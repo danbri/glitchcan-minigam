@@ -413,6 +413,28 @@ try {
       && sel.buttons.includes('Fly there') && visiting
       ? pass(`a pick is a selection in the shell: ${sel.e.kind} "${sel.e.name}" (${sel.e.id}, ${sel.e.where.lat.toFixed(4)}°N ${sel.e.where.lon.toFixed(4)}°E), with ${sel.buttons.join(' / ')}; Fly there flies`)
       : fail(`selection: ${JSON.stringify({ sel, visiting })}`);
+    // 20d. THE CITY'S OWN PAUSE (owner, September 2026: "an in-game pause at top of main menu (different to foafos
+    // pause …)"; while paused, "neighbouring pickables might also be highlighted in ways that allow a simple tap to
+    // make them the highlighted entity"). The first row of the city's menu stops the world clock and not the view;
+    // a selection's neighbours get rings, and a tap on one makes it the selection.
+    const first = await wpage.evaluate(() => (FinkWM._appActions || [])[0] || null);
+    const pRan = first ? await wpage.evaluate((id) => FinkMinigames.runAction(id), first.id) : false;
+    const paused = await wcity.waitForFunction(() => __drift.CITYP.on, null, { timeout: 10000 }).then(() => true, () => false);
+    const w0 = await wcity.evaluate(() => [__drift.wclock(), __drift.now()]);
+    await wpage.waitForTimeout(1200);
+    const w1 = await wcity.evaluate(() => [__drift.wclock(), __drift.now()]);
+    await wcity.evaluate(() => __drift.pickGo(innerWidth / 2, innerHeight * 0.62, false));
+    const rings = await wcity.waitForFunction(() => document.querySelectorAll('.pickNear:not([hidden])').length > 0, null, { timeout: 10000 })
+      .then(() => wcity.evaluate(() => document.querySelectorAll('.pickNear:not([hidden])').length), () => 0);
+    const selId0 = await wpage.evaluate(() => FoafOS.bus.retained('app.drift.selection')[0]?.data?.entity?.id);
+    const ringName = rings ? await wcity.evaluate(() => { const r = document.querySelector('.pickNear:not([hidden])'); const n = r.getAttribute('aria-label'); r.click(); return n; }) : null;
+    const selId1 = await wpage.waitForFunction((a) => { const id = FoafOS.bus.retained('app.drift.selection')[0]?.data?.entity?.id; return id && id !== a ? id : null; },
+      selId0, { timeout: 10000 }).then((h) => h.jsonValue(), () => null);
+    await wpage.evaluate((id) => FinkMinigames.runAction(id), first?.id);
+    const resumed = await wcity.waitForFunction(() => !__drift.CITYP.on && document.querySelectorAll('.pickNear').length === 0, null, { timeout: 10000 }).then(() => true, () => false);
+    first?.label === 'Pause the city' && pRan && paused && w1[0] === w0[0] && w1[1] > w0[1] && rings > 0 && selId1 && resumed
+      ? pass(`the city's menu starts with "Pause the city": the world's clock stops (${w0[0].toFixed(2)} s, still after 1.2 s) while the page's goes on; the selection's neighbours get ${rings} rings, and a tap on "${ringName}" makes it the selection (${selId1}); unpausing clears them`)
+      : fail(`city pause: ${JSON.stringify({ first: first?.label, pRan, paused, w0, w1, rings, selId0, selId1, resumed })}`);
     // the talking head's line (section 19) went to the shell's activity stream, and its face with it
     // the feed has it once the line has ended; while it plays it is the live card on screen
     const stream = await wpage.evaluate(() => [...document.querySelectorAll('#foafos-feed-wrap foaf-activity, #foafos-activity foaf-activity')]

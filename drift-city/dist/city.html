@@ -121,6 +121,13 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 /* the selection, followed in the view (pickMarkFrame): a ring on the picked thing until it is cleared */
 .pickMark { position: fixed; z-index: 12; pointer-events: none; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #7fe3ff; box-shadow: 0 0 10px rgba(127, 227, 255, .8), inset 0 0 10px rgba(127, 227, 255, .5); }
 .pickMark[hidden] { display: none; }
+/* while the city is paused: a ring on each thing next to the selection, to tap (pickNearFrame) */
+.pickNear { position: fixed; z-index: 12; transform: translate(-50%, -50%); border-radius: 50%; padding: 0; background: rgba(120, 255, 170, .06);
+  border: 2px dashed rgba(120, 255, 170, .75); box-shadow: 0 0 8px rgba(120, 255, 170, .5); cursor: pointer; animation: pickNearPulse 1.6s ease-in-out infinite; }
+.pickNear[hidden] { display: none; }
+.pickNear:focus-visible { outline: 3px solid #fff; }
+@keyframes pickNearPulse { 50% { box-shadow: 0 0 16px rgba(120, 255, 170, .9); } }
+@media (prefers-reduced-motion: reduce) { .pickNear { animation: none; } }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
 .mapHead { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 0 2px 6px; }
 .mapClose { font: inherit; font-size: 18px; color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid var(--edge); border-radius: 10px; width: 40px; height: 36px; cursor: pointer; }
@@ -354,7 +361,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, life: array<vec4f, 80> };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, sel: vec4f, sel2: vec4f, life: array<vec4f, 80> };
 // Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
 fn lifeAt(col: i32, row: i32) -> f32 {
   if (row < 0 || row >= 40) { return 0.0; }
@@ -422,6 +429,9 @@ struct Surf { alb: vec3f, emi: vec3f, spec: f32, refl: f32, rough: f32, trans: f
 struct SignG { ok: bool, ctr: vec3f, half: vec3f, axisX: bool, sgn: f32 };
 
 var<private> tqId: vec2i = vec2i(2147483647, 0);
+// the selected person for pedQ's throb: set from ev.sel by the scene pass only (the shadow and proxy passes have no
+// event buffer bound, and a person throbbing in its shadow would cost them for nothing)
+var<private> gSelP: vec4f = vec4f(0.0, 0.0, -1.0, 0.0); // cell x, cell z, key (-1: none), real time
 var<private> tq: array<vec4f, 4>;
 var<private> tq2: array<vec4f, 4>;
 var<private> gNoDyn: bool = false;
@@ -2149,7 +2159,10 @@ fn pedQ(p: vec3f) -> vec4f {
       // the walker's own frame faces the way it moves: +z along the ring for one lane, -z for the other
       let sw = 0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182);
       let sway = select(min(0.8, 0.45 * pace / sw) * sin(u.time * sw + f32(key)), 0.0, kind == 4);
-      let q = vec3f(m - R, p.y, dir * (ds - sway));
+      var q = vec3f(m - R, p.y, dir * (ds - sway));
+      // the selected person (pick.js, ev.sel) throbs bigger: scaled up from the feet, in and out once a second
+      let thr = select(1.0, 1.12 + 0.12 * sin(gSelP.w * 6.2831853), gSelP.z > -0.5 && all(c == vec2i(gSelP.xy)) && key == i32(gSelP.z));
+      q /= thr;
       // a box round the figure: only rays that reach it pay for the body
       let hy = select(1.4, 2.3, kind == 4);
       let bnd = length(max(abs(q - vec3f(0.0, hy, 0.0)) - vec3f(0.95, hy + 0.1, 1.0), vec3f(0.0)));
@@ -2161,6 +2174,7 @@ fn pedQ(p: vec3f) -> vec4f {
         if (kind <= 2) { ph = pedGait(kind, dist, key); }
         dd = pedFigure(q, kind, ph, key);
       }
+      dd *= thr;
       d = min(d, dd * 0.9);
       if (d < best.x) { best = vec4f(d, ds, q.x, f32(key + 1)); }
     }
@@ -7492,12 +7506,103 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   return vec3f(hsh(i32(fc.x), i32(fc.y), f * 5 + k), hsh(i32(fc.x), i32(fc.y), f * 5 + k + 1), hsh(i32(fc.x), i32(fc.y), f * 5 + k + 2)) - 0.5;
 }
 
+// ---------- the selection (pick.js pickSelGPU): ev.sel = cell x, cell z, kind (1 building, 2 person), person key;
+// ev.sel2 = building top, real time, city paused. Owner, September 2026: "strong, thick glowing
+// edge + shimmer and jelly"; people "throb bigger" (pedQ).
+const SEL_HI: vec3f = vec3f(0.35, 1.0, 0.8);
+// where the shader puts person `key` of cell c now: pedQ's own sums run backwards (as main.js walkerAt does), so
+// the highlight follows the figure the shader draws even where the page's copy of the sums disagrees
+fn pedPos(c: vec2i, key: i32) -> vec2f {
+  let ln = key & 1;
+  let R = select(9.95, 10.45, ln == 1);
+  let dir = select(1.0, -1.0, ln == 1);
+  let per = 8.0 * R;
+  let n = floor(per / 4.4);
+  let spacing = per / n;
+  let pace = pedPace(c, ln);
+  let A = u.time * pace + 3.0 * pace * (vnoise(vec2f(u.time * 0.07, f32(c.x * 13 + c.y * 7 + ln)), 181) - 0.5);
+  let kind = pedKind(c, ln, key);
+  let sw = 0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182);
+  let sway = select(min(0.8, 0.45 * pace / sw) * sin(u.time * sw + f32(key)), 0.0, kind == 4);
+  let s0 = (f32(key >> 1) + 0.5) * spacing + sway + dir * A;
+  let s = s0 - per * floor(s0 / per);
+  var lp = vec2f(-R, 7.0 * R - s);
+  if (s < 2.0 * R) { lp = vec2f(s - R, -R); } else if (s < 4.0 * R) { lp = vec2f(R, s - 3.0 * R); } else if (s < 6.0 * R) { lp = vec2f(5.0 * R - s, R); }
+  return (vec2f(c) + 0.5) * CS + lp;
+}
+// does this hit belong to the selection?
+fn selIs(p: vec3f, m: f32) -> bool {
+  if (ev.sel.z < 0.5) { return false; }
+  let ci = vec2i(floor(p.xz / CS));
+  if (!all(ci == vec2i(ev.sel.xy))) { return false; }
+  let mi = i32(m + 0.5);
+  // a person: the figure at the selected slot's place (pedPos; not pedQ again, every call is inlined)
+  if (ev.sel.z > 1.5) { return mi == 24 && length(p.xz - pedPos(ci, i32(ev.sel.w))) < 1.3; }
+  let lq = p.xz - (vec2f(ci) + 0.5) * CS;
+  return max(abs(lq.x), abs(lq.y)) < 9.7 && p.y > 0.4 && mi != 24 && mi != 12 && mi != 14 && mi != 17 && mi != 28;
+}
+// the selection's box: a building's plot up to its top, a person's body
+fn selBox() -> array<vec3f, 2> {
+  if (ev.sel.z > 1.5) {
+    let pp = pedPos(vec2i(ev.sel.xy), i32(ev.sel.w));
+    let c = vec3f(pp.x, 1.1, pp.y);
+    return array<vec3f, 2>(c - vec3f(0.7, 1.1, 0.7), c + vec3f(0.7, 1.4, 0.7));
+  }
+  let c = (vec2f(ev.sel.xy) + 0.5) * CS;
+  return array<vec3f, 2>(vec3f(c.x - 9.7, 0.0, c.y - 9.7), vec3f(c.x + 9.7, ev.sel2.x + 3.0, c.y + 9.7));
+}
+// where a ray leaves a box (from inside or through it)
+fn boxExit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> f32 {
+  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
+  let t0 = (lo - ro) * inv;
+  let t1 = (hi - ro) * inv;
+  let tx = max(t0, t1);
+  return min(tx.x, min(tx.y, tx.z));
+}
+// the selection's colour: a thick rim, bands of light running up it, sparks
+fn selGlow(p: vec3f, n: vec3f, rd: vec3f) -> vec3f {
+  let rt = ev.sel2.y;
+  let rim = pow(1.0 - clamp(dot(-rd, n), 0.0, 1.0), 1.4);
+  let band = pow(0.5 + 0.5 * sin(p.y * 1.6 - rt * 4.0 + (p.x + p.z) * 0.35), 6.0);
+  let spark = step(0.992, hsh(i32(floor(p.x * 2.5)) + i32(floor(rt * 9.0)) * 977, i32(floor(p.y * 2.5)), i32(floor(p.z * 2.5)) + 811));
+  return SEL_HI * (3.0 * rim + 1.4 * band + 4.0 * spark) * (0.8 + 0.4 * sin(rt * 3.0));
+}
+// where a ray enters and leaves a box (enter > leave: it misses)
+fn selBoxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> vec2f {
+  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
+  let t0 = (lo - ro) * inv;
+  let t1 = (hi - ro) * inv;
+  let tn = min(t0, t1);
+  let tf = max(t0, t1);
+  return vec2f(max(tn.x, max(tn.y, tn.z)), min(tf.x, min(tf.y, tf.z)));
+}
+// the thick edge round the selection's box: the ray against the box grown by one to four widths, a width being
+// about 1.2% of the distance, so the edge is as thick on screen far away as near. Hidden where something nearer
+// stands in front; inside the box's own outline the thing glows itself (selGlow)
+fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
+  if (ev.sel.z < 0.5) { return vec3f(0.0); }
+  let b = selBox();
+  let core = selBoxHit(ro, rd, b[0], b[1]);
+  if (core.x <= core.y && core.y > 0.0) { return vec3f(0.0); }
+  let w = max(length((b[0] + b[1]) * 0.5 - ro) * 0.012, 0.12);
+  var g = 0.0;
+  var tn = 1e9;
+  for (var i = 1; i <= 4; i++) {
+    let e = w * f32(i);
+    let hb = selBoxHit(ro, rd, b[0] - vec3f(e, 0.0, e), b[1] + vec3f(e));
+    if (hb.x <= hb.y && hb.y > 0.0) { g += 0.25; tn = min(tn, max(hb.x, 0.0)); }
+  }
+  if (g <= 0.0 || tHit < tn - w * 6.0) { return vec3f(0.0); }
+  return SEL_HI * g * g * 2.2 * (0.8 + 0.2 * sin(ev.sel2.y * 3.0));
+}
+
 @fragment fn scene(@builtin(position) fc: vec4f) -> @location(0) vec4f {
   let px = vec2f(floor(fc.x) * 2.0 + f32((i32(fc.y) + i32(u.frame)) & 1) + 0.5, fc.y);
   let fj = px + u.jitter;
   let uv = vec2f(fj.x * 2.0 - u.res.x, u.res.y - fj.y * 2.0) / u.res.y;
   let ro = u.camPos;
   let rd = normalize(u.camFwd + (uv.x * u.camRight + uv.y * u.camUp) * u.fov);
+  if (ev.sel.z > 1.5) { gSelP = vec4f(ev.sel.xy, ev.sel.w, ev.sel2.y); }
   if (ev.wx.z > 0.5) { return roomRender(ro, rd, px); }
   var tProxy = 0.0;
   if (u.p5 < 0.5) { tProxy = max(textureLoad(proxyTex, vec2i(i32(px.x), i32(fc.y)), 0).r - 0.5, 0.0); }
@@ -7527,6 +7632,23 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
     var sf = surface(p, n, h.m, crd, h.t + tBase);
     if (first) { var nb = n; sf = weathering(sf, n, p, i32(h.m + 0.5), h.t, &nb); n = nb; }
     sf = frostify(sf, n, p, h.m);
+    // the selection: glowing, shimmering, and jelly (the view goes on through it, below)
+    let jelly = first && selIs(p, h.m);
+    if (jelly) {
+      sf.alb = mix(sf.alb, SEL_HI * 0.35, 0.5);
+      sf.emi += selGlow(p, n, crd);
+      sf.refl = 0.0;
+    }
+    // the city paused: the street grid glows green, with a pulse running out from the selection
+    if (first && ev.sel2.z > 0.5 && p.y < 0.6) {
+      let lqG = p.xz - (floor(p.xz / CS) + 0.5) * CS;
+      let eG = HALF - max(abs(lqG.x), abs(lqG.y));
+      let wG = 0.12 + h.t * 0.0025;
+      let lineG = 1.0 - smoothstep(wG, wG * 2.2, eG);
+      let sc = select(p.xz, (vec2f(ev.sel.xy) + 0.5) * CS, ev.sel.z > 0.5);
+      let pulse = 0.5 + 0.5 * sin(length(p.xz - sc) * 0.08 - ev.sel2.y * 3.0);
+      sf.emi += vec3f(0.25, 1.0, 0.35) * lineG * (0.6 + 1.2 * pulse) * (1.0 - smoothstep(600.0, 1400.0, h.t));
+    }
     var sha = 0.75;
     var occ = 0.85;
     if (first) {
@@ -7550,26 +7672,42 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
       break;
     }
     c += sf.alb * beamSpot(p);
-    if (sf.refl <= 0.02) { col += c * fT + f0; break; }
-    var r = reflect(crd, n);
-    r = normalize(r + rnd3(px, 3) * sf.rough * 2.0);
-    if (h.kind == 1) { r.y = abs(r.y); }
-    let w = clamp(sf.refl, 0.0, 1.0);
-    if (!(u.refl > 0.5 && h.t < 350.0 && sf.refl > 0.1)) {
-      var rc = fogApply(skyCol(r), p, r, TMAX);
-      rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));
-      col += mix(c, rc * sf.tint, w) * fT + f0;
-      break;
+    // the next ray: on through the selection (jelly), or reflected. One traceScene call site for both: the GPU
+    // compilers inline every call, and a second one doubled the pipeline's build time
+    var nro = p + n * 0.08;
+    var nrd = crd;
+    if (jelly) {
+      // jelly: part of the light comes through from behind, tinted, from where the ray leaves the selection's box
+      let b = selBox();
+      let tEx = max(boxExit(p, crd, b[0], b[1]), 0.05);
+      col += c * 0.6 * fT + f0;
+      wgt = mix(vec3f(1.0), SEL_HI, 0.35) * 0.4 * fT;
+      tBase = h.t + tEx;
+      nro = p + crd * (tEx + 0.1);
+    } else {
+      if (sf.refl <= 0.02) { col += c * fT + f0; break; }
+      var r = reflect(crd, n);
+      r = normalize(r + rnd3(px, 3) * sf.rough * 2.0);
+      if (h.kind == 1) { r.y = abs(r.y); }
+      let w = clamp(sf.refl, 0.0, 1.0);
+      if (!(u.refl > 0.5 && h.t < 350.0 && sf.refl > 0.1)) {
+        var rc = fogApply(skyCol(r), p, r, TMAX);
+        rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));
+        col += mix(c, rc * sf.tint, w) * fT + f0;
+        break;
+      }
+      col += c * (1.0 - w) * fT + f0;
+      wgt = sf.tint * w * fT;
+      tBase = h.t;
+      nrd = r;
     }
-    col += c * (1.0 - w) * fT + f0;
-    wgt = sf.tint * w * fT;
     var d2 = 1.0;
-    tBase = h.t;
-    cro = p + n * 0.08;
-    crd = r;
+    cro = nro;
+    crd = nrd;
     h = traceScene(cro, crd, 320.0, 22, 12, 18, &d2, false);
   }
   col += beamGlow(ro, rd, tOut) * (0.3 + u.windows);
+  col += selHalo(ro, rd, tOut);
   let tEv = select(tOut, FARMAX, hit.kind == 0);
   col += fireworksFx(ro, rd, tEv);
   col = launchFx(ro, rd, tEv, col);
@@ -10036,7 +10174,7 @@ function initGL(reason) {
       if (ema > 40 && scale > 0.25) { if (shadows && ema > 50) shadows = 0; else scale = Math.max(0.25, scale * 0.85); lastChange = now; resize(); }
       else if (ema < 22 && scale < 0.8) { slowT += dt; if (slowT > 3) { scale = Math.min(0.8, scale * 1.1); lastChange = now; slowT = 0; resize(); } }
     }
-    clock += dtS;
+    clock += dtS; if (!CITYP.on) wclock += dtS;
     if (!INTRO.started && frameNoGL > 4 && worldOn()) worldStart();   // the world beside a story in foafos (tales.js)
     update(dtS);
     recentre();
@@ -10051,7 +10189,7 @@ function initGL(reason) {
     gl.uniform3f(U.camPos, st.x, st.y, st.z);
     gl.uniform3fv(U.camF, cam.f); gl.uniform3fv(U.camR, cam.r); gl.uniform3fv(U.camU, cam.up);
     gl.uniform2f(U.res, canvas.width, canvas.height);
-    gl.uniform1f(U.fov, 0.72); gl.uniform1f(U.time, clock); gl.uniform1f(U.win, tod.win); gl.uniform1f(U.stars, tod.stars); gl.uniform1f(U.den, tod.den);
+    gl.uniform1f(U.fov, 0.72); gl.uniform1f(U.time, wclock); gl.uniform1f(U.win, tod.win); gl.uniform1f(U.stars, tod.stars); gl.uniform1f(U.den, tod.den);
     const night = Math.min(1, Math.max(0, (tod.win - 0.25) / 0.8)), ak = Math.floor(clock / 330);
     gl.uniform1f(U.aur, night * (hsh(ak, 1, 170) < 0.4 ? 1 : 0));
     gl.uniform1f(U.shadowsOn, shadows);
@@ -10067,13 +10205,13 @@ function initGL(reason) {
     if (hud > 0.25) {
       hud = 0;
       const autoOn = clock - lastInput > 4.5;
-      const parts = [autoOn ? "Autopilot" : "Steering by hand", placeName(), st.y.toFixed(0) + " m"];
+      const parts = [CITYP.on ? "City paused" : autoOn ? "Autopilot" : "Steering by hand", placeName(), st.y.toFixed(0) + " m"];
       if (hostOn()) hostStatus(parts);                 // in foafos the readout is the shell's (host.js)
       else statusEl.innerHTML = "<b>" + parts[0] + "</b><span>" + parts[1] + "</span><span>" + parts[2] + "</span>";
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
     if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
-    pickMarkFrame();
+    pickMarkFrame(); pickNearFrame();
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;
@@ -10740,7 +10878,9 @@ function placePages(act, title) {
 // What is going on now, at the top of the menu: the tour's controls and "Explore from here" live here, not on the
 // screen over the view (owner, September 2026).
 function menuNow() {
-  const rows = [];
+  // first: the city's own pause (the world stops; the view, the menus and the sound go on; the picker shows
+  // neighbours and the street grid). Not the foafos pause, which stops the whole app
+  const rows = [{ label: "Pause the city", check: CITYP.on, act: () => { cityPause(!CITYP.on); renderMenu(); } }];
   if (GUIDE.on) {
     rows.push(GUIDE.paused ? { label: "Carry on with the tour", detail: guideWhere(), now: true, act: () => { closeGoPanel(); guideResume(); } }
       : { label: "Pause the tour", detail: guideWhere(), now: true, act: () => { GUIDE.menuPaused = false; closeGoPanel(); } });
@@ -13627,7 +13767,7 @@ function pickAt(px, py) {
   }
   // the Warmhouse bubble: a sphere in the air, so test it like a skyboat
   {
-    const c = bubbleAt(clock), oc = [o[0] - c[0], o[1] - c[1], o[2] - c[2]];
+    const c = bubbleAt(wclock), oc = [o[0] - c[0], o[1] - c[1], o[2] - c[2]];
     const b = dot3(oc, d), h = b * b - (dot3(oc, oc) - BUB_R * BUB_R);
     const tb = h > 0 ? (-b - Math.sqrt(h) > 0 ? -b - Math.sqrt(h) : -b + Math.sqrt(h)) : -1;
     if (tb > 0 && tb < bt) {
@@ -13656,7 +13796,7 @@ function pickAt(px, py) {
   if (!cell.wild && cell.h > 6 && (cell.typ === 1 || cell.typ === 2 || cell.typ === 3 || cell.typ === 8 || cell.typ === 13)) {
     const zone = ZONE_NAMES[cell.zone];
     const what = cell.h > 90 ? "A tower" : cell.h > 40 ? "A block" : "A building";
-    return { name: what + " on " + street + ", " + zone, x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz, y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "" };
+    return { name: what + " on " + street + ", " + zone, x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz, y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "", building: [cx, cz] };
   }
   const place = cell.wild ? placeNameAt(hit[0], hit[2]) : street + ", " + ZONE_NAMES[cell.zone];
   return { name: place, x: hit[0], z: hit[2], y0: Math.max(terrSurfAt(hit[0], hit[2]), 0), r: 25, h: 8, blurb: "" };
@@ -13741,6 +13881,8 @@ function pickGo(px, py, now) {
   if (S.y0 === undefined) S.y0 = 0;
   // in foafos the shell shows the pick with its actions (spec §5.11); the page marks it in the view
   if (hostOn() && !now) { pickRing(px, py, S.name); hostSelect(S); return; }
+  // the city paused: a tap selects (the highlight, and rings on the things next to it)
+  if (CITYP.on && !now) { pickRing(px, py, S.name); pickMarkSet(S); return; }
   // the simpler (WebGL) city has no visits: name it, but stay
   if (!GPUREF.device) { pickRing(px, py, S.name); return; }
   if (now) { if (S.walk && now === "walk") visitWalkTo(V, S.x, S.z); else pickLaunch(S); return; }
@@ -13761,7 +13903,7 @@ function pickPerson(px, py, before) {
   if (!(t > 0) || t > 260 || t > before + 6) return null;
   const x = o[0] + d[0] * t, z = o[2] + d[2] * t;
   let best = null, bd = 2.5;
-  for (const w of walkersNear(x, z, 14, clock)) { const dd = Math.hypot(w.x - x, w.z - z); if (dd < bd) { bd = dd; best = w; } }
+  for (const w of walkersNear(x, z, 14, wclock)) { const dd = Math.hypot(w.x - x, w.z - z); if (dd < bd) { bd = dd; best = w; } }
   if (!best) return null;
   return { name: PERSON_KINDS[best.kind] || "Someone", x: best.x, z: best.z, y0: 0, r: 4, h: 2.2, person: best,
     blurb: "One of the people on the street, on their way somewhere." };
@@ -13785,7 +13927,9 @@ function pickEntity(S) {
 function pickMarkFrame() {
   const S = PICK.sel, m = PICK.mark;
   if (!S || !m) return;
-  if (S.person) { const w = walkerAt(S.person.cx, S.person.cz, S.person.ln, S.person.ki, clock, S.person.dens); if (w) { S.x = w.x; S.z = w.z; } }
+  if (S.person) { const w = walkerAt(S.person.cx, S.person.cz, S.person.ln, S.person.ki, wclock, S.person.dens); if (w) { S.x = w.x; S.z = w.z; } }
+  // the GPU city draws a building or a person itself (scene.wgsl `selIs`, `selHalo`): no ring
+  if (GPUREF.device && (S.person || S.building)) { m.hidden = true; return; }
   const c = CAMNOW, v = [S.x - c.p[0], (S.y0 || 0) + (S.h || 0) * 0.5 - c.p[1], S.z - c.p[2]];
   const zf = dot3(v, c.f);
   if (zf <= 0.5) { m.hidden = true; return; }
@@ -13798,6 +13942,7 @@ function pickMarkFrame() {
 }
 function pickMarkSet(S) {
   PICK.sel = S;
+  pickNearSet();
   if (!PICK.mark && document.body && document.body.appendChild) {
     const m = document.createElement("div"); m.className = "pickMark"; m.setAttribute("aria-hidden", "true"); m.hidden = true;
     document.body.appendChild(m); PICK.mark = m;
@@ -13872,6 +14017,84 @@ function pickInit(canvas) {
   canvas.addEventListener("pointermove", (e) => { if (PICK.timer && Math.hypot(e.clientX - PICK.x, e.clientY - PICK.y) > 10) cancel(); });
   canvas.addEventListener("pointerup", cancel);
   canvas.addEventListener("pointercancel", cancel);
+}
+
+// ---------- the city's own pause, and the selection as the shader draws it ----------
+// Owner, September 2026: an in-game pause at the top of the main menu, "different to foafos pause which stops
+// music/audio and everything": the world stops (wclock, main.js), and while it is stopped the picker shows more.
+// The selected building or person is drawn by the shader (scene.wgsl, `selIs`, `selGlow`, `selHalo`): "strong, thick glowing edge +
+// shimmer and jelly", and a person or exo "throbs bigger". Its neighbours get rings to tap (pickNearFrame), and the
+// street grid glows green.
+function cityPause(on) {
+  CITYP.on = on; CITYP.t0 = clock;
+  if (on) showHint("The city is paused. Tap a building or a person to select it; the rings mark what is next to it.", 5000);
+  pickNearSet();
+}
+// the selection for the GPU: EVN[216..223] (ev.sel, ev.sel2 in scene.wgsl)
+//   sel: cell x, cell z, kind (0 none, 1 building, 2 person), person key; sel2: top (person: z), real time,
+//   paused, person x
+function pickSelGPU() {
+  const S = PICK.sel;
+  let k = 0, cx = 0, cz = 0, key = 0, top = 0;
+  let px = 0;
+  // cells as the view has them (not wrapped): the shader hashes people by the same unwrapped cell
+  if (S && S.person) { k = 2; cx = S.person.cx; cz = S.person.cz; key = S.person.key; top = S.z; px = S.x; }
+  else if (S && S.building) { k = 1; cx = S.building[0]; cz = S.building[1]; top = S.h || 0; }
+  EVN.set([cx, cz, k, key, top, clock, CITYP.on ? 1 : 0, px], 216);
+  return k;
+}
+// the things next to the selection, while the city is paused: the buildings in the eight cells round it and the
+// people within 12 m, each with a ring to tap; a tap makes it the selection, and then its neighbours get rings
+function pickNearSet() {
+  const L = PICK.near || (PICK.near = []);
+  for (const e of L) e.el.remove();
+  L.length = 0;
+  const S = PICK.sel;
+  if (!CITYP.on || !S || !document.body || !document.createElement) return;
+  const cand = [];
+  const cx0 = Math.floor(S.x / C), cz0 = Math.floor(S.z / C);
+  for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+    const cx = cx0 + dx, cz = cz0 + dz, cell = cellAt(cx, cz);
+    if (cell.wild || !(cell.h > 6) || !(cell.typ === 1 || cell.typ === 2 || cell.typ === 3 || cell.typ === 8 || cell.typ === 13)) continue;
+    const T = { name: (cell.h > 90 ? "A tower" : cell.h > 40 ? "A block" : "A building") + " on " + streetName(cx * 131 + cz * 7) + ", " + ZONE_NAMES[cell.zone],
+      x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz, y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "", building: [cx, cz] };
+    if (S.building && S.building[0] === T.building[0] && S.building[1] === T.building[1]) continue;
+    cand.push(T);
+  }
+  for (const w of walkersNear(S.x, S.z, 12, wclock)) {
+    if (S.person && S.person.id === w.id) continue;
+    cand.push({ name: PERSON_KINDS[w.kind] || "Someone", x: w.x, z: w.z, y0: 0, r: 4, h: 2.2, person: w, blurb: "One of the people on the street, on their way somewhere." });
+  }
+  for (const T of cand.slice(0, 14)) {
+    const el = document.createElement("button");
+    el.className = "pickNear"; el.type = "button"; el.hidden = true;
+    el.setAttribute("aria-label", "Select: " + T.name);
+    el.addEventListener("click", (ev) => { ev.stopPropagation(); pickSelect(T); });
+    document.body.appendChild(el);
+    L.push({ T, el });
+  }
+}
+// make T the selection, as a tap on it would
+function pickSelect(T) {
+  const S = { ...T };
+  if (hostOn()) hostSelect(S); else pickMarkSet(S);
+}
+function pickNearFrame() {
+  const L = PICK.near;
+  if (!L || !L.length) return;
+  const c = CAMNOW, H = innerHeight, W = innerWidth;
+  for (const { T, el } of L) {
+    const v = [T.x - c.p[0], (T.y0 || 0) + (T.person ? 1.1 : Math.min(T.h || 0, 60) * 0.5) - c.p[1], T.z - c.p[2]];
+    const zf = dot3(v, c.f);
+    if (zf <= 0.5) { el.hidden = true; continue; }
+    const ux = dot3(v, c.r) / zf / 0.72, uy = dot3(v, c.up) / zf / 0.72;
+    const x = (ux * H + W) / 2, y = (H - uy * H) / 2;
+    if (x < -40 || x > W + 40 || y < -40 || y > H + 40) { el.hidden = true; continue; }
+    el.hidden = false;
+    el.style.left = x + "px"; el.style.top = y + "px";
+    const px = Math.max(30, Math.min(110, (T.r || 10) / zf / 0.72 * H * 0.7));
+    el.style.width = el.style.height = px + "px";
+  }
 }
 
 // ---------- a light camera assist in free flight ----------
@@ -14625,6 +14848,10 @@ const keys = new Set();
 let lastInput = -100;
 const pointer = { down: false, x: 0, y: 0, sx: 0, sy: 0, hoverX: 0, hoverY: 0, hoverT: -100, type: "mouse" };
 let clock = 0;
+// the world's clock: people, traffic, water, Life, weather and the shader's time. "Pause the city" (CITYP, the
+// menu's first row) stops it; `clock` goes on for the view, the menus and the sound
+let wclock = 0;
+const CITYP = { on: false, t0: 0 };
 function angDiff(a, b) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
 function giantAheadOnLine(fx, fz) {
   const bx0 = Math.floor(st.x / BIG), bz0 = Math.floor(st.z / BIG);
@@ -14654,7 +14881,7 @@ function statusParts(autoOn) {
   if (NAV.mode === "trip") { const a = len3(NAV.cam.P) - TR; return [NAV.tour ? "Grand tour" : "Autopilot", "To " + NAV.trip.dest.name, fmtAlt(a)]; }
   if (NAV.mode === "free") { const a = len3(NAV.free.P) - TR; return ["Flying by hand", regionAt(norm3(NAV.free.P)).name, fmtAlt(a)]; }
   if (NAV.mode === "space") { const k = NAV.space.kind; return [clock - lastInput > 4.5 ? "Drifting" : "Steering by hand", spaceName(), k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn"]; }
-  const lead = NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
+  const lead = CITYP.on ? "City paused" : NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
   // in the city, a place name you could give someone, not the drone's state
   if (!NAV.tour) return [autoOn ? "" : "By hand", placeLabel()];
   return [lead, placeLabel()];
@@ -14847,8 +15074,10 @@ function audioWorld(dt) {
 // maths), so their sounds come from the figures you see. Each: world x, z, kind, gait phase, key.
 const GAIT_S = [0.3, 0.13, 0.28], GAIT_SF = [0.56, 0.6, 0.4];
 // one walker (cell cx, cz; lane ln; slot ki) at time t, or null if that slot is empty
+// the slots on a ring, counted in 32-bit floats as the shader counts them (why: the drift-city skill, walkers)
+function ringSlots(R) { const f = Math.fround; return Math.floor(f(f(8 * f(R)) / f(4.4))); }
 function walkerAt(cx, cz, ln, ki, t, dens) {
-  const R = ln ? 10.45 : 9.95, dir = ln ? -1 : 1, per = 8 * R, n = Math.floor(per / 4.4), spacing = per / n, key = ki * 2 + ln;
+  const R = ln ? 10.45 : 9.95, dir = ln ? -1 : 1, per = 8 * R, n = ringSlots(R), spacing = per / n, key = ki * 2 + ln;
   if (hsh(cx * 31 + key, cz, 95) >= dens) return null;
   const pulley = hsh(cx * 11 + ln, cz * 5, 183) < 0.22;
   const pace = (0.5 + 1.1 * hsh(cx * 5 + ln, cz * 3, 180)) * (pulley ? 2.6 : 1);
@@ -14873,7 +15102,7 @@ function walkersNear(x0, z0, rad, t) {
     if (!(ty <= 3 || ty === 8 || ty === 9 || ty === 10 || ty === 11 || ty === 13)) continue;
     const dens = 0.16 + 0.45 * ((o.fl >> 10) & 1) + (o.fl & 16 ? 0.3 : 0);
     for (let ln = 0; ln < 2; ln++) {
-      const n = Math.floor(8 * (ln ? 10.45 : 9.95) / 4.4);
+      const n = ringSlots(ln ? 10.45 : 9.95);
       for (let ki = 0; ki < n; ki++) {
         const w = walkerAt(cx, cz, ln, ki, t, dens);
         if (w && Math.hypot(w.x - x0, w.z - z0) <= rad) out.push(w);
@@ -14889,12 +15118,12 @@ function audioFeet(dt) {
   if (NAV.spaceMix > 0.5 || AUW.alt > 120) { FEET.list = []; return; }
   const l = AU.ready ? AU.lpos : [st.x, st.y, st.z], play = AU.ready && AU.on;
   FEET.t -= dt;
-  if (FEET.t <= 0) { FEET.t = 0.25; FEET.list = walkersNear(l[0], l[2], 30, clock).sort((a, b) => Math.hypot(a.x - l[0], a.z - l[2]) - Math.hypot(b.x - l[0], b.z - l[2])).slice(0, 16); }
+  if (FEET.t <= 0) { FEET.t = 0.25; FEET.list = walkersNear(l[0], l[2], 30, wclock).sort((a, b) => Math.hypot(a.x - l[0], a.z - l[2]) - Math.hypot(b.x - l[0], b.z - l[2])).slice(0, 16); }
   const seen = new Map();
   let made = 0;
   for (const w0 of FEET.list) {
     // re-place each walker now: they move between the lists' updates
-    const w = walkerAt(w0.cx, w0.cz, w0.ln, w0.ki, clock, w0.dens) || w0;
+    const w = walkerAt(w0.cx, w0.cz, w0.ln, w0.ki, wclock, w0.dens) || w0;
     const step = w.kind === 3 ? Math.floor(w.ph / (4 * Math.PI)) : Math.floor(w.ph / Math.PI);
     const prev = FEET.last.get(w.id);
     seen.set(w.id, step);
@@ -15172,7 +15401,8 @@ function update(dt) {
   const ux = clampv(kx + sx, -1, 1);
   const uy = clampv(ky - sy, -1, 1);
   if (kx !== 0 || ky !== 0 || pointer.down || PAD.ly !== 0 || PAD.rx !== 0 || PAD.ry !== 0) lastInput = clock;
-  const auto = sstep(1.5, 4.5, clock - lastInput);
+  // the city paused: no autopilot, so the view stays on what is being picked (steering by hand still works)
+  const auto = CITYP.on ? 0 : sstep(1.5, 4.5, clock - lastInput);
   if (auto < 0.3) st.realign = true;
 
   st.modeT -= dt;
@@ -15369,7 +15599,7 @@ function halton(i, b) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % 
 
 const SN = 1024, STS = 0.8, AIR_Y = 96;
 // Per-frame events for the shader: searchlight beams from the nearest air taxis, smoke plumes, the holographic koi.
-const EVN = new Float32Array(216);
+const EVN = new Float32Array(224);
 const CHASE_Y = 64;
 const WX = { rain: 0, wet: 0 };
 let boState = null;
@@ -15440,7 +15670,7 @@ function computeEvents(tod, dt) {
   EVN.set([bp[0], bp[1], bp[2], 32], 56);
   EVN.set([-Math.sin(ba), 0, Math.cos(ba), 1], 60);
   // skyboats on fixed routes: one line of [x, y, z, half-length] at 144, one of [heading, kind] at 176
-  skyboats(clock);
+  skyboats(wclock);
   // district blackout every few minutes near the camera
   const bcy = 150, bk = Math.floor(clock / bcy), bt = clock - bk * bcy;
   if (bt >= 50 && bt <= 78 && hsh(bk, 3, 160) < 0.75) {
@@ -15813,6 +16043,7 @@ async function init() {
   try { PL = await buildAll(forceLite); }
   catch (e1) {
     if (forceLite || e1.compile) { startFallback("This device's graphics driver could not build the city's shaders", describe(e1)); return; }
+    console.warn("The full pipelines failed; trying the lighter ones. " + describe(e1));
     try { PL = await buildAll(true); }
     catch (e2) { startFallback("This device's graphics driver could not build the city's shaders", describe(e2) + "\n(The full version failed first: " + describe(e1) + ")"); return; }
   }
@@ -15851,7 +16082,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 864 + 1280, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 896 + 1280, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     PHYS.ubuf = device.createBuffer({ size: 224, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -16073,7 +16304,7 @@ async function init() {
     }
     // the world's clock runs in every mode: story scenes, trips, space and free flight included
     // a long-press flight runs the city's clock fast (pick.js)
-    clock += dtS * pickWarp();
+    { const warp = pickWarp(); clock += dtS * warp; if (!CITYP.on) wclock += dtS * warp; }
     if (!INTRO.started && frameNo > 4) { INTRO.started = true; if (worldOn()) worldStart(); else if (!globalThis.__noIntro) gateShow(); }
     if (INTRO.on) introCaptions();
     const modeWas = NAV.mode;
@@ -16125,7 +16356,7 @@ async function init() {
       if (smaps[smPending].done) { smActive = smPending; smPending = -1; }
     }
     const j = Math.floor(frameNo / 2) % 16 + 1;
-    U[0] = T.w; U[1] = T.h; U[2] = clock; U[3] = scale > 0.42 ? 1 : 0;
+    U[0] = T.w; U[1] = T.h; U[2] = wclock; U[3] = scale > 0.42 ? 1 : 0;
     if (inSpace) { U[4] = 0; U[5] = 0; U[6] = 0; }
     else if (FOLLOW && NAV.spaceMix < 0.01) {
       // follow the drone: a little behind and above it, looking just past it
@@ -16151,7 +16382,7 @@ async function init() {
     U[40] = halton(j, 2) - 0.5; U[41] = halton(j, 3) - 0.5; U[42] = canvas.width; U[43] = canvas.height;
     const pv = prev || { pos: [U[4], U[5], U[6]], f: cam.f, r: cam.r, up: cam.up };
     U.set(pv.pos, 44); U.set(pv.f, 48); U.set(pv.r, 52); U.set(pv.up, 56);
-    updateWeather(dt);
+    updateWeather(CITYP.on ? 0 : dt);
     U[47] = wind.cx; U[51] = wind.cz; U[55] = inSpace || roomNow() ? 0 : WX.rain; U[59] = WX.wet;
     U.set([REG.ox, REG.oz, roomNow() ? 1 : 0, REG.city, REG.cx, REG.cz, 0, 0], 60); // reg.z: in a venue's room (post.wgsl)
     // the lens: on the story's scene when there is one in view, otherwise (0) on the centre of the view
@@ -16169,7 +16400,7 @@ async function init() {
     U[66] = FOCUS.d; U[67] = FOCUS.s;
     device.queue.writeBuffer(ubuf, 0, U);
     if (!inSpace) device.queue.writeBuffer(propBuf, 0, worldProps());
-    if (!inSpace) { stepFlock(dtS); if (!FLOCKS_ON) FLOCK_DATA[0] = 0; device.queue.writeBuffer(flockBuf, 0, FLOCK_DATA); }
+    if (!inSpace) { stepFlock(CITYP.on ? 0 : dtS); if (!FLOCKS_ON) FLOCK_DATA[0] = 0; device.queue.writeBuffer(flockBuf, 0, FLOCK_DATA); }
     if (NAV.spaceMix > 0.001 && NAV.cam) {
       if (!NAV.sunT) NAV.sunT = sunTitanFromLocal(tod.sun);
       // near Titan the light keeps the goggles' warm grade; out among the moons it is plain sunlight
@@ -16180,11 +16411,12 @@ async function init() {
     computeEvents(tod, dt);
     computeExtras(tod, dt);
     EVN[208] = WX.cover || 0; // settled snow (after computeEvents clears the array)
-    EVN[209] = morseKey(clock); // the masts' Morse (morse.js)
+    EVN[209] = morseKey(wclock); // the masts' Morse (morse.js)
     { const r = roomNow(); EVN[210] = r ? r.room : 0; if (r) EVN.set([r.x, r.y - 1.7, r.z, r.yaw], 212); // a venue's room (tales.js)
       EVN[211] = r ? (globalThis.__bandForce !== undefined ? globalThis.__bandForce : venueBand(r.room, clock)) : -1; } // __bandForce: a test hook // the band's beat for the room's lights and people (venue.js)
+    pickSelGPU();
     device.queue.writeBuffer(evBuf, 0, EVN);
-    { const lg = lifeUpdate(dtS); if (lg) device.queue.writeBuffer(evBuf, 864, lg); }
+    { const lg = lifeUpdate(CITYP.on ? 0 : dtS); if (lg) device.queue.writeBuffer(evBuf, 896, lg); }
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);
     const measure = hasTS && !qBusy && frameNo % 6 === 0;
     ran.fill(0);
@@ -16228,7 +16460,7 @@ async function init() {
       PHYS.u.set([dr[0], dr[1], dr[2], dr[3],
         wind.x * 0.6, 0, wind.z * 0.6, wind.gust,
         U[4], U[6], 38, WX.cover || 0,
-        Math.min(dt, 1 / 30), 2, PHYS.n, WX.rain || 0]);
+        CITYP.on ? 0 : Math.min(dt, 1 / 30), 2, PHYS.n, WX.rain || 0]);
       // the drone's body (behind the view when it follows the drone; at the camera otherwise), and its velocity
       const bodyR = NAV.mode === "space" || NAV.mode === "free" ? 0 : 0.42;
       const bv = PHYS.lastBody ? [(st.x - PHYS.lastBody[0]) / Math.max(dt, 1e-3), (st.y - PHYS.lastBody[1]) / Math.max(dt, 1e-3), (st.z - PHYS.lastBody[2]) / Math.max(dt, 1e-3)] : [0, 0, 0];
@@ -16307,6 +16539,7 @@ async function init() {
       }
     }
     pickMarkFrame();                         // the selection ring follows its thing
+    pickNearFrame();                         // and the rings on its neighbours, while the city is paused
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -16431,7 +16664,7 @@ const release = (e) => {
   // a short tap: in foafos it picks what is under it (the page draws no controls of its own to show or hide there);
   // on its own page it shows or hides the controls
   if (pointer.down && e && e.type === "pointerup" && performance.now() - downAt < 300 && Math.hypot(pointer.x - pointer.sx, pointer.y - pointer.sy) < 10) {
-    if (hostOn()) pickGo(pointer.x, pointer.y, false); else setUiHidden(!uiHidden);
+    if (hostOn() || CITYP.on) pickGo(pointer.x, pointer.y, false); else setUiHidden(!uiHidden);
   }
   pointer.down = false;
 };
@@ -16463,7 +16696,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { CITYP, cityPause, pickSelect, pickSelGPU, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

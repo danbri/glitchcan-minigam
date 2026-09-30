@@ -611,7 +611,7 @@ function initGL(reason) {
       if (ema > 40 && scale > 0.25) { if (shadows && ema > 50) shadows = 0; else scale = Math.max(0.25, scale * 0.85); lastChange = now; resize(); }
       else if (ema < 22 && scale < 0.8) { slowT += dt; if (slowT > 3) { scale = Math.min(0.8, scale * 1.1); lastChange = now; slowT = 0; resize(); } }
     }
-    clock += dtS;
+    clock += dtS; if (!CITYP.on) wclock += dtS;
     if (!INTRO.started && frameNoGL > 4 && worldOn()) worldStart();   // the world beside a story in foafos (tales.js)
     update(dtS);
     recentre();
@@ -626,7 +626,7 @@ function initGL(reason) {
     gl.uniform3f(U.camPos, st.x, st.y, st.z);
     gl.uniform3fv(U.camF, cam.f); gl.uniform3fv(U.camR, cam.r); gl.uniform3fv(U.camU, cam.up);
     gl.uniform2f(U.res, canvas.width, canvas.height);
-    gl.uniform1f(U.fov, 0.72); gl.uniform1f(U.time, clock); gl.uniform1f(U.win, tod.win); gl.uniform1f(U.stars, tod.stars); gl.uniform1f(U.den, tod.den);
+    gl.uniform1f(U.fov, 0.72); gl.uniform1f(U.time, wclock); gl.uniform1f(U.win, tod.win); gl.uniform1f(U.stars, tod.stars); gl.uniform1f(U.den, tod.den);
     const night = Math.min(1, Math.max(0, (tod.win - 0.25) / 0.8)), ak = Math.floor(clock / 330);
     gl.uniform1f(U.aur, night * (hsh(ak, 1, 170) < 0.4 ? 1 : 0));
     gl.uniform1f(U.shadowsOn, shadows);
@@ -642,13 +642,13 @@ function initGL(reason) {
     if (hud > 0.25) {
       hud = 0;
       const autoOn = clock - lastInput > 4.5;
-      const parts = [autoOn ? "Autopilot" : "Steering by hand", placeName(), st.y.toFixed(0) + " m"];
+      const parts = [CITYP.on ? "City paused" : autoOn ? "Autopilot" : "Steering by hand", placeName(), st.y.toFixed(0) + " m"];
       if (hostOn()) hostStatus(parts);                 // in foafos the readout is the shell's (host.js)
       else statusEl.innerHTML = "<b>" + parts[0] + "</b><span>" + parts[1] + "</span><span>" + parts[2] + "</span>";
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
     if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
-    pickMarkFrame();
+    pickMarkFrame(); pickNearFrame();
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;

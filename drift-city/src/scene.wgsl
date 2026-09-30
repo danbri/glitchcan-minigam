@@ -33,7 +33,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, life: array<vec4f, 80> };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, sel: vec4f, sel2: vec4f, life: array<vec4f, 80> };
 // Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
 fn lifeAt(col: i32, row: i32) -> f32 {
   if (row < 0 || row >= 40) { return 0.0; }
@@ -101,6 +101,9 @@ struct Surf { alb: vec3f, emi: vec3f, spec: f32, refl: f32, rough: f32, trans: f
 struct SignG { ok: bool, ctr: vec3f, half: vec3f, axisX: bool, sgn: f32 };
 
 var<private> tqId: vec2i = vec2i(2147483647, 0);
+// the selected person for pedQ's throb: set from ev.sel by the scene pass only (the shadow and proxy passes have no
+// event buffer bound, and a person throbbing in its shadow would cost them for nothing)
+var<private> gSelP: vec4f = vec4f(0.0, 0.0, -1.0, 0.0); // cell x, cell z, key (-1: none), real time
 var<private> tq: array<vec4f, 4>;
 var<private> tq2: array<vec4f, 4>;
 var<private> gNoDyn: bool = false;
@@ -1828,7 +1831,10 @@ fn pedQ(p: vec3f) -> vec4f {
       // the walker's own frame faces the way it moves: +z along the ring for one lane, -z for the other
       let sw = 0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182);
       let sway = select(min(0.8, 0.45 * pace / sw) * sin(u.time * sw + f32(key)), 0.0, kind == 4);
-      let q = vec3f(m - R, p.y, dir * (ds - sway));
+      var q = vec3f(m - R, p.y, dir * (ds - sway));
+      // the selected person (pick.js, ev.sel) throbs bigger: scaled up from the feet, in and out once a second
+      let thr = select(1.0, 1.12 + 0.12 * sin(gSelP.w * 6.2831853), gSelP.z > -0.5 && all(c == vec2i(gSelP.xy)) && key == i32(gSelP.z));
+      q /= thr;
       // a box round the figure: only rays that reach it pay for the body
       let hy = select(1.4, 2.3, kind == 4);
       let bnd = length(max(abs(q - vec3f(0.0, hy, 0.0)) - vec3f(0.95, hy + 0.1, 1.0), vec3f(0.0)));
@@ -1840,6 +1846,7 @@ fn pedQ(p: vec3f) -> vec4f {
         if (kind <= 2) { ph = pedGait(kind, dist, key); }
         dd = pedFigure(q, kind, ph, key);
       }
+      dd *= thr;
       d = min(d, dd * 0.9);
       if (d < best.x) { best = vec4f(d, ds, q.x, f32(key + 1)); }
     }
@@ -7171,12 +7178,103 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   return vec3f(hsh(i32(fc.x), i32(fc.y), f * 5 + k), hsh(i32(fc.x), i32(fc.y), f * 5 + k + 1), hsh(i32(fc.x), i32(fc.y), f * 5 + k + 2)) - 0.5;
 }
 
+// ---------- the selection (pick.js pickSelGPU): ev.sel = cell x, cell z, kind (1 building, 2 person), person key;
+// ev.sel2 = building top, real time, city paused. Owner, September 2026: "strong, thick glowing
+// edge + shimmer and jelly"; people "throb bigger" (pedQ).
+const SEL_HI: vec3f = vec3f(0.35, 1.0, 0.8);
+// where the shader puts person `key` of cell c now: pedQ's own sums run backwards (as main.js walkerAt does), so
+// the highlight follows the figure the shader draws even where the page's copy of the sums disagrees
+fn pedPos(c: vec2i, key: i32) -> vec2f {
+  let ln = key & 1;
+  let R = select(9.95, 10.45, ln == 1);
+  let dir = select(1.0, -1.0, ln == 1);
+  let per = 8.0 * R;
+  let n = floor(per / 4.4);
+  let spacing = per / n;
+  let pace = pedPace(c, ln);
+  let A = u.time * pace + 3.0 * pace * (vnoise(vec2f(u.time * 0.07, f32(c.x * 13 + c.y * 7 + ln)), 181) - 0.5);
+  let kind = pedKind(c, ln, key);
+  let sw = 0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182);
+  let sway = select(min(0.8, 0.45 * pace / sw) * sin(u.time * sw + f32(key)), 0.0, kind == 4);
+  let s0 = (f32(key >> 1) + 0.5) * spacing + sway + dir * A;
+  let s = s0 - per * floor(s0 / per);
+  var lp = vec2f(-R, 7.0 * R - s);
+  if (s < 2.0 * R) { lp = vec2f(s - R, -R); } else if (s < 4.0 * R) { lp = vec2f(R, s - 3.0 * R); } else if (s < 6.0 * R) { lp = vec2f(5.0 * R - s, R); }
+  return (vec2f(c) + 0.5) * CS + lp;
+}
+// does this hit belong to the selection?
+fn selIs(p: vec3f, m: f32) -> bool {
+  if (ev.sel.z < 0.5) { return false; }
+  let ci = vec2i(floor(p.xz / CS));
+  if (!all(ci == vec2i(ev.sel.xy))) { return false; }
+  let mi = i32(m + 0.5);
+  // a person: the figure at the selected slot's place (pedPos; not pedQ again, every call is inlined)
+  if (ev.sel.z > 1.5) { return mi == 24 && length(p.xz - pedPos(ci, i32(ev.sel.w))) < 1.3; }
+  let lq = p.xz - (vec2f(ci) + 0.5) * CS;
+  return max(abs(lq.x), abs(lq.y)) < 9.7 && p.y > 0.4 && mi != 24 && mi != 12 && mi != 14 && mi != 17 && mi != 28;
+}
+// the selection's box: a building's plot up to its top, a person's body
+fn selBox() -> array<vec3f, 2> {
+  if (ev.sel.z > 1.5) {
+    let pp = pedPos(vec2i(ev.sel.xy), i32(ev.sel.w));
+    let c = vec3f(pp.x, 1.1, pp.y);
+    return array<vec3f, 2>(c - vec3f(0.7, 1.1, 0.7), c + vec3f(0.7, 1.4, 0.7));
+  }
+  let c = (vec2f(ev.sel.xy) + 0.5) * CS;
+  return array<vec3f, 2>(vec3f(c.x - 9.7, 0.0, c.y - 9.7), vec3f(c.x + 9.7, ev.sel2.x + 3.0, c.y + 9.7));
+}
+// where a ray leaves a box (from inside or through it)
+fn boxExit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> f32 {
+  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
+  let t0 = (lo - ro) * inv;
+  let t1 = (hi - ro) * inv;
+  let tx = max(t0, t1);
+  return min(tx.x, min(tx.y, tx.z));
+}
+// the selection's colour: a thick rim, bands of light running up it, sparks
+fn selGlow(p: vec3f, n: vec3f, rd: vec3f) -> vec3f {
+  let rt = ev.sel2.y;
+  let rim = pow(1.0 - clamp(dot(-rd, n), 0.0, 1.0), 1.4);
+  let band = pow(0.5 + 0.5 * sin(p.y * 1.6 - rt * 4.0 + (p.x + p.z) * 0.35), 6.0);
+  let spark = step(0.992, hsh(i32(floor(p.x * 2.5)) + i32(floor(rt * 9.0)) * 977, i32(floor(p.y * 2.5)), i32(floor(p.z * 2.5)) + 811));
+  return SEL_HI * (3.0 * rim + 1.4 * band + 4.0 * spark) * (0.8 + 0.4 * sin(rt * 3.0));
+}
+// where a ray enters and leaves a box (enter > leave: it misses)
+fn selBoxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> vec2f {
+  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
+  let t0 = (lo - ro) * inv;
+  let t1 = (hi - ro) * inv;
+  let tn = min(t0, t1);
+  let tf = max(t0, t1);
+  return vec2f(max(tn.x, max(tn.y, tn.z)), min(tf.x, min(tf.y, tf.z)));
+}
+// the thick edge round the selection's box: the ray against the box grown by one to four widths, a width being
+// about 1.2% of the distance, so the edge is as thick on screen far away as near. Hidden where something nearer
+// stands in front; inside the box's own outline the thing glows itself (selGlow)
+fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
+  if (ev.sel.z < 0.5) { return vec3f(0.0); }
+  let b = selBox();
+  let core = selBoxHit(ro, rd, b[0], b[1]);
+  if (core.x <= core.y && core.y > 0.0) { return vec3f(0.0); }
+  let w = max(length((b[0] + b[1]) * 0.5 - ro) * 0.012, 0.12);
+  var g = 0.0;
+  var tn = 1e9;
+  for (var i = 1; i <= 4; i++) {
+    let e = w * f32(i);
+    let hb = selBoxHit(ro, rd, b[0] - vec3f(e, 0.0, e), b[1] + vec3f(e));
+    if (hb.x <= hb.y && hb.y > 0.0) { g += 0.25; tn = min(tn, max(hb.x, 0.0)); }
+  }
+  if (g <= 0.0 || tHit < tn - w * 6.0) { return vec3f(0.0); }
+  return SEL_HI * g * g * 2.2 * (0.8 + 0.2 * sin(ev.sel2.y * 3.0));
+}
+
 @fragment fn scene(@builtin(position) fc: vec4f) -> @location(0) vec4f {
   let px = vec2f(floor(fc.x) * 2.0 + f32((i32(fc.y) + i32(u.frame)) & 1) + 0.5, fc.y);
   let fj = px + u.jitter;
   let uv = vec2f(fj.x * 2.0 - u.res.x, u.res.y - fj.y * 2.0) / u.res.y;
   let ro = u.camPos;
   let rd = normalize(u.camFwd + (uv.x * u.camRight + uv.y * u.camUp) * u.fov);
+  if (ev.sel.z > 1.5) { gSelP = vec4f(ev.sel.xy, ev.sel.w, ev.sel2.y); }
   if (ev.wx.z > 0.5) { return roomRender(ro, rd, px); }
   var tProxy = 0.0;
   if (u.p5 < 0.5) { tProxy = max(textureLoad(proxyTex, vec2i(i32(px.x), i32(fc.y)), 0).r - 0.5, 0.0); }
@@ -7206,6 +7304,23 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
     var sf = surface(p, n, h.m, crd, h.t + tBase);
     if (first) { var nb = n; sf = weathering(sf, n, p, i32(h.m + 0.5), h.t, &nb); n = nb; }
     sf = frostify(sf, n, p, h.m);
+    // the selection: glowing, shimmering, and jelly (the view goes on through it, below)
+    let jelly = first && selIs(p, h.m);
+    if (jelly) {
+      sf.alb = mix(sf.alb, SEL_HI * 0.35, 0.5);
+      sf.emi += selGlow(p, n, crd);
+      sf.refl = 0.0;
+    }
+    // the city paused: the street grid glows green, with a pulse running out from the selection
+    if (first && ev.sel2.z > 0.5 && p.y < 0.6) {
+      let lqG = p.xz - (floor(p.xz / CS) + 0.5) * CS;
+      let eG = HALF - max(abs(lqG.x), abs(lqG.y));
+      let wG = 0.12 + h.t * 0.0025;
+      let lineG = 1.0 - smoothstep(wG, wG * 2.2, eG);
+      let sc = select(p.xz, (vec2f(ev.sel.xy) + 0.5) * CS, ev.sel.z > 0.5);
+      let pulse = 0.5 + 0.5 * sin(length(p.xz - sc) * 0.08 - ev.sel2.y * 3.0);
+      sf.emi += vec3f(0.25, 1.0, 0.35) * lineG * (0.6 + 1.2 * pulse) * (1.0 - smoothstep(600.0, 1400.0, h.t));
+    }
     var sha = 0.75;
     var occ = 0.85;
     if (first) {
@@ -7229,26 +7344,42 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
       break;
     }
     c += sf.alb * beamSpot(p);
-    if (sf.refl <= 0.02) { col += c * fT + f0; break; }
-    var r = reflect(crd, n);
-    r = normalize(r + rnd3(px, 3) * sf.rough * 2.0);
-    if (h.kind == 1) { r.y = abs(r.y); }
-    let w = clamp(sf.refl, 0.0, 1.0);
-    if (!(u.refl > 0.5 && h.t < 350.0 && sf.refl > 0.1)) {
-      var rc = fogApply(skyCol(r), p, r, TMAX);
-      rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));
-      col += mix(c, rc * sf.tint, w) * fT + f0;
-      break;
+    // the next ray: on through the selection (jelly), or reflected. One traceScene call site for both: the GPU
+    // compilers inline every call, and a second one doubled the pipeline's build time
+    var nro = p + n * 0.08;
+    var nrd = crd;
+    if (jelly) {
+      // jelly: part of the light comes through from behind, tinted, from where the ray leaves the selection's box
+      let b = selBox();
+      let tEx = max(boxExit(p, crd, b[0], b[1]), 0.05);
+      col += c * 0.6 * fT + f0;
+      wgt = mix(vec3f(1.0), SEL_HI, 0.35) * 0.4 * fT;
+      tBase = h.t + tEx;
+      nro = p + crd * (tEx + 0.1);
+    } else {
+      if (sf.refl <= 0.02) { col += c * fT + f0; break; }
+      var r = reflect(crd, n);
+      r = normalize(r + rnd3(px, 3) * sf.rough * 2.0);
+      if (h.kind == 1) { r.y = abs(r.y); }
+      let w = clamp(sf.refl, 0.0, 1.0);
+      if (!(u.refl > 0.5 && h.t < 350.0 && sf.refl > 0.1)) {
+        var rc = fogApply(skyCol(r), p, r, TMAX);
+        rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));
+        col += mix(c, rc * sf.tint, w) * fT + f0;
+        break;
+      }
+      col += c * (1.0 - w) * fT + f0;
+      wgt = sf.tint * w * fT;
+      tBase = h.t;
+      nrd = r;
     }
-    col += c * (1.0 - w) * fT + f0;
-    wgt = sf.tint * w * fT;
     var d2 = 1.0;
-    tBase = h.t;
-    cro = p + n * 0.08;
-    crd = r;
+    cro = nro;
+    crd = nrd;
     h = traceScene(cro, crd, 320.0, 22, 12, 18, &d2, false);
   }
   col += beamGlow(ro, rd, tOut) * (0.3 + u.windows);
+  col += selHalo(ro, rd, tOut);
   let tEv = select(tOut, FARMAX, hit.kind == 0);
   col += fireworksFx(ro, rd, tEv);
   col = launchFx(ro, rd, tEv, col);

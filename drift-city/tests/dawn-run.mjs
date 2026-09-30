@@ -96,6 +96,19 @@ for (let f = 0; f < N; f++) {
   // LIFEGEN=n: run both Life boards n generations before the render, so a gun's gliders are out (the runner's clock
   // barely moves, so the page itself steps them only a few times)
   if (process.env.LIFEGEN && f === 2) { const D = globalThis.__drift; for (let i = 0; i < +process.env.LIFEGEN; i++) { D.lifeStep(); D.lifeStepR(); } D.LIFE.acc = 1; }
+  // PAUSE=1: pause the city at frame 4; PICKXY=fx,fy: tap there (fractions of the view) at frame 5, as a tap selects
+  // while the city is paused; PICKPERSON=1: select the person nearest the middle of the view instead
+  if (process.env.PAUSE && f === 4) globalThis.__drift.cityPause(true);
+  if (process.env.PICKXY && f === 5) { const [fx, fy] = process.env.PICKXY.split(',').map(Number); globalThis.__drift.pickGo(fx * W, fy * H, false); const S = globalThis.__drift.PICK.sel; console.log('PICKLOG', S ? S.name + ' ' + JSON.stringify(S.building || (S.person && S.person.key)) : 'nothing'); }
+  if (process.env.PICKPERSON && f === 5) { const D = globalThis.__drift, c = D.CAMNOW, t = (1.3 - c.p[1]) / Math.min(c.f[1], -0.05), gx = c.p[0] + c.f[0] * t, gz = c.p[2] + c.f[2] * t;
+    const w = D.walkersNear(gx, gz, 40, D.wclock()).sort((a, b) => Math.hypot(a.x - gx, a.z - gz) - Math.hypot(b.x - gx, b.z - gz))[0];
+    // WALKERS=1: print where pick.js thinks each person near the view is on screen (to lay over the frame)
+    if (process.env.WALKERS) { const H2 = H, W2 = W; const out = [];
+      for (const v of D.walkersNear(c.p[0], c.p[2], 40, D.wclock())) { const d = [v.x - c.p[0], 1.1 - c.p[1], v.z - c.p[2]]; const zf = d[0] * c.f[0] + d[1] * c.f[1] + d[2] * c.f[2]; if (zf < 0.5) continue;
+        const ux = (d[0] * c.r[0] + d[1] * c.r[1] + d[2] * c.r[2]) / zf / 0.72, uy = (d[0] * c.up[0] + d[1] * c.up[1] + d[2] * c.up[2]) / zf / 0.72; out.push([Math.round((ux * H2 + W2) / 2), Math.round((H2 - uy * H2) / 2), v.kind, v.key]); }
+      console.log('WALKERS', JSON.stringify(out)); }
+    console.log('CLOCKLOG pick: wclock', D.wclock(), 'clock', D.now(), 'frame', f);
+    console.log('PICKLOG person', w ? w.kind + ' at ' + w.x.toFixed(1) + ',' + w.z.toFixed(1) + ' key ' + w.key : 'none'); if (w && !process.env.NOSELECT) D.pickSelect({ name: 'someone', x: w.x, z: w.z, y0: 0, r: 4, h: 2.2, person: w }); }
   if (process.env.HOP && f === 3) { const D = globalThis.__drift; if (process.env.HOP.startsWith('place:')) D.hopPlace(process.env.HOP.slice(6)); else D.hop(D.destById(process.env.HOP)); }
   // CAM=x,y,z,yaw,pitch: after a HOP, look from there instead
   if (process.env.CAM && f === 3) { const D = globalThis.__drift, [x, y, z, yaw, pitch] = process.env.CAM.split(',').map(Number), c = { ...D.NAV.visit.to, x, y, z, yaw, pitch }; D.NAV.visit.from = c; D.NAV.visit.to = c; }
@@ -109,6 +122,7 @@ for (let f = 0; f < N; f++) {
   await theDevice.queue.onSubmittedWorkDone();
 }
 const tEnd = performance.now();
+if (globalThis.__drift && globalThis.__drift.wclock) console.log('CLOCKLOG end: wclock', globalThis.__drift.wclock(), 'clock', globalThis.__drift.now());
 console.log('frames', N, 'wall ms/frame', ((tEnd - tStart) / N).toFixed(1), 'steady (last 20)', ((tEnd - tTail) / 20).toFixed(1), 'canvas', canvas.width, canvas.height);
 console.log('errors', errors.length ? errors.slice(0, 5) : 'none', 'err panel:', els.errMsg?.textContent || '');
 console.log('stats:', els.stats?.textContent);
