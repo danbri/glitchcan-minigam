@@ -29,6 +29,8 @@
     "fink:vars:strict": "node inklet/tools/fink-vars.mjs --strict",
     "fink:check": "node inklet/tools/fink-check.mjs",
     "skills:check": "node tools/check-skills.mjs",
+    "game-mcp": "node tools/game-mcp/server.mjs",
+    "test:game-mcp": "node tools/game-mcp/test.mjs",
     "test:backticks": "node packages/backticks/test/run.js",
     "test:finkcore": "node packages/finkcore/test/run.js",
     "test:fink:kernels": "npm run test:backticks && npm run test:finkcore",
