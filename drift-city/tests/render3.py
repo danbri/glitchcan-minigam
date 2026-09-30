@@ -2,7 +2,7 @@ import sys, math, struct, subprocess, time
 import numpy as np, wgpu
 from PIL import Image
 D='/home/claude/v3/'
-common=open(D+'common.wgsl').read(); import os; scene=open(os.environ.get('SCENE', D+'scene.wgsl')).read(); post=open(D+'post.wgsl').read()
+common=open(D+'common.wgsl').read()+open(D+'gen/design.wgsl').read(); import os; scene=open(os.environ.get('SCENE', D+'scene.wgsl')).read(); post=open(D+'post.wgsl').read()
 dev=wgpu.gpu.request_adapter_sync(power_preference='high-performance').request_device_sync()
 sm=dev.create_shader_module(code=common+scene); pm=dev.create_shader_module(code=common+post)
 F16=wgpu.TextureFormat.rgba16float; OUT=wgpu.TextureFormat.rgba8unorm

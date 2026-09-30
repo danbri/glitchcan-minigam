@@ -604,6 +604,7 @@ function initGL(reason) {
     if (hostPaused()) { last = now; requestAnimationFrame(frame); return; } // paused by the foafos shell (host.js)
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
+    pinchStep(dt);
     ema = ema * 0.93 + dt * 1000 * 0.07;
     dtS = dtS * 0.75 + dt * 0.25;
     // resolution follows frame time; shadows go first when the device struggles

@@ -2,7 +2,7 @@
 // About 5 minutes. Uses the shader's own Life rules; why and how: the drift-city skill, "Conway Corner".
 import fs from 'node:fs';
 const src = (f) => fs.readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
-const W = new Function(src('world.js') + '; return { cellAt, hsh, wrapS, heightAt, C };')();
+const W = new Function(src('gen/design.js') + src('world.js') + '; return { cellAt, hsh, wrapS, heightAt, C };')();
 const { cellAt, hsh, wrapS, heightAt, C } = W;
 const seed = (cx, cz) => (wrapS(cx) * 7919 + wrapS(cz) * 104729) | 0;
 const T = [];

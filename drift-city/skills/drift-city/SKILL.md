@@ -641,6 +641,99 @@ and the street's sound drops behind the walls (see Music).
   (dome with strings of bulbs, tables with lamps in two rings, the stand with a curtain, piano, kit and bass). The
   first cellar render had a lantern hanging 1 m in front of the camera; the lantern grid starts at x = 2.8.
 
+## Compile time: one call site per big function (September 2026)
+
+Owner: "efficient webgpu code ... analyze our wgsl for perf improvement opportunities at every level of
+abstraction". GPU compilers inline every call, so a pipeline is as big as its entry point with every call expanded;
+a large function with several call sites is copied that many times. Measure it without a GPU:
+`node drift-city/tools/wgsl-inline-report.mjs` prints the scene pipeline's size once inlined (in source lines) and
+the functions ranked by the lines they add (copies x own size). It overcounts a function called with a constant
+argument (`traceBand(..., 2)`): the compiler keeps only that branch.
+
+Measured on 30 September (cold, `MESA_SHADER_CACHE_DISABLE=true node drift-city/tests/pipeline-bench.mjs`; the
+same machine, back to back, because the absolute numbers move with its load):
+
+| change | inlined lines | scene pipeline |
+|---|---|---|
+| master (before) | 78,503 | 53 s |
+| `traceCells` merges its three height intervals, then ONE `traceSeg` call site | | 38 s |
+| `cellSDF` notes which egg, where, and replace or join; ONE `eggSDF` call after the switch | | 29 s |
+| `normalAO`: the normal and the occlusion in one loop, ONE `sdfFor` call site | 53,762 | 23 s |
+| `propsFx`: part, normal and occlusion of the hit prop in one loop, ONE `propSDF` call site | 50,014 | 24 s |
+| fog parts once, one car query per road point, ship index from the hit, landmark constants | 49,058 | 25 s |
+
+A room pipeline (`roomScene:1`) went from 5.8 s to 1.6 s: rooms call `propsFx`. The shadow pipeline builds with
+`override NO_DYN = 1` (it set `gNoDyn` at run time); it compiles in 0.7 s either way, so that is tidiness.
+
+Rules:
+- A new call of a big distance function (anything that reaches `cellSDF`, `giantSDF`, `propSDF`, `pedFigure`) goes
+  inside a loop that already calls it, with the arguments chosen before the call. Run the report before and after.
+- `normalAO` steps the occlusion along the geometric normal, before `weathering` bumps it and the ripples tilt it;
+  the old `calcAO` used the bumped one. The difference is fine speckle on the buildings (mean 0.5 of 255).
+- The prop normal is now a tetrahedral gradient (4 samples) like the city's, not central differences (6).
+
+## Frame time: the proxy pass (September 2026)
+
+The proxy pass drew 9,216 cell boxes x 36 vertices a frame: 332k vertex invocations, about 23 ms of 340 ms on lavapipe
+at 390x844. Now `boxVertex` draws only the faces towards the camera (18 vertices: the nearest surface of a box seen
+from outside is on them; a face pair seen edge-on draws nothing) and `proxyCulled` drops boxes whose nearest point
+is beyond TMAX (a pixel with no box starts at 1e9, the same result) or whose bounding sphere is behind the camera or
+out of view. Measured: proxies 22.8 and 26.2 ms (master) to 10.4 and 10.6 ms. The scene pass itself did not change
+(300 to 340 ms here, within the run-to-run spread). The camera inside a box is the `u.p5` case, where the scene does
+not read the proxies, so drawing only outward-facing faces is safe.
+
+Checking that a change is invisible: `node drift-city/tests/render-diff.mjs <old city.html> <new city.html> <outdir>`
+renders street, high, night and cellar with both builds (Dawn, FREEZE) and prints the mean and 99th-percentile
+difference, and writes old, new and difference (x8) pictures. Know the noise first: master against itself is 0.28 on
+the street (walkers), 0.02 high up, 1.15 in the cellar (the room pipeline is ready at a different frame each run,
+so the anti-aliasing history differs at every edge).
+
+Findings from the audit NOT done, and why:
+- 1c "skip moving objects in the primary cell march": the street cars are found ONLY there (the walker band traces
+  people, not cars); it would remove them.
+- 1b "no moving objects in reflections": a visible change; the owner's call.
+- One loop for the five band traces: each call has a constant `which`, so each site already keeps one query.
+- Worth doing next, measured first: a tileable 3D noise texture for `weathering`'s `vn3` (24 hashes per call);
+  per-cell `accrete` values (door side, awning, AC) in `cellTex` instead of 7 hashes a step; `var` lookup arrays
+  (`zc`, `pal`, `zoneLamp`, word lists) as module `const` or uniforms; `bubbleC()` as a uniform.
+
+## Design data: src/design and tools/gen-design.mjs (September 2026)
+
+Owner: "Ultimately we want to separate more shapes, design, modeling from pure procedural code. There may be
+opportunities for an offline build step". First step: the landmarks (the Assembly Hall, the Hive, the works, the
+ringed spire, the power beam) were written twice, in world.js and in scene.wgsl, with comments asking to keep them
+in step. They are now `drift-city/src/design/landmarks.json`, and `tools/gen-design.mjs` (run first by assemble.py)
+writes `src/gen/design.wgsl` (constants, added to `wgsl-common`) and `src/gen/design.js` (`DESIGN`, added before
+world.js). No runtime cost: they are constants, and the compiler folds them as before. `places.json`, baked from
+world.js, came out byte-identical. Tools that evaluate world.js or the WGSL by themselves (bakeplaces,
+life-view-search, tests/smooth.js, tests/render3.py) load the generated file too.
+- `top` is a landmark's height; `boundTop` is the box the shaders trace (the Hive's 272 m includes what stands on
+  its 240 m roof). They differed on purpose before; the JSON keeps both.
+- The next candidates, from the audit: the holograms' positions and hues (`holoFx`), the palettes (`pal`,
+  `zoneLamp`, `zc`), the Hive's board list, the poster lines; and one JSON per room from which the build writes the
+  room's WGSL map function and its walking bounds in tales.js (generate code, not a runtime table, so ROOM_K still
+  folds).
+
+## Pinch to move (September 2026)
+
+Owner: "supporting pinch (bigger and smaller) as a way of moving the user / viewpoint in the world, perhaps snappy
+quick moves also set some inertia momentum too". `PINCH` in main.js: fingers apart moves you towards what you look
+at, together moves you back. Walking in a scene: `inp.move` (up to 4x the stick). Flying by hand: down or up
+(`inp.climb`, proportional to height, so it feels like a zoom). The drone's own flight: `st.altBias` (dive or rise).
+The map view: zoom (`MAPV.wheel`). Space keeps its old pinch (`wheelAcc`).
+- While the fingers move, the view follows them (`PINCH.acc`, the spread's log change, spent each frame). On lift, a
+  pinch faster than about a doubling in 0.35 s (|rate| >= 2 in log units a second) leaves its speed, which dies
+  away (`exp(-2.2 t)`); a slower one, or fingers that had stopped for 120 ms, leaves nothing. 1.2 was too low: a
+  slow pinch in kept drifting.
+- Times come from the events' `timeStamp`, not `performance.now()`, so the Dawn harness (which runs its own clock)
+  and a browser agree.
+- Two fingers do not steer: the one-finger drag restarts from where the second finger lifts, and a pinch that just
+  ended is not a tap.
+- The WebGL fallback has no walking or free flight (it never calls `navStep`), so a headless Chromium page cannot
+  test this. `node drift-city/tests/pinch.mjs` drives real pointer events through dawn-run (`PINCH=a,b,n`); the
+  harness's stub page used to keep only the LAST listener of each event, which is why the first attempt moved
+  nothing. It now calls them all.
+
 ## Rooms have their own pipelines (September 2026)
 
 Owner: "Very slow to load; is that getting worse?" Measured cold builds of the scene pipeline (Node Dawn on

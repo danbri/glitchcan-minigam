@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import { compileStory, knotTags, STORY_FILES } from './story.mjs';
 const src = (f) => fs.readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
-const W = new Function(src('world.js') + src('tales.js').split('// ---------- the story panel')[0] + '; return { buildPlaces };')();
+const W = new Function(src('gen/design.js') + src('world.js') + src('tales.js').split('// ---------- the story panel')[0] + '; return { buildPlaces };')();
 const P = W.buildPlaces().map((p) => ({ ...p, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(4), pitch: +p.pitch.toFixed(4) }));
 // every place a story refers to must exist (read from the compiled story's knot tags)
 const need = [];

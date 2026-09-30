@@ -1,7 +1,7 @@
 const fs = require('fs');
 globalThis.document = { getElementById: () => null };
 const stub = 'function clampv(v,a,b){return Math.min(b,Math.max(a,v));}function dot3(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}function cross3(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}function norm3(a){const l=Math.hypot(a[0],a[1],a[2]);return [a[0]/l,a[1]/l,a[2]/l];}let FB_ACTIVE=false;let clock=0,lastInput=-100;const st={x:0,y:150,z:0,yaw:2.8,pitch:0.15,roll:0};function cameraVectors(){const cp=Math.cos(st.pitch);const f=[Math.cos(st.yaw)*cp,Math.sin(st.pitch),Math.sin(st.yaw)*cp];const r=norm3([-f[2],0,f[0]]);const up=cross3(r,f);return {f,r,up};}function showHint(){}function syncLabels(){}let todIdx=0,todFrom=null,todT=1,todAuto=0;const EX={};function currentTod(){return {sun:norm3([0.62,0.3,0.42])};}';
-const W = new Function(stub + fs.readFileSync('../src/world.js', 'utf8') + fs.readFileSync('../src/titan.js', 'utf8') + ';return {st,NAV,startTrip,navStep,destById,flatCamTitan,len3,sub3,TR,sunTitanFromLocal,norm3,arriveRegion};')();
+const W = new Function(stub + fs.readFileSync('../src/gen/design.js', 'utf8') + fs.readFileSync('../src/world.js', 'utf8') + fs.readFileSync('../src/titan.js', 'utf8') + ';return {st,NAV,startTrip,navStep,destById,flatCamTitan,len3,sub3,TR,sunTitanFromLocal,norm3,arriveRegion};')();
 W.NAV.sunT = W.sunTitanFromLocal(W.norm3([0.62, 0.3, 0.42]));
 for (const dest of process.argv.slice(2)) {
   if (W.NAV.site.id !== 'home') W.arriveRegion(W.destById('home'), true);
