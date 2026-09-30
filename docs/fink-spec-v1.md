@@ -1042,6 +1042,11 @@ the reader sets the share with a grip on the seam and may swap the order
 (the window manager keeps both per device). The layout moves only the
 story window that owns the world: other open apps keep their places.
 
+
+`facts` (optional, up to 4): labelled lines about the thing,
+`{ label, value }` (label ≤ 20 characters, value ≤ 100), shown under the
+detail. Drift uses it for a person's home and workplace, real buildings of
+the city chosen by the person's slot.
 ### 6.3 Known v1 leaks (scheduled for v2)
 
 Content in platform files, tracked for removal: `fink-config.js`

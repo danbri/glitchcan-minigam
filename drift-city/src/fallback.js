@@ -627,7 +627,7 @@ function initGL(reason) {
     gl.uniform3fv(U.camF, cam.f); gl.uniform3fv(U.camR, cam.r); gl.uniform3fv(U.camU, cam.up);
     gl.uniform2f(U.res, canvas.width, canvas.height);
     gl.uniform1f(U.fov, 0.72); gl.uniform1f(U.time, wclock); gl.uniform1f(U.win, tod.win); gl.uniform1f(U.stars, tod.stars); gl.uniform1f(U.den, tod.den);
-    const night = Math.min(1, Math.max(0, (tod.win - 0.25) / 0.8)), ak = Math.floor(clock / 330);
+    const night = Math.min(1, Math.max(0, (tod.win - 0.25) / 0.8)), ak = Math.floor(wclock / 330);
     gl.uniform1f(U.aur, night * (hsh(ak, 1, 170) < 0.4 ? 1 : 0));
     gl.uniform1f(U.shadowsOn, shadows);
     const sg = skyGeometry();

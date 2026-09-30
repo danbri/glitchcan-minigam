@@ -4823,7 +4823,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let lifeP = select(0.25, 0.85, cfz.h >= 12.0 * 3.6);
         let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < lifeP;
         let lang = fract(atan2(lq.y - cfz.off.y, lq.x - cfz.off.x) / 6.2831853 + 1.0);
-        let fx = select(facU / select(1.5, 1.1, mega), lang * 64.0, lifeT);
+        let fx = select(facU / select(1.5, 1.1, mega), lang * 32.0, lifeT);
         let fy = p.y / select(3.6, 3.0, mega);
         let gx = fract(fx);
         let gy = fract(fy);
@@ -4849,10 +4849,18 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         if (lifeT) {
           // the cells stay sharp much further out than the other windows (they are what a visitor looks for), and
           // bright enough to see by day
+          // the round towers' board (lifeColR, its gun facing Conway Corner), 32 columns round; a row as tall as a
+          // column is wide (a 64-column board in 3.6 m floors read as thin stripes, as on the organic towers)
           let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
-          let lc = lifeCol(i32(floor(fx)) + (cseed & 63), i32(floor((cfz.h - p.y) / 3.6)));
-          lit = max(lc.x, max(lc.y, lc.z)) * (1.0 - opaque);
-          s.emi = mix(vec3f(0.06, 0.12, 0.09), lc * (1.0 - opaque), lifeD) * (1.2 + 1.0 * u.windows);
+          let rrL = min(cfz.w.x, cfz.w.y) * 0.85;
+          let cellHL = max(0.8, (4.0 * (cfz.w.x + cfz.w.y) - 1.717 * rrL) / 32.0);
+          let rowL = (cfz.h - p.y) / cellHL;
+          let gyL = fract(rowL);
+          let opL = max(mull, (1.0 - smoothstep(0.03, 0.07, min(gyL, 1.0 - gyL))) * detail);
+          let lc = lifeColR(i32(floor(fx)), i32(floor(rowL)));
+          lit = max(lc.x, max(lc.y, lc.z)) * (1.0 - opL);
+          s.alb = mix(glass, mix(vec3f(0.13, 0.135, 0.145), vec3f(0.17, 0.15, 0.12), warmGlass), opL);
+          s.emi = mix(vec3f(0.06, 0.12, 0.09), lc * (1.0 - opL), lifeD) * (1.6 + 0.8 * u.windows);
         }
         // Life on the flat faces of the stepped towers (owner, September 2026: their window grid "looks more naturally
         // Conway-esque" than the round towers). A cell is a pane split by a transom, 1.5 m by 1.8 m; 40 rows from the

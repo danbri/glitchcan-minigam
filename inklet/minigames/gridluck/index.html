@@ -89,46 +89,23 @@
             try { gameFrame.contentWindow?.postMessage(d, '*'); } catch (e) { /* not ready */ }
         });
 
-        // Monitor game state and sync progress
-        setInterval(() => {
-            if (!gameActive) return;
-            try {
-                const doc = gameFrame.contentDocument;
-                if (!doc) return;
-
-                // Check for game over screen
-                const gameOverScreen = doc.getElementById('gameOverScreen');
-                if (gameOverScreen && gameOverScreen.style.display === 'flex') {
-                    // Game has ended
-                    const messageText = doc.getElementById('gameOverMessageText')?.textContent || '';
-                    const won = messageText.includes('WIN') || messageText.includes('VICTORY');
-
-                    sdk.complete({
-                        success: won,
-                        score: lastScore,
-                        variables: {
-                            gridluck_won: won,
-                            gridluck_score: lastScore
-                        }
-                    });
-                    gameActive = false;
-                    return;
-                }
-
-                // Try to read current score from UI
-                const scoreEl = doc.querySelector('#ui-level, #scoreDisplay, .score');
-                if (scoreEl) {
-                    const scoreMatch = scoreEl.textContent.match(/\d+/);
-                    if (scoreMatch) {
-                        const currentScore = parseInt(scoreMatch[0], 10);
-                        if (currentScore !== lastScore) {
-                            lastScore = currentScore;
-                            sdk.progress({ gems: currentScore, score: currentScore });
-                        }
-                    }
-                }
-            } catch (e) { /* iframe not accessible */ }
-        }, 1000);
+        // The game's score and its end, as messages from the game's frame. (This page used to read the game's
+        // document every second; the opaque sandbox forbids that, so the result never reached the story and the
+        // only way out was the close button.)
+        window.addEventListener('message', (event) => {
+            if (event.source !== gameFrame.contentWindow) return;
+            const d = event.data;
+            if (!d || !gameActive) return;
+            if (d.type === 'host-progress' && typeof d.score === 'number' && d.score !== lastScore) {
+                lastScore = d.score;
+                sdk.progress({ gems: lastScore, score: lastScore });
+            } else if (d.type === 'host-result') {
+                const won = !!d.won;
+                if (typeof d.score === 'number') lastScore = d.score;
+                sdk.complete({ success: won, score: lastScore, variables: { gridluck_won: won, gridluck_score: lastScore } });
+                gameActive = false;
+            }
+        });
 
         // Route console logs to host
         if (window.parent !== window) {

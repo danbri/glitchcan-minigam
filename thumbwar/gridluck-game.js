@@ -105,6 +105,10 @@ export class Game{
     addEventListener('resize',()=>this.setupCanvas()); this.setupCanvas(); 
     this.resetGame(); 
     this.input(); this.setupExtraInputs();
+    // to a host (inklet/minigames/gridluck, a sandboxed frame that cannot read this document): the score as it
+    // changes and the end; standalone, no parent, nothing is sent
+    this.tellHost = (m) => { if (window.parent !== window) { try { window.parent.postMessage(m, '*'); } catch (e) { /* no host */ } } };
+    this.lastToldScore = -1;
     // paused by a host (the foafos shell, through inklet/minigames/gridluck): no updates and no sound until resumed
     this.hostPaused = false;
     addEventListener('message', (e) => { const d = e.data; if (!d || d.type !== 'host-pause') return; this.hostPaused = !!d.paused;
@@ -127,6 +131,7 @@ export class Game{
       if (this.gameOverFlag) { this.lastTime = 0; return; }
       const dt = Math.min(100, timestamp - this.lastTime); this.lastTime = timestamp;
       if (!this.hostPaused) this.update(dt);
+      if (this.score !== this.lastToldScore) { this.lastToldScore = this.score; this.tellHost({ type: 'host-progress', score: this.score }); }
       this.draw(timestamp); 
       requestAnimationFrame(this.gameLoop.bind(this));
   }
@@ -756,6 +761,7 @@ export class Game{
           this.gameOverFlag = true; 
           this.gameOverMessageText.textContent = 'GAME OVER! Final Score: ' + this.score + '\n\nPress ENTER or SPACE to restart'; 
           this.gameOverScreen.style.display = 'flex';
+          this.tellHost({ type: 'host-result', won: false, score: this.score });
         } else if (this.ply.lives >= 0) { 
           Object.assign(this.ply,{gx:9,gy:15,x:9,y:15,t:0, dir: 'L', next:null, deathTimer:0, deathPhase:0}); 
           this.frenziedGhosts = []; // Clear frenzied ghosts on player death
