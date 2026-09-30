@@ -447,6 +447,7 @@ window.FinkWM = {
             const check = typeof it.checked === 'boolean';
             const b = this._row(group ? '›' : check ? (it.checked ? '✓' : '') : '•', it.label, it.detail);
             b.dataset.action = it.id;
+            if (it.closes) b.dataset.closes = '1';
             if (check) b.setAttribute('aria-pressed', String(it.checked));
             if (group) b.setAttribute('aria-expanded', 'false');
             if (it.disabled) b.disabled = true;
@@ -471,8 +472,9 @@ window.FinkWM = {
                 { label: 'Mute everything', checked: mute?.getAttribute('aria-pressed') === 'true', run: () => mute?.click() },
                 ...[100, 75, 50, 25].map((v) => ({ label: `Volume ${v}%`, checked: Math.abs(Number(vol?.value || 0) - v) < 1, run: () => setVol(v) })),
             ] },
-            { id: 'look', icon: '🎨', label: 'Look', items: () => q('#skin-picker button').map((b) => ({
-                label: b.textContent.trim(), checked: b.getAttribute('aria-pressed') === 'true' || b.classList.contains('active'), run: () => b.click() })) },
+            { id: 'look', icon: '🎨', label: 'Look', items: () => [...q('#skin-picker button').map((b) => ({
+                label: b.textContent.trim(), checked: b.getAttribute('aria-pressed') === 'true' || b.classList.contains('active'), run: () => b.click() })),
+                { label: 'Menu as a ring (radial, first version)', checked: this._radialOn(), run: () => this._setRadial(!this._radialOn()), closes: true }] },
             { id: 'widgets', icon: '🧩', label: 'Widgets', items: () => q('#foafos-launcher button').map((b) => ({
                 label: b.textContent.trim(), run: () => b.click(), closes: true })) },
             { id: 'session', icon: '👤', label: 'Session and capabilities', run: () => window.FoafOS?.openSession?.(), closes: true },
@@ -518,6 +520,132 @@ window.FinkWM = {
             });
             sect.appendChild(b);
         }
+    },
+    // ── the menu as a ring ───────────────────────────────────────────
+    // Owner, September 2026: "Once menus all in one place we can look at making them radial with a top level fork
+    // between foafos vs running cluster of apps/stories/minigams/docs ("project")". First version, off by default:
+    // the first ring is that fork, the second the chosen side's rows. The rows are the list menu's own buttons,
+    // clicked on the reader's behalf, so a ring item does exactly what its row does. Keyboard: Tab or the arrow
+    // keys move round, Enter chooses, Escape closes.
+    _radialOn() { try { return localStorage.getItem('foafos.menu.radial') === '1'; } catch (e) { return false; } },
+    _setRadial(on) { try { localStorage.setItem('foafos.menu.radial', on ? '1' : '0'); } catch (e) { /* storage off */ } },
+    _radialItems(branch) {
+        // the project's ring: the app's own rows, then two smaller rings (how the window sits, the on-screen
+        // controls) and Exit; foafos's ring: its own rows and pages
+        const ids = branch === 'project' ? ['wm-app-sect'] : branch === 'project/win' ? ['wm-win-sect']
+            : branch === 'project/pad' ? ['wm-pad-sect'] : ['wm-sys-sect', 'wm-shell-sect'];
+        const out = [];
+        for (const id of ids) {
+            const sect = document.getElementById(id);
+            if (!sect || sect.hidden) continue;
+            for (const b of sect.querySelectorAll('button')) {
+                if (b.hidden || b.disabled) continue;
+                const label = (b.querySelector('.wm-label')?.textContent || b.textContent || '').trim();
+                if (!label) continue;
+                out.push({ btn: b, icon: (b.querySelector('.wm-ico')?.textContent || '').trim() || '•', label,
+                    stay: !b.dataset.closes && (b.hasAttribute('aria-expanded') || b.hasAttribute('aria-pressed') || b.classList.contains('wm-back')),
+                    pressed: b.getAttribute('aria-pressed') === 'true' });
+            }
+        }
+        if (branch === 'project') {
+            out.push({ go: 'project/win', icon: '▣', label: 'Window', stay: true });
+            const pad = document.getElementById('wm-pad-sect');
+            if (pad && !pad.hidden && pad.querySelector('button')) out.push({ go: 'project/pad', icon: '🎮', label: 'On-screen controls', stay: true });
+            const exit = document.getElementById('returnToStory');
+            if (exit && !exit.hidden) out.push({ btn: exit, icon: '✕', label: (exit.querySelector('.wm-label')?.textContent || 'Exit').trim(), stay: false });
+        }
+        return out;
+    },
+    _openRadial() {
+        if (!this._radial) {
+            const o = document.createElement('div');
+            o.id = 'wm-radial';
+            o.setAttribute('role', 'dialog');
+            o.setAttribute('aria-label', 'Menu');
+            o.addEventListener('click', (e) => { if (e.target === o) this._closeRadial(); });
+            o.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') { e.stopPropagation(); this._closeRadial(); return; }
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    const bs = [...o.querySelectorAll('button')];
+                    const i = bs.indexOf(document.activeElement);
+                    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
+                    bs[(i + d + bs.length) % bs.length]?.focus();
+                    e.preventDefault();
+                }
+            });
+            document.body.appendChild(o);
+            this._radial = o;
+        }
+        this._radialBranch = this.active ? null : 'foafos';
+        this._radialPage = 0;
+        this._radial.hidden = false;
+        this._renderRadial();
+    },
+    _closeRadial() {
+        if (this._radial) this._radial.hidden = true;
+        this._shellPage = null;
+        this.elements.handle?.focus();
+    },
+    _renderRadial() {
+        const o = this._radial;
+        o.textContent = '';
+        const W = window.innerWidth, H = window.innerHeight;
+        const R = Math.max(90, Math.min(150, Math.min(W, H) / 2 - 56));
+        const cx = W / 2, cy = H / 2;
+        const place = (el, a) => { el.style.left = `${Math.round(cx + Math.cos(a) * R)}px`; el.style.top = `${Math.round(cy + Math.sin(a) * R)}px`; };
+        const bubble = (icon, label, cls) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'wm-rad-item' + (cls ? ' ' + cls : '');
+            const i = document.createElement('span'); i.className = 'wm-rad-ico'; i.setAttribute('aria-hidden', 'true'); i.textContent = icon;
+            const l = document.createElement('span'); l.className = 'wm-rad-label'; l.textContent = label;
+            b.append(i, l);
+            b.setAttribute('aria-label', label);
+            o.appendChild(b);
+            return b;
+        };
+        const canBack = this._radialBranch && (this.active || this._radialBranch.includes('/'));
+        const centre = bubble(canBack ? '‹' : '✕', canBack ? 'Back' : 'Close', 'wm-rad-centre');
+        centre.style.left = `${cx}px`; centre.style.top = `${cy}px`;
+        centre.addEventListener('click', () => {
+            if (!canBack) { this._closeRadial(); return; }
+            this._radialBranch = this._radialBranch.includes('/') ? this._radialBranch.split('/')[0] : null;
+            this._shellPage = null; this._radialPage = 0; this._renderRadial();
+        });
+        if (!this._radialBranch) {
+            // the fork: foafos, or the project now running (its app's name, when the app says it)
+            const f = bubble('⚙', 'foafos', 'wm-rad-fork');
+            // one above the centre, one below: a phone is taller than it is wide
+            f.style.left = `${cx}px`; f.style.top = `${Math.round(cy - R * 0.85)}px`;
+            f.addEventListener('click', () => { this._radialBranch = 'foafos'; this._radialPage = 0; this._renderRadial(); });
+            const p = bubble('▶', this._appTitle || 'This project', 'wm-rad-fork');
+            p.style.left = `${cx}px`; p.style.top = `${Math.round(cy + R * 0.85)}px`;
+            p.addEventListener('click', () => { this._radialBranch = 'project'; this._radialPage = 0; this._renderRadial(); });
+            f.focus();
+            return;
+        }
+        const all = this._radialItems(this._radialBranch);
+        const per = 8, pages = all.length > per ? Math.ceil(all.length / (per - 1)) : 1;
+        const page = Math.min(this._radialPage || 0, pages - 1);
+        const list = pages > 1 ? all.slice(page * (per - 1), page * (per - 1) + per - 1) : all;
+        const n = list.length + (pages > 1 ? 1 : 0);
+        list.forEach((it, k) => {
+            const b = bubble(it.icon, it.label, it.pressed ? 'wm-rad-on' : '');
+            if (it.btn?.hasAttribute('aria-pressed')) b.setAttribute('aria-pressed', String(it.pressed));
+            place(b, -Math.PI / 2 + (k / n) * 2 * Math.PI);
+            b.addEventListener('click', () => {
+                if (it.go) { this._radialBranch = it.go; this._radialPage = 0; this._renderRadial(); return; }
+                it.btn.click();
+                if (it.stay) setTimeout(() => this._renderRadial(), 80);
+                else this._closeRadial();
+            });
+        });
+        if (pages > 1) {
+            const m = bubble('⋯', `More (${page + 1} of ${pages})`, '');
+            place(m, -Math.PI / 2 + ((n - 1) / n) * 2 * Math.PI);
+            m.addEventListener('click', () => { this._radialPage = (page + 1) % pages; this._renderRadial(); });
+        }
+        o.querySelector('.wm-rad-item:not(.wm-rad-centre)')?.focus();
     },
     // new activity while the Activity window is closed: a count on the ☰
     setUnread(n) {
@@ -569,6 +697,15 @@ window.FinkWM = {
 
     _setCollapsed(collapsed) {
         const { chrome, handle } = this.elements;
+        // the menu as a ring (a setting, ☰ › Look): the list's rows are built as usual, unshown, and the ring
+        // offers the same buttons (_openRadial)
+        if (!collapsed && this._radialOn()) {
+            this._renderPadSection();
+            this._renderAppSection();
+            this._renderShellSection();
+            this._openRadial();
+            return;
+        }
         // If the buttons are about to display:none while one of them holds
         // focus, the focus would silently land on <body>. Hand it to the
         // handle instead — the control that brings everything back.

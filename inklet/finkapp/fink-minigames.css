@@ -1143,3 +1143,19 @@ body.fink-wm-dragging iframe { pointer-events: none; }
 #wm-unread { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
   background: #e0569a; color: #fff; font: 700 11px/18px system-ui, sans-serif; text-align: center; pointer-events: none; }
 #wm-unread[hidden] { display: none; }
+
+/* the menu as a ring (fink-wm.js _openRadial): a dimmed screen, a centre button (Close or Back) and up to eight
+   round buttons on a circle; the first ring is the fork between foafos and the running project */
+#wm-radial { position: fixed; inset: 0; z-index: 3000; background: rgba(0, 0, 0, 0.55); }
+#wm-radial[hidden] { display: none; }
+.wm-rad-item { position: absolute; transform: translate(-50%, -50%); width: 86px; height: 86px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px;
+  background: rgba(10, 14, 22, 0.94); color: #eef; border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer;
+  font: 600 11px/1.15 system-ui, sans-serif; text-align: center; }
+.wm-rad-item:focus-visible { outline: 3px solid #ff0; }
+.wm-rad-ico { font-size: 20px; line-height: 1; }
+.wm-rad-label { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-width: 76px; }
+.wm-rad-centre { width: 70px; height: 70px; background: rgba(40, 44, 56, 0.96); }
+.wm-rad-fork { width: 110px; height: 110px; font-size: 13px; border-color: var(--sk-accent, #4fd); }
+.wm-rad-fork .wm-rad-ico { font-size: 26px; }
+.wm-rad-on { border-color: var(--sk-accent, #4fd); box-shadow: 0 0 10px var(--sk-accent, #4fd); }

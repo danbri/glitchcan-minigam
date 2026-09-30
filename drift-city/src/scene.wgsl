@@ -33,7 +33,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, sel: vec4f, sel2: vec4f, life: array<vec4f, 214> };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, sel: vec4f, sel2: vec4f, nb: array<vec4f, 8>, life: array<vec4f, 214> };
 // Conway's Life (life.js): per cell a colour class the page works out when it steps the board (lifePack), six 4-bit
 // classes to a float: the flat board (64 columns by 40 rows) from float 0, the round towers' board (32 by 80) from
 // float 428. One read per pixel; counting the neighbours here cost a fifth of the scene's time.
@@ -836,15 +836,6 @@ fn cylV(ro: vec3f, rd: vec3f, c: vec2f, rad: f32, y0: f32, y1: f32) -> f32 {
     }
   }
   return best;
-}
-fn boxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> f32 {
-  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
-  let t0 = (lo - ro) * inv;
-  let t1 = (hi - ro) * inv;
-  let tn = max(max(min(t0.x, t1.x), min(t0.y, t1.y)), min(t0.z, t1.z));
-  let tf = min(min(max(t0.x, t1.x), max(t0.y, t1.y)), max(t0.z, t1.z));
-  if (tf < max(tn, 0.0)) { return -1.0; }
-  return select(tn, -1.0, tn <= 0.0);
 }
 // nearest tube structure along a ray (within 220 m): (t, material), t < 0 for none
 fn tubeStructTrace(ro: vec3f, rd: vec3f, tEnd: f32) -> vec2f {
@@ -7210,7 +7201,7 @@ fn selIs(p: vec3f, m: f32) -> bool {
   if (!all(ci == vec2i(ev.sel.xy))) { return false; }
   let mi = i32(m + 0.5);
   // a person: the figure at the selected slot's place (pedPos; not pedQ again, every call is inlined)
-  if (ev.sel.z > 1.5) { return mi == 24 && length(p.xz - pedPos(ci, i32(ev.sel.w))) < 1.3; }
+  if (ev.sel.z > 1.5) { return mi == 24 && length(p.xz - pedPos(ci, i32(ev.sel.w))) < 0.9; }
   let lq = p.xz - (vec2f(ci) + 0.5) * CS;
   return max(abs(lq.x), abs(lq.y)) < 9.7 && p.y > 0.4 && mi != 24 && mi != 12 && mi != 14 && mi != 17 && mi != 28;
 }
@@ -7219,18 +7210,11 @@ fn selBox() -> array<vec3f, 2> {
   if (ev.sel.z > 1.5) {
     let pp = pedPos(vec2i(ev.sel.xy), i32(ev.sel.w));
     let c = vec3f(pp.x, 1.1, pp.y);
-    return array<vec3f, 2>(c - vec3f(0.7, 1.1, 0.7), c + vec3f(0.7, 1.4, 0.7));
+    // the same 0.9 m as selIs: a hit counted as the person must be inside the box the jelly pass leaves through
+    return array<vec3f, 2>(c - vec3f(0.95, 1.1, 0.95), c + vec3f(0.95, 1.6, 0.95));
   }
   let c = (vec2f(ev.sel.xy) + 0.5) * CS;
   return array<vec3f, 2>(vec3f(c.x - 9.7, 0.0, c.y - 9.7), vec3f(c.x + 9.7, ev.sel2.x + 3.0, c.y + 9.7));
-}
-// where a ray leaves a box (from inside or through it)
-fn boxExit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> f32 {
-  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
-  let t0 = (lo - ro) * inv;
-  let t1 = (hi - ro) * inv;
-  let tx = max(t0, t1);
-  return min(tx.x, min(tx.y, tx.z));
 }
 // the selection's colour: a thick rim, bands of light running up it, sparks
 fn selGlow(p: vec3f, n: vec3f, rd: vec3f) -> vec3f {
@@ -7240,8 +7224,9 @@ fn selGlow(p: vec3f, n: vec3f, rd: vec3f) -> vec3f {
   let spark = step(0.992, hsh(i32(floor(p.x * 2.5)) + i32(floor(rt * 9.0)) * 977, i32(floor(p.y * 2.5)), i32(floor(p.z * 2.5)) + 811));
   return SEL_HI * (3.0 * rim + 1.4 * band + 4.0 * spark) * (0.8 + 0.4 * sin(rt * 3.0));
 }
-// where a ray enters and leaves a box (enter > leave: it misses)
-fn selBoxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> vec2f {
+// where a ray enters and leaves a box: (enter, leave); enter > leave is a miss, leave < 0 is behind. A ray that starts
+// inside has enter < 0 < leave. (The only ray-box test in this module; the far field's inline slab keeps its own.)
+fn boxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> vec2f {
   let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
   let t0 = (lo - ro) * inv;
   let t1 = (hi - ro) * inv;
@@ -7249,20 +7234,42 @@ fn selBoxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> vec2f {
   let tf = max(t0, t1);
   return vec2f(max(tn.x, max(tn.y, tn.z)), min(tf.x, min(tf.y, tf.z)));
 }
+// While the city is paused, the selection's neighbours (pick.js pickNearSet, ev.nb: centre x, centre z, half width,
+// top; top 0 = none): a thin shimmering outline round each one's box, so their extents show and a tap on one's ring
+// makes it the selection (owner, September 2026: "the neighbouring entities of THAT item in turn are shimmering and
+// their extents determined")
+fn nbHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
+  if (ev.sel2.z < 0.5) { return vec3f(0.0); }
+  var col = vec3f(0.0);
+  for (var i = 0; i < 8; i++) {
+    let b = ev.nb[i];
+    if (b.w <= 0.0) { break; }
+    let lo = vec3f(b.x - b.z, 0.0, b.y - b.z);
+    let hi = vec3f(b.x + b.z, b.w, b.y + b.z);
+    let core = boxHit(ro, rd, lo, hi);
+    if (core.x <= core.y && core.y > 0.0) { continue; }
+    let w = max(length(vec3f(b.x, b.w * 0.5, b.y) - ro) * 0.007, 0.08);
+    let g = boxHit(ro, rd, lo - vec3f(w, 0.0, w), hi + vec3f(w));
+    if (g.x > g.y || g.y <= 0.0 || tHit < g.x - w * 6.0) { continue; }
+    let q = ro + rd * max(g.x, 0.0);
+    col += vec3f(0.45, 1.0, 0.65) * (0.35 + 0.35 * sin(q.y * 0.6 - ev.sel2.y * 3.0 + f32(i)));
+  }
+  return col;
+}
 // the thick edge round the selection's box: the ray against the box grown by one to four widths, a width being
 // about 1.2% of the distance, so the edge is as thick on screen far away as near. Hidden where something nearer
 // stands in front; inside the box's own outline the thing glows itself (selGlow)
 fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
   if (ev.sel.z < 0.5) { return vec3f(0.0); }
   let b = selBox();
-  let core = selBoxHit(ro, rd, b[0], b[1]);
+  let core = boxHit(ro, rd, b[0], b[1]);
   if (core.x <= core.y && core.y > 0.0) { return vec3f(0.0); }
   let w = max(length((b[0] + b[1]) * 0.5 - ro) * 0.012, 0.12);
   var g = 0.0;
   var tn = 1e9;
   for (var i = 1; i <= 4; i++) {
     let e = w * f32(i);
-    let hb = selBoxHit(ro, rd, b[0] - vec3f(e, 0.0, e), b[1] + vec3f(e));
+    let hb = boxHit(ro, rd, b[0] - vec3f(e, 0.0, e), b[1] + vec3f(e));
     if (hb.x <= hb.y && hb.y > 0.0) { g += 0.25; tn = min(tn, max(hb.x, 0.0)); }
   }
   if (g <= 0.0 || tHit < tn - w * 6.0) { return vec3f(0.0); }
@@ -7371,7 +7378,7 @@ fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
     if (jelly) {
       // jelly: part of the light comes through from behind, tinted, from where the ray leaves the selection's box
       let b = selBox();
-      let tEx = max(boxExit(p, crd, b[0], b[1]), 0.05);
+      let tEx = max(boxHit(p, crd, b[0], b[1]).y, 0.05);
       col += c * 0.6 * fT + f0;
       wgt = mix(vec3f(1.0), SEL_HI, 0.35) * 0.4 * fT;
       tBase = h.t + tEx;
@@ -7400,6 +7407,7 @@ fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
   }
   col += beamGlow(ro, rd, tOut) * (0.3 + u.windows);
   col += selHalo(ro, rd, tOut);
+  col += nbHalo(ro, rd, tOut);
   let tEv = select(tOut, FARMAX, hit.kind == 0);
   col += fireworksFx(ro, rd, tEv);
   col = launchFx(ro, rd, tEv, col);

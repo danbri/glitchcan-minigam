@@ -459,6 +459,27 @@ try {
     card && card.facts.some((f) => /^Home: /.test(f)) && card.btns.includes('Their home') && home && card.facts[0].endsWith(home)
       ? pass(`a person has a home and a workplace in the city (${card.facts.join('; ')}); "Their home" selects it`)
       : fail(`person's places: ${JSON.stringify({ who, card, home })}`);
+    // 20g. the menu as a ring (owner, September 2026: "making them radial with a top level fork between foafos vs
+    // running cluster of apps/stories/minigams/docs"): a setting; the first ring is that fork, the second the
+    // chosen side's rows, which do what the list's rows do
+    const ring = await wpage.evaluate(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const labels = () => [...document.querySelectorAll('#wm-radial:not([hidden]) button')].map((b) => b.getAttribute('aria-label'));
+      FinkWM._setRadial(true);
+      document.getElementById('wm-handle').click(); await wait(200);
+      const fork = labels();
+      document.querySelectorAll('#wm-radial .wm-rad-fork')[1].click(); await wait(200);
+      const proj = labels();
+      [...document.querySelectorAll('#wm-radial button')].find((b) => /^Pause the city/.test(b.getAttribute('aria-label'))).click(); await wait(400);
+      const closed = document.getElementById('wm-radial').hidden;
+      FinkWM._setRadial(false);
+      return { fork, proj, closed };
+    });
+    const pausedByRing = await wcity.evaluate(() => __drift.CITYP.on);
+    if (pausedByRing) await wcity.evaluate(() => __drift.cityPause(false));
+    ring.fork.includes('foafos') && ring.fork.length === 3 && ring.proj.some((l) => /^Pause the city/.test(l)) && ring.closed && pausedByRing
+      ? pass(`the menu as a ring: the fork (${ring.fork.slice(1).join(' / ')}), then the project's rows (${ring.proj.length - 1}); "Pause the city" chosen there pauses the city and closes the ring`)
+      : fail(`radial menu: ${JSON.stringify({ ring, pausedByRing })}`);
     // the talking head's line (section 19) went to the shell's activity stream, and its face with it
     // the feed has it once the line has ended; while it plays it is the live card on screen
     const stream = await wpage.evaluate(() => [...document.querySelectorAll('#foafos-feed-wrap foaf-activity, #foafos-activity foaf-activity, #foafos-activity-win foaf-activity')]
