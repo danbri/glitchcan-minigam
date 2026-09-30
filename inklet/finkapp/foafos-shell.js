@@ -1444,20 +1444,17 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   box.setAttribute('aria-label', `${who}: ${text}. Open the activity history`);
   box.appendChild(card);
   box.addEventListener('click', () => FoafOS.openActivity());
-  // With the Activity window open, the item goes there and nothing covers the app's pane (owner, September 2026:
-  // the stream's items "only render within monolithic World pane, not managed in foafos"). Without it, the newest
-  // one or two show over the pane for a few seconds, as a notice; a tap opens the window.
+  // Nothing is drawn over an app's pane (owner, September 2026: the talking heads were "an activity bar shown in
+  // main world view not separately in foafos"). Items go into the Activity window, a window the shell manages;
+  // a face that starts to speak opens it, unless the reader has closed it; otherwise the ☰ counts what is unread.
+  if (!activityLive() && live && !FoafOS._activityClosed) FoafOS.openActivity({ compact: true });
   const live0 = activityLive();
   if (live0) {
     live0.prepend(box);
     while (live0.children.length > 3) live0.lastChild.remove();
   } else {
-    placeActivity();
-    activityStrip.prepend(box);
-    // a short pane has room for one card and the selection, not two
-    const paneH = window.FinkWM?.active ? document.getElementById('minigame-view')?.getBoundingClientRect().height || 0 : window.innerHeight;
-    const keep = paneH < 460 ? 1 : 2;
-    while (activityStrip.children.length > keep) activityStrip.lastChild.remove();
+    FoafOS._activityUnread = (FoafOS._activityUnread || 0) + 1;
+    window.FinkWM?.setUnread?.(FoafOS._activityUnread);
   }
   if (live) {
     liveItems.set(appId, { data, box, canvas: card.liveCanvas, frames: 0,
@@ -1466,14 +1463,38 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   return data;
 };
 const liveItems = new Map();                   // appId → the live item on screen
+// Session and capabilities: what the side drawer showed at its top, in a window of its own (☰ › Session and
+// capabilities). The drawer's own nodes move in, so their code is unchanged.
+FoafOS.openSession = () => {
+  const open = document.getElementById('foafos-session-win');
+  if (open) { open.style.zIndex = 2630; return open; }
+  const win = FoafOS._makeWindow('👤 Session and capabilities', 360, 380);
+  win.id = 'foafos-session-win';
+  win.classList.add('foafos-panel');
+  const body = document.createElement('div');
+  body.className = 'act-body';
+  for (const id of ['foafos-session', 'foafos-caps-wrap']) { const n = document.getElementById(id); if (n) body.appendChild(n); }
+  const det = body.querySelector('#foafos-session-details');
+  if (det) det.open = true;
+  win.appendChild(body);
+  document.body.appendChild(win);
+  return win;
+};
 // the Activity window (a shell panel, foafos-apps.js row 'activity'): the live cards on top, the history below
 function activityLive() { return document.querySelector('#foafos-activity-win .act-live'); }
-FoafOS.openActivity = () => {
+FoafOS.openActivity = (opts = {}) => {
+  FoafOS._activityUnread = 0;
+  window.FinkWM?.setUnread?.(0);
+  if (!opts.compact) FoafOS._activityClosed = false;     // opened by the reader: it may open itself again
   const open = document.getElementById('foafos-activity-win');
   if (open) { document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; }); open.style.zIndex = 2630; return open; }
-  const win = FoafOS._makeWindow('💬 Activity', 380, 520);
+  const win = FoafOS._makeWindow('💬 Activity', 360, opts.compact ? 190 : 520, { float: !!opts.compact });
+  // opened by a face that speaks: a short strip across the top, over the older story text, not the choices
+  if (opts.compact) { win.style.left = '8px'; win.style.top = '8px'; win.style.width = `${Math.min(420, window.innerWidth - 16)}px`; }
   win.id = 'foafos-activity-win';
   win.classList.add('foafos-panel');
+  // closed by the reader: it stays closed until they open it again (new items are counted on the ☰)
+  win.querySelector('.foafos-window-close')?.addEventListener('click', () => { FoafOS._activityClosed = true; });
   const body = document.createElement('div');
   body.className = 'act-body';
   body.innerHTML = '<div class="act-live" role="log" aria-live="polite" aria-label="Now"></div><h4 class="act-h">History</h4>';
@@ -2359,7 +2380,7 @@ function buildUI() {
     if (e.key === 'Escape' && overviewOn) { e.preventDefault(); exitOverview(null); }
   });
 
-  function makeWindow(title, w, h) {
+  function makeWindow(title, w, h, opts = {}) {
     widgetSeq++;
     const win = document.createElement('div');
     win.className = 'foafos-window';
@@ -2443,7 +2464,8 @@ function buildUI() {
     // desktop metaphor at exactly the size where it stops paying rent.
     // Small viewports open maximized; the ❐ button restores the floating
     // geometry (kept in `restore`) for anyone who wants the cascade.
-    if (window.innerWidth < 520) {
+    // (opts.float: a small window that should stay small, such as the Activity strip)
+    if (window.innerWidth < 520 && !opts.float) {
       restore = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
       setMax(true);
     }

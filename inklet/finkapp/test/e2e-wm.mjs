@@ -207,9 +207,10 @@ try {
   story?.shown && gameLbl?.shown
     ? pass(`both panes named: "${story.text}" / "${gameLbl.text}"`)
     : fail(`panes not both labelled: ${JSON.stringify(own.labels)}`);
-  Math.abs(story.bottom - own.seam) <= 3 && Math.abs(gameLbl.y - own.seam) <= 3
-    ? pass(`names meet at the seam (${own.seam}px)`)
-    : fail(`labels not at the seam ${own.seam}: story ends ${story.bottom}, game starts ${gameLbl.y}`);
+  // the game's name sits just under the split grip (38px), which holds ⇅ Swap: at the seam it covered Swap
+  Math.abs(story.bottom - own.seam) <= 3 && Math.abs(gameLbl.y - (own.seam + 38)) <= 3
+    ? pass(`names meet at the seam (${own.seam}px), the game's just under the grip so ⇅ Swap stays clear`)
+    : fail(`labels not at the seam ${own.seam}: story ends ${story.bottom}, game starts ${gameLbl.y} (want ${own.seam + 38})`);
   // ☰ sits at the top of the game's pane in split; neither pane's name may
   // be under it (the story's name used to sit under the old toolbar)
   const hit = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
@@ -368,7 +369,8 @@ try {
     const w = f?.closest('.foafos-window') || f;
     return {
       wmActive: FinkWM.active,
-      chromeHidden: document.getElementById('wm-chrome').classList.contains('wm-hidden'),
+      // with no game the ☰ stays, with only foafos's rows (it is the one menu)
+      chromeHidden: document.getElementById('wm-chrome').classList.contains('wm-shell-only'),
       storyShown: !!w && getComputedStyle(w).visibility !== 'hidden' && w.getBoundingClientRect().height > 150,
       gameGone: !document.getElementById('minigame-view').classList.contains('active'),
     };

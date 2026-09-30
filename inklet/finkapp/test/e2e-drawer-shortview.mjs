@@ -58,12 +58,12 @@ try {
   await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
   await page.waitForTimeout(1200);
 
-  // Open the drawer via the dock.
-  await page.click('#foafos-dock');
+  // Open the drawer (its ⊞ dock is gone from the screen: the ☰ is the one menu; the drawer is opened by the API)
+  await page.evaluate(() => FoafOS.openDrawer(true));
   await page.waitForTimeout(400);
   const open = await page.evaluate(() =>
     document.getElementById('foafos-drawer').classList.contains('open'));
-  if (open) pass('drawer opened from the dock');
+  if (open) pass('drawer opened');
   else fail('drawer did not open');
 
   // THE FIX ITSELF: when content is taller than the short viewport the

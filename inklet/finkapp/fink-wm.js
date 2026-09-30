@@ -44,6 +44,7 @@ window.FinkWM = {
             },
             swapRow: document.getElementById('wm-swap'),
             padSect: document.getElementById('wm-pad-sect'),
+            shellSect: document.getElementById('wm-shell-sect'),
             appSect: document.getElementById('wm-app-sect'),
         };
         if (!this.elements.chrome || !this.elements.view) {
@@ -61,8 +62,7 @@ window.FinkWM = {
         const sys = { 'wm-sys-apps': () => window.FoafOS?.openHome?.(),
                       'wm-sys-tasks': () => window.FoafOS?.openSwitcher?.(),
                       'wm-sys-windows': () => window.FoafOS?.enterOverview?.(),
-                      'wm-sys-activity': () => window.FoafOS?.openActivity?.(),
-                      'wm-sys-shell': () => window.FoafOS?.openDrawer?.(true) };
+                      'wm-sys-activity': () => window.FoafOS?.openActivity?.() };
         for (const [id, go] of Object.entries(sys)) {
             document.getElementById(id)?.addEventListener('click', () => { this._setCollapsed(true); go(); });
         }
@@ -86,6 +86,8 @@ window.FinkWM = {
         // property and let the CSS prefer it. dvh stays the fallback.
         this._trackVisualViewport();
 
+        // the ☰ is the one menu, with or without a game (the ⊞ dock and its side drawer are gone from the screen)
+        if (!this.active) { this.elements.chrome.classList.remove('wm-hidden'); this.elements.chrome.classList.add('wm-shell-only'); }
         this.log('window manager ready');
     },
 
@@ -93,7 +95,7 @@ window.FinkWM = {
 
     open(mode = 'full') {
         this.active = true;
-        this.elements.chrome.classList.remove('wm-hidden');
+        this.elements.chrome.classList.remove('wm-hidden', 'wm-shell-only');
         // Opens CLOSED, as one ☰. The old toolbar opened expanded because a
         // lone ▦ grip read as "this game has no window controls"; ☰ reads
         // as a menu, so it can start closed and cover less of the game.
@@ -110,7 +112,8 @@ window.FinkWM = {
         this.mode = null;
         this.lastNonPipMode = 'full';
         const { chrome, view } = this.elements;
-        chrome.classList.add('wm-hidden');
+        // no game: the ☰ stays, with only foafos's own rows (it is the one menu, and the ⊞ dock is gone)
+        chrome.classList.add('wm-shell-only');
         this._setCollapsed(true);
         this.setAppActions(null);
         view.classList.remove('state-full', 'state-split', 'state-pip', 'wm-transitioning');
@@ -456,6 +459,74 @@ window.FinkWM = {
             sect.appendChild(b);
         }
     },
+    // ── foafos's own pages (what the side drawer held) ──────────────────
+    // Sound, Look, Widgets and Session. The rows drive the drawer's own controls (which stay in the DOM, unshown),
+    // so each setting still has one implementation.
+    _shellPages() {
+        const q = (sel) => [...document.querySelectorAll(sel)];
+        const mute = document.getElementById('foafos-mute'), vol = document.getElementById('foafos-vol');
+        const setVol = (v) => { if (!vol) return; vol.value = String(v); vol.dispatchEvent(new Event('input', { bubbles: true })); vol.dispatchEvent(new Event('change', { bubbles: true })); };
+        return [
+            { id: 'sound', icon: '🔊', label: 'Sound', items: () => [
+                { label: 'Mute everything', checked: mute?.getAttribute('aria-pressed') === 'true', run: () => mute?.click() },
+                ...[100, 75, 50, 25].map((v) => ({ label: `Volume ${v}%`, checked: Math.abs(Number(vol?.value || 0) - v) < 1, run: () => setVol(v) })),
+            ] },
+            { id: 'look', icon: '🎨', label: 'Look', items: () => q('#skin-picker button').map((b) => ({
+                label: b.textContent.trim(), checked: b.getAttribute('aria-pressed') === 'true' || b.classList.contains('active'), run: () => b.click() })) },
+            { id: 'widgets', icon: '🧩', label: 'Widgets', items: () => q('#foafos-launcher button').map((b) => ({
+                label: b.textContent.trim(), run: () => b.click(), closes: true })) },
+            { id: 'session', icon: '👤', label: 'Session and capabilities', run: () => window.FoafOS?.openSession?.(), closes: true },
+        ];
+    },
+    _renderShellSection() {
+        const sect = this.elements.shellSect;
+        if (!sect) return;
+        sect.textContent = '';
+        const pages = this._shellPages();
+        const page = pages.find((p) => p.id === this._shellPage && p.items);
+        if (!page) {
+            this._shellPage = null;
+            for (const p of pages) {
+                const b = this._row(p.items ? '›' : p.icon, p.label);
+                if (p.items) b.setAttribute('aria-expanded', 'false');
+                b.addEventListener('click', () => {
+                    if (p.items) { this._shellPage = p.id; this._renderShellSection(); sect.querySelector('button')?.focus(); return; }
+                    p.run(); if (p.closes) this._setCollapsed(true);
+                });
+                sect.appendChild(b);
+            }
+            return;
+        }
+        const back = this._row('‹', 'foafos');
+        back.setAttribute('aria-label', `Back from ${page.label}`);
+        back.classList.add('wm-back');
+        back.addEventListener('click', () => { this._shellPage = null; this._renderShellSection(); sect.querySelector('button')?.focus(); });
+        sect.appendChild(back);
+        const h = document.createElement('span');
+        h.className = 'wm-sect-title';
+        h.textContent = page.label;
+        h.setAttribute('aria-hidden', 'true');
+        sect.appendChild(h);
+        for (const it of page.items()) {
+            const check = typeof it.checked === 'boolean';
+            const b = this._row(check ? (it.checked ? '✓' : '') : '•', it.label);
+            if (check) b.setAttribute('aria-pressed', String(it.checked));
+            b.addEventListener('click', () => {
+                it.run();
+                if (it.closes) this._setCollapsed(true);
+                else setTimeout(() => this._renderShellSection(), 60);
+            });
+            sect.appendChild(b);
+        }
+    },
+    // new activity while the Activity window is closed: a count on the ☰
+    setUnread(n) {
+        const u = document.getElementById('wm-unread');
+        if (!u) return;
+        u.hidden = !(n > 0);
+        u.textContent = n > 9 ? '9+' : String(n || '');
+        this.elements.handle?.setAttribute('aria-label', n > 0 ? `Window menu, ${n} new in Activity` : 'Window menu');
+    },
     _focusFirstApp() {
         this.elements.appSect?.querySelector('button')?.focus();
     },
@@ -512,6 +583,7 @@ window.FinkWM = {
             // what the menu offers depends on now: the pad, the app's actions
             this._renderPadSection();
             this._renderAppSection();
+            this._renderShellSection();
             this._fitMenu();
         }
     },

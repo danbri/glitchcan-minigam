@@ -461,7 +461,7 @@ try {
       : fail(`person's places: ${JSON.stringify({ who, card, home })}`);
     // the talking head's line (section 19) went to the shell's activity stream, and its face with it
     // the feed has it once the line has ended; while it plays it is the live card on screen
-    const stream = await wpage.evaluate(() => [...document.querySelectorAll('#foafos-feed-wrap foaf-activity, #foafos-activity foaf-activity')]
+    const stream = await wpage.evaluate(() => [...document.querySelectorAll('#foafos-feed-wrap foaf-activity, #foafos-activity foaf-activity, #foafos-activity-win foaf-activity')]
       .map((c) => ({ label: c.getAttribute('aria-label'), img: !!c.shadowRoot?.querySelector('.face img, .face canvas') })));
     const mags = stream.find((c) => /^Mags/.test(c.label || ''));
     const headOff = await wcity.evaluate(() => !document.querySelector('.headFeed') || document.querySelector('.headFeed').classList.contains('hostOff')
