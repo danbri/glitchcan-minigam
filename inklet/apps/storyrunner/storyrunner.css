@@ -40,14 +40,14 @@ html, body {
 #choices button:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
 #choices button:hover { background: var(--sk-accent, rgba(41,173,255,0.22));
   color: var(--sk-accent-ink, inherit); }
-#world-open {
+#world-open, #resume-offer {
   font: inherit; font-size: 0.85em; font-family: var(--sk-font-ui, inherit);
   margin: 0.4em 0; padding: 0.5em 0.9em; min-height: 44px; cursor: pointer;
   background: transparent; color: inherit;
   border: 1px dashed var(--sk-choice-line, #29adff); border-radius: 0.5em;
 }
-#world-open[hidden] { display: none; }
-#world-open:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
+#world-open[hidden], #resume-offer[hidden] { display: none; }
+#world-open:focus-visible, #resume-offer:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
 #status { font-size: 0.8em; opacity: 0.6; overflow-wrap: break-word; }
 /* In the accessibility tree, absent from the picture. The reading surface is
    deliberately untitled to LOOK at, and a screen-reader user still needs a

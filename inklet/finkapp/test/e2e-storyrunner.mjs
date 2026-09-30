@@ -689,6 +689,33 @@ try {
       : fail(`reopening did not resume the sent place: ${JSON.stringify(back)}`);
   }
 
+  // ── 9c. A PAGE LOAD STARTS FRESH, AND OFFERS THE SAVED READING ───────
+  // Owner, September 2026: "it seems harder to get to fresh start of game, can that be default for base url?"
+  // Reopening inside a page resumes (9, 9b); loading the page plays the story from its beginning, with the saved
+  // reading of the same story on a button until the first choice.
+  {
+    // this suite's page is `?player=none`; load the address a reader would have, naming the story being read
+    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/apps/storyrunner/peer.fink.js`);
+    await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
+    let rf = null;
+    for (let i = 0; i < 60 && !rf; i++) {
+      rf = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
+      if (!rf) await page.waitForTimeout(300);
+    }
+    const fresh = rf && await rf.waitForFunction(() => window.__storyrunner?.ready?.(), null, { timeout: 20000 })
+      .then(() => rf.waitForTimeout(500))
+      .then(() => rf.evaluate(() => ({ resumed: window.__storyrunner.state.resumedFromSave,
+        offer: !document.getElementById('resume-offer').hidden, opening: /Beyond the doorway/.test(document.getElementById('prose').textContent) })), () => null);
+    const kept = await page.evaluate(() => !!(FoafOS.store.snapshot(FoafOS.snapshotNs) || {})['app:storyrunner']);
+    await rf?.evaluate(() => document.getElementById('resume-offer').click());
+    const back = rf && await rf.waitForFunction(() => window.__storyrunner.state.resumedFromSave, null, { timeout: 10000 })
+      .then(() => rf.evaluate(() => ({ url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+        choices: window.__storyrunner.state.choices.length, offer: !document.getElementById('resume-offer').hidden })), () => null);
+    fresh && !fresh.resumed && fresh.offer && fresh.opening && kept && back && back.url === 'peer.fink.js' && back.choices === 0 && !back.offer
+      ? pass(`a page load starts the story fresh (its opening text), keeps the saved reading, and "Continue where you stopped" resumes it (the end of ${back.url})`)
+      : fail(`fresh start on load: ${JSON.stringify({ fresh, kept, back })}`);
+  }
+
   // ── 10. PARITY ON A BUNDLED STORY (#779) ────────────────────────────
   // The fixtures prove mechanisms; a bundled story is the bar. Hampstead is
   // the mandatory journey, and it must play IN THE BOX with its real art,

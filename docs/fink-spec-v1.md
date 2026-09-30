@@ -662,6 +662,15 @@ here.
 - A guest that **completes** (win or lose) clears its saved state. A
   finished game has nothing to resume, and without this rule "keeps its
   place" would mean the player can never start a fresh run.
+- **A page load starts the story fresh** (owner, September 2026: "it seems
+  harder to get to fresh start of game, can that be default for base
+  url?"). The shell marks the launch that opens the page's story with
+  `config.boot: true`. The story runner then plays that story from its
+  beginning, and offers a saved reading of the same story on a button
+  ("Continue where you stopped") until the reader makes a first choice.
+  While the offer shows, the saved reading is what the runner keeps
+  (`keepPlace` and the close both send it), so a reload does not lose it.
+  Reopening the runner inside a page still resumes, as above.
 
 State is keyed by guest type and written through to FoafStore under a
 shell-owned namespace, so it survives a reload. The guest cannot read
