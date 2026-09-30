@@ -449,7 +449,8 @@ window.FinkWM = {
             b.addEventListener('click', () => {
                 if (group) { this._appPath.push(it.id); this._renderAppSection(); this._focusFirstApp(); return; }
                 window.FinkMinigames?.runAction?.(it.id);
-                if (!check) this._setCollapsed(true);
+                // a setting keeps the menu open, unless it says the view is needed (closes: spec §5.9)
+                if (!check || it.closes) this._setCollapsed(true);
             });
             sect.appendChild(b);
         }

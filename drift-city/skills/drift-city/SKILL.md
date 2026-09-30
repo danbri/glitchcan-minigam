@@ -557,6 +557,15 @@ humanoids/exos".
   second `traceScene` call for a 12-minute run; the scene pipeline alone measured 115 s before this work and
   126 s after (a bench with `layout: 'auto'` and the `scene` entry only). The jelly shares the reflection's
   `traceScene` call anyway: every call is inlined, and a second call site would add a copy of the whole march.
+- **Two pauses in one menu, and the reader took the wrong one.** Owner, September 2026: "Cant do in pause
+  currently as it frosts over entirely". The shell's ⏸ row ("Pause") sat just above "Pause the city" in the
+  window menu, and it frosts the app and stops its sound, as it should. Now the shell's row reads "Pause
+  everything (sound too)", the city's reads "Pause the city: look and tap on", and the city's row carries
+  `closes: true` (spec §5.9) so the menu closes and the view is free to tap. A setting kept the menu open
+  before, and the menu covered the city.
+- **The drone hovers.** In surface flight the drone always flies forward at its cruise speed; the autopilot only
+  steers. With the autopilot off it still flew away at about 20 m/s. In the pause the speed target is the
+  reader's forward push only (`tSpeed *= max(0, uy)`).
 - **The autopilot stops too.** The camera kept flying after a tap, so the selection and its rings left the view
   at once (found with game-mcp: the rings were at x = -30 px). In the pause the autopilot is off (`auto = 0` in
   `update`); steering by hand still works, and the readout says "City paused".

@@ -432,8 +432,8 @@ try {
       selId0, { timeout: 10000 }).then((h) => h.jsonValue(), () => null);
     await wpage.evaluate((id) => FinkMinigames.runAction(id), first?.id);
     const resumed = await wcity.waitForFunction(() => !__drift.CITYP.on && document.querySelectorAll('.pickNear').length === 0, null, { timeout: 10000 }).then(() => true, () => false);
-    first?.label === 'Pause the city' && pRan && paused && w1[0] === w0[0] && w1[1] > w0[1] && rings > 0 && selId1 && resumed
-      ? pass(`the city's menu starts with "Pause the city": the world's clock stops (${w0[0].toFixed(2)} s, still after 1.2 s) while the page's goes on; the selection's neighbours get ${rings} rings, and a tap on "${ringName}" makes it the selection (${selId1}); unpausing clears them`)
+    /^Pause the city/.test(first?.label || '') && first?.closes === true && pRan && paused && w1[0] === w0[0] && w1[1] > w0[1] && rings > 0 && selId1 && resumed
+      ? pass(`the city's menu starts with "${first.label}" (it closes the window menu, so the view is free to tap): the world's clock stops (${w0[0].toFixed(2)} s, still after 1.2 s) while the page's goes on; the selection's neighbours get ${rings} rings, and a tap on "${ringName}" makes it the selection (${selId1}); unpausing clears them`)
       : fail(`city pause: ${JSON.stringify({ first: first?.label, pRan, paused, w0, w1, rings, selId0, selId1, resumed })}`);
     // the talking head's line (section 19) went to the shell's activity stream, and its face with it
     // the feed has it once the line has ended; while it plays it is the live card on screen

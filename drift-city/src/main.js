@@ -719,6 +719,8 @@ function update(dt) {
   }
   yawCmd = clampv(yawCmd * auto + ux * 0.8, -1, 1);
   tSpeed *= st.speedMul;
+  // the city paused: hover, and go forward only as far as the reader pushes (the view stays on what is picked)
+  if (CITYP.on) tSpeed *= Math.max(0, uy);
 
   const spd = Math.hypot(st.vx, st.vz);
   const look = low ? 36 : Math.max(60, spd * 6);
@@ -1890,7 +1892,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { CITYP, cityPause, pickSelect, pickSelGPU, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { CITYP, cityPause, pickSelect, pickSelGPU, cellAt, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

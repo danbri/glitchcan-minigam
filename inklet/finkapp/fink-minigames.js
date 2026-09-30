@@ -654,7 +654,7 @@ window.FinkMinigames = {
             btn.classList.toggle('active', this.windowState.paused);
             const ico = btn.querySelector('.wm-ico'), lbl = btn.querySelector('.wm-label');
             if (ico) ico.textContent = this.windowState.paused ? '▶' : '⏸';
-            if (lbl) lbl.textContent = this.windowState.paused ? 'Resume' : 'Pause';
+            if (lbl) lbl.textContent = this.windowState.paused ? 'Resume everything' : 'Pause everything (sound too)';
             if (!ico && !lbl) btn.textContent = this.windowState.paused ? '▶' : '⏸';
             btn.setAttribute('aria-pressed', String(this.windowState.paused));
         }
@@ -871,7 +871,7 @@ window.FinkMinigames = {
             pb.setAttribute('aria-pressed', 'false');
             const ico = pb.querySelector('.wm-ico'), lbl = pb.querySelector('.wm-label');
             if (ico) ico.textContent = '⏸';
-            if (lbl) lbl.textContent = 'Pause';
+            if (lbl) lbl.textContent = 'Pause everything (sound too)';
             if (!ico && !lbl) pb.textContent = '⏸';
         }
 

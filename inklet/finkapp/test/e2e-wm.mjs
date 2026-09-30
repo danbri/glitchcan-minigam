@@ -82,7 +82,7 @@ try {
       .map((b) => b.querySelector('.wm-label')?.textContent || ''),
     handleBox: (() => { const r = document.getElementById('wm-handle').getBoundingClientRect(); return [r.x, r.y].map(Math.round); })(),
   }));
-  expanded.open && ['Full screen', 'Split with story', 'Picture-in-picture', 'Pause', 'Exit the game']
+  expanded.open && ['Full screen', 'Split with story', 'Picture-in-picture', 'Pause everything (sound too)', 'Exit the game']
     .every((l) => expanded.rows.includes(l))
     ? pass(`a tap on ☰ opens the menu: ${expanded.rows.join(' · ')}`)
     : fail(`menu did not open with its rows: ${JSON.stringify(expanded)}`);

@@ -91,7 +91,8 @@ Screenshots:
   Waterworld, Boidwars or Canary Wharf, or their Replay / Back buttons.
 - **Pause:** five apps show their own PAUSED screen under the shell's frost,
   so the reader sees two pause screens. Skydock ignores pause. GridLuck's pause
-  does not reach the game.
+  did not reach the game (fixed 30 September 2026: the wrapper forwards it,
+  e2e-input checks the board holds still).
 - **Quit:** Robbin is the only app that can own the ✕ (the `quit` verb). The
   guest SDK cannot declare verbs (see section 3, item 1).
 - **Accessibility:** support is uneven.

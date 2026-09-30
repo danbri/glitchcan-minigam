@@ -938,7 +938,13 @@ sdk.onAction((id) => run(id));              // declares the `actions` contract
 
 - `checked` (true or false) makes a setting; `items` makes a group that
   opens in place (depth ≤ 4); anything else is a command. `detail` is a
-  short note on the right. Labels ≤ 80 characters.
+  short note on the right. Labels ≤ 80 characters. `closes: true` on a
+  setting closes the window menu after it is chosen (a setting otherwise
+  keeps it open): for a setting whose point is the view, such as Drift's
+  "Pause the city", which stops the world so the reader can tap in it.
+- The shell's own pause row reads "Pause everything (sound too)": it
+  frosts the app and stops its sound. An app's own pause (Drift's) is a
+  different thing and says what it keeps going.
 - The list replaces the last one; send it again when a label or a check
   changes. The shell keeps it per instance and draws the playing one's.
 - The shell sends back only an id the app offered

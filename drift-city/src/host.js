@@ -95,6 +95,7 @@ function hostMenuTree() {
     const out = { id, label: r.label };
     if (r.detail !== undefined && r.detail !== "") out.detail = String(r.detail);
     if (typeof r.check === "boolean") out.checked = r.check;
+    if (r.closes) out.closes = true;
     if (r.sub && depth < 4) {
       const page = r.sub();
       out.items = walk(typeof page.items === "function" ? page.items() : page.items, id, depth + 1);
