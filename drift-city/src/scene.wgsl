@@ -595,6 +595,13 @@ fn ruin(p: vec3f, c: Cell) -> vec2f {
   return vec2f(d, 8.0);
 }
 
+// Life on the organic towers: which towers run it (tall ones mostly), and the board, a screen round the top of the
+// tower: a window of LIFE_WIN of the board's 64 columns round the tower, square cells, 40 rows down from just under
+// the cap. The window starts at the tower's own column, so neighbouring towers show different parts of the board.
+const LIFE_WIN: f32 = 24.0;
+fn organicLife(c: Cell) -> bool { return hsh(c.seed, 5, 781) < select(0.3, 0.9, c.h >= 12.0 * 4.2); }
+fn lifeCellH(c: Cell) -> f32 { return 6.2831853 * (3.8 + 1.4 * c.v) / LIFE_WIN; }
+fn lifeBoardFoot(c: Cell) -> f32 { return c.h - 1.5 - 40.0 * lifeCellH(c); }
 fn organic(p: vec3f, c: Cell) -> vec2f {
   let h = c.h;
   let ph = c.s * 6.2831;
@@ -608,7 +615,9 @@ fn organic(p: vec3f, c: Cell) -> vec2f {
   d = smin(d, cap, 1.5);
   var m = 15.0;
   let sy = p.y - 4.2 * round(p.y / 4.2);
-  let slab = max(max((rq - R - 0.85) * 0.8, abs(sy) - 0.22), max(p.y - h + 0.5, 1.0 - p.y));
+  // a Life tower (the rule in material 15) has no floor rings over its board, which they would hide
+  let lifeB = select(1e5, lifeBoardFoot(c), organicLife(c));
+  let slab = max(max((rq - R - 0.85) * 0.8, abs(sy) - 0.22), max(p.y - min(h - 0.5, lifeB - 0.3), 1.0 - p.y));
   if (slab < d) { m = 13.0; d = slab; }
   return vec2f(d, m);
 }
@@ -4976,15 +4985,25 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       let hr = hsh(sec + cseed, fl * 131 + i32(floor(u.time / 45.0 + hsh(sec, fl, 66) * 5.0)) * 7, 65);
       let litP = 0.05 + 0.2 * u.windows;
       s.emi = vec3f(1.0, 0.72, 0.45) * rib * mix(litP * 0.5, step(hr, litP) * 0.8, detail) * u.windows * 0.8;
-      // Life (life.js) on half the round towers: the window band cut into 64 cells round the tower, one row a floor,
-      // the board's top at the tower's top, each tower turned by its own number of columns
+      // Life (life.js): a screen of square cells round the top of the tower (organicLife, above). The angle is taken
+      // round the tower's own leaning axis, as organic() bends it, so the columns stay upright
       let cfo = cellFull(ci);
-      if (hsh(cseed, 5, 781) < select(0.3, 0.9, cfo.h >= 12.0 * 4.2)) {
-        let fxL = fract(atan2(lc.y - cfo.off.y, lc.x - cfo.off.x) / 6.2831853 + 1.0) * 64.0;
-        let mullL = (1.0 - smoothstep(0.05, 0.12, min(fract(fxL), 1.0 - fract(fxL)))) * detail;
+      let cH = lifeCellH(cfo);
+      let rowF = (cfo.h - 1.5 - p.y) / cH;
+      if (organicLife(cfo) && rowF >= 0.0 && rowF < 40.0) {
+        let ph = cfo.s * 6.2831;
+        let q = lc - cfo.off - vec2f(sin(p.y * 0.045 + ph), cos(p.y * 0.038 + ph * 1.3)) * (1.0 + cfo.v) * smoothstep(0.0, 30.0, p.y);
+        let fxL = fract(atan2(q.y, q.x) / 6.2831853 + 1.0) * LIFE_WIN;
+        let gx = fract(fxL);
+        let gy = fract(rowF);
+        // a pale grid between the cells, so the board reads as a board even when most of it is dead
+        let grid = (1.0 - smoothstep(0.015, 0.045, min(min(gx, 1.0 - gx), min(gy, 1.0 - gy)))) * detail;
         let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
-        let lcol = lifeCol(i32(floor(fxL)) + (cseed & 63), i32(floor((cfo.h - p.y) / 4.2)));
-        s.emi = mix(vec3f(0.06, 0.12, 0.09), lcol * (1.0 - mullL), lifeD) * rib * (1.2 + 1.0 * u.windows);
+        let lcol = lifeCol(i32(floor(fxL)) + (cseed & 63), i32(floor(rowF)));
+        s.alb = mix(vec3f(0.012, 0.018, 0.022), vec3f(0.16, 0.16, 0.15), grid);
+        s.spec = mix(1.0, 0.3, grid);
+        s.refl = (1.0 - grid) * (0.04 + 0.4 * pow(1.0 - ndv, 4.0)) * (1.0 - min(1.0, dot(lcol, vec3f(1.0))));
+        s.emi = mix(vec3f(0.06, 0.12, 0.09), lcol * (1.0 - grid), lifeD) * (2.0 + 0.6 * u.windows);
       }
     }
     case 2: {

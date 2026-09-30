@@ -105,6 +105,13 @@ function lifeSeed() {
     const small = [LIFE_PATTERNS[3], LIFE_PATTERNS[7], LIFE_PATTERNS[5], ["blinker", ["###"]]][Math.floor(Math.random() * 4)];
     lifeStamp(small[1], Math.floor(k * LIFE_W / 6 + Math.random() * 5), Math.floor(Math.random() * 5), Math.random() < 0.5);
   }
+  // random soup in patches all over the board: what Life looks like to most people, growth, collapse, blinkers
+  // and blocks left behind, and a glider now and then. Each tower shows only 24 of the 64 columns, so without it
+  // most of the board in view was empty (owner, September 2026: "not obviously life")
+  for (let k = 0; k < 7; k++) {
+    const x0 = Math.floor(k * LIFE_W / 7 + Math.random() * 4), y0 = 2 + Math.floor(Math.random() * (LIFE_H - 12));
+    for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) if (Math.random() < 0.38) LIFE.a[(y0 + j) * LIFE_W + (x0 + i) % LIFE_W] = 1;
+  }
   LIFE.seedAt = LIFE.t;
 }
 function lifeStep() {
