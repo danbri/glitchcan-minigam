@@ -1013,8 +1013,12 @@ app (`foafos-apps.js`), opened from the window menu ("Activity: who said
 what"). A face that starts to speak opens it as a short strip across the top
 (`makeWindow(..., { float: true })`: it does not maximize on a phone), unless
 the reader has closed it; then new items are counted on the ☰ instead. It
-holds the live card and the history (a `foafos-feed` on `activity.*`, which
-replays). Owner: the items "only render within monolithic World pane, not
+holds the live cards ("Now", three at most) and the history (a `foafos-feed`
+on `activity.*`). Two rules, both found by a failing test (September 2026):
+the shell keeps the last 100 items and the window shows them when it opens
+(`appendOlder`; activity items are not retained on the bus, so a feed made
+later saw nothing from before it existed); and a face still speaking keeps
+its place in "Now": the oldest other item leaves first. Owner: the items "only render within monolithic World pane, not
 managed in foafos"; the talking heads were "an activity bar shown in main
 world view not separately in foafos".
 ### 5.11 The selection — normative

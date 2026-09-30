@@ -59,6 +59,14 @@ export function defineFeed() {
       }
     }
 
+    // events from before this feed existed, newest first, below what it already shows
+    appendOlder(events) {
+      for (const ev of events) {
+        if (this._list.children.length >= MAX_ITEMS) break;
+        this._list.append(this.registry.materialize(ev));
+      }
+    }
+
     push(ev) {
       const el = this.registry.materialize(ev);
       this._list.prepend(el);

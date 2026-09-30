@@ -617,14 +617,14 @@ props and hotspots stay where they are; a new visit starts at its place again.
   the goal) and comes down on the far side. Any stick or key input takes over at once. Test: `PICK=x,y PICKF=12
   PICKWALK=1` in the scratch Dawn runner logs the walk's progress and lift every 5 frames.
 
-## Rooms: the venues' interiors (`ROOMS` in tales.js, `roomRender` in scene.wgsl)
+## Rooms: the venues' interiors (`ROOMS` in tales.js, `roomRender` in rooms.wgsl)
 
 Owner, September 2026: "the music venues: when we fly to them we see only street scenes. No interiors." The city is
 a height-field raymarch with coarse building boxes; it has no insides to walk into. So a venue is a separate small
 scene: four room places (`cold_tap`, `low_orbit_bar`, `lantern_cellar`, `warmhouse_club`) stand at their street
 (or, for the club, the Warmhouse square) beyond the fifty generated places. When you arrive at one (`roomNow()`:
 the visit at 92% or more), `EVN[210]` carries its kind and `EVN[212..215]` its origin and heading, and the scene
-pass returns `roomRender` at once: its own SDF (`rmMap`), up to six lamps (`rmLight`, all with soft shadows), up to
+pass uses that room's own pipeline (next section), which draws `roomRender`: its own SDF (`rmMap`), up to six lamps (`rmLight`, all with soft shadows), up to
 three lamp beams in the haze (`rmBeam`), one glossy reflection bounce, AO, haze, and the story's props lit by the room (`propsFx` checks `ev.wx.z`). The snow overlay is off (`U[55]`)
 and the street's sound drops behind the walls (see Music).
 
@@ -640,6 +640,37 @@ and the street's sound drops behind the walls (see Music).
   the far end), the Lantern Cellar (brick barrel vault, paper lanterns, the stand with a kit and a bass), the club
   (dome with strings of bulbs, tables with lamps in two rings, the stand with a curtain, piano, kit and bass). The
   first cellar render had a lantern hanging 1 m in front of the camera; the lantern grid starts at x = 2.8.
+
+## Rooms have their own pipelines (September 2026)
+
+Owner: "Very slow to load; is that getting worse?" Measured cold builds of the scene pipeline (Node Dawn on
+lavapipe, `MESA_SHADER_CACHE_DISABLE=true node drift-city/tests/pipeline-bench.mjs <city.html> <entry>`):
+68 s on 26 September, 111 s on 27 September (the interiors: rooms, the fan's rays, smoke, glitterball, lasers),
+107 s on 30 September. The rooms were compiled into the city's pipeline on every load, even outdoors: GPU compilers
+inline everything reachable from the entry point, and `propsFx` reached every room through `rmLit` -> `rmShadow`
+-> `rmMap`. Removing only the `roomRender` call saved 28 s; the props path kept the rest.
+
+The split:
+- `src/scene.wgsl` is the city and what the city shares with the rooms (room coordinates `rmLocal`, the band's beat
+  `rmBand`, `rmStageCol`, `primaryPx`/`primaryDir`). Its module is `common + scene + rooms-off.wgsl`; `rooms-off`
+  stands in for `roomK`, `rmLit` and `rmLight`, which `propsFx` calls. Inside a venue the city's pass draws a dark
+  frame until the room's pipeline is ready.
+- `src/rooms.wgsl` is the shared indoor code (lights, beams, shading, trace, `roomRender`, the `roomScene` entry).
+  `src/rooms/<place>.wgsl` holds one place each: its walls and things (`rmColdTap` with the fan, `rmClub` with the
+  glitterball and lasers, ...). `ROOMS` in tales.js names each place's file and map function (`wgsl`, `map`), and
+  `main.js` (`roomDispatch`) writes `rmPlaceMap` from it. `assemble.py` adds every file in `src/rooms/`.
+- The room module is `common + scene + rooms + every place + the dispatch`. One pipeline per place:
+  `override ROOM_K` is set when the pipeline is made (`constants: { ROOM_K }`), `roomRender` and `roomK()` read it,
+  so the compiler keeps one room's branches. `roomWarm` builds them one at a time, 4 s after load, the room you
+  are going to first.
+- Measured after the split: the city 81 s (was 108 s), a room 6 s (Cold Tap 5.8 s, club 5.6 s). Dawn renders of
+  the Cold Tap and the club match the renders from before, people on the stand lit by the room.
+- Not done yet, and needed before a story can bring a new place: the shared code still names places by kind in
+  `rmLight0`, `rmBeam0`, `rmBeam`, `rmLight`, `rmSurface` (materials) and `roomRender` (haze colour, the fan's mask,
+  the lasers, dry ice). A new kind falls into their `default` branches, which are the club's. The next step is a
+  place interface: each place file gives its lights, beams, haze and materials, and the dispatch calls them.
+  A place from a story file would also be shader code from a story: a new trust question (a shader cannot reach
+  the network or the page, but a slow one can stall the GPU), to settle before it is allowed.
 
 ## Interiors and people: how to make them tell stories (September 2026)
 

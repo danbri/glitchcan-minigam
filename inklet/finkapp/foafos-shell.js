@@ -1443,6 +1443,7 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   box.className = 'foafos-activity-item';
   box.setAttribute('aria-label', `${who}: ${text}. Open the activity history`);
   box.appendChild(card);
+  if (live) box.dataset.live = '1';
   box.addEventListener('click', () => FoafOS.openActivity());
   // Nothing is drawn over an app's pane (owner, September 2026: the talking heads were "an activity bar shown in
   // main world view not separately in foafos"). Items go into the Activity window, a window the shell manages;
@@ -1451,7 +1452,8 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   const live0 = activityLive();
   if (live0) {
     live0.prepend(box);
-    while (live0.children.length > 3) live0.lastChild.remove();
+    // three at most; a face still speaking stays, the oldest other item goes first
+    while (live0.children.length > 3) ([...live0.children].reverse().find((b) => !b.dataset.live) || live0.lastChild).remove();
   } else {
     FoafOS._activityUnread = (FoafOS._activityUnread || 0) + 1;
     window.FinkWM?.setUnread?.(FoafOS._activityUnread);
@@ -1463,6 +1465,9 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   return data;
 };
 const liveItems = new Map();                   // appId → the live item on screen
+// the activity history: the Activity window shows it when it opens, not only what arrives after that
+const activityHist = [];
+bus.subscribe('activity.*', (ev) => { activityHist.push(ev); if (activityHist.length > 100) activityHist.shift(); });
 // Session and capabilities: what the side drawer showed at its top, in a window of its own (☰ › Session and
 // capabilities). The drawer's own nodes move in, so their code is unchanged.
 FoafOS.openSession = () => {
@@ -1503,7 +1508,9 @@ FoafOS.openActivity = (opts = {}) => {
   hist.setAttribute('topics', 'activity.*');
   body.appendChild(hist);
   win.appendChild(body);
+  const past = activityHist.slice().reverse();
   document.body.appendChild(win);
+  hist.appendOlder?.(past);
   // what is on screen now moves in with it
   const live = body.querySelector('.act-live');
   for (const b of [...activityStrip.children]) { b.classList.remove('fading'); live.appendChild(b); }
@@ -1519,6 +1526,7 @@ function endLive(appId) {
   if (!L) return;
   liveItems.delete(appId);
   clearTimeout(L.timer);
+  delete L.box.dataset.live;
   let still = null;
   try { if (L.frames && L.canvas) still = L.canvas.toDataURL('image/jpeg', 0.82); } catch (e) { /* tainted or gone */ }
   bus.publish(`activity.${appId}`, { ...L.data, live: false, image: still && still.length <= ACTIVITY_IMAGE_MAX ? still : null });
