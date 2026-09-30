@@ -105,6 +105,10 @@ export class Game{
     addEventListener('resize',()=>this.setupCanvas()); this.setupCanvas(); 
     this.resetGame(); 
     this.input(); this.setupExtraInputs();
+    // paused by a host (the foafos shell, through inklet/minigames/gridluck): no updates and no sound until resumed
+    this.hostPaused = false;
+    addEventListener('message', (e) => { const d = e.data; if (!d || d.type !== 'host-pause') return; this.hostPaused = !!d.paused;
+      if (this.audioCtx) { try { this.hostPaused ? this.audioCtx.suspend() : this.audioCtx.resume(); } catch (err) { /* no audio */ } } });
     this.gameLoop = this.gameLoop.bind(this); this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop);
   }
 
@@ -122,7 +126,8 @@ export class Game{
   gameLoop(timestamp){
       if (this.gameOverFlag) { this.lastTime = 0; return; }
       const dt = Math.min(100, timestamp - this.lastTime); this.lastTime = timestamp;
-      this.update(dt); this.draw(timestamp); 
+      if (!this.hostPaused) this.update(dt);
+      this.draw(timestamp); 
       requestAnimationFrame(this.gameLoop.bind(this));
   }
 

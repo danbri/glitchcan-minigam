@@ -275,6 +275,7 @@ class MinigameSDK {
             if (it?.detail != null) out.detail = String(it.detail).slice(0, 40);
             if (typeof it?.checked === 'boolean') out.checked = it.checked;
             if (it?.disabled) out.disabled = true;
+            if (it?.closes) out.closes = true;
             if (Array.isArray(it?.items) && depth < 4) out.items = clean(it.items, depth + 1);
             return out;
         }).filter((it) => it.id && it.label);

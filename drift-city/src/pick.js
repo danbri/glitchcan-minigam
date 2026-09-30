@@ -74,11 +74,8 @@ function pickAt(px, py) {
   }
   const cx = Math.floor(hit[0] / C), cz = Math.floor(hit[2] / C), cell = cellAt(cx, cz);
   const street = streetName(cx * 131 + cz * 7);
-  if (!cell.wild && cell.h > 6 && (cell.typ === 1 || cell.typ === 2 || cell.typ === 3 || cell.typ === 8 || cell.typ === 13)) {
-    const zone = ZONE_NAMES[cell.zone];
-    const what = cell.h > 90 ? "A tower" : cell.h > 40 ? "A block" : "A building";
-    return { name: what + " on " + street + ", " + zone, x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz, y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "", building: [cx, cz] };
-  }
+  const B = pickBuilding(cx, cz);
+  if (B) return B;
   const place = cell.wild ? placeNameAt(hit[0], hit[2]) : street + ", " + ZONE_NAMES[cell.zone];
   return { name: place, x: hit[0], z: hit[2], y0: Math.max(terrSurfAt(hit[0], hit[2]), 0), r: 25, h: 8, blurb: "" };
 }
@@ -193,7 +190,7 @@ function pickEntity(S) {
   const cx = Math.floor(S.x / C), cz = Math.floor(S.z / C);
   const kind = S.person ? "person" : S.ship !== undefined ? "vehicle" : S.walkOnly ? "room"
     : pickLandmarks().some((l) => l.name === S.name) || S.name === "The Warmhouse" ? "place"
-    : S.h > 6 ? "building" : "place";
+    : S.building ? "building" : "place";
   const id = S.person ? "person:" + S.person.id : S.ship !== undefined ? "ship:" + S.ship
     : kind === "building" ? "building:" + wrapS(cx) + "," + wrapS(cz) : "place:" + S.name;
   const dist = Math.hypot(S.x - st.x, S.z - st.z);
@@ -335,10 +332,8 @@ function pickNearSet() {
   const cand = [];
   const cx0 = Math.floor(S.x / C), cz0 = Math.floor(S.z / C);
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-    const cx = cx0 + dx, cz = cz0 + dz, cell = cellAt(cx, cz);
-    if (cell.wild || !(cell.h > 6) || !(cell.typ === 1 || cell.typ === 2 || cell.typ === 3 || cell.typ === 8 || cell.typ === 13)) continue;
-    const T = { name: (cell.h > 90 ? "A tower" : cell.h > 40 ? "A block" : "A building") + " on " + streetName(cx * 131 + cz * 7) + ", " + ZONE_NAMES[cell.zone],
-      x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz, y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "", building: [cx, cz] };
+    const T = pickBuilding(cx0 + dx, cz0 + dz);
+    if (!T) continue;
     if (S.building && S.building[0] === T.building[0] && S.building[1] === T.building[1]) continue;
     cand.push(T);
   }
@@ -356,6 +351,14 @@ function pickNearSet() {
   }
 }
 // make T the selection, as a tap on it would
+// the building standing in cell (cx, cz), as a pick, or null (the ruins of the old town count: they stand tall)
+function pickBuilding(cx, cz) {
+  const cell = cellAt(cx, cz);
+  if (cell.wild || !(cell.h > 6) || ![1, 2, 3, 4, 8, 13].includes(cell.typ)) return null;
+  const what = cell.typ === 4 ? "A ruin" : cell.h > 90 ? "A tower" : cell.h > 40 ? "A block" : "A building";
+  return { name: what + " on " + streetName(cx * 131 + cz * 7) + ", " + ZONE_NAMES[cell.zone], x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz,
+    y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "", building: [cx, cz] };
+}
 function pickSelect(T) {
   const S = { ...T };
   if (hostOn()) hostSelect(S); else pickMarkSet(S);

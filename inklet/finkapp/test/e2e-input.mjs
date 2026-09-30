@@ -304,6 +304,20 @@ try {
     next === 'L'
       ? pass('a host press still reaches a game one frame deeper than the SDK')
       : fail(`nested guest did not get the press: ply.next=${JSON.stringify(next)}`);
+    // the shell's pause reaches it too. Owner, September 2026: "pause on Gridluck feels similar yet actually game
+    // continues in bg": the wrapper showed PAUSED and the game one frame deeper played on under the frost
+    const tOf = () => inner.evaluate(() => { const g = window.__gridluck.game; return JSON.stringify([g.ply.x, g.ply.y, g.score, (g.ghosts || []).map((h) => [h.x, h.y])]); });
+    await page.evaluate(() => window.FinkMinigames.togglePause());
+    await inner.waitForFunction(() => window.__gridluck.game.hostPaused === true, null, { timeout: 5000 }).catch(() => {});
+    const a0 = await tOf();
+    await page.waitForTimeout(1200);
+    const a1 = await tOf();
+    await page.evaluate(() => window.FinkMinigames.togglePause());
+    await page.waitForTimeout(1200);
+    const a2 = await tOf();
+    a0 === a1 && a1 !== a2
+      ? pass('the shell\'s pause reaches GridLuck one frame deeper: the board holds still under the frost and moves again on resume')
+      : fail(`gridluck pause: ${JSON.stringify({ paused: a0 === a1, resumed: a1 !== a2, a0: a0.slice(0, 80), a1: a1.slice(0, 80), a2: a2.slice(0, 80) })}`);
   }
 
   pageErrors.length === 0 ? pass('no page errors')

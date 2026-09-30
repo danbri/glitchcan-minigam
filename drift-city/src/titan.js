@@ -654,7 +654,7 @@ function placePages(act, title) {
 function menuNow() {
   // first: the city's own pause (the world stops; the view, the menus and the sound go on; the picker shows
   // neighbours and the street grid). Not the foafos pause, which stops the whole app
-  const rows = [{ label: "Pause the city", check: CITYP.on, act: () => { cityPause(!CITYP.on); renderMenu(); } }];
+  const rows = [{ label: "Pause the city: look and tap on", check: CITYP.on, closes: true, act: () => { cityPause(!CITYP.on); renderMenu(); } }];
   if (GUIDE.on) {
     rows.push(GUIDE.paused ? { label: "Carry on with the tour", detail: guideWhere(), now: true, act: () => { closeGoPanel(); guideResume(); } }
       : { label: "Pause the tour", detail: guideWhere(), now: true, act: () => { GUIDE.menuPaused = false; closeGoPanel(); } });

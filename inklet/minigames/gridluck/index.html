@@ -58,14 +58,20 @@
             gameActive = true;
         });
 
+        // The game is a frame deeper: tell it, or it plays on under the
+        // shell's frost (owner, September 2026: "pause on Gridluck feels
+        // similar yet actually game continues in bg")
+        const tellGame = (paused) => { try { gameFrame.contentWindow?.postMessage({ type: 'host-pause', paused }, '*'); } catch (e) { /* not ready */ } };
         sdk.onPause(() => {
             console.log('[GridLuck] Paused');
             document.getElementById('pause-overlay').classList.add('visible');
+            tellGame(true);
         });
 
         sdk.onResume(() => {
             console.log('[GridLuck] Resumed');
             document.getElementById('pause-overlay').classList.remove('visible');
+            tellGame(false);
         });
 
         sdk.onTerminate((reason) => {
