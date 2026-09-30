@@ -648,7 +648,7 @@ function initGL(reason) {
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
     if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
-    pickMarkFrame(); pickNearFrame();
+    pickMarkFrame(); pickNearFrame(); mapLabelsFrame();
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;

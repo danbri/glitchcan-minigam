@@ -2,14 +2,14 @@
 // Two boards, stepped here a few times a second and sent to the GPU packed 16 cells to a float (floats hold whole
 // numbers exactly up to 2^24) after the event block:
 // - LIFE, 64 columns (they wrap) by 40 rows from the top down (the top and the bottom are dead edges): the stepped
-//   towers' flat faces and the rounded modern towers (`lifeAt` in scene.wgsl). Reseeded every couple of minutes, or
+//   towers' flat faces and the rounded modern towers (`lifeCol` in scene.wgsl). Reseeded every couple of minutes, or
 //   when the board dies or stops changing.
-// - LIFER, 32 columns by 80 rows: the organic round towers (`lifeAtR`). 32 columns go once round the tower, so the
+// - LIFER, 32 columns by 80 rows: the organic round towers (`lifeColR`). 32 columns go once round the tower, so the
 //   board wraps as a cylinder does, with no seam. It always runs one glider gun at the top, turned on its side, and its
 //   gliders go down and round the tower. The bottom two rows are a sink (cleared each step), so the gliders leave
 //   there and nothing builds up to reach the gun. Two guns on one board destroy each other's streams (simulated).
 const LIFE_W = 64, LIFE_H = 40, LIFER_W = 32, LIFER_H = 80;
-const LIFE = { a: new Uint8Array(LIFE_W * LIFE_H), b: new Uint8Array(LIFE_W * LIFE_H), gpu: new Float32Array(320), t: 0, gen: 0, seedAt: -1e9, hist: [], pat: "" };
+const LIFE = { a: new Uint8Array(LIFE_W * LIFE_H), b: new Uint8Array(LIFE_W * LIFE_H), gpu: new Float32Array(856), t: 0, gen: 0, seedAt: -1e9, hist: [], pat: "" };
 const LIFER = { a: new Uint8Array(LIFER_W * LIFER_H), b: new Uint8Array(LIFER_W * LIFER_H), gen: 0, seedAt: -1e9, pat: "" };
 // patterns as rows of text, "#" alive; [name, rows, weight]
 const LIFE_PATTERNS = [
@@ -169,11 +169,29 @@ function lifeStep() {
   const stale = LIFE.hist.length === 6 && (LIFE.hist[5] === LIFE.hist[3] && LIFE.hist[4] === LIFE.hist[2]);
   return { pop, stale };
 }
+// For the GPU, each cell's colour class, not its bare state: the shader then reads one value per pixel, where
+// counting eight neighbours there cost a fifth of the scene's time once Life covered the stepped towers (Dawn,
+// September 2026: 99.7 to 119.9 ms). Class: 0 dead, 1 dead with three neighbours (born next), 2 alive with one or
+// none (dies of loneliness), 3 two, 4 three, 5 four or more (dies of crowding). Six 4-bit classes to a float
+// (floats hold whole numbers exactly up to 2^24): the flat board from float 0, the round board from float 428.
+const LIFE_RBASE = 428;
+function lifeClassPack(a, W, H, g, base) {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let n = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      const yy = y + dy;
+      if (yy < 0 || yy >= H) continue;
+      for (let dx = -1; dx <= 1; dx++) if (dx || dy) n += a[yy * W + (x + dx + W) % W];
+    }
+    const i = y * W + x;
+    const k = a[i] ? (n <= 1 ? 2 : n === 2 ? 3 : n === 3 ? 4 : 5) : (n === 3 ? 1 : 0);
+    if (k) g[base + Math.floor(i / 6)] += k * Math.pow(16, i % 6);
+  }
+}
 function lifePack() {
   const g = LIFE.gpu; g.fill(0);
-  for (let i = 0; i < LIFE.a.length; i++) if (LIFE.a[i]) g[i >> 4] += 1 << (i & 15);
-  // the round board after it, at float 160 (scene.wgsl `lifeAtR` reads cell 2560 on)
-  for (let i = 0; i < LIFER.a.length; i++) if (LIFER.a[i]) g[160 + (i >> 4)] += 1 << (i & 15);
+  lifeClassPack(LIFE.a, LIFE_W, LIFE_H, g, 0);
+  lifeClassPack(LIFER.a, LIFER_W, LIFER_H, g, LIFE_RBASE);
   return g;
 }
 // advance the board by real time; returns the packed board for the GPU

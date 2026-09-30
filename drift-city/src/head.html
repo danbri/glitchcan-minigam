@@ -121,6 +121,19 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 /* the selection, followed in the view (pickMarkFrame): a ring on the picked thing until it is cleared */
 .pickMark { position: fixed; z-index: 12; pointer-events: none; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #7fe3ff; box-shadow: 0 0 10px rgba(127, 227, 255, .8), inset 0 0 10px rgba(127, 227, 255, .5); }
 .pickMark[hidden] { display: none; }
+/* the city's sound is on but the browser has not let it play: one tap here starts it (audio.js audioChipTick) */
+#soundChip { position: fixed; z-index: 14; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  padding: 10px 16px; border-radius: 22px; border: 1px solid rgba(255, 255, 255, .35); background: rgba(10, 16, 24, .72); color: #fff;
+  font: 600 15px/1.2 system-ui, sans-serif; cursor: pointer; }
+#soundChip[hidden] { display: none; }
+/* the map overlay's labels (map.js mapLabelsFrame): districts in capitals, places as small buttons that go there */
+.mapLabel { position: fixed; z-index: 11; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+  font: 600 12px/1.2 system-ui, sans-serif; color: #fff; text-shadow: 0 0 3px #000, 0 0 6px #000; }
+.mapLabel[hidden] { display: none; }
+.mapDistrict { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; opacity: .9; }
+.mapPlace { pointer-events: auto; cursor: pointer; padding: 3px 7px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .45);
+  background: rgba(8, 12, 20, .55); }
+.mapPlace:focus-visible { outline: 2px solid #ff0; }
 /* while the city is paused: a ring on each thing next to the selection, to tap (pickNearFrame) */
 .pickNear { position: fixed; z-index: 12; transform: translate(-50%, -50%); border-radius: 50%; padding: 0; background: rgba(120, 255, 170, .06);
   border: 2px dashed rgba(120, 255, 170, .75); box-shadow: 0 0 8px rgba(120, 255, 170, .5); cursor: pointer; animation: pickNearPulse 1.6s ease-in-out infinite; }
@@ -240,6 +253,7 @@ body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { 
 </head>
 <body>
 <canvas id="c" aria-label="Autonomous drone flight over a procedural city"></canvas>
+<button type="button" id="soundChip" hidden>🔈 Tap for the city's sound</button>
 <div class="ui" id="ui">
   <div class="stats" id="stats" hidden></div>
   <button class="status" id="status" type="button" aria-pressed="false" title="Show performance stats"></button>

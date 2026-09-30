@@ -682,7 +682,10 @@ function menuRoot() {
         { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } },
         { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) }]),
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }, ...(NAV.tourHeld ? [{ label: "Carry on the Grand tour", act: () => { closeGoPanel(); tourResume(); } }] : [])] }) },
-      { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
+      { label: "Map", detail: MAPV.on ? "from above" : MAPO.on ? "overlay" : "", sub: () => ({ title: "Map", items: () => [
+        { label: "Map view: the city from above", check: MAPV.on, closes: true, act: () => { closeGoPanel(); mapViewSet(!MAPV.on); renderMenu(); } },
+        { label: "Map overlay: districts, streets and places on the city", check: MAPO.on, closes: true, act: () => { mapOverlaySet(!MAPO.on); closeGoPanel(); renderMenu(); } },
+        { label: "Flat map, with directions in words", act: () => { closeGoPanel(); mapOpen(); } }] }) },
       ...(GUIDE.on ? [] : [
         { label: "Guided flight: the ship's computer shows you the city (3 minutes)", act: () => { closeGoPanel(); guideStart("short"); } },
         { label: "Full tour: the city and four of its bars, Life towers, Morse masts (8 minutes)", act: () => { closeGoPanel(); guideStart("full"); } }]),
@@ -695,6 +698,7 @@ function menuRoot() {
       // in foafos the shell's volume and mute are the sound control (hostGain)
       ...(hostOn() ? [] : [{ label: "Sound", check: AU.on, act: () => { audioSetOn(!AU.on); renderMenu(); } }]),
       { label: "View", sub: () => ({ title: "View", items: () => [
+        { label: "Sharper (a lower frame rate on a slow device)", check: QUALITY.sharp, act: () => { QUALITY.sharp = !QUALITY.sharp; try { localStorage.setItem("drift.sharp", QUALITY.sharp ? "1" : "0"); } catch (e) {} renderMenu(); } },
         ...[["Route: automatic", null], ["Route: street level", "low"], ["Route: over the rooftops", "high"]].map(([n, v]) => ({ label: n, check: st.forced === v, act: () => { st.forced = v; if (v === null) st.modeT = 20; st.realign = true; syncLabels(); renderMenu(); } })),
         { label: "Opening sequence when the page loads", check: introEnabled(), act: () => { try { localStorage.setItem("drift.intro", introEnabled() ? "0" : "1"); } catch (e) {} renderMenu(); } },
         { label: "Loose things with Titan physics (grit, litter, snow)", check: PHYS_ON, act: () => { PHYS_ON = !PHYS_ON; try { localStorage.setItem("drift.phys", PHYS_ON ? "1" : "0"); } catch (e) {} renderMenu(); } },

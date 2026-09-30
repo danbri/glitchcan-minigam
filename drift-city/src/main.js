@@ -46,6 +46,10 @@ let clock = 0;
 // menu's first row) stops it; `clock` goes on for the view, the menus and the sound
 let wclock = 0;
 const CITYP = { on: false, t0: 0 };
+// View › Sharper: the governor keeps the render scale at 66% or more (owner, September 2026: "looking a bit pixelated
+// or frosty"), for a lower frame rate on a slow GPU
+const QUALITY = { sharp: false };
+try { QUALITY.sharp = localStorage.getItem("drift.sharp") === "1"; } catch (e) {}
 function angDiff(a, b) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
 function giantAheadOnLine(fx, fz) {
   const bx0 = Math.floor(st.x / BIG), bz0 = Math.floor(st.z / BIG);
@@ -77,7 +81,7 @@ function statusParts(autoOn) {
   if (NAV.mode === "space") { const k = NAV.space.kind; return [clock - lastInput > 4.5 ? "Drifting" : "Steering by hand", spaceName(), k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn"]; }
   const lead = CITYP.on ? "City paused" : NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
   // in the city, a place name you could give someone, not the drone's state
-  if (!NAV.tour) return [autoOn ? "" : "By hand", placeLabel()];
+  if (!NAV.tour) return [CITYP.on ? "City paused" : autoOn ? "" : "By hand", placeLabel()];
   return [lead, placeLabel()];
 }
 function statusHTML(autoOn) {
@@ -1278,7 +1282,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 896 + 1280, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 896 + 3424, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     PHYS.ubuf = device.createBuffer({ size: 224, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -1413,7 +1417,7 @@ async function init() {
   const coarse = matchMedia("(pointer: coarse)").matches;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   let scale = coarse ? 0.66 : 0.82, ceiling = 1.0;
-  const minScale = 0.36;
+  // the lowest render scale the frame-rate governor may choose: 36%, or 66% with View › Sharper (QUALITY)
   let T = null, histValid = false, cur = 0, carry = null, carryBG = null;
   function buildTargets() {
     // Keep the latest resolved frame: the anti-aliasing pass samples history by screen position,
@@ -1490,7 +1494,9 @@ async function init() {
     }
     missE = missE * 0.96 + (dt * 1000 > displayMs * 1.22 ? 0.04 : 0);
     if (now - lastChange > 2500) {
-      if (missE > 0.15 && scale > minScale) {
+      const minScale = QUALITY.sharp ? 0.66 : 0.36;
+      if (scale < minScale) { scale = minScale; buildTargets(); lastChange = now; }
+      else if (missE > 0.15 && scale > minScale) {
         if (now - lastIncrease < 8000) ceiling = scale / 1.05;
         scale = Math.max(minScale, scale * 0.9); buildTargets(); lastChange = now; goodTime = 0; missE = 0.08;
       } else if (missE < 0.03 && scale < ceiling) {
@@ -1574,7 +1580,7 @@ async function init() {
     const zc = cellAt(Math.floor(st.x / C), Math.floor(st.z / C));
     const steamy = !zc.wild && zc.zone === 3 ? Math.max(0, 1 - Math.max(st.y - 20, 0) / 60) : 0;
     MAPCAM.steam = (MAPCAM.steam || 0) + (steamy - (MAPCAM.steam || 0)) * Math.min(1, dt * 0.5);
-    U.set(tod.fog, 36); U[39] = tod.den * (1 + 2.4 * DIR.fog) * (1 + 1.2 * MAPCAM.steam);
+    U.set(tod.fog, 36); U[39] = tod.den * (1 + 2.4 * DIR.fog) * (1 + 1.2 * MAPCAM.steam) * (1 - 0.85 * MAPV.k);
     U[40] = halton(j, 2) - 0.5; U[41] = halton(j, 3) - 0.5; U[42] = canvas.width; U[43] = canvas.height;
     const pv = prev || { pos: [U[4], U[5], U[6]], f: cam.f, r: cam.r, up: cam.up };
     U.set(pv.pos, 44); U.set(pv.f, 48); U.set(pv.r, 52); U.set(pv.up, 56);
@@ -1736,6 +1742,7 @@ async function init() {
     }
     pickMarkFrame();                         // the selection ring follows its thing
     pickNearFrame();                         // and the rings on its neighbours, while the city is paused
+    mapViewStep(dtS); mapLabelsFrame();      // the map view and the map overlay's labels (map.js)
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -1892,7 +1899,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { CITYP, cityPause, pickSelect, pickSelGPU, cellAt, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { MAPV, MAPO, mapViewSet, mapOverlaySet, CITYP, cityPause, pickSelect, pickSelGPU, cellAt, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

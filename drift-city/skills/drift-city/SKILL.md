@@ -455,6 +455,13 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
   seven patches, or four below row 16 when there is a gun, so the gun's gliders have something to hit.
   Measured offline before the gun change (`life.js` in `node:vm`, ten minutes, eight 24-column windows): the
   emptiest window had a median of 31 live cells, 21 without soup.
+- **The GPU reads a colour class per cell, not the board (September 2026).** Owner, with a phone screenshot:
+  "looking a bit pixelated or frosty". The render scale is adaptive (66% at the start on a phone, down to 36%),
+  so a slower shader shows as a softer picture. Dawn, same night view at Conway Corner: scene 99.7 ms before the
+  day's Life work, 119.9 ms after it (each lit Life cell counted its eight neighbours per pixel, on the flat faces
+  too, with both boards read). `lifePack` now sends each cell's class (six 4-bit classes to a float; the flat board
+  from float 0, the round board from float 428; `ev.life` is 214 vec4s) and `lifeCol`/`lifeColR` read one value:
+  108.2 ms. View › Sharper keeps the scale at 66% or more (`QUALITY`), for a lower frame rate.
 - Seeing gliders in a headless render: `LIFEGEN=300` in dawn-run.mjs runs both boards 300 generations before the
   frame (the runner's clock hardly moves, so the page steps them only a few times itself).
 - Check it with a known still life: `LIFESTRIPE=1` in the scratch runner stamps every other row full (stable in
@@ -904,6 +911,26 @@ every corner, so a street-level eye fails every test. The top result is not
 always the best picture: render the first few and look at them with
 `HOP=place:conway_corner CAM=x,y,z,yaw,pitch node drift-city/tests/dawn-run.mjs`.
 If you change a Life rule in scene.wgsl, change it in the search tool too.
+
+**The map view and the map overlay (`map.js`, September 2026).** Owner: "the map looks like a one off artifact
+not data driven. It should be possible to fly up and see the city from mappers eye view and toggle map on/off, or
+see map overlaid on the 3D". Menu › Map has three rows:
+- "Map view": a visit (`NAV.visit.mapView`) to 900 m straight down (pitch -1.52; other visits stop at -1.3), north
+  up. There the sticks, a drag and the arrow keys pan, and the right stick, W/S or the wheel zoom from 250 to
+  2600 m (`mapViewInput`, called from `visitStep`). The haze is thinned to 15% (`MAPV.k` on U[39]). The overlay
+  comes on with it. Turning it off flies back, and to surface flight when that is where you were. Not in the WebGL
+  fallback: it has no visits.
+- "Map overlay": the shader tints ground and roofs with the district's colour (the flat map's `MAP_ZONE_COL`, from
+  bits 15-17 of the cell's flags) and draws street lines; `ev.sel2.w` bit 1 switches it. Labels for the districts
+  (their centres, from `mapBase`) and every non-room place in `PLACES` are DOM elements laid over the view each
+  frame (`mapLabelsFrame`, nearest 26 in view); a place label is a button that goes there.
+- "Flat map, with directions in words": the old panel, kept for reading without the view.
+
+**The city's sound, when the browser has not started it.** A browser starts a frame's audio only for a tap in
+that frame, so a reader who taps only the story or the shell hears nothing, with no way to fix it (owner: "bg
+audio isn't always there and i dont see how to restore"). While the sound is on and not playing, the city shows
+one button, "Tap for the city's sound" (`#soundChip`, audio.js `audioBlocked`), the one piece of city UI kept
+in its own frame on purpose, and its status says "Sound: off: tap the city".
 
 **The city's menu is the shell's inside foafos** (spec §5.9). `host.js`
 hides `#bMenu` and walks `menuRoot()` into shell actions once a second

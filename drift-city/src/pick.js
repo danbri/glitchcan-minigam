@@ -309,16 +309,16 @@ function cityPause(on) {
   pickNearSet();
 }
 // the selection for the GPU: EVN[216..223] (ev.sel, ev.sel2 in scene.wgsl)
-//   sel: cell x, cell z, kind (0 none, 1 building, 2 person), person key; sel2: top (person: z), real time,
-//   paused, person x
+//   sel: cell x, cell z, kind (0 none, 1 building, 2 person), person key; sel2: building top, real time, paused,
+//   flags (1: the map overlay)
 function pickSelGPU() {
   const S = PICK.sel;
   let k = 0, cx = 0, cz = 0, key = 0, top = 0;
-  let px = 0;
   // cells as the view has them (not wrapped): the shader hashes people by the same unwrapped cell
-  if (S && S.person) { k = 2; cx = S.person.cx; cz = S.person.cz; key = S.person.key; top = S.z; px = S.x; }
+  if (S && S.person) { k = 2; cx = S.person.cx; cz = S.person.cz; key = S.person.key; }
   else if (S && S.building) { k = 1; cx = S.building[0]; cz = S.building[1]; top = S.h || 0; }
-  EVN.set([cx, cz, k, key, top, clock, CITYP.on ? 1 : 0, px], 216);
+  // sel2.w: flags for the shader, 1 the map overlay (map.js)
+  EVN.set([cx, cz, k, key, top, clock, CITYP.on ? 1 : 0, MAPO.on ? 1 : 0], 216);
   return k;
 }
 // the things next to the selection, while the city is paused: the buildings in the eight cells round it and the

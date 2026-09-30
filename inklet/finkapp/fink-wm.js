@@ -61,6 +61,7 @@ window.FinkWM = {
         const sys = { 'wm-sys-apps': () => window.FoafOS?.openHome?.(),
                       'wm-sys-tasks': () => window.FoafOS?.openSwitcher?.(),
                       'wm-sys-windows': () => window.FoafOS?.enterOverview?.(),
+                      'wm-sys-activity': () => window.FoafOS?.openActivity?.(),
                       'wm-sys-shell': () => window.FoafOS?.openDrawer?.(true) };
         for (const [id, go] of Object.entries(sys)) {
             document.getElementById(id)?.addEventListener('click', () => { this._setCollapsed(true); go(); });

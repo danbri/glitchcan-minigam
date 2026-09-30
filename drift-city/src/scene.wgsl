@@ -33,39 +33,32 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, sel: vec4f, sel2: vec4f, life: array<vec4f, 80> };
-// Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
-fn lifeAt(col: i32, row: i32) -> f32 {
-  if (row < 0 || row >= 40) { return 0.0; }
-  let i = u32(row * 64 + ((col % 64) + 64) % 64);
-  let f = ev.life[i >> 6u][(i >> 4u) & 3u];
-  return f32((u32(f) >> (i & 15u)) & 1u);
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, sel: vec4f, sel2: vec4f, life: array<vec4f, 214> };
+// Conway's Life (life.js): per cell a colour class the page works out when it steps the board (lifePack), six 4-bit
+// classes to a float: the flat board (64 columns by 40 rows) from float 0, the round towers' board (32 by 80) from
+// float 428. One read per pixel; counting the neighbours here cost a fifth of the scene's time.
+fn lifeK(base: i32, i: i32) -> i32 {
+  let fi = base + i / 6;
+  return (i32(ev.life[fi >> 2][fi & 3]) >> (u32(i % 6) * 4u)) & 15;
 }
-// the round towers' board (life.js LIFER): 32 columns once round the tower by 80 rows, after the first board
-fn lifeAtR(col: i32, row: i32) -> f32 {
-  if (row < 0 || row >= 80) { return 0.0; }
-  let i = u32(2560 + row * 32 + ((col % 32) + 32) % 32);
-  let f = ev.life[i >> 6u][(i >> 4u) & 3u];
-  return f32((u32(f) >> (i & 15u)) & 1u);
-}
-fn lifeCell(r: bool, col: i32, row: i32) -> f32 { return select(lifeAt(col, row), lifeAtR(col, row), r); }
 // a cell's colour by how many live neighbours it has, which is also its fate: one or none (it dies of loneliness)
 // amber, two green, three blue, four or more (it dies of crowding) magenta; an empty cell with three (born next
 // generation) glows faintly blue
-fn lifeCol(col: i32, row: i32) -> vec3f { return lifeColB(false, col, row); }
-fn lifeColB(r: bool, col: i32, row: i32) -> vec3f {
-  let a = lifeCell(r, col, row);
-  var n = 0.0;
-  for (var dy = -1; dy <= 1; dy++) {
-    for (var dx = -1; dx <= 1; dx++) {
-      if (dx != 0 || dy != 0) { n += lifeCell(r, col + dx, row + dy); }
-    }
-  }
-  if (a < 0.5) { return vec3f(0.2, 0.55, 1.0) * 0.14 * step(abs(n - 3.0), 0.1); }
-  if (n < 1.5) { return vec3f(1.0, 0.5, 0.12); }
-  if (n < 2.5) { return vec3f(0.35, 1.0, 0.45); }
-  if (n < 3.5) { return vec3f(0.3, 0.75, 1.0); }
+fn lifeClassCol(k: i32) -> vec3f {
+  if (k == 0) { return vec3f(0.0); }
+  if (k == 1) { return vec3f(0.2, 0.55, 1.0) * 0.14; }
+  if (k == 2) { return vec3f(1.0, 0.5, 0.12); }
+  if (k == 3) { return vec3f(0.35, 1.0, 0.45); }
+  if (k == 4) { return vec3f(0.3, 0.75, 1.0); }
   return vec3f(1.0, 0.3, 0.85);
+}
+fn lifeCol(col: i32, row: i32) -> vec3f {
+  if (row < 0 || row >= 40) { return vec3f(0.0); }
+  return lifeClassCol(lifeK(0, row * 64 + ((col % 64) + 64) % 64));
+}
+fn lifeColR(col: i32, row: i32) -> vec3f {
+  if (row < 0 || row >= 80) { return vec3f(0.0); }
+  return lifeClassCol(lifeK(428, row * 32 + ((col % 32) + 32) % 32));
 }
 struct EscG { ok: bool, a: vec3f, b: vec3f };
 @group(0) @binding(11) var<uniform> ev: EV;
@@ -5031,7 +5024,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         // a pale grid between the cells, so the board reads as a board even when most of it is dead
         let grid = (1.0 - smoothstep(0.015, 0.045, min(min(gx, 1.0 - gx), min(gy, 1.0 - gy)))) * detail;
         let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
-        let lcol = lifeColB(true, i32(floor(fxL)), i32(floor(rowF)));
+        let lcol = lifeColR(i32(floor(fxL)), i32(floor(rowF)));
         s.alb = mix(vec3f(0.012, 0.018, 0.022), vec3f(0.16, 0.16, 0.15), grid);
         s.spec = mix(1.0, 0.3, grid);
         s.refl = (1.0 - grid) * (0.04 + 0.4 * pow(1.0 - ndv, 4.0)) * (1.0 - min(1.0, dot(lcol, vec3f(1.0))));
@@ -7310,6 +7303,25 @@ fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
       sf.alb = mix(sf.alb, SEL_HI * 0.35, 0.5);
       sf.emi += selGlow(p, n, crd);
       sf.refl = 0.0;
+    }
+    // the map overlay (map.js MAPO): each district's colour on the ground and the roofs, as on the flat map, and the
+    // street lines; not on the wild land
+    if (first && (i32(ev.sel2.w) & 1) != 0 && (p.y < 0.6 || n.y > 0.7)) {
+      let cM = vec2i(floor(p.xz / CS));
+      let hM = cellHead(cM);
+      if (hM.typ != 7) {
+        var zc = array<vec3f, 8>(vec3f(0.79, 0.64, 0.42), vec3f(0.88, 0.34, 0.6), vec3f(0.73, 0.54, 0.37), vec3f(0.82, 0.32, 0.24),
+          vec3f(0.49, 0.45, 0.41), vec3f(0.6, 0.64, 0.68), vec3f(0.44, 0.37, 0.53), vec3f(0.37, 0.66, 0.63));
+        let zcol = zc[(hM.fl >> 15) & 7];
+        sf.alb = mix(sf.alb, zcol * 0.6, 0.6);
+        sf.emi += zcol * (0.05 + 0.12 * u.windows);
+        if (p.y < 0.6) {
+          let lqM = p.xz - (vec2f(cM) + 0.5) * CS;
+          let eM = HALF - max(abs(lqM.x), abs(lqM.y));
+          let wM = 0.25 + h.t * 0.002;
+          sf.emi += vec3f(1.0, 0.95, 0.8) * (1.0 - smoothstep(wM, wM * 2.0, eM)) * (0.5 + 0.8 * u.windows);
+        }
+      }
     }
     // the city paused: the street grid glows green, with a pulse running out from the selection
     if (first && ev.sel2.z > 0.5 && p.y < 0.6) {

@@ -720,10 +720,12 @@ function visitStep(dt, inp) {
   // a stick (or W, S) pushed during the flight there takes over at once: the view stops where it is and is yours
   // (not during a guided tour: there the sticks only turn the view, and the tour flies on)
   const touring = typeof GUIDE !== "undefined" && GUIDE.on && !GUIDE.paused;
-  if (!touring && V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
+  if (!touring && !V.mapView && V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
     const here = { ...V.to, id: (V.to.id || "") + "~", x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch, room: 0 };
     V = NAV.visit = { from: here, to: here, t: 1, T: 1, ly: 0, lp: 0 };
   }
+  // the map view (map.js): once up there, the sticks and a drag pan and zoom instead of looking about
+  if (V.mapView && V.t >= V.T) { mapViewInput(V, inp, dt); inp = { ...inp, dx: 0, dy: 0, move: 0 }; }
   V.t = Math.min(V.t + dt, V.T);
   const e = sstep(0, 1, V.t / V.T);
   const a = V.from, b = V.to;
@@ -735,8 +737,8 @@ function visitStep(dt, inp) {
   const there = V.t >= V.T;
   // looking about: once there, or at any time on a tour (a brush turns the view and the tour flies on)
   if (there || touring) { V.ly += inp.dx * 1.6 * dt; V.lp = clampv(V.lp - inp.dy * 1.1 * dt, -1.0, 1.0); }
-  st.yaw = a.yaw + dy * e + V.ly + (there ? 0.015 * Math.sin(clock * 0.37) : 0);
-  st.pitch = clampv(a.pitch + (b.pitch - a.pitch) * e + V.lp + (there ? 0.01 * Math.sin(clock * 0.29) : 0), -1.3, 1.3);
+  st.yaw = a.yaw + dy * e + V.ly + (there && !V.mapView ? 0.015 * Math.sin(clock * 0.37) : 0);
+  st.pitch = clampv(a.pitch + (b.pitch - a.pitch) * e + V.lp + (there && !V.mapView ? 0.01 * Math.sin(clock * 0.29) : 0), V.mapView ? -1.52 : -1.3, 1.3);
   // a flight to something picked (V.look): turn to watch it on the way, then settle into the composed view
   if (V.look && !there) {
     const lx = V.look[0] - st.x, ly = V.look[1] - st.y, lz = V.look[2] - st.z;

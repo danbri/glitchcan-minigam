@@ -137,6 +137,7 @@ function hostStatus(parts) {
   if (parts[1]) items.push({ id: "where", value: parts[1] });
   if (parts[2]) items.push({ id: "far", value: parts[2] });
   items.push({ id: "at", label: "Titan", value: at });
+  if (audioBlocked()) items.push({ id: "sound", label: "Sound", value: "off: tap the city" });
   const json = JSON.stringify(items);
   if (json === HOST_STATUS.sent) return;
   HOST_STATUS.sent = json;

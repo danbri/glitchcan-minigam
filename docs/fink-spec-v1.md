@@ -990,6 +990,15 @@ seconds (one when the pane is short); a tap opens the history.
 most 6). Published retained as `app.<id>.status` (the menubar reads it)
 and shown under the title of the window menu (§5.9).
 
+
+**The Activity window (September 2026).** The stream has a window the shell
+manages: the `activity` panel app (`foafos-apps.js`), opened from the window
+menu ("Activity: who said what") or by a tap on an item. It holds the live
+card of a speaking face and the history (a `foafos-feed` on `activity.*`,
+which replays). While it is open, new items go into it and nothing is drawn
+over the app's pane; without it, the newest one or two show over the pane for
+a few seconds as a notice. Owner: the items "only render within monolithic
+World pane, not managed in foafos".
 ### 5.11 The selection — normative
 
 Owner, September 2026: "an object picker so clicking in the world gives
