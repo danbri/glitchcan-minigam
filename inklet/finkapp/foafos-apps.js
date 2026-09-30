@@ -307,6 +307,10 @@ export const APPS = [
   // not read this row as "sandboxed with no capabilities".
   { id: 'maker', family: 'make', icon: '🔧', name: 'Maker', surface: 'panel', panel: 'maker',
     desc: 'Variables, governance, capabilities', capabilities: ['shell'], silent: true },
+  // Who said or did what in every app (spec §5.10): the talking heads' live card and the history, in a window the
+  // shell manages, not over an app's pane
+  { id: 'activity', family: 'make', icon: '💬', name: 'Activity', surface: 'panel', panel: 'activity',
+    desc: 'Who said or did what, in every app', capabilities: ['shell'], silent: true },
   { id: 'logger', family: 'make', icon: '📜', name: 'Logger', surface: 'panel', panel: 'logger',
     desc: 'The event bus, filterable — including everything refused',
     capabilities: ['shell'], silent: true },

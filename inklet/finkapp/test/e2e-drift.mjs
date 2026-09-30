@@ -435,6 +435,17 @@ try {
     /^Pause the city/.test(first?.label || '') && first?.closes === true && pRan && paused && w1[0] === w0[0] && w1[1] > w0[1] && rings > 0 && selId1 && resumed
       ? pass(`the city's menu starts with "${first.label}" (it closes the window menu, so the view is free to tap): the world's clock stops (${w0[0].toFixed(2)} s, still after 1.2 s) while the page's goes on; the selection's neighbours get ${rings} rings, and a tap on "${ringName}" makes it the selection (${selId1}); unpausing clears them`)
       : fail(`city pause: ${JSON.stringify({ first: first?.label, pRan, paused, w0, w1, rings, selId0, selId1, resumed })}`);
+    // 20e. the map overlay (owner, September 2026: "see map overlaid on the 3D"): a row of the city's Map menu in
+    // the shell's window menu; it lays the districts' and places' names over the view, and turns off again
+    const mapRow = await wpage.evaluate(() => (FinkWM._appActions || []).find((a) => a.label === 'Map')?.items?.find((x) => /^Map overlay/.test(x.label)) || null);
+    if (mapRow) await wpage.evaluate((id) => FinkMinigames.runAction(id), mapRow.id);
+    const mapLabels = await wcity.waitForFunction(() => document.querySelectorAll('.mapLabel:not([hidden])').length > 2, null, { timeout: 10000 })
+      .then(() => wcity.evaluate(() => [...document.querySelectorAll('.mapLabel:not([hidden])')].map((e) => e.textContent)), () => []);
+    if (mapRow) await wpage.evaluate((id) => FinkMinigames.runAction(id), mapRow.id);
+    const cleared = await wcity.waitForFunction(() => document.querySelectorAll('.mapLabel').length === 0, null, { timeout: 10000 }).then(() => true, () => false);
+    mapRow?.closes === true && mapLabels.length > 2 && cleared
+      ? pass(`Map › Map overlay lays names over the city (${mapLabels.length} in view: ${mapLabels.slice(0, 4).join(', ')} …) and takes them away again`)
+      : fail(`map overlay: ${JSON.stringify({ mapRow, mapLabels, cleared })}`);
     // the talking head's line (section 19) went to the shell's activity stream, and its face with it
     // the feed has it once the line has ended; while it plays it is the live card on screen
     const stream = await wpage.evaluate(() => [...document.querySelectorAll('#foafos-feed-wrap foaf-activity, #foafos-activity foaf-activity')]
@@ -445,6 +456,20 @@ try {
     mags && headOff
       ? pass(`the talking head speaks in the shell's activity stream ("${mags.label.slice(0, 60)}…"${mags.img ? ', with a still of the face' : ''}), not over the view`)
       : fail(`activity stream: ${JSON.stringify({ stream: stream.slice(0, 4), headOff })}`);
+    // the stream in a window the shell manages (owner, September 2026: its items "only render within monolithic
+    // World pane, not managed in foafos"): opened from the window menu, it holds the history (Mags's line among
+    // it) and the new items, and while it is open nothing is drawn over the app's pane
+    await wpage.evaluate(() => document.getElementById('wm-sys-activity').click());
+    const actWin = await wpage.waitForSelector('#foafos-activity-win', { timeout: 5000 }).then(() => true, () => false);
+    await wpage.evaluate(() => FoafOS.postActivity('drift', { who: 'Test', text: 'a line for the window' }, 'Drift City'));
+    const act = await wpage.evaluate(() => ({
+      live: [...document.querySelectorAll('#foafos-activity-win .act-live foaf-activity')].map((c) => c.getAttribute('aria-label')),
+      hist: [...document.querySelectorAll('#foafos-activity-win foafos-feed foaf-activity')].map((c) => c.getAttribute('aria-label')),
+      overPane: document.querySelectorAll('#foafos-activity .foafos-activity-item').length }));
+    actWin && act.live.some((l) => /a line for the window/.test(l || '')) && [...act.live, ...act.hist].some((l) => /^Mags/.test(l || '')) && act.overPane === 0
+      ? pass(`the activity stream has a window of its own in foafos (window menu › Activity): new items go there (${act.live.length}), the history is there (${act.hist.length}), and Mags's line with them (a live line joins the history when it ends), and nothing is drawn over the city`)
+      : fail(`activity window: ${JSON.stringify({ actWin, act })}`);
+    await wpage.evaluate(() => document.getElementById('foafos-activity-win')?.remove());
 
     // 20b. the city never plays its own story beside a foafos one. Field report, September 2026: "The tea stall
     // story ink ui seems to use its builtin ink engine": the opening flight's end, the Story button and the t key

@@ -121,6 +121,19 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 /* the selection, followed in the view (pickMarkFrame): a ring on the picked thing until it is cleared */
 .pickMark { position: fixed; z-index: 12; pointer-events: none; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #7fe3ff; box-shadow: 0 0 10px rgba(127, 227, 255, .8), inset 0 0 10px rgba(127, 227, 255, .5); }
 .pickMark[hidden] { display: none; }
+/* the city's sound is on but the browser has not let it play: one tap here starts it (audio.js audioChipTick) */
+#soundChip { position: fixed; z-index: 14; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  padding: 10px 16px; border-radius: 22px; border: 1px solid rgba(255, 255, 255, .35); background: rgba(10, 16, 24, .72); color: #fff;
+  font: 600 15px/1.2 system-ui, sans-serif; cursor: pointer; }
+#soundChip[hidden] { display: none; }
+/* the map overlay's labels (map.js mapLabelsFrame): districts in capitals, places as small buttons that go there */
+.mapLabel { position: fixed; z-index: 11; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+  font: 600 12px/1.2 system-ui, sans-serif; color: #fff; text-shadow: 0 0 3px #000, 0 0 6px #000; }
+.mapLabel[hidden] { display: none; }
+.mapDistrict { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; opacity: .9; }
+.mapPlace { pointer-events: auto; cursor: pointer; padding: 3px 7px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .45);
+  background: rgba(8, 12, 20, .55); }
+.mapPlace:focus-visible { outline: 2px solid #ff0; }
 /* while the city is paused: a ring on each thing next to the selection, to tap (pickNearFrame) */
 .pickNear { position: fixed; z-index: 12; transform: translate(-50%, -50%); border-radius: 50%; padding: 0; background: rgba(120, 255, 170, .06);
   border: 2px dashed rgba(120, 255, 170, .75); box-shadow: 0 0 8px rgba(120, 255, 170, .5); cursor: pointer; animation: pickNearPulse 1.6s ease-in-out infinite; }
@@ -240,6 +253,7 @@ body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { 
 </head>
 <body>
 <canvas id="c" aria-label="Autonomous drone flight over a procedural city"></canvas>
+<button type="button" id="soundChip" hidden>🔈 Tap for the city's sound</button>
 <div class="ui" id="ui">
   <div class="stats" id="stats" hidden></div>
   <button class="status" id="status" type="button" aria-pressed="false" title="Show performance stats"></button>
@@ -361,39 +375,32 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, sel: vec4f, sel2: vec4f, life: array<vec4f, 80> };
-// Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
-fn lifeAt(col: i32, row: i32) -> f32 {
-  if (row < 0 || row >= 40) { return 0.0; }
-  let i = u32(row * 64 + ((col % 64) + 64) % 64);
-  let f = ev.life[i >> 6u][(i >> 4u) & 3u];
-  return f32((u32(f) >> (i & 15u)) & 1u);
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, sel: vec4f, sel2: vec4f, life: array<vec4f, 214> };
+// Conway's Life (life.js): per cell a colour class the page works out when it steps the board (lifePack), six 4-bit
+// classes to a float: the flat board (64 columns by 40 rows) from float 0, the round towers' board (32 by 80) from
+// float 428. One read per pixel; counting the neighbours here cost a fifth of the scene's time.
+fn lifeK(base: i32, i: i32) -> i32 {
+  let fi = base + i / 6;
+  return (i32(ev.life[fi >> 2][fi & 3]) >> (u32(i % 6) * 4u)) & 15;
 }
-// the round towers' board (life.js LIFER): 32 columns once round the tower by 80 rows, after the first board
-fn lifeAtR(col: i32, row: i32) -> f32 {
-  if (row < 0 || row >= 80) { return 0.0; }
-  let i = u32(2560 + row * 32 + ((col % 32) + 32) % 32);
-  let f = ev.life[i >> 6u][(i >> 4u) & 3u];
-  return f32((u32(f) >> (i & 15u)) & 1u);
-}
-fn lifeCell(r: bool, col: i32, row: i32) -> f32 { return select(lifeAt(col, row), lifeAtR(col, row), r); }
 // a cell's colour by how many live neighbours it has, which is also its fate: one or none (it dies of loneliness)
 // amber, two green, three blue, four or more (it dies of crowding) magenta; an empty cell with three (born next
 // generation) glows faintly blue
-fn lifeCol(col: i32, row: i32) -> vec3f { return lifeColB(false, col, row); }
-fn lifeColB(r: bool, col: i32, row: i32) -> vec3f {
-  let a = lifeCell(r, col, row);
-  var n = 0.0;
-  for (var dy = -1; dy <= 1; dy++) {
-    for (var dx = -1; dx <= 1; dx++) {
-      if (dx != 0 || dy != 0) { n += lifeCell(r, col + dx, row + dy); }
-    }
-  }
-  if (a < 0.5) { return vec3f(0.2, 0.55, 1.0) * 0.14 * step(abs(n - 3.0), 0.1); }
-  if (n < 1.5) { return vec3f(1.0, 0.5, 0.12); }
-  if (n < 2.5) { return vec3f(0.35, 1.0, 0.45); }
-  if (n < 3.5) { return vec3f(0.3, 0.75, 1.0); }
+fn lifeClassCol(k: i32) -> vec3f {
+  if (k == 0) { return vec3f(0.0); }
+  if (k == 1) { return vec3f(0.2, 0.55, 1.0) * 0.14; }
+  if (k == 2) { return vec3f(1.0, 0.5, 0.12); }
+  if (k == 3) { return vec3f(0.35, 1.0, 0.45); }
+  if (k == 4) { return vec3f(0.3, 0.75, 1.0); }
   return vec3f(1.0, 0.3, 0.85);
+}
+fn lifeCol(col: i32, row: i32) -> vec3f {
+  if (row < 0 || row >= 40) { return vec3f(0.0); }
+  return lifeClassCol(lifeK(0, row * 64 + ((col % 64) + 64) % 64));
+}
+fn lifeColR(col: i32, row: i32) -> vec3f {
+  if (row < 0 || row >= 80) { return vec3f(0.0); }
+  return lifeClassCol(lifeK(428, row * 32 + ((col % 32) + 32) % 32));
 }
 struct EscG { ok: bool, a: vec3f, b: vec3f };
 @group(0) @binding(11) var<uniform> ev: EV;
@@ -5359,7 +5366,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         // a pale grid between the cells, so the board reads as a board even when most of it is dead
         let grid = (1.0 - smoothstep(0.015, 0.045, min(min(gx, 1.0 - gx), min(gy, 1.0 - gy)))) * detail;
         let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
-        let lcol = lifeColB(true, i32(floor(fxL)), i32(floor(rowF)));
+        let lcol = lifeColR(i32(floor(fxL)), i32(floor(rowF)));
         s.alb = mix(vec3f(0.012, 0.018, 0.022), vec3f(0.16, 0.16, 0.15), grid);
         s.spec = mix(1.0, 0.3, grid);
         s.refl = (1.0 - grid) * (0.04 + 0.4 * pow(1.0 - ndv, 4.0)) * (1.0 - min(1.0, dot(lcol, vec3f(1.0))));
@@ -7638,6 +7645,25 @@ fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
       sf.alb = mix(sf.alb, SEL_HI * 0.35, 0.5);
       sf.emi += selGlow(p, n, crd);
       sf.refl = 0.0;
+    }
+    // the map overlay (map.js MAPO): each district's colour on the ground and the roofs, as on the flat map, and the
+    // street lines; not on the wild land
+    if (first && (i32(ev.sel2.w) & 1) != 0 && (p.y < 0.6 || n.y > 0.7)) {
+      let cM = vec2i(floor(p.xz / CS));
+      let hM = cellHead(cM);
+      if (hM.typ != 7) {
+        var zc = array<vec3f, 8>(vec3f(0.79, 0.64, 0.42), vec3f(0.88, 0.34, 0.6), vec3f(0.73, 0.54, 0.37), vec3f(0.82, 0.32, 0.24),
+          vec3f(0.49, 0.45, 0.41), vec3f(0.6, 0.64, 0.68), vec3f(0.44, 0.37, 0.53), vec3f(0.37, 0.66, 0.63));
+        let zcol = zc[(hM.fl >> 15) & 7];
+        sf.alb = mix(sf.alb, zcol * 0.6, 0.6);
+        sf.emi += zcol * (0.05 + 0.12 * u.windows);
+        if (p.y < 0.6) {
+          let lqM = p.xz - (vec2f(cM) + 0.5) * CS;
+          let eM = HALF - max(abs(lqM.x), abs(lqM.y));
+          let wM = 0.25 + h.t * 0.002;
+          sf.emi += vec3f(1.0, 0.95, 0.8) * (1.0 - smoothstep(wM, wM * 2.0, eM)) * (0.5 + 0.8 * u.windows);
+        }
+      }
     }
     // the city paused: the street grid glows green, with a pulse running out from the selection
     if (first && ev.sel2.z > 0.5 && p.y < 0.6) {
@@ -10211,7 +10237,7 @@ function initGL(reason) {
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
     if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
-    pickMarkFrame(); pickNearFrame();
+    pickMarkFrame(); pickNearFrame(); mapLabelsFrame();
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;
@@ -10908,7 +10934,10 @@ function menuRoot() {
         { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } },
         { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) }]),
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }, ...(NAV.tourHeld ? [{ label: "Carry on the Grand tour", act: () => { closeGoPanel(); tourResume(); } }] : [])] }) },
-      { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
+      { label: "Map", detail: MAPV.on ? "from above" : MAPO.on ? "overlay" : "", sub: () => ({ title: "Map", items: () => [
+        { label: "Map view: the city from above", check: MAPV.on, closes: true, act: () => { closeGoPanel(); mapViewSet(!MAPV.on); renderMenu(); } },
+        { label: "Map overlay: districts, streets and places on the city", check: MAPO.on, closes: true, act: () => { mapOverlaySet(!MAPO.on); closeGoPanel(); renderMenu(); } },
+        { label: "Flat map, with directions in words", act: () => { closeGoPanel(); mapOpen(); } }] }) },
       ...(GUIDE.on ? [] : [
         { label: "Guided flight: the ship's computer shows you the city (3 minutes)", act: () => { closeGoPanel(); guideStart("short"); } },
         { label: "Full tour: the city and four of its bars, Life towers, Morse masts (8 minutes)", act: () => { closeGoPanel(); guideStart("full"); } }]),
@@ -10921,6 +10950,7 @@ function menuRoot() {
       // in foafos the shell's volume and mute are the sound control (hostGain)
       ...(hostOn() ? [] : [{ label: "Sound", check: AU.on, act: () => { audioSetOn(!AU.on); renderMenu(); } }]),
       { label: "View", sub: () => ({ title: "View", items: () => [
+        { label: "Sharper (a lower frame rate on a slow device)", check: QUALITY.sharp, act: () => { QUALITY.sharp = !QUALITY.sharp; try { localStorage.setItem("drift.sharp", QUALITY.sharp ? "1" : "0"); } catch (e) {} renderMenu(); } },
         ...[["Route: automatic", null], ["Route: street level", "low"], ["Route: over the rooftops", "high"]].map(([n, v]) => ({ label: n, check: st.forced === v, act: () => { st.forced = v; if (v === null) st.modeT = 20; st.realign = true; syncLabels(); renderMenu(); } })),
         { label: "Opening sequence when the page loads", check: introEnabled(), act: () => { try { localStorage.setItem("drift.intro", introEnabled() ? "0" : "1"); } catch (e) {} renderMenu(); } },
         { label: "Loose things with Titan physics (grit, litter, snow)", check: PHYS_ON, act: () => { PHYS_ON = !PHYS_ON; try { localStorage.setItem("drift.phys", PHYS_ON ? "1" : "0"); } catch (e) {} renderMenu(); } },
@@ -11297,6 +11327,26 @@ function audioSetOn(on) {
 // iOS counts only some events as a user gesture that may start or resume audio (a touch's pointerup and touchend,
 // click, keydown; not a touch's pointerdown), and it suspends audio when the app goes to the background: listen for all
 for (const ev of ["pointerdown", "pointerup", "touchend", "click", "keydown"]) addEventListener(ev, () => { if (!AU.on) return; if (!AU.ctx) audioInit(); else if (AU.ctx.state !== "running") AU.ctx.resume(); }, { passive: true });
+// Silent with no way back (owner, September 2026: "bg audio isn't always there and i dont see how to restore"). A
+// browser starts or resumes a frame's audio only for a tap IN that frame: a tap on the story, the shell or its menu
+// cannot do it for the city. So while the sound is on but not playing, the city shows one button of its own, the
+// one piece of city UI that must stay in the city's frame, and says so in its status (audioBlocked).
+function audioBlocked() {
+  if (!AU.on || (typeof hostPaused === "function" && hostPaused())) return false;
+  return !AU.ctx || AU.ctx.state !== "running";
+}
+function audioChipTick() {
+  const b = document.getElementById("soundChip");
+  if (!b) return;
+  const want = audioBlocked() && clock > 2;
+  if (b.hidden === !want) return;
+  b.hidden = !want;
+}
+if (typeof document !== "undefined" && document.getElementById) {
+  const b = document.getElementById("soundChip");
+  if (b && b.addEventListener) b.addEventListener("click", (e) => { e.stopPropagation(); if (!AU.ctx) audioInit(); else AU.ctx.resume(); b.hidden = true; });
+  if (typeof setInterval === "function") setInterval(audioChipTick, 700);
+}
 
 // ---------- placing sounds ----------
 function auSetPos(p, pos, tc) {
@@ -13021,10 +13071,12 @@ function visitStep(dt, inp) {
   // a stick (or W, S) pushed during the flight there takes over at once: the view stops where it is and is yours
   // (not during a guided tour: there the sticks only turn the view, and the tour flies on)
   const touring = typeof GUIDE !== "undefined" && GUIDE.on && !GUIDE.paused;
-  if (!touring && V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
+  if (!touring && !V.mapView && V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
     const here = { ...V.to, id: (V.to.id || "") + "~", x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch, room: 0 };
     V = NAV.visit = { from: here, to: here, t: 1, T: 1, ly: 0, lp: 0 };
   }
+  // the map view (map.js): once up there, the sticks and a drag pan and zoom instead of looking about
+  if (V.mapView && V.t >= V.T) { mapViewInput(V, inp, dt); inp = { ...inp, dx: 0, dy: 0, move: 0 }; }
   V.t = Math.min(V.t + dt, V.T);
   const e = sstep(0, 1, V.t / V.T);
   const a = V.from, b = V.to;
@@ -13036,8 +13088,8 @@ function visitStep(dt, inp) {
   const there = V.t >= V.T;
   // looking about: once there, or at any time on a tour (a brush turns the view and the tour flies on)
   if (there || touring) { V.ly += inp.dx * 1.6 * dt; V.lp = clampv(V.lp - inp.dy * 1.1 * dt, -1.0, 1.0); }
-  st.yaw = a.yaw + dy * e + V.ly + (there ? 0.015 * Math.sin(clock * 0.37) : 0);
-  st.pitch = clampv(a.pitch + (b.pitch - a.pitch) * e + V.lp + (there ? 0.01 * Math.sin(clock * 0.29) : 0), -1.3, 1.3);
+  st.yaw = a.yaw + dy * e + V.ly + (there && !V.mapView ? 0.015 * Math.sin(clock * 0.37) : 0);
+  st.pitch = clampv(a.pitch + (b.pitch - a.pitch) * e + V.lp + (there && !V.mapView ? 0.01 * Math.sin(clock * 0.29) : 0), V.mapView ? -1.52 : -1.3, 1.3);
   // a flight to something picked (V.look): turn to watch it on the way, then settle into the composed view
   if (V.look && !there) {
     const lx = V.look[0] - st.x, ly = V.look[1] - st.y, lz = V.look[2] - st.z;
@@ -13717,6 +13769,87 @@ function mapOpen() {
 }
 function mapClose() { if (MAP.el) MAP.el.hidden = true; clearInterval(MAP.timer); }
 
+// ---------- the map view and the map overlay (owner, September 2026) ----------
+// "the map looks like a one off artifact not data driven. It should be possible to fly up and see the city from
+// mappers eye view and toggle map on/off, or see map overlaid on the 3D". Two settings in the Map menu:
+// - map view (MAPV): the camera flies up to 900 m and looks straight down, north up; the sticks, a drag or the arrow
+//   keys pan, the right stick (up and down), W and S or the wheel zoom (250 to 2600 m); the haze thins. Turning it
+//   off flies back to where you were.
+// - map overlay (MAPO): the districts' colours on the ground and the roofs, the street lines, and labels for the
+//   places (PLACES) and districts (their centres, from mapBase), drawn on the 3D view by the shader (ev.sel2.w, bit
+//   1) and as labels here. The colours are the flat map's (MAP_ZONE_COL).
+const MAPV = { on: false, saved: null, back: false, k: 0, wheel: 0, prevO: false };
+const MAPO = { on: false, els: [] };
+function mapViewSet(on) {
+  if (on === MAPV.on) return;
+  const pose = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
+  if (on) {
+    if (NAV.mode !== "surface" && NAV.mode !== "visit") { showHint("The map view opens from the city, not from here.", 4000); return; }
+    MAPV.saved = { visit: NAV.mode === "visit" ? NAV.visit : null, pose };
+    tourHold();
+    const to = { id: "mapview", name: "Map view", x: st.x, y: Math.max(900, st.y + 300), z: st.z, yaw: -Math.PI / 2, pitch: -1.52 };
+    NAV.visit = { from: pose, to, t: 0, T: 2.5, ly: 0, lp: 0, mapView: true };
+    NAV.mode = "visit";
+    MAPV.on = true;
+    MAPV.prevO = MAPO.on; MAPO.on = true;           // the map view starts with the overlay; its row turns it off
+  } else {
+    MAPV.on = false;
+    MAPO.on = !!MAPV.prevO;
+    const S = MAPV.saved || { pose };
+    if (S.visit) NAV.visit = { ...S.visit, from: pose, t: 0, T: 2.5, ly: 0, lp: 0 };
+    else { NAV.visit = { from: pose, to: { ...S.pose, id: "mapback" }, t: 0, T: 2.5, ly: 0, lp: 0 }; MAPV.back = true; }
+    NAV.mode = "visit";
+  }
+  mapLabelsSet();
+}
+// in visitStep, once the map view is reached: pan and zoom instead of looking about
+function mapViewInput(V, inp, dt) {
+  const s = V.to.y * 0.9 * dt;
+  const y = clampv(V.to.y * (1 - (inp.move + MAPV.wheel) * 0.9 * dt), 250, 2600);
+  MAPV.wheel = (MAPV.wheel || 0) * Math.exp(-dt * 6);
+  V.to = { ...V.to, x: V.to.x + inp.dx * s, z: V.to.z + inp.dy * s, y };
+  V.from = V.to;
+  if (inp.dx || inp.dy || inp.move) lastInput = clock;
+}
+function mapViewStep(dt) {
+  MAPV.k += ((MAPV.on ? 1 : 0) - MAPV.k) * Math.min(1, dt * 1.5);
+  const V = NAV.visit;
+  if (MAPV.back && (!V || V.t >= V.T)) { MAPV.back = false; if (NAV.mode === "visit") flyOn(); }
+  if (MAPV.on && (NAV.mode !== "visit" || !V || !V.mapView)) { MAPV.on = false; MAPO.on = !!MAPV.prevO; mapLabelsSet(); }
+}
+function mapOverlaySet(on) { MAPO.on = on; mapLabelsSet(); }
+function mapLabelsSet() {
+  for (const e of MAPO.els) e.el.remove();
+  MAPO.els = [];
+  if (!MAPO.on || !document.body || !document.createElement) return;
+  mapBase();
+  const add = (name, x, y, z, cls, go) => {
+    const el = document.createElement(go ? "button" : "span");
+    el.className = "mapLabel " + cls; el.textContent = name; el.hidden = true;
+    if (go) { el.type = "button"; el.setAttribute("aria-label", "Go to " + name); el.addEventListener("click", (e) => { e.stopPropagation(); if (MAPV.on) { MAPV.on = false; MAPV.saved = null; } taleGo(go); mapLabelsSet(); }); }
+    document.body.appendChild(el);
+    MAPO.els.push({ el, x, y, z, cls });
+  };
+  for (const [name, x, z] of MAP.centres || []) add(name, x, 0, z, "mapDistrict", null);
+  const named = new Set();
+  for (const p of PLACES || []) { const n = p.name.split(",")[0]; if (p.room || named.has(n)) continue; named.add(n); add(n, p.x, Math.max(0, (p.y || 0) - 1.5), p.z, "mapPlace", p.id); }
+}
+function mapLabelsFrame() {
+  if (!MAPO.els.length) return;
+  const c = CAMNOW, H = innerHeight, W = innerWidth, far = MAPV.on ? 6000 : 1600;
+  let shown = 0;
+  const L = MAPO.els.map((e) => { const v = [e.x - c.p[0], e.y - c.p[1], e.z - c.p[2]]; return { e, v, zf: dot3(v, c.f), d: Math.hypot(v[0], v[2]) }; })
+    .sort((a, b) => (a.e.cls === b.e.cls ? a.d - b.d : a.e.cls === "mapDistrict" ? -1 : 1));
+  for (const { e, v, zf, d } of L) {
+    if (zf <= 1 || d > far || shown >= 26) { e.el.hidden = true; continue; }
+    const x = (dot3(v, c.r) / zf / 0.72 * H + W) / 2, y = (H - dot3(v, c.up) / zf / 0.72 * H) / 2;
+    if (x < 0 || x > W || y < 0 || y > H) { e.el.hidden = true; continue; }
+    e.el.hidden = false; shown++;
+    e.el.style.left = x + "px"; e.el.style.top = y + "px";
+  }
+}
+addEventListener("wheel", (e) => { if (MAPV.on) { MAPV.wheel = clampv((MAPV.wheel || 0) + e.deltaY * 0.004, -3, 3); e.preventDefault(); } }, { passive: false });
+
 // ---------- long-press to go ----------
 // Hold a finger (or the mouse) still on the view for half a second: the ray under it is followed into the city, the
 // thing it meets is named (a skyboat, a landmark, a building, the land), and the camera flies there on a high arc
@@ -14028,16 +14161,16 @@ function cityPause(on) {
   pickNearSet();
 }
 // the selection for the GPU: EVN[216..223] (ev.sel, ev.sel2 in scene.wgsl)
-//   sel: cell x, cell z, kind (0 none, 1 building, 2 person), person key; sel2: top (person: z), real time,
-//   paused, person x
+//   sel: cell x, cell z, kind (0 none, 1 building, 2 person), person key; sel2: building top, real time, paused,
+//   flags (1: the map overlay)
 function pickSelGPU() {
   const S = PICK.sel;
   let k = 0, cx = 0, cz = 0, key = 0, top = 0;
-  let px = 0;
   // cells as the view has them (not wrapped): the shader hashes people by the same unwrapped cell
-  if (S && S.person) { k = 2; cx = S.person.cx; cz = S.person.cz; key = S.person.key; top = S.z; px = S.x; }
+  if (S && S.person) { k = 2; cx = S.person.cx; cz = S.person.cz; key = S.person.key; }
   else if (S && S.building) { k = 1; cx = S.building[0]; cz = S.building[1]; top = S.h || 0; }
-  EVN.set([cx, cz, k, key, top, clock, CITYP.on ? 1 : 0, px], 216);
+  // sel2.w: flags for the shader, 1 the map overlay (map.js)
+  EVN.set([cx, cz, k, key, top, clock, CITYP.on ? 1 : 0, MAPO.on ? 1 : 0], 216);
   return k;
 }
 // the things next to the selection, while the city is paused: the buildings in the eight cells round it and the
@@ -14393,14 +14526,14 @@ if (typeof document !== "undefined" && document.addEventListener) {
 // Two boards, stepped here a few times a second and sent to the GPU packed 16 cells to a float (floats hold whole
 // numbers exactly up to 2^24) after the event block:
 // - LIFE, 64 columns (they wrap) by 40 rows from the top down (the top and the bottom are dead edges): the stepped
-//   towers' flat faces and the rounded modern towers (`lifeAt` in scene.wgsl). Reseeded every couple of minutes, or
+//   towers' flat faces and the rounded modern towers (`lifeCol` in scene.wgsl). Reseeded every couple of minutes, or
 //   when the board dies or stops changing.
-// - LIFER, 32 columns by 80 rows: the organic round towers (`lifeAtR`). 32 columns go once round the tower, so the
+// - LIFER, 32 columns by 80 rows: the organic round towers (`lifeColR`). 32 columns go once round the tower, so the
 //   board wraps as a cylinder does, with no seam. It always runs one glider gun at the top, turned on its side, and its
 //   gliders go down and round the tower. The bottom two rows are a sink (cleared each step), so the gliders leave
 //   there and nothing builds up to reach the gun. Two guns on one board destroy each other's streams (simulated).
 const LIFE_W = 64, LIFE_H = 40, LIFER_W = 32, LIFER_H = 80;
-const LIFE = { a: new Uint8Array(LIFE_W * LIFE_H), b: new Uint8Array(LIFE_W * LIFE_H), gpu: new Float32Array(320), t: 0, gen: 0, seedAt: -1e9, hist: [], pat: "" };
+const LIFE = { a: new Uint8Array(LIFE_W * LIFE_H), b: new Uint8Array(LIFE_W * LIFE_H), gpu: new Float32Array(856), t: 0, gen: 0, seedAt: -1e9, hist: [], pat: "" };
 const LIFER = { a: new Uint8Array(LIFER_W * LIFER_H), b: new Uint8Array(LIFER_W * LIFER_H), gen: 0, seedAt: -1e9, pat: "" };
 // patterns as rows of text, "#" alive; [name, rows, weight]
 const LIFE_PATTERNS = [
@@ -14560,11 +14693,29 @@ function lifeStep() {
   const stale = LIFE.hist.length === 6 && (LIFE.hist[5] === LIFE.hist[3] && LIFE.hist[4] === LIFE.hist[2]);
   return { pop, stale };
 }
+// For the GPU, each cell's colour class, not its bare state: the shader then reads one value per pixel, where
+// counting eight neighbours there cost a fifth of the scene's time once Life covered the stepped towers (Dawn,
+// September 2026: 99.7 to 119.9 ms). Class: 0 dead, 1 dead with three neighbours (born next), 2 alive with one or
+// none (dies of loneliness), 3 two, 4 three, 5 four or more (dies of crowding). Six 4-bit classes to a float
+// (floats hold whole numbers exactly up to 2^24): the flat board from float 0, the round board from float 428.
+const LIFE_RBASE = 428;
+function lifeClassPack(a, W, H, g, base) {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let n = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      const yy = y + dy;
+      if (yy < 0 || yy >= H) continue;
+      for (let dx = -1; dx <= 1; dx++) if (dx || dy) n += a[yy * W + (x + dx + W) % W];
+    }
+    const i = y * W + x;
+    const k = a[i] ? (n <= 1 ? 2 : n === 2 ? 3 : n === 3 ? 4 : 5) : (n === 3 ? 1 : 0);
+    if (k) g[base + Math.floor(i / 6)] += k * Math.pow(16, i % 6);
+  }
+}
 function lifePack() {
   const g = LIFE.gpu; g.fill(0);
-  for (let i = 0; i < LIFE.a.length; i++) if (LIFE.a[i]) g[i >> 4] += 1 << (i & 15);
-  // the round board after it, at float 160 (scene.wgsl `lifeAtR` reads cell 2560 on)
-  for (let i = 0; i < LIFER.a.length; i++) if (LIFER.a[i]) g[160 + (i >> 4)] += 1 << (i & 15);
+  lifeClassPack(LIFE.a, LIFE_W, LIFE_H, g, 0);
+  lifeClassPack(LIFER.a, LIFER_W, LIFER_H, g, LIFE_RBASE);
   return g;
 }
 // advance the board by real time; returns the packed board for the GPU
@@ -14768,6 +14919,7 @@ function hostStatus(parts) {
   if (parts[1]) items.push({ id: "where", value: parts[1] });
   if (parts[2]) items.push({ id: "far", value: parts[2] });
   items.push({ id: "at", label: "Titan", value: at });
+  if (audioBlocked()) items.push({ id: "sound", label: "Sound", value: "off: tap the city" });
   const json = JSON.stringify(items);
   if (json === HOST_STATUS.sent) return;
   HOST_STATUS.sent = json;
@@ -14856,6 +15008,10 @@ let clock = 0;
 // menu's first row) stops it; `clock` goes on for the view, the menus and the sound
 let wclock = 0;
 const CITYP = { on: false, t0: 0 };
+// View › Sharper: the governor keeps the render scale at 66% or more (owner, September 2026: "looking a bit pixelated
+// or frosty"), for a lower frame rate on a slow GPU
+const QUALITY = { sharp: false };
+try { QUALITY.sharp = localStorage.getItem("drift.sharp") === "1"; } catch (e) {}
 function angDiff(a, b) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
 function giantAheadOnLine(fx, fz) {
   const bx0 = Math.floor(st.x / BIG), bz0 = Math.floor(st.z / BIG);
@@ -14887,7 +15043,7 @@ function statusParts(autoOn) {
   if (NAV.mode === "space") { const k = NAV.space.kind; return [clock - lastInput > 4.5 ? "Drifting" : "Steering by hand", spaceName(), k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn"]; }
   const lead = CITYP.on ? "City paused" : NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
   // in the city, a place name you could give someone, not the drone's state
-  if (!NAV.tour) return [autoOn ? "" : "By hand", placeLabel()];
+  if (!NAV.tour) return [CITYP.on ? "City paused" : autoOn ? "" : "By hand", placeLabel()];
   return [lead, placeLabel()];
 }
 function statusHTML(autoOn) {
@@ -16088,7 +16244,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 896 + 1280, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 896 + 3424, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     PHYS.ubuf = device.createBuffer({ size: 224, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -16223,7 +16379,7 @@ async function init() {
   const coarse = matchMedia("(pointer: coarse)").matches;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   let scale = coarse ? 0.66 : 0.82, ceiling = 1.0;
-  const minScale = 0.36;
+  // the lowest render scale the frame-rate governor may choose: 36%, or 66% with View › Sharper (QUALITY)
   let T = null, histValid = false, cur = 0, carry = null, carryBG = null;
   function buildTargets() {
     // Keep the latest resolved frame: the anti-aliasing pass samples history by screen position,
@@ -16300,7 +16456,9 @@ async function init() {
     }
     missE = missE * 0.96 + (dt * 1000 > displayMs * 1.22 ? 0.04 : 0);
     if (now - lastChange > 2500) {
-      if (missE > 0.15 && scale > minScale) {
+      const minScale = QUALITY.sharp ? 0.66 : 0.36;
+      if (scale < minScale) { scale = minScale; buildTargets(); lastChange = now; }
+      else if (missE > 0.15 && scale > minScale) {
         if (now - lastIncrease < 8000) ceiling = scale / 1.05;
         scale = Math.max(minScale, scale * 0.9); buildTargets(); lastChange = now; goodTime = 0; missE = 0.08;
       } else if (missE < 0.03 && scale < ceiling) {
@@ -16384,7 +16542,7 @@ async function init() {
     const zc = cellAt(Math.floor(st.x / C), Math.floor(st.z / C));
     const steamy = !zc.wild && zc.zone === 3 ? Math.max(0, 1 - Math.max(st.y - 20, 0) / 60) : 0;
     MAPCAM.steam = (MAPCAM.steam || 0) + (steamy - (MAPCAM.steam || 0)) * Math.min(1, dt * 0.5);
-    U.set(tod.fog, 36); U[39] = tod.den * (1 + 2.4 * DIR.fog) * (1 + 1.2 * MAPCAM.steam);
+    U.set(tod.fog, 36); U[39] = tod.den * (1 + 2.4 * DIR.fog) * (1 + 1.2 * MAPCAM.steam) * (1 - 0.85 * MAPV.k);
     U[40] = halton(j, 2) - 0.5; U[41] = halton(j, 3) - 0.5; U[42] = canvas.width; U[43] = canvas.height;
     const pv = prev || { pos: [U[4], U[5], U[6]], f: cam.f, r: cam.r, up: cam.up };
     U.set(pv.pos, 44); U.set(pv.f, 48); U.set(pv.r, 52); U.set(pv.up, 56);
@@ -16546,6 +16704,7 @@ async function init() {
     }
     pickMarkFrame();                         // the selection ring follows its thing
     pickNearFrame();                         // and the rings on its neighbours, while the city is paused
+    mapViewStep(dtS); mapLabelsFrame();      // the map view and the map overlay's labels (map.js)
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -16702,7 +16861,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { CITYP, cityPause, pickSelect, pickSelGPU, cellAt, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { MAPV, MAPO, mapViewSet, mapOverlaySet, CITYP, cityPause, pickSelect, pickSelGPU, cellAt, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

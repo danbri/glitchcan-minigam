@@ -109,6 +109,11 @@ for (let f = 0; f < N; f++) {
       console.log('WALKERS', JSON.stringify(out)); }
     console.log('CLOCKLOG pick: wclock', D.wclock(), 'clock', D.now(), 'frame', f);
     console.log('PICKLOG person', w ? w.kind + ' at ' + w.x.toFixed(1) + ',' + w.z.toFixed(1) + ' key ' + w.key : 'none'); if (w && !process.env.NOSELECT) D.pickSelect({ name: 'someone', x: w.x, z: w.z, y0: 0, r: 4, h: 2.2, person: w }); }
+  // MAPVIEW=1: the map view from frame 4, arrived at by frame 6; MAPO=1: the map overlay
+  if (process.env.MAPVIEW && f === 4) globalThis.__drift.mapViewSet(true);
+  if (process.env.MAPVIEW && f === 6 && globalThis.__drift.NAV.visit) { const V = globalThis.__drift.NAV.visit; V.t = V.T; }
+  if (process.env.MAPVIEW && (f === 10 || f === 20)) { const D = globalThis.__drift; console.log('MAPLOG f', f, 'mode', D.NAV.mode, 'mapView', !!(D.NAV.visit && D.NAV.visit.mapView), 'st', [D.st.x, D.st.y, D.st.z, D.st.yaw, D.st.pitch].map((v) => +v.toFixed(3)).join(','), 'camF', D.CAMNOW.f && D.CAMNOW.f.map((v) => +v.toFixed(3)).join(','), 'MAPV', JSON.stringify({ on: D.MAPV.on, k: +D.MAPV.k.toFixed(2) })); }
+  if (process.env.MAPO && f === 4) globalThis.__drift.mapOverlaySet(true);
   if (process.env.HOP && f === 3) { const D = globalThis.__drift; if (process.env.HOP.startsWith('place:')) D.hopPlace(process.env.HOP.slice(6)); else D.hop(D.destById(process.env.HOP)); }
   // CAM=x,y,z,yaw,pitch: after a HOP, look from there instead
   if (process.env.CAM && f === 3) { const D = globalThis.__drift, [x, y, z, yaw, pitch] = process.env.CAM.split(',').map(Number), c = { ...D.NAV.visit.to, x, y, z, yaw, pitch }; D.NAV.visit.from = c; D.NAV.visit.to = c; }

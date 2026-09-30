@@ -1443,16 +1443,22 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   box.className = 'foafos-activity-item';
   box.setAttribute('aria-label', `${who}: ${text}. Open the activity history`);
   box.appendChild(card);
-  box.addEventListener('click', () => {
-    FoafOS.openDrawer?.(true);
-    document.getElementById('foafos-feed-wrap')?.scrollIntoView({ block: 'start' });
-  });
-  placeActivity();
-  activityStrip.prepend(box);
-  // a short pane has room for one card and the selection, not two
-  const paneH = window.FinkWM?.active ? document.getElementById('minigame-view')?.getBoundingClientRect().height || 0 : window.innerHeight;
-  const keep = paneH < 460 ? 1 : 2;
-  while (activityStrip.children.length > keep) activityStrip.lastChild.remove();
+  box.addEventListener('click', () => FoafOS.openActivity());
+  // With the Activity window open, the item goes there and nothing covers the app's pane (owner, September 2026:
+  // the stream's items "only render within monolithic World pane, not managed in foafos"). Without it, the newest
+  // one or two show over the pane for a few seconds, as a notice; a tap opens the window.
+  const live0 = activityLive();
+  if (live0) {
+    live0.prepend(box);
+    while (live0.children.length > 3) live0.lastChild.remove();
+  } else {
+    placeActivity();
+    activityStrip.prepend(box);
+    // a short pane has room for one card and the selection, not two
+    const paneH = window.FinkWM?.active ? document.getElementById('minigame-view')?.getBoundingClientRect().height || 0 : window.innerHeight;
+    const keep = paneH < 460 ? 1 : 2;
+    while (activityStrip.children.length > keep) activityStrip.lastChild.remove();
+  }
   if (live) {
     liveItems.set(appId, { data, box, canvas: card.liveCanvas, frames: 0,
       timer: setTimeout(() => endLive(appId), 30000) });          // a line that never says it ended
@@ -1460,6 +1466,29 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   return data;
 };
 const liveItems = new Map();                   // appId → the live item on screen
+// the Activity window (a shell panel, foafos-apps.js row 'activity'): the live cards on top, the history below
+function activityLive() { return document.querySelector('#foafos-activity-win .act-live'); }
+FoafOS.openActivity = () => {
+  const open = document.getElementById('foafos-activity-win');
+  if (open) { document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; }); open.style.zIndex = 2630; return open; }
+  const win = FoafOS._makeWindow('💬 Activity', 380, 520);
+  win.id = 'foafos-activity-win';
+  win.classList.add('foafos-panel');
+  const body = document.createElement('div');
+  body.className = 'act-body';
+  body.innerHTML = '<div class="act-live" role="log" aria-live="polite" aria-label="Now"></div><h4 class="act-h">History</h4>';
+  const hist = document.createElement('foafos-feed');
+  hist.bus = bus;
+  hist.setAttribute('topics', 'activity.*');
+  body.appendChild(hist);
+  win.appendChild(body);
+  document.body.appendChild(win);
+  // what is on screen now moves in with it
+  const live = body.querySelector('.act-live');
+  for (const b of [...activityStrip.children]) { b.classList.remove('fading'); live.appendChild(b); }
+  bus.publish('ui.activity', { summary: 'Activity opened' });
+  return win;
+};
 function fadeActivity(box, ms) {
   setTimeout(() => box.classList.add('fading'), ms);
   setTimeout(() => box.remove(), ms + 600);
@@ -2717,6 +2746,7 @@ function buildUI() {
         // boundary. Kept in one registry for discovery, not for security.
         if (app.panel === 'maker') return openMaker();
         if (app.panel === 'logger') return openLogger();
+        if (app.panel === 'activity') return FoafOS.openActivity();
         if (app.panel === 'publishing') return openPublishing();
         return null;
       case 'window':
@@ -4616,6 +4646,7 @@ function buildUI() {
     return win;
   }
   FoafOS.openLogger = openLogger;
+  FoafOS._makeWindow = makeWindow;               // for shell panels defined outside this block (the Activity window)
 
   function openMaker() {
     if (document.getElementById('foafos-maker')) return;

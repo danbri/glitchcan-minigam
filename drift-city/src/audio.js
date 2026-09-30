@@ -87,6 +87,26 @@ function audioSetOn(on) {
 // iOS counts only some events as a user gesture that may start or resume audio (a touch's pointerup and touchend,
 // click, keydown; not a touch's pointerdown), and it suspends audio when the app goes to the background: listen for all
 for (const ev of ["pointerdown", "pointerup", "touchend", "click", "keydown"]) addEventListener(ev, () => { if (!AU.on) return; if (!AU.ctx) audioInit(); else if (AU.ctx.state !== "running") AU.ctx.resume(); }, { passive: true });
+// Silent with no way back (owner, September 2026: "bg audio isn't always there and i dont see how to restore"). A
+// browser starts or resumes a frame's audio only for a tap IN that frame: a tap on the story, the shell or its menu
+// cannot do it for the city. So while the sound is on but not playing, the city shows one button of its own, the
+// one piece of city UI that must stay in the city's frame, and says so in its status (audioBlocked).
+function audioBlocked() {
+  if (!AU.on || (typeof hostPaused === "function" && hostPaused())) return false;
+  return !AU.ctx || AU.ctx.state !== "running";
+}
+function audioChipTick() {
+  const b = document.getElementById("soundChip");
+  if (!b) return;
+  const want = audioBlocked() && clock > 2;
+  if (b.hidden === !want) return;
+  b.hidden = !want;
+}
+if (typeof document !== "undefined" && document.getElementById) {
+  const b = document.getElementById("soundChip");
+  if (b && b.addEventListener) b.addEventListener("click", (e) => { e.stopPropagation(); if (!AU.ctx) audioInit(); else AU.ctx.resume(); b.hidden = true; });
+  if (typeof setInterval === "function") setInterval(audioChipTick, 700);
+}
 
 // ---------- placing sounds ----------
 function auSetPos(p, pos, tc) {

@@ -134,3 +134,84 @@ function mapOpen() {
   MAP.el.querySelector(".mapClose").focus();
 }
 function mapClose() { if (MAP.el) MAP.el.hidden = true; clearInterval(MAP.timer); }
+
+// ---------- the map view and the map overlay (owner, September 2026) ----------
+// "the map looks like a one off artifact not data driven. It should be possible to fly up and see the city from
+// mappers eye view and toggle map on/off, or see map overlaid on the 3D". Two settings in the Map menu:
+// - map view (MAPV): the camera flies up to 900 m and looks straight down, north up; the sticks, a drag or the arrow
+//   keys pan, the right stick (up and down), W and S or the wheel zoom (250 to 2600 m); the haze thins. Turning it
+//   off flies back to where you were.
+// - map overlay (MAPO): the districts' colours on the ground and the roofs, the street lines, and labels for the
+//   places (PLACES) and districts (their centres, from mapBase), drawn on the 3D view by the shader (ev.sel2.w, bit
+//   1) and as labels here. The colours are the flat map's (MAP_ZONE_COL).
+const MAPV = { on: false, saved: null, back: false, k: 0, wheel: 0, prevO: false };
+const MAPO = { on: false, els: [] };
+function mapViewSet(on) {
+  if (on === MAPV.on) return;
+  const pose = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
+  if (on) {
+    if (NAV.mode !== "surface" && NAV.mode !== "visit") { showHint("The map view opens from the city, not from here.", 4000); return; }
+    MAPV.saved = { visit: NAV.mode === "visit" ? NAV.visit : null, pose };
+    tourHold();
+    const to = { id: "mapview", name: "Map view", x: st.x, y: Math.max(900, st.y + 300), z: st.z, yaw: -Math.PI / 2, pitch: -1.52 };
+    NAV.visit = { from: pose, to, t: 0, T: 2.5, ly: 0, lp: 0, mapView: true };
+    NAV.mode = "visit";
+    MAPV.on = true;
+    MAPV.prevO = MAPO.on; MAPO.on = true;           // the map view starts with the overlay; its row turns it off
+  } else {
+    MAPV.on = false;
+    MAPO.on = !!MAPV.prevO;
+    const S = MAPV.saved || { pose };
+    if (S.visit) NAV.visit = { ...S.visit, from: pose, t: 0, T: 2.5, ly: 0, lp: 0 };
+    else { NAV.visit = { from: pose, to: { ...S.pose, id: "mapback" }, t: 0, T: 2.5, ly: 0, lp: 0 }; MAPV.back = true; }
+    NAV.mode = "visit";
+  }
+  mapLabelsSet();
+}
+// in visitStep, once the map view is reached: pan and zoom instead of looking about
+function mapViewInput(V, inp, dt) {
+  const s = V.to.y * 0.9 * dt;
+  const y = clampv(V.to.y * (1 - (inp.move + MAPV.wheel) * 0.9 * dt), 250, 2600);
+  MAPV.wheel = (MAPV.wheel || 0) * Math.exp(-dt * 6);
+  V.to = { ...V.to, x: V.to.x + inp.dx * s, z: V.to.z + inp.dy * s, y };
+  V.from = V.to;
+  if (inp.dx || inp.dy || inp.move) lastInput = clock;
+}
+function mapViewStep(dt) {
+  MAPV.k += ((MAPV.on ? 1 : 0) - MAPV.k) * Math.min(1, dt * 1.5);
+  const V = NAV.visit;
+  if (MAPV.back && (!V || V.t >= V.T)) { MAPV.back = false; if (NAV.mode === "visit") flyOn(); }
+  if (MAPV.on && (NAV.mode !== "visit" || !V || !V.mapView)) { MAPV.on = false; MAPO.on = !!MAPV.prevO; mapLabelsSet(); }
+}
+function mapOverlaySet(on) { MAPO.on = on; mapLabelsSet(); }
+function mapLabelsSet() {
+  for (const e of MAPO.els) e.el.remove();
+  MAPO.els = [];
+  if (!MAPO.on || !document.body || !document.createElement) return;
+  mapBase();
+  const add = (name, x, y, z, cls, go) => {
+    const el = document.createElement(go ? "button" : "span");
+    el.className = "mapLabel " + cls; el.textContent = name; el.hidden = true;
+    if (go) { el.type = "button"; el.setAttribute("aria-label", "Go to " + name); el.addEventListener("click", (e) => { e.stopPropagation(); if (MAPV.on) { MAPV.on = false; MAPV.saved = null; } taleGo(go); mapLabelsSet(); }); }
+    document.body.appendChild(el);
+    MAPO.els.push({ el, x, y, z, cls });
+  };
+  for (const [name, x, z] of MAP.centres || []) add(name, x, 0, z, "mapDistrict", null);
+  const named = new Set();
+  for (const p of PLACES || []) { const n = p.name.split(",")[0]; if (p.room || named.has(n)) continue; named.add(n); add(n, p.x, Math.max(0, (p.y || 0) - 1.5), p.z, "mapPlace", p.id); }
+}
+function mapLabelsFrame() {
+  if (!MAPO.els.length) return;
+  const c = CAMNOW, H = innerHeight, W = innerWidth, far = MAPV.on ? 6000 : 1600;
+  let shown = 0;
+  const L = MAPO.els.map((e) => { const v = [e.x - c.p[0], e.y - c.p[1], e.z - c.p[2]]; return { e, v, zf: dot3(v, c.f), d: Math.hypot(v[0], v[2]) }; })
+    .sort((a, b) => (a.e.cls === b.e.cls ? a.d - b.d : a.e.cls === "mapDistrict" ? -1 : 1));
+  for (const { e, v, zf, d } of L) {
+    if (zf <= 1 || d > far || shown >= 26) { e.el.hidden = true; continue; }
+    const x = (dot3(v, c.r) / zf / 0.72 * H + W) / 2, y = (H - dot3(v, c.up) / zf / 0.72 * H) / 2;
+    if (x < 0 || x > W || y < 0 || y > H) { e.el.hidden = true; continue; }
+    e.el.hidden = false; shown++;
+    e.el.style.left = x + "px"; e.el.style.top = y + "px";
+  }
+}
+addEventListener("wheel", (e) => { if (MAPV.on) { MAPV.wheel = clampv((MAPV.wheel || 0) + e.deltaY * 0.004, -3, 3); e.preventDefault(); } }, { passive: false });
