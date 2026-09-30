@@ -51,13 +51,12 @@ function buildPlaces() {
   add("hall_floor", "Assembly Hall, the floor", "Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.", { x: hx - 8, y: 2.8, z: hz + 3, yaw: Math.PI - 0.3, pitch: 0.28 });
   add("hall_steps", "Assembly Hall, the steps", "The broad stone steps below the arcade, a place to wait, to argue, to be seen.", { x: hx - 84, y: 1.7 + 2.7, z: hz, yaw: 0, pitch: 0.2 });
   add("civic_axis", "The Assembly Hall avenue, old town", "The long reflecting pools up the avenue, between two walls of stone, to the dome of the Assembly Hall.", { x: 728, y: 3.2, z: -175, yaw: -Math.PI / 2, pitch: 0.1 });
-  // Conway Corner (owner, September 2026: "somewhere we see Life game optimally from"): the street corner, 70 m up,
-  // with the most Life boards in one view. Found by a search over every corner in ±30 cells, every heading in 6°
-  // steps and three heights: the Life towers by the shader's own rule (organic towers, scene.wgsl), 45-330 m away
-  // (the boards are sharp within 350 m), a clear line of sight, score = board area over distance. It sees six,
-  // in the tallest group of Life towers. How to run the search again: the drift-city skill, "Conway Corner".
-  add("conway_corner", "Conway Corner, financial district", "A crossing high over the financial district where six of the round towers stand in view at once, their windows running Conway's Game of Life: gliders crawl round them, colonies bloom and die, and each board starts again when it goes still.",
-    { x: -416, y: 70, z: -286, yaw: 3.979, pitch: -0.118 });
+  // Conway Corner (owner, September 2026: "somewhere we see Life game optimally from"): a street corner 70 m up with
+  // Life towers of both kinds in view, the stepped towers' flat faces first (the owner found them "more naturally
+  // Conway-esque") and the round towers' screens. Found by a search over corners, headings and heights, scored by
+  // board size over distance with a clear line of sight: the drift-city skill, "Conway Corner".
+  add("conway_corner", "Conway Corner, financial district", "A crossing high over the financial district among towers whose windows run Conway's Game of Life: gliders crawl across the flat faces, colonies bloom and die, and each board starts again when it goes still.",
+    { x: -260, y: 70, z: -338, yaw: 1.94, pitch: -0.1 });
   // scan the city in rings outward from the centre, collecting one of each kind per district
   const seen = new Set();
   const want = (key) => { if (seen.has(key)) return false; seen.add(key); return true; };

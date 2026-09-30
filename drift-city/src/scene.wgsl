@@ -4845,10 +4845,26 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
           lit = max(lc.x, max(lc.y, lc.z)) * (1.0 - opaque);
           s.emi = mix(vec3f(0.06, 0.12, 0.09), lc * (1.0 - opaque), lifeD) * (1.2 + 1.0 * u.windows);
         }
+        // Life on the flat faces of the stepped towers (owner, September 2026: their window grid "looks more naturally
+        // Conway-esque" than the round towers). A cell is a pane split by a transom, 1.5 m by 1.8 m; 40 rows from the
+        // top of the top tier; each face shows its own run of columns (16 apart), so no face repeats another
+        let lifeF = cfz.v < 0.4 && !mega && hsh(cseed, 5, 781) < select(0.15, 0.5, cfz.h >= 12.0 * 3.6);
+        let fyF = (cfz.h * 1.06 - p.y) / 1.8;
+        let onBoard = lifeF && fyF >= 0.0 && fyF < 40.0;
+        if (onBoard) {
+          let face = select(select(2, 0, n.x > 0.0), select(3, 1, n.z > 0.0), abs(n.z) > abs(n.x));
+          let gyF = fract(fyF);
+          let opF = max(mull, (1.0 - smoothstep(0.03, 0.07, min(gyF, 1.0 - gyF))) * detail);
+          let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
+          let lc = lifeCol(i32(floor(facU / 1.5)) + face * 16 + (cseed & 63), i32(floor(fyF)));
+          lit = max(lc.x, max(lc.y, lc.z)) * (1.0 - opF);
+          s.alb = mix(glass, mix(vec3f(0.13, 0.135, 0.145), vec3f(0.17, 0.15, 0.12), warmGlass), opF);
+          s.emi = mix(vec3f(0.06, 0.12, 0.09), lc * (1.0 - opF), lifeD) * (1.6 + 0.8 * u.windows);
+        }
         s.refl = (0.05 + 0.85 * pow(1.0 - ndv, 4.0)) * (1.0 - opaque * 0.75) * (1.0 - lit * 0.8);
         // rebuilt, not generated: on one tower in three a band of floors was redone in concrete with small windows;
         // elsewhere a pane in sixteen was replaced with glass that does not quite match
-        if (!lifeT && !mega) {
+        if (!lifeT && !onBoard && !mega) {
           let b0 = floor(hsh(cseed, 9, 811) * max(cfz.h / 3.6, 1.0) * 0.7);
           let bn = 2.0 + floor(hsh(cseed, 10, 812) * 5.0);
           if (hsh(cseed, 11, 813) < 0.33 && fy >= b0 && fy < b0 + bn) {

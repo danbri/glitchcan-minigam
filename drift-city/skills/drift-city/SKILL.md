@@ -803,20 +803,34 @@ for cameras; use anything from nasa/esa that makes sense."
 
 ## Conway Corner (September 2026)
 
-`conway_corner`, "Conway Corner, financial district": the street corner
-at cell (-16, -11), 70 m up, facing 228° of yaw (north-west), with six
-Life towers in view, in the tallest group of them. Found by a search, not
-by eye: every corner in ±30 cells, every 6° of heading, heights 28, 45 and
-70 m; Life towers by the shader's own rule (organic towers, typ 8, the
-`hsh(cseed,5,781) < (h >= 50.4 ? 0.9 : 0.3)` test); 45-330 m away (the
-boards are sharp within 350 m); a line of sight marched against
-`heightAt` that stops 16 m short of the tower (its own cell counts as an
-obstacle otherwise, and every view scored zero); score = h × 9 / d. Street
-trees make `heightAt` 19 m on almost every corner, so a street-level eye
-fails every test. Rendered and looked at with Node Dawn (daylight): six
-round towers in frame. After the square-cell change (above) the nearest
-tower fills the middle of a phone screen with its board; check a change with
-`HOP=place:conway_corner node drift-city/tests/dawn-run.mjs`.
+`conway_corner`, "Conway Corner, financial district": a street corner at
+(-260, 70, -338), yaw 1.94, pitch -0.1. It sees three stepped towers with
+Life on their flat faces and a round tower with a Life screen.
+
+History. The first corner (-416, 70, -286) was chosen for six organic round
+towers. The owner flew there and wrote "not obviously life"; on a phone the
+round towers showed thin stripes (see "Conway's Life in the round towers").
+The owner then pointed at the stepped towers opposite: their window grid
+"looks more naturally Conway-esque". So Life also runs on the flat faces of
+the stepped modern towers (material 1, `v` < 0.4, `lifeF`): a cell is a pane
+split by a transom (1.5 m x 1.8 m), 40 rows down from the top of the top
+tier, each face its own run of columns (16 apart). One tall stepped tower in
+two runs it, a short one in seven. In a Dawn render gliders and blocks read
+at once on the flat faces.
+
+How the view was found: `node drift-city/tools/life-view-search.mjs` (about
+5 minutes). It lists the Life towers of both kinds by the shader's rules
+(stepped: `hsh(cseed,5,781) < (h >= 43.2 ? 0.5 : 0.15)`; organic:
+`< (h >= 50.4 ? 0.9 : 0.3)`), then tries every corner in a 60 x 60 cell
+area, every 6° of heading and heights 45, 70 and 95 m. A tower counts when it
+is 40-300 m away, within 18° of the heading, and in clear sight (a line
+marched against `heightAt`, stopping 16 m short of the tower, because its own
+cell blocks the line otherwise). Score: min(h, 40) / distance, stepped towers
+weighted 12, organic 9. Street trees make `heightAt` about 19 m on almost
+every corner, so a street-level eye fails every test. The top result is not
+always the best picture: render the first few and look at them with
+`HOP=place:conway_corner CAM=x,y,z,yaw,pitch node drift-city/tests/dawn-run.mjs`.
+If you change a Life rule in scene.wgsl, change it in the search tool too.
 
 **The city's menu is the shell's inside foafos** (spec §5.9). `host.js`
 hides `#bMenu` and walks `menuRoot()` into shell actions once a second
