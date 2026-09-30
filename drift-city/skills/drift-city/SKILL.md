@@ -672,6 +672,27 @@ The split:
   A place from a story file would also be shader code from a story: a new trust question (a shader cannot reach
   the network or the page, but a slow one can stall the GPU), to settle before it is allowed.
 
+## The fan's rays (the Cold Tap, September 2026)
+
+Owner: the fan "only cuts one ray thru the reflective (smokey?) air even while making five circle on the floor";
+then "Darker blade shadows in the fog. (And maybe thicker fog?)". Not a bug in `rmFanMask`: seen from the side, a
+blade's shadow is a thin sheet that a line of sight crosses in a few centimetres, so it hardly darkens the smoke,
+and only a sheet seen edge-on makes a ray. The hub's round column is dark from every side and does not turn, so it
+was the one ray. The game's 16 samples over the whole ray turned the faint blade rays into noise, and the TAA
+history averaged the turning rays away.
+
+What changed (`rmFanFog` in rooms/coldtap.wgsl, called after the haze loop in `roomRender`):
+- the fan's beam has its own 16 samples, only where the ray is inside the vertical cylinder (r = 4.3 m) the lamp's
+  cone can reach; the haze loop skips that beam and is back to 10 samples in every room;
+- in the smoke the blades are twice as wide as on the floor (`rmFanMaskW(p, 2.0)`; the floor keeps 1.0);
+- the share of the ray the blades leave lit, `r`, is cubed, and the result has a gain of 1.6, so the cone keeps
+  about its brightness while the rays get darker;
+- the Cold Tap's haze is 0.042 (was 0.032).
+Tuned first on a CPU copy of these formulas (a picture of three variants took seconds; a Dawn render takes
+minutes), then checked in a Dawn render: several rays below the fan, not one
+(`docs/ux-review/interaction-20260929/coldtap-fan-rays.png`, before on the left). The room pipeline builds in
+7.5 s (was 5.8 s).
+
 ## Interiors and people: how to make them tell stories (September 2026)
 
 Owner, September 2026, on the first rooms: "way too bland and cartoonish ... a cheap formica kids toyhouse. And the

@@ -23,7 +23,9 @@ fn rmFan(q: vec3f) -> vec2f {
   return r;
 }
 // 1 where the fan's lamp reaches a point, less in the blades' and the hub's shadow; the penumbra widens further down
-fn rmFanMask(p: vec3f) -> f32 {
+fn rmFanMask(p: vec3f) -> f32 { return rmFanMaskW(p, 1.0); }
+// `wide` scales the blades' width: 1 for the floor and the walls, more for the smoke (rmFanFog)
+fn rmFanMaskW(p: vec3f, wide: f32) -> f32 {
   let L = RM_FANL;
   let dl = normalize(p - L);
   let cone = smoothstep(0.5, 0.62, -dl.y);
@@ -37,7 +39,8 @@ fn rmFanMask(p: vec3f) -> f32 {
   let ai = a - sec * round(a / sec);
   let across = abs(r * sin(ai));
   let along = r * cos(ai);
-  let blade = (1.0 - smoothstep(0.055, 0.055 + soft, across)) * smoothstep(0.12, 0.12 + soft, along) * (1.0 - smoothstep(0.63, 0.63 + soft, along));
+  let bw = 0.055 * wide;
+  let blade = (1.0 - smoothstep(bw, bw + soft, across)) * smoothstep(0.12, 0.12 + soft, along) * (1.0 - smoothstep(0.63, 0.63 + soft, along));
   let hub = 1.0 - smoothstep(0.1, 0.1 + soft, r);
   return cone * (1.0 - 0.93 * max(blade, hub));
 }
@@ -131,4 +134,36 @@ fn rmColdTap(q: vec3f) -> vec2f {
   r = rmU(r, rmPendant(q, vec3f(6.2, 2.3, 1.55), 3.0));
   r = rmU(r, rmPendant(q, vec3f(3.8, 2.2, -2.7), 3.0));
   return r;
+}
+
+// The fan's lamp in the smoke (owner, September 2026: the fan "only cuts one ray thru the reflective (smokey?) air
+// even while making five circle on the floor"; asked for "darker blade shadows in the fog"). From the side a blade's
+// shadow is a thin sheet that a line of sight crosses in a few centimetres, so it hardly darkens the smoke; only
+// the hub's column read. So the smoke gets its own 16 samples, only where the ray is inside the cylinder the lamp's
+// cone can reach, the blades are twice as wide here as on the floor, and the share of the ray they cut is raised to
+// the third power. Tuned on a CPU copy of these formulas; why and the numbers: the drift-city skill, "The fan's rays".
+fn rmFanFog(o: vec3f, d: vec3f, tEnd: f32, j: f32) -> vec3f {
+  let B = rmBeam(1, 2);
+  let R = 4.3;
+  let oc = o.xz - RM_FANL.xz;
+  let a = dot(d.xz, d.xz);
+  let bq = dot(oc, d.xz);
+  let disc = bq * bq - a * (dot(oc, oc) - R * R);
+  if (disc <= 0.0 || a < 1e-6) { return vec3f(0.0); }
+  let sq = sqrt(disc);
+  let t0 = max((-bq - sq) / a, 0.0);
+  let t1 = min((-bq + sq) / a, tEnd);
+  if (t1 <= t0) { return vec3f(0.0); }
+  var open = 0.0;
+  var lit = 0.0;
+  for (var s = 0; s < 16; s++) {
+    let sp = o + d * (t0 + (t1 - t0) * (f32(s) + j) / 16.0);
+    let v = sp - B[0].xyz;
+    let dl = length(v);
+    let w = smoothstep(B[1].w, B[1].w + 0.06, dot(v / max(dl, 1e-3), B[1].xyz)) / (1.0 + dl * dl * B[0].w) * rmSmoke(sp);
+    open += w;
+    lit += w * rmFanMaskW(sp, 2.0);
+  }
+  let r = lit / max(open, 1e-5);
+  return B[2].xyz * open * r * r * r * (t1 - t0) / 16.0 * 1.6;
 }

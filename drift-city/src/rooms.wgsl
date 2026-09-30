@@ -603,6 +603,10 @@ fn rmShade(q: vec3f, n0: vec3f, m: f32, k: i32, ld: vec3f, shadowed: bool) -> ar
   }
   return array<vec3f, 3>(col, n, vec3f(sf.refl, 0.0, 0.0));
 }
+// smoke: slow layered drifts, so the beams show swirls rather than an even glow
+fn rmSmoke(sp: vec3f) -> f32 {
+  return 0.3 + 1.4 * vn3(sp * vec3f(0.9, 1.7, 0.9) + vec3f(u.time * 0.12, u.time * 0.03, -u.time * 0.07), 951).x;
+}
 fn rmTrace(ro: vec3f, rd: vec3f, k: i32, steps: i32, tMax: f32) -> vec2f {
   var t = 0.015;
   for (var i = 0; i < steps; i++) {
@@ -620,7 +624,8 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
   gRmJ = hsh(i32(px.x) * 3 + 1, i32(px.y), i32(u.frame) + 41);
   let h = rmTrace(lo, ld, k, 140, 60.0);
   let t = h.x;
-  let hazeK = select(select(select(0.032, 0.03, k == 2), 0.05, k == 3), 0.028, k == 4);
+  // the Cold Tap is thicker than it was (0.032): owner, September 2026, "maybe thicker fog?"
+  let hazeK = select(select(select(select(0.032, 0.042, k == 1), 0.03, k == 2), 0.05, k == 3), 0.028, k == 4);
   let haze = select(select(select(vec3f(0.07, 0.035, 0.025), vec3f(0.03, 0.04, 0.06), k == 2), vec3f(0.12, 0.05, 0.03), k == 3), vec3f(0.07, 0.05, 0.06), k == 4);
   var col = haze;
   if (h.y >= 0.0) {
@@ -652,22 +657,20 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
   var ice = 0.0;
   let tb = min(t, 30.0);
   let j0 = hsh(i32(px.x), i32(px.y), i32(u.frame) + 31);
-  // more samples in the small smoky bar, where the fan cuts its lamp's cone into rays
-  let ns = select(10, 16, k == 1);
+  // the Cold Tap's fan has its own samples in the smoke (rmFanFog), after this loop
+  let ns = 10;
   let smoky = k == 1 || k == 3;
   for (var s = 0; s < ns; s++) {
     let sp = lo + ld * (tb * (f32(s) + j0) / f32(ns));
-    // smoke: slow layered drifts, so the beams show swirls rather than an even glow
     var smoke = 1.0;
-    if (smoky) { smoke = 0.3 + 1.4 * vn3(sp * vec3f(0.9, 1.7, 0.9) + vec3f(u.time * 0.12, u.time * 0.03, -u.time * 0.07), 951).x; }
+    if (smoky) { smoke = rmSmoke(sp); }
     for (var b = 0; b < 3; b++) {
       let B = rmBeam(k, b);
-      if (B[1].w > 1.5) { continue; }
+      if (B[1].w > 1.5 || (k == 1 && b == 2)) { continue; }
       let v = sp - B[0].xyz;
       let dl = length(v);
       let cs = dot(v / max(dl, 1e-3), B[1].xyz);
       var bl = B[2].xyz * smoothstep(B[1].w, B[1].w + 0.06, cs) / (1.0 + dl * dl * select(0.35, B[0].w, B[0].w > 0.0));
-      if (k == 1 && b == 2) { bl *= rmFanMask(sp); }
       beams += bl * smoke;
     }
     // dry ice: a low, rolling layer on the club's floor near the stand and across the cellar's stage end
@@ -678,6 +681,7 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
     }
   }
   col += beams * tb / f32(ns) * hazeK * select(3.0, 5.0, k == 3);
+  if (k == 1) { col += rmFanFog(lo, ld, tb, j0) * hazeK * 3.0; }
   if (k >= 3) {
     let Bd = rmBand();
     let iceC = mix(vec3f(0.5, 0.45, 0.5), rmStageCol(floor(Bd.z / 2.0) + f32(k)), 0.55) * select(0.06, 0.09, k == 4);
