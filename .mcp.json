@@ -2,6 +2,12 @@
   "mcpServers": {
     "playwright": {
       "url": "http://localhost:3001/mcp"
+    },
+    "glitchcan": {
+      "command": "node",
+      "args": [
+        "tools/game-mcp/server.mjs"
+      ]
     }
   }
 }
