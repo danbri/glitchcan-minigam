@@ -423,7 +423,7 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
 - Headless check: the runner's clock barely moves, so the board is uploaded only if a step happens. Set
   `D.LIFE.acc = 1` after changing the board (`D.lifeStamp`, `D.lifeStep` and `D.LIFE_PATTERNS` are on `__drift`).
   Use `CAM=-490,95,-229,-2.729,-0.02 CAMF=4` with `HOP=place:roof_0` to look at the tour's Life tower.
-- Uploaded at byte 896 of the event buffer (after the selection block) as colour classes, not bits (see "The GPU
+- Uploaded at byte 1024 of the event buffer (after the selection and neighbour blocks) as colour classes, not bits (see "The GPU
   reads a colour class per cell" below); read by `lifeCol` (the flat board) and `lifeColR` (the round board).
 - Shown on the organic round towers (type 8, material 15) by `organicLife()`; on the stepped towers' flat faces
   (Conway Corner, below); and on two in five rounded modern towers (material 1, `v` 0.4 to 0.72). The stepped
@@ -547,7 +547,7 @@ humanoids/exos".
   makes it the selection and moves the rings to its neighbours. e2e-drift 20d.
 - **The highlight is drawn by the shader**, for a building (its plot, 9.7 m round the cell centre, from 0.4 m up)
   or a person; other picks keep the DOM ring. pick.js `pickSelGPU` writes `ev.sel`/`ev.sel2` each frame (EVN
-  216-223; the event block grew to 224 floats and the Life boards moved to byte 896). Cells are the view's,
+  216-223, and the neighbours' boxes 224-255; the event block is 256 floats and the Life boards start at byte 1024). Cells are the view's,
   UNWRAPPED: the shader hashes people by the unwrapped cell, so a wrapped one matched nobody.
   - `selIs`: does this hit belong to the selection. For a person it is a distance test against the position
     pick.js sends, NOT `pedQ` again (see the next point);
@@ -579,6 +579,13 @@ humanoids/exos".
   at once (found with game-mcp: the rings were at x = -30 px). In the pause the autopilot is off (`auto = 0` in
   `update`); steering by hand still works, and the readout says "City paused".
 - Compile timing: `node drift-city/tests/pipeline-bench.mjs` builds the scene pipeline alone.
+- **Neighbours shimmer, with their extents** (`nbHalo`, ev.nb): while paused, the first eight ringed neighbours get
+  a thin green outline round their boxes that shimmers up and down. The DOM rings stay, as the things to tap.
+- **One ray-box function** (`boxHit`, returns enter and leave). An investigation found an older `boxHit` that
+  returned only the entry and treated a ray from inside as a miss, with no caller since the commit that added it;
+  it is gone, and the selection code's two copies became this one. It also found that `selIs` took a person's
+  hits within 1.3 m while the box the jelly pass leaves through was 0.7 m, so the pass could restart inside the
+  figure; both are 0.9-0.95 m now.
 - Headless: `PAUSE=1 PICKXY=0.75,0.35` (tap there, as fractions of the view) or `PICKPERSON=1` in dawn-run.mjs.
 
 ## Walking into a scene (`visitMove`, `visitWalkTo` in tales.js)

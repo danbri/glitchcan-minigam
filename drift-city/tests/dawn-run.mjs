@@ -26,7 +26,7 @@ const W = +(process.env.W || 390), H = +(process.env.H || 844), DPR = +(process.
 const handlers = {};
 function el(id) {
   return { id, style: {}, hidden: true, textContent: wg[id] || '', innerHTML: '', classList: { _s: new Set(), add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); }, toggle(c, f) { (f ?? !this._s.has(c)) ? this._s.add(c) : this._s.delete(c); }, contains(c) { return this._s.has(c); } },
-    setAttribute() {}, addEventListener(t, f) { handlers[id + ':' + t] = f; }, setPointerCapture() {}, appendChild() {} };
+    setAttribute() {}, getAttribute() { return null; }, addEventListener(t, f) { handlers[id + ':' + t] = f; }, setPointerCapture() {}, appendChild() {}, remove() {}, querySelector() { return el('q'); } };
 }
 const els = {};
 let curTex = null, ctxCfg = null;
@@ -42,7 +42,7 @@ canvas.getContext = () => ({
   },
 });
 els.c = canvas;
-globalThis.document = { getElementById: (id) => (els[id] ||= el(id)), createElement: () => { const e = el('pre'); els.__pre = e; return e; } };
+globalThis.document = { getElementById: (id) => (els[id] ||= el(id)), createElement: () => { const e = el('pre'); els.__pre = e; return e; }, body: el('body') };
 Object.defineProperty(globalThis, 'navigator', { value: { gpu: Object.assign(gpu, { getPreferredCanvasFormat: () => 'bgra8unorm' }) }, configurable: true, writable: true });
 globalThis.window = globalThis; globalThis.innerWidth = W; globalThis.innerHeight = H; globalThis.devicePixelRatio = DPR;
 globalThis.matchMedia = () => ({ matches: true });

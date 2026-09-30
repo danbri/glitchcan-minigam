@@ -972,9 +972,14 @@ Sound (mute, volume), Look (the skins), Widgets, and Session and capabilities
 (a window). The dock is not shown; the drawer stays as an API
 (`FoafOS.openDrawer`) for its feed and shelf. Owner: the drawer was a "super
 ugly archaic side menu which should be assimilated into the one true menu
-system". Next, the owner's direction: a radial menu with a top-level fork
-between foafos and the running cluster of apps, stories, minigames and
-documents (a "project").
+system". The owner's direction: a radial menu with a top-level fork between foafos
+and the running cluster of apps, stories, minigames and documents (a
+"project"). A first version is a setting (☰ › foafos › Look › "Menu as a
+ring"; `foafos.menu.radial` in the browser's storage): the first ring is the
+fork, the project's ring holds the app's own rows with "Window", "On-screen
+controls" and Exit, and foafos's ring its rows and pages. A ring item clicks
+the list row it stands for, so the two cannot drift apart; eight to a ring,
+then "More". Keyboard: the arrow keys move round, Escape closes.
 ### 5.10 The activity stream and the app's readout — normative
 
 Owner, September 2026: talking heads were "icons within world view.

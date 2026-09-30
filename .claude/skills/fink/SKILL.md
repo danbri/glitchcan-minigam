@@ -383,6 +383,10 @@ window replaces the notices over the app pane; it opens itself as a floating str
 maximizes every other shell window). Tests that clicked the dock or `#wm-sys-shell` now use `FoafOS.openDrawer`
 or the ☰ pages. Spec §5.9, §5.10.
 
+The ring (`_openRadial`, a setting): the list is still built, unshown, and each ring item clicks its row, so the
+list stays the one implementation and the ring is a view of it. A row's `closes` flag rides as `data-closes`, so
+the ring closes where the list would. Test: e2e-drift 20g.
+
 ## Window manager (FinkWM)
 
 **September 2026: activity stream, readout and selection** (spec §5.10,

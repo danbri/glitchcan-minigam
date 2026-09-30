@@ -799,7 +799,7 @@ function halton(i, b) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % 
 
 const SN = 1024, STS = 0.8, AIR_Y = 96;
 // Per-frame events for the shader: searchlight beams from the nearest air taxis, smoke plumes, the holographic koi.
-const EVN = new Float32Array(224);
+const EVN = new Float32Array(256);
 const CHASE_Y = 64;
 const WX = { rain: 0, wet: 0 };
 let boState = null;
@@ -1282,7 +1282,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 896 + 3424, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 1024 + 3424, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     PHYS.ubuf = device.createBuffer({ size: 224, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -1618,7 +1618,7 @@ async function init() {
       EVN[211] = r ? (globalThis.__bandForce !== undefined ? globalThis.__bandForce : venueBand(r.room, clock)) : -1; } // __bandForce: a test hook // the band's beat for the room's lights and people (venue.js)
     pickSelGPU();
     device.queue.writeBuffer(evBuf, 0, EVN);
-    { const lg = lifeUpdate(CITYP.on ? 0 : dtS); if (lg) device.queue.writeBuffer(evBuf, 896, lg); }
+    { const lg = lifeUpdate(CITYP.on ? 0 : dtS); if (lg) device.queue.writeBuffer(evBuf, 1024, lg); }
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);
     const measure = hasTS && !qBusy && frameNo % 6 === 0;
     ran.fill(0);

@@ -344,6 +344,14 @@ function pickSelGPU() {
   else if (S && S.building) { k = 1; cx = S.building[0]; cz = S.building[1]; top = S.h || 0; }
   // sel2.w: flags for the shader, 1 the map overlay (map.js)
   EVN.set([cx, cz, k, key, top, clock, CITYP.on ? 1 : 0, MAPO.on ? 1 : 0], 216);
+  // the neighbours' boxes (ev.nb, scene.wgsl nbHalo): centre x, centre z, half width, top; the first eight rings
+  EVN.fill(0, 224, 256);
+  const L = PICK.near || [];
+  for (let i = 0; i < Math.min(8, L.length); i++) {
+    const T = L[i].T;
+    if (T.person) { const w = walkerAt(T.person.cx, T.person.cz, T.person.ln, T.person.ki, wclock, T.person.dens) || T.person; EVN.set([w.x, w.z, 0.95, 2.6], 224 + i * 4); }
+    else if (T.building) EVN.set([(T.building[0] + 0.5) * C, (T.building[1] + 0.5) * C, 9.7, (T.h || 0) + 3], 224 + i * 4);
+  }
   return k;
 }
 // the things next to the selection, while the city is paused: the buildings in the eight cells round it and the
