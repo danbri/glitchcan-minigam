@@ -729,6 +729,7 @@ function choose(i) {
   // the story did not say it itself.
   _pendingEcho = story.currentChoices[i].text;
   story.ChooseChoiceIndex(i);
+  dropResumeOffer();                    // a choice here is the fresh reading going on
   advance();
   // FOCUS FOLLOWS THE READING. Without this a reader who takes a choice is
   // dropped back at the document body and must walk the whole page again for
@@ -1850,6 +1851,8 @@ function applySkinTokens(tokens, skin) {
 // re-rendering the scrollback from a save would put words in the reader's
 // past that they might not have read, and the ink state is the truth.
 function snapshotPlaythrough() {
+  // A fresh start with a saved reading on offer keeps that reading until the reader chooses
+  if (_resumeOffer) return _resumeOffer;
   if (!story || !state.ready) return null;              // nothing to keep yet
   // Decline while paused for a game: the ink is mid-beat and the game holds
   // state of its own, so a save here would restore into a story waiting for
@@ -1875,6 +1878,7 @@ function snapshotPlaythrough() {
 // reader stops at a new one, and the shell keeps the last one sent when the
 // answer is late.
 function keepPlace() {
+  if (_resumeOffer) return;             // the saved reading on offer stands
   if (!story || !state.ready) return;   // mid-load: the last place sent stands
   window.foaf?.keepSnapshot?.(snapshotPlaythrough());
 }
@@ -1911,6 +1915,28 @@ async function restorePlaythrough(snap) {
   });
 }
 
+// A PAGE LOAD STARTS FRESH (owner, September 2026: "it seems harder to get to fresh start of game, can that be
+// default for base url?"). The shell marks the launch that opens the page's story (`config.boot`); that launch
+// plays the story from its beginning and offers the saved reading of the same story on a button until the reader
+// makes a first choice. Reopening the runner inside a page still resumes, as before.
+let _resumeOffer = null;
+function offerResume(snap) {
+  _resumeOffer = snap;
+  const b = $('resume-offer');
+  if (b) b.hidden = false;
+}
+function dropResumeOffer() {
+  if (!_resumeOffer) return;
+  _resumeOffer = null;
+  const b = $('resume-offer');
+  if (b) b.hidden = true;
+}
+$('resume-offer')?.addEventListener('click', () => {
+  const snap = _resumeOffer;
+  dropResumeOffer();
+  if (snap) restorePlaythrough(snap).then(() => $('prose')?.focus?.());
+});
+
 // Live inside foafos if present; run standalone otherwise (dev).
 if (window.foaf?.onInit) {
   let booted = false;
@@ -1937,7 +1963,8 @@ if (window.foaf?.onInit) {
       const savedUrl = savedSnap?.storyUrl || null;
       const sameStory = asked && savedUrl
         && savedUrl.split('/').pop() === String(asked).split('/').pop();
-      if (savedSnap && (!asked || sameStory)) { restorePlaythrough(savedSnap); return; }
+      if (savedSnap && (!asked || sameStory) && !config?.boot) { restorePlaythrough(savedSnap); return; }
+      if (savedSnap && (!asked || sameStory)) offerResume(savedSnap);
       // A DEEP LINK beats the default story: the URL says where, the
       // session says how far.
       boot(config).then(() => honourDeepLink());

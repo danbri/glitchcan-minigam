@@ -2943,6 +2943,7 @@ function buildUI() {
       catch (err) { /* closed */ }
     });
 
+    let bootTaken;                   // the boot story, if this window's launch took it
     const onMsg = (e) => {
       if (e.source !== frame.contentWindow) return;      // provenance, always
       const d = e.data;
@@ -2953,6 +2954,12 @@ function buildUI() {
       // its capabilities and its whole stored keyspace, so its
       // synchronous localStorage shim is warm before its first line runs.
       if (d.type === 'app.hello') {
+        // the page's `?story=` reached foafos-boot.js, which made it the boot story; the address is not read again
+        // here, because it now follows the reading (it names the story being read). Taken once per window.
+        if (bootTaken === undefined) {
+          bootTaken = !win.dataset.story && !app.story && (app.capabilities || []).includes('story:link') ? takeBootStory() : null;
+        }
+        const bootStory = win.dataset.story || app.story || bootTaken || null;
         const snapshot = holds('storage') ? store.snapshot(app.id)
           : (refuseAtNode('store', 'storage', 'snapshot'), null);
         try {
@@ -2973,14 +2980,9 @@ function buildUI() {
               // broke its `# BG:`/`# AUDIO:` legs. An app launched on its
               // own keeps its own default; only the boot path imposes the
               // installation's.
-              story: win.dataset.story || app.story
-                || ((app.capabilities || []).includes('story:link')
-                    // the page's `?story=` reached foafos-boot.js, which made it
-                    // the boot story; the address is not read again here, because
-                    // it now follows the reading (it names the story being read)
-                    ? takeBootStory()
-                    : null)
-                || null,
+              story: bootStory,
+              // the launch that opens the page's story: the runner starts it fresh and offers a saved reading
+              boot: !!bootTaken,
               // The GLOBAL media base — outermost layer of the layered chain
               // (global → story BASEHREF → file-relative). A boxed story
               // cannot read fink-config.js, so the shell hands it over.

@@ -31,6 +31,9 @@
   <!-- `tabindex="-1"` so focus can FOLLOW THE READING: after a beat the reader
        caused, the keyboard lands here, at the new prose, and the choices follow
        in DOM order. Without it every choice drops them at the document body. -->
+  <!-- A page load starts the story from its beginning; a saved reading of the
+       same story is offered here until the reader makes a first choice. -->
+  <button id="resume-offer" type="button" hidden>Continue where you stopped</button>
   <div id="prose" role="log" aria-live="polite" aria-relevant="additions"
        tabindex="-1" aria-label="Story text"></div>
   <ul id="choices" aria-label="Choices"></ul>

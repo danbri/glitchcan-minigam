@@ -925,6 +925,15 @@ widgets are Apps." The tree half was already true (game nodes spawn under
     logs arrival times, in every frame; console lines from child frames
     reach `page.on('console')`. Probe calls made just BEFORE the ✕ hid the
     race (8 of 8 runs passed), so record from the start instead.
+- **A page load starts the story fresh; a reopen resumes** (spec §5.5.4, owner September 2026: "harder to get to
+  fresh start of game"). Before, a save of the same story beat the default boot, so every reload landed in the
+  old reading and there was no plain way back to the opening. Now the shell sends `config.boot: true` to the
+  launch that took the boot story (computed once per window: `takeBootStory` is one-shot, and a re-sent init must
+  not lose it), and the runner plays the story from its start with a "Continue where you stopped" button
+  (`#resume-offer`). Until the first choice, `keepPlace` and `onSnapshot` both return the offered save, so a
+  reload or a close does not overwrite it with the fresh opening. `e2e-storyrunner` §9c. Its first version
+  checked for choices at the opening; `peer.fink.js` opens on a `# MINIGAME:`, so it has none: check the
+  opening text instead.
 - Guests may answer `null` to decline. Chess does, mid-animation: a
   half-slid piece would restore to a board that disagrees with itself.
 - **Disclosure is part of the feature.** The Task Manager says *keeps its
