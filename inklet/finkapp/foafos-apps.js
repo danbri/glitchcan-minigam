@@ -171,10 +171,12 @@ export const APPS = [
   // guest with its own ink, launched by `# MINIGAME: cellar`. It lives
   // beside its content, so it names its page with `url`. It reads and
   // writes no story variable and its video is muted, so it holds nothing.
+  // `exits=oskar` (Per Aspera's cellar) adds that story's "Sit in with Oskar"
+  // as a way out; the way the reader left comes back as the result's score.
   { id: 'cellar', family: 'play', icon: '🏮', name: 'The Lantern Cellar',
     surface: 'stage', game: 'cellar', url: '../../drift-city/novel/cellar.html',
     desc: 'A graphic-novel page from Drift City', controls: 'none',
-    capabilities: [], silent: true },
+    args: ['exits'], capabilities: [], silent: true },
   // Drift City itself: the raymarched city on Titan (WebGPU, with a WebGL
   // fallback) and its stories. `# MINIGAME: drift tale=peraspera` opens it on
   // that story; `args` lists the only keys a story may pass. It obeys pause

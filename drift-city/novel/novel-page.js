@@ -142,8 +142,10 @@ class NovelPage extends HTMLElement {
     if (!story) return;
     const lines = [];
     let want = null;
+    const tags = [];
     while (story.canContinue) {
       const line = story.Continue();
+      tags.push(...(story.currentTags || []));
       for (const tag of story.currentTags || []) {
         const i = tag.indexOf(":");
         if (i > 0 && tag.slice(0, i).trim().toLowerCase() === "panel") want = this._panelByName(tag.slice(i + 1));
@@ -151,6 +153,8 @@ class NovelPage extends HTMLElement {
       if (line.trim()) lines.push(line.trim());
     }
     this._render(lines);
+    // every tag of this step, for the page that holds the component (cellar.html uses "# leave:")
+    if (tags.length) this.dispatchEvent(new CustomEvent("storytags", { detail: { tags }, bubbles: true }));
     if (want !== null && want >= -1 && want < this._panels.length && want !== this._cur) this._goto(want, "story");
   }
 

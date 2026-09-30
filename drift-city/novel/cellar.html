@@ -86,13 +86,21 @@ if (window.parent !== window && typeof MinigameSDK === "function") {
   sdk.onResume(() => page.resume());
   sdk.onSnapshot(() => (story ? page.captureState() : null));
   sdk.onRestore((state) => { if (story) page.restoreState(state); else pendingRestore = state; });
+  // The way the reader left goes back as the score, so the story can go on from there (the runner sets its
+  // `game_score` VAR): 1 "Sit in with Oskar" (only when the story passed `exits=oskar`), 2 "Back to Ferry Street".
   let leaving = 0;
   page.addEventListener("panelchange", (e) => {
     clearTimeout(leaving);
     const { index, source } = e.detail;
     if (source !== "story" || page.panels[index]?.getAttribute("knot") !== "street") return;
     const flight = parseFloat(page.getAttribute("duration")) || 1400;   // let the flight land first
-    leaving = setTimeout(() => sdk.complete({ success: true }), flight + 1200);
+    leaving = setTimeout(() => sdk.complete({ success: true, score: 2 }), flight + 1200);
+  });
+  page.addEventListener("storytags", (e) => {
+    if (e.detail.tags.some((t) => /^\s*leave\s*:\s*oskar\s*$/i.test(t))) {
+      clearTimeout(leaving);
+      leaving = setTimeout(() => sdk.complete({ success: true, score: 1 }), 600);
+    }
   });
 }
 
@@ -101,6 +109,8 @@ try {
   const r = await fetch("cellar.ink");
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   story = new inkjs.Story(new inkjs.Compiler(await r.text()).Compile().ToJson());
+  // `# MINIGAME: cellar exits=oskar` arrives as ?exits=oskar (only the keys the app row lists get through)
+  if (new URLSearchParams(location.search).get("exits") === "oskar") story.variablesState["oskar_exit"] = true;
   page.play(story);
   if (pendingRestore) page.restoreState(pendingRestore);
 } catch (e) { console.error("cellar.ink:", e); }
