@@ -415,9 +415,27 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
   `D.LIFE.acc = 1` after changing the board (`D.lifeStamp`, `D.lifeStep` and `D.LIFE_PATTERNS` are on `__drift`).
   Use `CAM=-490,95,-229,-2.729,-0.02 CAMF=4` with `HOP=place:roof_0` to look at the tour's Life tower.
 - Uploaded packed 16 cells to a float at byte 848 of the event buffer (`ev.life`, read by `lifeAt`).
-- Shown on half the organic round towers (type 8, material 15: the banded ones; the window band cut into 64 cells)
-  and two in five rounded modern towers (material 1, `v` 0.4 to 0.72). Each tower turns the board by its own
-  number of columns.
+- Shown on the organic round towers (type 8, material 15) by `organicLife()`, and two in five rounded modern
+  towers (material 1, `v` 0.4 to 0.72, still one row a 3.6 m floor and 64 columns round). Each tower turns the
+  board by its own number of columns.
+- **Organic towers: a screen of square cells, not the window band (September 2026).** Owner, with phone
+  screenshots from Conway Corner: "not obviously life". The old mapping put 64 columns round a tower about 4.5 m
+  in radius and one row a floor, lit only in the window band: cells about 0.44 m wide and 2.3 m tall, split by
+  the gold floor rings. From 50 m and more they read as thin coloured stripes (Dawn render, confirmed). Now:
+  - a window of `LIFE_WIN` = 24 of the 64 columns goes round the tower, so a cell is about 1.2 m wide (at 150 m,
+    about 4 pixels on a phone at the 66% render scale);
+  - rows are the same height as a cell is wide (`lifeCellH`), 40 of them down from 1.5 m under the cap, about
+    48 m of screen; a shorter tower shows the rows it has;
+  - `organic()` leaves out the floor rings over the board (`lifeBoardFoot`), because the rings hid it;
+  - the angle is taken round the tower's leaning axis, as `organic()` bends it, so the columns stay upright;
+  - dead cells are dark glass with a thin grey grid between cells. A pale grid lit by the amber sky made the
+    tower read as a gold lattice, not a board.
+  The window has a seam where column 24 meets column 1, at the tower's own angle 0. Each tower shows a different
+  part of the board.
+- **Seeding for a 24-column window.** Guns and fleets at random columns often missed a tower's window. Seven 8 x 8
+  patches of random soup (38% alive) now go all over the board as well. Measured offline (`life.js` in `node:vm`,
+  ten minutes of steps, eight windows): the emptiest window had a median of 31 live cells, 21 before; the mean did
+  not change (about 54 of 960).
 - Check it with a known still life: `LIFESTRIPE=1` in the scratch runner stamps every other row full (stable in
   Life), so a Life tower must show every other floor lit. The first attempt put Life on material 1 only; the
   visible round towers are type 8, and nothing showed.
@@ -796,7 +814,9 @@ boards are sharp within 350 m); a line of sight marched against
 obstacle otherwise, and every view scored zero); score = h × 9 / d. Street
 trees make `heightAt` 19 m on almost every corner, so a street-level eye
 fails every test. Rendered and looked at with Node Dawn (daylight): six
-round towers in frame.
+round towers in frame. After the square-cell change (above) the nearest
+tower fills the middle of a phone screen with its board; check a change with
+`HOP=place:conway_corner node drift-city/tests/dawn-run.mjs`.
 
 **The city's menu is the shell's inside foafos** (spec §5.9). `host.js`
 hides `#bMenu` and walks `menuRoot()` into shell actions once a second
