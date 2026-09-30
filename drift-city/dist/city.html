@@ -1739,7 +1739,7 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   }
   // in a venue's room: lit by the room's lamps (with the room's shadows), no sky and no fog
   if (ev.wx.z > 0.5) {
-    let rk = i32(ev.wx.z + 0.5);
+    let rk = roomK();
     let hpL = rmLocal(ro + rd * bestT);
     let nL = rmLocalDir(nw);
     var rc = alb * rmLit(hpL, nL, rk, occ, true) * (0.55 + 0.45 * occ) + emi;
@@ -6368,8 +6368,10 @@ fn lightSurf(n: vec3f, rd: vec3f, sf: Surf, sha: f32, occ: f32) -> vec3f {
 
 // ---------- the venues' rooms (tales.js ROOMS; keep the walls in step with it) ----------
 // While you stand in a venue, ev.wx.z holds its kind (1 the Cold Tap, 2 the Low Orbit, 3 the Lantern Cellar, 4 the
-// Warmhouse club) and ev.room its origin (the floor under the place) and heading. The scene pass then draws the
-// room round the camera with its own lights and nothing of the city. Room axes: x forward along the heading, z to
+// Warmhouse club) and ev.room its origin (the floor under the place) and heading. The rooms are not in this file:
+// rooms.wgsl and rooms/*.wgsl are their own pipeline, one per place (main.js, roomPipe), which draws the room round
+// the camera with its own lights and nothing of the city. What stays here is what the city's code shares with
+// them: room coordinates and the band's beat (the people on the stands use it). Room axes: x forward along the heading, z to
 // the right, y up from the floor. How these rooms are made, and the rules that keep them from looking like a toy
 // house: the drift-city skill, "Interiors and people".
 fn rmLocalDir(v: vec3f) -> vec3f {
@@ -6378,6 +6380,442 @@ fn rmLocalDir(v: vec3f) -> vec3f {
   return vec3f(v.x * c + v.z * s, v.y, -v.x * s + v.z * c);
 }
 fn rmLocal(p: vec3f) -> vec3f { return rmLocalDir(p - ev.room.xyz); }
+// the band (venue.js, through ev.wx.w): x playing (0 between tunes), y a pulse on each beat, z the bar, w the beat
+fn rmBand() -> vec4f {
+  let w = ev.wx.w;
+  let play = step(0.0, w);
+  let beat = max(w, 0.0);
+  return vec4f(play, exp(-fract(beat) * 5.0) * play, floor(beat / 4.0), beat);
+}
+// the stage's colour, changed every two bars: amber, rose, deep blue, warm white
+fn rmStageCol(n: f32) -> vec3f {
+  let i = i32(n) & 3;
+  if (i == 0) { return vec3f(1.0, 0.62, 0.25); }
+  if (i == 1) { return vec3f(1.0, 0.3, 0.55); }
+  if (i == 2) { return vec3f(0.35, 0.45, 1.0); }
+  return vec3f(1.0, 0.9, 0.75);
+}
+
+// ---------- sun shadow map (world-anchored, toroidal, filled incrementally) ----------
+fn smKey(id: vec2i) -> u32 {
+  return u32(id.x & 0x3fff) | (u32(id.y & 0x3fff) << 14u) | (u32(sp.gen) << 28u);
+}
+
+fn shadowLookup(p: vec3f, n: vec3f, jit: vec2f) -> f32 {
+  let ndl = clamp(dot(n, sp.lz), 0.08, 1.0);
+  let slope = min(sqrt(1.0 - ndl * ndl) / ndl, 5.0);
+  let pb = p + n * (0.1 + sp.ts * (0.6 + 0.6 * (1.0 - ndl)));
+  let uvf = vec2f(dot(pb, sp.lx), dot(pb, sp.ly)) / sp.ts - 0.5 + jit;
+  let i0 = vec2i(floor(uvf));
+  let f = uvf - floor(uvf);
+  let wp = dot(pb, sp.lz);
+  let nn = i32(sp.n);
+  var s = vec4f(0.0);
+  for (var k = 0; k < 4; k++) {
+    let id = i0 + vec2i(k & 1, k >> 1);
+    let slot = vec2i(((id.x % nn) + nn) % nn, ((id.y % nn) + nn) % nn);
+    let tx = textureLoad(shadowTex, slot, 0);
+    if (tx.y != smKey(id)) { return -1.0; }
+    s[k] = select(1.0, 0.0, wp < bitcast<f32>(tx.x) - sp.ts * (0.5 + 1.1 * slope) - 0.1);
+  }
+  return mix(mix(s.x, s.y, f.x), mix(s.z, s.w, f.x), f.y);
+}
+
+@compute @workgroup_size(8, 8) fn shadowBuild(@builtin(global_invocation_id) gid: vec3u) {
+  let r = rectU;
+  if (i32(gid.x) >= r.z || i32(gid.y) >= r.w) { return; }
+  let id = vec2i(r.x + i32(gid.x), r.y + i32(gid.y));
+  let uu = (f32(id.x) + 0.5) * sp.ts;
+  let vv = (f32(id.y) + 0.5) * sp.ts;
+  let w0 = (275.0 - sp.ly.y * vv) / sp.lz.y;
+  let ro = sp.lx * uu + sp.ly * vv + sp.lz * w0;
+  gNoDyn = true;
+  var dummy = 1.0;
+  let hit = traceScene(ro, -sp.lz, 1250.0, 140, 24, 40, &dummy, false);
+  var wHit = -1e9;
+  if (hit.kind >= 2) { wHit = w0 - hit.t; }
+  let nn = i32(sp.n);
+  let slot = vec2i(((id.x % nn) + nn) % nn, ((id.y % nn) + nn) % nn);
+  textureStore(shadowOut, slot, vec4u(bitcast<u32>(wHit), smKey(id), 0u, 0u));
+}
+
+// ---------- rasterized proxies: conservative ray start distances ----------
+struct PxOut { @builtin(position) pos: vec4f, @location(0) wp: vec3f };
+
+fn projectPx(wp: vec3f) -> vec4f {
+  let v = wp - u.camPos;
+  let z = dot(v, u.camFwd);
+  let nearZ = 0.1;
+  let farZ = 2000.0;
+  return vec4f(dot(v, u.camRight) / (u.fov * u.res.x / u.res.y), dot(v, u.camUp) / u.fov, z * farZ / (farZ - nearZ) - farZ * nearZ / (farZ - nearZ), z);
+}
+
+fn boxVertex(vi: u32, lo: vec3f, hi: vec3f) -> PxOut {
+  var tbl = array<u32, 36>(0u, 1u, 3u, 0u, 3u, 2u, 4u, 6u, 7u, 4u, 7u, 5u, 0u, 4u, 5u, 0u, 5u, 1u,
+                           2u, 3u, 7u, 2u, 7u, 6u, 0u, 2u, 6u, 0u, 6u, 4u, 1u, 5u, 7u, 1u, 7u, 3u);
+  let c = tbl[vi];
+  let k = vec3f(f32(c & 1u), f32((c >> 1u) & 1u), f32((c >> 2u) & 1u));
+  var wp = mix(lo, hi, k);
+  let m = 0.25 + length(wp - u.camPos) * (3.0 * u.fov / u.res.y);
+  wp += (k * 2.0 - 1.0) * m;
+  var o: PxOut;
+  o.wp = wp;
+  o.pos = projectPx(wp);
+  return o;
+}
+
+@vertex fn vsCell(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> PxOut {
+  var o: PxOut;
+  o.pos = vec4f(2.0, 2.0, 2.0, 1.0);
+  o.wp = vec3f(0.0);
+  let sx = i32(ii) % NC;
+  let sz = i32(ii) / NC;
+  let t0 = textureLoad(cellTex, vec2i(sx * 3, sz), 0);
+  let t1 = textureLoad(cellTex, vec2i(sx * 3 + 1, sz), 0);
+  let top = max(t1.y, t0.w);
+  if (top <= 0.0 || t0.x > 1.5e7) { return o; }
+  let cen = (t0.xy + 0.5) * CS;
+  var lo = vec3f(cen.x - HALF, -0.5, cen.y - HALF);
+  var hi = vec3f(cen.x + HALF, top + 0.5, cen.y + HALF);
+  if (t0.w <= 0.0 && ((i32(round(t0.z)) >> 5) & 30720) == 0 && ((i32(round(t0.z)) >> 20) & 7) != 3 && (i32(round(t0.z)) & 15) != 14) {
+    let typ = i32(round(t0.z)) & 15;
+    var ctr = cen;
+    var ext = vec2f(FOOT);
+    if (typ == 1 || typ == 2) {
+      let t2 = textureLoad(cellTex, vec2i(sx * 3 + 2, sz), 0);
+      ctr = cen + t2.xy;
+      ext = t1.zw + 0.6;
+      if (typ == 1 && t2.z >= 0.72) { ext = vec2f(max(t1.z, t1.w) * 1.42 + 0.6); }
+    }
+    lo = vec3f(max(ctr.x - ext.x, cen.x - FOOT), -0.5, max(ctr.y - ext.y, cen.y - FOOT));
+    hi = vec3f(min(ctr.x + ext.x, cen.x + FOOT), top + 0.5, min(ctr.y + ext.y, cen.y + FOOT));
+  }
+  return boxVertex(vi, lo, hi);
+}
+
+@vertex fn vsGiant(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> PxOut {
+  var o: PxOut;
+  o.pos = vec4f(2.0, 2.0, 2.0, 1.0);
+  o.wp = vec3f(0.0);
+  let b = vec2i(floor(u.camPos.xz / BIG)) + vec2i(i32(ii) % 13 - 6, i32(ii) / 13 - 6);
+  if (!giantHasW(b)) { return o; }
+  let cen = (vec2f(b) + 0.5) * BIG;
+  let top = giantTop(b) + 8.0;
+  let hw = select(82.0, 104.5, isHive(b) || isFab(b));
+  return boxVertex(vi, vec3f(cen.x - hw, -0.5, cen.y - hw), vec3f(cen.x + hw, top, cen.y + hw));
+}
+
+@fragment fn fsProxy(i: PxOut) -> @location(0) vec4f {
+  return vec4f(length(i.wp - u.camPos), 0.0, 0.0, 1.0);
+}
+
+fn rnd3(fc: vec2f, k: i32) -> vec3f {
+  let f = i32(u.frame);
+  return vec3f(hsh(i32(fc.x), i32(fc.y), f * 5 + k), hsh(i32(fc.x), i32(fc.y), f * 5 + k + 1), hsh(i32(fc.x), i32(fc.y), f * 5 + k + 2)) - 0.5;
+}
+
+// ---------- the selection (pick.js pickSelGPU): ev.sel = cell x, cell z, kind (1 building, 2 person), person key;
+// ev.sel2 = building top, real time, city paused. Owner, September 2026: "strong, thick glowing
+// edge + shimmer and jelly"; people "throb bigger" (pedQ).
+const SEL_HI: vec3f = vec3f(0.35, 1.0, 0.8);
+// where the shader puts person `key` of cell c now: pedQ's own sums run backwards (as main.js walkerAt does), so
+// the highlight follows the figure the shader draws even where the page's copy of the sums disagrees
+fn pedPos(c: vec2i, key: i32) -> vec2f {
+  let ln = key & 1;
+  let R = select(9.95, 10.45, ln == 1);
+  let dir = select(1.0, -1.0, ln == 1);
+  let per = 8.0 * R;
+  let n = floor(per / 4.4);
+  let spacing = per / n;
+  let pace = pedPace(c, ln);
+  let A = u.time * pace + 3.0 * pace * (vnoise(vec2f(u.time * 0.07, f32(c.x * 13 + c.y * 7 + ln)), 181) - 0.5);
+  let kind = pedKind(c, ln, key);
+  let sw = 0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182);
+  let sway = select(min(0.8, 0.45 * pace / sw) * sin(u.time * sw + f32(key)), 0.0, kind == 4);
+  let s0 = (f32(key >> 1) + 0.5) * spacing + sway + dir * A;
+  let s = s0 - per * floor(s0 / per);
+  var lp = vec2f(-R, 7.0 * R - s);
+  if (s < 2.0 * R) { lp = vec2f(s - R, -R); } else if (s < 4.0 * R) { lp = vec2f(R, s - 3.0 * R); } else if (s < 6.0 * R) { lp = vec2f(5.0 * R - s, R); }
+  return (vec2f(c) + 0.5) * CS + lp;
+}
+// does this hit belong to the selection?
+fn selIs(p: vec3f, m: f32) -> bool {
+  if (ev.sel.z < 0.5) { return false; }
+  let ci = vec2i(floor(p.xz / CS));
+  if (!all(ci == vec2i(ev.sel.xy))) { return false; }
+  let mi = i32(m + 0.5);
+  // a person: the figure at the selected slot's place (pedPos; not pedQ again, every call is inlined)
+  if (ev.sel.z > 1.5) { return mi == 24 && length(p.xz - pedPos(ci, i32(ev.sel.w))) < 0.9; }
+  let lq = p.xz - (vec2f(ci) + 0.5) * CS;
+  return max(abs(lq.x), abs(lq.y)) < 9.7 && p.y > 0.4 && mi != 24 && mi != 12 && mi != 14 && mi != 17 && mi != 28;
+}
+// the selection's box: a building's plot up to its top, a person's body
+fn selBox() -> array<vec3f, 2> {
+  if (ev.sel.z > 1.5) {
+    let pp = pedPos(vec2i(ev.sel.xy), i32(ev.sel.w));
+    let c = vec3f(pp.x, 1.1, pp.y);
+    // the same 0.9 m as selIs: a hit counted as the person must be inside the box the jelly pass leaves through
+    return array<vec3f, 2>(c - vec3f(0.95, 1.1, 0.95), c + vec3f(0.95, 1.6, 0.95));
+  }
+  let c = (vec2f(ev.sel.xy) + 0.5) * CS;
+  return array<vec3f, 2>(vec3f(c.x - 9.7, 0.0, c.y - 9.7), vec3f(c.x + 9.7, ev.sel2.x + 3.0, c.y + 9.7));
+}
+// the selection's colour: a thick rim, bands of light running up it, sparks
+fn selGlow(p: vec3f, n: vec3f, rd: vec3f) -> vec3f {
+  let rt = ev.sel2.y;
+  let rim = pow(1.0 - clamp(dot(-rd, n), 0.0, 1.0), 1.4);
+  let band = pow(0.5 + 0.5 * sin(p.y * 1.6 - rt * 4.0 + (p.x + p.z) * 0.35), 6.0);
+  let spark = step(0.992, hsh(i32(floor(p.x * 2.5)) + i32(floor(rt * 9.0)) * 977, i32(floor(p.y * 2.5)), i32(floor(p.z * 2.5)) + 811));
+  return SEL_HI * (3.0 * rim + 1.4 * band + 4.0 * spark) * (0.8 + 0.4 * sin(rt * 3.0));
+}
+// where a ray enters and leaves a box: (enter, leave); enter > leave is a miss, leave < 0 is behind. A ray that starts
+// inside has enter < 0 < leave. (The only ray-box test in this module; the far field's inline slab keeps its own.)
+fn boxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> vec2f {
+  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
+  let t0 = (lo - ro) * inv;
+  let t1 = (hi - ro) * inv;
+  let tn = min(t0, t1);
+  let tf = max(t0, t1);
+  return vec2f(max(tn.x, max(tn.y, tn.z)), min(tf.x, min(tf.y, tf.z)));
+}
+// While the city is paused, the selection's neighbours (pick.js pickNearSet, ev.nb: centre x, centre z, half width,
+// top; top 0 = none): a thin shimmering outline round each one's box, so their extents show and a tap on one's ring
+// makes it the selection (owner, September 2026: "the neighbouring entities of THAT item in turn are shimmering and
+// their extents determined")
+fn nbHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
+  if (ev.sel2.z < 0.5) { return vec3f(0.0); }
+  var col = vec3f(0.0);
+  for (var i = 0; i < 8; i++) {
+    let b = ev.nb[i];
+    if (b.w <= 0.0) { break; }
+    let lo = vec3f(b.x - b.z, 0.0, b.y - b.z);
+    let hi = vec3f(b.x + b.z, b.w, b.y + b.z);
+    let core = boxHit(ro, rd, lo, hi);
+    if (core.x <= core.y && core.y > 0.0) { continue; }
+    let w = max(length(vec3f(b.x, b.w * 0.5, b.y) - ro) * 0.007, 0.08);
+    let g = boxHit(ro, rd, lo - vec3f(w, 0.0, w), hi + vec3f(w));
+    if (g.x > g.y || g.y <= 0.0 || tHit < g.x - w * 6.0) { continue; }
+    let q = ro + rd * max(g.x, 0.0);
+    col += vec3f(0.45, 1.0, 0.65) * (0.35 + 0.35 * sin(q.y * 0.6 - ev.sel2.y * 3.0 + f32(i)));
+  }
+  return col;
+}
+// the thick edge round the selection's box: the ray against the box grown by one to four widths, a width being
+// about 1.2% of the distance, so the edge is as thick on screen far away as near. Hidden where something nearer
+// stands in front; inside the box's own outline the thing glows itself (selGlow)
+fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
+  if (ev.sel.z < 0.5) { return vec3f(0.0); }
+  let b = selBox();
+  let core = boxHit(ro, rd, b[0], b[1]);
+  if (core.x <= core.y && core.y > 0.0) { return vec3f(0.0); }
+  let w = max(length((b[0] + b[1]) * 0.5 - ro) * 0.012, 0.12);
+  var g = 0.0;
+  var tn = 1e9;
+  for (var i = 1; i <= 4; i++) {
+    let e = w * f32(i);
+    let hb = boxHit(ro, rd, b[0] - vec3f(e, 0.0, e), b[1] + vec3f(e));
+    if (hb.x <= hb.y && hb.y > 0.0) { g += 0.25; tn = min(tn, max(hb.x, 0.0)); }
+  }
+  if (g <= 0.0 || tHit < tn - w * 6.0) { return vec3f(0.0); }
+  return SEL_HI * g * g * 2.2 * (0.8 + 0.2 * sin(ev.sel2.y * 3.0));
+}
+
+// the pixel this fragment shades (half-width, checkerboarded by frame) and its view ray; the rooms' pass uses them too
+fn primaryPx(fc: vec4f) -> vec2f { return vec2f(floor(fc.x) * 2.0 + f32((i32(fc.y) + i32(u.frame)) & 1) + 0.5, fc.y); }
+fn primaryDir(px: vec2f) -> vec3f {
+  let fj = px + u.jitter;
+  let uv = vec2f(fj.x * 2.0 - u.res.x, u.res.y - fj.y * 2.0) / u.res.y;
+  return normalize(u.camFwd + (uv.x * u.camRight + uv.y * u.camUp) * u.fov);
+}
+@fragment fn scene(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let px = primaryPx(fc);
+  let ro = u.camPos;
+  let rd = primaryDir(px);
+  if (ev.sel.z > 1.5) { gSelP = vec4f(ev.sel.xy, ev.sel.w, ev.sel2.y); }
+  // inside a venue the rooms' own pipeline draws (rooms.wgsl); this frame shows only until that one is built
+  if (ev.wx.z > 0.5) { return vec4f(0.03, 0.02, 0.015, 1.0); }
+  var tProxy = 0.0;
+  if (u.p5 < 0.5) { tProxy = max(textureLoad(proxyTex, vec2i(i32(px.x), i32(fc.y)), 0).r - 0.5, 0.0); }
+  let hit = tracePrimary(ro, rd, tProxy);
+  var col = vec3f(0.0);
+  var tOut = TMAX;
+  // The primary hit and, for reflective surfaces, the reflected hit are shaded by the same code in a two-pass
+  // loop. GPU compilers inline every call, so a single call site keeps the pipeline small and quick to build.
+  var cro = ro;
+  var crd = rd;
+  var h = hit;
+  var wgt = vec3f(1.0);
+  var tBase = 0.0;
+  let nPass = select(2, 3, u.frame < -1.0);
+  for (var bounce = 0; bounce < nPass; bounce++) {
+    let first = bounce == 0;
+    if (h.kind == 0) {
+      var sc = fogApply(skyCol(crd), cro, crd, TMAX);
+      if (!first) { sc *= min(1.0, 2.5 / max(luma(sc), 1e-4)); }
+      col += wgt * sc;
+      break;
+    }
+    let p = cro + crd * h.t;
+    if (first) { tOut = h.t; }
+    var n = hitNormal(p, h);
+    // weathering first, then frost and settled snow on top of it (the tholin dust would brown fresh snow)
+    var sf = surface(p, n, h.m, crd, h.t + tBase);
+    if (first) { var nb = n; sf = weathering(sf, n, p, i32(h.m + 0.5), h.t, &nb); n = nb; }
+    sf = frostify(sf, n, p, h.m);
+    // the selection: glowing, shimmering, and jelly (the view goes on through it, below)
+    let jelly = first && selIs(p, h.m);
+    if (jelly) {
+      sf.alb = mix(sf.alb, SEL_HI * 0.35, 0.5);
+      sf.emi += selGlow(p, n, crd);
+      sf.refl = 0.0;
+    }
+    // the map overlay (map.js MAPO): each district's colour on the ground and the roofs, as on the flat map, and the
+    // street lines; not on the wild land
+    if (first && (i32(ev.sel2.w) & 1) != 0 && (p.y < 0.6 || n.y > 0.7)) {
+      let cM = vec2i(floor(p.xz / CS));
+      let hM = cellHead(cM);
+      if (hM.typ != 7) {
+        var zc = array<vec3f, 8>(vec3f(0.79, 0.64, 0.42), vec3f(0.88, 0.34, 0.6), vec3f(0.73, 0.54, 0.37), vec3f(0.82, 0.32, 0.24),
+          vec3f(0.49, 0.45, 0.41), vec3f(0.6, 0.64, 0.68), vec3f(0.44, 0.37, 0.53), vec3f(0.37, 0.66, 0.63));
+        let zcol = zc[(hM.fl >> 15) & 7];
+        sf.alb = mix(sf.alb, zcol * 0.6, 0.6);
+        sf.emi += zcol * (0.05 + 0.12 * u.windows);
+        if (p.y < 0.6) {
+          let lqM = p.xz - (vec2f(cM) + 0.5) * CS;
+          let eM = HALF - max(abs(lqM.x), abs(lqM.y));
+          let wM = 0.25 + h.t * 0.002;
+          sf.emi += vec3f(1.0, 0.95, 0.8) * (1.0 - smoothstep(wM, wM * 2.0, eM)) * (0.5 + 0.8 * u.windows);
+        }
+      }
+    }
+    // the city paused: the street grid glows green, with a pulse running out from the selection
+    if (first && ev.sel2.z > 0.5 && p.y < 0.6) {
+      let lqG = p.xz - (floor(p.xz / CS) + 0.5) * CS;
+      let eG = HALF - max(abs(lqG.x), abs(lqG.y));
+      let wG = 0.12 + h.t * 0.0025;
+      let lineG = 1.0 - smoothstep(wG, wG * 2.2, eG);
+      let sc = select(p.xz, (vec2f(ev.sel.xy) + 0.5) * CS, ev.sel.z > 0.5);
+      let pulse = 0.5 + 0.5 * sin(length(p.xz - sc) * 0.08 - ev.sel2.y * 3.0);
+      sf.emi += vec3f(0.25, 1.0, 0.35) * lineG * (0.6 + 1.2 * pulse) * (1.0 - smoothstep(600.0, 1400.0, h.t));
+    }
+    var sha = 0.75;
+    var occ = 0.85;
+    if (first) {
+      if (sf.wet > 0.0) { n = normalize(n + rippleN(p) * sf.wet * (0.6 + 0.8 * u.p8)); }
+      sha = 0.0;
+      if (u.sunDir.y > 0.0 && dot(n, u.sunDir) > -0.3) {
+        let sm = shadowLookup(p, n, rnd3(px, 0).xy * 0.9);
+        sha = select(0.8, sm, sm >= 0.0);
+      }
+      occ = 1.0;
+      if (h.t < 300.0 && h.kind != 5) { occ = calcAO(p, n, h); }
+    }
+    var c = lightSurf(n, crd, sf, sha, occ);
+    // fog along this segment is an affine blend, fogApply(x) = x * fT + f0
+    let f0 = fogApply(vec3f(0.0), cro, crd, h.t);
+    let fT = fogApply(vec3f(1.0), cro, crd, h.t).x - f0.x;
+    if (!first) {
+      var rc = c * fT + f0;
+      rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));
+      col += wgt * rc;
+      break;
+    }
+    c += sf.alb * beamSpot(p);
+    // the next ray: on through the selection (jelly), or reflected. One traceScene call site for both: the GPU
+    // compilers inline every call, and a second one doubled the pipeline's build time
+    var nro = p + n * 0.08;
+    var nrd = crd;
+    if (jelly) {
+      // jelly: part of the light comes through from behind, tinted, from where the ray leaves the selection's box
+      let b = selBox();
+      let tEx = max(boxHit(p, crd, b[0], b[1]).y, 0.05);
+      col += c * 0.6 * fT + f0;
+      wgt = mix(vec3f(1.0), SEL_HI, 0.35) * 0.4 * fT;
+      tBase = h.t + tEx;
+      nro = p + crd * (tEx + 0.1);
+    } else {
+      if (sf.refl <= 0.02) { col += c * fT + f0; break; }
+      var r = reflect(crd, n);
+      r = normalize(r + rnd3(px, 3) * sf.rough * 2.0);
+      if (h.kind == 1) { r.y = abs(r.y); }
+      let w = clamp(sf.refl, 0.0, 1.0);
+      if (!(u.refl > 0.5 && h.t < 350.0 && sf.refl > 0.1)) {
+        var rc = fogApply(skyCol(r), p, r, TMAX);
+        rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));
+        col += mix(c, rc * sf.tint, w) * fT + f0;
+        break;
+      }
+      col += c * (1.0 - w) * fT + f0;
+      wgt = sf.tint * w * fT;
+      tBase = h.t;
+      nrd = r;
+    }
+    var d2 = 1.0;
+    cro = nro;
+    crd = nrd;
+    h = traceScene(cro, crd, 320.0, 22, 12, 18, &d2, false);
+  }
+  col += beamGlow(ro, rd, tOut) * (0.3 + u.windows);
+  col += selHalo(ro, rd, tOut);
+  col += nbHalo(ro, rd, tOut);
+  let tEv = select(tOut, FARMAX, hit.kind == 0);
+  col += fireworksFx(ro, rd, tEv);
+  col = launchFx(ro, rd, tEv, col);
+  col = smokeFx(ro, rd, tOut, col);
+  col = tubesFx(ro, rd, tOut, col);
+  col = holoFx(ro, rd, tEv, col);
+  col = beamFx(ro, rd, tEv, col);
+  col = bubbleFx(ro, rd, tEv, col);
+  col = flockFx(ro, rd, tOut, col);
+  col = propsFx(ro, rd, tOut, col);
+  // a power cut: everything in the area goes dark (with a flicker as it fails and comes back)
+  if (ev.blk.w > 0.0) {
+    let hp = ro + rd * min(tOut, 3000.0);
+    let bd = length(hp.xz - ev.blk.xy);
+    col *= 1.0 - ev.blk.w * sstepJ(ev.blk.z, ev.blk.z * 0.55, bd) * sstepJ(400.0, 250.0, hp.y) * (0.4 + 0.6 * u.windows);
+  }
+  // a burst heat pipe: a rising, spreading plume of warm steam
+  if (ev.steam.w > 0.0) {
+    let age = u.time - ev.steam.w;
+    if (age > 0.0 && age < 30.0) {
+      let base = ev.steam.xyz;
+      var acc = 0.0;
+      let tc = clamp(dot(base + vec3f(0.0, 12.0, 0.0) - ro, rd), 0.0, tOut);
+      for (var i = 0; i < 10; i++) {
+        let t = tc + (f32(i) - 4.5) * 3.0;
+        if (t < 0.0 || t > tOut) { continue; }
+        let q = ro + rd * t - base;
+        let h = max(q.y, 0.0);
+        let rad = 1.5 + h * 0.35 + age * 0.3;
+        let r = length(q.xz - vec2f(h * 0.25, 0.0));
+        acc += exp(-r * r / (rad * rad)) * exp(-h / (6.0 + age * 1.5)) * step(-1.0, q.y) * (0.6 + 0.4 * vnoise(q.xz * 0.4 + vec2f(0.0, u.time * 0.8), 183));
+      }
+      let fade = sstepJ(0.0, 1.5, age) * sstepJ(30.0, 18.0, age);
+      col = mix(col, (u.skyHor * 0.6 + u.sunCol * 0.15 + vec3f(0.55, 0.5, 0.48) * (0.3 + 0.5 * u.windows)), clamp(acc * 0.3 * fade, 0.0, 0.8));
+    }
+  }
+  col += koiFx(ro, rd, tOut);
+  col = max(col, vec3f(0.0));
+  col *= min(1.0, 12.0 / max(luma(col), 1e-4));
+  return vec4f(col, tOut);
+}
+</script>
+<script type="text/wgsl" id="wgsl-rooms-off">
+// ---------- the city's pipeline without the rooms ----------
+// propsFx lights people with the room's lamps when they stand in a venue; that happens only in the rooms' pipelines
+// (rooms.wgsl). These stand-ins let the city's module compile without the rooms' code.
+fn roomK() -> i32 { return 0; }
+fn rmLit(q: vec3f, n: vec3f, k: i32, occ: f32, shadowed: bool) -> vec3f { return vec3f(0.0); }
+fn rmLight(k: i32, i: i32) -> array<vec3f, 2> { return array<vec3f, 2>(vec3f(0.0), vec3f(0.0)); }
+</script>
+<script type="text/wgsl" id="wgsl-rooms">
+// ---------- the venues' rooms: the shared part (rooms/*.wgsl hold each place's walls and things) ----------
+// Built as its own module: common.wgsl + scene.wgsl + this file + every rooms/*.wgsl + the dispatch main.js writes
+// (roomDispatch). One pipeline per place: ROOM_K is set when the pipeline is made, so the compiler keeps only that
+// place's branches. The city's pipeline has none of this; rooms-off.wgsl stands in for the few calls it makes.
+// Why: the drift-city skill, "Rooms have their own pipelines".
+override ROOM_K: i32 = 1;
+fn roomK() -> i32 { return ROOM_K; }
 // a row of n things spaced `stp` apart from `start` along one axis: the offset from the nearest
 fn rmRep(x: f32, start: f32, stp: f32, n: f32) -> f32 { return x - start - stp * clamp(round((x - start) / stp), 0.0, n - 1.0); }
 fn rmIdx(x: f32, start: f32, stp: f32, n: f32) -> f32 { return clamp(round((x - start) / stp), 0.0, n - 1.0); }
@@ -6471,349 +6909,14 @@ fn rmStool(q: vec3f, k: vec2f) -> vec2f {
   return r;
 }
 
-// the Cold Tap: a narrow old bar. Oxblood plaster over dark panelling, a pressed-tin ceiling browned by decades of
-// heater fumes, a long bar with a brass rail and taps, a mirrored back bar full of odd bottles, green-shaded lamps,
-// a jukebox glowing in the corner, and the airlock at the far end with a porthole onto the blue street.
-// ---------- noir and disco: the Cold Tap's fan, the club's glitterball and lasers, smoke and dry ice ----------
-// All cheap by construction: the fan's shadow is found by projecting a point onto the fan's disc from the lamp above
-// it (no shadow march), the glitterball's spots are a pattern on the sphere of directions round the ball, a laser is
-// the closest approach between the view ray and a line, smoke and dry ice are noise on the haze samples already taken.
-const RM_FAN = vec3f(4.6, 2.6, -0.7);
-const RM_FANL = vec3f(4.6, 3.34, -0.7);
-const RM_BALL = vec3f(12.0, 7.4, 0.0);
-fn rmFanRot() -> f32 { return u.time * 2.3; }
-fn rmFan(q: vec3f) -> vec2f {
-  let p = q - RM_FAN;
-  let bb = sdBox(p - vec3f(0.0, 0.2, 0.0), vec3f(0.68, 0.24, 0.68));
-  if (bb > 0.05) { return vec2f(bb, 9.0); }
-  var r = vec2f(sdSeg(p, vec3f(0.0), vec3f(0.0, 0.42, 0.0)) - 0.013, 5.0);
-  r = rmU(r, vec2f(sdEll(p, vec3f(0.1, 0.05, 0.1)), 5.0));
-  let sec = 1.2566371;
-  let a = atan2(p.z, p.x) - rmFanRot();
-  let ai = a - sec * round(a / sec);
-  let rr = length(p.xz);
-  let bp = vec3f(rr * cos(ai), p.y + 0.02 * sin(ai * 8.0), rr * sin(ai));
-  r = rmU(r, vec2f(sdBox(bp - vec3f(0.38, -0.01, 0.0), vec3f(0.25, 0.006, 0.055)) - 0.003, 9.0));
-  return r;
-}
-// 1 where the fan's lamp reaches a point, less in the blades' and the hub's shadow; the penumbra widens further down
-fn rmFanMask(p: vec3f) -> f32 {
-  let L = RM_FANL;
-  let dl = normalize(p - L);
-  let cone = smoothstep(0.5, 0.62, -dl.y);
-  if (p.y > RM_FAN.y - 0.01) { return cone; }
-  let sc = (L.y - RM_FAN.y) / (L.y - p.y);
-  let c = L.xz + (p.xz - L.xz) * sc - RM_FAN.xz;
-  let r = length(c);
-  let soft = 0.01 + 0.035 * (1.0 - sc);
-  let sec = 1.2566371;
-  let a = atan2(c.y, c.x) - rmFanRot();
-  let ai = a - sec * round(a / sec);
-  let across = abs(r * sin(ai));
-  let along = r * cos(ai);
-  let blade = (1.0 - smoothstep(0.055, 0.055 + soft, across)) * smoothstep(0.12, 0.12 + soft, along) * (1.0 - smoothstep(0.63, 0.63 + soft, along));
-  let hub = 1.0 - smoothstep(0.1, 0.1 + soft, r);
-  return cone * (1.0 - 0.93 * max(blade, hub));
-}
-// the glitterball's spots: the direction from the ball, turned with it, cut into facets; one facet in two or so
-// catches the follow-spots and throws a small spot wherever that direction lands
-fn rmBallSpots(q: vec3f) -> f32 {
-  let dv = normalize(q - RM_BALL);
-  let rot = u.time * 0.35;
-  let dr = vec3f(dv.x * cos(rot) - dv.z * sin(rot), dv.y, dv.x * sin(rot) + dv.z * cos(rot));
-  let lat = acos(clamp(dr.y, -1.0, 1.0));
-  let gl = lat / 0.1;
-  let go = atan2(dr.z, dr.x) / 0.1;
-  let cl = round(gl);
-  let co = round(go);
-  let d = length(vec2f(gl - cl, (go - co) * max(sin(lat), 0.2)));
-  let on = step(0.45, hsh(i32(cl), i32(co), 955));
-  return on * (1.0 - smoothstep(0.1, 0.2, d));
-}
-// lasers from the lip of the stand, fanning and sweeping, green and red, in the second half of each eight bars
-fn rmLasers(o: vec3f, d: vec3f, tHit: f32) -> vec3f {
-  let B = rmBand();
-  let on = B.x * step(4.0, B.z - 8.0 * floor(B.z / 8.0));
-  if (on < 0.5) { return vec3f(0.0); }
-  var c = vec3f(0.0);
-  let src = vec3f(21.9, 2.2, 0.0);
-  for (var i = 0; i < 6; i++) {
-    let fi = f32(i);
-    let yaw = 3.14159 + (fi - 2.5) * 0.2 + 0.35 * sin(u.time * 0.6 + fi * 0.3);
-    let el = 0.04 + 0.16 * (0.5 + 0.5 * sin(u.time * 0.9 + fi * 1.3));
-    let L = vec3f(cos(yaw) * cos(el), sin(el), sin(yaw) * cos(el));
-    let w = o - src;
-    let b = dot(d, L);
-    let dd = dot(d, w);
-    let e = dot(L, w);
-    let den = max(1.0 - b * b, 1e-4);
-    let t = (b * e - dd) / den;
-    let sl = (e - b * dd) / den;
-    if (t < 0.0 || t > tHit || sl < 0.0 || sl > 28.0) { continue; }
-    let dist = length(w + d * t - L * sl);
-    let wd = 0.004 + 0.0012 * t;
-    let lc = select(vec3f(0.2, 1.0, 0.3), vec3f(1.0, 0.15, 0.2), (i & 1) == 1);
-    c += lc * exp(-dist * dist / (wd * wd)) * (0.004 / wd) * 5.0 * (0.6 + 0.6 * B.y);
-  }
-  return c;
-}
-fn rmColdTap(q: vec3f) -> vec2f {
-  // the room, and a round lightwell in the ceiling over the fan with a lamp at its top
-  let well = max(length(q.xz - RM_FAN.xz) - 0.45, abs(q.y - 3.2) - 0.22);
-  let s = -min(sdBox(q - vec3f(3.75, 1.5, 0.0), vec3f(5.55, 1.5, 3.5)), well);
-  var m = 2.0;
-  if (q.y < 0.02) { m = 1.0; } else if (q.y > 2.98) { m = 3.0; } else if (q.y < 1.05) { m = 15.0; }
-  if (q.z > 3.45 && q.y > 1.2 && q.y < 2.45 && q.x > 1.0 && q.x < 8.2) { m = 16.0; }
-  var r = vec2f(s, m);
-  r = rmU(r, vec2f(max(length(q.xz - RM_FAN.xz) - 0.16, abs(q.y - 3.41) - 0.012), 26.0));
-  r = rmU(r, rmFan(q));
-  // dado rail and a crown moulding along every wall
-  r = rmU(r, vec2f(max(s - 0.035, abs(q.y - 1.07) - 0.028), 4.0));
-  r = rmU(r, vec2f(max(s - 0.07, abs(q.y - 2.92) - 0.06), 15.0));
-  // the bar: slatted front, dark body, a thick top with a brass bullnose; a foot rail on posts
-  if (q.z > 1.4 && q.x > 0.6 && q.x < 8.6) {
-    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.52, 2.35), vec3f(3.6, 0.52, 0.4)), 34.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 1.09, 2.2), vec3f(3.72, 0.035, 0.5)) - 0.005, 4.0));
-    r = rmU(r, vec2f(rmCapX(q - vec3f(0.0, 1.08, 1.72), 0.9, 8.3, 0.04), 5.0));
-    r = rmU(r, vec2f(rmCapX(q - vec3f(0.0, 0.22, 1.66), 0.9, 8.3, 0.022), 5.0));
-    let px = rmRep(q.x, 1.0, 1.2, 7.0);
-    r = rmU(r, vec2f(sdSeg(vec3f(px, q.y, q.z), vec3f(0.0, 0.0, 1.66), vec3f(0.0, 0.22, 1.66)) - 0.014, 5.0));
-    // beer taps: brass columns, black handles with a coloured top
-    if (q.y > 1.1 && q.y < 1.75 && q.z > 2.1 && q.z < 2.45) {
-      let tx = rmRep(q.x, 3.2, 0.36, 4.0);
-      let tp = vec3f(tx, q.y, q.z - 2.3);
-      r = rmU(r, vec2f(sdCyl(tp, 0.028, 1.12, 1.4), 5.0));
-      r = rmU(r, vec2f(sdSeg(tp, vec3f(0.0, 1.38, 0.0), vec3f(0.0, 1.33, -0.09)) - 0.014, 5.0));
-      r = rmU(r, vec2f(sdSeg(tp, vec3f(0.0, 1.42, 0.0), vec3f(0.0, 1.62, 0.02)) - 0.018, 32.0));
-    }
-    // a few glasses left on the bar
-    let gx = rmRep(q.x, 1.8, 1.55, 4.0);
-    r = rmU(r, vec2f(max(abs(length(vec2f(gx, q.z - 1.95)) - 0.038 - 0.004 * (q.y - 1.125)) - 0.003, max(1.125 - q.y, q.y - 1.28)), 6.0));
-    r = rmU(r, vec2f(sdCyl(vec3f(gx, q.y, q.z - 1.95), 0.035, 1.13, 1.23 - 0.05 * rmIdx(q.x, 1.8, 1.55, 4.0) * 0.3), 36.0));
-  }
-  // the back bar: a cabinet, shelves in front of the mirror, a light strip under each, the bottles
-  if (q.z > 2.7) {
-    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.5, 3.25), vec3f(3.8, 0.5, 0.25)), 4.0));
-    let si = clamp(round((q.y - 1.45) / 0.4), 0.0, 2.0);
-    let sy = q.y - 1.45 - 0.4 * si;
-    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy, q.z - 3.28), vec3f(3.6, 0.014, 0.2)), 6.0));
-    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy + 0.022, q.z - 3.1), vec3f(3.6, 0.006, 0.01)), 8.0));
-    r = rmU(r, vec2f(rmBottles(q.x, q.y, q.z - 3.3, 1.0, 42.0, 1.45), 6.0));
-  }
-  // stools along the bar
-  if (q.z > 0.9 && q.z < 1.7) { r = rmU(r, rmStool(vec3f(rmRep(q.x, 1.7, 0.95, 7.0), q.y, q.z), vec2f(0.0, 1.3))); }
-  // booths on the left: tables, leather benches against the panelling, framed photographs above
-  if (q.z < -1.9) {
-    let bx = rmRep(q.x, 2.2, 3.2, 2.0);
-    r = rmU(r, rmTable(vec3f(bx, q.y, q.z), vec2f(0.0, -2.75), false));
-    r = rmU(r, vec2f(sdBox(vec3f(bx, q.y - 0.24, q.z + 3.22), vec3f(1.1, 0.24, 0.26)) - 0.03, 10.0));
-    r = rmU(r, vec2f(sdBox(vec3f(bx, q.y - 0.75, q.z + 3.42), vec3f(1.1, 0.34, 0.06)) - 0.03, 10.0));
-    let fx = rmRep(q.x, 0.6, 0.72, 11.0);
-    let fi = rmIdx(q.x, 0.6, 0.72, 11.0);
-    let fh = 0.18 + 0.12 * hsh(i32(fi), 2, 932);
-    r = rmU(r, vec2f(sdBox(vec3f(fx, q.y - 1.72 - 0.1 * hsh(i32(fi), 3, 933), q.z + 3.49), vec3f(0.2, fh, 0.02)), 23.0));
-  }
-  // the price board, the neon glass on the wall, the heater, the jukebox in the corner
-  r = rmU(r, vec2f(sdBox(q - vec3f(4.0, 2.05, -3.47), vec3f(0.9, 0.34, 0.03)), 13.0));
-  {
-    let w = vec2f(q.x - 7.2, q.y - 1.95);
-    let glass = abs(max(abs(w.x) - (0.16 + 0.05 * (w.y + 0.3) / 0.6), abs(w.y) - 0.3)) - 0.0;
-    let foam = abs(length(w - vec2f(0.0, 0.34)) - 0.12);
-    let tube = min(glass, max(foam, 0.3 - w.y));
-    r = rmU(r, vec2f(length(vec2f(tube, q.z + 3.43)) - 0.012, 18.0));
-  }
-  r = rmU(r, vec2f(sdBox(q - vec3f(9.15, 0.8, -2.3), vec3f(0.12, 0.45, 0.5)) - 0.02, 12.0));
-  {
-    let j = q - vec3f(8.85, 0.0, 2.95);
-    let jb = min(sdBox(j - vec3f(0.0, 0.62, 0.0), vec3f(0.3, 0.62, 0.33)), max(length(j.yz - vec2f(1.24, 0.0)) - 0.33, abs(j.x) - 0.3)) - 0.02;
-    r = rmU(r, vec2f(jb, 19.0));
-  }
-  // the airlock: a riveted ring, the door, its wheel, a porthole of cold street light
-  {
-    let hq = q - vec3f(9.3, 1.12, 0.3);
-    r = rmU(r, vec2f(rmTorusX(hq, 0.86, 0.075), 30.0));
-    let ra = atan2(hq.z, hq.y);
-    let ri = round(ra / 0.3927) * 0.3927;
-    r = rmU(r, vec2f(length(hq - vec3f(-0.07, cos(ri) * 0.86, sin(ri) * 0.86)) - 0.022, 5.0));
-    r = rmU(r, vec2f(max(length(hq.yz) - 0.8, abs(hq.x + 0.02) - 0.03), 30.0));
-    r = rmU(r, vec2f(rmTorusX(hq + vec3f(0.07, 0.35, 0.0), 0.16, 0.014), 5.0));
-    r = rmU(r, vec2f(max(length(hq.yz - vec2f(0.28, 0.0)) - 0.17, abs(hq.x + 0.05) - 0.01), 24.0));
-  }
-  // pipes along the ceiling on brackets, and three lamps
-  let pipe = min(length(q.yz - vec2f(2.78, -3.1)), length(q.yz - vec2f(2.78, -2.84))) - 0.06;
-  r = rmU(r, vec2f(pipe, 17.0));
-  r = rmU(r, rmPendant(q, vec3f(3.0, 2.3, 1.55), 3.0));
-  r = rmU(r, rmPendant(q, vec3f(6.2, 2.3, 1.55), 3.0));
-  r = rmU(r, rmPendant(q, vec3f(3.8, 2.2, -2.7), 3.0));
-  return r;
-}
 
-// the Low Orbit: a crew bar built like a ship's mess. Riveted steel panels between ribbed frames, ducts and cable
-// trays overhead, tread-plate floor worn bright down the middle, a long window on the pads with frost at its edges,
-// steel tables with mugs, caged lamps, a departures screen over the bar.
-fn rmLowOrbit(q: vec3f) -> vec2f {
-  let s = -sdBox(q - vec3f(9.15, 2.1, 0.0), vec3f(10.95, 2.1, 4.8));
-  var m = 2.0;
-  if (q.y < 0.02) { m = 1.0; } else if (q.y > 4.15) { m = 3.0; }
-  if (q.z < -4.7 && q.x > 1.9 && q.x < 17.1 && q.y > 0.9 && q.y < 3.4) { m = 7.0; }
-  var r = vec2f(s, m);
-  // ribbed frames every three metres, round the walls and over the ceiling
-  let fx = rmRep(q.x, 0.5, 3.0, 7.0);
-  r = rmU(r, vec2f(max(abs(fx) - 0.1, s - 0.16), 30.0));
-  // ducts and a cable tray
-  r = rmU(r, vec2f(length(q.yz - vec2f(3.75, 3.2)) - 0.34, 17.0));
-  r = rmU(r, vec2f(max(sdBox(vec3f(0.0, q.y - 3.95, q.z + 1.5), vec3f(1e3, 0.05, 0.25)), -sdBox(vec3f(0.0, q.y - 4.0, q.z + 1.5), vec3f(1e3, 0.05, 0.22))), 30.0));
-  // tables along the window, bolted down, benches, mugs
-  if (q.z < -1.8) {
-    let tx = rmRep(q.x, 3.5, 3.0, 5.0);
-    let tp = vec3f(tx, q.y, q.z + 3.5);
-    r = rmU(r, vec2f(sdBox(tp - vec3f(0.0, 0.74, 0.0), vec3f(0.55, 0.025, 0.42)) - 0.01, 17.0));
-    r = rmU(r, vec2f(sdBox(tp - vec3f(0.0, 0.37, 0.0), vec3f(0.05, 0.37, 0.05)), 17.0));
-    r = rmU(r, vec2f(sdBox(vec3f(abs(tx) - 0.95, q.y - 0.45, q.z + 3.5), vec3f(0.2, 0.03, 0.45)) - 0.02, 10.0));
-    let mq = tp - vec3f(0.15, 0.765, 0.1);
-    r = rmU(r, vec2f(max(abs(length(mq.xz) - 0.042) - 0.005, max(-mq.y, mq.y - 0.1)), 31.0));
-  }
-  // the bar across the far end: steel front with a padded edge, a wooden top, bottles behind, the screen above
-  if (q.x > 16.5) {
-    r = rmU(r, vec2f(sdBox(q - vec3f(17.6, 0.55, 0.9), vec3f(0.35, 0.55, 3.2)), 17.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(17.55, 1.12, 0.9), vec3f(0.45, 0.035, 3.3)) - 0.005, 4.0));
-    r = rmU(r, vec2f(length(vec2f(q.x - 17.2, q.y - 1.02)) - 0.06, 10.0));
-    let si = clamp(round((q.y - 1.45) / 0.4), 0.0, 2.0);
-    r = rmU(r, vec2f(sdBox(vec3f(q.x - 19.9, q.y - 1.45 - 0.4 * si, q.z - 0.9), vec3f(0.18, 0.014, 3.0)), 30.0));
-    r = rmU(r, vec2f(rmBottles(q.z, q.y, q.x - 19.9, -2.0, 30.0, 1.45), 6.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(20.05, 3.0, 0.9), vec3f(0.04, 0.45, 1.5)), 28.0));
-  }
-  // the window's mullions
-  let mx = rmRep(q.x, 2.0, 3.0, 6.0);
-  r = rmU(r, vec2f(sdBox(vec3f(mx, q.y - 2.15, q.z + 4.72), vec3f(0.07, 1.3, 0.08)), 30.0));
-  r = rmU(r, vec2f(sdBox(vec3f(q.x - 9.5, abs(q.y - 2.15) - 1.28, q.z + 4.72), vec3f(7.6, 0.06, 0.1)), 30.0));
-  // caged lamps down the middle
-  let lx = rmRep(q.x, 3.0, 4.0, 4.0);
-  let lp = vec3f(lx, q.y - 3.25, q.z + 0.6);
-  r = rmU(r, vec2f(length(lp) - 0.07, 8.0));
-  let la = atan2(lp.z, lp.x);
-  let cage = max(abs(length(lp) - 0.14) - 0.006, abs(fract(la / 0.785 + 0.5) - 0.5) * 0.785 * length(lp.xz) - 0.006);
-  r = rmU(r, vec2f(max(cage, -lp.y - 0.12), 17.0));
-  r = rmU(r, vec2f(sdCyl(lp, 0.006, 0.1, 1.0), 17.0));
-  return r;
-}
-
-// the Lantern Cellar: a brick barrel vault forty steps down, sooted at the crown and damp at the foot, red paper
-// lanterns at every height, small tables with checked cloths and candles in bottles, and the stand at the far end
-// on a worn rug: Oskar's kit, a bass, an amp, a microphone.
-fn rmCellar(q: vec3f) -> vec2f {
-  let box = sdBox(q - vec3f(5.95, 1.6, 0.0), vec3f(7.75, 1.6, 5.2));
-  let vault = length(vec2f(q.y + 8.67, q.z)) - 11.87;
-  var r = vec2f(-max(box, vault), select(11.0, 1.0, q.y < 0.02));
-  // the stand, a rug on it, the band's things
-  r = rmU(r, vec2f(sdBox(q - vec3f(12.2, 0.15, 0.0), vec3f(1.6, 0.15, 4.6)), 9.0));
-  r = rmU(r, vec2f(sdBox(q - vec3f(12.3, 0.305, 0.4), vec3f(1.1, 0.006, 1.6)), 27.0));
-  if (q.x > 10.0) {
-    r = rmU(r, rmDrums(q, vec3f(12.6, 0.3, 1.0)));
-    r = rmU(r, rmBass(q, vec3f(12.4, 0.3, -1.3)));
-    r = rmU(r, vec2f(sdBox(q - vec3f(13.2, 0.62, -2.3), vec3f(0.22, 0.32, 0.3)) - 0.02, 14.0));
-    r = rmU(r, vec2f(min(sdSeg(q, vec3f(11.4, 0.3, -0.2), vec3f(11.4, 1.55, -0.2)) - 0.01, length(q - vec3f(11.36, 1.58, -0.2)) - 0.03), 17.0));
-  }
-  // tables with checked cloths, a candle in a bottle on each
-  if (abs(q.z) > 1.4 && q.x < 9.6) {
-    let tx = rmRep(q.x, 2.0, 2.8, 3.0);
-    let tz = q.z - 3.0 * sign(q.z);
-    r = rmU(r, rmTable(vec3f(tx, q.y, tz), vec2f(0.0, 0.0), true));
-    let cb = vec3f(tx - 0.1, q.y, tz + 0.05);
-    r = rmU(r, vec2f(min(sdCyl(cb, 0.035, 0.765, 0.93) - 0.005, sdCyl(cb, 0.013, 0.93, 1.0)), 6.0));
-    r = rmU(r, vec2f(sdEll(cb - vec3f(0.0, 1.035 + 0.004 * sin(u.time * 13.0 + q.x), 0.0), vec3f(0.01, 0.024, 0.01)), 26.0));
-  }
-  // lanterns at every height through the vault
-  let lxi = rmIdx(q.x, 1.6, 2.2, 5.0);
-  let lzi = clamp(round(q.z / 2.1), -2.0, 2.0);
-  if (!(abs(lxi) < 0.5 && abs(lzi) < 0.5)) {
-    let lh = hsh(i32(lxi), i32(lzi), 934);
-    let lr = 0.14 + 0.1 * lh;
-    r = rmU(r, rmLantern(q, vec3f(1.6 + 2.2 * lxi, 2.0 + 0.5 * fract(lh * 7.0), lzi * 2.1), lr, lh));
-  }
-  // gig posters pasted on the brick either side of the stand
-  let pz = abs(q.z) - 5.12;
-  r = rmU(r, vec2f(sdBox(vec3f(rmRep(q.x, 3.0, 2.6, 3.0), q.y - 1.45, pz), vec3f(0.32, 0.45, 0.012)), 23.0));
-  return r;
-}
-
-// the Warmhouse club: a round room under a ribbed dome painted as a night sky, strings of bulbs, a parquet floor
-// polished by dancing, tables in white cloths with little red lamps, a velvet curtain and footlights at the stand.
-fn rmClub(q: vec3f) -> vec2f {
-  let cq = q - vec3f(12.0, -5.0, 0.0);
-  let dome = length(cq) - 16.57;
-  var r = vec2f(-dome, select(3.0, 1.0, q.y < 0.02));
-  // gilt ribs up the dome
-  let az = atan2(cq.z, cq.x);
-  let ra = (fract(az / 0.3491 + 0.5) - 0.5) * 0.3491 * length(cq.xz);
-  r = rmU(r, vec2f(max(abs(ra) - 0.07, -dome - 0.14), 5.0));
-  // the glitterball on its cord from the top of the dome
-  r = rmU(r, vec2f(length(q - RM_BALL) - 0.38, 37.0));
-  r = rmU(r, vec2f(sdSeg(q, RM_BALL, vec3f(12.0, 11.6, 0.0)) - 0.008, 5.0));
-  // the stand, footlights along its lip, the band's things
-  let sq = q - vec3f(24.0, 0.0, 0.0);
-  r = rmU(r, vec2f(max(sdCyl(sq, 6.2, 0.0, 0.7), -sq.x - 2.4), 9.0));
-  if (q.x > 20.0) {
-    let fa = atan2(sq.z, sq.x);
-    let fl = vec3f(length(sq.xz) - 6.15, q.y - 0.72, (fract(fa / 0.12 + 0.5) - 0.5) * 0.12 * 6.15);
-    r = rmU(r, vec2f(max(length(fl) - 0.035, -sq.x - 2.4), 8.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(25.0, 1.25, -2.8), vec3f(0.35, 0.55, 0.8)) - 0.01, 14.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(24.62, 1.18, -2.8), vec3f(0.06, 0.02, 0.7)), 31.0));
-    r = rmU(r, rmDrums(q, vec3f(24.8, 0.7, 2.6)));
-    r = rmU(r, rmBass(q, vec3f(23.4, 0.7, 0.9)));
-    r = rmU(r, vec2f(min(sdSeg(q, vec3f(21.3, 0.7, -0.5), vec3f(21.3, 2.2, -0.5)) - 0.01, length(q - vec3f(21.26, 2.24, -0.5)) - 0.03), 17.0));
-  }
-  // tables in two rings, each in a white cloth with a small red-shaded lamp
-  let cz = q.xz - vec2f(12.0, 0.0);
-  let a = atan2(cz.y, cz.x);
-  let ai = round(a / 6.2832 * 10.0);
-  if (abs(ai) >= 1.5 && length(cz) < 9.5) {
-    let aa = ai / 10.0 * 6.2832;
-    let tq = vec2f(cos(aa), sin(aa)) * 7.8;
-    let p = vec3f(cz.x, q.y, cz.y);
-    r = rmU(r, rmTable(p, tq, true));
-    r = rmU(r, rmPendant(p - vec3f(tq.x, 0.0, tq.y), vec3f(0.0, 0.9, 0.0), 0.9));
-    r = rmU(r, vec2f(sdCyl(p - vec3f(tq.x, 0.0, tq.y), 0.012, 0.76, 0.95), 5.0));
-  }
-  let ai2 = round(a / 6.2832 * 14.0 + 0.5) - 0.5;
-  if (abs(ai2) >= 2.0 && length(cz) > 9.5) {
-    let aa = ai2 / 14.0 * 6.2832;
-    let tq = vec2f(cos(aa), sin(aa)) * 12.0;
-    let p = vec3f(cz.x, q.y, cz.y);
-    r = rmU(r, rmTable(p, tq, true));
-    r = rmU(r, rmPendant(p - vec3f(tq.x, 0.0, tq.y), vec3f(0.0, 0.9, 0.0), 0.9));
-    r = rmU(r, vec2f(sdCyl(p - vec3f(tq.x, 0.0, tq.y), 0.012, 0.76, 0.95), 5.0));
-  }
-  return r;
-}
-
-fn rmMap(q: vec3f, k: i32) -> vec2f {
-  if (k == 1) { return rmColdTap(q); }
-  if (k == 2) { return rmLowOrbit(q); }
-  if (k == 3) { return rmCellar(q); }
-  return rmClub(q);
-}
+// the place's walls and things: rmPlaceMap is written by main.js (roomDispatch) from tales.js ROOMS
+fn rmMap(q: vec3f, k: i32) -> vec2f { return rmPlaceMap(q); }
 fn rmNormal(q: vec3f, k: i32) -> vec3f {
   let e = vec2f(0.0012, -0.0012);
   return normalize(e.xyy * rmMap(q + e.xyy, k).x + e.yyx * rmMap(q + e.yyx, k).x + e.yxy * rmMap(q + e.yxy, k).x + e.xxx * rmMap(q + e.xxx, k).x);
 }
-// the lights of each room: position (local) and colour times strength; the first one casts a soft shadow. Warm
-// against cold in every room: tungsten and candle against a window, a porthole or a stair.
-// the band (venue.js, through ev.wx.w): x playing (0 between tunes), y a pulse on each beat, z the bar, w the beat
-fn rmBand() -> vec4f {
-  let w = ev.wx.w;
-  let play = step(0.0, w);
-  let beat = max(w, 0.0);
-  return vec4f(play, exp(-fract(beat) * 5.0) * play, floor(beat / 4.0), beat);
-}
-// the stage's colour, changed every two bars: amber, rose, deep blue, warm white
-fn rmStageCol(n: f32) -> vec3f {
-  let i = i32(n) & 3;
-  if (i == 0) { return vec3f(1.0, 0.62, 0.25); }
-  if (i == 1) { return vec3f(1.0, 0.3, 0.55); }
-  if (i == 2) { return vec3f(0.35, 0.45, 1.0); }
-  return vec3f(1.0, 0.9, 0.75);
-}
+
 // the lamps as the music moves them: the stage key changes colour with the tune and lifts on the beat, the
 // footlights pulse, the house lights come up between tunes while the stage dims, candles and lanterns flicker,
 // and the jukebox's light turns through its colours
@@ -6831,6 +6934,8 @@ fn rmLight(k: i32, i: i32) -> array<vec3f, 2> {
   if (k == 1 && i == 4) { L[1] = (hue3(fract(u.time * 0.04)) * 0.8 + 0.2) * 1.5 * (0.7 + 0.5 * B.y + 0.3 * B.x); }
   return L;
 }
+// the lights of each room: position (local) and colour times strength; the first one casts a soft shadow. Warm
+// against cold in every room: tungsten and candle against a window, a porthole or a stair.
 fn rmLight0(k: i32, i: i32) -> array<vec3f, 2> {
   let z = array<vec3f, 2>(vec3f(0.0, -50.0, 0.0), vec3f(0.0));
   switch k {
@@ -7320,7 +7425,7 @@ fn rmTrace(ro: vec3f, rd: vec3f, k: i32, steps: i32, tMax: f32) -> vec2f {
   return vec2f(t, -1.0);
 }
 fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
-  let k = i32(ev.wx.z + 0.5);
+  let k = ROOM_K;
   let lo = rmLocal(ro);
   let ld = rmLocalDir(rd);
   gRmJ = hsh(i32(px.x) * 3 + 1, i32(px.y), i32(u.frame) + 41);
@@ -7394,402 +7499,332 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
   return vec4f(max(col, vec3f(0.0)), t);
 }
 
-// ---------- sun shadow map (world-anchored, toroidal, filled incrementally) ----------
-fn smKey(id: vec2i) -> u32 {
-  return u32(id.x & 0x3fff) | (u32(id.y & 0x3fff) << 14u) | (u32(sp.gen) << 28u);
+@fragment fn roomScene(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let px = primaryPx(fc);
+  return roomRender(u.camPos, primaryDir(px), px);
 }
-
-fn shadowLookup(p: vec3f, n: vec3f, jit: vec2f) -> f32 {
-  let ndl = clamp(dot(n, sp.lz), 0.08, 1.0);
-  let slope = min(sqrt(1.0 - ndl * ndl) / ndl, 5.0);
-  let pb = p + n * (0.1 + sp.ts * (0.6 + 0.6 * (1.0 - ndl)));
-  let uvf = vec2f(dot(pb, sp.lx), dot(pb, sp.ly)) / sp.ts - 0.5 + jit;
-  let i0 = vec2i(floor(uvf));
-  let f = uvf - floor(uvf);
-  let wp = dot(pb, sp.lz);
-  let nn = i32(sp.n);
-  var s = vec4f(0.0);
-  for (var k = 0; k < 4; k++) {
-    let id = i0 + vec2i(k & 1, k >> 1);
-    let slot = vec2i(((id.x % nn) + nn) % nn, ((id.y % nn) + nn) % nn);
-    let tx = textureLoad(shadowTex, slot, 0);
-    if (tx.y != smKey(id)) { return -1.0; }
-    s[k] = select(1.0, 0.0, wp < bitcast<f32>(tx.x) - sp.ts * (0.5 + 1.1 * slope) - 0.1);
+</script>
+<script type="text/wgsl" id="wgsl-room-cellar">
+// the Lantern Cellar: a brick barrel vault forty steps down, sooted at the crown and damp at the foot, red paper
+// lanterns at every height, small tables with checked cloths and candles in bottles, and the stand at the far end
+// on a worn rug: Oskar's kit, a bass, an amp, a microphone.
+fn rmCellar(q: vec3f) -> vec2f {
+  let box = sdBox(q - vec3f(5.95, 1.6, 0.0), vec3f(7.75, 1.6, 5.2));
+  let vault = length(vec2f(q.y + 8.67, q.z)) - 11.87;
+  var r = vec2f(-max(box, vault), select(11.0, 1.0, q.y < 0.02));
+  // the stand, a rug on it, the band's things
+  r = rmU(r, vec2f(sdBox(q - vec3f(12.2, 0.15, 0.0), vec3f(1.6, 0.15, 4.6)), 9.0));
+  r = rmU(r, vec2f(sdBox(q - vec3f(12.3, 0.305, 0.4), vec3f(1.1, 0.006, 1.6)), 27.0));
+  if (q.x > 10.0) {
+    r = rmU(r, rmDrums(q, vec3f(12.6, 0.3, 1.0)));
+    r = rmU(r, rmBass(q, vec3f(12.4, 0.3, -1.3)));
+    r = rmU(r, vec2f(sdBox(q - vec3f(13.2, 0.62, -2.3), vec3f(0.22, 0.32, 0.3)) - 0.02, 14.0));
+    r = rmU(r, vec2f(min(sdSeg(q, vec3f(11.4, 0.3, -0.2), vec3f(11.4, 1.55, -0.2)) - 0.01, length(q - vec3f(11.36, 1.58, -0.2)) - 0.03), 17.0));
   }
-  return mix(mix(s.x, s.y, f.x), mix(s.z, s.w, f.x), f.y);
-}
-
-@compute @workgroup_size(8, 8) fn shadowBuild(@builtin(global_invocation_id) gid: vec3u) {
-  let r = rectU;
-  if (i32(gid.x) >= r.z || i32(gid.y) >= r.w) { return; }
-  let id = vec2i(r.x + i32(gid.x), r.y + i32(gid.y));
-  let uu = (f32(id.x) + 0.5) * sp.ts;
-  let vv = (f32(id.y) + 0.5) * sp.ts;
-  let w0 = (275.0 - sp.ly.y * vv) / sp.lz.y;
-  let ro = sp.lx * uu + sp.ly * vv + sp.lz * w0;
-  gNoDyn = true;
-  var dummy = 1.0;
-  let hit = traceScene(ro, -sp.lz, 1250.0, 140, 24, 40, &dummy, false);
-  var wHit = -1e9;
-  if (hit.kind >= 2) { wHit = w0 - hit.t; }
-  let nn = i32(sp.n);
-  let slot = vec2i(((id.x % nn) + nn) % nn, ((id.y % nn) + nn) % nn);
-  textureStore(shadowOut, slot, vec4u(bitcast<u32>(wHit), smKey(id), 0u, 0u));
-}
-
-// ---------- rasterized proxies: conservative ray start distances ----------
-struct PxOut { @builtin(position) pos: vec4f, @location(0) wp: vec3f };
-
-fn projectPx(wp: vec3f) -> vec4f {
-  let v = wp - u.camPos;
-  let z = dot(v, u.camFwd);
-  let nearZ = 0.1;
-  let farZ = 2000.0;
-  return vec4f(dot(v, u.camRight) / (u.fov * u.res.x / u.res.y), dot(v, u.camUp) / u.fov, z * farZ / (farZ - nearZ) - farZ * nearZ / (farZ - nearZ), z);
-}
-
-fn boxVertex(vi: u32, lo: vec3f, hi: vec3f) -> PxOut {
-  var tbl = array<u32, 36>(0u, 1u, 3u, 0u, 3u, 2u, 4u, 6u, 7u, 4u, 7u, 5u, 0u, 4u, 5u, 0u, 5u, 1u,
-                           2u, 3u, 7u, 2u, 7u, 6u, 0u, 2u, 6u, 0u, 6u, 4u, 1u, 5u, 7u, 1u, 7u, 3u);
-  let c = tbl[vi];
-  let k = vec3f(f32(c & 1u), f32((c >> 1u) & 1u), f32((c >> 2u) & 1u));
-  var wp = mix(lo, hi, k);
-  let m = 0.25 + length(wp - u.camPos) * (3.0 * u.fov / u.res.y);
-  wp += (k * 2.0 - 1.0) * m;
-  var o: PxOut;
-  o.wp = wp;
-  o.pos = projectPx(wp);
-  return o;
-}
-
-@vertex fn vsCell(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> PxOut {
-  var o: PxOut;
-  o.pos = vec4f(2.0, 2.0, 2.0, 1.0);
-  o.wp = vec3f(0.0);
-  let sx = i32(ii) % NC;
-  let sz = i32(ii) / NC;
-  let t0 = textureLoad(cellTex, vec2i(sx * 3, sz), 0);
-  let t1 = textureLoad(cellTex, vec2i(sx * 3 + 1, sz), 0);
-  let top = max(t1.y, t0.w);
-  if (top <= 0.0 || t0.x > 1.5e7) { return o; }
-  let cen = (t0.xy + 0.5) * CS;
-  var lo = vec3f(cen.x - HALF, -0.5, cen.y - HALF);
-  var hi = vec3f(cen.x + HALF, top + 0.5, cen.y + HALF);
-  if (t0.w <= 0.0 && ((i32(round(t0.z)) >> 5) & 30720) == 0 && ((i32(round(t0.z)) >> 20) & 7) != 3 && (i32(round(t0.z)) & 15) != 14) {
-    let typ = i32(round(t0.z)) & 15;
-    var ctr = cen;
-    var ext = vec2f(FOOT);
-    if (typ == 1 || typ == 2) {
-      let t2 = textureLoad(cellTex, vec2i(sx * 3 + 2, sz), 0);
-      ctr = cen + t2.xy;
-      ext = t1.zw + 0.6;
-      if (typ == 1 && t2.z >= 0.72) { ext = vec2f(max(t1.z, t1.w) * 1.42 + 0.6); }
-    }
-    lo = vec3f(max(ctr.x - ext.x, cen.x - FOOT), -0.5, max(ctr.y - ext.y, cen.y - FOOT));
-    hi = vec3f(min(ctr.x + ext.x, cen.x + FOOT), top + 0.5, min(ctr.y + ext.y, cen.y + FOOT));
+  // tables with checked cloths, a candle in a bottle on each
+  if (abs(q.z) > 1.4 && q.x < 9.6) {
+    let tx = rmRep(q.x, 2.0, 2.8, 3.0);
+    let tz = q.z - 3.0 * sign(q.z);
+    r = rmU(r, rmTable(vec3f(tx, q.y, tz), vec2f(0.0, 0.0), true));
+    let cb = vec3f(tx - 0.1, q.y, tz + 0.05);
+    r = rmU(r, vec2f(min(sdCyl(cb, 0.035, 0.765, 0.93) - 0.005, sdCyl(cb, 0.013, 0.93, 1.0)), 6.0));
+    r = rmU(r, vec2f(sdEll(cb - vec3f(0.0, 1.035 + 0.004 * sin(u.time * 13.0 + q.x), 0.0), vec3f(0.01, 0.024, 0.01)), 26.0));
   }
-  return boxVertex(vi, lo, hi);
+  // lanterns at every height through the vault
+  let lxi = rmIdx(q.x, 1.6, 2.2, 5.0);
+  let lzi = clamp(round(q.z / 2.1), -2.0, 2.0);
+  if (!(abs(lxi) < 0.5 && abs(lzi) < 0.5)) {
+    let lh = hsh(i32(lxi), i32(lzi), 934);
+    let lr = 0.14 + 0.1 * lh;
+    r = rmU(r, rmLantern(q, vec3f(1.6 + 2.2 * lxi, 2.0 + 0.5 * fract(lh * 7.0), lzi * 2.1), lr, lh));
+  }
+  // gig posters pasted on the brick either side of the stand
+  let pz = abs(q.z) - 5.12;
+  r = rmU(r, vec2f(sdBox(vec3f(rmRep(q.x, 3.0, 2.6, 3.0), q.y - 1.45, pz), vec3f(0.32, 0.45, 0.012)), 23.0));
+  return r;
+}
+</script>
+<script type="text/wgsl" id="wgsl-room-club">
+// the club's glitterball hangs at the top of the dome
+const RM_BALL = vec3f(12.0, 7.4, 0.0);
+// the glitterball's spots: the direction from the ball, turned with it, cut into facets; one facet in two or so
+// catches the follow-spots and throws a small spot wherever that direction lands
+fn rmBallSpots(q: vec3f) -> f32 {
+  let dv = normalize(q - RM_BALL);
+  let rot = u.time * 0.35;
+  let dr = vec3f(dv.x * cos(rot) - dv.z * sin(rot), dv.y, dv.x * sin(rot) + dv.z * cos(rot));
+  let lat = acos(clamp(dr.y, -1.0, 1.0));
+  let gl = lat / 0.1;
+  let go = atan2(dr.z, dr.x) / 0.1;
+  let cl = round(gl);
+  let co = round(go);
+  let d = length(vec2f(gl - cl, (go - co) * max(sin(lat), 0.2)));
+  let on = step(0.45, hsh(i32(cl), i32(co), 955));
+  return on * (1.0 - smoothstep(0.1, 0.2, d));
+}
+// lasers from the lip of the stand, fanning and sweeping, green and red, in the second half of each eight bars
+fn rmLasers(o: vec3f, d: vec3f, tHit: f32) -> vec3f {
+  let B = rmBand();
+  let on = B.x * step(4.0, B.z - 8.0 * floor(B.z / 8.0));
+  if (on < 0.5) { return vec3f(0.0); }
+  var c = vec3f(0.0);
+  let src = vec3f(21.9, 2.2, 0.0);
+  for (var i = 0; i < 6; i++) {
+    let fi = f32(i);
+    let yaw = 3.14159 + (fi - 2.5) * 0.2 + 0.35 * sin(u.time * 0.6 + fi * 0.3);
+    let el = 0.04 + 0.16 * (0.5 + 0.5 * sin(u.time * 0.9 + fi * 1.3));
+    let L = vec3f(cos(yaw) * cos(el), sin(el), sin(yaw) * cos(el));
+    let w = o - src;
+    let b = dot(d, L);
+    let dd = dot(d, w);
+    let e = dot(L, w);
+    let den = max(1.0 - b * b, 1e-4);
+    let t = (b * e - dd) / den;
+    let sl = (e - b * dd) / den;
+    if (t < 0.0 || t > tHit || sl < 0.0 || sl > 28.0) { continue; }
+    let dist = length(w + d * t - L * sl);
+    let wd = 0.004 + 0.0012 * t;
+    let lc = select(vec3f(0.2, 1.0, 0.3), vec3f(1.0, 0.15, 0.2), (i & 1) == 1);
+    c += lc * exp(-dist * dist / (wd * wd)) * (0.004 / wd) * 5.0 * (0.6 + 0.6 * B.y);
+  }
+  return c;
 }
 
-@vertex fn vsGiant(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> PxOut {
-  var o: PxOut;
-  o.pos = vec4f(2.0, 2.0, 2.0, 1.0);
-  o.wp = vec3f(0.0);
-  let b = vec2i(floor(u.camPos.xz / BIG)) + vec2i(i32(ii) % 13 - 6, i32(ii) / 13 - 6);
-  if (!giantHasW(b)) { return o; }
-  let cen = (vec2f(b) + 0.5) * BIG;
-  let top = giantTop(b) + 8.0;
-  let hw = select(82.0, 104.5, isHive(b) || isFab(b));
-  return boxVertex(vi, vec3f(cen.x - hw, -0.5, cen.y - hw), vec3f(cen.x + hw, top, cen.y + hw));
+// the Warmhouse club: a round room under a ribbed dome painted as a night sky, strings of bulbs, a parquet floor
+// polished by dancing, tables in white cloths with little red lamps, a velvet curtain and footlights at the stand.
+fn rmClub(q: vec3f) -> vec2f {
+  let cq = q - vec3f(12.0, -5.0, 0.0);
+  let dome = length(cq) - 16.57;
+  var r = vec2f(-dome, select(3.0, 1.0, q.y < 0.02));
+  // gilt ribs up the dome
+  let az = atan2(cq.z, cq.x);
+  let ra = (fract(az / 0.3491 + 0.5) - 0.5) * 0.3491 * length(cq.xz);
+  r = rmU(r, vec2f(max(abs(ra) - 0.07, -dome - 0.14), 5.0));
+  // the glitterball on its cord from the top of the dome
+  r = rmU(r, vec2f(length(q - RM_BALL) - 0.38, 37.0));
+  r = rmU(r, vec2f(sdSeg(q, RM_BALL, vec3f(12.0, 11.6, 0.0)) - 0.008, 5.0));
+  // the stand, footlights along its lip, the band's things
+  let sq = q - vec3f(24.0, 0.0, 0.0);
+  r = rmU(r, vec2f(max(sdCyl(sq, 6.2, 0.0, 0.7), -sq.x - 2.4), 9.0));
+  if (q.x > 20.0) {
+    let fa = atan2(sq.z, sq.x);
+    let fl = vec3f(length(sq.xz) - 6.15, q.y - 0.72, (fract(fa / 0.12 + 0.5) - 0.5) * 0.12 * 6.15);
+    r = rmU(r, vec2f(max(length(fl) - 0.035, -sq.x - 2.4), 8.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(25.0, 1.25, -2.8), vec3f(0.35, 0.55, 0.8)) - 0.01, 14.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(24.62, 1.18, -2.8), vec3f(0.06, 0.02, 0.7)), 31.0));
+    r = rmU(r, rmDrums(q, vec3f(24.8, 0.7, 2.6)));
+    r = rmU(r, rmBass(q, vec3f(23.4, 0.7, 0.9)));
+    r = rmU(r, vec2f(min(sdSeg(q, vec3f(21.3, 0.7, -0.5), vec3f(21.3, 2.2, -0.5)) - 0.01, length(q - vec3f(21.26, 2.24, -0.5)) - 0.03), 17.0));
+  }
+  // tables in two rings, each in a white cloth with a small red-shaded lamp
+  let cz = q.xz - vec2f(12.0, 0.0);
+  let a = atan2(cz.y, cz.x);
+  let ai = round(a / 6.2832 * 10.0);
+  if (abs(ai) >= 1.5 && length(cz) < 9.5) {
+    let aa = ai / 10.0 * 6.2832;
+    let tq = vec2f(cos(aa), sin(aa)) * 7.8;
+    let p = vec3f(cz.x, q.y, cz.y);
+    r = rmU(r, rmTable(p, tq, true));
+    r = rmU(r, rmPendant(p - vec3f(tq.x, 0.0, tq.y), vec3f(0.0, 0.9, 0.0), 0.9));
+    r = rmU(r, vec2f(sdCyl(p - vec3f(tq.x, 0.0, tq.y), 0.012, 0.76, 0.95), 5.0));
+  }
+  let ai2 = round(a / 6.2832 * 14.0 + 0.5) - 0.5;
+  if (abs(ai2) >= 2.0 && length(cz) > 9.5) {
+    let aa = ai2 / 14.0 * 6.2832;
+    let tq = vec2f(cos(aa), sin(aa)) * 12.0;
+    let p = vec3f(cz.x, q.y, cz.y);
+    r = rmU(r, rmTable(p, tq, true));
+    r = rmU(r, rmPendant(p - vec3f(tq.x, 0.0, tq.y), vec3f(0.0, 0.9, 0.0), 0.9));
+    r = rmU(r, vec2f(sdCyl(p - vec3f(tq.x, 0.0, tq.y), 0.012, 0.76, 0.95), 5.0));
+  }
+  return r;
+}
+</script>
+<script type="text/wgsl" id="wgsl-room-coldtap">
+// the Cold Tap: a narrow old bar. Oxblood plaster over dark panelling, a pressed-tin ceiling browned by decades of
+// heater fumes, a long bar with a brass rail and taps, a mirrored back bar full of odd bottles, green-shaded lamps,
+// a jukebox glowing in the corner, and the airlock at the far end with a porthole onto the blue street.
+// ---------- noir and disco: the Cold Tap's fan, the club's glitterball and lasers, smoke and dry ice ----------
+// All cheap by construction: the fan's shadow is found by projecting a point onto the fan's disc from the lamp above
+// it (no shadow march), the glitterball's spots are a pattern on the sphere of directions round the ball, a laser is
+// the closest approach between the view ray and a line, smoke and dry ice are noise on the haze samples already taken.
+const RM_FAN = vec3f(4.6, 2.6, -0.7);
+const RM_FANL = vec3f(4.6, 3.34, -0.7);
+fn rmFanRot() -> f32 { return u.time * 2.3; }
+fn rmFan(q: vec3f) -> vec2f {
+  let p = q - RM_FAN;
+  let bb = sdBox(p - vec3f(0.0, 0.2, 0.0), vec3f(0.68, 0.24, 0.68));
+  if (bb > 0.05) { return vec2f(bb, 9.0); }
+  var r = vec2f(sdSeg(p, vec3f(0.0), vec3f(0.0, 0.42, 0.0)) - 0.013, 5.0);
+  r = rmU(r, vec2f(sdEll(p, vec3f(0.1, 0.05, 0.1)), 5.0));
+  let sec = 1.2566371;
+  let a = atan2(p.z, p.x) - rmFanRot();
+  let ai = a - sec * round(a / sec);
+  let rr = length(p.xz);
+  let bp = vec3f(rr * cos(ai), p.y + 0.02 * sin(ai * 8.0), rr * sin(ai));
+  r = rmU(r, vec2f(sdBox(bp - vec3f(0.38, -0.01, 0.0), vec3f(0.25, 0.006, 0.055)) - 0.003, 9.0));
+  return r;
+}
+// 1 where the fan's lamp reaches a point, less in the blades' and the hub's shadow; the penumbra widens further down
+fn rmFanMask(p: vec3f) -> f32 {
+  let L = RM_FANL;
+  let dl = normalize(p - L);
+  let cone = smoothstep(0.5, 0.62, -dl.y);
+  if (p.y > RM_FAN.y - 0.01) { return cone; }
+  let sc = (L.y - RM_FAN.y) / (L.y - p.y);
+  let c = L.xz + (p.xz - L.xz) * sc - RM_FAN.xz;
+  let r = length(c);
+  let soft = 0.01 + 0.035 * (1.0 - sc);
+  let sec = 1.2566371;
+  let a = atan2(c.y, c.x) - rmFanRot();
+  let ai = a - sec * round(a / sec);
+  let across = abs(r * sin(ai));
+  let along = r * cos(ai);
+  let blade = (1.0 - smoothstep(0.055, 0.055 + soft, across)) * smoothstep(0.12, 0.12 + soft, along) * (1.0 - smoothstep(0.63, 0.63 + soft, along));
+  let hub = 1.0 - smoothstep(0.1, 0.1 + soft, r);
+  return cone * (1.0 - 0.93 * max(blade, hub));
 }
 
-@fragment fn fsProxy(i: PxOut) -> @location(0) vec4f {
-  return vec4f(length(i.wp - u.camPos), 0.0, 0.0, 1.0);
-}
-
-fn rnd3(fc: vec2f, k: i32) -> vec3f {
-  let f = i32(u.frame);
-  return vec3f(hsh(i32(fc.x), i32(fc.y), f * 5 + k), hsh(i32(fc.x), i32(fc.y), f * 5 + k + 1), hsh(i32(fc.x), i32(fc.y), f * 5 + k + 2)) - 0.5;
-}
-
-// ---------- the selection (pick.js pickSelGPU): ev.sel = cell x, cell z, kind (1 building, 2 person), person key;
-// ev.sel2 = building top, real time, city paused. Owner, September 2026: "strong, thick glowing
-// edge + shimmer and jelly"; people "throb bigger" (pedQ).
-const SEL_HI: vec3f = vec3f(0.35, 1.0, 0.8);
-// where the shader puts person `key` of cell c now: pedQ's own sums run backwards (as main.js walkerAt does), so
-// the highlight follows the figure the shader draws even where the page's copy of the sums disagrees
-fn pedPos(c: vec2i, key: i32) -> vec2f {
-  let ln = key & 1;
-  let R = select(9.95, 10.45, ln == 1);
-  let dir = select(1.0, -1.0, ln == 1);
-  let per = 8.0 * R;
-  let n = floor(per / 4.4);
-  let spacing = per / n;
-  let pace = pedPace(c, ln);
-  let A = u.time * pace + 3.0 * pace * (vnoise(vec2f(u.time * 0.07, f32(c.x * 13 + c.y * 7 + ln)), 181) - 0.5);
-  let kind = pedKind(c, ln, key);
-  let sw = 0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182);
-  let sway = select(min(0.8, 0.45 * pace / sw) * sin(u.time * sw + f32(key)), 0.0, kind == 4);
-  let s0 = (f32(key >> 1) + 0.5) * spacing + sway + dir * A;
-  let s = s0 - per * floor(s0 / per);
-  var lp = vec2f(-R, 7.0 * R - s);
-  if (s < 2.0 * R) { lp = vec2f(s - R, -R); } else if (s < 4.0 * R) { lp = vec2f(R, s - 3.0 * R); } else if (s < 6.0 * R) { lp = vec2f(5.0 * R - s, R); }
-  return (vec2f(c) + 0.5) * CS + lp;
-}
-// does this hit belong to the selection?
-fn selIs(p: vec3f, m: f32) -> bool {
-  if (ev.sel.z < 0.5) { return false; }
-  let ci = vec2i(floor(p.xz / CS));
-  if (!all(ci == vec2i(ev.sel.xy))) { return false; }
-  let mi = i32(m + 0.5);
-  // a person: the figure at the selected slot's place (pedPos; not pedQ again, every call is inlined)
-  if (ev.sel.z > 1.5) { return mi == 24 && length(p.xz - pedPos(ci, i32(ev.sel.w))) < 0.9; }
-  let lq = p.xz - (vec2f(ci) + 0.5) * CS;
-  return max(abs(lq.x), abs(lq.y)) < 9.7 && p.y > 0.4 && mi != 24 && mi != 12 && mi != 14 && mi != 17 && mi != 28;
-}
-// the selection's box: a building's plot up to its top, a person's body
-fn selBox() -> array<vec3f, 2> {
-  if (ev.sel.z > 1.5) {
-    let pp = pedPos(vec2i(ev.sel.xy), i32(ev.sel.w));
-    let c = vec3f(pp.x, 1.1, pp.y);
-    // the same 0.9 m as selIs: a hit counted as the person must be inside the box the jelly pass leaves through
-    return array<vec3f, 2>(c - vec3f(0.95, 1.1, 0.95), c + vec3f(0.95, 1.6, 0.95));
+fn rmColdTap(q: vec3f) -> vec2f {
+  // the room, and a round lightwell in the ceiling over the fan with a lamp at its top
+  let well = max(length(q.xz - RM_FAN.xz) - 0.45, abs(q.y - 3.2) - 0.22);
+  let s = -min(sdBox(q - vec3f(3.75, 1.5, 0.0), vec3f(5.55, 1.5, 3.5)), well);
+  var m = 2.0;
+  if (q.y < 0.02) { m = 1.0; } else if (q.y > 2.98) { m = 3.0; } else if (q.y < 1.05) { m = 15.0; }
+  if (q.z > 3.45 && q.y > 1.2 && q.y < 2.45 && q.x > 1.0 && q.x < 8.2) { m = 16.0; }
+  var r = vec2f(s, m);
+  r = rmU(r, vec2f(max(length(q.xz - RM_FAN.xz) - 0.16, abs(q.y - 3.41) - 0.012), 26.0));
+  r = rmU(r, rmFan(q));
+  // dado rail and a crown moulding along every wall
+  r = rmU(r, vec2f(max(s - 0.035, abs(q.y - 1.07) - 0.028), 4.0));
+  r = rmU(r, vec2f(max(s - 0.07, abs(q.y - 2.92) - 0.06), 15.0));
+  // the bar: slatted front, dark body, a thick top with a brass bullnose; a foot rail on posts
+  if (q.z > 1.4 && q.x > 0.6 && q.x < 8.6) {
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.52, 2.35), vec3f(3.6, 0.52, 0.4)), 34.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 1.09, 2.2), vec3f(3.72, 0.035, 0.5)) - 0.005, 4.0));
+    r = rmU(r, vec2f(rmCapX(q - vec3f(0.0, 1.08, 1.72), 0.9, 8.3, 0.04), 5.0));
+    r = rmU(r, vec2f(rmCapX(q - vec3f(0.0, 0.22, 1.66), 0.9, 8.3, 0.022), 5.0));
+    let px = rmRep(q.x, 1.0, 1.2, 7.0);
+    r = rmU(r, vec2f(sdSeg(vec3f(px, q.y, q.z), vec3f(0.0, 0.0, 1.66), vec3f(0.0, 0.22, 1.66)) - 0.014, 5.0));
+    // beer taps: brass columns, black handles with a coloured top
+    if (q.y > 1.1 && q.y < 1.75 && q.z > 2.1 && q.z < 2.45) {
+      let tx = rmRep(q.x, 3.2, 0.36, 4.0);
+      let tp = vec3f(tx, q.y, q.z - 2.3);
+      r = rmU(r, vec2f(sdCyl(tp, 0.028, 1.12, 1.4), 5.0));
+      r = rmU(r, vec2f(sdSeg(tp, vec3f(0.0, 1.38, 0.0), vec3f(0.0, 1.33, -0.09)) - 0.014, 5.0));
+      r = rmU(r, vec2f(sdSeg(tp, vec3f(0.0, 1.42, 0.0), vec3f(0.0, 1.62, 0.02)) - 0.018, 32.0));
+    }
+    // a few glasses left on the bar
+    let gx = rmRep(q.x, 1.8, 1.55, 4.0);
+    r = rmU(r, vec2f(max(abs(length(vec2f(gx, q.z - 1.95)) - 0.038 - 0.004 * (q.y - 1.125)) - 0.003, max(1.125 - q.y, q.y - 1.28)), 6.0));
+    r = rmU(r, vec2f(sdCyl(vec3f(gx, q.y, q.z - 1.95), 0.035, 1.13, 1.23 - 0.05 * rmIdx(q.x, 1.8, 1.55, 4.0) * 0.3), 36.0));
   }
-  let c = (vec2f(ev.sel.xy) + 0.5) * CS;
-  return array<vec3f, 2>(vec3f(c.x - 9.7, 0.0, c.y - 9.7), vec3f(c.x + 9.7, ev.sel2.x + 3.0, c.y + 9.7));
-}
-// the selection's colour: a thick rim, bands of light running up it, sparks
-fn selGlow(p: vec3f, n: vec3f, rd: vec3f) -> vec3f {
-  let rt = ev.sel2.y;
-  let rim = pow(1.0 - clamp(dot(-rd, n), 0.0, 1.0), 1.4);
-  let band = pow(0.5 + 0.5 * sin(p.y * 1.6 - rt * 4.0 + (p.x + p.z) * 0.35), 6.0);
-  let spark = step(0.992, hsh(i32(floor(p.x * 2.5)) + i32(floor(rt * 9.0)) * 977, i32(floor(p.y * 2.5)), i32(floor(p.z * 2.5)) + 811));
-  return SEL_HI * (3.0 * rim + 1.4 * band + 4.0 * spark) * (0.8 + 0.4 * sin(rt * 3.0));
-}
-// where a ray enters and leaves a box: (enter, leave); enter > leave is a miss, leave < 0 is behind. A ray that starts
-// inside has enter < 0 < leave. (The only ray-box test in this module; the far field's inline slab keeps its own.)
-fn boxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> vec2f {
-  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
-  let t0 = (lo - ro) * inv;
-  let t1 = (hi - ro) * inv;
-  let tn = min(t0, t1);
-  let tf = max(t0, t1);
-  return vec2f(max(tn.x, max(tn.y, tn.z)), min(tf.x, min(tf.y, tf.z)));
-}
-// While the city is paused, the selection's neighbours (pick.js pickNearSet, ev.nb: centre x, centre z, half width,
-// top; top 0 = none): a thin shimmering outline round each one's box, so their extents show and a tap on one's ring
-// makes it the selection (owner, September 2026: "the neighbouring entities of THAT item in turn are shimmering and
-// their extents determined")
-fn nbHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
-  if (ev.sel2.z < 0.5) { return vec3f(0.0); }
-  var col = vec3f(0.0);
-  for (var i = 0; i < 8; i++) {
-    let b = ev.nb[i];
-    if (b.w <= 0.0) { break; }
-    let lo = vec3f(b.x - b.z, 0.0, b.y - b.z);
-    let hi = vec3f(b.x + b.z, b.w, b.y + b.z);
-    let core = boxHit(ro, rd, lo, hi);
-    if (core.x <= core.y && core.y > 0.0) { continue; }
-    let w = max(length(vec3f(b.x, b.w * 0.5, b.y) - ro) * 0.007, 0.08);
-    let g = boxHit(ro, rd, lo - vec3f(w, 0.0, w), hi + vec3f(w));
-    if (g.x > g.y || g.y <= 0.0 || tHit < g.x - w * 6.0) { continue; }
-    let q = ro + rd * max(g.x, 0.0);
-    col += vec3f(0.45, 1.0, 0.65) * (0.35 + 0.35 * sin(q.y * 0.6 - ev.sel2.y * 3.0 + f32(i)));
+  // the back bar: a cabinet, shelves in front of the mirror, a light strip under each, the bottles
+  if (q.z > 2.7) {
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.5, 3.25), vec3f(3.8, 0.5, 0.25)), 4.0));
+    let si = clamp(round((q.y - 1.45) / 0.4), 0.0, 2.0);
+    let sy = q.y - 1.45 - 0.4 * si;
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy, q.z - 3.28), vec3f(3.6, 0.014, 0.2)), 6.0));
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy + 0.022, q.z - 3.1), vec3f(3.6, 0.006, 0.01)), 8.0));
+    r = rmU(r, vec2f(rmBottles(q.x, q.y, q.z - 3.3, 1.0, 42.0, 1.45), 6.0));
   }
-  return col;
+  // stools along the bar
+  if (q.z > 0.9 && q.z < 1.7) { r = rmU(r, rmStool(vec3f(rmRep(q.x, 1.7, 0.95, 7.0), q.y, q.z), vec2f(0.0, 1.3))); }
+  // booths on the left: tables, leather benches against the panelling, framed photographs above
+  if (q.z < -1.9) {
+    let bx = rmRep(q.x, 2.2, 3.2, 2.0);
+    r = rmU(r, rmTable(vec3f(bx, q.y, q.z), vec2f(0.0, -2.75), false));
+    r = rmU(r, vec2f(sdBox(vec3f(bx, q.y - 0.24, q.z + 3.22), vec3f(1.1, 0.24, 0.26)) - 0.03, 10.0));
+    r = rmU(r, vec2f(sdBox(vec3f(bx, q.y - 0.75, q.z + 3.42), vec3f(1.1, 0.34, 0.06)) - 0.03, 10.0));
+    let fx = rmRep(q.x, 0.6, 0.72, 11.0);
+    let fi = rmIdx(q.x, 0.6, 0.72, 11.0);
+    let fh = 0.18 + 0.12 * hsh(i32(fi), 2, 932);
+    r = rmU(r, vec2f(sdBox(vec3f(fx, q.y - 1.72 - 0.1 * hsh(i32(fi), 3, 933), q.z + 3.49), vec3f(0.2, fh, 0.02)), 23.0));
+  }
+  // the price board, the neon glass on the wall, the heater, the jukebox in the corner
+  r = rmU(r, vec2f(sdBox(q - vec3f(4.0, 2.05, -3.47), vec3f(0.9, 0.34, 0.03)), 13.0));
+  {
+    let w = vec2f(q.x - 7.2, q.y - 1.95);
+    let glass = abs(max(abs(w.x) - (0.16 + 0.05 * (w.y + 0.3) / 0.6), abs(w.y) - 0.3)) - 0.0;
+    let foam = abs(length(w - vec2f(0.0, 0.34)) - 0.12);
+    let tube = min(glass, max(foam, 0.3 - w.y));
+    r = rmU(r, vec2f(length(vec2f(tube, q.z + 3.43)) - 0.012, 18.0));
+  }
+  r = rmU(r, vec2f(sdBox(q - vec3f(9.15, 0.8, -2.3), vec3f(0.12, 0.45, 0.5)) - 0.02, 12.0));
+  {
+    let j = q - vec3f(8.85, 0.0, 2.95);
+    let jb = min(sdBox(j - vec3f(0.0, 0.62, 0.0), vec3f(0.3, 0.62, 0.33)), max(length(j.yz - vec2f(1.24, 0.0)) - 0.33, abs(j.x) - 0.3)) - 0.02;
+    r = rmU(r, vec2f(jb, 19.0));
+  }
+  // the airlock: a riveted ring, the door, its wheel, a porthole of cold street light
+  {
+    let hq = q - vec3f(9.3, 1.12, 0.3);
+    r = rmU(r, vec2f(rmTorusX(hq, 0.86, 0.075), 30.0));
+    let ra = atan2(hq.z, hq.y);
+    let ri = round(ra / 0.3927) * 0.3927;
+    r = rmU(r, vec2f(length(hq - vec3f(-0.07, cos(ri) * 0.86, sin(ri) * 0.86)) - 0.022, 5.0));
+    r = rmU(r, vec2f(max(length(hq.yz) - 0.8, abs(hq.x + 0.02) - 0.03), 30.0));
+    r = rmU(r, vec2f(rmTorusX(hq + vec3f(0.07, 0.35, 0.0), 0.16, 0.014), 5.0));
+    r = rmU(r, vec2f(max(length(hq.yz - vec2f(0.28, 0.0)) - 0.17, abs(hq.x + 0.05) - 0.01), 24.0));
+  }
+  // pipes along the ceiling on brackets, and three lamps
+  let pipe = min(length(q.yz - vec2f(2.78, -3.1)), length(q.yz - vec2f(2.78, -2.84))) - 0.06;
+  r = rmU(r, vec2f(pipe, 17.0));
+  r = rmU(r, rmPendant(q, vec3f(3.0, 2.3, 1.55), 3.0));
+  r = rmU(r, rmPendant(q, vec3f(6.2, 2.3, 1.55), 3.0));
+  r = rmU(r, rmPendant(q, vec3f(3.8, 2.2, -2.7), 3.0));
+  return r;
 }
-// the thick edge round the selection's box: the ray against the box grown by one to four widths, a width being
-// about 1.2% of the distance, so the edge is as thick on screen far away as near. Hidden where something nearer
-// stands in front; inside the box's own outline the thing glows itself (selGlow)
-fn selHalo(ro: vec3f, rd: vec3f, tHit: f32) -> vec3f {
-  if (ev.sel.z < 0.5) { return vec3f(0.0); }
-  let b = selBox();
-  let core = boxHit(ro, rd, b[0], b[1]);
-  if (core.x <= core.y && core.y > 0.0) { return vec3f(0.0); }
-  let w = max(length((b[0] + b[1]) * 0.5 - ro) * 0.012, 0.12);
-  var g = 0.0;
-  var tn = 1e9;
-  for (var i = 1; i <= 4; i++) {
-    let e = w * f32(i);
-    let hb = boxHit(ro, rd, b[0] - vec3f(e, 0.0, e), b[1] + vec3f(e));
-    if (hb.x <= hb.y && hb.y > 0.0) { g += 0.25; tn = min(tn, max(hb.x, 0.0)); }
+</script>
+<script type="text/wgsl" id="wgsl-room-loworbit">
+// the Low Orbit: a crew bar built like a ship's mess. Riveted steel panels between ribbed frames, ducts and cable
+// trays overhead, tread-plate floor worn bright down the middle, a long window on the pads with frost at its edges,
+// steel tables with mugs, caged lamps, a departures screen over the bar.
+fn rmLowOrbit(q: vec3f) -> vec2f {
+  let s = -sdBox(q - vec3f(9.15, 2.1, 0.0), vec3f(10.95, 2.1, 4.8));
+  var m = 2.0;
+  if (q.y < 0.02) { m = 1.0; } else if (q.y > 4.15) { m = 3.0; }
+  if (q.z < -4.7 && q.x > 1.9 && q.x < 17.1 && q.y > 0.9 && q.y < 3.4) { m = 7.0; }
+  var r = vec2f(s, m);
+  // ribbed frames every three metres, round the walls and over the ceiling
+  let fx = rmRep(q.x, 0.5, 3.0, 7.0);
+  r = rmU(r, vec2f(max(abs(fx) - 0.1, s - 0.16), 30.0));
+  // ducts and a cable tray
+  r = rmU(r, vec2f(length(q.yz - vec2f(3.75, 3.2)) - 0.34, 17.0));
+  r = rmU(r, vec2f(max(sdBox(vec3f(0.0, q.y - 3.95, q.z + 1.5), vec3f(1e3, 0.05, 0.25)), -sdBox(vec3f(0.0, q.y - 4.0, q.z + 1.5), vec3f(1e3, 0.05, 0.22))), 30.0));
+  // tables along the window, bolted down, benches, mugs
+  if (q.z < -1.8) {
+    let tx = rmRep(q.x, 3.5, 3.0, 5.0);
+    let tp = vec3f(tx, q.y, q.z + 3.5);
+    r = rmU(r, vec2f(sdBox(tp - vec3f(0.0, 0.74, 0.0), vec3f(0.55, 0.025, 0.42)) - 0.01, 17.0));
+    r = rmU(r, vec2f(sdBox(tp - vec3f(0.0, 0.37, 0.0), vec3f(0.05, 0.37, 0.05)), 17.0));
+    r = rmU(r, vec2f(sdBox(vec3f(abs(tx) - 0.95, q.y - 0.45, q.z + 3.5), vec3f(0.2, 0.03, 0.45)) - 0.02, 10.0));
+    let mq = tp - vec3f(0.15, 0.765, 0.1);
+    r = rmU(r, vec2f(max(abs(length(mq.xz) - 0.042) - 0.005, max(-mq.y, mq.y - 0.1)), 31.0));
   }
-  if (g <= 0.0 || tHit < tn - w * 6.0) { return vec3f(0.0); }
-  return SEL_HI * g * g * 2.2 * (0.8 + 0.2 * sin(ev.sel2.y * 3.0));
-}
-
-@fragment fn scene(@builtin(position) fc: vec4f) -> @location(0) vec4f {
-  let px = vec2f(floor(fc.x) * 2.0 + f32((i32(fc.y) + i32(u.frame)) & 1) + 0.5, fc.y);
-  let fj = px + u.jitter;
-  let uv = vec2f(fj.x * 2.0 - u.res.x, u.res.y - fj.y * 2.0) / u.res.y;
-  let ro = u.camPos;
-  let rd = normalize(u.camFwd + (uv.x * u.camRight + uv.y * u.camUp) * u.fov);
-  if (ev.sel.z > 1.5) { gSelP = vec4f(ev.sel.xy, ev.sel.w, ev.sel2.y); }
-  if (ev.wx.z > 0.5) { return roomRender(ro, rd, px); }
-  var tProxy = 0.0;
-  if (u.p5 < 0.5) { tProxy = max(textureLoad(proxyTex, vec2i(i32(px.x), i32(fc.y)), 0).r - 0.5, 0.0); }
-  let hit = tracePrimary(ro, rd, tProxy);
-  var col = vec3f(0.0);
-  var tOut = TMAX;
-  // The primary hit and, for reflective surfaces, the reflected hit are shaded by the same code in a two-pass
-  // loop. GPU compilers inline every call, so a single call site keeps the pipeline small and quick to build.
-  var cro = ro;
-  var crd = rd;
-  var h = hit;
-  var wgt = vec3f(1.0);
-  var tBase = 0.0;
-  let nPass = select(2, 3, u.frame < -1.0);
-  for (var bounce = 0; bounce < nPass; bounce++) {
-    let first = bounce == 0;
-    if (h.kind == 0) {
-      var sc = fogApply(skyCol(crd), cro, crd, TMAX);
-      if (!first) { sc *= min(1.0, 2.5 / max(luma(sc), 1e-4)); }
-      col += wgt * sc;
-      break;
-    }
-    let p = cro + crd * h.t;
-    if (first) { tOut = h.t; }
-    var n = hitNormal(p, h);
-    // weathering first, then frost and settled snow on top of it (the tholin dust would brown fresh snow)
-    var sf = surface(p, n, h.m, crd, h.t + tBase);
-    if (first) { var nb = n; sf = weathering(sf, n, p, i32(h.m + 0.5), h.t, &nb); n = nb; }
-    sf = frostify(sf, n, p, h.m);
-    // the selection: glowing, shimmering, and jelly (the view goes on through it, below)
-    let jelly = first && selIs(p, h.m);
-    if (jelly) {
-      sf.alb = mix(sf.alb, SEL_HI * 0.35, 0.5);
-      sf.emi += selGlow(p, n, crd);
-      sf.refl = 0.0;
-    }
-    // the map overlay (map.js MAPO): each district's colour on the ground and the roofs, as on the flat map, and the
-    // street lines; not on the wild land
-    if (first && (i32(ev.sel2.w) & 1) != 0 && (p.y < 0.6 || n.y > 0.7)) {
-      let cM = vec2i(floor(p.xz / CS));
-      let hM = cellHead(cM);
-      if (hM.typ != 7) {
-        var zc = array<vec3f, 8>(vec3f(0.79, 0.64, 0.42), vec3f(0.88, 0.34, 0.6), vec3f(0.73, 0.54, 0.37), vec3f(0.82, 0.32, 0.24),
-          vec3f(0.49, 0.45, 0.41), vec3f(0.6, 0.64, 0.68), vec3f(0.44, 0.37, 0.53), vec3f(0.37, 0.66, 0.63));
-        let zcol = zc[(hM.fl >> 15) & 7];
-        sf.alb = mix(sf.alb, zcol * 0.6, 0.6);
-        sf.emi += zcol * (0.05 + 0.12 * u.windows);
-        if (p.y < 0.6) {
-          let lqM = p.xz - (vec2f(cM) + 0.5) * CS;
-          let eM = HALF - max(abs(lqM.x), abs(lqM.y));
-          let wM = 0.25 + h.t * 0.002;
-          sf.emi += vec3f(1.0, 0.95, 0.8) * (1.0 - smoothstep(wM, wM * 2.0, eM)) * (0.5 + 0.8 * u.windows);
-        }
-      }
-    }
-    // the city paused: the street grid glows green, with a pulse running out from the selection
-    if (first && ev.sel2.z > 0.5 && p.y < 0.6) {
-      let lqG = p.xz - (floor(p.xz / CS) + 0.5) * CS;
-      let eG = HALF - max(abs(lqG.x), abs(lqG.y));
-      let wG = 0.12 + h.t * 0.0025;
-      let lineG = 1.0 - smoothstep(wG, wG * 2.2, eG);
-      let sc = select(p.xz, (vec2f(ev.sel.xy) + 0.5) * CS, ev.sel.z > 0.5);
-      let pulse = 0.5 + 0.5 * sin(length(p.xz - sc) * 0.08 - ev.sel2.y * 3.0);
-      sf.emi += vec3f(0.25, 1.0, 0.35) * lineG * (0.6 + 1.2 * pulse) * (1.0 - smoothstep(600.0, 1400.0, h.t));
-    }
-    var sha = 0.75;
-    var occ = 0.85;
-    if (first) {
-      if (sf.wet > 0.0) { n = normalize(n + rippleN(p) * sf.wet * (0.6 + 0.8 * u.p8)); }
-      sha = 0.0;
-      if (u.sunDir.y > 0.0 && dot(n, u.sunDir) > -0.3) {
-        let sm = shadowLookup(p, n, rnd3(px, 0).xy * 0.9);
-        sha = select(0.8, sm, sm >= 0.0);
-      }
-      occ = 1.0;
-      if (h.t < 300.0 && h.kind != 5) { occ = calcAO(p, n, h); }
-    }
-    var c = lightSurf(n, crd, sf, sha, occ);
-    // fog along this segment is an affine blend, fogApply(x) = x * fT + f0
-    let f0 = fogApply(vec3f(0.0), cro, crd, h.t);
-    let fT = fogApply(vec3f(1.0), cro, crd, h.t).x - f0.x;
-    if (!first) {
-      var rc = c * fT + f0;
-      rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));
-      col += wgt * rc;
-      break;
-    }
-    c += sf.alb * beamSpot(p);
-    // the next ray: on through the selection (jelly), or reflected. One traceScene call site for both: the GPU
-    // compilers inline every call, and a second one doubled the pipeline's build time
-    var nro = p + n * 0.08;
-    var nrd = crd;
-    if (jelly) {
-      // jelly: part of the light comes through from behind, tinted, from where the ray leaves the selection's box
-      let b = selBox();
-      let tEx = max(boxHit(p, crd, b[0], b[1]).y, 0.05);
-      col += c * 0.6 * fT + f0;
-      wgt = mix(vec3f(1.0), SEL_HI, 0.35) * 0.4 * fT;
-      tBase = h.t + tEx;
-      nro = p + crd * (tEx + 0.1);
-    } else {
-      if (sf.refl <= 0.02) { col += c * fT + f0; break; }
-      var r = reflect(crd, n);
-      r = normalize(r + rnd3(px, 3) * sf.rough * 2.0);
-      if (h.kind == 1) { r.y = abs(r.y); }
-      let w = clamp(sf.refl, 0.0, 1.0);
-      if (!(u.refl > 0.5 && h.t < 350.0 && sf.refl > 0.1)) {
-        var rc = fogApply(skyCol(r), p, r, TMAX);
-        rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));
-        col += mix(c, rc * sf.tint, w) * fT + f0;
-        break;
-      }
-      col += c * (1.0 - w) * fT + f0;
-      wgt = sf.tint * w * fT;
-      tBase = h.t;
-      nrd = r;
-    }
-    var d2 = 1.0;
-    cro = nro;
-    crd = nrd;
-    h = traceScene(cro, crd, 320.0, 22, 12, 18, &d2, false);
+  // the bar across the far end: steel front with a padded edge, a wooden top, bottles behind, the screen above
+  if (q.x > 16.5) {
+    r = rmU(r, vec2f(sdBox(q - vec3f(17.6, 0.55, 0.9), vec3f(0.35, 0.55, 3.2)), 17.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(17.55, 1.12, 0.9), vec3f(0.45, 0.035, 3.3)) - 0.005, 4.0));
+    r = rmU(r, vec2f(length(vec2f(q.x - 17.2, q.y - 1.02)) - 0.06, 10.0));
+    let si = clamp(round((q.y - 1.45) / 0.4), 0.0, 2.0);
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 19.9, q.y - 1.45 - 0.4 * si, q.z - 0.9), vec3f(0.18, 0.014, 3.0)), 30.0));
+    r = rmU(r, vec2f(rmBottles(q.z, q.y, q.x - 19.9, -2.0, 30.0, 1.45), 6.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(20.05, 3.0, 0.9), vec3f(0.04, 0.45, 1.5)), 28.0));
   }
-  col += beamGlow(ro, rd, tOut) * (0.3 + u.windows);
-  col += selHalo(ro, rd, tOut);
-  col += nbHalo(ro, rd, tOut);
-  let tEv = select(tOut, FARMAX, hit.kind == 0);
-  col += fireworksFx(ro, rd, tEv);
-  col = launchFx(ro, rd, tEv, col);
-  col = smokeFx(ro, rd, tOut, col);
-  col = tubesFx(ro, rd, tOut, col);
-  col = holoFx(ro, rd, tEv, col);
-  col = beamFx(ro, rd, tEv, col);
-  col = bubbleFx(ro, rd, tEv, col);
-  col = flockFx(ro, rd, tOut, col);
-  col = propsFx(ro, rd, tOut, col);
-  // a power cut: everything in the area goes dark (with a flicker as it fails and comes back)
-  if (ev.blk.w > 0.0) {
-    let hp = ro + rd * min(tOut, 3000.0);
-    let bd = length(hp.xz - ev.blk.xy);
-    col *= 1.0 - ev.blk.w * sstepJ(ev.blk.z, ev.blk.z * 0.55, bd) * sstepJ(400.0, 250.0, hp.y) * (0.4 + 0.6 * u.windows);
-  }
-  // a burst heat pipe: a rising, spreading plume of warm steam
-  if (ev.steam.w > 0.0) {
-    let age = u.time - ev.steam.w;
-    if (age > 0.0 && age < 30.0) {
-      let base = ev.steam.xyz;
-      var acc = 0.0;
-      let tc = clamp(dot(base + vec3f(0.0, 12.0, 0.0) - ro, rd), 0.0, tOut);
-      for (var i = 0; i < 10; i++) {
-        let t = tc + (f32(i) - 4.5) * 3.0;
-        if (t < 0.0 || t > tOut) { continue; }
-        let q = ro + rd * t - base;
-        let h = max(q.y, 0.0);
-        let rad = 1.5 + h * 0.35 + age * 0.3;
-        let r = length(q.xz - vec2f(h * 0.25, 0.0));
-        acc += exp(-r * r / (rad * rad)) * exp(-h / (6.0 + age * 1.5)) * step(-1.0, q.y) * (0.6 + 0.4 * vnoise(q.xz * 0.4 + vec2f(0.0, u.time * 0.8), 183));
-      }
-      let fade = sstepJ(0.0, 1.5, age) * sstepJ(30.0, 18.0, age);
-      col = mix(col, (u.skyHor * 0.6 + u.sunCol * 0.15 + vec3f(0.55, 0.5, 0.48) * (0.3 + 0.5 * u.windows)), clamp(acc * 0.3 * fade, 0.0, 0.8));
-    }
-  }
-  col += koiFx(ro, rd, tOut);
-  col = max(col, vec3f(0.0));
-  col *= min(1.0, 12.0 / max(luma(col), 1e-4));
-  return vec4f(col, tOut);
+  // the window's mullions
+  let mx = rmRep(q.x, 2.0, 3.0, 6.0);
+  r = rmU(r, vec2f(sdBox(vec3f(mx, q.y - 2.15, q.z + 4.72), vec3f(0.07, 1.3, 0.08)), 30.0));
+  r = rmU(r, vec2f(sdBox(vec3f(q.x - 9.5, abs(q.y - 2.15) - 1.28, q.z + 4.72), vec3f(7.6, 0.06, 0.1)), 30.0));
+  // caged lamps down the middle
+  let lx = rmRep(q.x, 3.0, 4.0, 4.0);
+  let lp = vec3f(lx, q.y - 3.25, q.z + 0.6);
+  r = rmU(r, vec2f(length(lp) - 0.07, 8.0));
+  let la = atan2(lp.z, lp.x);
+  let cage = max(abs(length(lp) - 0.14) - 0.006, abs(fract(la / 0.785 + 0.5) - 0.5) * 0.785 * length(lp.xz) - 0.006);
+  r = rmU(r, vec2f(max(cage, -lp.y - 0.12), 17.0));
+  r = rmU(r, vec2f(sdCyl(lp, 0.006, 0.1, 1.0), 17.0));
+  return r;
 }
 </script>
 <script type="text/wgsl" id="wgsl-space">
@@ -12379,10 +12414,10 @@ function streetName(k) { return STREET_A[Math.floor(hsh(k, 3, 901) * STREET_A.le
 // Room axes: x forward along the place's heading, z to the right, y up from the floor; the camera starts at x = 0.
 // x0..x1 and hw (half width) are the walls, for walking and for placing the story's things; scene.wgsl must match.
 const ROOMS = [
-  { id: "cold_tap", kind: 1, base: "street_1", x0: -1.3, x1: 8.8, hw: 3.0, name: "The Cold Tap, Ferry Street", blurb: "A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome." },
-  { id: "low_orbit_bar", kind: 2, base: "street_5", x0: -1.3, x1: 19.6, hw: 4.3, name: "The Low Orbit, by the spaceport", blurb: "A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling." },
-  { id: "lantern_cellar", kind: 3, base: "street_3", x0: -1.3, x1: 13.2, hw: 4.8, name: "The Lantern Cellar, Chinatown", blurb: "Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops." },
-  { id: "warmhouse_club", kind: 4, base: "warmhouse", x0: -2.8, x1: 26.5, hw: 14.5, round: [12, 15.2], name: "The Warmhouse club", blurb: "The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side." },
+  { id: "cold_tap", kind: 1, wgsl: "coldtap", map: "rmColdTap", base: "street_1", x0: -1.3, x1: 8.8, hw: 3.0, name: "The Cold Tap, Ferry Street", blurb: "A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome." },
+  { id: "low_orbit_bar", kind: 2, wgsl: "loworbit", map: "rmLowOrbit", base: "street_5", x0: -1.3, x1: 19.6, hw: 4.3, name: "The Low Orbit, by the spaceport", blurb: "A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling." },
+  { id: "lantern_cellar", kind: 3, wgsl: "cellar", map: "rmCellar", base: "street_3", x0: -1.3, x1: 13.2, hw: 4.8, name: "The Lantern Cellar, Chinatown", blurb: "Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops." },
+  { id: "warmhouse_club", kind: 4, wgsl: "club", map: "rmClub", base: "warmhouse", x0: -2.8, x1: 26.5, hw: 14.5, round: [12, 15.2], name: "The Warmhouse club", blurb: "The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side." },
 ];
 // the room you are in now (a room place, arrived or nearly), or null
 function roomNow() { const V = NAV.visit; return NAV.mode === "visit" && V && V.to && V.to.room && V.t >= V.T * 0.92 ? V.to : null; }
@@ -16221,7 +16256,7 @@ async function init() {
   };
   async function buildAll(lite) {
     const named = (name, pr) => pr.catch((e) => { const err = new Error((e && e.message) || String(e)); err.pipeline = name; throw err; });
-    const sceneMod = device.createShaderModule({ label: lite ? "scene (lite)" : "scene", code: common + (lite ? liteScene(src("wgsl-scene")) : src("wgsl-scene")) });
+    const sceneMod = device.createShaderModule({ label: lite ? "scene (lite)" : "scene", code: common + (lite ? liteScene(src("wgsl-scene")) : src("wgsl-scene")) + src("wgsl-rooms-off") });
     const postMod = device.createShaderModule({ label: "post", code: common + src("wgsl-post") });
     const spaceMod = device.createShaderModule({ label: "space", code: common + src("wgsl-space") });
     for (const [name, mod] of [["scene", sceneMod], ["post", postMod], ["space", spaceMod]]) {
@@ -16265,6 +16300,41 @@ async function init() {
   }
   const { sceneMod, postMod, spaceMod, pScene, pTaa, pDown, pBH, pBV, pComp, pProxyC, pProxyG, pShadow, pTree, spBGL, pSpace, pTerr, pMipB, pMipD } = PL;
   if (PL.lite && !forceLite) setTimeout(() => showHint("Lighter graphics for this device.", 6000), 1500);
+  // The venues' rooms are their own pipelines, one per place, built after the city is on screen: in the city's
+  // pipeline they doubled its build time. ROOM_K picks the place, so each build compiles one room. Until a room's
+  // pipeline is ready the city's pass draws a dark frame there. Why: the drift-city skill, "Rooms have their own pipelines".
+  const ROOMP = { mod: null, ready: {}, pending: {}, failed: {}, ms: {}, queue: [] };
+  const roomDispatch = () => "fn rmPlaceMap(q: vec3f) -> vec2f {\n  switch ROOM_K {\n" +
+    ROOMS.map((r) => `    case ${r.kind}: { return ${r.map}(q); }\n`).join("") + "    default: { return vec2f(1e5, 0.0); }\n  }\n}\n";
+  function roomModule() {
+    if (ROOMP.mod) return ROOMP.mod;
+    const sc = PL.lite ? liteScene(src("wgsl-scene")) : src("wgsl-scene");
+    const places = [...new Set(ROOMS.map((r) => r.wgsl))].map((w) => src("wgsl-room-" + w)).join("\n");
+    ROOMP.mod = device.createShaderModule({ label: "rooms", code: common + sc + src("wgsl-rooms") + places + roomDispatch() });
+    ROOMP.mod.getCompilationInfo().then((info) => {
+      const errs = info.messages.filter((x) => x.type === "error");
+      if (errs.length) { ROOMP.error = errs.map((x) => x.lineNum + ":" + x.linePos + " " + x.message).join("\n"); console.error("rooms shader: " + ROOMP.error); }
+    });
+    return ROOMP.mod;
+  }
+  function roomPipe(kind) {
+    if (ROOMP.ready[kind] || ROOMP.pending[kind] || ROOMP.failed[kind]) return ROOMP.ready[kind] || null;
+    const t0 = performance.now();
+    ROOMP.pending[kind] = device.createRenderPipelineAsync({
+      label: "room " + kind, layout: pl(scBGL), vertex: { module: roomModule(), entryPoint: "vs" },
+      fragment: { module: roomModule(), entryPoint: "roomScene", constants: { ROOM_K: kind }, targets: [{ format: F16 }] }, primitive: { topology: "triangle-list" },
+    }).then((p) => { ROOMP.ready[kind] = p; ROOMP.ms[kind] = Math.round(performance.now() - t0); },
+      (e) => { ROOMP.failed[kind] = (e && e.message) || String(e); console.error("room " + kind + " pipeline: " + ROOMP.failed[kind]); })
+      .finally(() => { delete ROOMP.pending[kind]; roomWarm(); });
+    return null;
+  }
+  // one build at a time, the room you are in (or going to) first, then the rest in ROOMS order
+  function roomWarm() {
+    if (Object.keys(ROOMP.pending).length) return;
+    const V = NAV.visit, next = V && V.to && V.to.room;
+    const k = [next, ...ROOMS.map((r) => r.kind)].find((x) => x && !ROOMP.ready[x] && !ROOMP.failed[x]);
+    if (k) roomPipe(k);
+  }
   // Titan physics (phys.wgsl): optional; without it the city runs as before
   let PHYS = null;
   try {
@@ -16284,7 +16354,9 @@ async function init() {
     PHYS = { step, draw, phBGL, pdBGL, n: 2048 };
     GPUREF.phys = PHYS; GPUREF.device = device;
   } catch (e) { console.warn("physics off:", e && e.message); }
-  globalThis.__driftGPU = { gpuInfo, lite: PL.lite };
+  globalThis.__driftGPU = { gpuInfo, lite: PL.lite, ROOMP, roomPipe };
+  // start on the rooms once the city has drawn a few seconds; a venue you walk into sooner is built first
+  setTimeout(roomWarm, 4000);
   HEADS.device = device; // the talking heads draw on the city's device (heads.js), not a second one
 
   const TU = GPUTextureUsage;
@@ -16690,7 +16762,10 @@ async function init() {
       const c = enc.beginComputePass({ timestampWrites: tsw(9, measure) });
       c.setPipeline(PHYS.step); c.setBindGroup(0, PHYS.bg); c.dispatchWorkgroups(PHYS.n / 64); c.end(); ran[9] = 1;
     }
-    if (!inSpace) rpass(enc, pScene, T.sc[smActive], T.scene.createView(), 3, measure);
+    if (!inSpace) {
+      const rk = EVN[210];
+      rpass(enc, (rk && roomPipe(rk)) || pScene, T.sc[smActive], T.scene.createView(), 3, measure);
+    }
     if (NAV.spaceMix > 0.001) {
       const p = enc.beginRenderPass({ colorAttachments: [{ view: T.scene.createView(), loadOp: inSpace ? "clear" : "load", storeOp: "store", clearValue: { r: 0, g: 0, b: 0, a: 1 } }] });
       p.setPipeline(pSpace); p.setBindGroup(0, spaceBG); p.draw(3); p.end();

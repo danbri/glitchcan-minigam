@@ -1205,7 +1205,7 @@ async function init() {
   };
   async function buildAll(lite) {
     const named = (name, pr) => pr.catch((e) => { const err = new Error((e && e.message) || String(e)); err.pipeline = name; throw err; });
-    const sceneMod = device.createShaderModule({ label: lite ? "scene (lite)" : "scene", code: common + (lite ? liteScene(src("wgsl-scene")) : src("wgsl-scene")) });
+    const sceneMod = device.createShaderModule({ label: lite ? "scene (lite)" : "scene", code: common + (lite ? liteScene(src("wgsl-scene")) : src("wgsl-scene")) + src("wgsl-rooms-off") });
     const postMod = device.createShaderModule({ label: "post", code: common + src("wgsl-post") });
     const spaceMod = device.createShaderModule({ label: "space", code: common + src("wgsl-space") });
     for (const [name, mod] of [["scene", sceneMod], ["post", postMod], ["space", spaceMod]]) {
@@ -1249,6 +1249,41 @@ async function init() {
   }
   const { sceneMod, postMod, spaceMod, pScene, pTaa, pDown, pBH, pBV, pComp, pProxyC, pProxyG, pShadow, pTree, spBGL, pSpace, pTerr, pMipB, pMipD } = PL;
   if (PL.lite && !forceLite) setTimeout(() => showHint("Lighter graphics for this device.", 6000), 1500);
+  // The venues' rooms are their own pipelines, one per place, built after the city is on screen: in the city's
+  // pipeline they doubled its build time. ROOM_K picks the place, so each build compiles one room. Until a room's
+  // pipeline is ready the city's pass draws a dark frame there. Why: the drift-city skill, "Rooms have their own pipelines".
+  const ROOMP = { mod: null, ready: {}, pending: {}, failed: {}, ms: {}, queue: [] };
+  const roomDispatch = () => "fn rmPlaceMap(q: vec3f) -> vec2f {\n  switch ROOM_K {\n" +
+    ROOMS.map((r) => `    case ${r.kind}: { return ${r.map}(q); }\n`).join("") + "    default: { return vec2f(1e5, 0.0); }\n  }\n}\n";
+  function roomModule() {
+    if (ROOMP.mod) return ROOMP.mod;
+    const sc = PL.lite ? liteScene(src("wgsl-scene")) : src("wgsl-scene");
+    const places = [...new Set(ROOMS.map((r) => r.wgsl))].map((w) => src("wgsl-room-" + w)).join("\n");
+    ROOMP.mod = device.createShaderModule({ label: "rooms", code: common + sc + src("wgsl-rooms") + places + roomDispatch() });
+    ROOMP.mod.getCompilationInfo().then((info) => {
+      const errs = info.messages.filter((x) => x.type === "error");
+      if (errs.length) { ROOMP.error = errs.map((x) => x.lineNum + ":" + x.linePos + " " + x.message).join("\n"); console.error("rooms shader: " + ROOMP.error); }
+    });
+    return ROOMP.mod;
+  }
+  function roomPipe(kind) {
+    if (ROOMP.ready[kind] || ROOMP.pending[kind] || ROOMP.failed[kind]) return ROOMP.ready[kind] || null;
+    const t0 = performance.now();
+    ROOMP.pending[kind] = device.createRenderPipelineAsync({
+      label: "room " + kind, layout: pl(scBGL), vertex: { module: roomModule(), entryPoint: "vs" },
+      fragment: { module: roomModule(), entryPoint: "roomScene", constants: { ROOM_K: kind }, targets: [{ format: F16 }] }, primitive: { topology: "triangle-list" },
+    }).then((p) => { ROOMP.ready[kind] = p; ROOMP.ms[kind] = Math.round(performance.now() - t0); },
+      (e) => { ROOMP.failed[kind] = (e && e.message) || String(e); console.error("room " + kind + " pipeline: " + ROOMP.failed[kind]); })
+      .finally(() => { delete ROOMP.pending[kind]; roomWarm(); });
+    return null;
+  }
+  // one build at a time, the room you are in (or going to) first, then the rest in ROOMS order
+  function roomWarm() {
+    if (Object.keys(ROOMP.pending).length) return;
+    const V = NAV.visit, next = V && V.to && V.to.room;
+    const k = [next, ...ROOMS.map((r) => r.kind)].find((x) => x && !ROOMP.ready[x] && !ROOMP.failed[x]);
+    if (k) roomPipe(k);
+  }
   // Titan physics (phys.wgsl): optional; without it the city runs as before
   let PHYS = null;
   try {
@@ -1268,7 +1303,9 @@ async function init() {
     PHYS = { step, draw, phBGL, pdBGL, n: 2048 };
     GPUREF.phys = PHYS; GPUREF.device = device;
   } catch (e) { console.warn("physics off:", e && e.message); }
-  globalThis.__driftGPU = { gpuInfo, lite: PL.lite };
+  globalThis.__driftGPU = { gpuInfo, lite: PL.lite, ROOMP, roomPipe };
+  // start on the rooms once the city has drawn a few seconds; a venue you walk into sooner is built first
+  setTimeout(roomWarm, 4000);
   HEADS.device = device; // the talking heads draw on the city's device (heads.js), not a second one
 
   const TU = GPUTextureUsage;
@@ -1674,7 +1711,10 @@ async function init() {
       const c = enc.beginComputePass({ timestampWrites: tsw(9, measure) });
       c.setPipeline(PHYS.step); c.setBindGroup(0, PHYS.bg); c.dispatchWorkgroups(PHYS.n / 64); c.end(); ran[9] = 1;
     }
-    if (!inSpace) rpass(enc, pScene, T.sc[smActive], T.scene.createView(), 3, measure);
+    if (!inSpace) {
+      const rk = EVN[210];
+      rpass(enc, (rk && roomPipe(rk)) || pScene, T.sc[smActive], T.scene.createView(), 3, measure);
+    }
     if (NAV.spaceMix > 0.001) {
       const p = enc.beginRenderPass({ colorAttachments: [{ view: T.scene.createView(), loadOp: inSpace ? "clear" : "load", storeOp: "store", clearValue: { r: 0, g: 0, b: 0, a: 1 } }] });
       p.setPipeline(pSpace); p.setBindGroup(0, spaceBG); p.draw(3); p.end();

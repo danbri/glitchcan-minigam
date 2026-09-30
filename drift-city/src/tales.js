@@ -12,10 +12,10 @@ function streetName(k) { return STREET_A[Math.floor(hsh(k, 3, 901) * STREET_A.le
 // Room axes: x forward along the place's heading, z to the right, y up from the floor; the camera starts at x = 0.
 // x0..x1 and hw (half width) are the walls, for walking and for placing the story's things; scene.wgsl must match.
 const ROOMS = [
-  { id: "cold_tap", kind: 1, base: "street_1", x0: -1.3, x1: 8.8, hw: 3.0, name: "The Cold Tap, Ferry Street", blurb: "A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome." },
-  { id: "low_orbit_bar", kind: 2, base: "street_5", x0: -1.3, x1: 19.6, hw: 4.3, name: "The Low Orbit, by the spaceport", blurb: "A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling." },
-  { id: "lantern_cellar", kind: 3, base: "street_3", x0: -1.3, x1: 13.2, hw: 4.8, name: "The Lantern Cellar, Chinatown", blurb: "Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops." },
-  { id: "warmhouse_club", kind: 4, base: "warmhouse", x0: -2.8, x1: 26.5, hw: 14.5, round: [12, 15.2], name: "The Warmhouse club", blurb: "The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side." },
+  { id: "cold_tap", kind: 1, wgsl: "coldtap", map: "rmColdTap", base: "street_1", x0: -1.3, x1: 8.8, hw: 3.0, name: "The Cold Tap, Ferry Street", blurb: "A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome." },
+  { id: "low_orbit_bar", kind: 2, wgsl: "loworbit", map: "rmLowOrbit", base: "street_5", x0: -1.3, x1: 19.6, hw: 4.3, name: "The Low Orbit, by the spaceport", blurb: "A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling." },
+  { id: "lantern_cellar", kind: 3, wgsl: "cellar", map: "rmCellar", base: "street_3", x0: -1.3, x1: 13.2, hw: 4.8, name: "The Lantern Cellar, Chinatown", blurb: "Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops." },
+  { id: "warmhouse_club", kind: 4, wgsl: "club", map: "rmClub", base: "warmhouse", x0: -2.8, x1: 26.5, hw: 14.5, round: [12, 15.2], name: "The Warmhouse club", blurb: "The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side." },
 ];
 // the room you are in now (a room place, arrived or nearly), or null
 function roomNow() { const V = NAV.visit; return NAV.mode === "visit" && V && V.to && V.to.room && V.t >= V.T * 0.92 ? V.to : null; }
