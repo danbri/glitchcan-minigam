@@ -1111,6 +1111,10 @@ body.fink-wm-dragging iframe { pointer-events: none; }
     border-right: 1px solid var(--sk-line, #2b3d5c);
     border-radius: 0 0 8px 8px;
 }
+/* In split the grip (36px, with ⇅ Swap in its middle) runs along the top of the game pane: the label goes under
+   it. At the top, on a phone, it covered Swap (owner, September 2026: "A drift city tab on the subwindow obscures
+   the draggable swap switch ui"). Swapped, the grip is at the bottom and the label can stay at the top. */
+#minigame-view.state-split:not(.wm-swapped) > .wm-pane-label { top: 38px; border-radius: 8px; border-top: 1px solid var(--sk-line, #2b3d5c); }
 
 
 
@@ -1127,3 +1131,15 @@ body.fink-wm-dragging iframe { pointer-events: none; }
 @media (prefers-reduced-motion: no-preference) {
     #minigame-view { transition: outline-color 160ms ease-out; }
 }
+
+/* No game: the ☰ is still the one menu (owner, September 2026: menus "all in one place"), bottom right where the
+   ⊞ dock was, with only foafos's own rows. */
+#wm-chrome.wm-shell-only { z-index: 2650; top: auto !important; left: auto !important; right: 12px !important;
+  bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+#wm-chrome.wm-shell-only #wm-win-sect, #wm-chrome.wm-shell-only #wm-pad-sect, #wm-chrome.wm-shell-only #wm-app-sect,
+#wm-chrome.wm-shell-only #wm-exit-sect, #wm-chrome.wm-shell-only #wm-target, #wm-chrome.wm-shell-only #wm-status { display: none !important; }
+#foafos-dock { display: none !important; }
+/* new activity while the Activity window is closed */
+#wm-unread { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: #e0569a; color: #fff; font: 700 11px/18px system-ui, sans-serif; text-align: center; pointer-events: none; }
+#wm-unread[hidden] { display: none; }

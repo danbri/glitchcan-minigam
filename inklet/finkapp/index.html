@@ -65,12 +65,13 @@
          ARIA menu: every row is an ordinary button, reachable by Tab. -->
     <div id="wm-chrome" class="wm-hidden collapsed" role="group" aria-label="Game window">
         <button type="button" id="wm-handle" aria-label="Window menu" aria-expanded="false" aria-controls="wm-buttons">☰</button>
+        <span id="wm-unread" aria-hidden="true" hidden></span>
         <div id="wm-buttons" role="group" aria-label="Window menu">
             <!-- Which pane does this menu act on? In split there are two;
                  the title names it, and the pane it governs gets an edge. -->
             <span id="wm-target" aria-hidden="true"></span>
             <span id="wm-status" role="status" hidden></span>
-            <div class="wm-sect" role="group" aria-label="Window">
+            <div class="wm-sect" id="wm-win-sect" role="group" aria-label="Window">
                 <button type="button" id="wm-full" aria-pressed="false"><span class="wm-ico" aria-hidden="true">▣</span><span class="wm-label">Full screen</span></button>
                 <button type="button" id="wm-split" aria-pressed="false"><span class="wm-ico" aria-hidden="true">◫</span><span class="wm-label">Split with story</span></button>
                 <button type="button" id="wm-pip" aria-pressed="false"><span class="wm-ico" aria-hidden="true">◰</span><span class="wm-label">Picture-in-picture</span></button>
@@ -87,9 +88,11 @@
                 <button type="button" id="wm-sys-tasks"><span class="wm-ico" aria-hidden="true">⧉</span><span class="wm-label">Task Manager</span></button>
                 <button type="button" id="wm-sys-windows"><span class="wm-ico" aria-hidden="true">▭</span><span class="wm-label">All windows</span></button>
                 <button type="button" id="wm-sys-activity"><span class="wm-ico" aria-hidden="true">💬</span><span class="wm-label">Activity: who said what</span></button>
-                <button type="button" id="wm-sys-shell"><span class="wm-ico" aria-hidden="true">⚙</span><span class="wm-label">Sound, look and session</span></button>
             </div>
-            <div class="wm-sect">
+            <!-- What the old side drawer held (sound, look, widgets, session): pages of this menu (fink-wm.js
+                 _renderShellSection), so there is one menu (owner, September 2026) -->
+            <div class="wm-sect" id="wm-shell-sect" role="group" aria-label="foafos settings"></div>
+            <div class="wm-sect" id="wm-exit-sect">
                 <button type="button" id="returnToStory"><span class="wm-ico" aria-hidden="true">✕</span><span class="wm-label">Exit the game</span></button>
             </div>
         </div>

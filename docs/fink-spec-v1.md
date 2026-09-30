@@ -964,6 +964,17 @@ Not done yet: window apps (office, players) have no actions; the menu does
 not tell the app that it opened (Drift's own menu paused a guided tour
 while open); the pad's "B" still sends Escape to the app.
 
+
+**One menu (September 2026).** The ☰ is the one menu, with or without a
+game. With no game it sits bottom right (where the ⊞ dock was) and shows only
+foafos's own rows (`wm-shell-only`). What the side drawer held is pages of it:
+Sound (mute, volume), Look (the skins), Widgets, and Session and capabilities
+(a window). The dock is not shown; the drawer stays as an API
+(`FoafOS.openDrawer`) for its feed and shelf. Owner: the drawer was a "super
+ugly archaic side menu which should be assimilated into the one true menu
+system". Next, the owner's direction: a radial menu with a top-level fork
+between foafos and the running cluster of apps, stories, minigames and
+documents (a "project").
 ### 5.10 The activity stream and the app's readout — normative
 
 Owner, September 2026: talking heads were "icons within world view.
@@ -991,14 +1002,16 @@ most 6). Published retained as `app.<id>.status` (the menubar reads it)
 and shown under the title of the window menu (§5.9).
 
 
-**The Activity window (September 2026).** The stream has a window the shell
-manages: the `activity` panel app (`foafos-apps.js`), opened from the window
-menu ("Activity: who said what") or by a tap on an item. It holds the live
-card of a speaking face and the history (a `foafos-feed` on `activity.*`,
-which replays). While it is open, new items go into it and nothing is drawn
-over the app's pane; without it, the newest one or two show over the pane for
-a few seconds as a notice. Owner: the items "only render within monolithic
-World pane, not managed in foafos".
+**The Activity window (September 2026).** Nothing is drawn over an app's
+pane. The stream lives in a window the shell manages: the `activity` panel
+app (`foafos-apps.js`), opened from the window menu ("Activity: who said
+what"). A face that starts to speak opens it as a short strip across the top
+(`makeWindow(..., { float: true })`: it does not maximize on a phone), unless
+the reader has closed it; then new items are counted on the ☰ instead. It
+holds the live card and the history (a `foafos-feed` on `activity.*`, which
+replays). Owner: the items "only render within monolithic World pane, not
+managed in foafos"; the talking heads were "an activity bar shown in main
+world view not separately in foafos".
 ### 5.11 The selection — normative
 
 Owner, September 2026: "an object picker so clicking in the world gives

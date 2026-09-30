@@ -373,6 +373,16 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   plain `python3 -m http.server` does NOT — local harnesses need a
   CORS-enabled server.
 
+## One menu (September 2026)
+
+The ☰ window menu is the only menu: the ⊞ dock is hidden and the side drawer is not reachable from the screen.
+With no game the ☰ stays (`#wm-chrome.wm-shell-only`, bottom right, z-index 2650 so it is above shell windows;
+at 2600 the story window's frame covered it). Its foafos pages (`FinkWM._shellPages`) drive the drawer's own
+controls (mute, volume, skin buttons, widget launchers), so each setting keeps one implementation. The Activity
+window replaces the notices over the app pane; it opens itself as a floating strip for a speaking face (a phone
+maximizes every other shell window). Tests that clicked the dock or `#wm-sys-shell` now use `FoafOS.openDrawer`
+or the ☰ pages. Spec §5.9, §5.10.
+
 ## Window manager (FinkWM)
 
 **September 2026: activity stream, readout and selection** (spec §5.10,
