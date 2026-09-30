@@ -48,7 +48,7 @@ function pickAt(px, py) {
   }
   // the Warmhouse bubble: a sphere in the air, so test it like a skyboat
   {
-    const c = bubbleAt(clock), oc = [o[0] - c[0], o[1] - c[1], o[2] - c[2]];
+    const c = bubbleAt(wclock), oc = [o[0] - c[0], o[1] - c[1], o[2] - c[2]];
     const b = dot3(oc, d), h = b * b - (dot3(oc, oc) - BUB_R * BUB_R);
     const tb = h > 0 ? (-b - Math.sqrt(h) > 0 ? -b - Math.sqrt(h) : -b + Math.sqrt(h)) : -1;
     if (tb > 0 && tb < bt) {
@@ -77,7 +77,7 @@ function pickAt(px, py) {
   if (!cell.wild && cell.h > 6 && (cell.typ === 1 || cell.typ === 2 || cell.typ === 3 || cell.typ === 8 || cell.typ === 13)) {
     const zone = ZONE_NAMES[cell.zone];
     const what = cell.h > 90 ? "A tower" : cell.h > 40 ? "A block" : "A building";
-    return { name: what + " on " + street + ", " + zone, x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz, y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "" };
+    return { name: what + " on " + street + ", " + zone, x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz, y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "", building: [cx, cz] };
   }
   const place = cell.wild ? placeNameAt(hit[0], hit[2]) : street + ", " + ZONE_NAMES[cell.zone];
   return { name: place, x: hit[0], z: hit[2], y0: Math.max(terrSurfAt(hit[0], hit[2]), 0), r: 25, h: 8, blurb: "" };
@@ -162,6 +162,8 @@ function pickGo(px, py, now) {
   if (S.y0 === undefined) S.y0 = 0;
   // in foafos the shell shows the pick with its actions (spec §5.11); the page marks it in the view
   if (hostOn() && !now) { pickRing(px, py, S.name); hostSelect(S); return; }
+  // the city paused: a tap selects (the highlight, and rings on the things next to it)
+  if (CITYP.on && !now) { pickRing(px, py, S.name); pickMarkSet(S); return; }
   // the simpler (WebGL) city has no visits: name it, but stay
   if (!GPUREF.device) { pickRing(px, py, S.name); return; }
   if (now) { if (S.walk && now === "walk") visitWalkTo(V, S.x, S.z); else pickLaunch(S); return; }
@@ -182,7 +184,7 @@ function pickPerson(px, py, before) {
   if (!(t > 0) || t > 260 || t > before + 6) return null;
   const x = o[0] + d[0] * t, z = o[2] + d[2] * t;
   let best = null, bd = 2.5;
-  for (const w of walkersNear(x, z, 14, clock)) { const dd = Math.hypot(w.x - x, w.z - z); if (dd < bd) { bd = dd; best = w; } }
+  for (const w of walkersNear(x, z, 14, wclock)) { const dd = Math.hypot(w.x - x, w.z - z); if (dd < bd) { bd = dd; best = w; } }
   if (!best) return null;
   return { name: PERSON_KINDS[best.kind] || "Someone", x: best.x, z: best.z, y0: 0, r: 4, h: 2.2, person: best,
     blurb: "One of the people on the street, on their way somewhere." };
@@ -206,7 +208,9 @@ function pickEntity(S) {
 function pickMarkFrame() {
   const S = PICK.sel, m = PICK.mark;
   if (!S || !m) return;
-  if (S.person) { const w = walkerAt(S.person.cx, S.person.cz, S.person.ln, S.person.ki, clock, S.person.dens); if (w) { S.x = w.x; S.z = w.z; } }
+  if (S.person) { const w = walkerAt(S.person.cx, S.person.cz, S.person.ln, S.person.ki, wclock, S.person.dens); if (w) { S.x = w.x; S.z = w.z; } }
+  // the GPU city draws a building or a person itself (scene.wgsl `selIs`, `selHalo`): no ring
+  if (GPUREF.device && (S.person || S.building)) { m.hidden = true; return; }
   const c = CAMNOW, v = [S.x - c.p[0], (S.y0 || 0) + (S.h || 0) * 0.5 - c.p[1], S.z - c.p[2]];
   const zf = dot3(v, c.f);
   if (zf <= 0.5) { m.hidden = true; return; }
@@ -219,6 +223,7 @@ function pickMarkFrame() {
 }
 function pickMarkSet(S) {
   PICK.sel = S;
+  pickNearSet();
   if (!PICK.mark && document.body && document.body.appendChild) {
     const m = document.createElement("div"); m.className = "pickMark"; m.setAttribute("aria-hidden", "true"); m.hidden = true;
     document.body.appendChild(m); PICK.mark = m;
@@ -293,4 +298,82 @@ function pickInit(canvas) {
   canvas.addEventListener("pointermove", (e) => { if (PICK.timer && Math.hypot(e.clientX - PICK.x, e.clientY - PICK.y) > 10) cancel(); });
   canvas.addEventListener("pointerup", cancel);
   canvas.addEventListener("pointercancel", cancel);
+}
+
+// ---------- the city's own pause, and the selection as the shader draws it ----------
+// Owner, September 2026: an in-game pause at the top of the main menu, "different to foafos pause which stops
+// music/audio and everything": the world stops (wclock, main.js), and while it is stopped the picker shows more.
+// The selected building or person is drawn by the shader (scene.wgsl, `selIs`, `selGlow`, `selHalo`): "strong, thick glowing edge +
+// shimmer and jelly", and a person or exo "throbs bigger". Its neighbours get rings to tap (pickNearFrame), and the
+// street grid glows green.
+function cityPause(on) {
+  CITYP.on = on; CITYP.t0 = clock;
+  if (on) showHint("The city is paused. Tap a building or a person to select it; the rings mark what is next to it.", 5000);
+  pickNearSet();
+}
+// the selection for the GPU: EVN[216..223] (ev.sel, ev.sel2 in scene.wgsl)
+//   sel: cell x, cell z, kind (0 none, 1 building, 2 person), person key; sel2: top (person: z), real time,
+//   paused, person x
+function pickSelGPU() {
+  const S = PICK.sel;
+  let k = 0, cx = 0, cz = 0, key = 0, top = 0;
+  let px = 0;
+  // cells as the view has them (not wrapped): the shader hashes people by the same unwrapped cell
+  if (S && S.person) { k = 2; cx = S.person.cx; cz = S.person.cz; key = S.person.key; top = S.z; px = S.x; }
+  else if (S && S.building) { k = 1; cx = S.building[0]; cz = S.building[1]; top = S.h || 0; }
+  EVN.set([cx, cz, k, key, top, clock, CITYP.on ? 1 : 0, px], 216);
+  return k;
+}
+// the things next to the selection, while the city is paused: the buildings in the eight cells round it and the
+// people within 12 m, each with a ring to tap; a tap makes it the selection, and then its neighbours get rings
+function pickNearSet() {
+  const L = PICK.near || (PICK.near = []);
+  for (const e of L) e.el.remove();
+  L.length = 0;
+  const S = PICK.sel;
+  if (!CITYP.on || !S || !document.body || !document.createElement) return;
+  const cand = [];
+  const cx0 = Math.floor(S.x / C), cz0 = Math.floor(S.z / C);
+  for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+    const cx = cx0 + dx, cz = cz0 + dz, cell = cellAt(cx, cz);
+    if (cell.wild || !(cell.h > 6) || !(cell.typ === 1 || cell.typ === 2 || cell.typ === 3 || cell.typ === 8 || cell.typ === 13)) continue;
+    const T = { name: (cell.h > 90 ? "A tower" : cell.h > 40 ? "A block" : "A building") + " on " + streetName(cx * 131 + cz * 7) + ", " + ZONE_NAMES[cell.zone],
+      x: (cx + 0.5) * C + cell.offx, z: (cz + 0.5) * C + cell.offz, y0: 0, r: Math.max(cell.wx, cell.wz) * 1.2, h: cell.top || cell.h, blurb: "", building: [cx, cz] };
+    if (S.building && S.building[0] === T.building[0] && S.building[1] === T.building[1]) continue;
+    cand.push(T);
+  }
+  for (const w of walkersNear(S.x, S.z, 12, wclock)) {
+    if (S.person && S.person.id === w.id) continue;
+    cand.push({ name: PERSON_KINDS[w.kind] || "Someone", x: w.x, z: w.z, y0: 0, r: 4, h: 2.2, person: w, blurb: "One of the people on the street, on their way somewhere." });
+  }
+  for (const T of cand.slice(0, 14)) {
+    const el = document.createElement("button");
+    el.className = "pickNear"; el.type = "button"; el.hidden = true;
+    el.setAttribute("aria-label", "Select: " + T.name);
+    el.addEventListener("click", (ev) => { ev.stopPropagation(); pickSelect(T); });
+    document.body.appendChild(el);
+    L.push({ T, el });
+  }
+}
+// make T the selection, as a tap on it would
+function pickSelect(T) {
+  const S = { ...T };
+  if (hostOn()) hostSelect(S); else pickMarkSet(S);
+}
+function pickNearFrame() {
+  const L = PICK.near;
+  if (!L || !L.length) return;
+  const c = CAMNOW, H = innerHeight, W = innerWidth;
+  for (const { T, el } of L) {
+    const v = [T.x - c.p[0], (T.y0 || 0) + (T.person ? 1.1 : Math.min(T.h || 0, 60) * 0.5) - c.p[1], T.z - c.p[2]];
+    const zf = dot3(v, c.f);
+    if (zf <= 0.5) { el.hidden = true; continue; }
+    const ux = dot3(v, c.r) / zf / 0.72, uy = dot3(v, c.up) / zf / 0.72;
+    const x = (ux * H + W) / 2, y = (H - uy * H) / 2;
+    if (x < -40 || x > W + 40 || y < -40 || y > H + 40) { el.hidden = true; continue; }
+    el.hidden = false;
+    el.style.left = x + "px"; el.style.top = y + "px";
+    const px = Math.max(30, Math.min(110, (T.r || 10) / zf / 0.72 * H * 0.7));
+    el.style.width = el.style.height = px + "px";
+  }
 }

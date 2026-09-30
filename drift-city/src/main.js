@@ -42,6 +42,10 @@ const keys = new Set();
 let lastInput = -100;
 const pointer = { down: false, x: 0, y: 0, sx: 0, sy: 0, hoverX: 0, hoverY: 0, hoverT: -100, type: "mouse" };
 let clock = 0;
+// the world's clock: people, traffic, water, Life, weather and the shader's time. "Pause the city" (CITYP, the
+// menu's first row) stops it; `clock` goes on for the view, the menus and the sound
+let wclock = 0;
+const CITYP = { on: false, t0: 0 };
 function angDiff(a, b) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
 function giantAheadOnLine(fx, fz) {
   const bx0 = Math.floor(st.x / BIG), bz0 = Math.floor(st.z / BIG);
@@ -71,7 +75,7 @@ function statusParts(autoOn) {
   if (NAV.mode === "trip") { const a = len3(NAV.cam.P) - TR; return [NAV.tour ? "Grand tour" : "Autopilot", "To " + NAV.trip.dest.name, fmtAlt(a)]; }
   if (NAV.mode === "free") { const a = len3(NAV.free.P) - TR; return ["Flying by hand", regionAt(norm3(NAV.free.P)).name, fmtAlt(a)]; }
   if (NAV.mode === "space") { const k = NAV.space.kind; return [clock - lastInput > 4.5 ? "Drifting" : "Steering by hand", spaceName(), k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn"]; }
-  const lead = NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
+  const lead = CITYP.on ? "City paused" : NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
   // in the city, a place name you could give someone, not the drone's state
   if (!NAV.tour) return [autoOn ? "" : "By hand", placeLabel()];
   return [lead, placeLabel()];
@@ -264,8 +268,10 @@ function audioWorld(dt) {
 // maths), so their sounds come from the figures you see. Each: world x, z, kind, gait phase, key.
 const GAIT_S = [0.3, 0.13, 0.28], GAIT_SF = [0.56, 0.6, 0.4];
 // one walker (cell cx, cz; lane ln; slot ki) at time t, or null if that slot is empty
+// the slots on a ring, counted in 32-bit floats as the shader counts them (why: the drift-city skill, walkers)
+function ringSlots(R) { const f = Math.fround; return Math.floor(f(f(8 * f(R)) / f(4.4))); }
 function walkerAt(cx, cz, ln, ki, t, dens) {
-  const R = ln ? 10.45 : 9.95, dir = ln ? -1 : 1, per = 8 * R, n = Math.floor(per / 4.4), spacing = per / n, key = ki * 2 + ln;
+  const R = ln ? 10.45 : 9.95, dir = ln ? -1 : 1, per = 8 * R, n = ringSlots(R), spacing = per / n, key = ki * 2 + ln;
   if (hsh(cx * 31 + key, cz, 95) >= dens) return null;
   const pulley = hsh(cx * 11 + ln, cz * 5, 183) < 0.22;
   const pace = (0.5 + 1.1 * hsh(cx * 5 + ln, cz * 3, 180)) * (pulley ? 2.6 : 1);
@@ -290,7 +296,7 @@ function walkersNear(x0, z0, rad, t) {
     if (!(ty <= 3 || ty === 8 || ty === 9 || ty === 10 || ty === 11 || ty === 13)) continue;
     const dens = 0.16 + 0.45 * ((o.fl >> 10) & 1) + (o.fl & 16 ? 0.3 : 0);
     for (let ln = 0; ln < 2; ln++) {
-      const n = Math.floor(8 * (ln ? 10.45 : 9.95) / 4.4);
+      const n = ringSlots(ln ? 10.45 : 9.95);
       for (let ki = 0; ki < n; ki++) {
         const w = walkerAt(cx, cz, ln, ki, t, dens);
         if (w && Math.hypot(w.x - x0, w.z - z0) <= rad) out.push(w);
@@ -306,12 +312,12 @@ function audioFeet(dt) {
   if (NAV.spaceMix > 0.5 || AUW.alt > 120) { FEET.list = []; return; }
   const l = AU.ready ? AU.lpos : [st.x, st.y, st.z], play = AU.ready && AU.on;
   FEET.t -= dt;
-  if (FEET.t <= 0) { FEET.t = 0.25; FEET.list = walkersNear(l[0], l[2], 30, clock).sort((a, b) => Math.hypot(a.x - l[0], a.z - l[2]) - Math.hypot(b.x - l[0], b.z - l[2])).slice(0, 16); }
+  if (FEET.t <= 0) { FEET.t = 0.25; FEET.list = walkersNear(l[0], l[2], 30, wclock).sort((a, b) => Math.hypot(a.x - l[0], a.z - l[2]) - Math.hypot(b.x - l[0], b.z - l[2])).slice(0, 16); }
   const seen = new Map();
   let made = 0;
   for (const w0 of FEET.list) {
     // re-place each walker now: they move between the lists' updates
-    const w = walkerAt(w0.cx, w0.cz, w0.ln, w0.ki, clock, w0.dens) || w0;
+    const w = walkerAt(w0.cx, w0.cz, w0.ln, w0.ki, wclock, w0.dens) || w0;
     const step = w.kind === 3 ? Math.floor(w.ph / (4 * Math.PI)) : Math.floor(w.ph / Math.PI);
     const prev = FEET.last.get(w.id);
     seen.set(w.id, step);
@@ -589,7 +595,8 @@ function update(dt) {
   const ux = clampv(kx + sx, -1, 1);
   const uy = clampv(ky - sy, -1, 1);
   if (kx !== 0 || ky !== 0 || pointer.down || PAD.ly !== 0 || PAD.rx !== 0 || PAD.ry !== 0) lastInput = clock;
-  const auto = sstep(1.5, 4.5, clock - lastInput);
+  // the city paused: no autopilot, so the view stays on what is being picked (steering by hand still works)
+  const auto = CITYP.on ? 0 : sstep(1.5, 4.5, clock - lastInput);
   if (auto < 0.3) st.realign = true;
 
   st.modeT -= dt;
@@ -786,7 +793,7 @@ function halton(i, b) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % 
 
 const SN = 1024, STS = 0.8, AIR_Y = 96;
 // Per-frame events for the shader: searchlight beams from the nearest air taxis, smoke plumes, the holographic koi.
-const EVN = new Float32Array(216);
+const EVN = new Float32Array(224);
 const CHASE_Y = 64;
 const WX = { rain: 0, wet: 0 };
 let boState = null;
@@ -857,7 +864,7 @@ function computeEvents(tod, dt) {
   EVN.set([bp[0], bp[1], bp[2], 32], 56);
   EVN.set([-Math.sin(ba), 0, Math.cos(ba), 1], 60);
   // skyboats on fixed routes: one line of [x, y, z, half-length] at 144, one of [heading, kind] at 176
-  skyboats(clock);
+  skyboats(wclock);
   // district blackout every few minutes near the camera
   const bcy = 150, bk = Math.floor(clock / bcy), bt = clock - bk * bcy;
   if (bt >= 50 && bt <= 78 && hsh(bk, 3, 160) < 0.75) {
@@ -1230,6 +1237,7 @@ async function init() {
   try { PL = await buildAll(forceLite); }
   catch (e1) {
     if (forceLite || e1.compile) { startFallback("This device's graphics driver could not build the city's shaders", describe(e1)); return; }
+    console.warn("The full pipelines failed; trying the lighter ones. " + describe(e1));
     try { PL = await buildAll(true); }
     catch (e2) { startFallback("This device's graphics driver could not build the city's shaders", describe(e2) + "\n(The full version failed first: " + describe(e1) + ")"); return; }
   }
@@ -1268,7 +1276,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 864 + 1280, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 896 + 1280, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     PHYS.ubuf = device.createBuffer({ size: 224, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -1490,7 +1498,7 @@ async function init() {
     }
     // the world's clock runs in every mode: story scenes, trips, space and free flight included
     // a long-press flight runs the city's clock fast (pick.js)
-    clock += dtS * pickWarp();
+    { const warp = pickWarp(); clock += dtS * warp; if (!CITYP.on) wclock += dtS * warp; }
     if (!INTRO.started && frameNo > 4) { INTRO.started = true; if (worldOn()) worldStart(); else if (!globalThis.__noIntro) gateShow(); }
     if (INTRO.on) introCaptions();
     const modeWas = NAV.mode;
@@ -1542,7 +1550,7 @@ async function init() {
       if (smaps[smPending].done) { smActive = smPending; smPending = -1; }
     }
     const j = Math.floor(frameNo / 2) % 16 + 1;
-    U[0] = T.w; U[1] = T.h; U[2] = clock; U[3] = scale > 0.42 ? 1 : 0;
+    U[0] = T.w; U[1] = T.h; U[2] = wclock; U[3] = scale > 0.42 ? 1 : 0;
     if (inSpace) { U[4] = 0; U[5] = 0; U[6] = 0; }
     else if (FOLLOW && NAV.spaceMix < 0.01) {
       // follow the drone: a little behind and above it, looking just past it
@@ -1568,7 +1576,7 @@ async function init() {
     U[40] = halton(j, 2) - 0.5; U[41] = halton(j, 3) - 0.5; U[42] = canvas.width; U[43] = canvas.height;
     const pv = prev || { pos: [U[4], U[5], U[6]], f: cam.f, r: cam.r, up: cam.up };
     U.set(pv.pos, 44); U.set(pv.f, 48); U.set(pv.r, 52); U.set(pv.up, 56);
-    updateWeather(dt);
+    updateWeather(CITYP.on ? 0 : dt);
     U[47] = wind.cx; U[51] = wind.cz; U[55] = inSpace || roomNow() ? 0 : WX.rain; U[59] = WX.wet;
     U.set([REG.ox, REG.oz, roomNow() ? 1 : 0, REG.city, REG.cx, REG.cz, 0, 0], 60); // reg.z: in a venue's room (post.wgsl)
     // the lens: on the story's scene when there is one in view, otherwise (0) on the centre of the view
@@ -1586,7 +1594,7 @@ async function init() {
     U[66] = FOCUS.d; U[67] = FOCUS.s;
     device.queue.writeBuffer(ubuf, 0, U);
     if (!inSpace) device.queue.writeBuffer(propBuf, 0, worldProps());
-    if (!inSpace) { stepFlock(dtS); if (!FLOCKS_ON) FLOCK_DATA[0] = 0; device.queue.writeBuffer(flockBuf, 0, FLOCK_DATA); }
+    if (!inSpace) { stepFlock(CITYP.on ? 0 : dtS); if (!FLOCKS_ON) FLOCK_DATA[0] = 0; device.queue.writeBuffer(flockBuf, 0, FLOCK_DATA); }
     if (NAV.spaceMix > 0.001 && NAV.cam) {
       if (!NAV.sunT) NAV.sunT = sunTitanFromLocal(tod.sun);
       // near Titan the light keeps the goggles' warm grade; out among the moons it is plain sunlight
@@ -1597,11 +1605,12 @@ async function init() {
     computeEvents(tod, dt);
     computeExtras(tod, dt);
     EVN[208] = WX.cover || 0; // settled snow (after computeEvents clears the array)
-    EVN[209] = morseKey(clock); // the masts' Morse (morse.js)
+    EVN[209] = morseKey(wclock); // the masts' Morse (morse.js)
     { const r = roomNow(); EVN[210] = r ? r.room : 0; if (r) EVN.set([r.x, r.y - 1.7, r.z, r.yaw], 212); // a venue's room (tales.js)
       EVN[211] = r ? (globalThis.__bandForce !== undefined ? globalThis.__bandForce : venueBand(r.room, clock)) : -1; } // __bandForce: a test hook // the band's beat for the room's lights and people (venue.js)
+    pickSelGPU();
     device.queue.writeBuffer(evBuf, 0, EVN);
-    { const lg = lifeUpdate(dtS); if (lg) device.queue.writeBuffer(evBuf, 864, lg); }
+    { const lg = lifeUpdate(CITYP.on ? 0 : dtS); if (lg) device.queue.writeBuffer(evBuf, 896, lg); }
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);
     const measure = hasTS && !qBusy && frameNo % 6 === 0;
     ran.fill(0);
@@ -1645,7 +1654,7 @@ async function init() {
       PHYS.u.set([dr[0], dr[1], dr[2], dr[3],
         wind.x * 0.6, 0, wind.z * 0.6, wind.gust,
         U[4], U[6], 38, WX.cover || 0,
-        Math.min(dt, 1 / 30), 2, PHYS.n, WX.rain || 0]);
+        CITYP.on ? 0 : Math.min(dt, 1 / 30), 2, PHYS.n, WX.rain || 0]);
       // the drone's body (behind the view when it follows the drone; at the camera otherwise), and its velocity
       const bodyR = NAV.mode === "space" || NAV.mode === "free" ? 0 : 0.42;
       const bv = PHYS.lastBody ? [(st.x - PHYS.lastBody[0]) / Math.max(dt, 1e-3), (st.y - PHYS.lastBody[1]) / Math.max(dt, 1e-3), (st.z - PHYS.lastBody[2]) / Math.max(dt, 1e-3)] : [0, 0, 0];
@@ -1724,6 +1733,7 @@ async function init() {
       }
     }
     pickMarkFrame();                         // the selection ring follows its thing
+    pickNearFrame();                         // and the rings on its neighbours, while the city is paused
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -1848,7 +1858,7 @@ const release = (e) => {
   // a short tap: in foafos it picks what is under it (the page draws no controls of its own to show or hide there);
   // on its own page it shows or hides the controls
   if (pointer.down && e && e.type === "pointerup" && performance.now() - downAt < 300 && Math.hypot(pointer.x - pointer.sx, pointer.y - pointer.sy) < 10) {
-    if (hostOn()) pickGo(pointer.x, pointer.y, false); else setUiHidden(!uiHidden);
+    if (hostOn() || CITYP.on) pickGo(pointer.x, pointer.y, false); else setUiHidden(!uiHidden);
   }
   pointer.down = false;
 };
@@ -1880,7 +1890,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { CITYP, cityPause, pickSelect, pickSelGPU, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

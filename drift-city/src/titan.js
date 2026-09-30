@@ -652,7 +652,9 @@ function placePages(act, title) {
 // What is going on now, at the top of the menu: the tour's controls and "Explore from here" live here, not on the
 // screen over the view (owner, September 2026).
 function menuNow() {
-  const rows = [];
+  // first: the city's own pause (the world stops; the view, the menus and the sound go on; the picker shows
+  // neighbours and the street grid). Not the foafos pause, which stops the whole app
+  const rows = [{ label: "Pause the city", check: CITYP.on, act: () => { cityPause(!CITYP.on); renderMenu(); } }];
   if (GUIDE.on) {
     rows.push(GUIDE.paused ? { label: "Carry on with the tour", detail: guideWhere(), now: true, act: () => { closeGoPanel(); guideResume(); } }
       : { label: "Pause the tour", detail: guideWhere(), now: true, act: () => { GUIDE.menuPaused = false; closeGoPanel(); } });

@@ -98,6 +98,15 @@ about it (all in `pedHuman` / `pedFigure`, driven by the planted-foot gait above
   (`pow(w, 0.65)`), legs trailing and arms spread only in the air. Their footfall sound plays at each landing
   (`floor(ph / 4 pi)` in `audioFeet`). Known: at touchdown the cape stands up as a flat sheet behind the glider.
 
+**The page's walkers must count in 32-bit floats (September 2026).** `walkerAt` and `walkersNear` (main.js) redo
+pedQ's sums so a tap, a footstep or a selection finds the figure on screen. The outer ring has
+`floor(8 * 10.45 / 4.4)` slots: 18 in doubles (83.6 / 4.4 = 18.999999999999996) and 19 on the GPU in f32. So
+every walker on the outer ring was in the wrong place on the page: `pickPerson` selected someone else, or no one,
+and footsteps came from empty pavement. Found when a selected person's highlight box stood empty in a Dawn
+render (`WALKERS=1 PICKPERSON=1` in dawn-run.mjs prints where the page puts each person, to lay over the frame).
+`ringSlots()` counts with `Math.fround`. Any page copy of shader arithmetic that ends in a `floor` or a
+comparison needs the same care.
+
 ## Physics (`src/phys.wgsl`, September 2026)
 
 Everything else in the city is a pure function of the clock, which is why it looks scripted: nothing has state,
@@ -414,7 +423,7 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
 - Headless check: the runner's clock barely moves, so the board is uploaded only if a step happens. Set
   `D.LIFE.acc = 1` after changing the board (`D.lifeStamp`, `D.lifeStep` and `D.LIFE_PATTERNS` are on `__drift`).
   Use `CAM=-490,95,-229,-2.729,-0.02 CAMF=4` with `HOP=place:roof_0` to look at the tour's Life tower.
-- Uploaded packed 16 cells to a float at byte 848 of the event buffer (`ev.life`, read by `lifeAt`).
+- Uploaded packed 16 cells to a float at byte 896 of the event buffer (after the selection block; it was 864, and 848 before that) (`ev.life`, read by `lifeAt`).
 - Shown on the organic round towers (type 8, material 15, their own board: below) by `organicLife()`; on the
   stepped towers' flat faces (Conway Corner, below); and on two in five rounded modern towers (material 1, `v` 0.4
   to 0.72, still one row a 3.6 m floor and 64 columns round). Each of these turns its board by its own number of
@@ -426,7 +435,7 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
   showed a 24-column window of the shared board in square cells; the owner: "still doesn't feel iconically Life.
   Maybe just need more glider guns, perhaps wrapping around the curvy towers?" Now:
   - the organic towers read a second board, `LIFER` in life.js, 32 x 80 (`lifeAtR`, cell 2560 on in `ev.life`,
-    which grew to 80 vec4s; the event buffer to 864 + 1280 bytes). 32 columns go once round the tower: no seam;
+    which grew to 80 vec4s; the event buffer to 896 + 1280 bytes, after the selection block). 32 columns go once round the tower: no seam;
   - it always runs one glider gun at the top, turned on its side (Gosper, or Simkin three times in ten, either
     way round), so the gliders go down and round the tower in a helix. Only two of the four turns of each gun fire
     down the board; the other two fire into the dead top edge and wreck themselves (simulated, 1200 generations).
@@ -510,6 +519,49 @@ The WebGL fallback only names things (it has no visits). Test: `PICK=x,y PICKF=1
   level, so a high view dived; and street places stand inside the flight code's coarse building boxes (`heightAt`
   at a street place can read the roof height across the street), and the push-out moved the drone to the roof in a
   few frames. `st.soft` limits that push to 5 m/s for 15 s after the handover.
+
+## The city's pause and the selection highlight (`cityPause`, `pickSelGPU` in pick.js; `selIs` in scene.wgsl)
+
+Owner, September 2026: an in-game pause "at top of main menu (different to foafos pause which stops
+music/audio and everything including stuff we want to do while paused)"; in it the picked thing is highlighted and
+its neighbours can be tapped; highlights chosen: "Strong, thick Glowing edge + shimmer and Jelly … throb bigger for
+humanoids/exos".
+
+- **Two clocks.** `clock` is the page's: the view, the menus, UI timers, the sound. `wclock` (main.js) is the
+  world's: the shader's `u.time`, the walkers (`walkerAt`, `walkersNear`: they must use the same time as the
+  shader or a pick misses the figure), skyboats, the Warmhouse bubble, the Morse masts, Life, the flock, the
+  weather and the physics step all run on it or get dt 0. "Pause the city" (`CITYP.on`, the first row of the
+  menu) stops `wclock` only. Not yet frozen: fireworks, meteors and launches (they time themselves on `clock`).
+- **Selecting while paused.** A short tap selects (it hides the UI otherwise). In foafos it was already a
+  selection (spec §5.11). The things next to the selection (the buildings in the eight cells round it, people
+  within 12 m, 14 at most) get dashed green rings, `.pickNear` buttons with an aria-label "Select: …"; a tap on one
+  makes it the selection and moves the rings to its neighbours. e2e-drift 20d.
+- **The highlight is drawn by the shader**, for a building (its plot, 9.7 m round the cell centre, from 0.4 m up)
+  or a person; other picks keep the DOM ring. pick.js `pickSelGPU` writes `ev.sel`/`ev.sel2` each frame (EVN
+  216-223; the event block grew to 224 floats and the Life boards moved to byte 896). Cells are the view's,
+  UNWRAPPED: the shader hashes people by the unwrapped cell, so a wrapped one matched nobody.
+  - `selIs`: does this hit belong to the selection. For a person it is a distance test against the position
+    pick.js sends, NOT `pedQ` again (see the next point);
+  - `selGlow`: rim, bands of light running up it, sparks; `selHalo`: the thick edge OUTSIDE the outline, from
+    how near the ray passes the selection's box, its width proportional to distance so it is as thick on screen far
+    away as near;
+  - jelly: the selection's colour at 60%, and the loop's second pass goes on from where the ray leaves the box
+    (`boxExit`), tinted, instead of a reflection;
+  - throb: `pedQ` scales the selected figure 1.0 to 1.24 from the feet, once a second, from `gSelP`, a private
+    copy of the selection that only the scene pass sets. The shadow pipeline also runs `pedQ` and has no event
+    buffer bound: reading `ev` in `pedQ` made the full pipelines fail ("Binding doesn't exist … @binding(11)"),
+    and the page fell back to lite without a word. main.js now logs why the full pipelines failed.
+- **Build time: measure it cold, and keep one call site per big function.** Mesa keeps a shader cache on disk
+  (`~/.cache/mesa_shader_cache`), so a Dawn run of an unchanged shader starts in seconds and a changed one
+  builds everything from nothing: several minutes, and more than ten with two runs at once. I first blamed a
+  second `traceScene` call for a 12-minute run; the scene pipeline alone measured 115 s before this work and
+  126 s after (a bench with `layout: 'auto'` and the `scene` entry only). The jelly shares the reflection's
+  `traceScene` call anyway: every call is inlined, and a second call site would add a copy of the whole march.
+- **The autopilot stops too.** The camera kept flying after a tap, so the selection and its rings left the view
+  at once (found with game-mcp: the rings were at x = -30 px). In the pause the autopilot is off (`auto = 0` in
+  `update`); steering by hand still works, and the readout says "City paused".
+- Compile timing: `node drift-city/tests/pipeline-bench.mjs` builds the scene pipeline alone.
+- Headless: `PAUSE=1 PICKXY=0.75,0.35` (tap there, as fractions of the view) or `PICKPERSON=1` in dawn-run.mjs.
 
 ## Walking into a scene (`visitMove`, `visitWalkTo` in tales.js)
 
