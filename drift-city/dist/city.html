@@ -5165,7 +5165,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let lifeP = select(0.25, 0.85, cfz.h >= 12.0 * 3.6);
         let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < lifeP;
         let lang = fract(atan2(lq.y - cfz.off.y, lq.x - cfz.off.x) / 6.2831853 + 1.0);
-        let fx = select(facU / select(1.5, 1.1, mega), lang * 64.0, lifeT);
+        let fx = select(facU / select(1.5, 1.1, mega), lang * 32.0, lifeT);
         let fy = p.y / select(3.6, 3.0, mega);
         let gx = fract(fx);
         let gy = fract(fy);
@@ -5191,10 +5191,18 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         if (lifeT) {
           // the cells stay sharp much further out than the other windows (they are what a visitor looks for), and
           // bright enough to see by day
+          // the round towers' board (lifeColR, its gun facing Conway Corner), 32 columns round; a row as tall as a
+          // column is wide (a 64-column board in 3.6 m floors read as thin stripes, as on the organic towers)
           let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
-          let lc = lifeCol(i32(floor(fx)) + (cseed & 63), i32(floor((cfz.h - p.y) / 3.6)));
-          lit = max(lc.x, max(lc.y, lc.z)) * (1.0 - opaque);
-          s.emi = mix(vec3f(0.06, 0.12, 0.09), lc * (1.0 - opaque), lifeD) * (1.2 + 1.0 * u.windows);
+          let rrL = min(cfz.w.x, cfz.w.y) * 0.85;
+          let cellHL = max(0.8, (4.0 * (cfz.w.x + cfz.w.y) - 1.717 * rrL) / 32.0);
+          let rowL = (cfz.h - p.y) / cellHL;
+          let gyL = fract(rowL);
+          let opL = max(mull, (1.0 - smoothstep(0.03, 0.07, min(gyL, 1.0 - gyL))) * detail);
+          let lc = lifeColR(i32(floor(fx)), i32(floor(rowL)));
+          lit = max(lc.x, max(lc.y, lc.z)) * (1.0 - opL);
+          s.alb = mix(glass, mix(vec3f(0.13, 0.135, 0.145), vec3f(0.17, 0.15, 0.12), warmGlass), opL);
+          s.emi = mix(vec3f(0.06, 0.12, 0.09), lc * (1.0 - opL), lifeD) * (1.6 + 0.8 * u.windows);
         }
         // Life on the flat faces of the stepped towers (owner, September 2026: their window grid "looks more naturally
         // Conway-esque" than the round towers). A cell is a pane split by a transom, 1.5 m by 1.8 m; 40 rows from the
@@ -10216,7 +10224,7 @@ function initGL(reason) {
     gl.uniform3fv(U.camF, cam.f); gl.uniform3fv(U.camR, cam.r); gl.uniform3fv(U.camU, cam.up);
     gl.uniform2f(U.res, canvas.width, canvas.height);
     gl.uniform1f(U.fov, 0.72); gl.uniform1f(U.time, wclock); gl.uniform1f(U.win, tod.win); gl.uniform1f(U.stars, tod.stars); gl.uniform1f(U.den, tod.den);
-    const night = Math.min(1, Math.max(0, (tod.win - 0.25) / 0.8)), ak = Math.floor(clock / 330);
+    const night = Math.min(1, Math.max(0, (tod.win - 0.25) / 0.8)), ak = Math.floor(wclock / 330);
     gl.uniform1f(U.aur, night * (hsh(ak, 1, 170) < 0.4 ? 1 : 0));
     gl.uniform1f(U.shadowsOn, shadows);
     const sg = skyGeometry();
@@ -14038,6 +14046,24 @@ function pickPerson(px, py, before) {
   return { name: PERSON_KINDS[best.kind] || "Someone", x: best.x, z: best.z, y0: 0, r: 4, h: 2.2, person: best,
     blurb: "One of the people on the street, on their way somewhere." };
 }
+// A person's home and workplace (owner, September 2026: "Should we work up persistent identities for each including
+// apartment blocks, jobs etc.?"): real buildings of the city, chosen by the person's slot, so the same person has
+// the same ones every visit. Homes are the housing clusters (type 3) and the dorm towers; workplaces the office
+// towers, the organic towers and the old town's buildings, within ten cells. Names and jobs wait for the owner's
+// lists; nothing is invented here (the drift-city skill, "Words on screen").
+function personPlaces(w) {
+  if (w._places !== undefined) return w._places;
+  const homes = [], works = [];
+  for (let dz = -10; dz <= 10; dz++) for (let dx = -10; dx <= 10; dx++) {
+    const cx = w.cx + dx, cz = w.cz + dz, c = cellAt(cx, cz);
+    if (c.wild || !(c.h > 6)) continue;
+    const dorm = ((c.fl >> 15) & 7) === 6;
+    if (c.typ === 3 || (dorm && c.typ === 1)) homes.push([cx, cz]);
+    else if (c.typ === 1 || c.typ === 2 || c.typ === 8) works.push([cx, cz]);
+  }
+  const one = (L, k) => (L.length ? pickBuilding(...L[Math.floor(hsh(w.id | 0, k, 311) * L.length)]) : null);
+  return (w._places = { home: one(homes, 1), work: one(works, 2) });
+}
 function pickEntity(S) {
   const cx = Math.floor(S.x / C), cz = Math.floor(S.z / C);
   const kind = S.person ? "person" : S.ship !== undefined ? "vehicle" : S.walkOnly ? "room"
@@ -14050,7 +14076,14 @@ function pickEntity(S) {
   if (!S.walkOnly) actions.push({ id: "pick:fly", label: "Fly there" });
   if (S.walk || S.walkOnly) actions.push({ id: "pick:walk", label: S.walkOnly ? "Walk across" : "Walk there" });
   actions.push({ id: "pick:map", label: "On the map" });
-  return { id, kind, name: S.name, detail: dist < 1000 ? Math.round(dist) + " m away" : (dist / 1000).toFixed(1) + " km away",
+  const far = dist < 1000 ? Math.round(dist) + " m away" : (dist / 1000).toFixed(1) + " km away";
+  const facts = [];
+  if (S.person) {
+    const P = personPlaces(S.person);
+    if (P.home) { actions.push({ id: "pick:home", label: "Their home" }); facts.push({ label: "Home", value: P.home.name }); }
+    if (P.work) { actions.push({ id: "pick:work", label: "Their work" }); facts.push({ label: "Work", value: P.work.name }); }
+  }
+  return { id, kind, name: S.name, detail: far, facts,
     where: titanPoint(S.x, (S.y0 || 0) + (S.h || 0) * 0.5, S.z), actions };
 }
 // the ring in the view, on the picked thing, every frame (a person moves: their slot is followed)
@@ -14958,6 +14991,11 @@ function hostPickAction(id) {
     const V = NAV.mode === "visit" && NAV.visit ? NAV.visit : null;
     if (V && !visitWalkTo(V, S.x, S.z)) showHint("You are there.", 1500);
   } else if (id === "pick:map") mapOpen();
+  else if ((id === "pick:home" || id === "pick:work") && S.person) {
+    // the person's home or workplace (pick.js personPlaces) becomes the selection, and the view flies there
+    const B = personPlaces(S.person)[id === "pick:home" ? "home" : "work"];
+    if (B) { hostSelect({ ...B }); pickLaunch(B, true); }
+  }
 }
 
 const canvas = document.getElementById("c");
@@ -15358,18 +15396,18 @@ function directorStep(dt) {
   DIR.fog = Math.max(0, DIR.fog - dt / 35);
   // sky lanterns drift up and away
   if (DIR.lanterns) {
-    const a = clock - DIR.lanterns.t0;
+    const a = wclock - DIR.lanterns.t0;
     DIR.props = DIR.lanterns.list.map((l) => ({ kind: 8, x: l.x + Math.sin(a * 0.3 + l.ph) * 2 + a * 0.6, y: l.y + a * l.v, z: l.z + Math.cos(a * 0.25 + l.ph) * 2, rot: a * 0.4, scale: 1.8, hue: l.hue, param: 0 }));
     if (a > 45) { DIR.lanterns = null; DIR.props = []; }
   }
   DIR.rush = Math.max(0, DIR.rush - dt / 20);
   // a power cut in progress: failing with a flicker, dark, then flickering back
   if (DIR.kind === "blackout") {
-    const a = clock - DIR.t0, L = DIR.len;
+    const a = wclock - DIR.t0, L = DIR.len;
     const v = a < 2.5 ? (Math.random() < 0.45 ? 0.9 : 0.15) : a < L ? 0.9 : a < L + 2.5 ? (Math.random() < 0.5 ? 0.9 : 0.1) : 0;
     EVN.set([DIR.pos[0], DIR.pos[2], 120, v], 136);
     if (a > L + 2.5) { DIR.kind = null; EVN[139] = 0; }
-  } else if (DIR.kind && clock - DIR.t0 > DIR.len) {
+  } else if (DIR.kind && wclock - DIR.t0 > DIR.len) {
     if (DIR.kind === "busker") { DIR.props = []; DIR.radio = null; }
     DIR.kind = null;
   }
@@ -15382,8 +15420,8 @@ function directorStep(dt) {
   const opts = [["steam", 3], ["siren", 2], ["rush", 1.6], ["startle", 2], ["squall", 1.1], ["blackout", night ? 2.2 : 0.3], ["busker", 2], ["lanterns", night ? 1.6 : 0.4], ["fog", 1.2], ["perch", 1.5]];
   let r = Math.random() * opts.reduce((a, o) => a + o[1], 0), kind = opts[0][0];
   for (const o of opts) { r -= o[1]; if (r <= 0) { kind = o[0]; break; } }
-  DIR.kind = kind; DIR.t0 = clock;
-  if (kind === "steam") { DIR.pos = dirAhead(25, 70); DIR.len = 30; EVN.set([DIR.pos[0], DIR.pos[1], DIR.pos[2], clock], 140); audioSteam(DIR.pos); }
+  DIR.kind = kind; DIR.t0 = wclock;
+  if (kind === "steam") { DIR.pos = dirAhead(25, 70); DIR.len = 30; EVN.set([DIR.pos[0], DIR.pos[1], DIR.pos[2], wclock], 140); audioSteam(DIR.pos); }
   else if (kind === "siren") {
     DIR.len = 9;
     const kx = Math.round(st.x / C) * C, s = Math.random() < 0.5 ? -1 : 1;
@@ -15393,7 +15431,7 @@ function directorStep(dt) {
     DIR.len = 6;
     let best = null, bd = 1e9;
     for (let g = 0; g < 4; g++) { const d = Math.hypot(FLOCK_DATA[4 + g * 4] - st.x, FLOCK_DATA[6 + g * 4] - st.z); if (d < bd) { bd = d; best = g; } }
-    if (best !== null) { for (const b of flock) if (b.g === best) { b.scare = clock + 6; b.v = [b.v[0] + (Math.random() - 0.5) * 10, 6 + Math.random() * 5, b.v[2] + (Math.random() - 0.5) * 10]; } audioFlurry([FLOCK_DATA[4 + best * 4], FLOCK_DATA[5 + best * 4], FLOCK_DATA[6 + best * 4]]); }
+    if (best !== null) { for (const b of flock) if (b.g === best) { b.scare = wclock + 6; b.v = [b.v[0] + (Math.random() - 0.5) * 10, 6 + Math.random() * 5, b.v[2] + (Math.random() - 0.5) * 10]; } audioFlurry([FLOCK_DATA[4 + best * 4], FLOCK_DATA[5 + best * 4], FLOCK_DATA[6 + best * 4]]); }
   } else if (kind === "squall") { DIR.len = 25; DIR.squall = 1; }
   else if (kind === "fog") { DIR.len = 35; DIR.fog = 1; }
   else if (kind === "busker") {
@@ -15409,14 +15447,14 @@ function directorStep(dt) {
     // somebody releases sky lanterns: a dozen small lights drifting up into the snow
     DIR.len = 45;
     const b = dirAhead(20, 45);
-    DIR.lanterns = { t0: clock, list: Array.from({ length: 12 }, () => ({ x: b[0] + (Math.random() - 0.5) * 12, y: b[1] + 1 + Math.random() * 2, z: b[2] + (Math.random() - 0.5) * 12, v: 1.2 + Math.random() * 1.2, ph: Math.random() * 6, hue: 0.05 + Math.random() * 0.06 })) };
+    DIR.lanterns = { t0: wclock, list: Array.from({ length: 12 }, () => ({ x: b[0] + (Math.random() - 0.5) * 12, y: b[1] + 1 + Math.random() * 2, z: b[2] + (Math.random() - 0.5) * 12, v: 1.2 + Math.random() * 1.2, ph: Math.random() * 6, hue: 0.05 + Math.random() * 0.06 })) };
     audioLanterns(b);
   } else if (kind === "perch") {
     // a flier comes down to settle near you for a while
     DIR.len = 22;
     let best = null, bd = 1e9;
     for (const b of flock) { const d = Math.hypot(b.p[0] - st.x, b.p[2] - st.z); if (d < bd) { bd = d; best = b; } }
-    if (best) { const p = dirAhead(7, 12); best.perch = { x: p[0], y: Math.max(p[1] + 3.5, st.y - 1), z: p[2], until: clock + 18 }; }
+    if (best) { const p = dirAhead(7, 12); best.perch = { x: p[0], y: Math.max(p[1] + 3.5, st.y - 1), z: p[2], until: wclock + 18 }; }
   }
   else { DIR.pos = dirAhead(90, 220); DIR.len = 12 + Math.random() * 13; audioThunk(DIR.pos); }
 }
@@ -15780,13 +15818,13 @@ function computeEvents(tod, dt) {
       if (hsh(lid, 0, 80) >= 0.55) continue;
       const dir = hsh(lid, 0, 81) < 0.5 ? 1 : -1;
       const ph = hsh(lid, 0, 82) * 300;
-      const k0 = Math.floor((along0 * dir - clock * 22 + ph) / 90);
+      const k0 = Math.floor((along0 * dir - wclock * 22 + ph) / 90);
       for (let k = k0 - 4; k <= k0 + 4; k++) {
         if (hsh(lid, k, 83) >= 0.6 || hsh(lid, k, 84) >= 0.5) continue;
-        const al = ((k + 0.5) * 90 + clock * 22 - ph) * dir;
+        const al = ((k + 0.5) * 90 + wclock * 22 - ph) * dir;
         const x = ax === 0 ? li * L3 : al, z = ax === 0 ? al : li * L3;
         const hy = AIR_Y - 2 + 4 * ax, dc2 = (x - st.x) ** 2 + (hy - st.y) ** 2 + (z - st.z) ** 2;
-        const y = hy + 6 * Math.exp(-dc2 / 400) + 0.25 * Math.sin(clock * 0.9 + k) - 0.7;
+        const y = hy + 6 * Math.exp(-dc2 / 400) + 0.25 * Math.sin(wclock * 0.9 + k) - 0.7;
         const d = Math.hypot(x - st.x, z - st.z, y - st.y);
         if (d < 450) cands.push([d, x, y, z, k + lid * 17]);
       }
@@ -15796,7 +15834,7 @@ function computeEvents(tod, dt) {
   for (let i = 0; i < Math.min(4, cands.length); i++) {
     const [d, x, y, z, sd] = cands[i];
     EVN.set([x, y, z, night * (1 - d / 450)], i * 4);
-    const dv = norm3([Math.sin(clock * 0.45 + sd) * 0.45, -1, Math.cos(clock * 0.37 + sd * 1.3) * 0.45]);
+    const dv = norm3([Math.sin(wclock * 0.45 + sd) * 0.45, -1, Math.cos(wclock * 0.37 + sd * 1.3) * 0.45]);
     EVN.set([dv[0], dv[1], dv[2], 0.09], 16 + i * 4);
   }
   const cx0 = Math.floor(st.x / C), cz0 = Math.floor(st.z / C), sm = [];
@@ -15818,15 +15856,15 @@ function computeEvents(tod, dt) {
   if (!koiInit) { koiAnchor[0] = st.x; koiAnchor[1] = st.z; koiInit = true; }
   koiAnchor[0] += (st.x - koiAnchor[0]) * Math.min(1, dt * 0.03);
   koiAnchor[1] += (st.z - koiAnchor[1]) * Math.min(1, dt * 0.03);
-  const kv = Math.sin(clock * 0.013 + 1.0);
+  const kv = Math.sin(wclock * 0.013 + 1.0);
   if (kv > 0.2) {
-    const a = clock * 0.035;
-    EVN.set([koiAnchor[0] + Math.cos(a) * 150, 120 + 10 * Math.sin(clock * 0.1), koiAnchor[1] + Math.sin(a) * 150, 80], 48);
+    const a = wclock * 0.035;
+    EVN.set([koiAnchor[0] + Math.cos(a) * 150, 120 + 10 * Math.sin(wclock * 0.1), koiAnchor[1] + Math.sin(a) * 150, 80], 48);
     EVN.set([-Math.sin(a), 0.04, Math.cos(a), Math.min(1, (kv - 0.2) * 4)], 52);
   }
   // advertising blimp on a wide circle around the same slowly following anchor, kept clear of the camera
-  const ba = clock * 0.01 + 2.0;
-  let bp = [koiAnchor[0] + Math.cos(ba) * 260, 165 + 8 * Math.sin(clock * 0.05), koiAnchor[1] + Math.sin(ba) * 260];
+  const ba = wclock * 0.01 + 2.0;
+  let bp = [koiAnchor[0] + Math.cos(ba) * 260, 165 + 8 * Math.sin(wclock * 0.05), koiAnchor[1] + Math.sin(ba) * 260];
   const bd = Math.hypot(bp[0] - st.x, bp[1] - st.y, bp[2] - st.z);
   if (bd < 90) { const k = 90 / Math.max(bd, 1); bp = [st.x + (bp[0] - st.x) * k, st.y + (bp[1] - st.y) * k, st.z + (bp[2] - st.z) * k]; }
   EVN.set([bp[0], bp[1], bp[2], 32], 56);
@@ -15834,7 +15872,7 @@ function computeEvents(tod, dt) {
   // skyboats on fixed routes: one line of [x, y, z, half-length] at 144, one of [heading, kind] at 176
   skyboats(wclock);
   // district blackout every few minutes near the camera
-  const bcy = 150, bk = Math.floor(clock / bcy), bt = clock - bk * bcy;
+  const bcy = 150, bk = Math.floor(wclock / bcy), bt = wclock - bk * bcy;
   if (bt >= 50 && bt <= 78 && hsh(bk, 3, 160) < 0.75) {
     if (!boState || boState.k !== bk) boState = { k: bk, x: st.x + (hsh(bk, 4, 161) - 0.5) * 300, z: st.z + (hsh(bk, 5, 162) - 0.5) * 300, r: 140 + 120 * hsh(bk, 6, 163) };
     let amt = 1;
@@ -15850,10 +15888,10 @@ function computeEvents(tod, dt) {
       const li = li0 + dl, lid = li * 2 + ax;
       if (hsh(lid, 5, 101) >= 0.5) continue;
       const dir = hsh(lid, 5, 102) < 0.5 ? 1 : -1, ph = hsh(lid, 5, 103) * 2600;
-      const k0 = Math.floor((along0 * dir - clock * 40 + ph) / 2600);
+      const k0 = Math.floor((along0 * dir - wclock * 40 + ph) / 2600);
       for (let k = k0 - 1; k <= k0 + 1; k++) {
         if (hsh(lid, k, 104) >= 0.8) continue;
-        const cen = ((k + 0.5) * 2600 + clock * 40 - ph) * dir;
+        const cen = ((k + 0.5) * 2600 + wclock * 40 - ph) * dir;
         const pos = (lc) => {
           const wa = cen + lc * dir, lat = 1.8 * Math.sin(wa * 0.03 + lid), y = CHASE_Y + 5 * ax + 1.2 * Math.sin(wa * 0.017 + lid * 2);
           return ax === 0 ? [li * BIG + lat, y, wa] : [wa, y, li * BIG + lat];
@@ -15880,7 +15918,7 @@ function computeExtras(tod, dt) {
   for (const o of [75, 83, 87, 91, 107, 111, 115, 119]) EVN[o] = -1;
   EVN.fill(0, 68, 75);
   // aurora on about two nights in five
-  const ak = Math.floor(clock / 330), at = clock - ak * 330;
+  const ak = Math.floor(wclock / 330), at = wclock - ak * 330;
   EVN[68] = night * (hsh(ak, 1, 170) < 0.4 ? 1 : 0) * sstep(0, 20, at) * (1 - sstep(300, 330, at));
   // a rainbow for about a minute after a daytime shower
   if (EX.rain0 > 0.3 && WX.rain <= 0.3) EX.rainbow = 1;
@@ -15904,42 +15942,42 @@ function computeExtras(tod, dt) {
   EVN.set([g.moonA.dir[0], g.moonA.dir[1], g.moonA.dir[2], g.moonA.r], 128); EVN.set([g.moonB.dir[0], g.moonB.dir[1], g.moonB.dir[2], g.moonB.r], 132);
   // shooting stars
   if (night > 0.5) {
-    if (!EX.meteor && clock > EX.meteorNext) {
+    if (!EX.meteor && wclock > EX.meteorNext) {
       const a = Math.random() * 6.283, e = 0.35 + Math.random() * 0.45, s = Math.random() < 0.5 ? -1 : 1;
-      EX.meteor = { A: dirFrom(a, e), B: dirFrom(a + s * (0.2 + Math.random() * 0.3), e - 0.08 - Math.random() * 0.15), t0: clock, dur: 0.7 + Math.random() * 0.9 };
+      EX.meteor = { A: dirFrom(a, e), B: dirFrom(a + s * (0.2 + Math.random() * 0.3), e - 0.08 - Math.random() * 0.15), t0: wclock, dur: 0.7 + Math.random() * 0.9 };
     }
     if (EX.meteor) {
-      const m = EX.meteor, age = clock - m.t0;
-      if (age > m.dur) { EX.meteor = null; EX.meteorNext = clock + 5 + Math.random() * 18; }
+      const m = EX.meteor, age = wclock - m.t0;
+      if (age > m.dur) { EX.meteor = null; EX.meteorNext = wclock + 5 + Math.random() * 18; }
       else { EVN.set([...m.A, age], 72); EVN.set([...m.B, m.dur], 76); }
     }
   }
   // fireworks: a show of about half a minute over a neon or Chinatown block ahead, every couple of minutes
   if (night > 0.6) {
-    if (!EX.fw && clock > EX.fwNext) {
+    if (!EX.fw && wclock > EX.fwNext) {
       const hx = Math.cos(st.yaw), hz = Math.sin(st.yaw);
       for (let k = 0; k < 16 && !EX.fw; k++) {
         const d = 250 + Math.random() * 350, a = (Math.random() - 0.5) * 1.3;
         const x = st.x + (hx * Math.cos(a) - hz * Math.sin(a)) * d, z = st.z + (hz * Math.cos(a) + hx * Math.sin(a)) * d;
         const c = cellAt(Math.floor(x / C), Math.floor(z / C)), zn = (c.fl >> 15) & 7;
-        if (!c.wild && (zn === 1 || zn === 3)) EX.fw = { x, z, t0: clock, b: [], slot: 0, nextB: clock };
+        if (!c.wild && (zn === 1 || zn === 3)) EX.fw = { x, z, t0: wclock, b: [], slot: 0, nextB: wclock };
       }
-      EX.fwNext = clock + (EX.fw ? 120 : 15);
+      EX.fwNext = wclock + (EX.fw ? 120 : 15);
     }
     if (EX.fw) {
       const f = EX.fw;
-      if (clock - f.t0 > 32) EX.fw = null;
+      if (wclock - f.t0 > 32) EX.fw = null;
       else {
-        if (clock > f.nextB) {
+        if (wclock > f.nextB) {
           f.slot = (f.slot + 1) % 3;
-          f.b[f.slot] = { x: f.x + (Math.random() - 0.5) * 160, y: 170 + Math.random() * 90, z: f.z + (Math.random() - 0.5) * 160, t0: clock, col: hueRGB(Math.random()), r: 35 + Math.random() * 35 };
+          f.b[f.slot] = { x: f.x + (Math.random() - 0.5) * 160, y: 170 + Math.random() * 90, z: f.z + (Math.random() - 0.5) * 160, t0: wclock, col: hueRGB(Math.random()), r: 35 + Math.random() * 35 };
           audioBang([f.b[f.slot].x, f.b[f.slot].y, f.b[f.slot].z], false);
-          f.nextB = clock + 0.8 + Math.random() * 0.8;
+          f.nextB = wclock + 0.8 + Math.random() * 0.8;
         }
         for (let i = 0; i < 3; i++) {
           const b = f.b[i];
-          if (!b || clock - b.t0 > 3.2) continue;
-          EVN.set([b.x, b.y, b.z, clock - b.t0], 80 + i * 4);
+          if (!b || wclock - b.t0 > 3.2) continue;
+          EVN.set([b.x, b.y, b.z, wclock - b.t0], 80 + i * 4);
           EVN.set([b.col[0] * 1.2 + 0.2, b.col[1] * 1.2 + 0.2, b.col[2] * 1.2 + 0.2, b.r], 92 + i * 4);
         }
       }
@@ -15961,15 +15999,15 @@ function computeExtras(tod, dt) {
     }
   }
   // a rocket launch every few minutes from the nearest empty pad
-  if (!EX.launch && clock > EX.launchNext && EX.pads.length) {
+  if (!EX.launch && wclock > EX.launchNext && EX.pads.length) {
     let best = null, bd = 1e18;
     for (const p of EX.pads) { const d = (p[0] - st.x) ** 2 + (p[1] - st.z) ** 2; if (d < bd) { bd = d; best = p; } }
-    EX.launch = { x: best[0], z: best[1], t0: clock };
+    EX.launch = { x: best[0], z: best[1], t0: wclock };
     audioBang([best[0], 0, best[1]], true);
-    EX.launchNext = clock + 170 + Math.random() * 120;
+    EX.launchNext = wclock + 170 + Math.random() * 120;
   }
   if (EX.launch) {
-    const age = clock - EX.launch.t0;
+    const age = wclock - EX.launch.t0;
     if (age > 95) EX.launch = null;
     else EVN.set([EX.launch.x, 0.5, EX.launch.z, age], 104);
   }
@@ -15979,9 +16017,9 @@ function computeExtras(tod, dt) {
     for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
       const gi = gx0 + i, gj = gz0 + j, hi = wrapN(gi, 16), hj = wrapN(gj, 16);
       if (hsh(hi, hj, 175) > 0.55) continue;
-      const ax = (gi + 0.5) * G + Math.sin(clock / 210 + hi) * 300, az = (gj + 0.5) * G + Math.cos(clock / 170 + hj) * 300;
+      const ax = (gi + 0.5) * G + Math.sin(wclock / 210 + hi) * 300, az = (gj + 0.5) * G + Math.cos(wclock / 170 + hj) * 300;
       if (cityDist(ax, az) < cityR(ax, az) + 200) continue;
-      const y = Math.max(0, terrSurfAt(ax, az)) + 150 + 40 * Math.sin(clock / 60 + hi * 3);
+      const y = Math.max(0, terrSurfAt(ax, az)) + 150 + 40 * Math.sin(wclock / 60 + hi * 3);
       bl.push([Math.hypot(ax - st.x, az - st.z), ax, y, az, hsh(hi, hj, 176)]);
     }
     bl.sort((a, b) => a[0] - b[0]);
@@ -15992,7 +16030,7 @@ function computeExtras(tod, dt) {
     let best = null, bd = 1e18;
     for (const p of EX.lhs) { const d = (p[0] - st.x) ** 2 + (p[2] - st.z) ** 2; if (d < bd) { bd = d; best = p; } }
     if (bd < 1500 * 1500) {
-      const a = clock * 0.8;
+      const a = wclock * 0.8;
       EVN.set([best[0], best[1], best[2], 1.5 + 0.5 * night], 12);
       EVN.set([Math.cos(a), -0.015, Math.sin(a), 0.012], 28);
     }
@@ -16001,7 +16039,7 @@ function computeExtras(tod, dt) {
 
 // Rain showers every few minutes; streets stay wet for a while afterwards and low districts flood.
 function updateWeather(dt) {
-  const cyc = 260, tau = (clock + 150) % cyc, k = Math.floor((clock + 150) / cyc);
+  const cyc = 260, tau = (wclock + 150) % cyc, k = Math.floor((wclock + 150) / cyc);
   WX.rain = sstep(0, 12, tau) * (1 - sstep(85, 100, tau)) * (0.55 + 0.45 * hsh(k, 7, 150));
   if (todIdx === 3) WX.rain = Math.max(WX.rain, 0.85 * sstep(0, 1, todT));
   // weather set by a story or from the developer menu overrides the cycle

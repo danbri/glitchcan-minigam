@@ -167,7 +167,7 @@ Screenshots:
      `inklet/toc.fink.js:81`).
    - So the blurb, the cover image and the "[enter X]" choice are never shown.
      The knot `external_story` is dead.
-6. **GridLuck never reports a result.** Its wrapper reads
+6. **GridLuck never reported a result** (fixed 30 September 2026: the game sends its score and end by message; e2e-input). Its wrapper reads
    `gameFrame.contentDocument` (`inklet/minigames/gridluck/index.html:90`),
    which the opaque sandbox blocks. The only way out is ✕.
 

@@ -1345,6 +1345,7 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 #foafos-selection .sel-text { flex: 1; min-width: 0; }
 #foafos-selection .sel-name { font-weight: bold; }
 #foafos-selection .sel-detail { font-size: 0.82em; opacity: 0.75; }
+#foafos-selection .sel-fact { font-size: 0.82em; opacity: 0.9; }
 #foafos-selection button {
   min-height: 40px; min-width: 40px;
   font: inherit; color: inherit; cursor: pointer;

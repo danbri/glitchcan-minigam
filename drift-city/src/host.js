@@ -176,4 +176,9 @@ function hostPickAction(id) {
     const V = NAV.mode === "visit" && NAV.visit ? NAV.visit : null;
     if (V && !visitWalkTo(V, S.x, S.z)) showHint("You are there.", 1500);
   } else if (id === "pick:map") mapOpen();
+  else if ((id === "pick:home" || id === "pick:work") && S.person) {
+    // the person's home or workplace (pick.js personPlaces) becomes the selection, and the view flies there
+    const B = personPlaces(S.person)[id === "pick:home" ? "home" : "work"];
+    if (B) { hostSelect({ ...B }); pickLaunch(B, true); }
+  }
 }

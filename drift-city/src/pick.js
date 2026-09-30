@@ -186,6 +186,24 @@ function pickPerson(px, py, before) {
   return { name: PERSON_KINDS[best.kind] || "Someone", x: best.x, z: best.z, y0: 0, r: 4, h: 2.2, person: best,
     blurb: "One of the people on the street, on their way somewhere." };
 }
+// A person's home and workplace (owner, September 2026: "Should we work up persistent identities for each including
+// apartment blocks, jobs etc.?"): real buildings of the city, chosen by the person's slot, so the same person has
+// the same ones every visit. Homes are the housing clusters (type 3) and the dorm towers; workplaces the office
+// towers, the organic towers and the old town's buildings, within ten cells. Names and jobs wait for the owner's
+// lists; nothing is invented here (the drift-city skill, "Words on screen").
+function personPlaces(w) {
+  if (w._places !== undefined) return w._places;
+  const homes = [], works = [];
+  for (let dz = -10; dz <= 10; dz++) for (let dx = -10; dx <= 10; dx++) {
+    const cx = w.cx + dx, cz = w.cz + dz, c = cellAt(cx, cz);
+    if (c.wild || !(c.h > 6)) continue;
+    const dorm = ((c.fl >> 15) & 7) === 6;
+    if (c.typ === 3 || (dorm && c.typ === 1)) homes.push([cx, cz]);
+    else if (c.typ === 1 || c.typ === 2 || c.typ === 8) works.push([cx, cz]);
+  }
+  const one = (L, k) => (L.length ? pickBuilding(...L[Math.floor(hsh(w.id | 0, k, 311) * L.length)]) : null);
+  return (w._places = { home: one(homes, 1), work: one(works, 2) });
+}
 function pickEntity(S) {
   const cx = Math.floor(S.x / C), cz = Math.floor(S.z / C);
   const kind = S.person ? "person" : S.ship !== undefined ? "vehicle" : S.walkOnly ? "room"
@@ -198,7 +216,14 @@ function pickEntity(S) {
   if (!S.walkOnly) actions.push({ id: "pick:fly", label: "Fly there" });
   if (S.walk || S.walkOnly) actions.push({ id: "pick:walk", label: S.walkOnly ? "Walk across" : "Walk there" });
   actions.push({ id: "pick:map", label: "On the map" });
-  return { id, kind, name: S.name, detail: dist < 1000 ? Math.round(dist) + " m away" : (dist / 1000).toFixed(1) + " km away",
+  const far = dist < 1000 ? Math.round(dist) + " m away" : (dist / 1000).toFixed(1) + " km away";
+  const facts = [];
+  if (S.person) {
+    const P = personPlaces(S.person);
+    if (P.home) { actions.push({ id: "pick:home", label: "Their home" }); facts.push({ label: "Home", value: P.home.name }); }
+    if (P.work) { actions.push({ id: "pick:work", label: "Their work" }); facts.push({ label: "Work", value: P.work.name }); }
+  }
+  return { id, kind, name: S.name, detail: far, facts,
     where: titanPoint(S.x, (S.y0 || 0) + (S.h || 0) * 0.5, S.z), actions };
 }
 // the ring in the view, on the picked thing, every frame (a person moves: their slot is followed)

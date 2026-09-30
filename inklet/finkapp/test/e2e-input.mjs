@@ -318,6 +318,16 @@ try {
     a0 === a1 && a1 !== a2
       ? pass('the shell\'s pause reaches GridLuck one frame deeper: the board holds still under the frost and moves again on resume')
       : fail(`gridluck pause: ${JSON.stringify({ paused: a0 === a1, resumed: a1 !== a2, a0: a0.slice(0, 80), a1: a1.slice(0, 80), a2: a2.slice(0, 80) })}`);
+    // and its result reaches the shell. The wrapper read the game's document to see the end, which the opaque
+    // sandbox forbids, so the story never heard how it went; the game now says so by message
+    const done = page.evaluate(() => new Promise((res) => { const off = FoafOS.bus.subscribe('minigame.complete', (e) => { off?.(); res(e.data); }); setTimeout(() => res(null), 10000); }));
+    await inner.evaluate(() => { const g = window.__gridluck.game; g.score = 340; });
+    await page.waitForTimeout(400);
+    await inner.evaluate(() => { const g = window.__gridluck.game; g.ply.lives = -1; g.ply.dying = true; g.ply.deathTimer = 2500; });
+    const result = await done;
+    result && JSON.stringify(result).includes('340')
+      ? pass(`GridLuck's end reaches the shell and the story (minigame.complete, score 340): ${JSON.stringify(result).slice(0, 120)}`)
+      : fail(`gridluck result: ${JSON.stringify(result)}`);
   }
 
   pageErrors.length === 0 ? pass('no page errors')

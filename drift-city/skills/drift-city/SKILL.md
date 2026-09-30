@@ -423,11 +423,13 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
 - Headless check: the runner's clock barely moves, so the board is uploaded only if a step happens. Set
   `D.LIFE.acc = 1` after changing the board (`D.lifeStamp`, `D.lifeStep` and `D.LIFE_PATTERNS` are on `__drift`).
   Use `CAM=-490,95,-229,-2.729,-0.02 CAMF=4` with `HOP=place:roof_0` to look at the tour's Life tower.
-- Uploaded packed 16 cells to a float at byte 896 of the event buffer (after the selection block; it was 864, and 848 before that) (`ev.life`, read by `lifeAt`).
-- Shown on the organic round towers (type 8, material 15, their own board: below) by `organicLife()`; on the
-  stepped towers' flat faces (Conway Corner, below); and on two in five rounded modern towers (material 1, `v` 0.4
-  to 0.72, still one row a 3.6 m floor and 64 columns round). Each of these turns its board by its own number of
-  columns; the organic towers do not (below).
+- Uploaded at byte 896 of the event buffer (after the selection block) as colour classes, not bits (see "The GPU
+  reads a colour class per cell" below); read by `lifeCol` (the flat board) and `lifeColR` (the round board).
+- Shown on the organic round towers (type 8, material 15) by `organicLife()`; on the stepped towers' flat faces
+  (Conway Corner, below); and on two in five rounded modern towers (material 1, `v` 0.4 to 0.72). The stepped
+  towers turn the flat board by their own number of columns. The organic and the rounded modern towers read the
+  round board, 32 columns round with square cells, unturned, so the gun faces Conway Corner on all of them. (The
+  rounded ones used 64 columns in 3.6 m floors: thin stripes, as the organic towers had.)
 - **Organic towers: their own board, a glider gun, gliders round the tower (September 2026).** Owner, with phone
   screenshots from Conway Corner: "not obviously life". The old mapping put 64 columns round a tower about 4.5 m
   in radius and one row a floor, lit only in the window band: cells about 0.44 m wide and 2.3 m tall, split by
@@ -925,6 +927,14 @@ see map overlaid on the 3D". Menu › Map has three rows:
   (their centres, from `mapBase`) and every non-room place in `PLACES` are DOM elements laid over the view each
   frame (`mapLabelsFrame`, nearest 26 in view); a place label is a button that goes there.
 - "Flat map, with directions in words": the old panel, kept for reading without the view.
+
+**People's homes and workplaces (`personPlaces` in pick.js, September 2026).** Owner: "Should we work up
+persistent identities for each including apartment blocks, jobs etc.? I can make stuff up if you like". Built
+from the city's data only: a person (a walker slot, `w.id`) gets a home among the housing clusters (type 3) and
+dorm towers, and a workplace among the office, old-town and organic towers, within ten cells, chosen by a hash of
+the slot, so it is the same every visit. The selection card shows them as `facts` (spec §5.11) with "Their home" and
+"Their work" actions (host.js `hostPickAction`). Names, jobs and habits are the owner's to write; nothing is
+invented for them. Walkers stay on their own block's pavement, so the home and the work are not yet places they go.
 
 **The city's sound, when the browser has not started it.** A browser starts a frame's audio only for a tap in
 that frame, so a reader who taps only the story or the shell hears nothing, with no way to fix it (owner: "bg

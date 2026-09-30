@@ -446,6 +446,19 @@ try {
     mapRow?.closes === true && mapLabels.length > 2 && cleared
       ? pass(`Map › Map overlay lays names over the city (${mapLabels.length} in view: ${mapLabels.slice(0, 4).join(', ')} …) and takes them away again`)
       : fail(`map overlay: ${JSON.stringify({ mapRow, mapLabels, cleared })}`);
+    // 20f. a person has a home and a workplace, real buildings of the city, the same ones every time (owner,
+    // September 2026: "persistent identities for each including apartment blocks, jobs"); names wait for the owner
+    const who = await wcity.evaluate(() => { const w = __drift.walkersNear(__drift.st.x, __drift.st.z, 200, __drift.wclock())[0];
+      if (!w) return null; __drift.pickSelect({ name: 'someone', x: w.x, z: w.z, y0: 0, r: 4, h: 2.2, person: w }); return w.id; });
+    const card = who === null ? null : await wpage.waitForFunction(() => document.querySelectorAll('#foafos-selection .sel-fact').length > 0, null, { timeout: 10000 })
+      .then(() => wpage.evaluate(() => ({ facts: [...document.querySelectorAll('#foafos-selection .sel-fact')].map((e) => e.textContent),
+        btns: [...document.querySelectorAll('#foafos-selection .sel-actions button')].map((b) => b.textContent) })), () => null);
+    const home = card ? await wpage.evaluate(() => { document.querySelector('#foafos-selection [data-action="pick:home"]')?.click(); return true; })
+      .then(() => wpage.waitForFunction(() => FoafOS.bus.retained('app.drift.selection')[0]?.data?.entity?.kind === 'building', null, { timeout: 10000 }))
+      .then(() => wpage.evaluate(() => FoafOS.bus.retained('app.drift.selection')[0].data.entity.name), () => null) : null;
+    card && card.facts.some((f) => /^Home: /.test(f)) && card.btns.includes('Their home') && home && card.facts[0].endsWith(home)
+      ? pass(`a person has a home and a workplace in the city (${card.facts.join('; ')}); "Their home" selects it`)
+      : fail(`person's places: ${JSON.stringify({ who, card, home })}`);
     // the talking head's line (section 19) went to the shell's activity stream, and its face with it
     // the feed has it once the line has ended; while it plays it is the live card on screen
     const stream = await wpage.evaluate(() => [...document.querySelectorAll('#foafos-feed-wrap foaf-activity, #foafos-activity foaf-activity')]

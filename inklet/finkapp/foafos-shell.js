@@ -1563,6 +1563,9 @@ FoafOS.showSelection = (appId, entity, run) => {
     id: String(entity.id || '').slice(0, 120), kind: String(entity.kind || 'thing').slice(0, 20),
     name: String(entity.name || '').slice(0, 80), detail: entity.detail ? String(entity.detail).slice(0, 80) : '',
     where: entity.where && typeof entity.where === 'object' ? JSON.parse(JSON.stringify(entity.where)) : null,
+    // facts: a few labelled lines about the thing (spec §5.11), e.g. a person's home and workplace
+    facts: (Array.isArray(entity.facts) ? entity.facts : []).slice(0, 4)
+      .map((f) => ({ label: String(f?.label || '').slice(0, 20), value: String(f?.value || '').slice(0, 100) })).filter((f) => f.value),
     actions: (Array.isArray(entity.actions) ? entity.actions : []).slice(0, 6)
       .map((a) => ({ id: String(a?.id || ''), label: String(a?.label || '').slice(0, 30) })).filter((a) => a.id && a.label),
   };
@@ -1582,6 +1585,12 @@ FoafOS.showSelection = (appId, entity, run) => {
   dt.className = 'sel-detail';
   dt.textContent = [e.kind, e.detail].filter(Boolean).join(' · ');
   txt.append(nm, dt);
+  for (const f of e.facts) {
+    const fl = document.createElement('div');
+    fl.className = 'sel-fact';
+    fl.textContent = f.label ? `${f.label}: ${f.value}` : f.value;
+    txt.appendChild(fl);
+  }
   const x = document.createElement('button');
   x.type = 'button';
   x.className = 'sel-close';
