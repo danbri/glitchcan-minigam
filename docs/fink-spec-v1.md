@@ -79,7 +79,7 @@ parser; values keep their case. Implemented tags:
 | `# IMAGE:` / `# VIDEO:` | media, resolved via §3.2 |
 | `# BASEHREF:` | story/knot media base |
 | `# FINK:` | load another FINK document (breaks the continue loop) |
-| `# MINIGAME: name [mode=m] [controls=dpad\|lite\|none] [key=value …]` | a game; the story pauses until it completes (§5). Other keys reach the game only if its registry row lists them in `args` |
+| `# MINIGAME: name [mode=m] [controls=dpad\|lite\|none] [key=value …]` | a game; the story pauses until it completes (§5). Other keys reach the game only if its registry row lists them in `args`. The game's result reaches the story as `game_success` and `game_score`, if the story declares those VARs |
 | `# WORLD: name [key=value …]` | a stage app beside the story that shows what the story's tags say; the story does not pause (§5.8) |
 | `# AUDIO:` / `# FOLEY:` / `# STOP_AUDIO` | audio (§7) |
 | `# PUBLIC:` | cold-entry respawn knots (links spec) |
@@ -101,6 +101,12 @@ diverts**. Tags that mark a moment (especially `# MINIGAME:`) MUST be
 inline on a text line. Reactions to minigame results MUST live behind a
 choice in the return knot (Ink evaluates a knot's entry text before the
 break takes effect). INK-GOTCHAS §8; E2E-locked in `e2e-robbin.mjs`.
+Lines AFTER an inline tagged line are different: the story runner breaks
+after the tagged line, and ink's look-ahead past it is rewound, so they read
+the game's result. Per Aspera's cellar does this (`{game_score == 1: ->
+oskar}` on the lines after `# MINIGAME: cellar exits=oskar`), and it resets
+`game_score` before the tag so an old value cannot divert. E2E-locked in
+`e2e-novel.mjs` (September 2026).
 
 ### 3.3 Media resolution
 

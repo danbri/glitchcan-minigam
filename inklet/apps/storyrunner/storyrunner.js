@@ -728,6 +728,7 @@ function choose(i) {
   // only record of what the reader chose. So: hold it, and add it only if
   // the story did not say it itself.
   _pendingEcho = story.currentChoices[i].text;
+  _readerChose = true;
   story.ChooseChoiceIndex(i);
   dropResumeOffer();                    // a choice here is the fresh reading going on
   advance();
@@ -915,8 +916,12 @@ async function launchAndWait(tag) {
   // interrupted (Skydock's PET terminals do); the host engine gave games the
   // same from its page.
   const recent = state.prose.slice(-8).map((l) => l.text);
+  // Waiting from now, not from the shell's answer: a world's re-entry or a test's goto in between would move a
+  // story that is paused on this tag (worldReenter and goto both check _awaitingGame).
+  _awaitingGame = game;
   const res = await storyRequest('story.launch', { game, args, recent });
   if (!res.ok) {
+    _awaitingGame = null;
     // A refused launch must not strand the reader in a story with no
     // choices. Say so and carry on — the beat continues without the game.
     setStatus(`${game} refused: ${res.reason}`);
@@ -948,6 +953,14 @@ function resumeAfterGame(detail) {
   for (const [name, value] of Object.entries(detail?.variables || {})) {
     _econSeen[name] = value;              // the shell's value: no need to send it back
     try { story.variablesState[name] = value; applied.push(name); }
+    catch { missed.push(name); }
+  }
+  // The game's own result, for a story that declares `game_success` or `game_score` (Per Aspera's cellar goes on
+  // from the way the reader left the novel page). A story that declares neither is not touched.
+  for (const [name, value] of [['game_success', detail?.success], ['game_score', detail?.score]]) {
+    if (value === null || value === undefined) continue;
+    if (!declaredNames()?.includes(name)) continue;
+    try { story.variablesState[name] = typeof value === 'boolean' ? value : Number(value) || 0; applied.push(name); }
     catch { missed.push(name); }
   }
   state.lastGame = { game, success: detail?.success ?? null,
@@ -1090,8 +1103,13 @@ function reportPosition(push = false) {
 // A deep link at boot: the shell answers what the URL asks for, and the
 // runner goes there if it can. A knot it does not have is reported, not
 // silently ignored — a shared link that lands somewhere wrong should say so.
+let _readerChose = false;                // set by choose(): a deep link from boot must not undo a choice
 async function honourDeepLink() {
   const res = await storyRequest('story.navigate', { op: 'resolve' });
+  // The answer is async, and the address follows the reading: by the time it arrives the shell may hold this
+  // runner's first position report, and the reader may already have chosen. Found by e2e-novel (September 2026):
+  // a choice made soon after load ("Go down to the Lantern Cellar") was undone by a jump back to #street.
+  if (_readerChose) return false;
   if (!res.ok || !res.parsed) return false;
   // A link to where the reader already is, is no move. The address may hold
   // this runner's own first position report (the fink skill, "deep link").

@@ -1202,6 +1202,20 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   our larger vision of Titan as icy space colony"). Outdoors: no trees, grass or open sky; methane ice and snow,
   orange-brown haze, sealed glass traffic tubes on pylons, domes, people in pressure suits and bubble helmets. Put the
   Titan design brief into the prompt; do not trust a source image to carry it.
+- In Per Aspera (owner, September 2026: "Can you work the novel format we prototyped into the story?"): the first
+  visit to the Lantern Cellar opens the page, `# MINIGAME: cellar exits=oskar`, inline on the cellar's first-visit
+  line. `exits=oskar` (the app row lists `args: ['exits']`) sets `oskar_exit` in cellar.ink, so the stage panel
+  also offers Per Aspera's own "Sit in with Oskar". The page completes with a score for the way out: 1 Oskar
+  (`# leave: oskar`, seen through the component's new `storytags` event), 2 the street (the story's move to the
+  street panel, as before). The runner copies the result into `game_score` (a story VAR, only if declared), and
+  the lines after the tag divert: `{game_score == 1: -> oskar}`, `{game_score == 2: -> street}`. A second visit
+  is text only. No new words: both labels are Per Aspera's. `node inklet/finkapp/test/e2e-novel.mjs`.
+  - The page's own ink shows the cellar's arrival line too, so the reader sees it twice (runner and page). Left as
+    it is for now; hiding the runner's copy while the page is open would need a runner change.
+  - Found on the way, in the story runner: a deep link from boot (`honourDeepLink`) answered after the reader's
+    first choice and jumped the story back to `#street`, the runner's own first position report in the address.
+    It now does nothing once the reader has chosen. And the runner now counts a game as playing from the launch
+    request, not from the shell's answer, so a world's re-entry in between cannot move a paused story.
 - Media notes and costs: `novel/media/README.md`.
 
 ## Character sheets (`drift-city/bible/`, September 2026)
