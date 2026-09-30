@@ -1,0 +1,10 @@
+{
+  "_about": "The city's placed landmarks: ONE source for the page (world.js) and the shaders (scene.wgsl). tools/gen-design.mjs writes src/gen/design.js and src/gen/design.wgsl from this file when the page is built (assemble.py). Blocks are big blocks of BIG metres, wrapped every WRAP blocks. 'top' is the landmark's height; 'boundTop' the height the shaders use as its bounding box (it includes what stands on the roof).",
+  "BIG": 208,
+  "WRAP": 96,
+  "hall":  { "block": [3, -4], "top": 96, "maxDist": 14000 },
+  "hive":  { "blocksX": [2, 4], "blocksZ": [5, 6], "centre": [728, 1248], "top": 240, "boundTop": 272 },
+  "fab":   { "block": [5, 5], "top": 110, "boundTop": 124 },
+  "spire": { "block": [0, -1] },
+  "beam":  { "dir": [-0.35, 1, 0.25] }
+}

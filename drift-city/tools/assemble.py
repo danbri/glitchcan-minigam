@@ -1,14 +1,15 @@
 import os, subprocess
 ROOT=os.path.dirname(os.path.abspath(__file__))+'/../'
 D=ROOT+'src/'
+subprocess.run(['node',ROOT+'tools/gen-design.mjs'],check=True)
 subprocess.run(['node',ROOT+'tools/bakeplaces.mjs'],check=True)
 head=open(D+'head.html').read()
-page=(head+'<script type="text/wgsl" id="wgsl-common">\n'+open(D+'common.wgsl').read()+'</script>\n'
+page=(head+'<script type="text/wgsl" id="wgsl-common">\n'+open(D+'common.wgsl').read()+open(D+'gen/design.wgsl').read()+'</script>\n'
       +'<script type="text/wgsl" id="wgsl-scene">\n'+open(D+'scene.wgsl').read()+'</script>\n'+'<script type="text/wgsl" id="wgsl-rooms-off">\n'+open(D+'rooms-off.wgsl').read()+'</script>\n'+'<script type="text/wgsl" id="wgsl-rooms">\n'+open(D+'rooms.wgsl').read()+'</script>\n'
       +''.join('<script type="text/wgsl" id="wgsl-room-'+f[:-5]+'">\n'+open(D+'rooms/'+f).read()+'</script>\n' for f in sorted(os.listdir(D+'rooms')) if f.endswith('.wgsl'))
       +'<script type="text/wgsl" id="wgsl-space">\n'+open(D+'space.wgsl').read()+'</script>\n'
       +'<script type="text/wgsl" id="wgsl-post">\n'+open(D+'post.wgsl').read()+'</script>\n'+'<script type="text/wgsl" id="wgsl-phys">\n'+open(D+'phys.wgsl').read()+'</script>\n'
-      +'<script>\n(() => {\n"use strict";\n'+open(D+'tables.js').read()+'\n'+open(D+'world.js').read()+'\n'+open(D+'fallback.js').read()+'\n'+open(D+'titan.js').read()+'\n'+open(D+'audio.js').read()+'\n'+open(D+'venue.js').read()+'\nconst PLACES_BAKED = '+open(D+'places.json').read()+';\n'+open(D+'tales.js').read()+'\n'+open(D+'heads.js').read()+'\n'+open(D+'feel.js').read()+'\n'+open(D+'map.js').read()+'\n'+open(D+'pick.js').read()+'\n'+open(D+'assist.js').read()+'\n'+open(D+'guide.js').read()+'\n'+open(D+'life.js').read()+'\n'+open(D+'morse.js').read()+'\n'+open(D+'host.js').read()+'\n'+open(D+'main.js').read()+'\n})();\n</script>\n</body>\n</html>\n')
+      +'<script>\n(() => {\n"use strict";\n'+open(D+'tables.js').read()+'\n'+open(D+'gen/design.js').read()+'\n'+open(D+'world.js').read()+'\n'+open(D+'fallback.js').read()+'\n'+open(D+'titan.js').read()+'\n'+open(D+'audio.js').read()+'\n'+open(D+'venue.js').read()+'\nconst PLACES_BAKED = '+open(D+'places.json').read()+';\n'+open(D+'tales.js').read()+'\n'+open(D+'heads.js').read()+'\n'+open(D+'feel.js').read()+'\n'+open(D+'map.js').read()+'\n'+open(D+'pick.js').read()+'\n'+open(D+'assist.js').read()+'\n'+open(D+'guide.js').read()+'\n'+open(D+'life.js').read()+'\n'+open(D+'morse.js').read()+'\n'+open(D+'host.js').read()+'\n'+open(D+'main.js').read()+'\n})();\n</script>\n</body>\n</html>\n')
 os.makedirs(ROOT+'dist',exist_ok=True)
 open(ROOT+'dist/city.html','w').write(page)
 print('page bytes', len(page))

@@ -471,6 +471,35 @@ addEventListener("touchmove", (e) => {
 let wheelAcc = 0;
 const touches = new Map();
 let pinchD = 0;
+// Pinch to move (owner, September 2026: "supporting pinch (bigger and smaller) as a way of moving the user /
+// viewpoint in the world, perhaps snappy quick moves also set some inertia"). Fingers apart moves you towards what
+// you look at, together moves you back: walking in a scene, flying by hand, the drone's own flight, and the map
+// view (where it zooms). Space keeps its own pinch (wheelAcc). While the fingers move, the view follows them; a
+// quick pinch leaves its speed behind, which dies away over about half a second. PINCH.s is the signal for this
+// frame, in natural-log units of finger spread per second (doubling the spread in 0.3 s is about 2.3).
+const PINCH = { acc: 0, rate: 0, lastT: 0, held: false, s: 0 };
+function pinchMove(dl, now) {
+  const dts = Math.max(8, now - PINCH.lastT) / 1000;
+  PINCH.acc += dl;
+  PINCH.rate = PINCH.rate * 0.5 + 0.5 * clampv(dl / dts, -8, 8);
+  PINCH.lastT = now; PINCH.held = true;
+}
+function pinchRelease(now) {
+  if (!PINCH.held) return;
+  PINCH.held = false;
+  // a slow pinch, or fingers that had stopped before they lifted, leaves nothing behind
+  if (Math.abs(PINCH.rate) < 2.0 || now - PINCH.lastT > 120) PINCH.rate = 0;
+}
+function pinchStep(dt) {
+  let s = 0;
+  if (PINCH.acc) { s = PINCH.acc / Math.max(dt, 1 / 120); PINCH.acc = 0; }
+  else if (!PINCH.held && PINCH.rate) { s = PINCH.rate; PINCH.rate *= Math.exp(-dt * 2.2); if (Math.abs(PINCH.rate) < 0.08) PINCH.rate = 0; }
+  PINCH.s = clampv(s, -8, 8);
+  if (PINCH.s) {
+    lastInput = clock;
+    if (MAPV.on) MAPV.wheel = clampv((MAPV.wheel || 0) - PINCH.s * dt * 1.5, -3, 3);
+  }
+}
 let climbBtn = 0;
 // the on-screen gamepad: the right thumb alone flies the city (up to speed up, centre to cruise, down to stop and
 // hover; left and right to turn); the left stick climbs and descends and slides sideways. Axes -1..1, up and right +.
@@ -534,8 +563,10 @@ function spaceInput(dt) {
     if (keys.has("w")) inp.move += 1;
     if (keys.has("s")) inp.move -= 1;
     inp.move = clampv(inp.move, -1, 1);
+    if (!MAPV.on) inp.move = clampv(inp.move + PINCH.s * 1.2, -4, 4);   // pinch: walk or glide along the view
     if (inp.move) lastInput = clock;
   }
+  if (NAV.mode === "free") inp.climb = clampv(inp.climb - PINCH.s * 0.8, -4, 4);   // pinch: down towards the city, or up
   if (inp.climb !== 0) lastInput = clock;
   if (NAV.mode !== "space" && NAV.mode !== "free" && NAV.mode !== "visit") { wheelAcc = 0; return inp; }
   const md = Math.min(innerWidth, innerHeight);
@@ -736,7 +767,7 @@ function update(dt) {
   st.dbgObst = obst;
   const floorAlt = Math.max(3, obst + (low ? 3.5 : 10));
   if (auto > 0.5) st.altBias *= 1 - 0.12 * dt;
-  st.altBias = clampv(st.altBias + uy * 22 * dt, -80, 260);
+  st.altBias = clampv(st.altBias + uy * 22 * dt - PINCH.s * 30 * dt, -80, 260);   // pinch: fingers apart dives
   targetY = Math.max(targetY + st.altBias, floorAlt);
   if (floorAlt - st.y > 15) tSpeed *= clampv(1 - (floorAlt - st.y) / 100, 0.3, 1);
 
@@ -1220,12 +1251,12 @@ async function init() {
       label: "proxy " + vsName, layout: pl(pxBGL), vertex: { module: sceneMod, entryPoint: vsName }, fragment: { module: sceneMod, entryPoint: "fsProxy", targets: [{ format: "r32float" }] },
       primitive: { topology: "triangle-list", cullMode: "none" }, depthStencil: { format: "depth24plus", depthWriteEnabled: true, depthCompare: "less" },
     }));
-    const mkC = (label, layout, module, entryPoint) => named(label, device.createComputePipelineAsync({ label, layout, compute: { module, entryPoint } }));
+    const mkC = (label, layout, module, entryPoint, constants) => named(label, device.createComputePipelineAsync({ label, layout, compute: { module, entryPoint, constants } }));
     if (globalThis.__failFull && !lite) { const err = new Error("CreateGraphicsPipelines failed with VK_ERROR_INITIALIZATION_FAILED (simulated)"); err.pipeline = "scene"; throw err; }
     const [pScene, pTaa, pDown, pBH, pBV, pComp, pProxyC, pProxyG, pShadow, pTree] = await Promise.all([
       mk("scene", sceneMod, "scene", F16, pl(scBGL)), mk("taa", postMod, "taa", F16), mk("bloom", postMod, "bloomDown", F16), mk("blur h", postMod, "blurH", F16), mk("blur v", postMod, "blurV", F16), mk("composite", postMod, "comp", format),
       mkProxy("vsCell"), mkProxy("vsGiant"),
-      mkC("shadows", pl(shBGL), sceneMod, "shadowBuild"), mkC("trees", pl(trBGL), sceneMod, "treeBuild"),
+      mkC("shadows", pl(shBGL), sceneMod, "shadowBuild", { NO_DYN: 1 }), mkC("trees", pl(trBGL), sceneMod, "treeBuild"),
     ]);
     const spBGL = bgl([{ binding: 0, visibility: VX | FR, buffer: { type: "uniform" } }, { binding: 1, visibility: FR, buffer: { type: "uniform" } }]);
     const pSpace = await named("space", device.createRenderPipelineAsync({
@@ -1512,6 +1543,7 @@ async function init() {
     if (hostPaused()) { last = now; requestAnimationFrame(frame); return; } // paused by the foafos shell (host.js)
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
+    pinchStep(dt);
     ema = ema * 0.95 + dt * 1000 * 0.05;
     dtS = dtS * 0.75 + dt * 0.25;
     dtHist[dtIdx % 120] = dt * 1000; dtIdx++;
@@ -1686,8 +1718,9 @@ async function init() {
         timestampWrites: tsw(2, measure),
       });
       p.setBindGroup(0, pxBG);
-      p.setPipeline(pProxyC); p.draw(36, NC * NC);
-      p.setPipeline(pProxyG); p.draw(36, 169);
+      // 18 vertices a box: the three faces towards the camera (boxVertex in scene.wgsl)
+      p.setPipeline(pProxyC); p.draw(18, NC * NC);
+      p.setPipeline(pProxyG); p.draw(18, 169);
       p.end(); ran[2] = 1;
     }
     const physOn = PHYS && !inSpace && PHYS_ON;
@@ -1890,11 +1923,15 @@ canvas.addEventListener("pointerdown", (e) => {
 canvas.addEventListener("pointermove", (e) => {
   if (touches.has(e.pointerId)) {
     touches.set(e.pointerId, [e.clientX, e.clientY]);
-    if (touches.size === 2 && NAV.mode === "space") {
+    if (touches.size === 2) {
       const [a, b] = [...touches.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
-      if (pinchD > 0) wheelAcc = clampv(wheelAcc - Math.log(d / pinchD) * 8, -3, 3);
+      if (pinchD > 0 && d > 0) {
+        if (NAV.mode === "space") wheelAcc = clampv(wheelAcc - Math.log(d / pinchD) * 8, -3, 3);
+        else pinchMove(Math.log(d / pinchD), e.timeStamp || performance.now());
+      }
       pinchD = d;
-      pointer.sx = pointer.x; pointer.sy = pointer.y;
+      // two fingers do not steer: the one-finger drag starts again from here
+      pointer.sx = pointer.x = e.clientX; pointer.sy = pointer.y = e.clientY;
     }
   }
   pointer.type = e.pointerType;
@@ -1903,7 +1940,11 @@ canvas.addEventListener("pointermove", (e) => {
 });
 const release = (e) => {
   if (e && e.pointerId !== undefined) touches.delete(e.pointerId);
-  if (touches.size > 0) return;
+  const tNow = (e && e.timeStamp) || performance.now();
+  if (touches.size < 2) { pinchRelease(tNow); pinchD = 0; }
+  if (touches.size > 0) { const [p] = [...touches.values()]; pointer.sx = pointer.x = p[0]; pointer.sy = pointer.y = p[1]; return; }
+  // a pinch that just ended is not a tap
+  if (tNow - PINCH.lastT < 300) { pointer.down = false; return; }
   // a short tap: in foafos it picks what is under it (the page draws no controls of its own to show or hide there);
   // on its own page it shows or hides the controls
   if (pointer.down && e && e.type === "pointerup" && performance.now() - downAt < 300 && Math.hypot(pointer.x - pointer.sx, pointer.y - pointer.sy) < 10) {
@@ -1939,7 +1980,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { MAPV, MAPO, mapViewSet, mapOverlaySet, CITYP, cityPause, pickSelect, pickSelGPU, cellAt, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { PINCH, MAPV, MAPO, mapViewSet, mapOverlaySet, CITYP, cityPause, pickSelect, pickSelGPU, cellAt, wclock: () => wclock, titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

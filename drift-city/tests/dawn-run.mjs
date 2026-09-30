@@ -26,7 +26,7 @@ const W = +(process.env.W || 390), H = +(process.env.H || 844), DPR = +(process.
 const handlers = {};
 function el(id) {
   return { id, style: {}, hidden: true, textContent: wg[id] || '', innerHTML: '', classList: { _s: new Set(), add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); }, toggle(c, f) { (f ?? !this._s.has(c)) ? this._s.add(c) : this._s.delete(c); }, contains(c) { return this._s.has(c); } },
-    setAttribute() {}, getAttribute() { return null; }, addEventListener(t, f) { handlers[id + ':' + t] = f; }, setPointerCapture() {}, appendChild() {}, remove() {}, querySelector() { return el('q'); } };
+    setAttribute() {}, getAttribute() { return null; }, addEventListener(t, f) { const k = id + ':' + t, g = handlers[k]; handlers[k] = g ? (e) => { g(e); f(e); } : f; }, setPointerCapture() {}, appendChild() {}, remove() {}, querySelector() { return el('q'); } };
 }
 const els = {};
 let curTex = null, ctxCfg = null;
@@ -123,6 +123,17 @@ for (let f = 0; f < N; f++) {
   if (process.env.MOVE && f > 3 && globalThis.__drift.NAV.visit) { const [mx, mz] = process.env.MOVE.split(',').map(Number), v = globalThis.__drift.NAV.visit; const c = { ...v.to, x: v.to.x + mx, z: v.to.z + mz }; v.from = c; v.to = c; }
   if (process.env.FREEALT && f === 3) { const D = globalThis.__drift; D.startFree(D.flatCamTitan()); const P = D.NAV.free.P, l = Math.hypot(...P), a = 2575 + (+process.env.FREEALT); D.NAV.free.P = P.map((v) => v * a / l); }
   if (process.env.GO && f === 4 && globalThis.__drift.NAV.trip) { const tr = globalThis.__drift.NAV.trip; tr.t = tr.T * (+process.env.GOAT || 0.985); }
+  // PINCH=a,b,n: a two-finger pinch on the canvas from spread a to b px over n frames, starting at frame 8 (after a
+  // HOP has arrived; set V.t = V.T at frame 7), lifted at frame 9+n; logs the move along the view each frame
+  if (process.env.PINCH) { const D = globalThis.__drift, [pa, pb, pn] = process.env.PINCH.split(',').map(Number), cx = W / 2, cy = H / 2;
+    const ev = (id, x, type) => ({ pointerId: id, clientX: x, clientY: cy, pointerType: 'touch', type, timeStamp: now, preventDefault() {}, stopPropagation() {} });
+    const at = (d) => [cx - d / 2, cx + d / 2];
+    if (f === 7 && D.NAV.visit) D.NAV.visit.t = D.NAV.visit.T;
+    if (f === 8) { const [x1, x2] = at(pa); handlers['c:pointerdown'](ev(1, x1, 'pointerdown')); handlers['c:pointerdown'](ev(2, x2, 'pointerdown')); }
+    if (f > 8 && f <= 8 + pn) { const [x1, x2] = at(pa + (pb - pa) * (f - 8) / pn); handlers['c:pointermove'](ev(1, x1, 'pointermove')); handlers['c:pointermove'](ev(2, x2, 'pointermove')); }
+    if (f === 9 + pn) { handlers['c:pointerup'](ev(1, 0, 'pointerup')); handlers['c:pointerup'](ev(2, 0, 'pointerup')); }
+    const V = D.NAV.visit, o = (V && V.off) || [0, 0, 0], P = D.NAV.free && D.NAV.free.P;
+    console.log('PINCHLOG', f, D.NAV.mode, 'along', (o[0] * Math.cos(D.st.yaw) + o[2] * Math.sin(D.st.yaw)).toFixed(3), 'yaw', D.st.yaw.toFixed(3), 's', D.PINCH.s.toFixed(2), 'rate', D.PINCH.rate.toFixed(2), 'alt', P ? ((Math.hypot(...P) - 2575) * 1000).toFixed(1) : '-'); }
   cb(now);
   await theDevice.queue.onSubmittedWorkDone();
 }

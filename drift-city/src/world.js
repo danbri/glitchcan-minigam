@@ -219,11 +219,12 @@ function zoneAt(cx, cz) {
 }
 // Landmarks are placed, not scattered: one Lumen pyramid and one ringed spire in the financial core, one plain
 // megatower over the dorms (big-block coordinates, 8 x 8 cells). Mirrored in scene.wgsl (giantHasW, the ring).
-const PYRAMID_CELL = [-6, -3], PAGODA_CELL = [-35, 16], SPIRE_BLOCK = [0, -1], GIANT_BLOCKS = [[0, -1]];
+// the landmarks' places and heights: src/design/landmarks.json, as DESIGN (src/gen/design.js, written by tools/gen-design.mjs)
+const PYRAMID_CELL = [-6, -3], PAGODA_CELL = [-35, 16], SPIRE_BLOCK = DESIGN.spire.block, GIANT_BLOCKS = [DESIGN.spire.block];
 // The Hive: the cattle-class pod block, a patched, hulking castle 620 x 420 m and 240 m tall on the dorms' outer edge,
 // looming over the nicer city. Big blocks x 2..4, z 5..6 (centre HIVE_C); mirrored as isHive and hiveSDF in scene.wgsl.
-const HIVE_C = [728, 1248], HIVE_H = 240;
-function hiveHas(bx, bz) { const wx = wrapN(bx, 96), wz = wrapN(bz, 96); return !!REG.city && wx >= 2 && wx <= 4 && wz >= 5 && wz <= 6; }
+const HIVE_C = DESIGN.hive.centre, HIVE_H = DESIGN.hive.top;
+function hiveHas(bx, bz) { const wx = wrapN(bx, 96), wz = wrapN(bz, 96), H = DESIGN.hive; return !!REG.city && wx >= H.blocksX[0] && wx <= H.blocksX[1] && wz >= H.blocksZ[0] && wz <= H.blocksZ[1]; }
 // its silhouette for the distant skyline: plinth, body, corner towers and the off-centre keep (local metres)
 function hiveTopAt(lx, lz) {
   const ax = Math.abs(lx), az = Math.abs(lz);
@@ -233,15 +234,15 @@ function hiveTopAt(lx, lz) {
 }
 // The pod fab: where the Hive's capsule homes are made, on big block (5, 5) beside it, powered by a beam from an orbital
 // power station (the receiver cup tops a 100 m tower). Mirrored as isFab / fabSDF / beamFx in scene.wgsl.
-const FAB_C = [5.5 * BIG, 5.5 * BIG], FAB_H = 110;
+const FAB_C = DESIGN.fabW, FAB_H = DESIGN.fab.top;
 // the beam comes down from the station along this direction (unit vector, pointing up the beam)
-const BEAM_DIR = (() => { const v = [-0.35, 1, 0.25], l = Math.hypot(...v); return v.map((x) => x / l); })();
+const BEAM_DIR = DESIGN.beamDir;
 // The Warmhouse: a 170 m bubble of warm Earth air that floats over the west edge of the city, tethered at four points.
 // Mirrored as bubbleC / bubbleSDF / bubbleFx in scene.wgsl (keep the drift the same). Why it floats: the skill, "Warmhouse".
 const BUB_R = 170;
 function bubbleAt(t) { return [-1650 + 9 * Math.sin(t * 0.031), 300 + 5 * Math.sin(t * 0.047), 520 + 7 * Math.cos(t * 0.027)]; }
 const BUB_C = bubbleAt(0);
-function fabHas(bx, bz) { return !!REG.city && wrapN(bx, 96) === 5 && wrapN(bz, 96) === 5; }
+function fabHas(bx, bz) { return !!REG.city && wrapN(bx, 96) === DESIGN.fab.block[0] && wrapN(bz, 96) === DESIGN.fab.block[1]; }
 function fabTopAt(lx, lz) { return Math.abs(lx) < 14 && Math.abs(lz) < 14 ? FAB_H : 26; }
 // Hillside letters spelling DRIFT CITY on the first hill north of the city, facing it.
 const SIGN = (() => {
@@ -309,13 +310,13 @@ function wildCell(o, cx, cz, ccx, ccz, lite) {
 function forestF(x, z) { return sstep(0.5, 0.66, vnoise(x / 260, z / 260, 7) * 0.7 + vnoise(x / 90, z / 90, 8) * 0.3); }
 function treeDens(x, z) { return sstep(0.12, 0.55, forestF(x, z)); }
 // the Assembly Hall stands on one giant cell about 1 km south-east of the centre
-function hallAt(bx, bz) { return REG.city && wrapN(bx, 96) === 3 && wrapN(bz, 96) === -4 && Math.hypot(repX((bx + 0.5) * BIG) + REG.ox, repZ((bz + 0.5) * BIG) + REG.oz) < 14000; }
+function hallAt(bx, bz) { const H = DESIGN.hall; return REG.city && wrapN(bx, 96) === H.block[0] && wrapN(bz, 96) === H.block[1] && Math.hypot(repX((bx + 0.5) * BIG) + REG.ox, repZ((bz + 0.5) * BIG) + REG.oz) < H.maxDist; }
 function giantHas(bx, bz) {
   if (hallAt(bx, bz) || hiveHas(bx, bz) || fabHas(bx, bz)) return true;
   const wx = wrapN(bx, 96), wz = wrapN(bz, 96);
   return REG.city && GIANT_BLOCKS.some((g) => g[0] === wx && g[1] === wz);
 }
-function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : hiveHas(bx, bz) ? HIVE_H : fabHas(bx, bz) ? FAB_H : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
+function giantH(bx, bz) { return hallAt(bx, bz) ? DESIGN.hall.top : hiveHas(bx, bz) ? HIVE_H : fabHas(bx, bz) ? FAB_H : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
 
 function computeBase(cx0, cz0, lite) {
   const cx = wrapS(cx0), cz = wrapS(cz0);

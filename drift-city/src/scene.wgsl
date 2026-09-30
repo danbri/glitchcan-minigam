@@ -100,6 +100,12 @@ var<private> gSelP: vec4f = vec4f(0.0, 0.0, -1.0, 0.0); // cell x, cell z, key (
 var<private> tq: array<vec4f, 4>;
 var<private> tq2: array<vec4f, 4>;
 var<private> gNoDyn: bool = false;
+// true for the shadow-map pipeline (main.js sets it when the pipeline is made), so the compiler drops the cars,
+// walkers, drones and ships from that pipeline instead of keeping them behind a flag that is always set there
+override NO_DYN: bool = false;
+fn noDyn() -> bool { return gNoDyn || NO_DYN; }
+// the cell (or, for a ship, index + 1) of the hit being shaded, for surface(); set by the scene pass
+var<private> gHitC: vec2i = vec2i(0);
 var<private> clKey: i32 = 2147483647;
 var<private> clA: array<vec4f, 6>;
 var<private> clB: array<vec4f, 6>;
@@ -355,19 +361,18 @@ fn wildTreeDens(tv: vec4f, p: vec2f) -> f32 {
 }
 fn isHall(b: vec2i) -> bool {
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
-  return u.reg.w > 0.5 && bw.x == 3 && bw.y == -4 && length(repP((vec2f(b) + 0.5) * BIG) + u.reg.xy) < 14000.0;
+  return u.reg.w > 0.5 && all(bw == HALL_B) && length(repP((vec2f(b) + 0.5) * BIG) + u.reg.xy) < HALL_MAXD;
 }
-fn isFab(b: vec2i) -> bool { return u.reg.w > 0.5 && wrapN(b.x, 96) == 5 && wrapN(b.y, 96) == 5; }
-// the beam from the orbital power station, pointing up it (BEAM_DIR in world.js), and its receiver cup
-const BEAM_B: vec3f = vec3f(-0.3215, 0.9186, 0.2297);
-const FAB_W: vec2f = vec2f(1144.0, 1144.0);
+fn isFab(b: vec2i) -> bool { return u.reg.w > 0.5 && wrapN(b.x, 96) == FAB_B.x && wrapN(b.y, 96) == FAB_B.y; }
+// the landmarks' blocks and heights, BEAM_B (the beam from the orbital power station, pointing up it) and FAB_W
+// (the works' centre) come from src/design/landmarks.json through tools/gen-design.mjs (src/gen/design.wgsl)
 fn giantHasW(b: vec2i) -> bool {
   if (isHall(b) || isHive(b) || isFab(b)) { return true; }
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
-  // placed, not scattered (GIANT_BLOCKS in world.js): the ringed spire in the core
-  return u.reg.w > 0.5 && bw.x == 0 && bw.y == -1;
+  // placed, not scattered (spire in src/design/landmarks.json): the ringed spire in the core
+  return u.reg.w > 0.5 && all(bw == SPIRE_B);
 }
-fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } if (isHive(b)) { return 272.0; } if (isFab(b)) { return 124.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
+fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return HALL_TOP; } if (isHive(b)) { return HIVE_BOUND_TOP; } if (isFab(b)) { return FAB_BOUND_TOP; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
 
 // terrain samples: one texel per block corner, bilinear between them
 fn terrV(v: vec2i) -> vec4f { return textureLoad(terrTex, wrapT(v), 0); }
@@ -1328,11 +1333,34 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   let Q = pr.a[bi * 2 + 1];
   let kind = i32(P.w);
   gPH = Q.z;
-  let part = i32(propSDF(bq, kind, bp).y);
+  // the part that was hit, the normal (a tetrahedral gradient) and, for people, the occlusion within the figure
+  // (three steps out along the normal): one loop, ONE propSDF call site. There were nine, and each inlined a
+  // whole figure (propPerson) into the scene pipeline (the drift-city skill, "Compile time").
   let e = 0.01;
-  let nl = normalize(vec3f(propSDF(bq + vec3f(e, 0.0, 0.0), kind, bp).x - propSDF(bq - vec3f(e, 0.0, 0.0), kind, bp).x,
-                           propSDF(bq + vec3f(0.0, e, 0.0), kind, bp).x - propSDF(bq - vec3f(0.0, e, 0.0), kind, bp).x,
-                           propSDF(bq + vec3f(0.0, 0.0, e), kind, bp).x - propSDF(bq - vec3f(0.0, 0.0, e), kind, bp).x));
+  var part = 0;
+  var ng = vec3f(0.0);
+  var nl = vec3f(0.0, 1.0, 0.0);
+  var o = 0.0;
+  let nS = select(5, 8, kind == 0);
+  for (var i = 0; i < nS; i++) {
+    var q = bq;
+    var kk = vec3f(0.0);
+    var hh = 1.0;
+    if (i >= 1 && i <= 4) {
+      let j = i - 1;
+      kk = vec3f(select(-1.0, 1.0, j == 0 || j == 3), select(-1.0, 1.0, j >= 2), select(-1.0, 1.0, j == 1 || j == 3));
+      q = bq + kk * e;
+    }
+    if (i >= 5) {
+      if (i == 5) { nl = normalize(ng); }
+      let j = f32(i - 4);
+      hh = 0.035 * j * j;
+      q = bq + nl * hh;
+    }
+    let r = propSDF(q, kind, bp);
+    if (i == 0) { part = i32(r.y); } else if (i <= 4) { ng += kk * r.x; } else { o += (hh - r.x) / hh; }
+  }
+  if (nS <= 5) { nl = normalize(ng); }
   let cy = cos(Q.x);
   let sy = sin(Q.x);
   let nw = normalize(vec3f(cy * nl.x + sy * nl.z, nl.y, -sy * nl.x + cy * nl.z));
@@ -1390,8 +1418,6 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   // occlusion within the thing itself (armpits, under the hat brim, between the legs): three steps out along the normal
   var occ = 1.0;
   if (kind == 0) {
-    var o = 0.0;
-    for (var k = 1; k <= 3; k++) { let hh = 0.035 * f32(k * k); o += (hh - propSDF(bq + nl * hh, kind, bp).x) / hh; }
     occ = clamp(1.0 - 0.28 * o, 0.3, 1.0);
     c *= 0.5 + 0.5 * occ;
   }
@@ -2763,6 +2789,9 @@ fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
   let lq = p.xz - (vec2f(c) + 0.5) * CS;
   let lp = vec3f(lq.x - cell.off.x, p.y, lq.y - cell.off.y);
   var r = vec2f(1e5, -1.0);
+  var eggId = -1;
+  var eggQ = vec3f(0.0);
+  var eggRep = false;
   switch cell.typ {
     case 1: { r = modern(lp, cell); if (cell.v < 0.4) { r = accrete(lp, cell, r, true); } }
     case 2: { r = historic(lp, cell); if (cell.v < 0.45) { r = accrete(lp, cell, r, false); } }
@@ -2782,16 +2811,16 @@ fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
       if (eg == 12) {
         r = vec2f(signSDF(vec3f(lq.x, p.y - cell.h, lq.y), i32(floor(fract(cell.v * 2.0) * 8.0 + 0.01)), cell.v >= 0.5), 46.0);
       } else {
-        r = vec2f(eggSDF(eg, vec3f(lq.x, p.y - cell.h, lq.y), cell.seed), 45.0);
+        eggId = eg; eggQ = vec3f(lq.x, p.y - cell.h, lq.y); eggRep = true;
       }
     }
     case 0: {
       let eg0 = cell.egg & 63;
       if ((cell.fl & 8) != 0) { r = wheelSDF(vec3f(lq.x, p.y, lq.y), cell.seed); }
       else if ((cell.fl & 16) != 0) { r = marketSDF(vec3f(lq.x, p.y, lq.y)); }
-      else if (eg0 == 24 || eg0 == 25) { r = vec2f(eggSDF(eg0, vec3f(lq.x, p.y, lq.y), cell.seed), 45.0); }
+      else if (eg0 == 24 || eg0 == 25) { eggId = eg0; eggQ = vec3f(lq.x, p.y, lq.y); eggRep = true; }
       else if ((cell.fl & 32) == 0 && ((cell.fl >> 15) & 7) == 7) { r = vec2f(cluster(lp, cell.h, 1.3, 3, 1.0, 0.15, cell.h * 0.6, cell.seed, 0.0, false), 3.0); }
-      if (eg0 == 26) { let dk = eggSDF(26, vec3f(lq.x, p.y, lq.y), cell.seed); if (dk < r.x) { r = vec2f(dk, 45.0); } }
+      if (eg0 == 26) { eggId = 26; eggQ = vec3f(lq.x, p.y, lq.y); }
     }
     default: {}
   }
@@ -2800,8 +2829,13 @@ fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
     let roofY = cell.h * select(1.0, 1.06, cell.v < 0.4);
     var eq = vec3f(lp.x, p.y - roofY, lp.z);
     if (eggC == 21) { eq = vec3f(lp.x - (cell.w.x * select(1.0, 0.74, cell.v < 0.4) - 0.45), p.y - roofY, lp.z); }
-    let de = eggSDF(eggC, eq, cell.seed);
-    if (de < r.x) { r = vec2f(de, 45.0); }
+    eggId = eggC; eggQ = eq;
+  }
+  // the one call of eggSDF (about 180 lines): each case above only says which egg, where, and whether it replaces
+  // the cell's shape or joins it. Four call sites made four inlined copies in every cellSDF copy.
+  if (eggId >= 0) {
+    let de = eggSDF(eggId, eggQ, cell.seed);
+    if (eggRep || de < r.x) { r = vec2f(de, 45.0); }
   }
   if ((cell.egg >> 6) != 0) {
     let ln = lanternSDF(lq, p.y, cell.egg >> 6);
@@ -2863,7 +2897,7 @@ fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
     let t = treesSDF(p, cell.typ);
     if (t.x < r.x) { r = t; }
   }
-  if (!gNoDyn) {
+  if (!noDyn()) {
     if (p.y < 2.5) {
       let cq = carsQ(p);
       if (cq.d < r.x) { r = vec2f(cq.d, 12.0); }
@@ -2897,7 +2931,7 @@ fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
 // wherever there was room, exhaust stacks, and the boards facing the nicer city (north and west). Local metres.
 fn isHive(b: vec2i) -> bool {
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
-  return u.reg.w > 0.5 && bw.x >= 2 && bw.x <= 4 && bw.y >= 5 && bw.y <= 6;
+  return u.reg.w > 0.5 && all(bw >= HIVE_B0) && all(bw <= HIVE_B1);
 }
 // the boards: centre (u, y) and half size (w, h) in their wall's own axes
 fn hiveBoardC(i: i32) -> vec4f {
@@ -3194,7 +3228,7 @@ fn giantSDF(p: vec3f, b: vec2i) -> vec2f {
   let ringW = 0.7 + 0.0025 * length(u.camPos.xz - (vec2f(b) + 0.5) * BIG);
   let ring = length(vec2f(length(q.xz) - 42.0, q.y)) - ringW;
   // only the spire in the core wears a ring: one landmark seen across the city
-  if (!gNoDyn && ring < d && bw.x == 0 && bw.y == -1) { m = 9.0; d = ring; }
+  if (!noDyn() && ring < d && all(bw == SPIRE_B)) { m = 9.0; d = ring; }
   return vec2f(d, m);
 }
 
@@ -3276,18 +3310,18 @@ fn traceCells(ro: vec3f, rd: vec3f, tStart: f32, tEnd: f32, maxCells: i32, maxSt
       if (iv[2].x < iv[1].x) { let tmp = iv[1]; iv[1] = iv[2]; iv[2] = tmp; }
       if (iv[1].x < iv[0].x) { let tmp = iv[0]; iv[0] = iv[1]; iv[1] = tmp; }
       let full = cellFull(c);
-      var cur = iv[0];
+      // merge the overlapping intervals first, then march them from ONE call site: GPU compilers inline every
+      // call, and traceSeg holds the whole cell distance function (the drift-city skill, "Compile time")
+      var seg = array<vec2f, 3>(iv[0], vec2f(1e9, -1e9), vec2f(1e9, -1e9));
+      var ns = 0;
       for (var k = 1; k < 3; k++) {
-        if (iv[k].x <= cur.y) {
-          cur.y = max(cur.y, iv[k].y);
-        } else {
-          let r = traceSeg(ro, rd, cur, c, full, maxSteps, sh, shadowMode);
-          if (r.y >= 0.0) { hit.t = r.x; hit.m = r.y; hit.kind = 2; hit.c = c; return hit; }
-          cur = iv[k];
-        }
+        if (iv[k].x <= seg[ns].y) { seg[ns].y = max(seg[ns].y, iv[k].y); }
+        else if (iv[k].x < 1e8) { ns++; seg[ns] = iv[k]; }
       }
-      let r = traceSeg(ro, rd, cur, c, full, maxSteps, sh, shadowMode);
-      if (r.y >= 0.0) { hit.t = r.x; hit.m = r.y; hit.kind = 2; hit.c = c; return hit; }
+      for (var q = 0; q <= ns; q++) {
+        let r = traceSeg(ro, rd, seg[q], c, full, maxSteps, sh, shadowMode);
+        if (r.y >= 0.0) { hit.t = r.x; hit.m = r.y; hit.kind = 2; hit.c = c; return hit; }
+      }
     }
     tPrev = tOut;
     if (tPrev >= tEnd) { break; }
@@ -3377,7 +3411,7 @@ fn traceScene(ro: vec3f, rd: vec3f, tmax: f32, cells: i32, steps: i32, gsteps: i
     tEnd = gh.t;
     if (shadowMode) { return best; }
   }
-  let ch = traceCells(ro, rd, 0.0, tEnd, cells, steps, sh, shadowMode, !gNoDyn);
+  let ch = traceCells(ro, rd, 0.0, tEnd, cells, steps, sh, shadowMode, !noDyn());
   if (ch.kind == 2) {
     best = ch;
   } else if (best.kind == 0 && tg <= tmax) {
@@ -3631,69 +3665,79 @@ fn sdfFor(p: vec3f, kind: i32, c: vec2i, cell: Cell) -> f32 {
   return cellSDF(p, c, cell).x;
 }
 
-fn hitNormal(p: vec3f, hit: Hit) -> vec3f {
-  if (hit.kind == 1) { return terrNormal(p); }
+// the normals that need no distance samples (terrain, balloons, far blocks, ...); w = 1 when handled here
+fn specialNormal(p: vec3f, hit: Hit) -> vec4f {
+  if (hit.kind == 1) { return vec4f(terrNormal(p), 1.0); }
   if (hit.kind == 5) {
     var bi = 0;
     var bd = 1e9;
     for (var i = 0; i < 3; i++) { let dd = length(p - ev.balloon[i].xyz); if (ev.balloon[i].w >= 0.0 && dd < bd) { bd = dd; bi = i; } }
     let q = p - ev.balloon[bi].xyz;
     let e = 0.05;
-    return normalize(vec3f(balloonSDF(q + vec3f(e, 0.0, 0.0)) - balloonSDF(q - vec3f(e, 0.0, 0.0)), balloonSDF(q + vec3f(0.0, e, 0.0)) - balloonSDF(q - vec3f(0.0, e, 0.0)), balloonSDF(q + vec3f(0.0, 0.0, e)) - balloonSDF(q - vec3f(0.0, 0.0, e))));
+    return vec4f(normalize(vec3f(balloonSDF(q + vec3f(e, 0.0, 0.0)) - balloonSDF(q - vec3f(e, 0.0, 0.0)), balloonSDF(q + vec3f(0.0, e, 0.0)) - balloonSDF(q - vec3f(0.0, e, 0.0)), balloonSDF(q + vec3f(0.0, 0.0, e)) - balloonSDF(q - vec3f(0.0, 0.0, e)))), 1.0);
   }
   if (hit.kind == 6 && hit.m > 50.5) {
     let lv = i32(hit.m + 0.5) - 50;
     let sz = CS * f32(1 << u32(lv));
-    if (p.y >= ffLoad(hit.c, lv).z - 0.3) { return vec3f(0.0, 1.0, 0.0); }
+    if (p.y >= ffLoad(hit.c, lv).z - 0.3) { return vec4f(vec3f(0.0, 1.0, 0.0), 1.0); }
     let lo = vec2f(hit.c) * sz;
     let dd = vec4f(abs(p.x - lo.x), abs(p.x - lo.x - sz), abs(p.z - lo.y), abs(p.z - lo.y - sz));
     let mn = min(min(dd.x, dd.y), min(dd.z, dd.w));
-    if (mn == dd.x) { return vec3f(-1.0, 0.0, 0.0); }
-    if (mn == dd.y) { return vec3f(1.0, 0.0, 0.0); }
-    if (mn == dd.z) { return vec3f(0.0, 0.0, -1.0); }
-    return vec3f(0.0, 0.0, 1.0);
+    if (mn == dd.x) { return vec4f(vec3f(-1.0, 0.0, 0.0), 1.0); }
+    if (mn == dd.y) { return vec4f(vec3f(1.0, 0.0, 0.0), 1.0); }
+    if (mn == dd.z) { return vec4f(vec3f(0.0, 0.0, -1.0), 1.0); }
+    return vec4f(vec3f(0.0, 0.0, 1.0), 1.0);
   }
   if (hit.kind == 6) {
     let b = textureLoad(ffBTex, wrapT(hit.c), 0);
     let cen = (vec2f(hit.c) + 0.5) * CS;
     let q = vec3f(p.x - cen.x, p.y - b.x * 0.5, p.z - cen.y) / vec3f(b.y, b.x * 0.5 + 1.0, b.z);
     let aq = abs(q);
-    if (aq.y > aq.x && aq.y > aq.z) { return vec3f(0.0, sign(q.y), 0.0); }
-    if (aq.x > aq.z) { return vec3f(sign(q.x), 0.0, 0.0); }
-    return vec3f(0.0, 0.0, sign(q.z));
+    if (aq.y > aq.x && aq.y > aq.z) { return vec4f(vec3f(0.0, sign(q.y), 0.0), 1.0); }
+    if (aq.x > aq.z) { return vec4f(vec3f(sign(q.x), 0.0, 0.0), 1.0); }
+    return vec4f(vec3f(0.0, 0.0, sign(q.z)), 1.0);
   }
-  var cell: Cell;
-  if (hit.kind == 2) { cell = cellFull(hit.c); }
-  let e = max(0.0012 * hit.t, 0.002);
-  // tetrahedral gradient in a loop with a runtime bound, so the distance function is compiled once
-  var nn = vec3f(0.0);
-  let nIt = select(4, 5, u.frame < -1.0);
-  for (var i = 0; i < nIt; i++) {
-    let k = vec3f(select(-1.0, 1.0, i == 0 || i == 3), select(-1.0, 1.0, i >= 2), select(-1.0, 1.0, i == 1 || i == 3));
-    nn += k * sdfFor(p + k * e, hit.kind, hit.c, cell);
-  }
-  return normalize(nn);
+  return vec4f(0.0);
 }
 
-fn calcAO(p: vec3f, n: vec3f, hit: Hit) -> f32 {
-  var c = hit.c;
-  var kind = hit.kind;
-  if (kind == 1) {
-    c = vec2i(floor(p.xz / CS));
-    kind = 2;
-  }
-  var cell: Cell;
-  if (kind == 2) { cell = cellFull(c); }
+// The surface normal (a tetrahedral gradient) and, when wantAO, the ambient occlusion (steps out along that
+// normal), from ONE loop with ONE sdfFor call: GPU compilers inline every call, and sdfFor holds the whole cell,
+// giant and ship distance functions. The occlusion now steps along the geometric normal, before the surface's
+// bump and ripples (it used the bumped one when it was its own function). Returns (normal, occlusion).
+fn normalAO(p: vec3f, hit: Hit, wantAO: bool) -> vec4f {
+  let sp = specialNormal(p, hit);
+  var n = sp.xyz;
+  var aoKind = hit.kind;
+  var aoC = hit.c;
+  if (aoKind == 1) { aoC = vec2i(floor(p.xz / CS)); aoKind = 2; }
+  var cellN: Cell;
+  if (hit.kind == 2) { cellN = cellFull(hit.c); }
+  var cellA = cellN;
+  if (aoKind == 2 && hit.kind != 2) { cellA = cellFull(aoC); }
+  let e = max(0.0012 * hit.t, 0.002);
+  let nIt = select(4, 5, u.frame < -1.0);
+  let nA = select(3, 4, u.frame < -1.0);
+  var nn = vec3f(0.0);
   var occ = 0.0;
   var w = 1.0;
-  let nA = select(3, 4, u.frame < -1.0);
-  for (var i = 1; i <= nA; i++) {
-    let h = 0.25 + 0.55 * f32(i * i);
-    let d = sdfFor(p + n * h, kind, c, cell);
-    occ += max(h - d, 0.0) / h * w;
-    w *= 0.65;
+  let i0 = select(0, nIt, sp.w > 0.5);
+  let i1 = nIt + select(0, nA, wantAO);
+  for (var i = i0; i < i1; i++) {
+    let ao = i >= nIt;
+    if (ao && i == nIt && sp.w < 0.5) { n = normalize(nn); }
+    let k = vec3f(select(-1.0, 1.0, i == 0 || i == 3), select(-1.0, 1.0, i >= 2), select(-1.0, 1.0, i == 1 || i == 3));
+    let j = i - nIt + 1;
+    let h = 0.25 + 0.55 * f32(j * j);
+    var q = p + k * e;
+    var kd = hit.kind;
+    var cc = hit.c;
+    var cl = cellN;
+    if (ao) { q = p + n * h; kd = aoKind; cc = aoC; cl = cellA; }
+    let d = sdfFor(q, kd, cc, cl);
+    if (ao) { occ += max(h - d, 0.0) / h * w; w *= 0.65; } else { nn += k * d; }
   }
-  return clamp(1.0 - occ * 0.55, 0.0, 1.0);
+  if (sp.w < 0.5 && !wantAO) { n = normalize(nn); }
+  return vec4f(n, clamp(1.0 - occ * 0.55, 0.0, 1.0));
 }
 
 // ---------- look ----------
@@ -3946,6 +3990,12 @@ fn traceBalloons(ro: vec3f, rd: vec3f, tEnd: f32) -> f32 {
 }
 
 fn fogApply(col: vec3f, ro: vec3f, rd: vec3f, tIn: f32) -> vec3f {
+  let f = fogParts(ro, rd, tIn);
+  return col * f.w + f.xyz;
+}
+// The fog is an affine blend: fogApply(x) = x * w + xyz. The scene pass needs both parts for every segment, and
+// used to call fogApply twice (with black and with white) to get them; this computes them once.
+fn fogParts(ro: vec3f, rd: vec3f, tIn: f32) -> vec4f {
   // the Warmhouse holds clear Earth air: the part of the ray inside it adds no haze
   let bq = ro - bubbleC();
   let bb = dot(bq, rd);
@@ -3962,7 +4012,7 @@ fn fogApply(col: vec3f, ro: vec3f, rd: vec3f, tIn: f32) -> vec3f {
   let amt = 1.0 - exp(-u.fogDen * exp(-max(ro.y, 0.0) * b) * fy);
   let sunAmt = pow(max(dot(rd, u.sunDir), 0.0), 8.0);
   let fc = mix(u.fogCol, u.fogCol * 0.6 + u.sunCol * 0.22, sunAmt);
-  var outc = mix(col, fc, clamp(amt, 0.0, 1.0));
+  let a1 = clamp(amt, 0.0, 1.0);
   // neon-lit smog hugging the streets at night, thickest in the neon districts
   let b2 = 0.045;
   let k2 = rd.y * b2;
@@ -3972,7 +4022,9 @@ fn fogApply(col: vec3f, ro: vec3f, rd: vec3f, tIn: f32) -> vec3f {
   let neon = clamp(ev.sky.z * (0.7 + 0.6 * vnoise(sp2 / 350.0, 33)), 0.0, 1.0);
   let smogAmt = 1.0 - exp(-0.02 * u.windows * (0.3 + neon) * exp(-max(ro.y, 0.0) * b2) * fy2);
   let smogCol = mix(vec3f(0.22, 0.07, 0.25), vec3f(0.06, 0.2, 0.26), vnoise(sp2 / 140.0, 34)) * (0.4 + 0.6 * neon);
-  return mix(outc, smogCol, clamp(smogAmt, 0.0, 0.7));
+  let a2 = clamp(smogAmt, 0.0, 0.7);
+  // mix(mix(x, fc, a1), smogCol, a2) = x * (1 - a1)(1 - a2) + fc * a1 (1 - a2) + smogCol * a2
+  return vec4f(fc * a1 * (1.0 - a2) + smogCol * a2, (1.0 - a1) * (1.0 - a2));
 }
 
 // ---------- neon text ----------
@@ -4730,8 +4782,12 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       let lampA = 9.0 * round(along / 9.0);
       let ld = vec2f(along - lampA, e - 2.9);
       s.emi = zoneLamp((cell.fl >> 15) & 7) * exp(-dot(ld, ld) * 0.35) * u.windows * 0.16 * road * (1.0 - dens);
+      // the car over this bit of road, found once for its shadow, its police lights and its head and tail lights
+      let carHere = road > 0.5 && (t < 250.0 || u.windows > 0.15);
+      var cq: CarQ;
+      cq.ok = 0.0;
+      if (carHere) { cq = carsQ(vec3f(p.x, 0.6, p.z)); }
       if (road > 0.5 && t < 250.0) {
-        let cq = carsQ(vec3f(p.x, 0.6, p.z));
         if (cq.ok > 0.5) {
           let under = (1.0 - smoothstep(1.7, 2.8, abs(cq.la))) * (1.0 - smoothstep(0.75, 1.35, abs(cq.lat)));
           s.alb *= 1.0 - 0.7 * under;
@@ -4743,7 +4799,6 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         }
       }
       if (u.windows > 0.15 && road > 0.5) {
-        let cq = carsQ(vec3f(p.x, 0.6, p.z));
         if (cq.ok > 0.5 && cq.la > 2.0) {
           s.emi += vec3f(1.0, 0.9, 0.75) * exp(-(cq.la - 7.0) * (cq.la - 7.0) / 22.0) * exp(-cq.lat * cq.lat * 0.5) * 0.22 * u.windows;
         }
@@ -5421,9 +5476,8 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
     }
     case 70: {
       // skyboats: envelope fabric by kind, painted hulls, lit windows, emigration screens, running lights
-      var si = 0;
-      var sd = 1e5;
-      for (var k = 0; k < 8; k++) { if (ev.ship[k].w > 0.0) { let d = abs(shipSDF(p, k).x); if (d < sd) { sd = d; si = k; } } }
+      // which ship: the hit carries it (traceShips sets c.x = index + 1); this used to test all eight
+      let si = clamp(gHitC.x - 1, 0, 7);
       let sp = shipSDF(p, si);
       let q = shipLocal(p, si);
       let kind = i32(ev.shipDir[si].w + 0.5);
@@ -6108,15 +6162,27 @@ fn projectPx(wp: vec3f) -> vec4f {
   return vec4f(dot(v, u.camRight) / (u.fov * u.res.x / u.res.y), dot(v, u.camUp) / u.fov, z * farZ / (farZ - nearZ) - farZ * nearZ / (farZ - nearZ), z);
 }
 
+// Only the faces that face the camera, up to three of six (vertex_index 0..17: axis x, y, z, six vertices each):
+// the nearest surface of a box seen from outside is on them, so the start distances are the same with half the
+// vertices and half the triangles. A face pair seen edge-on (the camera between its planes) draws nothing. The
+// camera inside a box is the u.p5 case, where the scene does not read the proxies.
 fn boxVertex(vi: u32, lo: vec3f, hi: vec3f) -> PxOut {
-  var tbl = array<u32, 36>(0u, 1u, 3u, 0u, 3u, 2u, 4u, 6u, 7u, 4u, 7u, 5u, 0u, 4u, 5u, 0u, 5u, 1u,
-                           2u, 3u, 7u, 2u, 7u, 6u, 0u, 2u, 6u, 0u, 6u, 4u, 1u, 5u, 7u, 1u, 7u, 3u);
-  let c = tbl[vi];
-  let k = vec3f(f32(c & 1u), f32((c >> 1u) & 1u), f32((c >> 2u) & 1u));
+  var o: PxOut;
+  o.pos = vec4f(2.0, 2.0, 2.0, 1.0);
+  o.wp = vec3f(0.0);
+  let a = i32(vi / 6u);
+  let cp = u.camPos;
+  var side = 0.0;
+  if (cp[a] < lo[a]) { side = 0.0; } else if (cp[a] > hi[a]) { side = 1.0; } else { return o; }
+  let j = vi % 6u;
+  let fc = vec2f(select(0.0, 1.0, j == 1u || j == 2u || j == 4u), select(0.0, 1.0, j == 2u || j == 4u || j == 5u));
+  var k = vec3f(0.0);
+  k[a] = side;
+  k[(a + 1) % 3] = fc.x;
+  k[(a + 2) % 3] = fc.y;
   var wp = mix(lo, hi, k);
   let m = 0.25 + length(wp - u.camPos) * (3.0 * u.fov / u.res.y);
   wp += (k * 2.0 - 1.0) * m;
-  var o: PxOut;
   o.wp = wp;
   o.pos = projectPx(wp);
   return o;
@@ -6148,7 +6214,26 @@ fn boxVertex(vi: u32, lo: vec3f, hi: vec3f) -> PxOut {
     lo = vec3f(max(ctr.x - ext.x, cen.x - FOOT), -0.5, max(ctr.y - ext.y, cen.y - FOOT));
     hi = vec3f(min(ctr.x + ext.x, cen.x + FOOT), top + 0.5, min(ctr.y + ext.y, cen.y + FOOT));
   }
+  if (proxyCulled(lo, hi)) { return o; }
   return boxVertex(vi, lo, hi);
+}
+
+// A box no primary ray can use: its nearest point is beyond TMAX (a pixel with no box starts at 1e9, and the
+// cells are traced only to TMAX, so the result is the same), or its bounding sphere is behind the camera or
+// outside the view. Of the 9,216 cell boxes most are one or the other; the rasterizer then skips them.
+fn proxyCulled(lo: vec3f, hi: vec3f) -> bool {
+  let dmin = length(max(max(lo - u.camPos, u.camPos - hi), vec3f(0.0)));
+  if (dmin > TMAX) { return true; }
+  let c = (lo + hi) * 0.5;
+  let r = length(hi - lo) * 0.5 + 2.0 + dmin * (3.0 * u.fov / u.res.y);
+  let v = c - u.camPos;
+  let z = dot(v, u.camFwd);
+  if (z < -r) { return true; }
+  let ax = u.fov * u.res.x / u.res.y;
+  let ay = u.fov;
+  if (abs(dot(v, u.camRight)) - ax * z > r * sqrt(1.0 + ax * ax)) { return true; }
+  if (abs(dot(v, u.camUp)) - ay * z > r * sqrt(1.0 + ay * ay)) { return true; }
+  return false;
 }
 
 @vertex fn vsGiant(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> PxOut {
@@ -6315,8 +6400,11 @@ fn primaryDir(px: vec2f) -> vec3f {
     }
     let p = cro + crd * h.t;
     if (first) { tOut = h.t; }
-    var n = hitNormal(p, h);
+    // the normal, and on the first hit the ambient occlusion, in one pass of distance samples (normalAO)
+    let nao = normalAO(p, h, first && h.t < 300.0 && h.kind != 5);
+    var n = nao.xyz;
     // weathering first, then frost and settled snow on top of it (the tholin dust would brown fresh snow)
+    gHitC = h.c;
     var sf = surface(p, n, h.m, crd, h.t + tBase);
     if (first) { var nb = n; sf = weathering(sf, n, p, i32(h.m + 0.5), h.t, &nb); n = nb; }
     sf = frostify(sf, n, p, h.m);
@@ -6366,12 +6454,13 @@ fn primaryDir(px: vec2f) -> vec3f {
         sha = select(0.8, sm, sm >= 0.0);
       }
       occ = 1.0;
-      if (h.t < 300.0 && h.kind != 5) { occ = calcAO(p, n, h); }
+      if (h.t < 300.0 && h.kind != 5) { occ = nao.w; }
     }
     var c = lightSurf(n, crd, sf, sha, occ);
     // fog along this segment is an affine blend, fogApply(x) = x * fT + f0
-    let f0 = fogApply(vec3f(0.0), cro, crd, h.t);
-    let fT = fogApply(vec3f(1.0), cro, crd, h.t).x - f0.x;
+    let fp = fogParts(cro, crd, h.t);
+    let f0 = fp.xyz;
+    let fT = fp.w;
     if (!first) {
       var rc = c * fT + f0;
       rc *= min(1.0, 2.5 / max(luma(rc), 1e-4));

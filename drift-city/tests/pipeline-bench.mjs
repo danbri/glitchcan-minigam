@@ -27,6 +27,9 @@ const mod = dev.createShaderModule({ code });
 const info = await mod.getCompilationInfo();
 for (const m of info.messages) if (m.type === 'error') console.log('WGSL', m.lineNum, m.message);
 const t1 = performance.now();
-await dev.createRenderPipelineAsync({ layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: ep, constants, targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } }).catch((e) => console.log('PIPE', e.message.slice(0, 300)));
+// compute entries (shadowBuild takes NO_DYN, as main.js builds it): `shadowBuild` or `shadowBuild:dyn` for the old way
+if (ep === 'shadowBuild') {
+  await dev.createComputePipelineAsync({ layout: 'auto', compute: { module: mod, entryPoint: ep, constants: kind === 'dyn' ? {} : { NO_DYN: 1 } } }).catch((e) => console.log('PIPE', e.message.slice(0, 300)));
+} else await dev.createRenderPipelineAsync({ layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: ep, constants, targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } }).catch((e) => console.log('PIPE', e.message.slice(0, 300)));
 console.log(entry, 'module', ((t1 - t0) / 1000).toFixed(1), 's; pipeline', ((performance.now() - t1) / 1000).toFixed(1), 's');
 process.exit(0);
