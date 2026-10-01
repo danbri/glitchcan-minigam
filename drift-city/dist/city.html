@@ -10398,7 +10398,8 @@ function initGL(reason) {
     }
     clock += dtS; if (!CITYP.on) wclock += dtS;
     if (!INTRO.started && frameNoGL > 4 && worldOn()) worldStart();   // the world beside a story in foafos (tales.js)
-    update(dtS);
+    // a story place or a picked view holds the camera there (visitStep); free flight and space need WebGPU
+    if (NAV.mode === "visit") navStep(dtS, spaceInput(dt)); else update(dtS);
     recentre();
     taleSync(dtS);
     worldShift = null;
@@ -10427,13 +10428,12 @@ function initGL(reason) {
     if (hud > 0.25) {
       hud = 0;
       const autoOn = clock - lastInput > 4.5;
-      const parts = [CITYP.on ? "City paused" : autoOn ? "Autopilot" : "Steering by hand", placeName(), st.y.toFixed(0) + " m"];
-      if (hostOn()) hostStatus(parts);                 // in foafos the readout is the shell's (host.js)
-      else statusEl.innerHTML = "<b>" + parts[0] + "</b><span>" + parts[1] + "</span><span>" + parts[2] + "</span>";
+      if (hostOn()) hostStatus(statusParts(autoOn));   // in foafos the readout is the shell's (host.js)
+      else statusEl.innerHTML = statusHTML(autoOn);
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
     if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
-    pickMarkFrame(); pickNearFrame(); mapLabelsFrame();
+    pickMarkFrame(); pickNearFrame(); mapViewStep(dtS); mapLabelsFrame();
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;
