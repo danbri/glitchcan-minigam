@@ -29,6 +29,7 @@ Choose your adventure! Each episode is half-finished in a different way.
 + [Diamond Cave] -> diamond_cave_selected
 + [Drift City] -> drift_city_selected
 + [Hampstead] -> hampstead_selected
++ [Larkspur Falls] -> larkspur_selected
 + [Maple Hollow] -> maple_hollow_selected
 + [Mudslide Mines] -> mudslidemines_selected
 + [Riverbend] -> riverbend_selected
@@ -150,6 +151,17 @@ Riverbend - Village Mystery
 Discover the secrets of a chocolate-box-perfect village where greed and jealousy bind neighbours together in a conspiracy of silence.
 
 + [Enter Riverbend] -> external_story
+
+=== larkspur_selected ===
+# FINK: ../cozyverse/larkspur.fink.js
+
+# IMAGE: ../../cozyverse/larkspur/media/title.jpg
+
+Larkspur Falls: The Snowglobe Affair
+
+A holiday romance with a small crime in it, in six scenes. A cancelled flight, an aunt's bakery, an old flame who is now the fire chief, and a snowglobe that should not be missing. Find the clues before the Lantern Festival.
+
++ [Enter Larkspur Falls] -> external_story
 
 === maple_hollow_selected ===
 # FINK: ../cozyverse/maple-hollow.fink.js

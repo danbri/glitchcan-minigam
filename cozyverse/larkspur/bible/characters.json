@@ -1,0 +1,67 @@
+{
+  "about": "Larkspur Falls: The Snowglobe Affair. Character and place definitions. Each 'look' string is pasted word for word into every image and video prompt that shows that person or place, so the same person looks the same in every shot. All people are invented; no real person's likeness is wanted. The image prompts that made each file are in prompts.json.",
+  "style": "Still from a made-for-TV holiday romance, about 2012: soft diffusion filter, warm practical lights (bulb strings, shop windows, lamps), gentle falling snow, shallow depth of field, saturated reds and greens, flattering even light on faces, 16:9.",
+  "characters": [
+    {
+      "id": "nora", "name": "Nora Halvorsen", "age": 34,
+      "role": "Forensic accountant from Chicago. Grew up in Larkspur Falls; left at eighteen. The reader plays her.",
+      "look": "a 34-year-old woman with shoulder-length dark auburn hair and straight bangs cut slightly too short, grey-green eyes, a small pale scar through her left eyebrow, reading glasses hanging on a beaded chain",
+      "wardrobe": "a charcoal wool city coat too thin for the weather, a cream cable-knit turtleneck, black trousers, black city ankle boots, a mustard-yellow scarf; she carries a small red leather notebook",
+      "habit": "Adds up numbers she sees: prices, dates, the steps of the gazebo."
+    },
+    {
+      "id": "wes", "name": "Wes Calloway", "age": 36,
+      "role": "Runs Calloway Tree Farm; volunteer fire chief, so he has a key to the town hall. Nora's boyfriend at seventeen.",
+      "look": "a tall broad 36-year-old man with a close-cropped dark-blond beard, sandy hair under a grey knit cap, laugh lines, a slightly crooked nose",
+      "wardrobe": "a red-and-black buffalo-check flannel shirt under a tan canvas work jacket with a brown corduroy collar, a fire-department radio clipped to his belt, work gloves in the back pocket",
+      "habit": "Answers a question with a question."
+    },
+    {
+      "id": "bea", "name": "Aunt Bea Halvorsen", "age": 68,
+      "role": "Nora's aunt; owns the Rolling Pin bakery on Main Street. Keeps the festival ledger.",
+      "look": "a small quick 68-year-old woman with short silver curls, round wire-rimmed glasses and rosy cheeks",
+      "wardrobe": "a flour-dusted cranberry-red apron over a Fair Isle cardigan, a pencil behind her ear",
+      "habit": "Uses cardamom in everything."
+    },
+    {
+      "id": "pruitt", "name": "Agatha Pruitt", "age": 61,
+      "role": "Owns Pruitt's Pies, across the street from the Rolling Pin. Trained in Lyon. Bea's rival for thirty years.",
+      "look": "a tall thin 61-year-old woman with steel-grey hair in a tight French twist, sharp cheekbones and small pearl earrings",
+      "wardrobe": "a crisp navy apron over a white blouse with a rounded collar, a small enamel brooch shaped like a pie, a sticking plaster on her right index finger",
+      "habit": "Writes her sevens with a bar through them, the French way. Dusts every pie with cinnamon sugar."
+    },
+    {
+      "id": "delphine", "name": "Mayor Delphine Oakes", "age": 52,
+      "role": "Mayor of Larkspur Falls. Runs the Lantern Festival like a military operation.",
+      "look": "a poised 52-year-old Black woman with close-cropped natural grey-black hair and tortoiseshell glasses",
+      "wardrobe": "an emerald-green wool coat with a gold lantern-shaped festival pin, leather gloves, always a clipboard",
+      "habit": "Calls everyone by their full name."
+    },
+    {
+      "id": "trent", "name": "Trent Whitlock", "age": 40,
+      "role": "Property developer from the city who wants to buy Main Street. The obvious suspect; innocent of this.",
+      "look": "a 40-year-old man with slicked-back dark hair, clean-shaven, a winter tan and very white teeth",
+      "wardrobe": "a long camel overcoat over a grey suit, brown leather loafers with no socks, a phone in his hand",
+      "habit": "Photographs buildings."
+    },
+    {
+      "id": "extra", "name": "the man with the wreath", "age": 50,
+      "role": "The same man is in the background of every scene. The town calls him by a different name each time (Gary from the hardware store, Pastor Gil, Deputy Bram, Mr Fenwick who does the lights) and nobody else sees that he is one man. He does not speak until the last scene.",
+      "look": "a mild-looking man of about 50 with a round face, a neat grey moustache and pale blue eyes",
+      "wardrobe": "a brown flat cap and a fawn duffel coat; he holds a holly wreath in both hands, always the same wreath",
+      "habit": "Stands at the edge of the frame, holding the wreath."
+    }
+  ],
+  "places": [
+    { "id": "mainstreet", "name": "Main Street", "look": "a small New England main street of two-storey red-brick shops with strings of warm bulbs across the street, snow banked on the kerbs, a white gazebo on the green at the far end and a red covered bridge beyond it" },
+    { "id": "rollingpin", "name": "The Rolling Pin", "look": "a cosy bakery with a cranberry-red awning, a bay window full of cardamom buns, a brass bell over the door, and a chalkboard menu in Bea's round handwriting" },
+    { "id": "pruitts", "name": "Pruitt's Pies", "look": "a bakery across the street with a navy-blue awning, pies in perfect rows in the window and a chalkboard of prices in neat French-style handwriting with barred sevens" },
+    { "id": "townhall", "name": "Town Hall", "look": "a white clapboard town hall with a clock tower whose clock always shows 4:52, inside a wood-panelled lobby with an empty glass display case on a velvet plinth" },
+    { "id": "treefarm", "name": "Calloway Tree Farm", "look": "rows of snowy fir trees, a red barn with a lit lantern by the door and a small shed with a woodstove and two mugs of cocoa" },
+    { "id": "gazebo", "name": "The gazebo at the Lantern Festival", "look": "the white gazebo on the green at night, hung with hundreds of paper lanterns, townspeople in hats and scarves gathered round" }
+  ],
+  "props": [
+    { "id": "snowglobe", "name": "the Founders' Snowglobe (1912)", "look": "an old hand-blown glass snowglobe the size of a melon on a carved walnut base, holding a tiny model of the white town hall; its snow drifts slowly upward" },
+    { "id": "ledger", "name": "the festival ledger", "look": "a green clothbound account book open on a counter, columns of handwritten figures, one entry in a different, neater hand: 'Glass repair, $70, cash, Dec 11' with the 7 barred" }
+  ]
+}

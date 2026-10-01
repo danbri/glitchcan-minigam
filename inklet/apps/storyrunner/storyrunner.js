@@ -472,12 +472,16 @@ function renderStatusBar() {
 }
 
 function parseMedia(kind, value) {
-  const parts = value.split(/\s+/).filter(Boolean);
+  let parts = value.split(/\s+/).filter(Boolean);
+  // `poster=<image>` (VIDEO): the picture shown before the reader taps play.
+  // Without one a phone shows a black box, because it does not load video ahead.
+  let poster = null;
+  parts = parts.filter((w) => (/^poster=./i.test(w) ? ((poster = w.slice(7)), false) : true));
   let role = 'feature';
   if (parts.length > 1 && MEDIA_ROLES[parts[parts.length - 1].toLowerCase()]) {
     role = parts.pop().toLowerCase();
   }
-  return { kind, src: parts.join(' '), role };
+  return { kind, src: parts.join(' '), role, poster };
 }
 
 function renderMedia(m) {
@@ -502,6 +506,8 @@ function renderMedia(m) {
     el = document.createElement('video');
     // Layered resolution, not story-relative: global base → BASEHREF → path.
     el.src = resolveMedia(m.src); el.controls = true; el.playsInline = true;
+    el.preload = 'metadata';
+    if (m.poster) el.poster = resolveMedia(m.poster);
   } else {
     el = document.createElement('img');
     el.src = resolveMedia(m.src);
@@ -517,7 +523,7 @@ function renderMedia(m) {
     box.onclick = () => stage.setAttribute('data-media-role',
       stage.getAttribute('data-media-role') === 'accent' ? 'hero' : 'accent');
   }
-  state.media = { kind: m.kind, src: m.src, resolved: el.src || null };
+  state.media = { kind: m.kind, src: m.src, resolved: el.src || null, poster: el.poster || null };
   state.mediaRole = m.role;
   state.mediaSpec = MEDIA_ROLES[m.role];
 }

@@ -37,6 +37,39 @@ platform grows a slot and the content fills it.
   evaluated as JavaScript at capture time and throws ReferenceError
   (this silently broke test-variables.fink.js for months).
 
+## Generated pictures and video with the same people in every shot (October 2026)
+
+Larkspur Falls (`cozyverse/larkspur.fink.js`) was made this way, through the ElevenLabs creative tools.
+Its record is `cozyverse/larkspur/bible/`: `characters.json` (each person's look and wardrobe, as strings),
+`prompts.json` (model, flow node, references and credits for every file), `sheets/` (the character sheets).
+
+The method that held faces steady across 12 stills and 3 clips:
+1. Write each person as two fixed strings (look, wardrobe) and paste them word for word into every prompt.
+2. Make one character sheet per person first (gemini-3-pro-image, four views on a plain background).
+3. Make every still on the same flow with the sheets of the people in it wired in as references
+   (`connect_from`). Describe each person again in the prompt by hair, coat and so on, so the model can match
+   prompt to sheet.
+4. Make video from a still as the start frame (kling-3-pro, 5 s). The clip keeps the faces of the still.
+
+Measured prices (October 2026; ask with `estimate_only` first, prices move):
+- a sheet or a still with no reference: about 1,218 credits ($0.27); each reference sheet adds about 609
+- a 5 s Kling 3.0 Pro clip at 1080p with sound: about 5,090 credits ($1.12), so about $0.22 a second
+- the whole six-scene pilot: about 56,300 credits ($12.40) for 7 sheets, 12 stills, 3 edits and 3 clips
+
+What the models do not do, and the fix:
+- Small exact details in a picture (a 7 with a bar through it, a clock at a given time) come out wrong, and an
+  edit pass (gpt-image-2) often does not fix them. Check every detail that a clue depends on by cropping at
+  full size. The barred sevens in Larkspur Falls were drawn on by hand with Pillow, at measured pixel
+  positions; the clock came right on one edit.
+- Each clip's master is about 10 MB at 1924 x 1076. Scale it to 960 px wide (H.264, CRF 26, `+faststart`):
+  about 0.5 MB.
+- Give every local `# VIDEO:` a `poster=` picture (the start frame does well). Phones do not load video ahead,
+  and without a poster the beat opens on a black box.
+- Brand marks can appear on clothes (a work-jacket logo appeared on Wes). Look for them before publishing.
+
+Test on a phone-sized screen: `inklet/finkapp/test/e2e-larkspur.mjs` (390 x 844, touch) plays the solving
+path and checks media, 44 px tap targets, posters and sideways scroll; `SHOTS=dir` saves a screenshot per step.
+
 ## The story map
 
 - `inklet/toc.fink.js` — main menu; episode knots carry `# FINK: <path>`
