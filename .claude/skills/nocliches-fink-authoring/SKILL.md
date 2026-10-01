@@ -137,6 +137,14 @@ These are this project's, not the guide's; each comes from a decision or a defec
 - **F6. Fixtures are not stories.** Platform test fixtures (inklet/apps/storyrunner/*.fink.js,
   inklet/validation/tests/*, the dream and annex demos) exist to test mechanisms. Score them, but report them
   separately and do not count them in the project score.
+- **F7. Deliberate pastiche keeps its clichés; its wrong notes are the point.** Maple Hollow
+  (cozyverse/maple-hollow.fink.js) is a pastiche of seasonal cable romance on purpose. Aslan in it is the owner's
+  choice and stays (owner, October 2026: Aslan "is just there to unsettle, to show that something is a bit off,
+  that Maple Hollow is not quite our world"). The October 2026 review missed this: it scored the genre surface as
+  faults and counted the Aslan line as one more stock line. For a pastiche, ask two different questions: does the
+  surface stay smooth enough for the wrong notes to disturb, and do the wrong notes land? A cliché is a fault there
+  only when it is flat and does nothing for either. Never propose removing a wrong note; it is not an error. Do not
+  flag a borrowed name or phrase as a legal risk more than once; that decision is the owner's.
 
 ## Scoring method (used for the October 2026 review)
 
