@@ -5,7 +5,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
 **Files:**
 - [`inklet/skydock.fink.js`](https://github.com/danbri/glitchcan-minigam/blob/master/inklet/skydock.fink.js) · [play it](https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?story=/glitchcan-minigam/inklet/skydock.fink.js)
 
-**Result:** 5 faults; under 40 lines (14.7) faults per 100 prose lines.
+**Result:** 5 faults in 34 prose lines (14.7 per 100).
 
 **Materials:**
 - [the skill (rubric)](https://github.com/danbri/glitchcan-minigam/blob/master/.claude/skills/nocliches-fink-authoring/SKILL.md)
@@ -22,7 +22,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
   - Consequence 4: trades and diamonds change what the veterans say; the route home is promised, not reached (it is a frame).
   - Decoration 4: one wallpaper line at the close.
   - Earned 4: "The room goes quiet" announces weight the diamonds already carry.
-  - Mean 4.2; density 14.7 is 9.7 above 5, one full 5 → minus 0.5. **Grade 3.7.**
+  - Mean 4.2. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.2.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
