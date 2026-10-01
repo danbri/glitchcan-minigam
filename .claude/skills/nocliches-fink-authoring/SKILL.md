@@ -145,10 +145,15 @@ These are this project's, not the guide's; each comes from a decision or a defec
    ink line for the Part 1 and Part 2 trigger words, the way grep would. It does not interpret ink structure (NO
    HACKPARSING, CLAUDE.md): it prints file:line, the rule id and the line, and per file the hits per 100 prose
    lines. A hit is a place to look, not a verdict: "cold" on Titan, "neon" in Neon Row and a literal tether are not
-   faults.
+   faults. It finds few of the faults: in the October 2026 review it made 99 hits where a full read found about 600
+   faults (about one in six, and one in twenty in some files), because most faults are constructions, repeated
+   stock lines and choice labels, not words. Never report a scan as a review.
 2. **Read every prose line yourself** (the scanner misses constructions: echo lines, front-loading, false range,
    elegant variation, choice labels). Record each fault as `file:line  rule  quoted text  why`.
 3. **Score each file 1 to 5 on the five final tests** (Specificity, Interchangeability, Consequence, Decoration,
    Earned), 5 = no problem found, and give the density (faults per 100 prose lines). The file grade is the
    mean of the five, minus 0.5 for each full 5 faults per 100 lines above 5 (accumulation), floored at 1.
+   Only for files with 40 or more prose lines: in a file of 5 to 12 lines one fault is already 10 to 20 per 100,
+   and the October 2026 review graded such files 1.0 to 1.8 for one or two faults (some of them quotes of another
+   file). For short files give the five scores and the fault list, and no deduction.
 4. **Report** fixtures separately (F6), name owner-written text as the owner's, and propose fixes; do not apply them.

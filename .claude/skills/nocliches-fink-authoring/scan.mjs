@@ -57,14 +57,14 @@ const RULES = [
   ['2.25', 'transition verb alone', /\b(shifted|flickered|softened|hardened|gentled)\b/i],
   ['2.26', 'stock banter', /\byou're (such a menace|impossible|trouble|the worst|insufferable|ridiculous)\b|death of me/i],
   ['2.27', 'cinematic wallpaper', /\b(light (spills|pools|catches)|shadows play|the skyline stretches|floor-to-ceiling|in sharp relief|neon glow|the city hummed)\b/i],
-  ['2.28', 'description cliché', /\b(orbs|alabaster|porcelain|mane|broad shoulders|lean muscle)\b/i],
+  ['2.28', 'description cliché', /\b(orbs?|alabaster|porcelain|mane|broad shoulders|lean muscle)\b/i],
   ['2.30', 'religious exclamation', /\b(oh (my )?god|jesus|christ)\b/i],
   ['2.31', 'ending cliché', /\b(that was enough|it was a start|figure it out\. somehow)\b/i],
   ['2.32', 'pseudo-analysis', /\b(cut through the noise|sliced through|pierced through|wormed its way|the (architecture|geometry|calculus|mathematics|grammar) of)\b/i],
   ['2.33', 'AI vocabulary', /\b(tapestry|landscape|interplay|intricac(y|ies)|nuanced?|multifaceted|dynamics|paradigm|delv(e|es|ing)|foster(s|ing)?|garner(s|ed|ing)?|underscor(e|es|ing)|showcas(e|es|ing)|pivotal|crucial|vital|vibrant|intricate|profound|compelling|poignant|evocative|palpable|seemingly|arguably|notably|importantly|ultimately|fundamentally|inherently|undeniably)\b/i],
   ['2.35', 'puffery', /\b(a testament to|serves as a reminder|enduring legacy|lasting (legacy|impact)|indelible|plays? a (vital|pivotal|crucial|key) role|cannot be overstated)\b/i],
-  ['2.36', 'brochure language', /\b(nestled|in the heart of|boasts? a|stunning|breathtaking|bustling|picturesque|idyllic|continues to captivate)\b/i],
-  ['2.37', 'familiarity word', /\b(familiar|usual|routine|ritual)\b/i],
+  ['2.36', 'brochure language', /\b(nestled|in the heart of|boasts? a|stunning|breathtaking|bustl(e|es|ing)|picturesque|idyllic|continues to captivate|invitingly)\b/i],
+  ['2.37', 'familiarity word', /\b(familiar|usual|routine|ritual|rhythm)\b/i],
   ['2.38', 'time-skip filler', /\b(passed in a blur|flew by|time slipped|before (he|she|you) knew it|lost track of time|blended together)\b/i],
 ];
 
