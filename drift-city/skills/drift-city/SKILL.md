@@ -516,7 +516,7 @@ district), or the land. `pickCompose` frames it: a distance that fits its size, 
 angle (0.2 rad for tall things, 0.32 for wide), the subject on a third of the frame away from the light. The flight
 is a visit (`NAV.visit` with `look` and `subject`): `visitStep` turns to watch the subject, then settles into the
 composed view; `pickWarp` runs the world clock up to eight times as fast mid-flight; focus lands on the subject.
-The WebGL fallback only names things (it has no visits). Test: `PICK=x,y PICKF=12` in the scratch Dawn runner.
+The WebGL fallback only names things (`pickRing`; it has no GPU pick to fly to). Test: `PICK=x,y PICKF=12` in the scratch Dawn runner.
 
 - **A long press offers; it never flies.** Until September 2026 the press started the flight at once, so a finger
   resting on the screen sent the view off somewhere (owner report: "sometimes it zooms off"). Now `pickOffer` shows a
@@ -587,6 +587,28 @@ humanoids/exos".
   hits within 1.3 m while the box the jelly pass leaves through was 0.7 m, so the pass could restart inside the
   figure; both are 0.9-0.95 m now.
 - Headless: `PAUSE=1 PICKXY=0.75,0.35` (tap there, as fractions of the view) or `PICKPERSON=1` in dawn-run.mjs.
+
+## The WebGL fallback (`src/fallback.js`)
+
+A browser without WebGPU (and every plain headless Chromium here) gets `initGL`: one GLSL fragment shader over a
+coarse block city, with its own frame loop. That loop is a second copy of the main one, so a step added to
+`main.js`'s frame is missing from the fallback until someone adds it there too. Measured October 2026: it never
+called `navStep`, so a story place (`NAV.mode === "visit"`) never arrived. The mode said "visit" while the drone
+flight model went on flying (250 m in 8 s from the hop), the status line said "Autopilot", W flew instead of
+walking, and the map view could not come back to flight (no `mapViewStep`).
+
+What the fallback runs now:
+- `navStep` in "visit" mode only (story places, the map view, walking with W/S, the sticks and a pinch); in every
+  other mode the drone's `update`. Trips and space views are `fallbackJump` (startTrip), and free flight is not
+  offered: both need the WebGPU space view.
+- `statusParts` / `statusHTML`, the same readout as the WebGPU path.
+- `mapViewStep`, `pinchStep`, `taleSync`, the pick ring and the map labels.
+
+What it does not have: rooms and landmark interiors (an indoor place such as `hall_floor` shows dark block
+geometry, because the camera stands inside a coarse box), the shader's map look, people, physics, audio.
+
+Test: `node drift-city/tests/fallback-visit.mjs` (after `assemble.py`). It fails on the code before this fix.
+When you add something to `main.js`'s frame loop, decide whether the fallback needs it, and say so in the commit.
 
 ## Walking into a scene (`visitMove`, `visitWalkTo` in tales.js)
 
@@ -729,8 +751,8 @@ The map view: zoom (`MAPV.wheel`). Space keeps its old pinch (`wheelAcc`).
   and a browser agree.
 - Two fingers do not steer: the one-finger drag restarts from where the second finger lifts, and a pinch that just
   ended is not a tap.
-- The WebGL fallback has no walking or free flight (it never calls `navStep`), so a headless Chromium page cannot
-  test this. `node drift-city/tests/pinch.mjs` drives real pointer events through dawn-run (`PINCH=a,b,n`); the
+- The WebGL fallback has no free flight, and walks only in a story place (see "The WebGL fallback"), so a headless
+  Chromium page cannot test flying by pinch. `node drift-city/tests/pinch.mjs` drives real pointer events through dawn-run (`PINCH=a,b,n`); the
   harness's stub page used to keep only the LAST listener of each event, which is why the first attempt moved
   nothing. It now calls them all.
 
@@ -1072,8 +1094,8 @@ see map overlaid on the 3D". Menu › Map has three rows:
 - "Map view": a visit (`NAV.visit.mapView`) to 900 m straight down (pitch -1.52; other visits stop at -1.3), north
   up. There the sticks, a drag and the arrow keys pan, and the right stick, W/S or the wheel zoom from 250 to
   2600 m (`mapViewInput`, called from `visitStep`). The haze is thinned to 15% (`MAPV.k` on U[39]). The overlay
-  comes on with it. Turning it off flies back, and to surface flight when that is where you were. Not in the WebGL
-  fallback: it has no visits.
+  comes on with it. Turning it off flies back, and to surface flight when that is where you were. The WebGL fallback
+  has the flight up and back, but none of the shader's map look (no thinned haze, no overlay colours).
 - "Map overlay": the shader tints ground and roofs with the district's colour (the flat map's `MAP_ZONE_COL`, from
   bits 15-17 of the cell's flags) and draws street lines; `ev.sel2.w` bit 1 switches it. Labels for the districts
   (their centres, from `mapBase`) and every non-room place in `PLACES` are DOM elements laid over the view each
