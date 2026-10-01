@@ -76,7 +76,7 @@ parser; values keep their case. Implemented tags:
 
 | Tag | Meaning |
 |---|---|
-| `# IMAGE:` / `# VIDEO:` | media, resolved via §3.2 |
+| `# IMAGE:` / `# VIDEO:` | media, resolved via §3.2. A local `# VIDEO:` may add `poster=<image>`, the picture shown before play (resolved the same way); phones load no video ahead, so without one the reader sees a black box |
 | `# BASEHREF:` | story/knot media base |
 | `# FINK:` | load another FINK document (breaks the continue loop) |
 | `# MINIGAME: name [mode=m] [controls=dpad\|lite\|none] [key=value …]` | a game; the story pauses until it completes (§5). Other keys reach the game only if its registry row lists them in `args`. The game's result reaches the story as `game_success` and `game_score`, if the story declares those VARs |

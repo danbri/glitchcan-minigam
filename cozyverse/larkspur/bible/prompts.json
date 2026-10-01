@@ -1,0 +1,181 @@
+{
+ "about": "How each media file in ../media was made, so it can be made again. Flow: https://elevenlabs.io/app/flows/LYlQN2Wvaj8jbWUYvXP9 (ElevenLabs creative). Character sheets first (gemini-3-pro-image), then scene stills with the sheets wired in as references, then videos with a still as the start frame (kling-3-pro). The person and place descriptions are the 'look' and 'wardrobe' strings of characters.json, pasted word for word.",
+ "sheet_template": "Character reference sheet for a TV holiday romance, photographic, plain warm-grey studio background, even soft light. The same invented person shown four times side by side: full body front view, full body three-quarter view, full body profile, and a head-and-shoulders close-up with <expression>. The person: <look>. Wearing <wardrobe>. Identical face, hair, clothes and proportions in all four views. No text, no labels.",
+ "sheets": {
+  "nora": {
+   "model": "gemini-3-pro-image",
+   "node": "08pQ03GkGGtz7tDYmOpA",
+   "file": "sheet-nora.jpg"
+  },
+  "wes": {
+   "model": "gemini-3-pro-image",
+   "node": "7EJvem2YGnz0MQjhUnuw",
+   "file": "sheet-wes.jpg"
+  },
+  "bea": {
+   "model": "gemini-3-pro-image",
+   "node": "mrg5sFbWDvp5Pa8YQng4",
+   "file": "sheet-bea.jpg"
+  },
+  "pruitt": {
+   "model": "gemini-3-pro-image",
+   "node": "TGBDDcZXpHZ38l7Bxw2Y",
+   "file": "sheet-pruitt.jpg"
+  },
+  "delphine": {
+   "model": "gemini-3-pro-image",
+   "node": "DiuwlvCZTWilOliSex6s",
+   "file": "sheet-delphine.jpg"
+  },
+  "trent": {
+   "model": "gemini-3-pro-image",
+   "node": "9rLRxz8q3yRRPSFsfdOl",
+   "file": "sheet-trent.jpg"
+  },
+  "extra": {
+   "model": "gemini-3-pro-image",
+   "node": "UUFpI4i02edTIWvay26G",
+   "file": "sheet-extra.jpg"
+  }
+ },
+ "stills": {
+  "title.jpg": {
+   "model": "gemini-3-pro-image",
+   "node": "yKMOMITdbVEWp2jyXpIi",
+   "refs": [],
+   "credits": 1218
+  },
+  "arrival.jpg (video start frame and poster)": {
+   "model": "gemini-3-pro-image",
+   "node": "Pv5fcyW8o3LmjO5eAGEG",
+   "refs": [
+    "nora",
+    "extra"
+   ],
+   "credits": 2436
+  },
+  "rollingpin.jpg": {
+   "model": "gemini-3-pro-image",
+   "node": "gy0QiJeev8fv651VQFtO",
+   "refs": [
+    "nora",
+    "bea",
+    "extra"
+   ],
+   "credits": 3045
+  },
+  "townhall.jpg": {
+   "model": "gemini-3-pro-image",
+   "node": "Y2s76vgIzh6ooRPNPCmL",
+   "refs": [
+    "nora",
+    "wes",
+    "delphine",
+    "extra"
+   ],
+   "credits": 3654
+  },
+  "ledger.jpg": {
+   "model": "gpt-image-2",
+   "node": "Cu0HIabtUpQ7tJcBsWJ1",
+   "then": "gpt-image-2 edit (node 6DJV53UepKDekrDFKQAi) did not bar the 7; the bar was drawn by hand with Pillow",
+   "credits": 604
+  },
+  "treefarm.jpg (video start frame and poster)": {
+   "model": "gemini-3-pro-image",
+   "node": "4c1Jbv25vWNCWeCfpHZR",
+   "refs": [
+    "nora",
+    "wes"
+   ],
+   "credits": 2436
+  },
+  "mainstreet.jpg": {
+   "model": "gemini-3-pro-image",
+   "node": "iJPn6iQCZjoVbyMxou0p",
+   "refs": [
+    "nora",
+    "wes",
+    "extra"
+   ],
+   "credits": 3045
+  },
+  "pruitts.jpg": {
+   "model": "gemini-3-pro-image",
+   "node": "2RafZylycE89rOMo7Uzi",
+   "refs": [
+    "pruitt",
+    "nora",
+    "extra"
+   ],
+   "then": "the model drew plain sevens; an edit (node yx2isqoYgwYiAKbEzzhq) did not bar them; the bars were drawn by hand with Pillow on the original",
+   "credits": 3465
+  },
+  "trent.jpg": {
+   "model": "gemini-3-pro-image",
+   "node": "CxZUuKK7Q0tMN2C56W1O",
+   "refs": [
+    "trent",
+    "nora",
+    "extra"
+   ],
+   "then": "clock set to 4:52 by a gpt-image-2 edit (node u1JY8wouX3ydhKzHNIC5); this file is the edit",
+   "credits": 3465
+  },
+  "gazebo.jpg": {
+   "model": "gemini-3-pro-image",
+   "node": "oDgB47duXN0PQ4iSwplN",
+   "refs": [
+    "nora",
+    "delphine",
+    "pruitt",
+    "wes",
+    "extra"
+   ],
+   "credits": 4263
+  },
+  "finale.jpg (video start frame and poster)": {
+   "model": "gemini-3-pro-image",
+   "node": "vZx1qDMIO1O7ry6nSFNC",
+   "refs": [
+    "delphine",
+    "nora",
+    "wes"
+   ],
+   "credits": 3045
+  },
+  "wreath.jpg": {
+   "model": "gemini-3-pro-image",
+   "node": "VjzEZLFsyH6KMbyN2O4p",
+   "refs": [
+    "extra"
+   ],
+   "credits": 1827
+  }
+ },
+ "videos": {
+  "arrival.mp4": {
+   "model": "kling-3-pro",
+   "node": "LPNbgCD56PjVXcZMsjho",
+   "start_frame": "arrival.jpg",
+   "seconds": 5,
+   "credits": 5090
+  },
+  "treefarm.mp4": {
+   "model": "kling-3-pro",
+   "node": "Nl2vh0zGJhwFT5N7b27R",
+   "start_frame": "treefarm.jpg",
+   "seconds": 5,
+   "credits": 5090
+  },
+  "finale.mp4": {
+   "model": "kling-3-pro",
+   "node": "NSnhJ9wkFBB6Xime56LP",
+   "start_frame": "finale.jpg",
+   "seconds": 5,
+   "credits": 5090
+  }
+ },
+ "encoding": "Stills: 1024 px wide progressive JPEG, quality 80. Videos: the 1924x1076 masters scaled to 960 px wide, H.264 main CRF 26, AAC 96k, +faststart (about 0.5 MB each instead of 10 MB).",
+ "note_on_prompts": "The full prompt text of every file is on the flow (each node keeps its prompt). Every prompt starts with the style string of characters.json and names each person by the look and wardrobe strings there."
+}
