@@ -39,18 +39,18 @@ even in a 5-line file, so one fault gave a grade near 1. The skill is now correc
 | inklet/riverbend.fink.js | 243 | 101 | 42 | 1.0 | |
 | inklet/mudslidemines.fink.js | 44 | 19 | 43.2 | 1.0 | |
 | cozyverse/maple-hollow.fink.js | 150 | 86 | 57.3 | 1.0 | |
-| inklet/skydock.fink.js | 34 | 5 | 14.7 | 3.7 | under 40 lines |
+| inklet/skydock.fink.js | 34 | 5 | 14.7 | 4.2 | under 40 lines |
 | inklet/demos/audio-demo.fink.js | 31 | 3 | 9.7 | 4.4 | under 40 lines |
-| inklet/demos/foafos-tour.fink.js | 31 | 6 | 19.4 | 3.0 | under 40 lines |
-| inklet/demos/dev-worldpools.fink.js | 29 | 12 | 41.4 | 1.0 | under 40 lines |
-| drift-city/foafos-entry.fink.js | 12 | 3 | 25 | 1.8 | under 40; all 3 are quotes of peraspera/episodes |
-| inklet/demos/status-demo.fink.js | 7 | 1 | 14.3 | 4.3 | under 40 lines |
-| drift-city/story/episodes.fink.js | 5 | 1 | 20 | 2.9 | under 40 lines |
-| drift-city/novel/cellar-entry.fink.js | 5 | 2 | 40 | 1.0 | under 40; both are quotes of peraspera |
+| inklet/demos/foafos-tour.fink.js | 31 | 6 | 19.4 | 4.0 | under 40 lines |
+| inklet/demos/dev-worldpools.fink.js | 29 | 12 | 41.4 | 2.4 | under 40 lines |
+| drift-city/foafos-entry.fink.js | 12 | 3 | 25 | 3.8 | under 40; all 3 are quotes of peraspera/episodes |
+| inklet/demos/status-demo.fink.js | 7 | 1 | 14.3 | 4.8 | under 40 lines |
+| drift-city/story/episodes.fink.js | 5 | 1 | 20 | 4.4 | under 40 lines |
+| drift-city/novel/cellar-entry.fink.js | 5 | 2 | 40 | 4.0 | under 40; both are quotes of peraspera |
 | inklet/_tmp_shane-manor.fink.js | 379 | 106 | 28.0 | 1.0 | a near-copy of shane-manor; see g2 |
 
-Fixtures (rule F6, not in the totals): storyrunner demo 3.9, peer 1.7, beside 4.3, annex 2.6, annexclash 5.0,
-dream 3.6; dream-inner 2.1, dream-outer 2.4; validation test-variables 4.0. All are under 40 lines.
+Fixtures (rule F6, not in the totals): storyrunner demo 4.4, peer 4.2, beside 4.8, annex 4.6, annexclash 5.0,
+dream 4.6; dream-inner 4.6, dream-outer 4.4; validation test-variables 4.0. All are under 40 lines, so no density deduction.
 
 ## Patterns across the files (accumulation)
 
@@ -235,8 +235,7 @@ Scores:
 - Consequence 5: a menu; each line leads to its story.
 - Decoration 5: the summaries are plain.
 - Earned 5: nothing is claimed that the stories do not give.
-- Grade: mean 4.4; 20 per 100 is 3 full 5s above 5, minus 1.5. **Grade 2.9.** The deduction comes from one fault in a
-  five-line file; the size of the file, not accumulation, makes the number.
+- Grade: mean 4.4. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.4.**
 
 Faults:
 
@@ -264,8 +263,8 @@ Scores:
 - Consequence 4: the Mags excerpt leads only back to the door (acceptable for an entry page).
 - Decoration 4: the cellar mood line.
 - Earned 4: the excerpts are coherent; the Mags excerpt drops `mags-2` but the peraspera summary covers it.
-- Grade: mean 3.8; 25 per 100 is 4 full 5s above 5, minus 2.0. **Grade 1.8.** As above, the file size drives the
-  deduction. Fix these at the source (episodes, peraspera); this file must then be re-quoted.
+- Grade: mean 3.8. Under 40 prose lines: no density deduction (skill, step 3). **Grade 3.8.** Fix these at the source
+  (episodes, peraspera); this file must then be re-quoted.
 
 Faults:
 
@@ -292,8 +291,8 @@ Scores:
 - Consequence 4: an entry point; the street knot only leads back to the cellar.
 - Decoration 4: "the jam goes on" ornaments.
 - Earned 4: nothing claimed.
-- Grade: mean 4.0; 40 per 100 is 7 full 5s above 5, minus 3.5 = 0.5, floored. **Grade 1.0.** The file is three prose
-  lines; the formula is not useful at this size. Fix at the source.
+- Grade: mean 4.0. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.0.** The file is three prose
+  lines. Fix at the source.
 
 Faults:
 
@@ -1378,7 +1377,7 @@ Strengths:
   - Consequence 4: trades and diamonds change what the veterans say; the route home is promised, not reached (it is a frame).
   - Decoration 4: one wallpaper line at the close.
   - Earned 4: "The room goes quiet" announces weight the diamonds already carry.
-  - Mean 4.2; density 14.7 is 9.7 above 5, one full 5 → minus 0.5. **Grade 3.7.**
+  - Mean 4.2. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.2.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
@@ -1545,7 +1544,7 @@ Small-file note: in a file with fewer than 10 prose lines, one fault gives a den
   - Consequence 5: Each knot changes what the reader hears.
   - Decoration 4: One vague image ("instead of fighting").
   - Earned 4: The slogan lines announce a point that the explanation then makes.
-- Grade: mean 4.4, density 9.7 (0 full steps above 5) = **4.4**
+- Grade: mean 4.4. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.4.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
@@ -1570,7 +1569,7 @@ Small-file note: in a file with fewer than 10 prose lines, one fault gives a den
   - Consequence 5: Each section changes the shell state.
   - Decoration 3: Breath, thinning and "politely" decorate a technical tour.
   - Earned 4: The opening triad announces the theme before the tour shows it.
-- Grade: mean 4.0, density 19.4 (2 full steps, minus 1.0) = **3.0**
+- Grade: mean 4.0. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.0.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
@@ -1599,7 +1598,7 @@ Small-file note: in a file with fewer than 10 prose lines, one fault gives a den
   - Consequence 4: Each pool loads a real story.
   - Decoration 2: Most adjectives ornament the text.
   - Earned 2: "ancient beyond measure" announces scale.
-- Grade: mean 2.4, density 41.4 (7 full steps, minus 3.5) = floor **1.0**
+- Grade: mean 2.4. Under 40 prose lines: no density deduction (skill, step 3). **Grade 2.4.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
@@ -1629,7 +1628,7 @@ Small-file note: in a file with fewer than 10 prose lines, one fault gives a den
   - Consequence 4: Line 35 is fixed text, and it becomes false on repeat.
   - Decoration 5: Each detail reports a variable.
   - Earned 5: There is no announcement.
-- Grade: mean 4.8, density 14.3 (1 full step, minus 0.5) = **4.3**
+- Grade: mean 4.8. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.8.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
@@ -1648,14 +1647,14 @@ Small-file note: in a file with fewer than 10 prose lines, one fault gives a den
 
 | file | prose lines | faults | per 100 | Spec | Interch | Conseq | Decor | Earned | mean | penalty | grade |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| inklet/apps/storyrunner/demo.fink.js | 25 | 3 | 12.0 | 4 | 5 | 5 | 4 | 4 | 4.4 | -0.5 | 3.9 |
-| inklet/apps/storyrunner/peer.fink.js | 6 | 2 | 33.3 | 4 | 5 | 5 | 3 | 4 | 4.2 | -2.5 | 1.7 |
-| inklet/apps/storyrunner/beside.fink.js | 9 | 1 | 11.1 | 5 | 5 | 5 | 4 | 5 | 4.8 | -0.5 | 4.3 |
-| inklet/apps/storyrunner/annex.fink.js | 8 | 2 | 25.0 | 4 | 5 | 5 | 5 | 4 | 4.6 | -2.0 | 2.6 |
+| inklet/apps/storyrunner/demo.fink.js | 25 | 3 | 12.0 | 4 | 5 | 5 | 4 | 4 | 4.4 | 0 | 4.4 |
+| inklet/apps/storyrunner/peer.fink.js | 6 | 2 | 33.3 | 4 | 5 | 5 | 3 | 4 | 4.2 | 0 | 4.2 |
+| inklet/apps/storyrunner/beside.fink.js | 9 | 1 | 11.1 | 5 | 5 | 5 | 4 | 5 | 4.8 | 0 | 4.8 |
+| inklet/apps/storyrunner/annex.fink.js | 8 | 2 | 25.0 | 4 | 5 | 5 | 5 | 4 | 4.6 | 0 | 4.6 |
 | inklet/apps/storyrunner/annexclash.fink.js | 2 | 0 | 0 | 5 | 5 | 5 | 5 | 5 | 5.0 | 0 | 5.0 |
-| inklet/apps/storyrunner/dream.fink.js | 6 | 1 | 16.7 | 4 | 5 | 5 | 4 | 5 | 4.6 | -1.0 | 3.6 |
-| inklet/demos/dream-inner.fink.js | 3 | 1 | 33.3 | 5 | 5 | 5 | 4 | 4 | 4.6 | -2.5 | 2.1 |
-| inklet/demos/dream-outer.fink.js | 7 | 2 | 28.6 | 4 | 5 | 5 | 4 | 4 | 4.4 | -2.0 | 2.4 |
+| inklet/apps/storyrunner/dream.fink.js | 6 | 1 | 16.7 | 4 | 5 | 5 | 4 | 5 | 4.6 | 0 | 4.6 |
+| inklet/demos/dream-inner.fink.js | 3 | 1 | 33.3 | 5 | 5 | 5 | 4 | 4 | 4.6 | 0 | 4.6 |
+| inklet/demos/dream-outer.fink.js | 7 | 2 | 28.6 | 4 | 5 | 5 | 4 | 4 | 4.4 | 0 | 4.4 |
 | inklet/validation/tests/test-variables.fink.js | 29 | 2 | 6.9 | 3 | 4 | 4 | 5 | 4 | 4.0 | 0 | 4.0 |
 
 Reasons for the scores below 5:

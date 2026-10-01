@@ -7,7 +7,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
 - [`drift-city/foafos-entry.fink.js`](https://github.com/danbri/glitchcan-minigam/blob/master/drift-city/foafos-entry.fink.js) · [play it](https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?story=/glitchcan-minigam/drift-city/foafos-entry.fink.js)
 - [`drift-city/novel/cellar-entry.fink.js`](https://github.com/danbri/glitchcan-minigam/blob/master/drift-city/novel/cellar-entry.fink.js) · [play it](https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?story=/glitchcan-minigam/drift-city/novel/cellar-entry.fink.js)
 
-**Result:** 6 faults; under 40 lines faults per 100 prose lines.
+**Result:** 6 faults in three short files (each under 40 prose lines).
 
 Most faults here are exact quotes of lines in Per Aspera or the episodes hub; fix them at the source and the quotes follow.
 
@@ -27,8 +27,7 @@ Scores:
 - Consequence 5: a menu; each line leads to its story.
 - Decoration 5: the summaries are plain.
 - Earned 5: nothing is claimed that the stories do not give.
-- Grade: mean 4.4; 20 per 100 is 3 full 5s above 5, minus 1.5. **Grade 2.9.** The deduction comes from one fault in a
-  five-line file; the size of the file, not accumulation, makes the number.
+- Grade: mean 4.4. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.4.**
 
 Faults:
 
@@ -56,8 +55,8 @@ Scores:
 - Consequence 4: the Mags excerpt leads only back to the door (acceptable for an entry page).
 - Decoration 4: the cellar mood line.
 - Earned 4: the excerpts are coherent; the Mags excerpt drops `mags-2` but the peraspera summary covers it.
-- Grade: mean 3.8; 25 per 100 is 4 full 5s above 5, minus 2.0. **Grade 1.8.** As above, the file size drives the
-  deduction. Fix these at the source (episodes, peraspera); this file must then be re-quoted.
+- Grade: mean 3.8. Under 40 prose lines: no density deduction (skill, step 3). **Grade 3.8.** Fix these at the source
+  (episodes, peraspera); this file must then be re-quoted.
 
 Faults:
 
@@ -84,8 +83,8 @@ Scores:
 - Consequence 4: an entry point; the street knot only leads back to the cellar.
 - Decoration 4: "the jam goes on" ornaments.
 - Earned 4: nothing claimed.
-- Grade: mean 4.0; 40 per 100 is 7 full 5s above 5, minus 3.5 = 0.5, floored. **Grade 1.0.** The file is three prose
-  lines; the formula is not useful at this size. Fix at the source.
+- Grade: mean 4.0. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.0.** The file is three prose
+  lines. Fix at the source.
 
 Faults:
 

@@ -8,7 +8,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
 - [`inklet/demos/dream-outer.fink.js`](https://github.com/danbri/glitchcan-minigam/blob/master/inklet/demos/dream-outer.fink.js) · [play it](https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?story=/glitchcan-minigam/inklet/demos/dream-outer.fink.js)
 - [`inklet/validation/tests/test-variables.fink.js`](https://github.com/danbri/glitchcan-minigam/blob/master/inklet/validation/tests/test-variables.fink.js)
 
-**Result:** 14 faults; all under 40 lines faults per 100 prose lines.
+**Result:** 14 faults in short test files (each under 40 prose lines).
 
 These files test platform mechanisms (rule F6), so they are not in the project score. Fix them only if a fixture is shown to readers.
 
@@ -22,14 +22,14 @@ These files test platform mechanisms (rule F6), so they are not in the project s
 
 | file | prose lines | faults | per 100 | Spec | Interch | Conseq | Decor | Earned | mean | penalty | grade |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| inklet/apps/storyrunner/demo.fink.js | 25 | 3 | 12.0 | 4 | 5 | 5 | 4 | 4 | 4.4 | -0.5 | 3.9 |
-| inklet/apps/storyrunner/peer.fink.js | 6 | 2 | 33.3 | 4 | 5 | 5 | 3 | 4 | 4.2 | -2.5 | 1.7 |
-| inklet/apps/storyrunner/beside.fink.js | 9 | 1 | 11.1 | 5 | 5 | 5 | 4 | 5 | 4.8 | -0.5 | 4.3 |
-| inklet/apps/storyrunner/annex.fink.js | 8 | 2 | 25.0 | 4 | 5 | 5 | 5 | 4 | 4.6 | -2.0 | 2.6 |
+| inklet/apps/storyrunner/demo.fink.js | 25 | 3 | 12.0 | 4 | 5 | 5 | 4 | 4 | 4.4 | 0 | 4.4 |
+| inklet/apps/storyrunner/peer.fink.js | 6 | 2 | 33.3 | 4 | 5 | 5 | 3 | 4 | 4.2 | 0 | 4.2 |
+| inklet/apps/storyrunner/beside.fink.js | 9 | 1 | 11.1 | 5 | 5 | 5 | 4 | 5 | 4.8 | 0 | 4.8 |
+| inklet/apps/storyrunner/annex.fink.js | 8 | 2 | 25.0 | 4 | 5 | 5 | 5 | 4 | 4.6 | 0 | 4.6 |
 | inklet/apps/storyrunner/annexclash.fink.js | 2 | 0 | 0 | 5 | 5 | 5 | 5 | 5 | 5.0 | 0 | 5.0 |
-| inklet/apps/storyrunner/dream.fink.js | 6 | 1 | 16.7 | 4 | 5 | 5 | 4 | 5 | 4.6 | -1.0 | 3.6 |
-| inklet/demos/dream-inner.fink.js | 3 | 1 | 33.3 | 5 | 5 | 5 | 4 | 4 | 4.6 | -2.5 | 2.1 |
-| inklet/demos/dream-outer.fink.js | 7 | 2 | 28.6 | 4 | 5 | 5 | 4 | 4 | 4.4 | -2.0 | 2.4 |
+| inklet/apps/storyrunner/dream.fink.js | 6 | 1 | 16.7 | 4 | 5 | 5 | 4 | 5 | 4.6 | 0 | 4.6 |
+| inklet/demos/dream-inner.fink.js | 3 | 1 | 33.3 | 5 | 5 | 5 | 4 | 4 | 4.6 | 0 | 4.6 |
+| inklet/demos/dream-outer.fink.js | 7 | 2 | 28.6 | 4 | 5 | 5 | 4 | 4 | 4.4 | 0 | 4.4 |
 | inklet/validation/tests/test-variables.fink.js | 29 | 2 | 6.9 | 3 | 4 | 4 | 5 | 4 | 4.0 | 0 | 4.0 |
 
 Reasons for the scores below 5:

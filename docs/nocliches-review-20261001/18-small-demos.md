@@ -8,7 +8,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
 - [`inklet/demos/dev-worldpools.fink.js`](https://github.com/danbri/glitchcan-minigam/blob/master/inklet/demos/dev-worldpools.fink.js) · [play it](https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?story=/glitchcan-minigam/inklet/demos/dev-worldpools.fink.js)
 - [`inklet/demos/status-demo.fink.js`](https://github.com/danbri/glitchcan-minigam/blob/master/inklet/demos/status-demo.fink.js) · [play it](https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?story=/glitchcan-minigam/inklet/demos/status-demo.fink.js)
 
-**Result:** 22 faults; all under 40 lines faults per 100 prose lines.
+**Result:** 22 faults in four short files (each under 40 prose lines).
 
 **Materials:**
 - [the skill (rubric)](https://github.com/danbri/glitchcan-minigam/blob/master/.claude/skills/nocliches-fink-authoring/SKILL.md)
@@ -24,7 +24,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
   - Consequence 5: Each knot changes what the reader hears.
   - Decoration 4: One vague image ("instead of fighting").
   - Earned 4: The slogan lines announce a point that the explanation then makes.
-- Grade: mean 4.4, density 9.7 (0 full steps above 5) = **4.4**
+- Grade: mean 4.4. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.4.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
@@ -49,7 +49,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
   - Consequence 5: Each section changes the shell state.
   - Decoration 3: Breath, thinning and "politely" decorate a technical tour.
   - Earned 4: The opening triad announces the theme before the tour shows it.
-- Grade: mean 4.0, density 19.4 (2 full steps, minus 1.0) = **3.0**
+- Grade: mean 4.0. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.0.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
@@ -78,7 +78,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
   - Consequence 4: Each pool loads a real story.
   - Decoration 2: Most adjectives ornament the text.
   - Earned 2: "ancient beyond measure" announces scale.
-- Grade: mean 2.4, density 41.4 (7 full steps, minus 3.5) = floor **1.0**
+- Grade: mean 2.4. Under 40 prose lines: no density deduction (skill, step 3). **Grade 2.4.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
@@ -108,7 +108,7 @@ Part of the October 2026 prose review: [summary](../nocliches-review-20261001.md
   - Consequence 4: Line 35 is fixed text, and it becomes false on repeat.
   - Decoration 5: Each detail reports a variable.
   - Earned 5: There is no announcement.
-- Grade: mean 4.8, density 14.3 (1 full step, minus 0.5) = **4.3**
+- Grade: mean 4.8. Under 40 prose lines: no density deduction (skill, step 3). **Grade 4.8.**
 
 | line | rule id | quoted text | why it fails here | direction for a fix |
 |---|---|---|---|---|
