@@ -1,8 +1,8 @@
 {
- "recorded": false,
+ "recorded": true,
  "about": "Every voiced line of the chapter's ink: who speaks it, the exact words shown on the page (\"text\"), and what the voice is given (\"say\": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves \"text\" matches the ink; tools/directions.py writes this file. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3; the page plays one at random.",
  "model": "eleven_v4",
- "takes": 2,
+ "takes": 1,
  "voices": {
   "quaile": "XEoBW4iDmiawQP72xnAF",
   "sam": "dqdOhmL2BvMSx2KtSAtN",
@@ -1166,5 +1166,6 @@
    "text": "The Jubilee board is lettered in round letters with no feet.",
    "say": "[dry, unhurried] The Jubilee board is lettered in round letters with no feet."
   }
- }
+ },
+ "secondTake": []
 }

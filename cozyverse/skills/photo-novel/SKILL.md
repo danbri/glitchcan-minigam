@@ -159,6 +159,13 @@ characters, so two takes cost about 43,000 credits and one take about 21,000. Pr
 before promising a total. Until they are recorded, `voices.json` says `"recorded": false` and the host plays the
 sounds without asking for any voice file.
 
+Voices, as done (owner: "Why choose up front?"): record ONE take of every line (230 lines, about 21,300 credits),
+check them, and record a second take only where the first is weak; `voices.json` `"takes": 1` plus a `"secondTake"`
+list of ids, and the host plays what exists. Check with `tools/takes-check.py <dir> ch2/voices.json --words`: pace
+outliers per speaker, then a local transcript of every take (faster-whisper base.en, about 8 minutes for 230 takes,
+no credits) compared with the page text. In chapter two no take read a tag aloud or dropped a sentence; the 38
+"differences" were the recogniser's spelling of names and numbers (Quail, Gil Sans, 814), so no second takes.
+
 What chapter two taught:
 
 - **Text in pictures is wrong first time, every time** it is more than a word or two: the ringing list came out as
