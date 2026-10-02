@@ -96,12 +96,13 @@ try {
     .then(() => pass('a tap on the scarecrows panel takes the story there and brings in its sound'))
     .catch(async () => fail(`tap: ${JSON.stringify(await page.evaluate(() => ({ s: window.__marrow.panelSound, t: document.querySelector('.ink').textContent.slice(0, 80) })))}`));
 
-  // the looping panel plays one loop, keeps the next one waiting at its first frame, and goes on to a different one
+  // the looping panel plays one loop, keeps the next one waiting at its first frame (its poster is the same still,
+  // so metadata is enough), and goes on to a different one
   const loopsOf = () => page.evaluate(() => [...document.querySelectorAll('#show video')].map((v) => ({
     src: v.currentSrc.split('/').pop(), ready: v.readyState, shown: v.style.visibility !== 'hidden', paused: v.paused })));
   const first = await loopsOf();
   const shown0 = first.find((v) => v.shown);
-  first.length === 2 && shown0 && !shown0.paused && first.every((v) => v.ready >= 2) && first[0].src !== first[1].src
+  first.length === 2 && shown0 && !shown0.paused && shown0.ready >= 2 && first.every((v) => v.ready >= 1) && first[0].src !== first[1].src
     ? pass(`page 1 loop plays (${shown0.src}) with a different loop waiting`) : fail(`loops: ${JSON.stringify(first)}`);
   await page.waitForFunction((s) => { const v = [...document.querySelectorAll('#show video')].find((x) => x.style.visibility !== 'hidden'); return v && !v.currentSrc.endsWith(s) && !v.paused; },
     shown0?.src, { timeout: 15000 }).then(async () => pass(`at its end the panel goes on to ${(await loopsOf()).find((v) => v.shown).src}`))
