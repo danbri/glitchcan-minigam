@@ -472,12 +472,16 @@ Joost: We did not see him after lock fifteen. He shouted at us there, about a pa
 
 = p3_joost_show
 + {photos} [Maaike's photograph at 22:41] -> p3_joost_broke
-+ {windlass} [His windlass, in the police bag] -> p3_joost_wrong
++ {windlass} [His windlass, in the police bag] -> p3_joost_windlass
 + {keys} [The chain keys] -> p3_joost_wrong
 + [Put it away] -> p3_joost_choices
 
 = p3_joost_wrong
-Joost: {&I do not know about this.|This is not ours.}
+Joost: I do not know about this.
+-> p3_joost_choices
+
+= p3_joost_windlass
+Joost: Yes, it is ours. We lost it somewhere. I do not know where.
 -> p3_joost_choices
 
 = p3_joost_broke
