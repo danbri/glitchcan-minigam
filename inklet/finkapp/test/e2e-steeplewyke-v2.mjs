@@ -119,6 +119,16 @@ try {
   await wait(600);
   await page.mouse.click(box.x, box.y);
   await page.waitForFunction(() => document.getElementById('page').current === -1, null, { timeout: 5000 }).catch(() => {});
+  // back on a page already read, the story says something short
+  await page.waitForFunction(() => /The show field: chutney, the tannoy, the scarecrows/.test(document.querySelector('.ink').textContent), null, { timeout: 5000 })
+    .then(() => pass('a page read before gets a short line when the view goes back to it'))
+    .catch(async () => fail(`page again: ${await page.evaluate(() => document.querySelector('.ink').textContent.slice(0, 120))}`));
+  // a still panel is marked as a still (vignette, no slow zoom), a looping one is not
+  const marks = await page.evaluate(() => ['chutney', 'show'].map((id) => { const s = document.getElementById(id);
+    return { id, shade: getComputedStyle(s, '::after').boxShadow !== 'none', moving: (s.querySelector('img')?.getAnimations() || []).length };
+  }));
+  marks[0].shade && !marks[0].moving && !marks[1].shade ? pass('a still panel has a vignette and does not move; a looping panel has no vignette')
+    : fail(`still/loop marks: ${JSON.stringify(marks)}`);
   await wait(1600);
   const show = await page.evaluate(() => { const r = document.getElementById('show').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await page.mouse.dblclick(show.x, show.y);
@@ -129,12 +139,12 @@ try {
   // the looping panel plays one loop, keeps the next one waiting at its first frame (its poster is the same still,
   // so metadata is enough), and goes on to a different one
   const loopsOf = () => page.evaluate(() => [...document.querySelectorAll('#show video')].map((v) => ({
-    src: v.currentSrc.split('/').pop(), ready: v.readyState, shown: v.style.visibility !== 'hidden', paused: v.paused })));
+    src: v.currentSrc.split('/').pop(), ready: v.readyState, shown: v.style.opacity === '1', paused: v.paused })));
   const first = await loopsOf();
   const shown0 = first.find((v) => v.shown);
   first.length === 2 && shown0 && !shown0.paused && shown0.ready >= 2 && first.every((v) => v.ready >= 1) && first[0].src !== first[1].src
     ? pass(`page 1 loop plays (${shown0.src}) with a different loop waiting`) : fail(`loops: ${JSON.stringify(first)}`);
-  await page.waitForFunction((s) => { const v = [...document.querySelectorAll('#show video')].find((x) => x.style.visibility !== 'hidden'); return v && !v.currentSrc.endsWith(s) && !v.paused; },
+  await page.waitForFunction((s) => { const v = [...document.querySelectorAll('#show video')].find((x) => x.style.opacity === '1'); return v && !v.currentSrc.endsWith(s) && !v.paused; },
     shown0?.src, { timeout: 15000 }).then(async () => pass(`at its end the panel goes on to ${(await loopsOf()).find((v) => v.shown).src}`))
     .catch(async () => fail(`the loop did not change: ${JSON.stringify(await loopsOf())}`));
   const sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

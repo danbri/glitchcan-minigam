@@ -19,9 +19,11 @@ novel-page > section { background: #000; }
 novel-page > section > img, novel-page > section > video {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
 }
-novel-page > section > img { animation: drift 26s ease-in-out infinite alternate; }
-@keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.07) translate(-0.8%, 0.6%); } }
-@media (prefers-reduced-motion: reduce) { novel-page > section > img { animation: none; } novel-page { transition: none; } }
+/* a still is a still: no slow zoom (it made readers wait for movement), and a soft vignette marks it as a
+   photograph, where a looping panel has none */
+novel-page > section:not([data-loops])::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 60px 18px rgba(0, 0, 0, 0.55); }
+@media (prefers-reduced-motion: reduce) { novel-page { transition: none; } }
 .ink { box-sizing: border-box; height: clamp(180px, 32vh, 310px); overflow: auto; padding: 12px 16px 16px;
   font: 16px/1.45 Georgia, serif; color: #ece6d6; border-top: 1px solid #2c2a25; }
 .ink p { margin: 0 0 8px; }
@@ -120,9 +122,12 @@ const bed = layer(() => bus.bed), panelLoop = layer(() => bus.panel);
 
 // Voices: each "# voice: id" queues one of its two takes; a new step cuts the line before it, as a page turn would.
 let queue = [], playing = null;
+const heard = new Map(); // voice id -> when it last played
 function playNext() {
   if (playing || !queue.length || !sound) return;
   const id = queue.shift();
+  if (performance.now() - (heard.get(id) ?? -1e9) < 120000) { setTimeout(playNext, 0); return; }
+  heard.set(id, performance.now());
   const url = `media/vo/${id}-${1 + Math.floor(Math.random() * 2)}.mp3`;
   const mine = { url, src: null };
   playing = mine;
@@ -144,9 +149,12 @@ function done(mine) {
 function cutVoice() { if (playing?.src) { playing.src.onended = null; playing.src.stop(); } playing = null; queue = []; }
 
 // ---- loops: a panel may have several short videos that all begin and end on its still picture. Two video elements
-// take turns: one plays while the other loads a different loop, and at the end they change places, so the panel
-// goes from loop to loop without a jump. novel-page plays and pauses every video in the panel as it does one.
+// take turns, stacked: the waiting one sits at its first frame, and 0.3 s before the playing one ends it starts and
+// fades in over it. A hard switch at "ended" showed a frame of poster or black (visible flicker on a phone), and a
+// clip's last frame is never quite its first. novel-page plays every video in a panel after a tap; the waiting one
+// must stay at its first frame until its turn.
 const canWebm = document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== "";
+const FADE = 0.3;
 function loopPlayer(section, bases, poster) {
   const count = bases.length;
   const pick = (not) => { let k; do k = Math.floor(Math.random() * count); while (count > 1 && k === not); return k; };
@@ -155,23 +163,35 @@ function loopPlayer(section, bases, poster) {
     const v = document.createElement("video");
     Object.assign(v, { poster, muted: true, playsInline: true, preload: "auto" });
     v.setAttribute("muted", ""); v.setAttribute("playsinline", "");
+    v.style.transition = `opacity ${FADE}s linear`;
     section.appendChild(v); return v;
   };
-  let k = pick(-1), front = make(), back = make();
-  front.src = src(k); front.autoplay = true;
-  back.src = src(k = pick(k)); back.style.visibility = "hidden";
-  const swap = (ended) => {
-    if (ended !== front) return;
-    [front, back] = [back, front];
-    front.style.visibility = ""; back.style.visibility = "hidden";
-    front.currentTime = 0;
-    const p = front.play(); if (p?.catch) p.catch(() => {});
-    back.src = src(k = pick(k)); back.load();
+  let k = pick(-1), front = make(), back = make(), fading = false;
+  front.src = src(k); front.autoplay = true; front.style.opacity = "1";
+  back.src = src(k = pick(k)); back.style.opacity = "0";
+  const playing = (v) => { const p = v.play(); if (p?.catch) p.catch(() => {}); };
+  const handOver = () => {
+    if (fading || back.readyState < 2) return;            // not decoded yet: let the front hold its last frame
+    fading = true;
+    back.currentTime = 0; playing(back);
+    back.style.zIndex = "1"; front.style.zIndex = "0"; back.style.opacity = "1";
+    setTimeout(() => {
+      const old = front; front = back; back = old;
+      back.pause(); back.style.opacity = "0"; back.style.zIndex = "0";
+      back.src = src(k = pick(k)); back.load();
+      fading = false;
+    }, FADE * 1000 + 30);
   };
+  const watch = () => {
+    if (!section.isConnected) return;
+    if (!front.paused && front.duration && front.duration - front.currentTime < FADE) handOver();
+    requestAnimationFrame(watch);
+  };
+  requestAnimationFrame(watch);
   for (const v of [front, back]) {
-    v.addEventListener("ended", () => swap(v));
-    // novel-page starts every video in a panel after a tap; the waiting one must stay at its first frame
-    v.addEventListener("play", () => { if (v === back) { v.pause(); v.currentTime = 0; } });
+    v.addEventListener("ended", () => { if (v === front) handOver(); });
+    v.addEventListener("canplay", () => { if (v === back && front.ended) handOver(); });
+    v.addEventListener("play", () => { if (v === back && !fading) { v.pause(); v.currentTime = 0; } });
   }
   section.dataset.loops = String(count);
 }
