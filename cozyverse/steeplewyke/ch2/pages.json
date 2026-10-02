@@ -1,6 +1,13 @@
 {
  "about": "Steeple Wyke, chapter 2: Plain Hunt. Ten pages of four panels on the chapter 1 layouts; pictures are media/p<n>-<knot>.jpg, sounds media/sfx/. 'tiny' is a short ambient loop (tools/tiny-loop.sh from a kling clip, start frame only, prompt given); 'peek' is the canary (tools/peek-window.py and peek-clip.sh, the photo-novel skill's Peek panels). 'place' replaces the bible's place in the picture prompts.",
  "place": "Steeple Wyke, a Cotswold village of honey-coloured stone with a church spire, in October.",
+ "canary": {
+  "mode": "rare",
+  "after": [
+   20,
+   45
+  ]
+ },
  "layouts": {
   "L1": {
    "a": "26,26 1054,26 1054,520 26,562",
@@ -37,10 +44,14 @@
      "alt": "The church tower of St Aldhelm's at dusk, rooks circling the spire, one lit window high up in the tower.",
      "prompt": "Dusk in October. The square honey-stone tower and spire of an English village church seen from the churchyard, old leaning gravestones and a yew tree in the foreground. Rooks circle the spire against a pale violet sky. One small arched window high in the tower is lit warm yellow. A wooden lychgate at the right with an empty bicycle rack beside it.",
      "sound": "rooks cawing and circling a church spire at dusk, wind in a yew tree",
-     "peek": {
-      "prompt": "Locked-off camera, no camera movement. For the first second nothing moves. Then a small bright canary-yellow canary pops its head up over the stone sill of the small lit window high in the tower, looks straight at the camera for about one second with a tiny tilt of the head, and ducks back down out of sight. Nothing else moves. The last frame is identical to the first frame."
-     },
-     "note": "peek clip made (kling-2.5-turbo, still on start and end frame) but no canary appeared in it: the panel is a still"
+     "note": "two kling-2.5-turbo takes of the loop prompt, the still on start and end frame; the host cross-fades one into the other. The canary peek clip made earlier had no canary in it.",
+     "loopSrc": [
+      "media/p1-tower-loop1",
+      "media/p1-tower-loop2"
+     ],
+     "loops": [
+      "Locked-off camera on a tripod, no camera movement at all. A flock of rooks wheels slowly in a wide loose circle around the church spire against the dusk sky, the birds gliding and flapping lazily, a few crossing in front of the spire and going behind it. The tower, the lit window, the gravestones, the yew tree and the lychgate stay completely still. Calm, slow, natural bird flight. The last frame is identical to the first frame, so the clip loops seamlessly."
+     ]
     },
     {
      "knot": "napkin",

@@ -1,6 +1,6 @@
 // Steeple Wyke, chapter 2: Plain Hunt (cozyverse/steeplewyke/ch2/index.html), on a phone-sized touch screen: one
 // solving route through all ten pages (the hub of inquiries, then the bell puzzle on page 9 with one wrong guess), a
-// voice take after every choice, each page's sound bed, the canary peeking on the barn panel, a short loop playing,
+// voice take after every choice, each page's sound bed, the canary showing once, on one panel (it is rare), a short loop playing,
 // every picture, loop and sound file present, the ending knowing it was solved, the village remembering (the notice,
 // the saved standing, Dr Achebe added to chapter 1's people), and a tap and a double tap on a panel.
 // Routes, rows and voices are checked offline: tools/walk.mjs, tools/rows.mjs, tools/lines.mjs (STORY=ch2).
@@ -72,7 +72,8 @@ try {
   for (const f of want) if (!(await page.request.head(BASE + f)).ok()) absent.push(f);
   absent.length ? fail(`files missing (${absent.length}): ${absent.slice(0, 8).join(', ')}`) : pass(`all ${want.length} pictures, loops, sounds and voice takes are present`);
 
-  await page.goto(BASE);
+  // the canary is rare: one panel per reading, once. ?canary=brush chooses the brush panel and a 2 s wait
+  await page.goto(BASE + '?canary=brush');
   await page.waitForSelector('#go-sound:not([disabled])');
   await page.click('#go-sound');
   if (VOICED) await page.waitForFunction(() => window.__plainhunt.page === 1 && (window.__plainhunt.playing || '').includes('/vo/p1-open-'), null, { timeout: 15000 })
@@ -96,13 +97,19 @@ try {
     if (!memSeen) memSeen = await page.evaluate(() => window.__plainhunt.memory);
     // the barn's brush panel holds its still and shows the canary every few seconds
     if (label === 'Look at the trestle at the back') {
-      await page.waitForFunction(() => document.getElementById('brush')?.classList.contains('peeking'), null, { timeout: 12000 })
-        .then(() => pass('the brush panel shows the canary peeking within one cycle'))
+      await page.waitForFunction(() => document.getElementById('brush')?.classList.contains('peeking') || window.__plainhunt.canary.done, null, { timeout: 12000 })
+        .then(() => pass('the brush panel shows the canary (two seconds after the page, as ?canary=brush asks)'))
         .catch(async () => fail(`no peek on the brush panel (data-loops ${await page.evaluate(() => document.getElementById('brush')?.dataset.loops)})`));
       await page.waitForFunction(() => { const s = document.getElementById('brush'), v = s?.querySelector('video');
         return s && !s.classList.contains('peeking') && v.paused && v.currentTime === 0; }, null, { timeout: 6000 })
         .then(() => pass('the peek ends and the panel holds its still again'))
         .catch(() => fail('the peek did not end'));
+    }
+    // the canary was given to the brush panel: the other canary panels are plain stills this reading
+    if (label === 'Ask what his drone saw on Tuesday') {
+      const school = await page.evaluate(() => ({ video: !!document.querySelector('#school video'), canary: window.__plainhunt.canary }));
+      !school.video && school.canary.done && school.canary.panel === 'brush' ? pass('the canary showed once, on one panel; the schoolhouse is a still this reading')
+        : fail(`canary: ${JSON.stringify(school)}`);
     }
     // a short loop plays on the fire, and a looping panel has no vignette
     if (label === 'Listen to the questions') {
@@ -143,8 +150,12 @@ try {
   await page.waitForFunction(() => window.__plainhunt.panelSound === 'media/sfx/p1-tower.mp3' && /Rooks go round the spire/.test(document.querySelector('.ink').textContent), null, { timeout: 10000 })
     .then(() => pass('a tap on the tower panel takes the story there and brings in its sound'))
     .catch(async () => fail(`tap: ${JSON.stringify(await page.evaluate(() => ({ s: window.__plainhunt.panelSound, t: document.querySelector('.ink').textContent.slice(0, 80) })))}`));
-  const still = await page.evaluate(() => getComputedStyle(document.getElementById('tower'), '::after').boxShadow !== 'none');
-  still ? pass('the tower (a still) has a vignette') : fail('the tower still has no vignette');
+  // the rooks loop over the tower (two takes, cross-faded); a still such as Dr Achebe's panel has a vignette
+  const marks = await page.evaluate(() => { const t = document.getElementById('tower'), a = document.getElementById('achebe');
+    return { loops: t.dataset.loops, playing: [...t.querySelectorAll('video')].some((v) => !v.paused), towerShade: getComputedStyle(t, '::after').boxShadow !== 'none',
+      stillShade: getComputedStyle(a, '::after').boxShadow !== 'none' }; });
+  marks.loops === '2' && marks.playing && !marks.towerShade && marks.stillShade
+    ? pass('the rooks loop on the tower panel (two takes); a still panel has a vignette') : fail(`tower/still: ${JSON.stringify(marks)}`);
   // a double tap counts as one tap (wait first: two taps within 350 ms are one double tap)
   await wait(600);
   await page.mouse.click(box.x, box.y);
