@@ -42,7 +42,9 @@ Live: https://danbri.github.io/glitchcan-minigam/cozyverse/steeplewyke/v2/ (v1 k
   `{p3_margaret == 0: -> p3_margaret}`. The guard's `# panel:` wins, so the view goes there too.
 - **Briefer on return.** A page's overview read again gets one short line (`{p3 > 1: ...}`); a third return makes
   Quaile say "We've been here, Sam." A conversation revisited gets one line and its choices
-  (`-> p3_margaret_choices`, a stitch). The host also skips a voice line heard in the last two minutes.
+  (`-> p3_margaret_choices`, a stitch). The host also skips a voice line that played in one of the last two STEPS (a reader tapping in and out). A
+  time window (two minutes) and then "the last three lines" both silenced a genuine "Where next?"; the test caught
+  both.
 - **Events once per reading.** A memory or clue that a tap can re-enter must be guarded by the knot's first visit
   (`{p4_syringe == 1: ~ rel_dilys += 1 ...}`); the random reader found Dilys warming up on every tap.
 - **The village remembers.** `rel_<who>` is a standing kept by the host in localStorage

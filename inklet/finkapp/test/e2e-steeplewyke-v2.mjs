@@ -140,6 +140,8 @@ try {
   // so metadata is enough), and goes on to a different one
   const loopsOf = () => page.evaluate(() => [...document.querySelectorAll('#show video')].map((v) => ({
     src: v.currentSrc.split('/').pop(), ready: v.readyState, shown: v.style.opacity === '1', paused: v.paused })));
+  // sample between hand-overs: during the 0.3 s cross-fade both videos are visible
+  await page.waitForFunction(() => [...document.querySelectorAll('#show video')].filter((v) => v.style.opacity === '1').length === 1, null, { timeout: 8000 }).catch(() => {});
   const first = await loopsOf();
   const shown0 = first.find((v) => v.shown);
   first.length === 2 && shown0 && !shown0.paused && shown0.ready >= 2 && first.every((v) => v.ready >= 1) && first[0].src !== first[1].src

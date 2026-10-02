@@ -122,12 +122,16 @@ const bed = layer(() => bus.bed), panelLoop = layer(() => bus.panel);
 
 // Voices: each "# voice: id" queues one of its two takes; a new step cuts the line before it, as a page turn would.
 let queue = [], playing = null;
-const heard = new Map(); // voice id -> when it last played
+// a reader going straight back and forth (tap in, out, in) should not hear the same lines again: a line that played
+// in one of the last two steps is skipped. Counted in steps, not lines: a quick reader hears only the first line of
+// each step, and "the last three lines" then silenced a genuine "Where next?" three steps on.
+const stepsHeard = [new Set(), new Set()]; // the two steps before this one
+let thisStep = new Set();
 function playNext() {
   if (playing || !queue.length || !sound) return;
   const id = queue.shift();
-  if (performance.now() - (heard.get(id) ?? -1e9) < 120000) { setTimeout(playNext, 0); return; }
-  heard.set(id, performance.now());
+  if (stepsHeard.some((s) => s.has(id))) { setTimeout(playNext, 0); return; }
+  thisStep.add(id);
   const url = `media/vo/${id}-${1 + Math.floor(Math.random() * 2)}.mp3`;
   const mine = { url, src: null };
   playing = mine;
@@ -280,6 +284,7 @@ page.addEventListener("storytags", (e) => {
   const ids = tags.map((t) => /^voice\s*:\s*([\w-]+)$/i.exec(t)?.[1]).filter(Boolean);
   if (!ids.length) return;
   cutVoice();
+  stepsHeard.shift(); stepsHeard.push(thisStep); thisStep = new Set();
   if (sound && !muted) { queue = ids; playNext(); }
 });
 
