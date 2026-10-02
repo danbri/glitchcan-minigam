@@ -1,0 +1,689 @@
+{
+ "about": "Steeple Wyke, version 2. The same ten pages as version 1 (../pages.json, ../media/), with each panel's loop files listed in 'loopSrc' (no extension; the page adds .webm or .mp4). Version 1's loops are shared; the bar loops (the scarecrow moved its head and arm) and one minibus loop are left out. 'tiny' marks a short ambient loop made for version 2: about 1.6 s of a clip from the still, played forward and back, so it starts and ends on the still (tools/tiny-loop.sh).",
+ "layouts": {
+  "L1": {
+   "a": "26,26 1054,26 1054,520 26,562",
+   "b": "26,592 556,570 516,1146 26,1166",
+   "c": "586,569 1054,550 1054,1186 546,1147",
+   "d": "26,1196 1054,1216 1054,1494 26,1494"
+  },
+  "L2": {
+   "a": "26,26 1054,26 1054,318 26,298",
+   "b": "26,328 534,348 514,930 26,950",
+   "c": "564,348 1054,328 1054,950 544,930",
+   "d": "26,980 1054,960 1054,1494 26,1494"
+  },
+  "L3": {
+   "a": "26,26 512,26 492,1100 26,1100",
+   "b": "542,26 1054,26 1054,540 522,560",
+   "c": "522,590 1054,570 1054,1100 502,1100",
+   "d": "26,1130 1054,1130 1054,1494 26,1494"
+  }
+ },
+ "pages": [
+  {
+   "n": 1,
+   "title": "The Show",
+   "layout": "L1",
+   "bed": "English village summer fete on a field: a large relaxed crowd murmuring and laughing, a distant brass band playing a slow march, children, wind flapping canvas and bunting, skylarks",
+   "panels": [
+    {
+     "knot": "show",
+     "ink": "p1_show",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "A village show on a sunny field: a white marquee, bunting, crowds, a brass band, and a church spire behind. Along the hedge, a line of scarecrows.",
+     "prompt": "Wide establishing shot of an English village horticultural show on a mown field in July: a big white marquee with its side walls rolled up, strings of faded triangle bunting, families with pushchairs, a brass band in maroon jackets on hay bales, trestle tables. Behind the marquee, the honey-coloured stone spire of a village church above trees. Along the hedge at the right, a line of six life-size scarecrows dressed as villagers.",
+     "sound": "brass band playing a slow march close by, tubas and cornets, a little out of tune, with crowd chatter",
+     "loops": [
+      "Locked-off camera. Bunting flaps gently and the crowd moves slightly. A single gust lifts a white paper plate off a trestle table and sends it rolling across the grass out of frame. Everything else stays still.",
+      "Locked-off camera. A small dog on a lead pulls its owner two steps towards the marquee, then sits down. Bunting flaps. Everything else stays still.",
+      "Locked-off camera. A child lets go of a red balloon; it rises slowly and drifts out of the top of the frame. The crowd moves slightly."
+     ],
+     "loopSrc": [
+      "../media/p1-show-loop1",
+      "../media/p1-show-loop2",
+      "../media/p1-show-loop3"
+     ]
+    },
+    {
+     "knot": "chutney",
+     "ink": "p1_chutney",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [
+      "quaile",
+      "sam"
+     ],
+     "alt": "DCI Quaile at a judging table of chutney jars with a teaspoon; Sam beside her holding a jam jar full of spoons.",
+     "prompt": "Inside a white show marquee: a trestle table with a white cloth and two rows of home-made chutney jars with handwritten labels and gingham lids. QUAILE stands behind it tasting from a teaspoon with a sceptical face; SAM stands beside her, holding a jam jar full of clean teaspoons, looking patient. Soft daylight through the canvas.",
+     "sound": "inside a marquee: teaspoons clinking on glass jars, jar lids unscrewing, murmured voices, canvas creaking in the wind"
+    },
+    {
+     "knot": "tannoy",
+     "ink": "p1_tannoy",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "gerald"
+     ],
+     "alt": "Gerald Pike in a panama hat speaks into a microphone on a stage of hay bales, in front of a table of giant marrows.",
+     "prompt": "GERALD stands on a low stage of hay bales speaking into an old chrome microphone on a stand, one finger raised. Behind him a table of giant green-striped marrows; the biggest has a red first-prize card. A grey horn loudspeaker is tied to a pole. Bright afternoon sun.",
+     "sound": "an old public address system: microphone feedback whine, a thump on the microphone, crackle and hum from a horn loudspeaker outdoors",
+     "focus": "64% 50%"
+    },
+    {
+     "knot": "scarecrows",
+     "ink": "p1_scarecrows",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "A row of scarecrows along a hedge: a straw vicar in a yellow jacket, a straw butcher in a striped apron, and a straw man in a panama hat facing away.",
+     "prompt": "A row of handmade scarecrows on posts along a hawthorn hedge at a village show, each dressed as a villager with stuffed sacking faces: one in a bright yellow cycling jacket and a white dog collar, one in a blue-and-white striped butcher's apron with curly red wool hair, one in a cream linen jacket and a panama hat with a red rosette, turned to face the hedge with its back to the camera. Small handwritten entry cards on stakes. Late afternoon sun.",
+     "sound": "wind moving through dry straw and a hawthorn hedge, a crow cawing twice, a bee passing",
+     "tiny": true,
+     "loopSrc": [
+      "media/p1-scarecrows-tiny"
+     ]
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "title": "Behind the produce tent",
+   "layout": "L2",
+   "bed": "behind a marquee at an outdoor village show: muffled crowd beyond the canvas, a brass band still playing in the distance, guy ropes creaking, wasps, a woman apologising faintly",
+   "panels": [
+    {
+     "knot": "crowd",
+     "ink": "p2_crowd",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [
+      "sam"
+     ],
+     "alt": "Sam holds his arms out to keep a crowd of villagers back between the guy ropes of the tent.",
+     "prompt": "Behind a white marquee among its guy ropes and tent pegs: SAM holds his arms wide to keep back a curious crowd of villagers in summer clothes and sun hats, some craning, one holding a raffle ticket. Hot afternoon light.",
+     "sound": "a crowd of curious villagers murmuring and shuffling on grass, someone asking what has happened, a dog barking once"
+    },
+    {
+     "knot": "chair",
+     "ink": "p2_chair",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "gerald"
+     ],
+     "alt": "Gerald Pike sits back in a striped deckchair behind the tent, his panama hat over his face, his hands folded. He looks asleep.",
+     "prompt": "Behind a white marquee, GERALD sits back in a faded red-and-white striped deckchair on the grass with his panama hat tipped forward over his face and his hands folded on his stomach, as if asleep in the sun. Discreet, still, peaceful; no injury, nothing graphic. Long grass, a tent peg, dappled light.",
+     "sound": "close, quiet outdoor summer air: a fly buzzing near, the canvas of a deckchair creaking, distant crowd",
+     "tiny": true,
+     "loopSrc": [
+      "media/p2-chair-tiny"
+     ]
+    },
+    {
+     "knot": "flask",
+     "ink": "p2_flask",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "On the grass by the deckchair, a blue enamel flask with a brown luggage label on a string that says Church Hall.",
+     "prompt": "Close-up on the grass beside the leg of a deckchair: a dented blue enamel drinks flask with its cup-lid off, half full of a pale cloudy cordial. Tied to its handle with string, a brown luggage label handwritten in black marker: CHURCH HALL. Daisies in the grass. Shallow depth of field.",
+     "sound": "a wasp buzzing close, landing and taking off, grass rustling",
+     "loops": [
+      "Locked-off close-up. A single wasp crawls along the rim of the flask, stops, then flies away out of frame. The grass moves very slightly in the breeze.",
+      "Locked-off close-up. A ladybird climbs up the string of the luggage label and walks off its edge. The grass moves slightly.",
+      "Locked-off close-up. A breeze turns the luggage label slowly on its string so its writing faces away, then back again."
+     ],
+     "loopSrc": [
+      "../media/p2-flask-loop1",
+      "../media/p2-flask-loop2",
+      "../media/p2-flask-loop3"
+     ]
+    },
+    {
+     "knot": "kneel",
+     "ink": "p2_kneel",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [
+      "quaile",
+      "sam"
+     ],
+     "alt": "Quaile crouches by the deckchair, looking at the flask without touching it; Sam stands over her with his notebook open.",
+     "prompt": "QUAILE crouches beside a striped deckchair behind a marquee, looking hard at a blue enamel flask on the grass without touching it, her reading glasses now on her nose. SAM stands over her with his black notebook open and a pen. In the deckchair at the edge of frame, only the legs and the cream linen sleeve of a seated man are visible. Afternoon light.",
+     "sound": "a pen scratching on a notebook, a radio crackling with a police call sign, a car door far away"
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "title": "Margaret",
+   "layout": "L3",
+   "bed": "a quiet English cottage garden in summer: blackbirds and wood pigeons, bees in flowers, a distant tractor, the faint sound of a village show two fields away",
+   "panels": [
+    {
+     "knot": "margaret",
+     "ink": "p3_margaret",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [
+      "margaret"
+     ],
+     "alt": "Margaret Pike stands very upright among her roses, secateurs in her hand, looking straight at you.",
+     "prompt": "MARGARET stands very upright on the brick path of her cottage garden among old pink roses, a cut rose in one hand and the red-handled secateurs in the other, looking straight at the camera with a composed, unreadable face. Behind her a honey-coloured stone cottage with a green door. Soft afternoon light.",
+     "sound": "secateurs snipping rose stems, a rose dropping into a trug, a blackbird singing nearby",
+     "tiny": true,
+     "loopSrc": [
+      "media/p3-margaret-tiny"
+     ]
+    },
+    {
+     "knot": "green",
+     "ink": "p3_green",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A green enamel flask upside down on a cottage kitchen draining board.",
+     "prompt": "A country cottage kitchen: a dark green enamel drinks flask stands upside down, washed, on a wooden draining board beside a white Belfast sink, next to a bottle of home-made elderflower cordial with a handwritten label. Morning light through a small window with a geranium on the sill.",
+     "sound": "a cottage kitchen: a tap dripping into a sink, a clock ticking, a fridge humming",
+     "tiny": true,
+     "loopSrc": [
+      "media/p3-green-tiny"
+     ]
+    },
+    {
+     "knot": "secateurs",
+     "ink": "p3_secateurs",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [
+      "margaret"
+     ],
+     "alt": "Close on Margaret's hands and the red-handled secateurs hanging on a cord round her neck.",
+     "prompt": "Close-up of the red-handled secateurs hanging on a cord against MARGARET's faded floral blouse and green quilted gilet, one of her thin hands holding them up a little to show clean blades. Shallow depth of field.",
+     "sound": "a secateurs spring clicking open and shut twice, fabric rustling"
+    },
+    {
+     "knot": "border",
+     "ink": "p3_border",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "A long border of tall purple foxgloves against a stone wall, every stem standing. At the far end, a scarecrow in a panama hat.",
+     "prompt": "A long cottage-garden border of tall purple and white foxgloves in full flower against a honey-coloured dry-stone wall, every stem intact and standing. At the far end of the border stands a scarecrow in a cream linen jacket and a panama hat with a red rosette, facing the camera. Afternoon sun.",
+     "sound": "bumblebees in foxglove flowers, close, buzzing in and out of the bells",
+     "loops": [
+      "Locked-off camera. A bumblebee climbs into one foxglove bell and backs out again. The foxgloves sway very slightly. The scarecrow does not move.",
+      "Locked-off camera. A cabbage white butterfly crosses the border from left to right. The foxgloves sway slightly. The scarecrow does not move.",
+      "Locked-off camera. A gust bends the whole row of foxgloves one way and lets them stand again. The scarecrow does not move at all."
+     ],
+     "loopSrc": [
+      "../media/p3-border-loop1",
+      "../media/p3-border-loop2",
+      "../media/p3-border-loop3"
+     ]
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "title": "The marrow tent",
+   "layout": "L1",
+   "bed": "inside a large empty marquee: canvas breathing and creaking in the wind, distant crowd outside, a wooden trestle creaking, flies",
+   "panels": [
+    {
+     "knot": "tent",
+     "ink": "p4_tent",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [
+      "dilys"
+     ],
+     "alt": "Inside the marrow marquee: long trestle tables of giant marrows with prize cards. One woman in a butcher's apron stands among them.",
+     "prompt": "Inside a long white marquee: trestle tables covered with white cloths and rows of giant green-striped show marrows, each with a small handwritten entry card. At the far end of one table, the biggest marrow has no card. DILYS stands among the tables, arms folded. Soft daylight through the canvas.",
+     "sound": "inside a marquee: canvas flapping, a wooden trestle table creaking under weight, a set of scales clunking"
+    },
+    {
+     "knot": "dilys",
+     "ink": "p4_dilys",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [
+      "dilys",
+      "quaile"
+     ],
+     "alt": "Dilys Rudd laughs loudly beside her marrow on a set of scales; Quaile watches her.",
+     "prompt": "DILYS laughs loudly with her head thrown back, one hand resting on a giant marrow on a set of old green weighing scales. QUAILE stands opposite her, watching without smiling. Inside a white marquee.",
+     "sound": "a big laugh from a woman, then old weighing scales creaking and clunking as a heavy marrow is set down"
+    },
+    {
+     "knot": "syringe",
+     "ink": "p4_syringe",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "dilys"
+     ],
+     "alt": "A huge veterinary syringe sticks out of Dilys's striped apron pocket.",
+     "prompt": "Close-up of the front pocket of DILYS's blue-and-white striped butcher's apron: a large clear plastic veterinary syringe, about thirty centimetres long, sticks out of it, a drop of water on its needle. Her freckled forearm and red checked sleeve at the edge of frame.",
+     "sound": "a large syringe plunger squeaking, water squirting, a woman humming"
+    },
+    {
+     "knot": "marrows",
+     "ink": "p4_marrows",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "Two giant marrows side by side. A drop of water weeps from a pinhole in each.",
+     "prompt": "Close, low shot along a white-clothed table of giant green-striped marrows. Two of them in the foreground each have a tiny pinhole near the stalk with a bead of water weeping out and a wet patch on the cloth below. Soft marquee light.",
+     "sound": "a single water drip falling slowly onto cloth, very close, with a quiet marquee around it",
+     "loops": [
+      "Locked-off close shot. A bead of water swells at the pinhole in the nearest marrow and runs down its skin onto the cloth. Nothing else moves.",
+      "Locked-off close shot. A housefly lands on the nearest marrow, walks to the pinhole, and flies off. Nothing else moves.",
+      "Locked-off close shot. The canvas light dims as a cloud passes over the marquee, then brightens again. Water glistens at the pinholes."
+     ],
+     "loopSrc": [
+      "../media/p4-marrows-loop1",
+      "../media/p4-marrows-loop2",
+      "../media/p4-marrows-loop3"
+     ]
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "title": "The car park",
+   "layout": "L2",
+   "bed": "a grass field used as a car park at a summer show: distant crowd, a car door closing, a tractor idling, skylarks, a man talking on a phone far off",
+   "panels": [
+    {
+     "knot": "field",
+     "ink": "p5_field",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "A field full of parked cars: Range Rovers, a tractor, a brass band's white minibus, and a black Range Rover parked across the gate.",
+     "prompt": "A grass field used as a car park for a village show: rows of muddy Range Rovers and estate cars, a green tractor, a white minibus with a brass band's name in maroon on its side, and a shiny black Range Rover parked across the field gate. Hot afternoon, dry tyre tracks.",
+     "sound": "a tractor engine idling, a car door shutting, a car alarm chirping as it locks",
+     "tiny": true,
+     "loopSrc": [
+      "media/p5-field-tiny"
+     ]
+    },
+    {
+     "knot": "toby",
+     "ink": "p5_toby",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "toby"
+     ],
+     "alt": "Toby Pike on the phone in the car park, holding up one finger to ask you to wait, with a quick grin.",
+     "prompt": "TOBY stands in the field car park with his phone to his ear, holding up one finger to the camera to say wait, with a quick defensive grin. His tan suede loafers are muddy. Behind him a black Range Rover.",
+     "sound": "a man talking on a mobile phone nearby, indistinct sales talk, a laugh, the phone beeping as the call ends"
+    },
+    {
+     "knot": "alibi",
+     "ink": "p5_alibi",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "toby",
+      "quaile"
+     ],
+     "alt": "Toby shows Quaile his phone's call log; she looks at it over her reading glasses.",
+     "prompt": "TOBY holds his phone out to show its screen; QUAILE looks at it over her reading glasses without taking it. They stand beside the open driver's door of a black Range Rover; a small dashcam is visible on the windscreen. Field car park.",
+     "sound": "a dashcam beeping, a phone screen tapped, a car interior chime from an open door"
+    },
+    {
+     "knot": "minibus",
+     "ink": "p5_minibus",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "Through the back window of the brass band's minibus: the straw vicar in a yellow jacket sits in a seat with its seatbelt on.",
+     "prompt": "Through the rear side window of a parked white minibus in a field: a scarecrow with a sacking face, a bright yellow cycling jacket and a white dog collar sits upright in a passenger seat with its seatbelt fastened, among brass instrument cases. Reflections of sky on the glass.",
+     "sound": "inside a parked vehicle: a muffled ticking engine cooling, a seatbelt buckle tapping, straw rustling once",
+     "loops": [
+      "Locked-off camera. The scarecrow's head turns slowly towards the window, holds, then turns slowly back to where it began. Nothing else moves.",
+      "Locked-off camera. A cloud reflection slides across the minibus window. The scarecrow does not move.",
+      "Locked-off camera. The scarecrow's straw hand lifts a little from its knee and settles back. Nothing else moves."
+     ],
+     "loopSrc": [
+      "../media/p5-minibus-loop1",
+      "../media/p5-minibus-loop2"
+     ]
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "title": "The vicarage",
+   "layout": "L3",
+   "bed": "an English churchyard in summer afternoon: rooks in tall trees, a church clock ticking and striking the quarter, scaffolding poles clanking, a distant lawnmower",
+   "panels": [
+    {
+     "knot": "vicar",
+     "ink": "p6_vicar",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [
+      "clement"
+     ],
+     "alt": "The Reverend Clement Ashby at the vicarage gate, holding his bicycle, with an eager, nervous smile.",
+     "prompt": "CLEMENT stands at an old wooden vicarage gate holding a black bicycle by the handlebars, smiling eagerly and a little nervously at the camera. Behind him, a stone vicarage with a messy front garden and the church tower with scaffolding. Afternoon light.",
+     "sound": "a bicycle freewheel ticking, a bicycle bell ringing once, a wooden gate latch"
+    },
+    {
+     "knot": "garden",
+     "ink": "p6_garden",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "The vicarage border: foxgloves, and six of them cut down to clean stalks.",
+     "prompt": "A slightly neglected vicarage garden border of purple foxgloves; six of them have been cut down to short clean green stalks with fresh cut ends, leaving gaps in the row. A slug on a leaf. Afternoon sun.",
+     "sound": "a garden: rooks in trees, leaves moving, a slow snail-like squelch and a twig snapping",
+     "tiny": true,
+     "loopSrc": [
+      "media/p6-garden-tiny"
+     ]
+    },
+    {
+     "knot": "hooks",
+     "ink": "p6_hooks",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A church-hall kitchen wall with seven numbered hooks and six blue enamel flasks. Hook four is empty.",
+     "prompt": "A plain church-hall kitchen wall painted cream: a wooden rail with seven brass hooks, numbered 1 to 7 in black marker pen on the wood, with a blue enamel flask hanging on six of them. Hook 4 is empty. A tea urn and stacked green cups below. Fluorescent and window light.",
+     "sound": "a church hall kitchen: a tea urn bubbling, enamel flasks knocking against each other on hooks, an echoing room"
+    },
+    {
+     "knot": "roof",
+     "ink": "p6_roof",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "The roof appeal board: a painted thermometer with a scale to sixty thousand pounds, red up to twenty thousand. The top of the red is wet and has run.",
+     "prompt": "(made with gpt-image-2, no reference sheets) Outside a Cotswold stone church wrapped in steel scaffolding, a weathered hand-painted white board tied to the scaffolding: ROOF APPEAL, a painted thermometer with a scale of £0 to £60,000, the old faded red topped by a short band of fresh, wet scarlet paint that has run in thin drips. Long churchyard grass and a yew tree.",
+     "sound": "scaffolding poles clinking in wind, a loose tarpaulin flapping on a church roof, rooks",
+     "loops": [
+      "Locked-off camera. One run of fresh red paint slides slowly down the board and stops. Nothing else moves.",
+      "Locked-off camera. A rook lands on the top of the scaffolding beside the board, looks about, and flies off. Nothing else moves.",
+      "Locked-off camera. A loose blue tarpaulin on the scaffolding lifts in the wind and falls back. The board stays still."
+     ],
+     "focus": "50% 90%",
+     "loopSrc": [
+      "../media/p6-roof-loop1",
+      "../media/p6-roof-loop2",
+      "../media/p6-roof-loop3"
+     ]
+    }
+   ]
+  },
+  {
+   "n": 7,
+   "title": "Gerald's study",
+   "layout": "L1",
+   "bed": "a quiet study in an old English house: a grandfather clock ticking, a window open to the garden, a wood pigeon, floorboards creaking",
+   "panels": [
+    {
+     "knot": "room",
+     "ink": "p7_room",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "Gerald's study: every wall covered in show rosettes. Through the window, the scarecrow in the panama hat stands on the lawn, looking in.",
+     "prompt": "A cluttered English study: the walls covered floor to ceiling with horticultural show rosettes in rows, red, blue and yellow, pinned in date order; a leather-topped desk with ledgers. Through a sash window, on the sunny lawn outside, a scarecrow in a cream linen jacket and a panama hat stands looking in at the window.",
+     "sound": "a grandfather clock ticking slowly, papers riffling, a sash window rattling slightly"
+    },
+    {
+     "knot": "doorway",
+     "ink": "p7_margaret",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [
+      "margaret"
+     ],
+     "alt": "Margaret stands in the study doorway with her arms folded and does not come in.",
+     "prompt": "MARGARET stands in the doorway of the study with her arms folded, not coming in, looking at the camera with pale watchful eyes. A dim hallway behind her with a barometer on the wall.",
+     "sound": "a door creaking open, a floorboard creak, a woman's quiet breath, a hall clock"
+    },
+    {
+     "knot": "notebook",
+     "ink": "p7_notebook",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "Gerald's notebook open on the desk. In square capitals: Prize fund £4,000 short. Roof? Ask C. After marrows.",
+     "prompt": "Overhead close-up of a small open notebook on a leather-topped desk, beside a fountain pen and a pair of half-moon glasses. On the right-hand page, in neat square handwritten capitals in blue ink, exactly these lines: SAT. / PRIZE FUND £4,000 SHORT / ROOF? / ASK C. AFTER MARROWS. Daylight from a window.",
+     "sound": "a notebook page lifting and falling in a breeze, paper rustle, a fountain pen rolling a little on leather",
+     "loops": [
+      "Locked-off overhead shot. A breeze from the window lifts the corner of the open page, it rises, then settles back down flat. Nothing else moves.",
+      "Locked-off overhead shot. The fountain pen rolls a few centimetres on the leather, then rolls back and stops. Nothing else moves.",
+      "Locked-off overhead shot. The shadow of a window frame moves across the page as a cloud passes and the sun returns. Nothing else moves."
+     ],
+     "focus": "64% 50%",
+     "loopSrc": [
+      "../media/p7-notebook-loop1",
+      "../media/p7-notebook-loop2",
+      "../media/p7-notebook-loop3"
+     ]
+    },
+    {
+     "knot": "cups",
+     "ink": "p7_cups",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "A shelf of nine identical silver cups, all engraved Pike Cup.",
+     "prompt": "A long oak shelf holding nine identical small silver two-handled trophy cups in a row, each engraved THE PIKE CUP with a different year, polished, with dust only on the shelf between them. Soft window light.",
+     "sound": "silver cups clinking softly as one is lifted and put back, a clock ticking"
+    }
+   ]
+  },
+  {
+   "n": 8,
+   "title": "The Plough",
+   "layout": "L2",
+   "bed": "a busy English village pub on a summer evening: chatter and laughter, glasses clinking, a fruit machine, a dartboard thud now and then, a door opening",
+   "panels": [
+    {
+     "knot": "outside",
+     "ink": "p8_outside",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The Plough at dusk: hanging baskets, picnic benches, and a blackboard that says Quiz cancelled, mark of respect. Scampi £9.",
+     "prompt": "The front of a stone village pub called The Plough at dusk, with hanging baskets of red geraniums, wooden picnic benches, warm light in the windows. A chalk blackboard by the door reads in chalk capitals: QUIZ CANCELLED / MARK OF RESPECT / SCAMPI £9.",
+     "sound": "outside a pub at dusk: muffled chatter through a window, a pub sign creaking, swifts screaming overhead",
+     "tiny": true,
+     "loopSrc": [
+      "media/p8-outside-tiny"
+     ]
+    },
+    {
+     "knot": "quaile",
+     "ink": "p8_quaile",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "quaile"
+     ],
+     "alt": "Quaile at a pub table with scampi and chips in a basket and a half of bitter, looking at you over her glasses.",
+     "prompt": "QUAILE sits at a dark wooden pub table with a red plastic basket of scampi and chips and a half-pint glass of bitter, holding a chip, looking at the camera over her reading glasses with a dry, expectant look. Warm pub light, a horse brass on the wall.",
+     "sound": "a pub table: a fork on a plate, a glass set down on wood, nearby chatter"
+    },
+    {
+     "knot": "notes",
+     "ink": "p8_notes",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "sam"
+     ],
+     "alt": "Sam at the table with his notebook open, a list of names down the page.",
+     "prompt": "SAM sits at a pub table with his black notebook open in front of him and a pen in his hand, frowning at it, a pint of lemonade untouched. Warm pub light. His navy mac is over the back of the chair.",
+     "sound": "pages of a small notebook turning, a pen clicking, pub chatter close behind"
+    },
+    {
+     "knot": "bar",
+     "ink": "p8_bar",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "The pub bar: darts players, villagers, and on a bar stool the straw butcher scarecrow in a striped apron with a full pint in front of it.",
+     "prompt": "Inside a crowded village pub: a dark wooden bar with brass pumps; locals, a darts team in matching polo shirts near a dartboard. On a bar stool, a scarecrow with a sacking face, curly red wool hair and a blue-and-white striped butcher's apron sits at the bar with a full pint of bitter in front of it. Nobody looks at it.",
+     "sound": "a dart thudding into a dartboard, a small cheer, a pint glass set on a bar",
+     "loops": [
+      "Locked-off camera. A dart thuds into the dartboard in the background. Foam slides slowly down the side of the scarecrow's pint glass. The people move only slightly.",
+      "Locked-off camera. The barman reaches past the scarecrow, wipes the bar beside its pint, and moves on. The scarecrow does not move.",
+      "Locked-off camera. A man at the bar raises his glass towards the scarecrow, drinks, and turns back to his friends. The scarecrow does not move."
+     ],
+     "tiny": true,
+     "loopSrc": [
+      "media/p8-bar-tiny"
+     ]
+    }
+   ]
+  },
+  {
+   "n": 9,
+   "title": "The prize-giving",
+   "layout": "L3",
+   "bed": "a village hall full of people: rows of folding chairs creaking, polite coughing, a microphone hum, rain starting on a tin roof",
+   "panels": [
+    {
+     "knot": "hall",
+     "ink": "p9_hall",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [
+      "clement"
+     ],
+     "alt": "The vicar on the village hall stage at a lectern, a table of silver cups beside him, bunting overhead.",
+     "prompt": "A village hall with a small wooden stage: CLEMENT stands at a lectern with a microphone, smiling too widely, a trestle table of silver cups and rosettes beside him, bunting strung above, a sagging red curtain. Fluorescent light.",
+     "sound": "a man tapping a microphone, a polite smattering of applause in a hall, a chair scraping"
+    },
+    {
+     "knot": "crowd9",
+     "ink": "p9_crowd",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [
+      "margaret",
+      "dilys",
+      "toby"
+     ],
+     "alt": "In the rows of chairs: Margaret upright in the front row, Dilys with arms folded, Toby at the back on his phone.",
+     "prompt": "Rows of folding chairs in a village hall seen from the stage: MARGARET sits very upright in the front row, DILYS sits two rows back with her arms folded, TOBY sits at the back looking at his phone. Other villagers fill the rows. Fluorescent light.",
+     "sound": "a seated audience shifting, a cough, a phone notification chime, a sweet wrapper"
+    },
+    {
+     "knot": "cup",
+     "ink": "p9_cup",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [
+      "clement"
+     ],
+     "alt": "Close on the vicar's hands holding the silver cup. The lid rattles.",
+     "prompt": "Close-up of CLEMENT's hands, with the black clerical cuffs and a yellow cycling-jacket sleeve, holding a silver two-handled trophy cup with a lid, engraved THE PIKE CUP. His knuckles are tight on the handles.",
+     "sound": "a silver cup lid rattling in shaking hands, a nervous breath",
+     "loops": [
+      "Locked-off close-up. The hands tremble slightly and the lid of the cup rattles, then they steady again. Nothing else moves.",
+      "Locked-off close-up. One thumb rubs the engraving on the cup twice, then stops. Nothing else moves.",
+      "Locked-off close-up. The hands tighten on the handles until the knuckles go pale, then relax. Nothing else moves."
+     ],
+     "loopSrc": [
+      "../media/p9-cup-loop1",
+      "../media/p9-cup-loop2",
+      "../media/p9-cup-loop3"
+     ]
+    },
+    {
+     "knot": "stand",
+     "ink": "p9_stand",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [
+      "sam",
+      "quaile"
+     ],
+     "alt": "Sam stands up at the back of the hall with his notebook. Quaile, seated beside him, looks up at him.",
+     "prompt": "At the back of a village hall full of seated people turning round in their chairs: SAM stands up with his black notebook in his hand; QUAILE sits beside him looking up at him, her hearing aid visible. Fluorescent light, bunting.",
+     "sound": "a whole room of folding chairs creaking as people turn round, then a hush and one cough"
+    }
+   ]
+  },
+  {
+   "n": 10,
+   "title": "Sunday",
+   "layout": "L2",
+   "bed": "a quiet Sunday morning in an English village: church bells ringing in the distance, birdsong, a marquee being dismantled with clanking poles, a car starting",
+   "panels": [
+    {
+     "knot": "field10",
+     "ink": "p10_field",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The show field on Sunday morning: men in shorts folding the half-collapsed marquee.",
+     "prompt": "The village show field on a misty Sunday morning: a half-collapsed white marquee being folded by men in shorts and sun hats, poles on the grass, a trailer, a cardboard box marked VILLAGE HALL. The church spire behind.",
+     "sound": "marquee poles clanking as they are stacked, canvas being folded, men calling to each other",
+     "tiny": true,
+     "loopSrc": [
+      "media/p10-field10-tiny"
+     ]
+    },
+    {
+     "knot": "margaret10",
+     "ink": "p10_margaret",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "margaret"
+     ],
+     "alt": "Margaret puts one cut foxglove into a vase of water on her kitchen table.",
+     "prompt": "MARGARET in her cottage kitchen puts a single tall purple foxglove into a glass vase of water on a scrubbed pine table, her secateurs on the table beside it. Morning light from the window.",
+     "sound": "water poured into a glass vase, a stem set in it, secateurs set down on a wooden table"
+    },
+    {
+     "knot": "car",
+     "ink": "p10_car",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "quaile"
+     ],
+     "alt": "Quaile in the passenger seat of a car, her hearing aid lying on the dashboard.",
+     "prompt": "Inside a car, QUAILE sits in the passenger seat looking out of the side window with a small private smile; her beige hearing aid lies on the dashboard in front of her. Green Cotswold lane outside. Morning light.",
+     "sound": "inside a moving car: engine hum, tyres on a country lane, an indicator ticking"
+    },
+    {
+     "knot": "scarecrows10",
+     "ink": "p10_scarecrows",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "The scarecrows along the hedge. At the end of the row stands a new one in a navy rain mac, a loose tie and brown city shoes, holding a small black notebook. Its card says Our Village: D.S. Adeyemi.",
+     "prompt": "A row of handmade scarecrows on posts along a hawthorn hedge on a misty morning, with sacking faces: a butcher in a striped apron, a man in a panama hat, and a gap where one is missing. At the end of the row, a new scarecrow with a dark brown sacking face and short black wool hair, wearing a navy rain mac, a white shirt and a loosened dark tie, grey trousers and brown leather city shoes, holding a small black notebook. A handwritten card on a stake in front of it reads: OUR VILLAGE / D.S. ADEYEMI.",
+     "sound": "wind through a hedge and straw, a distant church bell, a crow",
+     "loops": [
+      "Locked-off camera. A breeze lifts the new scarecrow's tie, then lets it fall back. The hedge stirs. Nothing else moves.",
+      "Locked-off camera. A crow lands on the shoulder of the new scarecrow, looks at its notebook, and flies off. Nothing else moves.",
+      "Locked-off camera. The pages of the new scarecrow's small black notebook flip open in the wind and fall shut again. Nothing else moves."
+     ],
+     "loopSrc": [
+      "../media/p10-scarecrows10-loop1",
+      "../media/p10-scarecrows10-loop2",
+      "../media/p10-scarecrows10-loop3"
+     ]
+    }
+   ]
+  }
+ ]
+}

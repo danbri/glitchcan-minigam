@@ -1,6 +1,6 @@
 # Delivery directions for eleven_v3: each voiced line's spoken text with audio tags ([drily], [sighs] ...). The tags
 # are for the voice only; voices.json keeps the plain text (what the page shows) in "text" and the directed text in
-# "say". Run: python3 tools/directions.py <lines.json from tools/lines.mjs>  -> writes voices.json
+# "say". Run from cozyverse/steeplewyke: python3 tools/directions.py <lines.json from tools/lines.mjs> -> v2/voices.json
 import json, re, sys
 DEFAULT = {
     'narrator': '[dry, unhurried]', 'quaile': '[drily]', 'sam': '[measured]', 'gerald': '[booming, pompous]',
@@ -124,6 +124,11 @@ SAY = {
     'p10c-4': '[loudly, cupping an ear] Hm? Other side, Sam. That one\'s off.',
     'p10d-3': '[amused, then uneasy] Twenty days, and they\'ve made you already. That\'s quick.',
     'p10d-4': '[very quiet] Nobody entered it.',
+    'p5b-warm': '[delighted, smooth] Sergeant! The one who waits. [laughs] I like a man who waits.',
+    'p5b-cold': '[sarcastic, wary] Oh. You. Shall I put the phone down myself this time?',
+    'p3a-cold': '[icy, dry] Come to count my foxgloves again, Sergeant?',
+    'p4b-warm': '[warm, loud] My favourite policeman. Ask me anything, love. [beat] One thing.',
+    'p8b-warm': '[drily, pleased] You\'ve learnt to ask me things, Sam. Don\'t let it go to your head.',
     'p10d-6': '[very quiet] Nobody entered it. [beat] The card on the straw vicar beside it says Best in Show.',
 }
 TAG = re.compile(r'\[[^\]]*\]\s*')
@@ -141,5 +146,5 @@ for k in sorted(lines):
 extra = [k for k in SAY if k not in lines]
 if bad or extra: sys.exit(f'directions out of step: {bad} {extra}')
 json.dump({'about': 'Every voiced line of marrow.ink: who speaks it, the exact words shown on the page ("text"), and what the voice is given ("say": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves "text" matches the ink; tools/directions.py writes this file. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3; the page plays one at random.',
-           'model': 'eleven_v3', 'takes': 2, 'voices': vmap, 'lines': out}, open('voices.json', 'w'), indent=1, ensure_ascii=False)
+           'model': 'eleven_v3', 'takes': 2, 'voices': vmap, 'lines': out}, open('v2/voices.json', 'w'), indent=1, ensure_ascii=False)
 print(len(out), 'lines;', len(SAY), 'with their own direction')

@@ -1,14 +1,16 @@
 // Every voiced line of marrow.ink, from the real ink compiler and Story API (no text parsing of the ink).
 // Visits each knot under many mixes of: every clue true or false, which places were seen, each ending, and the
 // first/middle/last visit, so the lines inside conditional blocks are found too. Prints JSON: { "<voice id>": { "speaker": "...", "text": "..." } }.
-//   node cozyverse/steeplewyke/tools/lines.mjs [--check voices.json]
+//   node cozyverse/steeplewyke/tools/lines.mjs [--check cozyverse/steeplewyke/v2/voices.json]   (STORY=. for version 1)
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 const here = dirname(fileURLToPath(import.meta.url));
 const inkjs = createRequire(import.meta.url)('inkjs/full');
-const src = readFileSync(join(here, '..', 'marrow.ink'), 'utf8');
+// the story folder: v2 unless STORY names another (STORY=. for the first version)
+const story = join(here, '..', process.env.STORY || 'v2');
+const src = readFileSync(join(story, 'marrow.ink'), 'utf8');
 const json = new inkjs.Compiler(src).Compile().ToJson();
 const CLUES = ['flask', 'green', 'foxglove', 'notebook', 'syringe', 'alibi', 'poured', 'argument', 'clement_study', 'rattled', 'toby_vicar'];
 const SEEN = ['seen_margaret', 'seen_tent', 'seen_carpark', 'seen_vicarage', 'seen_study'];
@@ -25,6 +27,8 @@ for (const knot of knots) for (const { on, seen, ending, visits } of MIXES) {
   for (const c of CLUES) s.variablesState[c] = on;
   for (const c of SEEN) s.variablesState[c] = seen.includes(c);
   s.variablesState.ending = ending; s.variablesState.visits = visits;
+  // what the village thought before this reading: warm on the all-true mixes, cold on the all-false ones
+  for (const who of ['toby', 'margaret', 'dilys', 'quaile']) s.variablesState[`was_${who}`] = on ? 1 : -1;
   s.ChoosePathString(knot);
   // a forced mix can be a state no reading reaches (every place seen after one visit): stop there quietly
   s.onError = () => {};

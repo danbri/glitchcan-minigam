@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 const inkjs = createRequire(import.meta.url)('inkjs/full');
 const here = dirname(fileURLToPath(import.meta.url));
-const json = new inkjs.Compiler(readFileSync(join(here, '..', 'marrow.ink'), 'utf8')).Compile().ToJson();
+const json = new inkjs.Compiler(readFileSync(join(here, '..', process.env.STORY || 'v2', 'marrow.ink'), 'utf8')).Compile().ToJson();
 const runs = +process.argv[2] || 2000;
 const endings = {}, routes = new Set(), texts = new Set(), evid = {};
 let stuck = 0;
