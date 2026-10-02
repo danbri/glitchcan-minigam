@@ -206,6 +206,17 @@ What chapter two taught:
   cottage takes and one barn take had no visible motion, and the other barn take moved the man the prompt said to
   keep still (small and natural, so it was kept). Five of eight were used. Run `tools/loop-motion.py` on every take
   and look at the map before encoding; a frame sheet at 2 frames a second is too coarse to show small motion.
+  Second round (owner: "not noticing much animation"; fire, rooks and bell were the standard, 0.24 to 0.34 change
+  per frame): prompts that say "almost a still photograph" or "very slightly" get exactly that. Name one clear
+  primary motion and one or two secondary ones, with sizes ("about forty degrees each way, one swing every two and a
+  half seconds"). For a swing, put the seat at its lowest point on the first and last frame, so the start and end
+  frame match while it moves. Three cottage takes with the still as start AND end frame moved only the puddles,
+  whatever the prompt asked; with the start frame only it moved hard but changed the far end of the lane after
+  1.25 s. Measure each region against frame 0 over time to find where the change starts, keep the part before it
+  and play it forward then back (`tools/tiny-loop.sh <clip> <out> 1.2`). For a secondary motion that needs a
+  source (steam needs a kettle), edit the still first (gemini-3-pro-image node from the panel's node, 16:9, 1,827
+  credits; check that only that area changed), then make the clip from the edited still and replace the panel's
+  picture and its alt text in every language. Round two: 7 clips and one edit, 16,674 credits, three panels fixed.
 - **A guard counts as a visit.** `{p3_band > 1: brief}` with a guard `{p3_quaile == 0: -> p3_quaile}` showed the brief
   on the first real visit after a tap had gone through the guard. Decide "revisited" by a variable set in the scenes
   that matter (`asked_band`), not by the knot's read count.

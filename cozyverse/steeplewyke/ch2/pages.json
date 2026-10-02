@@ -232,9 +232,9 @@
       "prompt": "Locked-off camera, almost a still photograph. Only the lace net curtain in the window stirs very slightly, and raindrops fall from the gutter. No camera movement."
      },
      "loopSrc": [
-      "media/p4-cottage-tiny"
+      "media/p4-cottage-wind1"
      ],
-     "note": "two kling-2.5-turbo 5 s takes made; neither had visible motion (only edge shimmer), so the short loop stays"
+     "note": "kling-2.5-turbo 5 s from the still, start frame only, a strong wind; the far end of the lane changed after 1.25 s, so the first 1.2 s plays forward then back (tools/tiny-loop.sh). Three takes with the still as end frame too hardly moved"
     },
     {
      "knot": "notes",
@@ -285,16 +285,17 @@
      "slot": "a",
      "ratio": "16:9",
      "cast": [],
-     "alt": "Inside a stone barn full of antique furniture, with a shaft of light from a high window.",
+     "alt": "Inside a stone barn full of antique furniture, with a shaft of light from a high window and a kettle on a camping stove by the door.",
      "prompt": "Inside a large old Cotswold stone barn turned into an antiques shop: dressers, chairs, grandfather clocks and gilt mirrors crowded together, every piece with a brown luggage label. A shaft of sunlight comes down from a high small window through dust. Hand-painted sign over the inner door: Restored with Sympathy.",
      "sound": "pigeons cooing in barn rafters, a creaking floorboard, a clock ticking among many",
      "tiny": {
       "prompt": "Locked-off camera, almost a still photograph. Only the dust drifts slowly in the shaft of sunlight. Nothing else moves. No camera movement."
      },
      "loopSrc": [
-      "media/p5-barn-loop1"
+      "media/p5-barn-steam1",
+      "media/p5-barn-steam2"
      ],
-     "note": "two kling-2.5-turbo 5 s takes, still on start and end frame; take 1 had no visible motion and was not used, take 2 (the man working at the bench) loops alone"
+     "note": "the still was edited (gemini-3-pro-image) to add a kettle on a camping stove; two kling-2.5-turbo 5 s takes from it, still on start and end frame: the man works and steam rises from the kettle, cross-faded. Earlier takes without the kettle (p5-barn-loop1, p5-barn-tiny) show the old still"
     },
     {
      "knot": "jeremy",
@@ -460,10 +461,9 @@
       "prompt": "Locked-off camera, almost a still photograph. Only the empty swing sways very slightly and a few leaves stir on the ground. No camera movement."
      },
      "loopSrc": [
-      "media/p7-swing-loop1",
-      "media/p7-swing-loop2"
+      "media/p7-swing-wide1"
      ],
-     "note": "two kling-2.5-turbo 5 s takes, still on start and end frame, cross-faded"
+     "note": "kling-2.5-turbo 5 s, still on start and end frame, the seat passing its lowest point at both: a slow wide swing. Of two takes the second hardly moved and is not used; p7-swing-loop1/2 were the earlier, smaller swing"
     }
    ]
   },
