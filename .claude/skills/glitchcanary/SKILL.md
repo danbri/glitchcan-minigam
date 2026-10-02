@@ -125,6 +125,19 @@ a village murder after Midsomer Murders): ten pages of four panels on ONE `<nove
 - Voices: `voices.json` lists every voiced line; `tools/lines.mjs` walks the compiled story with the Story API (each
   knot with every clue on and off) and `--check` fails when the file and the ink differ. A line that starts
   "Name:" is spoken by that person; the page shows the name as a small label.
+- Revision 2, after the owner played it twice: "very linear ... almost identical routes". Measured: 40 of 56 stops
+  offered ONE choice, the clues were on the main path, and every accusation led to the same ending. The fix was ink
+  only, on the same pictures: after the body, a hub of inquiries (four visits of five places, any order, the page
+  of each place reused); the ORDER changes what is found (the vicar has been in the study if you go to the
+  vicarage first); each interview allows one question; an `evidence()` function decides whether an accusation
+  holds, and four endings change page 10's lines. `tools/walk.mjs` plays 2,000 random readings with the Story API:
+  no dead ends, 400 page orders and 1,998 different texts, where before there was one page order. Measure it this
+  way before calling a story branching.
+- Voices revision 2: the first recording had no audio tags ("flat", the owner said). `tools/directions.py` gives
+  every line eleven_v3 tags (a default per speaker, 118 lines their own); voices.json keeps the shown "text" and the
+  spoken "say" apart, and the check compares only "text". Narration voices sound flat in character parts: Toby and
+  the vicar moved to character voices. Gerald's tannoy lines get an ffmpeg loudspeaker filter
+  (`tools/voices-post.sh`). Takes are mono at 96 kbit/s (the first set was 64, chosen for size alone).
 - Test: `inklet/finkapp/test/e2e-steeplewyke.mjs` (390 x 844, touch): the solving path through all ten pages, a
   voice after every choice, each page's bed, a tap bringing in a panel's sound, a loop going on to another loop.
 

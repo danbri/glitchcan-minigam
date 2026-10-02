@@ -3,27 +3,58 @@
   "style": "A real photograph, hyper-photorealistic, full-frame camera, 35mm lens, natural light, true skin texture with pores and lines, slight film grain, the muted natural colour of a British TV drama. Not an illustration, not a painting, not CGI, no captions.",
   "place": "Steeple Wyke, a Cotswold village of honey-coloured stone with a church spire, in July.",
   "characters": [
-    { "id": "quaile", "name": "DCI Hester Quaile", "voice": "XEoBW4iDmiawQP72xnAF",
+    {
+      "id": "quaile",
+      "name": "DCI Hester Quaile",
+      "voice": "XEoBW4iDmiawQP72xnAF",
       "role": "Detective Chief Inspector. Judging the chutney. Wears a hearing aid in her left ear and switches it off when she does not want to hear.",
-      "look": "a 58-year-old white British woman with a short grey bob, reading glasses pushed up into her hair, a small beige hearing aid in her left ear, a lined, humorous face, wearing an olive waxed-cotton jacket over a navy crew-neck jumper, dark jeans and muddy green wellington boots" },
-    { "id": "sam", "name": "DS Sam Adeyemi", "voice": "dqdOhmL2BvMSx2KtSAtN",
+      "look": "a 58-year-old white British woman with a short grey bob, reading glasses pushed up into her hair, a small beige hearing aid in her left ear, a lined, humorous face, wearing an olive waxed-cotton jacket over a navy crew-neck jumper, dark jeans and muddy green wellington boots"
+    },
+    {
+      "id": "sam",
+      "name": "DS Sam Adeyemi",
+      "voice": "dqdOhmL2BvMSx2KtSAtN",
       "role": "Detective Sergeant, nineteen days in the county, from London. The reader plays him.",
-      "look": "a 31-year-old Black British man with close-cropped hair and a short neat beard, tall and lean, wearing a navy rain mac over a white shirt and a loosened dark tie, grey trousers, polished brown leather city shoes, holding a small black police notebook" },
-    { "id": "gerald", "name": "Gerald Pike", "voice": "fGIZlgPQ75MMlvQ6WxgY",
+      "look": "a 31-year-old Black British man with close-cropped hair and a short neat beard, tall and lean, wearing a navy rain mac over a white shirt and a loosened dark tie, grey trousers, polished brown leather city shoes, holding a small black police notebook"
+    },
+    {
+      "id": "gerald",
+      "name": "Gerald Pike",
+      "voice": "fGIZlgPQ75MMlvQ6WxgY",
       "role": "Chairman of the Horticultural Society for thirty-one years. Judges the marrows; his own has won for nine. The victim.",
-      "look": "a 72-year-old white British man, stout, with a ruddy face, bushy white eyebrows and a clipped white moustache, wearing a cream linen jacket, a pale blue shirt, a panama hat with a green-and-gold ribbon band and a red rosette on his lapel" },
-    { "id": "margaret", "name": "Margaret Pike", "voice": "pbVD3LqiqlzGqszOvKuT",
+      "look": "a 72-year-old white British man, stout, with a ruddy face, bushy white eyebrows and a clipped white moustache, wearing a cream linen jacket, a pale blue shirt, a panama hat with a green-and-gold ribbon band and a red rosette on his lapel"
+    },
+    {
+      "id": "margaret",
+      "name": "Margaret Pike",
+      "voice": "pbVD3LqiqlzGqszOvKuT",
       "role": "Gerald's wife. Gardener. Forty-one foxgloves, none cut.",
-      "look": "a 68-year-old white British woman, thin and very upright, with silver hair in a loose bun and pale watchful eyes, wearing a quilted bottle-green gilet over a faded floral blouse, beige trousers, garden clogs, and red-handled secateurs on a cord round her neck" },
-    { "id": "clement", "name": "The Reverend Clement Ashby", "voice": "sNwCKTIAudVoHBcLnZER",
+      "look": "a 68-year-old white British woman, thin and very upright, with silver hair in a loose bun and pale watchful eyes, wearing a quilted bottle-green gilet over a faded floral blouse, beige trousers, garden clogs, and red-handled secateurs on a cord round her neck"
+    },
+    {
+      "id": "clement",
+      "name": "The Reverend Clement Ashby",
+      "voice": "yZ3w1DL4ZAxIdOscv2t8",
       "role": "Vicar of St Aldhelm's and treasurer of the Society. Took four thousand pounds from the prize fund for the church roof. The murderer.",
-      "look": "a 46-year-old white British man, slim, with thinning sandy hair and rimless glasses, wearing a black clerical shirt with a white dog collar under an unzipped bright yellow cycling jacket, black trousers with steel cycle clips at the ankle, black trainers" },
-    { "id": "dilys", "name": "Dilys Rudd", "voice": "Ky9j3wxFbp3dSAdrkOEv",
+      "look": "a 46-year-old white British man, slim, with thinning sandy hair and rimless glasses, wearing a black clerical shirt with a white dog collar under an unzipped bright yellow cycling jacket, black trousers with steel cycle clips at the ankle, black trainers"
+    },
+    {
+      "id": "dilys",
+      "name": "Dilys Rudd",
+      "voice": "Ky9j3wxFbp3dSAdrkOEv",
       "role": "The village butcher and Gerald's marrow rival. Injects water into her marrows.",
-      "look": "a 55-year-old white British woman, broad and strong, with curly hennaed red hair and freckled forearms, wearing a blue-and-white striped butcher's apron over a red checked flannel shirt with rolled sleeves, jeans and work boots, a pencil behind her ear" },
-    { "id": "toby", "name": "Toby Pike", "voice": "JlptfLxaUpd8pZcw9dKd",
+      "look": "a 55-year-old white British woman, broad and strong, with curly hennaed red hair and freckled forearms, wearing a blue-and-white striped butcher's apron over a red checked flannel shirt with rolled sleeves, jeans and work boots, a pencil behind her ear"
+    },
+    {
+      "id": "toby",
+      "name": "Toby Pike",
+      "voice": "NXaTw4ifg0LAguvKuIwZ",
       "role": "Gerald's son, an estate agent in Cirencester. Wants forty houses on his father's fields. Was on the phone.",
-      "look": "a 36-year-old white British man with swept-back brown hair, a fresh tan and very white teeth, wearing a navy quilted gilet over a salmon-pink shirt, beige chinos and tan suede loafers without socks, a phone in his hand" }
+      "look": "a 36-year-old white British man with swept-back brown hair, a fresh tan and very white teeth, wearing a navy quilted gilet over a salmon-pink shirt, beige chinos and tan suede loafers without socks, a phone in his hand"
+    }
   ],
-  "narrator": { "name": "Narrator", "voice": "3XD5qTvPWht0mpTnYXY0" }
+  "narrator": {
+    "name": "Narrator",
+    "voice": "3XD5qTvPWht0mpTnYXY0"
+  }
 }

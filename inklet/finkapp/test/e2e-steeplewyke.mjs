@@ -1,6 +1,8 @@
-// Steeple Wyke: The Marrow Show (cozyverse/steeplewyke/index.html) on a phone-sized touch screen: the solving path
-// through all ten pages, a voice take after every choice, each page's sound bed, a panel's own sound when a tap
-// takes the view into it, a looping panel going on from one loop to another, every picture, loop and sound file present, and the ending knowing it was solved.
+// Steeple Wyke: The Marrow Show (cozyverse/steeplewyke/index.html) on a phone-sized touch screen: one solving
+// route through all ten pages (the hub of inquiries between them), a voice take after every choice, each page's
+// sound bed, a panel's own sound when a tap takes the view into it, a double tap counting as one tap, a looping
+// panel going on from one loop to another, every picture, loop and sound file present, and the ending knowing it
+// was solved. The variety of routes is checked offline: node cozyverse/steeplewyke/tools/walk.mjs
 //   node inklet/finkapp/test/e2e-steeplewyke.mjs        (SHOTS=dir saves a screenshot of each page)
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -20,16 +22,20 @@ const fail = (m) => { failed++; console.error('✖', m); };
 const pass = (m) => console.log('✔', m);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// [choice label, page the story is on after it]
+// [choice label, page the story is on after it]. One solving route through the inquiries hub (pages 3 to 7 in any
+// order, four of five): the vicarage before the study (so the vicar has been in the study), Margaret shown the
+// flask, Dilys asked about the argument. The hub knot keeps the page it was reached from.
 const PATH = [
   ['Find DCI Quaile', 1], ['Hold the spoons', 1], ['Walk along the scarecrows', 1], ['Run to the produce tent', 2],
-  ['Check on him', 2], ["Look at what's on the grass", 2], ['Tell Quaile what you think', 2], ['Go and find Margaret Pike', 3],
-  ['Tell her', 3], ['Ask about his flask', 3], ['Ask about her secateurs', 3], ['Count them', 3], ['Go back to the show', 4],
-  ['Talk to her', 4], ["Ask what's in her apron pocket", 4], ['Look at her marrow', 4], ["Find Gerald's son", 5],
-  ['Wait for him to finish', 5], ["Ask where he was at two o'clock", 5], ['Walk him back to his car', 5], ['Go to the vicarage', 6],
-  ['Find the vicar', 6], ['Ask about his garden', 6], ['Ask to see the hall kitchen', 6], ['Go out and look at the roof', 6],
-  ["Go to Gerald's study", 7], ['Search the desk', 7], ['Look at the cups on the shelf', 7], ['Go to the pub and think', 8],
-  ['Sit down with Quaile', 8], ['Go through your notebook', 8], ['Look round the bar', 8], ['Go to the prize-giving', 9],
+  ['Check on him', 2], ["Look at what's on the grass", 2], ['Tell Quaile what you think', 2], ['Decide where to start', 2],
+  ['Call on the vicar', 6], ['Find the vicar', 6], ['Ask about his garden', 6], ['Ask to see the hall kitchen', 6],
+  ['Go out and look at the roof', 6], ['Leave the vicar to his roof', 6],
+  ["Search Gerald's study", 7], ['Search the desk', 7], ['Leave the study', 7],
+  ["Go to Margaret Pike's cottage", 3], ['Talk to her', 3], ['Ask about his flask', 3], ['Show her the church-hall flask', 3],
+  ['Ask about the foxgloves', 3], ['Leave her to the roses', 3],
+  ['Go back to the marrow tent', 4], ['Talk to her', 4], ['Ask who Gerald argued with today', 4], ['Look at her marrow', 4],
+  ['Leave the tent', 4], ['Go to the pub', 8],
+  ['Sit down with Quaile', 8], ['Ask her what she thinks', 8], ['Go through your notebook', 8], ['Go to the prize-giving', 9],
   ['Listen to the vicar', 9], ['Stand up', 9], ['Name the vicar', 9], ['Go out into the evening', 10],
   ['Say goodbye to Margaret', 10], ['Walk to the car', 10], ['Drive past the scarecrows', 10],
 ];
@@ -82,12 +88,14 @@ try {
   bedWrong.length ? fail(`wrong bed: ${bedWrong.join('; ')}`) : pass('each page plays its own sound bed');
   small ? fail(`${small} choice buttons under 44 px`) : pass('every choice button is at least 44 px tall');
 
-  const end = await page.evaluate(() => ({ text: document.querySelector('.ink').textContent, solved: window.__marrow.story.variablesState.solved }));
-  end.solved === true && /You solved the Marrow Show/.test(end.text) ? pass('the ending says the case is solved') : fail(`ending: ${JSON.stringify(end)}`);
+  const end = await page.evaluate(() => ({ text: document.querySelector('.ink').textContent, ending: window.__marrow.story.variablesState.ending,
+    evidence: window.__marrow.story.EvaluateFunction('evidence') }));
+  end.ending === 'solved' && /You solved the Marrow Show/.test(end.text) && end.evidence >= 5
+    ? pass(`the ending says the case is solved (evidence ${end.evidence} of 7)`) : fail(`ending: ${JSON.stringify(end)}`);
 
   // Begin again, then a tap into a panel: the story follows the tap and that panel's own sound comes in over the bed
   await page.evaluate(() => [...document.querySelectorAll('.ink .choice')].find((b) => b.textContent === 'Begin again').click());
-  await page.waitForFunction(() => window.__marrow.page === 1 && window.__marrow.story.variablesState.flask === false, null, { timeout: 10000 })
+  await page.waitForFunction(() => window.__marrow.page === 1 && window.__marrow.story.variablesState.visits === 0 && window.__marrow.story.variablesState.flask === false, null, { timeout: 10000 })
     .then(() => pass('Begin again goes back to page 1 with no clues')).catch(() => fail('Begin again did not reset'));
   await wait(1200);
   const box = await page.evaluate(() => { const r = document.getElementById('scarecrows').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
@@ -95,6 +103,16 @@ try {
   await page.waitForFunction(() => window.__marrow.panelSound === 'media/sfx/p1-scarecrows.mp3' && /scarecrow competition/.test(document.querySelector('.ink').textContent), null, { timeout: 10000 })
     .then(() => pass('a tap on the scarecrows panel takes the story there and brings in its sound'))
     .catch(async () => fail(`tap: ${JSON.stringify(await page.evaluate(() => ({ s: window.__marrow.panelSound, t: document.querySelector('.ink').textContent.slice(0, 80) })))}`));
+
+  // a double tap counts as one tap: back to the overview, then a double tap on the show panel leaves the view in it
+  await page.mouse.click(box.x, box.y);
+  await page.waitForFunction(() => document.getElementById('page').current === -1, null, { timeout: 5000 }).catch(() => {});
+  await wait(1600);
+  const show = await page.evaluate(() => { const r = document.getElementById('show').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  await page.mouse.dblclick(show.x, show.y);
+  await wait(1800);
+  const dbl = await page.evaluate(() => { const p = document.getElementById('page'); return p.current >= 0 ? p.panels[p.current].id : 'overview'; });
+  dbl === 'show' ? pass('a double tap on a panel goes into it, as one tap does') : fail(`after a double tap the view is on ${dbl}`);
 
   // the looping panel plays one loop, keeps the next one waiting at its first frame (its poster is the same still,
   // so metadata is enough), and goes on to a different one

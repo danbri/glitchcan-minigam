@@ -1235,7 +1235,8 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   `duration`, `easing`.
 - Touch, revision 2 (owner, 2026-09-28): tap a panel and it zooms to it, CENTRED (revision 1 centred on the tapped
   point, which the owner found "not quite right"); a tap in a gutter picks the nearest panel within 40 page px.
-  Zoomed in, any tap goes back to the overview. A drag moves the page one to one, with no wall at the panel edge; on
+  Zoomed in, any tap goes back to the overview. A double tap counts as one tap (owner, October 2026: readers try
+  both); before that, its second half undid the first, in and straight out again. Within 350 ms and 30 px. A drag moves the page one to one, with no wall at the panel edge; on
   release the velocity of the last 100 ms is projected 0.22 s ahead, the path is walked, and the first other panel it
   enters by at least 12% of that panel's extent becomes the new panel; otherwise it springs back. So swipes work in
   every direction (up from panel c goes to d, below it). The motion is a damped spring (omega 9, damping ratio 0.78:

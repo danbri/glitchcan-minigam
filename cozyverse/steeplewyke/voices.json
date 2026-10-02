@@ -1,537 +1,907 @@
 {
- "about": "Every voiced line of marrow.ink: who speaks it and the exact words. tools/lines.mjs --check voices.json proves this file matches the ink. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3, made with eleven_v3; the page plays one at random.",
+ "about": "Every voiced line of marrow.ink: who speaks it, the exact words shown on the page (\"text\"), and what the voice is given (\"say\": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves \"text\" matches the ink; tools/directions.py writes this file. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3; the page plays one at random.",
  "model": "eleven_v3",
  "takes": 2,
  "voices": {
-  "narrator": "3XD5qTvPWht0mpTnYXY0",
   "quaile": "XEoBW4iDmiawQP72xnAF",
   "sam": "dqdOhmL2BvMSx2KtSAtN",
   "gerald": "fGIZlgPQ75MMlvQ6WxgY",
   "margaret": "pbVD3LqiqlzGqszOvKuT",
-  "clement": "sNwCKTIAudVoHBcLnZER",
+  "clement": "yZ3w1DL4ZAxIdOscv2t8",
   "dilys": "Ky9j3wxFbp3dSAdrkOEv",
-  "toby": "JlptfLxaUpd8pZcw9dKd"
+  "toby": "NXaTw4ifg0LAguvKuIwZ",
+  "narrator": "3XD5qTvPWht0mpTnYXY0"
  },
  "lines": {
+  "evening": {
+   "speaker": "quaile",
+   "text": "That's the light gone. Pub, Sam. I'm buying, so it's halves.",
+   "say": "[sighs, then brightly] That's the light gone. Pub, Sam. I'm buying, so it's halves."
+  },
+  "hub-0": {
+   "speaker": "quaile",
+   "text": "Five people to see before seven, and time for four. Where first?",
+   "say": "[brisk] Five people to see before seven, and time for four. [beat] Where first?"
+  },
+  "hub-3": {
+   "speaker": "quaile",
+   "text": "One more, then the pub. My feet have been judging chutney since nine.",
+   "say": "[tired, wry] One more, then the pub. My feet have been judging chutney since nine."
+  },
+  "hub-n": {
+   "speaker": "quaile",
+   "text": "Where next?",
+   "say": "[brisk] Where next?"
+  },
   "p1-open": {
    "speaker": "narrator",
-   "text": "The Steeple Wyke Horticultural Show, the hundred and twelfth. You have been a detective sergeant in this county for nineteen days."
+   "text": "The Steeple Wyke Horticultural Show, the hundred and twelfth. You have been a detective sergeant in this county for nineteen days.",
+   "say": "[warm, wry] The Steeple Wyke Horticultural Show, the hundred and twelfth. [beat] You have been a detective sergeant in this county for nineteen days."
   },
   "p10-open": {
    "speaker": "narrator",
-   "text": "Sunday. The marquee is coming down, and the marrows have gone to the pig farm."
+   "text": "Sunday. The marquee is coming down, and the marrows have gone to the pig farm.",
+   "say": "[dry, unhurried] Sunday. The marquee is coming down, and the marrows have gone to the pig farm."
   },
   "p10a-1": {
    "speaker": "narrator",
-   "text": "Men in shorts are folding the marquee. The Pike Cup is in a box marked Village Hall, Do Not Remove."
+   "text": "Men in shorts are folding the marquee. The Pike Cup is in a box marked Village Hall, Do Not Remove.",
+   "say": "[dry, unhurried] Men in shorts are folding the marquee. The Pike Cup is in a box marked Village Hall, Do Not Remove."
   },
   "p10b-1": {
    "speaker": "narrator",
-   "text": "Margaret has cut one foxglove, and is putting it in a vase on the kitchen table."
+   "text": "Margaret has cut one foxglove, and is putting it in a vase on the kitchen table.",
+   "say": "[dry, unhurried] Margaret has cut one foxglove, and is putting it in a vase on the kitchen table."
   },
   "p10b-2": {
    "speaker": "margaret",
-   "text": "Thank you, Sergeant. You were very thorough. They look nice indoors, as long as nobody drinks the water."
+   "text": "Thank you, Sergeant. You were very thorough. They look nice indoors, as long as nobody drinks the water.",
+   "say": "[cool, faint smile] Thank you, Sergeant. You were very thorough. They look nice indoors, [dry] as long as nobody drinks the water."
+  },
+  "p10b-3": {
+   "speaker": "margaret",
+   "text": "The vicar called this morning, to see how I was. I didn't offer him anything.",
+   "say": "[cool, pointed] The vicar called this morning, to see how I was. I didn't offer him anything."
   },
   "p10c-1": {
    "speaker": "narrator",
-   "text": "Quaile has taken her hearing aid out. It is on the dashboard."
+   "text": "Quaile has taken her hearing aid out. It is on the dashboard.",
+   "say": "[dry, unhurried] Quaile has taken her hearing aid out. It is on the dashboard."
   },
   "p10c-2": {
    "speaker": "quaile",
-   "text": "You did well, Sam. For nineteen days."
+   "text": "You did well, Sam. For nineteen days.",
+   "say": "[warm, grudging] You did well, Sam. For nineteen days."
   },
   "p10c-3": {
    "speaker": "sam",
-   "text": "Twenty."
+   "text": "Twenty.",
+   "say": "[amused] Twenty."
   },
   "p10c-4": {
    "speaker": "quaile",
-   "text": "Hm? Other side, Sam. That one's off."
+   "text": "Hm? Other side, Sam. That one's off.",
+   "say": "[loudly, cupping an ear] Hm? Other side, Sam. That one's off."
+  },
+  "p10c-5": {
+   "speaker": "quaile",
+   "text": "Next time, look at the vicar first. In my experience it's the vicar a surprising amount of the time.",
+   "say": "[drily] Next time, look at the vicar first. In my experience it's the vicar a surprising amount of the time."
+  },
+  "p10c-6": {
+   "speaker": "quaile",
+   "text": "We'll have him on the prize fund by Friday. The foxgloves will take longer.",
+   "say": "[grim, dry] We'll have him on the prize fund by Friday. The foxgloves will take longer."
+  },
+  "p10c-7": {
+   "speaker": "quaile",
+   "text": "Well. Nobody's dead who wasn't dead yesterday.",
+   "say": "[sighs] Well. Nobody's dead who wasn't dead yesterday."
   },
   "p10d-1": {
    "speaker": "narrator",
-   "text": "The scarecrows are still along the hedge. The straw vicar has gone."
+   "text": "The scarecrows are still along the hedge. The straw vicar has gone.",
+   "say": "[dry, unhurried] The scarecrows are still along the hedge. The straw vicar has gone."
   },
   "p10d-2": {
    "speaker": "narrator",
-   "text": "At the end of the row is a new one: a navy mac, a loose tie, brown city shoes, a small black notebook. Its card says Our Village, D S Adeyemi."
+   "text": "At the end of the row is a new one: a navy mac, a loose tie, brown city shoes, a small black notebook. Its card says Our Village, D S Adeyemi.",
+   "say": "[dry, unhurried] At the end of the row is a new one: a navy mac, a loose tie, brown city shoes, a small black notebook. Its card says Our Village, D S Adeyemi."
   },
   "p10d-3": {
    "speaker": "quaile",
-   "text": "Twenty days, and they've made you already. That's quick."
+   "text": "Twenty days, and they've made you already. That's quick.",
+   "say": "[amused, then uneasy] Twenty days, and they've made you already. That's quick."
   },
   "p10d-4": {
    "speaker": "narrator",
-   "text": "Nobody entered it."
+   "text": "Nobody entered it.",
+   "say": "[very quiet] Nobody entered it."
+  },
+  "p10d-5": {
+   "speaker": "narrator",
+   "text": "The scarecrows are still along the hedge. The straw vicar has moved to the end of the row.",
+   "say": "[dry, unhurried] The scarecrows are still along the hedge. The straw vicar has moved to the end of the row."
+  },
+  "p10d-6": {
+   "speaker": "narrator",
+   "text": "Nobody entered it. The card on the straw vicar beside it says Best in Show.",
+   "say": "[very quiet] Nobody entered it. [beat] The card on the straw vicar beside it says Best in Show."
   },
   "p1a-1": {
    "speaker": "narrator",
-   "text": "Bunting, a marquee, a brass band from the next village, and four hundred people who know each other's business."
+   "text": "Bunting, a marquee, a brass band from the next village, and four hundred people who know each other's business.",
+   "say": "[amused] Bunting, a marquee, a brass band from the next village, and four hundred people who know each other's business."
   },
   "p1a-2": {
    "speaker": "narrator",
-   "text": "Behind the marquee, a church spire. In front of it, a line of scarecrows."
+   "text": "Behind the marquee, a church spire. In front of it, a line of scarecrows.",
+   "say": "[dry, unhurried] Behind the marquee, a church spire. In front of it, a line of scarecrows."
   },
   "p1b-1": {
    "speaker": "quaile",
-   "text": "You came. Good. I'm judging the chutney, and you're holding the spoons."
+   "text": "You came. Good. I'm judging the chutney, and you're holding the spoons.",
+   "say": "[brisk, pleased] You came. Good. I'm judging the chutney, and you're holding the spoons."
   },
   "p1b-2": {
    "speaker": "sam",
-   "text": "Ma'am, I was told this was a day off."
+   "text": "Ma'am, I was told this was a day off.",
+   "say": "[polite, wary] Ma'am, I was told this was a day off."
   },
   "p1b-3": {
    "speaker": "quaile",
-   "text": "It is. Nobody has ever been murdered over chutney."
+   "text": "It is. Nobody has ever been murdered over chutney.",
+   "say": "[cheerfully] It is. [beat] Nobody has ever been murdered over chutney."
   },
   "p1c-1": {
    "speaker": "gerald",
-   "text": "Gerald Pike, chairman. The marrow results are delayed. Would whoever has moved the marrows please put them back."
+   "text": "Gerald Pike, chairman. The marrow results are delayed. Would whoever has moved the marrows please put them back.",
+   "say": "[shouting into a microphone, pompous] Gerald Pike, chairman. The marrow results are delayed. [irritated] Would whoever has moved the marrows please put them back."
   },
   "p1c-2": {
    "speaker": "gerald",
-   "text": "And the vicar's cordial is in the church-hall flasks again. Do not take them home."
+   "text": "And the vicar's cordial is in the church-hall flasks again. Do not take them home.",
+   "say": "[shouting into a microphone, stern] And the vicar's cordial is in the church-hall flasks again. Do not take them home."
   },
   "p1c-3": {
    "speaker": "narrator",
-   "text": "He has judged the marrows for thirty-one years. His own marrow has won for nine."
+   "text": "He has judged the marrows for thirty-one years. His own marrow has won for nine.",
+   "say": "[deadpan] He has judged the marrows for thirty-one years. His own marrow has won for nine."
   },
   "p1d-1": {
    "speaker": "narrator",
-   "text": "The scarecrow competition. This year's theme is Our Village: a straw vicar in a yellow jacket, a straw butcher, and a straw man in a panama hat."
+   "text": "The scarecrow competition. This year's theme is Our Village: a straw vicar in a yellow jacket, a straw butcher, and a straw man in a panama hat.",
+   "say": "[dry, unhurried] The scarecrow competition. This year's theme is Our Village: a straw vicar in a yellow jacket, a straw butcher, and a straw man in a panama hat."
   },
   "p1d-2": {
    "speaker": "narrator",
-   "text": "The straw Gerald has a red rosette, and faces the wrong way."
+   "text": "The straw Gerald has a red rosette, and faces the wrong way.",
+   "say": "[slightly uneasy] The straw Gerald has a red rosette, and faces the wrong way."
   },
   "p1d-3": {
    "speaker": "narrator",
-   "text": "Behind the produce tent, somebody screams. It is a short scream, and then a very English apology."
+   "text": "Behind the produce tent, somebody screams. It is a short scream, and then a very English apology.",
+   "say": "[deadpan] Behind the produce tent, somebody screams. [beat] It is a short scream, and then a very English apology."
   },
   "p2-open": {
    "speaker": "narrator",
-   "text": "Gerald Pike is in a deckchair behind the produce tent, with his hat over his face. The woman who screamed is still apologising."
+   "text": "Gerald Pike is in a deckchair behind the produce tent, with his hat over his face. The woman who screamed is still apologising.",
+   "say": "[low] Gerald Pike is in a deckchair behind the produce tent, with his hat over his face. [dry] The woman who screamed is still apologising."
   },
   "p2a-1": {
    "speaker": "narrator",
-   "text": "Half the show has followed you round the tent. The brass band has not stopped playing."
+   "text": "Half the show has followed you round the tent. The brass band has not stopped playing.",
+   "say": "[dry, unhurried] Half the show has followed you round the tent. The brass band has not stopped playing."
   },
   "p2a-2": {
    "speaker": "quaile",
-   "text": "Keep them back, Sam. Use your height."
+   "text": "Keep them back, Sam. Use your height.",
+   "say": "[calm, firm] Keep them back, Sam. Use your height."
   },
   "p2b-1": {
    "speaker": "narrator",
-   "text": "No pulse. His hand is cool. Under the hat his face is calm, as if somebody has just told him his marrow won."
+   "text": "No pulse. His hand is cool. Under the hat his face is calm, as if somebody has just told him his marrow won.",
+   "say": "[quiet] No pulse. His hand is cool. Under the hat his face is calm, as if somebody has just told him his marrow won."
   },
   "p2b-2": {
    "speaker": "quaile",
-   "text": "Don't move him. Ring it in. Then look at what's on the grass."
+   "text": "Don't move him. Ring it in. Then look at what's on the grass.",
+   "say": "[quietly, all business] Don't move him. Ring it in. Then look at what's on the grass."
   },
   "p2c-1": {
    "speaker": "narrator",
-   "text": "A blue enamel flask, half full of something pale. A brown label on a string: Church Hall."
+   "text": "A blue enamel flask, half full of something pale. A brown label on a string: Church Hall.",
+   "say": "[dry, unhurried] A blue enamel flask, half full of something pale. A brown label on a string: Church Hall."
   },
   "p2c-2": {
    "speaker": "sam",
-   "text": "He told everybody not to take them home."
+   "text": "He told everybody not to take them home.",
+   "say": "[thinking aloud] He told everybody not to take them home."
   },
   "p2c-3": {
    "speaker": "quaile",
-   "text": "Then why has he got one?"
+   "text": "Then why has he got one?",
+   "say": "[sharp] Then why has he got one?"
   },
   "p2d-1": {
    "speaker": "quaile",
-   "text": "Seventy-two, heavy, red in the face, a hot day. The doctor will say heart."
+   "text": "Seventy-two, heavy, red in the face, a hot day. The doctor will say heart.",
+   "say": "[weary] Seventy-two, heavy, red in the face, a hot day. The doctor will say heart."
   },
   "p2d-2": {
    "speaker": "sam",
-   "text": "And you'll say?"
+   "text": "And you'll say?",
+   "say": "[curious] And you'll say?"
   },
   "p2d-3": {
    "speaker": "quaile",
-   "text": "I'll say a man who tells four hundred people not to touch the vicar's flasks doesn't drink from one. Find his wife."
+   "text": "I'll say a man who tells four hundred people not to touch the vicar's flasks doesn't drink from one.",
+   "say": "[drily, certain] I'll say a man who tells four hundred people not to touch the vicar's flasks doesn't drink from one."
+  },
+  "p2d-4": {
+   "speaker": "quaile",
+   "text": "The prize-giving is at seven, and the whole village will be in one room. We have till then.",
+   "say": "[brisk] The prize-giving is at seven, and the whole village will be in one room. We have till then."
   },
   "p3-open": {
    "speaker": "narrator",
-   "text": "Margaret Pike is in her garden, two fields from the show, deadheading roses. Nobody has told her. You have to."
+   "text": "Margaret Pike is in her garden, two fields from the show, deadheading roses. Nobody has told her. You have to.",
+   "say": "[gentle] Margaret Pike is in her garden, two fields from the show, deadheading roses. Nobody has told her. [quiet] You have to."
+  },
+  "p3-open-b": {
+   "speaker": "narrator",
+   "text": "Margaret Pike is back in her garden, deadheading roses, as if the afternoon were any other.",
+   "say": "[slightly unsettled] Margaret Pike is back in her garden, deadheading roses, as if the afternoon were any other."
   },
   "p3a-1": {
    "speaker": "sam",
-   "text": "Mrs Pike, I'm sorry. Your husband has died."
+   "text": "Mrs Pike, I'm sorry. Your husband has died.",
+   "say": "[gently, carefully] Mrs Pike, I'm sorry. Your husband has died."
   },
   "p3a-2": {
    "speaker": "margaret",
-   "text": "At the show?"
+   "text": "At the show?",
+   "say": "[flat, after a pause] At the show?"
   },
   "p3a-3": {
    "speaker": "sam",
-   "text": "Behind the produce tent."
+   "text": "Behind the produce tent.",
+   "say": "[gently] Behind the produce tent."
   },
   "p3a-4": {
    "speaker": "margaret",
-   "text": "He'd have wanted to be in front of it."
+   "text": "He'd have wanted to be in front of it.",
+   "say": "[dry, not unkind] He'd have wanted to be in front of it."
+  },
+  "p3a-b1": {
+   "speaker": "margaret",
+   "text": "You've been in his study, Sergeant. Did you find what you wanted?",
+   "say": "[cool, faintly mocking] You've been in his study, Sergeant. Did you find what you wanted?"
+  },
+  "p3a-b2": {
+   "speaker": "sam",
+   "text": "Some of it.",
+   "say": "[guarded] Some of it."
   },
   "p3b-1": {
    "speaker": "margaret",
-   "text": "Gerald only drank from the green flask. Elderflower. He made it himself, and nobody else would touch it."
+   "text": "Gerald only drank from the green flask. Elderflower. He made it himself, and nobody else would touch it.",
+   "say": "[precise] Gerald only drank from the green flask. Elderflower. He made it himself, [dry] and nobody else would touch it."
   },
   "p3b-2": {
    "speaker": "margaret",
-   "text": "He forgot it this morning. He forgot it every morning, and I took it down to him at twelve."
+   "text": "He forgot it this morning. He forgot it every morning, and I took it down to him at twelve.",
+   "say": "[a little weary] He forgot it this morning. He forgot it every morning, and I took it down to him at twelve."
   },
   "p3b-3": {
    "speaker": "sam",
-   "text": "Not today?"
+   "text": "Not today?",
+   "say": "[quiet] Not today?"
   },
   "p3b-4": {
    "speaker": "margaret",
-   "text": "Not today. I had the roses."
+   "text": "Not today. I had the roses.",
+   "say": "[cool] Not today. [beat] I had the roses."
   },
   "p3c-1": {
    "speaker": "narrator",
-   "text": "Red handles, clean blades. She wears them on a cord round her neck."
+   "text": "Red handles, clean blades. She wears them on a cord round her neck.",
+   "say": "[dry, unhurried] Red handles, clean blades. She wears them on a cord round her neck."
   },
   "p3c-2": {
    "speaker": "margaret",
-   "text": "If you want to know whether I've cut any foxgloves, Sergeant, count them."
+   "text": "If you want to know whether I've cut any foxgloves, Sergeant, count them.",
+   "say": "[cool, challenging] If you want to know whether I've cut any foxgloves, Sergeant, count them."
   },
   "p3d-1": {
    "speaker": "narrator",
-   "text": "Forty-one foxgloves along the back wall. You count them twice. Every stem is standing."
+   "text": "Forty-one foxgloves along the back wall. You count them twice. Every stem is standing.",
+   "say": "[dry, unhurried] Forty-one foxgloves along the back wall. You count them twice. Every stem is standing."
   },
   "p3d-2": {
    "speaker": "narrator",
-   "text": "At the end of the border stands the scarecrow in the panama hat. An hour ago it was at the show."
+   "text": "At the end of the border stands the scarecrow in the panama hat. An hour ago it was at the show.",
+   "say": "[uneasy, quiet] At the end of the border stands the scarecrow in the panama hat. An hour ago it was at the show."
   },
   "p3d-3": {
    "speaker": "margaret",
-   "text": "That's not ours."
+   "text": "That's not ours.",
+   "say": "[flat] That's not ours."
+  },
+  "p3e-1": {
+   "speaker": "margaret",
+   "text": "That's the vicar's. Clement takes Gerald a cup of his cordial at every show, and Gerald tips it on the nearest roses when Clement has gone.",
+   "say": "[recognising it, cool] That's the vicar's. Clement takes Gerald a cup of his cordial at every show, [dry] and Gerald tips it on the nearest roses when Clement has gone."
+  },
+  "p3e-2": {
+   "speaker": "margaret",
+   "text": "He must have been thirsty today.",
+   "say": "[quietly, pointed] He must have been thirsty today."
   },
   "p4-open": {
    "speaker": "narrator",
-   "text": "The marrow tent. Forty marrows on trestles, and one woman in a butcher's apron, who has not left."
+   "text": "The marrow tent. Forty marrows on trestles, and one woman in a butcher's apron, who has not left.",
+   "say": "[dry, unhurried] The marrow tent. Forty marrows on trestles, and one woman in a butcher's apron, who has not left."
   },
   "p4a-1": {
    "speaker": "narrator",
-   "text": "Gerald's marrow is on the end of the table. This year it has no card."
+   "text": "Gerald's marrow is on the end of the table. This year it has no card.",
+   "say": "[dry, unhurried] Gerald's marrow is on the end of the table. This year it has no card."
   },
   "p4a-2": {
    "speaker": "dilys",
-   "text": "He judged it himself. Every year. Nobody said anything, because it was Gerald."
+   "text": "He judged it himself. Every year. Nobody said anything, because it was Gerald.",
+   "say": "[loud, cheerful] He judged it himself. Every year. Nobody said anything, because it was Gerald."
   },
   "p4b-1": {
    "speaker": "dilys",
-   "text": "Dilys Rudd, Rudd's Butchers. I didn't kill him, love. I was weighing."
+   "text": "Dilys Rudd, Rudd's Butchers. I didn't kill him, love. I was weighing.",
+   "say": "[laughs] Dilys Rudd, Rudd's Butchers. I didn't kill him, love. [cheerful] I was weighing."
   },
   "p4b-2": {
    "speaker": "quaile",
-   "text": "I'm told he was going to disqualify you this year."
+   "text": "I'm told he was going to disqualify you this year.",
+   "say": "[mild, probing] I'm told he was going to disqualify you this year."
   },
   "p4b-3": {
    "speaker": "dilys",
-   "text": "He was going to try."
+   "text": "He was going to try.",
+   "say": "[grinning] He was going to try."
+  },
+  "p4b-4": {
+   "speaker": "narrator",
+   "text": "The tannoy is calling her to the scales. You have time for one question.",
+   "say": "[dry, unhurried] The tannoy is calling her to the scales. You have time for one question."
   },
   "p4c-1": {
    "speaker": "narrator",
-   "text": "In her apron pocket, a veterinary syringe the size of a cucumber."
+   "text": "In her apron pocket, a veterinary syringe the size of a cucumber.",
+   "say": "[dry, unhurried] In her apron pocket, a veterinary syringe the size of a cucumber."
   },
   "p4c-2": {
    "speaker": "dilys",
-   "text": "Water. Two pints a night, straight up the stalk. Every grower in this tent does it. Gerald just never caught anyone else."
+   "text": "Water. Two pints a night, straight up the stalk. Every grower in this tent does it. Gerald just never caught anyone else.",
+   "say": "[unashamed, loud] Water. Two pints a night, straight up the stalk. Every grower in this tent does it. [scornful] Gerald just never caught anyone else."
   },
   "p4c-3": {
    "speaker": "quaile",
-   "text": "Is that a confession?"
+   "text": "Is that a confession?",
+   "say": "[drily] Is that a confession?"
   },
   "p4c-4": {
    "speaker": "dilys",
-   "text": "To marrows, yes."
+   "text": "To marrows, yes.",
+   "say": "[laughs] To marrows, yes."
   },
   "p4d-1": {
    "speaker": "narrator",
-   "text": "Her marrow is weeping water from a hole the size of a pin. So is Gerald's."
+   "text": "Her marrow is weeping water from a hole the size of a pin. So is Gerald's.",
+   "say": "[dry, unhurried] Her marrow is weeping water from a hole the size of a pin. So is Gerald's."
   },
   "p4d-2": {
    "speaker": "sam",
-   "text": "He did it too."
+   "text": "He did it too.",
+   "say": "[surprised] He did it too."
   },
   "p4d-3": {
    "speaker": "dilys",
-   "text": "Thirty-one years. Write that down, love. Big letters."
+   "text": "Thirty-one years. Write that down, love. Big letters.",
+   "say": "[delighted, loud] Thirty-one years. Write that down, love. Big letters."
+  },
+  "p4d-4": {
+   "speaker": "narrator",
+   "text": "Her marrow is weeping water from a hole the size of a pin. So is Gerald's, and so is every other marrow on the table.",
+   "say": "[dry, unhurried] Her marrow is weeping water from a hole the size of a pin. So is Gerald's, and so is every other marrow on the table."
+  },
+  "p4f-1": {
+   "speaker": "dilys",
+   "text": "The vicar. Behind the produce tent, about one. Gerald was waving his little notebook at him.",
+   "say": "[lowering her voice, enjoying it] The vicar. Behind the produce tent, about one. Gerald was waving his little notebook at him."
+  },
+  "p4f-2": {
+   "speaker": "dilys",
+   "text": "Then they shook hands, and the vicar went and fetched him a drink. Very Christian.",
+   "say": "[sarcastic] Then they shook hands, and the vicar went and fetched him a drink. Very Christian."
+  },
+  "p4f-3": {
+   "speaker": "narrator",
+   "text": "She goes to the scales without a backward look.",
+   "say": "[dry, unhurried] She goes to the scales without a backward look."
   },
   "p5-open": {
    "speaker": "narrator",
-   "text": "The car park is a field. Toby Pike is in the middle of it, on the phone, in suede loafers."
+   "text": "The car park is a field. Toby Pike is in the middle of it, on the phone, in suede loafers.",
+   "say": "[dry, unhurried] The car park is a field. Toby Pike is in the middle of it, on the phone, in suede loafers."
   },
   "p5a-1": {
    "speaker": "narrator",
-   "text": "Range Rovers, a tractor, the brass band's minibus. Somebody has parked across the gate, and it is Toby."
+   "text": "Range Rovers, a tractor, the brass band's minibus. Somebody has parked across the gate, and it is Toby.",
+   "say": "[dry, unhurried] Range Rovers, a tractor, the brass band's minibus. Somebody has parked across the gate, and it is Toby."
   },
   "p5b-1": {
    "speaker": "toby",
-   "text": "Sorry, sorry. Clients. Toby Pike, Pike and Lowe, Cirencester. Is it Dad?"
+   "text": "Sorry, sorry. Clients. Toby Pike, Pike and Lowe, Cirencester. Is it Dad?",
+   "say": "[distracted, smooth] Sorry, sorry. Clients. Toby Pike, Pike and Lowe, Cirencester. [beat] Is it Dad?"
   },
   "p5b-2": {
    "speaker": "sam",
-   "text": "I'm sorry."
+   "text": "I'm sorry.",
+   "say": "[gently] I'm sorry."
   },
   "p5b-3": {
    "speaker": "toby",
-   "text": "Right. Right. Is there a form for probate, or do I just ring someone?"
+   "text": "Right. Right. Is there a form for probate, or do I just ring someone?",
+   "say": "[briefly thrown, then businesslike] Right. Right. Is there a form for probate, or do I just ring someone?"
+  },
+  "p5b-4": {
+   "speaker": "narrator",
+   "text": "His phone is already buzzing again. He will give you one answer.",
+   "say": "[dry, unhurried] His phone is already buzzing again. He will give you one answer."
   },
   "p5c-1": {
    "speaker": "toby",
-   "text": "In the car, on a call to a man in Swindon from half one till twenty past two. He wants a barn."
+   "text": "In the car, on a call to a man in Swindon from half one till twenty past two. He wants a barn.",
+   "say": "[glib] In the car, on a call to a man in Swindon from half one till twenty past two. He wants a barn."
   },
   "p5c-2": {
    "speaker": "narrator",
-   "text": "His phone agrees. So does his dashcam, which has filmed him talking to the windscreen for fifty minutes."
+   "text": "His phone agrees. So does his dashcam, which has filmed him talking to the windscreen for fifty minutes.",
+   "say": "[dry, unhurried] His phone agrees. So does his dashcam, which has filmed him talking to the windscreen for fifty minutes."
   },
   "p5c-3": {
    "speaker": "quaile",
-   "text": "Your father owned the fields behind the church."
+   "text": "Your father owned the fields behind the church.",
+   "say": "[mild] Your father owned the fields behind the church."
   },
   "p5c-4": {
    "speaker": "toby",
-   "text": "Forty houses, if the parish council sees sense. Dad wouldn't. I'm not hiding it."
+   "text": "Forty houses, if the parish council sees sense. Dad wouldn't. I'm not hiding it.",
+   "say": "[unembarrassed] Forty houses, if the parish council sees sense. Dad wouldn't. I'm not hiding it."
   },
   "p5d-1": {
    "speaker": "narrator",
-   "text": "There is mud to his ankles and no straw on him anywhere. He has not been near the produce tent."
+   "text": "There is mud to his ankles and no straw on him anywhere. He has not been near the produce tent.",
+   "say": "[dry, unhurried] There is mud to his ankles and no straw on him anywhere. He has not been near the produce tent."
   },
   "p5d-2": {
    "speaker": "narrator",
-   "text": "In the back of the brass band's minibus, the straw vicar sits with its seatbelt on."
+   "text": "In the back of the brass band's minibus, the straw vicar sits with its seatbelt on.",
+   "say": "[uneasy, deadpan] In the back of the brass band's minibus, the straw vicar sits with its seatbelt on."
+  },
+  "p5e-1": {
+   "speaker": "toby",
+   "text": "The vicar? Dad said he couldn't add up. Said it twice this week, which for Dad is practically a sermon.",
+   "say": "[amused] The vicar? Dad said he couldn't add up. Said it twice this week, [laughs] which for Dad is practically a sermon."
+  },
+  "p5e-2": {
+   "speaker": "toby",
+   "text": "Sorry, I have to take this. It's Swindon.",
+   "say": "[already turning away] Sorry, I have to take this. It's Swindon."
   },
   "p6-open": {
    "speaker": "narrator",
-   "text": "St Aldhelm's: the church, the hall, the vicarage, and a roof that has been under scaffolding since Easter."
+   "text": "St Aldhelm's: the church, the hall, the vicarage, and a roof that has been under scaffolding since Easter.",
+   "say": "[dry, unhurried] St Aldhelm's: the church, the hall, the vicarage, and a roof that has been under scaffolding since Easter."
   },
   "p6a-1": {
    "speaker": "clement",
-   "text": "Sergeant! Inspector! Dreadful. I've been on the cake stall all afternoon, you can ask anyone."
+   "text": "Sergeant! Inspector! Dreadful. I've been on the cake stall all afternoon, you can ask anyone.",
+   "say": "[flustered, eager] Sergeant! Inspector! Dreadful. [rushed] I've been on the cake stall all afternoon, you can ask anyone."
   },
   "p6a-2": {
    "speaker": "quaile",
-   "text": "Nobody's asked you yet, Vicar."
+   "text": "Nobody's asked you yet, Vicar.",
+   "say": "[drily] Nobody's asked you yet, Vicar."
   },
   "p6a-3": {
    "speaker": "clement",
-   "text": "No. Quite. Sorry. Cordial?"
+   "text": "No. Quite. Sorry. Cordial?",
+   "say": "[embarrassed laugh] No. Quite. Sorry. [too bright] Cordial?"
   },
   "p6b-1": {
    "speaker": "narrator",
-   "text": "The vicarage border: foxgloves, and six of them cut down to the stalk. Clean cuts, this week."
+   "text": "The vicarage border: foxgloves, and six of them cut down to the stalk. Clean cuts, this week.",
+   "say": "[dry, unhurried] The vicarage border: foxgloves, and six of them cut down to the stalk. Clean cuts, this week."
   },
   "p6b-2": {
    "speaker": "clement",
-   "text": "Slugs."
+   "text": "Slugs.",
+   "say": "[too quickly] Slugs."
   },
   "p6b-3": {
    "speaker": "sam",
-   "text": "Slugs with secateurs?"
+   "text": "Slugs with secateurs?",
+   "say": "[deadpan] Slugs with secateurs?"
   },
   "p6b-4": {
    "speaker": "clement",
-   "text": "Very determined slugs."
+   "text": "Very determined slugs.",
+   "say": "[weakly] Very determined slugs."
   },
   "p6c-1": {
    "speaker": "narrator",
-   "text": "The church-hall kitchen. Seven hooks, numbered in marker pen. Six blue flasks."
+   "text": "The church-hall kitchen. Seven hooks, numbered in marker pen. Six blue flasks.",
+   "say": "[dry, unhurried] The church-hall kitchen. Seven hooks, numbered in marker pen. Six blue flasks."
   },
   "p6c-2": {
    "speaker": "clement",
-   "text": "One always goes walkabout at the show. Gerald's very strict about it. Was."
+   "text": "One always goes walkabout at the show. Gerald's very strict about it. Was.",
+   "say": "[babbling] One always goes walkabout at the show. Gerald's very strict about it. [catches himself] Was."
   },
   "p6d-1": {
    "speaker": "narrator",
-   "text": "The roof appeal board: a thermometer painted red up to twenty thousand pounds. The target is sixty."
+   "text": "The roof appeal board: a thermometer painted red up to twenty thousand pounds. The target is sixty.",
+   "say": "[dry, unhurried] The roof appeal board: a thermometer painted red up to twenty thousand pounds. The target is sixty."
   },
   "p6d-2": {
    "speaker": "narrator",
-   "text": "The top of the red is still wet. It has run down over the old paint."
+   "text": "The top of the red is still wet. It has run down over the old paint.",
+   "say": "[dry, unhurried] The top of the red is still wet. It has run down over the old paint."
   },
   "p6d-3": {
    "speaker": "quaile",
-   "text": "Generous parish."
+   "text": "Generous parish.",
+   "say": "[drily] Generous parish."
   },
   "p6d-4": {
    "speaker": "clement",
-   "text": "An anonymous donor."
+   "text": "An anonymous donor.",
+   "say": "[too quickly] An anonymous donor."
+  },
+  "p6e-1": {
+   "speaker": "clement",
+   "text": "Gerald wrote everything down. He once wrote down my sermon. And timed it.",
+   "say": "[forced laugh] Gerald wrote everything down. He once wrote down my sermon. [nervous] And timed it."
+  },
+  "p6e-2": {
+   "speaker": "quaile",
+   "text": "Did he time this?",
+   "say": "[quietly] Did he time this?"
+  },
+  "p6e-3": {
+   "speaker": "narrator",
+   "text": "The vicar puts both hands on his bicycle, as if it might leave without him.",
+   "say": "[dry, unhurried] The vicar puts both hands on his bicycle, as if it might leave without him."
   },
   "p7-open": {
    "speaker": "narrator",
-   "text": "Gerald's study. Margaret lets you in, and stays in the doorway."
+   "text": "Gerald's study. Margaret lets you in, and stays in the doorway.",
+   "say": "[dry, unhurried] Gerald's study. Margaret lets you in, and stays in the doorway."
+  },
+  "p7-open-b": {
+   "speaker": "narrator",
+   "text": "Margaret Pike opens the door. Someone has already told her; she does not say who. She lets you into the study and stays in the doorway.",
+   "say": "[dry, unhurried] Margaret Pike opens the door. Someone has already told her; she does not say who. She lets you into the study and stays in the doorway."
   },
   "p7a-1": {
    "speaker": "narrator",
-   "text": "Rosettes on every wall, in date order from 1994. Out on the lawn, the scarecrow in the panama hat looks in at the window."
+   "text": "Rosettes on every wall, in date order from 1994. Out on the lawn, the scarecrow in the panama hat looks in at the window.",
+   "say": "[dry, unhurried] Rosettes on every wall, in date order from 1994. Out on the lawn, the scarecrow in the panama hat looks in at the window."
   },
   "p7a-2": {
    "speaker": "margaret",
-   "text": "That wasn't there this morning either."
+   "text": "That wasn't there this morning either.",
+   "say": "[cool, uneasy] That wasn't there this morning either."
   },
   "p7b-1": {
    "speaker": "margaret",
-   "text": "He kept the Society's books in there. He was treasurer before Clement, and he never forgave him for being better at it."
+   "text": "He kept the Society's books in there. He was treasurer before Clement, and he never forgave him for being better at it.",
+   "say": "[dry] He kept the Society's books in there. He was treasurer before Clement, and he never forgave him for being better at it."
   },
   "p7b-2": {
    "speaker": "sam",
-   "text": "Was Clement better at it?"
+   "text": "Was Clement better at it?",
+   "say": "[measured] Was Clement better at it?"
   },
   "p7b-3": {
    "speaker": "margaret",
-   "text": "Clement was nicer at it."
+   "text": "Clement was nicer at it.",
+   "say": "[dry] Clement was nicer at it."
   },
   "p7c-1": {
    "speaker": "narrator",
-   "text": "A notebook in Gerald's square capitals. Saturday's page: Prize fund four thousand short. Roof? Ask C. After marrows."
+   "text": "A notebook in Gerald's square capitals. Saturday's page: Prize fund four thousand short. Roof? Ask C. After marrows.",
+   "say": "[dry, unhurried] A notebook in Gerald's square capitals. Saturday's page: Prize fund four thousand short. Roof? Ask C. After marrows."
   },
   "p7c-2": {
    "speaker": "sam",
-   "text": "After the marrows. He was going to ask him today."
+   "text": "After the marrows. He was going to ask him today.",
+   "say": "[realising] After the marrows. He was going to ask him today."
   },
   "p7c-3": {
    "speaker": "quaile",
-   "text": "And he never got past the marrows."
+   "text": "And he never got past the marrows.",
+   "say": "[quietly] And he never got past the marrows."
+  },
+  "p7c-4": {
+   "speaker": "margaret",
+   "text": "The vicar came at four, to pray with me. He asked to sit in here on his own for a while.",
+   "say": "[cool, deliberate] The vicar came at four, to pray with me. He asked to sit in here on his own for a while."
+  },
+  "p7c-5": {
+   "speaker": "quaile",
+   "text": "And did he pray?",
+   "say": "[drily] And did he pray?"
+  },
+  "p7c-6": {
+   "speaker": "margaret",
+   "text": "He looked in the drawers. I suppose that's a kind of prayer.",
+   "say": "[dry] He looked in the drawers. I suppose that's a kind of prayer."
   },
   "p7d-1": {
    "speaker": "narrator",
-   "text": "Nine silver cups. All of them the Pike Cup, all won by Gerald Pike, all judged by Gerald Pike."
+   "text": "Nine silver cups. All of them the Pike Cup, all won by Gerald Pike, all judged by Gerald Pike.",
+   "say": "[dry, unhurried] Nine silver cups. All of them the Pike Cup, all won by Gerald Pike, all judged by Gerald Pike."
   },
   "p7d-2": {
    "speaker": "quaile",
-   "text": "I'd have poisoned him over that alone."
+   "text": "I'd have poisoned him over that alone.",
+   "say": "[deadpan] I'd have poisoned him over that alone."
   },
   "p7d-3": {
    "speaker": "sam",
-   "text": "Ma'am."
+   "text": "Ma'am.",
+   "say": "[shocked] Ma'am."
   },
   "p7d-4": {
    "speaker": "quaile",
-   "text": "I'm deaf in one ear, Sam. I can say what I like."
+   "text": "I'm deaf in one ear, Sam. I can say what I like.",
+   "say": "[cheerfully] I'm deaf in one ear, Sam. I can say what I like."
   },
   "p8-open": {
    "speaker": "narrator",
-   "text": "The Plough, half past eight. The whole village is in, and pretending not to listen to you."
+   "text": "The Plough, half past six. The whole village is in, and pretending not to listen to you.",
+   "say": "[dry, unhurried] The Plough, half past six. The whole village is in, and pretending not to listen to you."
   },
   "p8a-1": {
    "speaker": "narrator",
-   "text": "The blackboard by the door says Quiz cancelled, mark of respect. Under that, it says Scampi, nine pounds."
+   "text": "The blackboard by the door says Quiz cancelled, mark of respect. Under that, it says Scampi, nine pounds.",
+   "say": "[dry, unhurried] The blackboard by the door says Quiz cancelled, mark of respect. Under that, it says Scampi, nine pounds."
   },
   "p8b-1": {
    "speaker": "quaile",
-   "text": "Go on, then. Who did it?"
+   "text": "Go on, then. Who did it?",
+   "say": "[mouth half full, amused] Go on, then. Who did it?"
   },
   "p8b-2": {
    "speaker": "quaile",
-   "text": "Foxglove's digitalis. On a hot day it stops a big man's heart, and it looks like a big man's heart on a hot day."
+   "text": "Foxglove's digitalis. On a hot day it stops a big man's heart, and it looks like a big man's heart on a hot day.",
+   "say": "[matter-of-fact] Foxglove's digitalis. On a hot day it stops a big man's heart, and it looks like a big man's heart on a hot day."
   },
   "p8c-alibi": {
    "speaker": "narrator",
-   "text": "Toby, on the phone in a field for fifty minutes."
+   "text": "Toby, on the phone in a field for fifty minutes.",
+   "say": "[dry, unhurried] Toby, on the phone in a field for fifty minutes."
+  },
+  "p8c-argument": {
+   "speaker": "narrator",
+   "text": "Gerald and the vicar, behind the produce tent at one. A notebook, a handshake, a drink.",
+   "say": "[dry, unhurried] Gerald and the vicar, behind the produce tent at one. A notebook, a handshake, a drink."
   },
   "p8c-empty": {
    "speaker": "narrator",
-   "text": "Your notebook has the date in it, and the word chutney."
+   "text": "Your notebook has the date in it, and the word chutney.",
+   "say": "[dry, unhurried] Your notebook has the date in it, and the word chutney."
   },
   "p8c-flask": {
    "speaker": "narrator",
-   "text": "A church-hall flask by his chair, and he never drank from them."
+   "text": "A church-hall flask by his chair, and he never drank from them.",
+   "say": "[dry, unhurried] A church-hall flask by his chair, and he never drank from them."
   },
   "p8c-foxglove": {
    "speaker": "narrator",
-   "text": "Six foxgloves cut at the vicarage. None cut at the Pikes'."
+   "text": "Six foxgloves cut at the vicarage. None cut at the Pikes'.",
+   "say": "[dry, unhurried] Six foxgloves cut at the vicarage. None cut at the Pikes'."
   },
   "p8c-green": {
    "speaker": "narrator",
-   "text": "His own green flask was at home on the draining board."
+   "text": "His own green flask was at home on the draining board.",
+   "say": "[dry, unhurried] His own green flask was at home on the draining board."
   },
   "p8c-notebook": {
    "speaker": "narrator",
-   "text": "Four thousand pounds short in the prize fund. Ask C."
+   "text": "Four thousand pounds short in the prize fund. Ask C.",
+   "say": "[dry, unhurried] Four thousand pounds short in the prize fund. Ask C."
+  },
+  "p8c-poured": {
+   "speaker": "narrator",
+   "text": "The vicar takes Gerald a cup of cordial at every show. Gerald pours it on the roses.",
+   "say": "[dry, unhurried] The vicar takes Gerald a cup of cordial at every show. Gerald pours it on the roses."
+  },
+  "p8c-rattled": {
+   "speaker": "narrator",
+   "text": "The vicar, holding on to his bicycle when he saw the notebook.",
+   "say": "[dry, unhurried] The vicar, holding on to his bicycle when he saw the notebook."
+  },
+  "p8c-study": {
+   "speaker": "narrator",
+   "text": "The vicar, alone in Gerald's study at four, looking in the drawers.",
+   "say": "[dry, unhurried] The vicar, alone in Gerald's study at four, looking in the drawers."
   },
   "p8c-syringe": {
    "speaker": "narrator",
-   "text": "Dilys and a syringe. Water, and only in marrows."
+   "text": "Dilys and a syringe. Water, and only in marrows.",
+   "say": "[dry, unhurried] Dilys and a syringe. Water, and only in marrows."
+  },
+  "p8c-toby": {
+   "speaker": "narrator",
+   "text": "Gerald said the vicar couldn't add up. Twice this week.",
+   "say": "[dry, unhurried] Gerald said the vicar couldn't add up. Twice this week."
   },
   "p8d-1": {
    "speaker": "narrator",
-   "text": "At the bar, between the darts team and the vet, the straw butcher has a pint in front of it. Nobody has drunk any."
+   "text": "At the bar, between the darts team and the vet, the straw butcher has a pint in front of it. Nobody has drunk any.",
+   "say": "[dry, unhurried] At the bar, between the darts team and the vet, the straw butcher has a pint in front of it. Nobody has drunk any."
   },
   "p8d-2": {
    "speaker": "quaile",
-   "text": "Don't. It happens every year. Nobody owns up."
+   "text": "Don't. It happens every year. Nobody owns up.",
+   "say": "[weary] Don't. It happens every year. Nobody owns up."
+  },
+  "p8e-1": {
+   "speaker": "narrator",
+   "text": "The landlord comes over to talk about the quiz. Quaile turns her hearing aid off and smiles at him until he goes.",
+   "say": "[dry, unhurried] The landlord comes over to talk about the quiz. Quaile turns her hearing aid off and smiles at him until he goes."
+  },
+  "p8e-ask": {
+   "speaker": "quaile",
+   "text": "Gerald didn't drink that flask by himself. Somebody saw who handed it to him. Somebody always sees.",
+   "say": "[thoughtful] Gerald didn't drink that flask by himself. Somebody saw who handed it to him. [knowing] Somebody always sees."
+  },
+  "p8e-good": {
+   "speaker": "quaile",
+   "text": "I think you know, and I think you'd like me to say it. I shan't.",
+   "say": "[smiling] I think you know, and I think you'd like me to say it. [beat] I shan't."
+  },
+  "p8e-study": {
+   "speaker": "quaile",
+   "text": "A chairman keeps notes. Nobody's read Gerald's.",
+   "say": "[pointed] A chairman keeps notes. Nobody's read Gerald's."
+  },
+  "p8e-vic": {
+   "speaker": "quaile",
+   "text": "Nobody's been to look at the vicar's garden. I'd have looked at the vicar's garden.",
+   "say": "[pointed] Nobody's been to look at the vicar's garden. I'd have looked at the vicar's garden."
   },
   "p9-open": {
    "speaker": "narrator",
-   "text": "The village hall. The prize-giving goes ahead, because Gerald would have wanted it, says the vicar, who is giving the prizes."
+   "text": "The village hall. The prize-giving goes ahead, because Gerald would have wanted it, says the vicar, who is giving the prizes.",
+   "say": "[dry, unhurried] The village hall. The prize-giving goes ahead, because Gerald would have wanted it, says the vicar, who is giving the prizes."
   },
   "p9a-1": {
    "speaker": "clement",
-   "text": "The Pike Cup for the heaviest marrow goes this year to Mrs Dilys Rudd."
+   "text": "The Pike Cup for the heaviest marrow goes this year to Mrs Dilys Rudd.",
+   "say": "[over-bright, into a microphone] The Pike Cup for the heaviest marrow goes this year to Mrs Dilys Rudd."
   },
   "p9a-2": {
    "speaker": "narrator",
-   "text": "Dilys does not go up. One by one, the hall turns round to look at you."
+   "text": "Dilys does not go up. One by one, the hall turns round to look at you.",
+   "say": "[dry, unhurried] Dilys does not go up. One by one, the hall turns round to look at you."
   },
   "p9b-1": {
    "speaker": "narrator",
-   "text": "Margaret in the front row, very upright. Dilys with her arms folded. Toby at the back, on his phone."
+   "text": "Margaret in the front row, very upright. Dilys with her arms folded. Toby at the back, on his phone.",
+   "say": "[dry, unhurried] Margaret in the front row, very upright. Dilys with her arms folded. Toby at the back, on his phone."
   },
   "p9c-1": {
    "speaker": "narrator",
-   "text": "The vicar holds the cup with both hands. The lid rattles."
+   "text": "The vicar holds the cup with both hands. The lid rattles.",
+   "say": "[dry, unhurried] The vicar holds the cup with both hands. The lid rattles."
   },
   "p9d-1": {
    "speaker": "quaile",
-   "text": "Your hall, Sergeant."
+   "text": "Your hall, Sergeant.",
+   "say": "[quietly] Your hall, Sergeant."
+  },
+  "p9e-argument": {
+   "speaker": "sam",
+   "text": "At one o'clock he showed you that notebook behind the produce tent. Then you fetched him a drink.",
+   "say": "[steady] At one o'clock he showed you that notebook behind the produce tent. Then you fetched him a drink."
   },
   "p9e-flask": {
    "speaker": "sam",
-   "text": "And he died with one of your flasks by his chair. He never drank from them. Somebody handed it to him."
+   "text": "He died with one of your flasks by his chair.",
+   "say": "[quiet, final] He died with one of your flasks by his chair."
   },
   "p9e-foxglove": {
    "speaker": "sam",
-   "text": "Six foxgloves cut in your garden. Not slugs."
+   "text": "Six foxgloves cut in your garden. Not slugs.",
+   "say": "[firm] Six foxgloves cut in your garden. Not slugs."
+  },
+  "p9e-hall": {
+   "speaker": "narrator",
+   "text": "Forty people in the hall nod. They all bought cake.",
+   "say": "[dry, unhurried] Forty people in the hall nod. They all bought cake."
   },
   "p9e-hunch": {
-   "speaker": "sam",
-   "text": "I can't prove it yet. But you offered us cordial."
+   "speaker": "clement",
+   "text": "I was on the cake stall all afternoon. Ask anyone.",
+   "say": "[relieved, too loud] I was on the cake stall all afternoon. Ask anyone."
   },
   "p9e-notebook": {
    "speaker": "sam",
-   "text": "The prize fund was four thousand short, and the roof went up four thousand. Gerald wrote it down: ask C, after the marrows."
+   "text": "The prize fund was four thousand short, and Gerald wrote it down: ask C, after the marrows.",
+   "say": "[steady, clear] The prize fund was four thousand short, and Gerald wrote it down: ask C, after the marrows."
+  },
+  "p9e-poured": {
+   "speaker": "sam",
+   "text": "He never drank your cordial. He poured it on the roses. So today you stayed and watched him drink it.",
+   "say": "[steady, pressing] He never drank your cordial. He poured it on the roses. So today you stayed and watched him drink it."
+  },
+  "p9e-sit": {
+   "speaker": "quaile",
+   "text": "Sit down, Sam. Not tonight.",
+   "say": "[quietly, tired] Sit down, Sam. Not tonight."
+  },
+  "p9e-study": {
+   "speaker": "sam",
+   "text": "And at four you were in his study, looking for the notebook.",
+   "say": "[firm] And at four you were in his study, looking for the notebook."
   },
   "p9f-dilys": {
    "speaker": "dilys",
-   "text": "I put water in marrows, love. Not in men."
+   "text": "I put water in marrows, love. Not in men.",
+   "say": "[outraged, loud] I put water in marrows, love. Not in men."
   },
   "p9f-margaret": {
    "speaker": "margaret",
-   "text": "I had forty-one foxgloves this morning, Sergeant. I still have forty-one. You counted them."
+   "text": "I had forty-one foxgloves this morning, Sergeant. I still have forty-one. Count them.",
+   "say": "[icy] I had forty-one foxgloves this morning, Sergeant. I still have forty-one. Count them."
   },
   "p9f-toby": {
    "speaker": "toby",
-   "text": "I was in a field with a man from Swindon. There's a video. It's very long."
+   "text": "I was in a field with a man from Swindon. There's a video. It's very long.",
+   "say": "[offended, smug] I was in a field with a man from Swindon. There's a video. [beat] It's very long."
   },
   "p9g-1": {
    "speaker": "quaile",
-   "text": "Sit down, Sam. Vicar, the prize fund is four thousand short, and your roof is four thousand up. Gerald was going to say so, after the marrows."
+   "text": "Sit down, Sam. Vicar, the prize fund is four thousand short, and your roof is not. Gerald was going to say so, after the marrows.",
+   "say": "[firm, unhurried] Sit down, Sam. [beat] Vicar, the prize fund is four thousand short, and your roof is not. Gerald was going to say so, after the marrows."
+  },
+  "p9g-2": {
+   "speaker": "quaile",
+   "text": "Sit down, Sam.",
+   "say": "[quietly] Sit down, Sam."
+  },
+  "p9g-3": {
+   "speaker": "narrator",
+   "text": "The vicar clears his throat and gives Dilys Rudd the Pike Cup. Nobody claps.",
+   "say": "[dry, unhurried] The vicar clears his throat and gives Dilys Rudd the Pike Cup. Nobody claps."
   },
   "p9h-1": {
    "speaker": "clement",
-   "text": "He was going to stand up here and say it. In front of everyone. In front of the roof."
+   "text": "He was going to stand up here and say it. In front of everyone. In front of the roof.",
+   "say": "[breaking, fast] He was going to stand up here and say it. In front of everyone. [voice cracking] In front of the roof."
   },
   "p9h-2": {
    "speaker": "clement",
-   "text": "I only wanted him to be ill. For the afternoon."
+   "text": "I only wanted him to be ill. For the afternoon.",
+   "say": "[small, ashamed] I only wanted him to be ill. For the afternoon."
   },
   "p9h-3": {
    "speaker": "quaile",
-   "text": "The roof will still leak, Vicar."
+   "text": "The roof will still leak, Vicar.",
+   "say": "[quiet, not unkind] The roof will still leak, Vicar."
   }
  }
 }
