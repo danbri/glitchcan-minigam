@@ -130,6 +130,11 @@ the video paused at 0. `SHOTS=dir` saves `peek.png`. Look at a crop at the peak 
 - Trusting small exact things in pictures: marrows came out as watermelons, a notebook page as scribble, a
   thermometer scale in the wrong order twice. Crop and look; change the text to match a picture when that is cheaper.
 - Recording voices before the text is final: two roof lines changed after a run and had to be done again.
+- Everyone speaking in polished one-liners. Owner, October 2026, on chapter 2's first draft: "I don't think this
+  writing will survive critical review." The draft gave every person the same wit (aphorisms, closing quips, a narrator
+  who summarises with a joke: "The bells took most of her hearing. A notepad ... does the rest."), and Dr Achebe's
+  percentages came back six times. The rewrite: say plainly what a person does or sees, let a character's jokes come
+  from what they want in the scene, keep a running gag to two uses, and end a scene on what happens, not on a line.
 - Spending without a ceiling: the account quota is 300,000 credits a period and ran out mid-recording. Price runs
   with `estimate_only`; Kling was refused while v4 still worked.
 
