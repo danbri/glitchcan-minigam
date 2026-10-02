@@ -201,6 +201,11 @@ What chapter two taught:
   (`tools/peek-window.py`) and look at a crop at the peak before using it. Of eight "almost still" clips, two broke
   the rule: a bell came down through the ringing-chamber ceiling, and a strip light switched on. Those panels are
   stills now (pages.json `note` says why).
+- **Long loops (5 s, still on start and end frame) often move nothing.** Chapter 2, eight takes for four panels
+  (16,968 credits): the seams were all clean (first against last frame, mean difference under 1 of 255), but both
+  cottage takes and one barn take had no visible motion, and the other barn take moved the man the prompt said to
+  keep still (small and natural, so it was kept). Five of eight were used. Run `tools/loop-motion.py` on every take
+  and look at the map before encoding; a frame sheet at 2 frames a second is too coarse to show small motion.
 - **A guard counts as a visit.** `{p3_band > 1: brief}` with a guard `{p3_quaile == 0: -> p3_quaile}` showed the brief
   on the first real visit after a tap had gone through the guard. Decide "revisited" by a variable set in the scenes
   that matter (`asked_band`), not by the knot's read count.
