@@ -19,6 +19,9 @@ A 3D view and a long section of the East London Line (London Overground) from Wa
 | `tools/fetch-raw.mjs` | downloads all raw data |
 | `tools/build-data.mjs` | builds `data/cwplans-data.js` from the raw data |
 | `research-report-2026-10.md` | the source survey supplied by the owner, unchanged; read the review below first |
+| `data/sourced-levels.json` | hand-curated published levels (platform depths, slab levels, dock bed) with source URL and quote; used by both builds |
+| `docklands/` | the wider Docklands model (London Bridge to Cody Dock, Canary Wharf above and below ground): https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/ |
+| `feeds/` | 200 checked data sources, feeds and APIs for the area: `feeds/README.md`, `feeds/feeds.json` |
 
 Rebuild:
 
@@ -56,7 +59,7 @@ Measured controls on the East London Line (Up / Down track):
 | Rotherhithe station cut | −9.8 / −10.7 | +2.4 |
 | Wapping open section | −12.1 to −13.3 / −11.4 to −12.7 | +4.2 |
 
-With the default model (1 in 40, dip 8 m), the track at Canada Water is about −14 m OD, about 19 m below the ground (+5.4 m OD). Canada Water station is 357 m along the tunnel from the south portal and about 310 m from the Rotherhithe cut. These distances limit how deep the track can be between two measured levels. That is the only constraint here; it is not a measurement.
+Published level (added 2026-10-02, `data/sourced-levels.json`): Wikipedia gives the East London line platforms at Canada Water as "11 m (36 ft) below the ground" and the Jubilee line platforms as "22 m (72 ft) down" (https://en.wikipedia.org/wiki/Canada_Water_station). With the LiDAR ground at the station (+5.4 m OD) these are −5.6 m and −16.6 m OD, and the model now passes through them. Before this, with only the LiDAR controls, the default model put the track at Canada Water at about −14 m OD; the published value shows that the dip setting is too deep for this section. A platform level stands in for the track level; the rail is about a metre lower, which no source here gives.
 
 ## Review of the source survey (`research-report-2026-10.md`)
 
@@ -65,7 +68,7 @@ Checked against the data above on 2026-10-02. Items not listed were not checked.
 1. The sample conversion in "Data Integration Workflow" and recommendation 7 is wrong. BNG 533000, 181000 is at 51.5123° N, 0.0848° W (OSTN15, checked with PROJ `cs2cs` and proj4js). That is in the City of London, near Leadenhall Market, 2.9 km north-west of Canada Water station. It is not at 51.4964° N, 0.0491° W.
 2. "The famous Thames Tunnel (Rotherhithe–Wapping) lies east of Surrey Quays": wrong. In OSM the Thames Tunnel ways run from about 0.35 km to 0.7 km north of Canada Water station, under the river to Wapping. The nearest end is 0.9 km north-north-west of Surrey Quays station. The East London Line goes through it.
 3. "runs … southward through the re-purposed Canada Dock (now the ornamental Canada Water lake)" and "passes under the former Surrey Docks basin": in OSM no point of the line is inside the present Canada Water lake. At the closest point the track is 18 m from the lake's west edge. Whether it passes under the infilled part of the former Canada Dock is not checked; historic dock outlines are not in this data.
-4. "the tunnel depth reaches several tens of metres below ground" and recommendation 4 ("e.g. >30 m below surface"): not consistent with the measured levels. The LiDAR sees the track bed at about 12 m below ground in the Rotherhithe cut and about 16 m at Wapping. The south portal is about 4 m below the ground nearby. For the track at Canada Water to be 30 m below ground, the gradient between the portal and Rotherhithe would have to be about 1 in 17.
+4. "the tunnel depth reaches several tens of metres below ground" and recommendation 4 ("e.g. >30 m below surface"): not consistent with the measured levels. The LiDAR sees the track bed at about 12 m below ground in the Rotherhithe cut and about 16 m at Wapping. The south portal is about 4 m below the ground nearby. For the track at Canada Water to be 30 m below ground, the gradient between the portal and Rotherhithe would have to be about 1 in 17. Wikipedia gives 11 m below ground for the East London line platforms at Canada Water, which settles it.
 5. "Environment Agency LiDAR … available by tile from the EA Data Platform (requires account)": the 1 m composite DTM and DSM are on an open WCS with no account. This build uses it.
 6. Recommendation 1 says to reproject with GDAL. Make sure that the transform uses the OSTN15 grid: without it, PROJ uses a Helmert transform, which is 1.8 m out here.
 7. Wikidata adds dates and names but no depths. Thames Tunnel: length 396 m, inception 1843. Canada Water station: opened 1999-08-19. Rotherhithe station: "station located in a cut", which agrees with the LiDAR. Surrey Quays station: earlier names Deptford Road and Surrey Docks.

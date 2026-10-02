@@ -1,0 +1,50 @@
+{
+  "about": "Hand-curated levels from published sources, used as tunnel controls and structure levels by tools/build-data.mjs (corridor) and tools/build-docklands.mjs. Each value was found in a page fetched on 2026-10-02 (quote below; full list in docklands/facts.json). Positions are the OSM station nodes. 'below_ground' values are subtracted from the LiDAR ground at that node. A platform level is used as the track level: the rail is about a metre lower, which no source here states, so it is not applied.",
+  "controls": [
+    {
+      "id": "cw-ell-platform", "line": "East London", "kinds": ["rail"], "place": "Canada Water station", "osm": "node/5700149213",
+      "lon": -0.0498405, "lat": 51.4979299, "level": { "below_ground": 11 }, "what": "East London line (Windrush) platforms",
+      "source": "https://en.wikipedia.org/wiki/Canada_Water_station",
+      "quote": "the two north-south Windrush line platforms are situated on the second level 11 m (36 ft) below the ground"
+    },
+    {
+      "id": "cw-jub-platform", "line": "Jubilee", "kinds": ["subway"], "place": "Canada Water station", "osm": "node/5700149213",
+      "lon": -0.0498405, "lat": 51.4979299, "level": { "below_ground": 22 }, "what": "Jubilee line platforms",
+      "source": "https://en.wikipedia.org/wiki/Canada_Water_station",
+      "quote": "the two east-west Jubilee line platforms are on the lowest level 22 m (72 ft) down."
+    },
+    {
+      "id": "cwh-eliz-platform", "line": "Elizabeth", "kinds": ["rail"], "place": "Canary Wharf Elizabeth line station", "osm": "node/9097410038",
+      "lon": -0.0176241, "lat": 51.5061102, "level": { "od": -18.05 }, "what": "Platform -5 level, structural slab 81.950 mATD; mATD = OD + 100 m (datum inferred: the same figure gives the dock water at 104.300, and the Canal & River Trust gives a full impound level of 4.23 m OD)",
+      "source": "https://learninglegacy.crossrail.co.uk/wp-content/uploads/2018/07/7K-005-Design-of-Canary-Wharf-Elizabeth-line-station-and-oversite-development.pdf",
+      "quote": "Platform -5 Level SSL 81.950"
+    },
+    {
+      "id": "ng-jub-track", "line": "Jubilee", "kinds": ["subway"], "place": "North Greenwich station", "osm": "node/5700001161",
+      "lon": 0.0043201, "lat": 51.500574, "level": { "below_ground": 25 }, "what": "Jubilee line trains (approximate, from an interview)",
+      "source": "https://www.architectsjournal.co.uk/archive/discussion-in-depth-about-north-greenwich-station-1-of-2",
+      "quote": "The trains are 25m down below"
+    },
+    {
+      "id": "cs-dlr-platform", "line": "Docklands Light", "kinds": ["light_rail"], "place": "Cutty Sark for Maritime Greenwich DLR station", "osm": "node/6489626917",
+      "lon": -0.0107517, "lat": 51.4817267, "level": { "below_ground": 20 }, "what": "DLR platforms",
+      "source": "https://en.wikipedia.org/wiki/Cutty_Sark_for_Maritime_Greenwich_DLR_station",
+      "quote": "The platforms are 20 metres (66 ft) below street level."
+    }
+  ],
+  "structures": [
+    {
+      "id": "crossrail-place-slabs", "place": "Canary Wharf Elizabeth line station / Crossrail Place", "footprint_osm": "way/281015404",
+      "datum": "mATD = OD + 100 m (inferred, see cwh-eliz-platform)",
+      "slabs_od": [["Park +1", 17.10], ["Ground 0", 11.25], ["Promenade -1", 5.90], ["Middle concourse -2", 0.95], ["Lower concourse -3", -4.20], ["Ticket hall -4", -11.05], ["Platform -5", -18.05], ["Base slab -6", -20.40]],
+      "source": "https://learninglegacy.crossrail.co.uk/wp-content/uploads/2018/07/7K-005-Design-of-Canary-Wharf-Elizabeth-line-station-and-oversite-development.pdf",
+      "quote": "Park +1 Level SSL 117.100 … Base Slab -6 Level SSL 79.600 (Figure 6)"
+    },
+    {
+      "id": "north-dock", "place": "West India Docks, North Dock", "water_name": "North Dock",
+      "water_od": 4.23, "bed_od": -5.365,
+      "source": "https://canalrivertrust.org.uk/media/document/tB54w_QEGw3s9b8-0-STeQ/2M_qfUsGGj4OY8dpZtbMIKxYqIFitUANjeM81bsw7XU/aHR0cHM6Ly9jcnRwcm9kY21zdWtzMDEuYmxvYi5jb3JlLndpbmRvd3MubmV0L2RvY3VtZW50Lw/0189927a-0ed7-725e-bea9-9ca9ec5d8374.pdf",
+      "quote": "FULL IMPOUND LEVEL 7.58M 4.23m … NORTH DOCK BED LEVEL 2.01m Below CD 5.365m (Annex B; OD = Chart Datum + 3.35 m)"
+    }
+  ]
+}

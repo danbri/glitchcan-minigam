@@ -35,7 +35,7 @@ details{margin-top:10px}summary{cursor:pointer}
 <div id="wrap"><canvas id="c" role="img" aria-label="3D model of the East London Line corridor from Wapping through Canada Water to Surrey Quays, from OpenStreetMap, Environment Agency LiDAR and Wikidata"></canvas><div id="labels"></div><div class="hud" id="hud">Loading…</div></div>
 <div class="panel">
   <b>Canada Water → Surrey Quays: open-data model</b> <span class="small">· <a href="schematic.html">first schematic</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/README.md">data notes</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/research-report-2026-10.md">source survey</a></span>
-  <div class="small">Ground, buildings and open track levels are measured (EA LiDAR 1 m). Tunnel levels are <b>not</b> measured: no open source gives them, so the sliders set a model between the levels the LiDAR does see: portals and open cuts (Rotherhithe, Wapping).</div>
+  <div class="small">Ground, buildings and open track levels are measured (EA LiDAR 1 m). Tunnel levels are not surveyed in any open source. The model joins the levels that are known: portals and open cuts the LiDAR sees (Rotherhithe, Wapping), and published platform depths (Canada Water: 11 m below ground for the East London line, 22 m for the Jubilee line, Wikipedia). The sliders set the shape between them.</div>
   <div class="row">
     <button type="button" id="vPlan" aria-pressed="false">Plan</button><button type="button" id="vObl" aria-pressed="true">Oblique</button><button type="button" id="vSec" aria-pressed="false">Long section</button>
     <label><input type="checkbox" id="ghost"> Ghost buildings</label><label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label>
@@ -56,7 +56,7 @@ details{margin-top:10px}summary{cursor:pointer}
   <div id="info" aria-live="polite"></div>
   <details open><summary>Long section, East London Line (Up track), Wapping → Surrey Quays</summary>
     <svg id="profile" role="img" aria-label="Profile of ground level and East London Line track level along the route"></svg>
-    <div class="small">Height in metres above Ordnance Datum Newlyn against distance along the route. Solid orange: track level measured by LiDAR (open track, portals, and the open cuts at Rotherhithe and Wapping). Dashed orange: modelled tunnel level. Grey: ground (LiDAR DTM).</div>
+    <div class="small">Height in metres above Ordnance Datum Newlyn against distance along the route. Solid orange: track level measured by LiDAR (open track, portals, and the open cuts at Rotherhithe and Wapping). Ring: published platform level. Dashed orange: modelled tunnel level. Grey: ground (LiDAR DTM).</div>
   </details>
   <details><summary>Levels at stations (text)</summary><table id="levels"></table></details>
   <p class="small" id="attrib"></p>
@@ -82,13 +82,17 @@ const isELL = r => /East London/i.test(r.name) || /East London|Silwood/i.test(r.
 // Between two controls the track follows the straight line joining them, dipping below it by at most
 // "dmax" and by no more than the gradient allows from each control. With no control: a fixed depth below ground.
 for (const r of D.rail) if (r.tunnel) {
-  r.ctl = [];
-  if (r.ends[0] != null) r.ctl.push([0, r.ends[0]]);
-  for (const p of r.pts) if (p[4] != null) r.ctl.push([p[3], p[4]]);
-  if (r.ends[1] != null) r.ctl.push([r.len, r.ends[1]]);
+  r.ctl = [];   // [s, level, kind]: portal, cut (both LiDAR) or a published level (data/sourced-levels.json)
+  if (r.ends[0] != null) r.ctl.push([0, r.ends[0], 'portal']);
+  for (const p of r.pts) if (p[4] != null) r.ctl.push([p[3], p[4], 'cut']);
+  if (r.ends[1] != null) r.ctl.push([r.len, r.ends[1], 'portal']);
+  for (const c of r.src || []) r.ctl.push([c[0], c[1], 'src', c[2]]);
   r.ctl.sort((a, b) => a[0] - b[0]);
 }
 const measured = (r, p) => !r.tunnel || p[4] != null;
+const published = (r, p) => r.tunnel && (r.src || []).find(c => Math.abs(c[0] - p[3]) < 12);
+const SRC = Object.fromEntries((D.meta.sourced || []).map(c => [c.id, c]));
+const levelKind = (r, p) => measured(r, p) ? 'measured (LiDAR)' : published(r, p) ? 'published' : 'modelled';
 function trackY(r, p, par) {
   if (!r.tunnel) return p[3];
   if (p[4] != null) return p[4];
@@ -96,7 +100,9 @@ function trackY(r, p, par) {
   let A = null, B = null; for (const c of r.ctl) { if (c[0] <= s) A = c; else { B = c; break; } }
   if (!A && !B) return p[2] - (r.kind === 'subway' ? par.djub : par.dmax);
   if (A && B) return A[1] + (B[1] - A[1]) * (s - A[0]) / (B[0] - A[0]) - Math.min(par.dmax, (s - A[0]) / n, (B[0] - s) / n);
-  const C = A || B; return C[1] - Math.min(par.dmax, Math.abs(s - C[0]) / n);
+  const C = A || B;
+  // one control only: a published station level holds flat; a portal or cut descends at the gradient
+  return C[2] === 'src' ? C[1] : C[1] - Math.min(par.dmax, Math.abs(s - C[0]) / n);
 }
 const railColour = r => r.kind === 'subway' ? COL.jub : isELL(r) ? COL.ell : COL.rail;
 
@@ -201,7 +207,7 @@ function showInfo(p) {
   const facts = p.facts ? Object.entries(p.facts).map(([k, v]) => `<div><span class="small">${esc(k)}:</span> ${esc(v.join('; '))}</div>`).join('') : '';
   const lv = levelAt(p);
   info.innerHTML = `<b>${esc(p.name)}</b>${p.desc ? ` <span class="small">${esc(p.desc)}</span>` : ''}${facts}` +
-    `<div class="small">Ground ${p.y} m OD (LiDAR)${lv ? ` · ELL track ${lv.y.toFixed(1)} m OD, ${lv.open ? 'measured' : 'modelled'}, ${(p.y - lv.y).toFixed(1)} m below ground` : ''}</div>` +
+    `<div class="small">Ground ${p.y} m OD (LiDAR)${lv ? ` · ELL track ${lv.y.toFixed(1)} m OD, ${lv.kind}, ${(p.y - lv.y).toFixed(1)} m below ground` : ''}</div>` +
     `<div class="small">${p.wd ? `<a href="https://www.wikidata.org/wiki/${esc(p.wd)}">Wikidata ${esc(p.wd)}</a>` : ''}${p.wp ? ` · <a href="${esc(p.wp)}">Wikipedia</a>` : ''}${p.osm ? ` · <a href="https://www.openstreetmap.org/${esc(p.osm)}">OSM</a>` : ''}</div>`;
   info.style.display = 'block';
 }
@@ -266,7 +272,7 @@ function levelAt(p) {
   let best = null, bestM = null;
   for (const r of ellUp) for (const q of r.pts) {
     const d = Math.hypot(q[0] - p.x, q[1] - p.z); if (d >= 80) continue;
-    const c = { d, y: trackY(r, q, P()), open: measured(r, q) };
+    const c = { d, y: trackY(r, q, P()), open: measured(r, q), kind: levelKind(r, q), src: published(r, q) };
     if (!best || d < best.d) best = c; if (c.open && (!bestM || d < bestM.d)) bestM = c;
   }
   return bestM || best;
@@ -290,6 +296,7 @@ function profile() {
     const cs = []; for (let k = 0; k < w.p.length; k += 2) if (offAxis(w.p[k], w.p[k + 1]) < 400) cs.push(chain(w.p[k], w.p[k + 1]));
     if (cs.length) s += `<rect x="${X(Math.max(c0, Math.min(...cs)))}" width="${X(Math.min(c1, Math.max(...cs))) - X(Math.max(c0, Math.min(...cs)))}" y="${Y(w.level)}" height="3" fill="var(--water)"><title>${esc(w.n)} (lake, ${w.level} m OD), projected onto the route</title></rect>`;
   }
+  for (const r of ellUp) for (const c of r.src || []) { const q = r.pts.reduce((b, p) => Math.abs(p[3] - c[0]) < Math.abs(b[3] - c[0]) ? p : b); const x = X(chain(q[0], q[1])); s += `<circle cx="${x}" cy="${Y(c[1])}" r="5" fill="none" stroke="var(--ell)" stroke-width="2"><title>${esc((SRC[c[2]] || {}).what || c[2])}: ${c[1]} m OD (published)</title></circle>`; }
   const tt = D.places.find(p => p.name === 'Thames Tunnel');  // Wikidata point, not the tunnel's midpoint
   const marks = [...['Wapping', 'Rotherhithe', 'Canada Water', 'Surrey Quays'].map(station).filter(Boolean), ...(tt ? [{ ...tt, name: 'Thames Tunnel' }] : [])];
   marks.sort((a, b) => chain(a.x, a.z) - chain(b.x, b.z));
@@ -301,7 +308,7 @@ function profile() {
   s += `<text x="${W - pad.r}" y="${H - 6}" fill="#8a949e" font-size="10" text-anchor="end">${W < 560 ? `${Math.round(c1 - c0)} m along route` : `metres along route from Wapping (${Math.round(c1 - c0)} m shown); vertical not to scale`}</text>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s;
   // station table
-  const rows = ['Wapping', 'Rotherhithe', 'Canada Water', 'Surrey Quays'].map(station).filter(Boolean).map(st => { const lv = levelAt(st); return `<tr><td>${esc(st.name)}</td><td>${st.y}</td><td>${lv ? lv.y.toFixed(1) : '–'}</td><td>${lv ? (st.y - lv.y).toFixed(1) : '–'}</td><td>${lv ? (lv.open ? 'measured' : 'modelled') : ''}</td></tr>`; });
+  const rows = ['Wapping', 'Rotherhithe', 'Canada Water', 'Surrey Quays'].map(station).filter(Boolean).map(st => { const lv = levelAt(st); return `<tr><td>${esc(st.name)}</td><td>${st.y}</td><td>${lv ? lv.y.toFixed(1) : '–'}</td><td>${lv ? (st.y - lv.y).toFixed(1) : '–'}</td><td>${lv ? (lv.src ? `published: <a href="${esc(SRC[lv.src[2]]?.source || '')}">source</a>` : lv.kind) : ''}</td></tr>`; });
   $('levels').innerHTML = '<tr><th>Station</th><th>Ground m OD</th><th>ELL track m OD</th><th>Depth m</th><th>Track level</th></tr>' + rows.join('');
 }
 const outs = { dmax: v => v + ' m', grad: v => v, djub: v => v + ' m', vz: v => v + '×' };

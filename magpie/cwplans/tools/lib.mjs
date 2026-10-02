@@ -153,3 +153,23 @@ export function poly(rings) {
   const m = mesh(rings); if (!m) return null;
   return { p: enc(m.p), ...(m.holes.length ? { holes: m.holes } : {}) };
 }
+// Published levels (data/sourced-levels.json) as tunnel controls. For each control, the nearest point within
+// 150 m of the station on every tunnel chain of that line and kind gets an entry in chain.src: [s, level OD, id].
+// lines: [{kind|k, name, tunnel, pts: [[x, z, ground, s, cut], ...]}]; ground(x, z) gives the LiDAR ground.
+export function applyControls(lines, file, toLocal, ground) {
+  const { controls } = JSON.parse(readFileSync(file, 'utf8')), used = [];
+  for (const c of controls) {
+    const [cx, cz] = toLocal(c.lon, c.lat), g = ground(cx, cz);
+    const level = c.level.od ?? (g === null ? null : g - c.level.below_ground);
+    if (level === null) continue;
+    let n = 0;
+    for (const l of lines) {
+      if (!l.tunnel || !c.kinds.includes(l.kind ?? l.k) || !new RegExp(c.line, 'i').test(l.name || '')) continue;
+      let best = null;
+      for (const p of l.pts) { const d = Math.hypot(p[0] - cx, p[1] - cz); if (d < 150 && (!best || d < best.d)) best = { d, s: p[3] }; }
+      if (best) { (l.src ||= []).push([best.s, Math.round(level * 100) / 100, c.id]); n++; }
+    }
+    if (n) used.push({ id: c.id, place: c.place, what: c.what, level: Math.round(level * 100) / 100, ground: g === null ? null : r1(g), x: r1(cx), z: r1(cz), chains: n, source: c.source, quote: c.quote });
+  }
+  return used;
+}

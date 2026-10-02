@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { gunzipSync } from 'zlib';
 import { join } from 'path';
-import { TOOLS, bngProjector, mosaic, r1, pct, min, polyArea, clipRing, cellsIn, poly, enc, joinRings, simplify } from './lib.mjs';
+import { TOOLS, bngProjector, mosaic, r1, pct, min, polyArea, clipRing, cellsIn, poly, enc, joinRings, simplify, applyControls } from './lib.mjs';
 import { DIR, BOX_BNG, ORIGIN, lidarTiles, tileFile } from './fetch-docklands.mjs';
 
 const OUTDIR = join(TOOLS, '..', 'docklands', 'data');
@@ -215,6 +215,16 @@ const footW = allW.filter(isFootTunnel);
 addTunnels(footW, allW.filter(w => w.tags.highway && !tunnelish(w.tags)), 'foot');
 console.log(`lines ${lines.length}: open ${lines.filter(l => !l.tunnel).length}, tunnel chains ${lines.filter(l => l.tunnel).length} (rail portals ${railPortals}, road portals ${roadPortals}, foot tunnel ways ${footW.length})`);
 
+// ---- published levels (data/sourced-levels.json): tunnel controls, Crossrail Place slabs, North Dock bed
+const LEVELS = join(TOOLS, '..', 'data', 'sourced-levels.json');
+const sourced = applyControls(lines, LEVELS, toLocal, (x, z) => win(DTM, x, z, 3, v => pct(v, .5)));
+const structures = [];
+for (const st of JSON.parse(readFileSync(LEVELS, 'utf8')).structures) {
+  if (st.footprint_osm) { const w = ways.get(+st.footprint_osm.split('/')[1]); const rings = w && toRings([w.refs], .2); if (rings) structures.push({ id: st.id, place: st.place, slabs: st.slabs_od, ...poly(rings), source: st.source, quote: st.quote }); }
+  if (st.water_name) { const w = water.find(x => x.n === st.water_name); if (w) structures.push({ id: st.id, place: st.place, water: st.water_od, bed: st.bed_od, p: w.p, ...(w.holes ? { holes: w.holes } : {}), lidarLevel: w.level, source: st.source, quote: st.quote }); }
+}
+console.log(`sourced controls: ${sourced.map(c => `${c.id} ${c.level} m OD on ${c.chains} chains`).join('; ')}; structures ${structures.map(s => s.id).join(', ')}`);
+
 // ---- the underground and indoor detail (whole box, but almost all of it is at Canary Wharf and the City)
 // indoor or level-tagged ways and areas, drawn at ground + level x storey height in the page
 const indoor = [];
@@ -258,24 +268,40 @@ for (const it of items.values()) {
   places.push({ name: it.label, desc: it.desc, cls: cls.slice(0, 4), x: r1(x), z: r1(z), g: r1(DTM(x, z) ?? 0), wd: it.q, ...(it.wp ? { wp: it.wp } : {}), ...(Object.keys(facts).length ? { facts } : {}) });
 }
 
+// ---- WGS84 -> local for the page (live feed points): quadratic least-squares fit over the box, max error recorded
+function fitGeo() {
+  const rows = [], xs = [], zs = [], terms = (lon, lat) => [1, lon, lat, lon * lat, lon * lon, lat * lat];
+  const [W, S, E, N] = [-0.0950, 51.4740, 0.0150, 51.5220];
+  for (let i = 0; i <= 20; i++) for (let j = 0; j <= 20; j++) { const lon = W + (E - W) * i / 20, lat = S + (N - S) * j / 20, [x, z] = toLocal(lon, lat); rows.push(terms(lon - W, lat - S)); xs.push(x); zs.push(z); }
+  const solve = y => {   // normal equations, Gauss-Jordan
+    const n = 6, M = Array.from({ length: n }, (_, r) => [...Array.from({ length: n }, (_, c) => rows.reduce((t, R) => t + R[r] * R[c], 0)), rows.reduce((t, R, k) => t + R[r] * y[k], 0)]);
+    for (let c = 0; c < n; c++) { let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r; [M[c], M[p]] = [M[p], M[c]];
+      for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; } }
+    return M.map((r, i) => r[n] / r[i]);
+  };
+  const cx = solve(xs), cz = solve(zs); let err = 0;
+  rows.forEach((R, k) => { const ex = R.reduce((t, v, i) => t + v * cx[i], 0) - xs[k], ez = R.reduce((t, v, i) => t + v * cz[i], 0) - zs[k]; err = Math.max(err, Math.hypot(ex, ez)); });
+  return { lon0: W, lat0: S, x: cx, z: cz, maxErrM: +err.toFixed(3), note: 'x or z = c0 + c1 dlon + c2 dlat + c3 dlon dlat + c4 dlon^2 + c5 dlat^2, dlon = lon - lon0, dlat = lat - lat0' };
+}
+
 // ---- write
 mkdirSync(OUTDIR, { recursive: true });
 const meta = {
   built: new Date().toISOString().slice(0, 10),
   origin: { crs: 'EPSG:27700', E0, N0, note: 'x = E - E0, z = -(N - N0) (north is -z), y = metres above ODN' },
-  extent: B, focus: FOCUS,
+  extent: B, focus: FOCUS, geo: fitGeo(),
   sources: [
     { id: 'osm', text: '© OpenStreetMap contributors, ODbL 1.0', url: 'https://www.openstreetmap.org/copyright' },
     { id: 'lidar', text: 'Environment Agency LiDAR Composite DTM and First Return DSM, 1 m. © Environment Agency copyright and/or database right. Open Government Licence v3.0', url: 'https://environment.data.gov.uk/dataset/13787b9a-26a4-4775-8523-806d13af58fc' },
     { id: 'wikidata', text: 'Wikidata, CC0', url: 'https://www.wikidata.org/' },
     { id: 'ostn15', text: 'OSTN15 transformation, © Ordnance Survey (free to use)', url: 'https://www.ordnancesurvey.co.uk/business-government/tools-support/os-net/for-developers' },
   ],
-  buildingHeightSources: Object.keys(SRC), buildingStats: bstat,
+  buildingHeightSources: Object.keys(SRC), buildingStats: bstat, sourced,
 };
 const write = (file, name, obj) => {
   const js = `// Generated by magpie/cwplans/tools/build-docklands.mjs on ${meta.built}. Do not edit by hand.\n// Sources and licences: meta.sources and magpie/cwplans/docklands/README.md.\nglobalThis.${name} = ${JSON.stringify(obj)};\n`;
   writeFileSync(join(OUTDIR, file), js); console.log(`wrote docklands/data/${file}: ${(js.length / 1e6).toFixed(2)} MB`);
 };
 write('area.js', 'DOCKLANDS_AREA', { meta, terrain: { cell: TERRAIN_CELL, nx, nz, x0: B.x0, z0: B.z0, dm: terrainDm }, water, greens, buildings, lines, places });
-write('under.js', 'DOCKLANDS_UNDER', { meta: { built: meta.built }, basements, indoor, pois });
+write('under.js', 'DOCKLANDS_UNDER', { meta: { built: meta.built }, basements, indoor, pois, structures });
 console.log(`water ${water.length}, greens ${greens.length}, places ${places.length}, indoor ${indoor.length}, pois ${pois.length}`);

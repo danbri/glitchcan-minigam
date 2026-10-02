@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { gunzipSync } from 'zlib';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { bngProjector, mosaic, r1, pct, min, polyArea, clipRing as clipRingBox, cellsIn, mesh, joinRings as joinNodeRings } from './lib.mjs';
+import { bngProjector, mosaic, r1, pct, min, polyArea, clipRing as clipRingBox, cellsIn, mesh, joinRings as joinNodeRings, applyControls } from './lib.mjs';
 import { BBOX_BNG } from './fetch-raw.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -179,6 +179,9 @@ for (const w of railWays) if (!isTunnel(w)) {
   });
 }
 
+// ---- published levels (data/sourced-levels.json) as extra tunnel controls
+const sourced = applyControls(rail, join(HERE, '..', 'data', 'sourced-levels.json'), toLocal, (x, z) => win(DTM, x, z, 3, v => pct(v, .5)));
+
 // ---- roads: open carriageways only, at LiDAR level (bridges from the DSM)
 const ROADS = { motorway: 1, trunk: 1, primary: 1, secondary: 1, tertiary: 2, unclassified: 3, residential: 3 };
 const roads = [];
@@ -230,7 +233,7 @@ const data = {
       { id: 'wikidata', text: 'Wikidata, CC0', url: 'https://www.wikidata.org/' },
       { id: 'ostn15', text: 'OSTN15 transformation, © Ordnance Survey (free to use)', url: 'https://www.ordnancesurvey.co.uk/business-government/tools-support/os-net/for-developers' },
     ],
-    buildingHeightSources: Object.keys(SRC), buildingStats: bstat,
+    buildingHeightSources: Object.keys(SRC), buildingStats: bstat, sourced,
   },
   terrain: { cell: TERRAIN_CELL, nx: nx + 1, nz: nz + 1, x0: X0, z0: Z0, dm: terrainDm },
   water, buildings, rail, roads, places,

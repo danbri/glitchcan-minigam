@@ -15,7 +15,7 @@ canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .hud{position:absolute;left:10px;top:10px;background:#111c;padding:6px 9px;border-radius:8px;font-size:12px;pointer-events:none;max-width:calc(100% - 40px)}
 #labels{position:absolute;inset:0;pointer-events:none}
 .lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:1px 5px;border-radius:5px;background:#0d1013d9;border:1px solid #39424b;color:var(--fg);pointer-events:auto;cursor:pointer}
-.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}.lb.wt{border-color:var(--water);color:#bfe3ff}
+.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border-color:#ffd26f}.lb.src{border-color:#ffd26f;color:#ffe7a8}
 .panel{padding:12px 16px;background:var(--panel);border-top:1px solid var(--line)}
 .row{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;margin-top:8px}
 button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px}
@@ -36,7 +36,7 @@ details{margin-top:10px}summary{cursor:pointer}
 <div class="panel">
   <b>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</b>
   <span class="small">· <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/README.md">feeds and APIs</a></span>
-  <div class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). "Cut away above" removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height below. Tunnel levels are modelled between the points the LiDAR can see (portals, open cuts).</div>
+  <div class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). "Cut away above" removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height below. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</div>
   <div class="row">
     <button type="button" data-view="area" aria-pressed="false">Whole area</button>
     <button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button>
@@ -67,9 +67,14 @@ details{margin-top:10px}summary{cursor:pointer}
     <span><i class="sw" style="background:var(--bld)"></i>Building, LiDAR height</span><span><i class="sw" style="background:var(--bldlv)"></i>Building, OSM levels or newer than LiDAR</span>
     <span><i class="sw" style="background:var(--base)"></i>Basement (storeys × height)</span><span><i class="sw" style="background:var(--corr)"></i>Indoor corridor / steps</span><span><i class="sw" style="background:var(--room)"></i>Shops, rooms, points with a level</span>
     <span><i class="sw" style="background:var(--plat)"></i>Platform</span><span><i class="sw" style="background:var(--jub)"></i>Jubilee</span><span><i class="sw" style="background:var(--eliz)"></i>Elizabeth line</span><span><i class="sw" style="background:var(--dlr)"></i>DLR</span>
-    <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:var(--water)"></i>Water</span>
+    <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:#f9c75a"></i>Published slab levels (Crossrail Place)</span><span><i class="sw" style="background:var(--water)"></i>Water</span>
   </div>
   <div id="info" aria-live="polite"></div>
+  <details id="liveBox"><summary>Live data</summary>
+    <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of 200 checked sources is in <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/README.md">feeds/README.md</a>.</p>
+    <div class="row"><button type="button" id="liveGo">Load live data</button><label><input type="checkbox" id="liveTide" disabled> Draw the tidal Thames at the Tower Pier level</label><label><input type="checkbox" id="liveCams" disabled checked> Traffic cameras</label></div>
+    <div id="liveOut" class="small" aria-live="polite"></div>
+  </details>
   <details><summary>Canary Wharf below ground (text)</summary><div id="ugText" class="small"></div></details>
   <p class="small" id="attrib"></p>
 </div>
@@ -100,9 +105,10 @@ const lineColour = l => {
 };
 // ---------- tunnel model (same rules as the corridor page; README "Tunnel model")
 for (const l of A.lines) if (l.tunnel) {
-  l.ctl = []; if (l.ends[0] != null) l.ctl.push([0, l.ends[0]]);
-  for (const p of l.pts) if (p[4] != null) l.ctl.push([p[3], p[4]]);
-  if (l.ends[1] != null) l.ctl.push([l.len, l.ends[1]]);
+  l.ctl = []; if (l.ends[0] != null) l.ctl.push([0, l.ends[0], 'portal']);   // [s, level, kind]
+  for (const p of l.pts) if (p[4] != null) l.ctl.push([p[3], p[4], 'cut']);
+  if (l.ends[1] != null) l.ctl.push([l.len, l.ends[1], 'portal']);
+  for (const c of l.src || []) l.ctl.push([c[0], c[1], 'src', c[2]]);   // published level (data/sourced-levels.json)
   l.ctl.sort((a, b) => a[0] - b[0]);
 }
 function tunnelY(l, p, P) {
@@ -112,7 +118,8 @@ function tunnelY(l, p, P) {
   if (!a && !b) return p[2] - (l.k === 'foot' || l.k === 'road' ? Math.min(P.ddeep, 15) : P.ddeep);
   const dip = l.k === 'road' || l.k === 'foot' ? Math.min(P.dmax, 12) : P.dmax;
   if (a && b) return a[1] + (b[1] - a[1]) * (s - a[0]) / Math.max(1, b[0] - a[0]) - Math.min(dip, (s - a[0]) / n, (b[0] - s) / n);
-  const c = a || b; return c[1] - Math.min(P.ddeep, Math.abs(s - c[0]) / n);
+  const c = a || b;   // one control: a published station level holds flat; a portal or cut descends at the gradient
+  return c[2] === 'src' ? c[1] : c[1] - Math.min(P.ddeep, Math.abs(s - c[0]) / n);
 }
 
 const cv = $('c'), gl = cv.getContext('webgl', { antialias: true, alpha: false });
@@ -176,7 +183,13 @@ const L = {};
   for (let j = 0; j < T.nz - 1; j++) for (let i = 0; i < T.nx - 1; i++) { const a = j * T.nx + i; M.tri(a, a + 1, a + T.nx); M.tri(a + 1, a + T.nx + 1, a + T.nx); }
   L.terrain = M.upload();
 })();
-{ const M = new Mesh(); for (const w of A.water) flat(M, w, w.level + .1, C.water); L.water = M.upload(); }
+{ const M = new Mesh(); for (const w of A.water) if (!w.tidal) flat(M, w, w.level + .1, C.water); L.water = M.upload(); }
+// tidal water (the Thames, creeks): at its LiDAR level, or at a live gauge level when the visitor asks
+// docks with a published bed level: the water as a volume from bed to surface
+{ const M = new Mesh(); for (const st of U.structures || []) if (st.bed != null) prism(M, st, st.bed, st.water, C.water.map(c => c * .8), true); L.dockVol = M.upload(); }
+let tidalLevel = null;
+function buildTidal() { if (L.tidal) L.tidal.free(); const M = new Mesh(); for (const w of A.water) if (w.tidal) flat(M, w, (tidalLevel ?? w.level) + .1, C.water.map(c => tidalLevel == null ? c : c * 1.15)); L.tidal = M.upload(); }
+buildTidal();
 { const M = new Mesh(); const T = A.terrain; const gh = (x, z) => { const i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
   for (const g of A.greens) { const f = dec(g.p); flat(M, g, gh(f[0], f[1]) + .4, C.green); } L.greens = M.upload(); }
 { const M = new Mesh(); for (const b of A.buildings) prism(M, b, b.b + (b.mh || 0), b.b + b.h, b.s === 1 || b.s === 4 ? C.bldlv : C.bld, !!b.mh); L.bld = M.upload(); }
@@ -215,6 +228,8 @@ function buildUnder(P) {
     else { const f = dec(o.line); for (let i = 2; i < f.length; i += 2) beam(M, [f[i - 2], y, f[i - 1]], [f[i], y, f[i + 1]], o.kind === 'steps' ? 2 : 3, .6, col); }
   }
   for (const p of U.pois) if (p.lv && p.kind === 'poi') cube(M, p.x, p.g + Math.min(...p.lv) * P.storey + 1.5, p.z, 3, C.room);
+  // published structure levels: Crossrail Place slabs (Arup), drawn inside the OSM outline
+  for (const st of U.structures || []) if (st.slabs) for (const [, y] of st.slabs) prism(M, st, y - .4, y, [.98, .78, .35], true);
   L.under = M.upload();
 }
 
@@ -250,9 +265,17 @@ for (const w of A.water) if (w.n && !seen.has('w' + w.n) && !/Pond|Fountain|Lake
   seen.add('w' + w.n); const f = dec(w.p); let x = 0, z = 0; const n = f.length / 2; for (let i = 0; i < n; i++) { x += f[2 * i]; z += f[2 * i + 1]; }
   labels.push({ name: w.n, x: x / n, z: z / n, y: w.level, pri: 2, cls: 'wt', water: w });
 }
+// published levels (data/sourced-levels.json), labelled at their level
+for (const c of A.meta.sourced || []) labels.push({ name: `${c.place.replace(/ station$/, '')}: ${c.level} m OD`, x: c.x, z: c.z, y: c.level, pri: 3, cls: 'src', pub: c });
+for (const st of U.structures || []) { const f = dec(st.p); labels.push({ name: st.slabs ? `${st.place.split(' / ').pop()}: ${st.slabs.length} published slab levels` : `${st.place}: bed ${st.bed} m OD`, x: f[0], z: f[1], y: st.slabs ? st.slabs[0][1] : st.bed, pri: 3, cls: 'src', st }); }
 labels.forEach(l => { const el = document.createElement('button'); el.type = 'button'; el.className = 'lb ' + l.cls; el.textContent = l.name; el.onclick = () => showInfo(l); labelBox.appendChild(el); l.el = el; });
 labels.sort((a, b) => b.pri - a.pri);
 function showInfo(l) {
+  if (l.pub || l.st) {
+    const o = l.pub || l.st, rows = l.st && l.st.slabs ? '<table>' + l.st.slabs.map(([n, y]) => `<tr><td>${esc(n)}</td><td class="n">${y} m OD</td></tr>`).join('') + '</table>' : '';
+    info.innerHTML = `<b>${esc(o.place)}</b><div>${l.pub ? `${esc(o.what)}: <b>${o.level} m OD</b>${o.ground != null ? ` (LiDAR ground ${o.ground} m OD)` : ''}` : l.st.bed != null ? `Water ${l.st.water} m OD (full impound), bed ${l.st.bed} m OD; the LiDAR saw the surface at ${l.st.lidarLevel} m OD` : 'Structural slab levels, OD = mATD - 100 m (datum inferred from the dock water level in the same figure)'}</div>${rows}<div class="small">Source: <a href="${esc(o.source)}">${esc(o.source.replace(/^https?:\/\//, '').slice(0, 70))}…</a> — "${esc(o.quote)}"</div>`;
+    info.style.display = 'block'; return;
+  }
   const w = l.wd && wdBy.get(l.wd), facts = w && w.facts ? Object.entries(w.facts).map(([k, v]) => `<div><span class="small">${esc(k)}:</span> ${esc(v.join('; '))}</div>`).join('') : '';
   info.innerHTML = `<b>${esc(l.name)}</b> ${w && w.desc ? `<span class="small">${esc(w.desc)}</span>` : ''}${facts}<div class="small">${l.water ? `Water surface ${l.water.level} m OD in the LiDAR pass${l.water.tidal ? ' (tidal: one tide state)' : ''}` : `Ground ${l.y} m OD (LiDAR)`}${l.mode ? ' · ' + esc(l.mode) : ''}</div>` +
     `<div class="small">${l.wd ? `<a href="https://www.wikidata.org/wiki/${esc(l.wd)}">Wikidata ${esc(l.wd)}</a>` : ''}${w && w.wp ? ` · <a href="${esc(w.wp)}">Wikipedia</a>` : ''}${l.osm ? ` · <a href="https://www.openstreetmap.org/${esc(l.osm)}">OSM</a>` : ''}</div>`;
@@ -261,12 +284,12 @@ function showInfo(l) {
 function placeLabels() {
   const show = $('showLabels').checked, w = cv.clientWidth, h = cv.clientHeight, placed = [];
   for (const l of labels) {
-    const el = l.el; if (!show) { el.style.display = 'none'; continue; }
+    const el = l.el; if (!show || (l.camEl && !$('liveCams').checked)) { el.style.display = 'none'; continue; }
     const X = [l.x, l.y + 8 / VZ, l.z], c = [0, 1, 2, 3].map(r => MVP[r] * X[0] + MVP[4 + r] * X[1] * VZ + MVP[8 + r] * X[2] + MVP[12 + r]);
     if (c[3] <= 0) { el.style.display = 'none'; continue; }
-    const sx = (c[0] / c[3] * .5 + .5) * w, sy = (1 - (c[1] / c[3] * .5 + .5)) * h, bw = l.name.length * 6.2 + 12;
+    const sx = (c[0] / c[3] * .5 + .5) * w, sy = (1 - (c[1] / c[3] * .5 + .5)) * h, bw = l.camEl ? 34 : l.name.length * 6.2 + 12;
     const r = [sx - bw / 2, sy - 18, sx + bw / 2, sy];
-    if (r[0] < 2 || r[2] > w - 2 || sy < 16 || sy > h || placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]) || placed.length > 60) { el.style.display = 'none'; continue; }
+    if (r[0] < 2 || r[2] > w - 2 || sy < 16 || sy > h || placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]) || (!l.camEl && placed.length > 60)) { el.style.display = 'none'; continue; }
     placed.push(r); el.style.display = ''; el.style.left = sx + 'px'; el.style.top = sy + 'px';
   }
 }
@@ -287,7 +310,7 @@ function render() {
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY);
   gl.disable(gl.BLEND); gl.depthMask(true);
-  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if (!cutOn) drawMesh(L.water, 1);
+  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if (!cutOn) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }
   if ($('showUnder').checked) drawMesh(L.under, 1);
   if ($('showRoads').checked) drawMesh(L.roads, 1);
   if ($('showFloors').checked) drawMesh(L.floors, 1);
@@ -296,7 +319,7 @@ function render() {
   if (bm === 'ghost') drawMesh(L.bld, .22);
   // the cut removes structures; ground, greens and water stay as faint context so you can see where you are
   gl.uniform1f(uCut, 1e9);
-  if (cutOn) drawMesh(L.water, .35);
+  if (cutOn) { drawMesh(L.water, .35); drawMesh(L.tidal, .35); drawMesh(L.dockVol, .3); }
   drawMesh(L.greens, cutOn ? .2 : .55); drawMesh(L.terrain, cutOn ? .14 : .5); gl.depthMask(true);
   placeLabels();
 }
@@ -340,7 +363,60 @@ function textTables() {
 }
 textTables();
 $('attrib').innerHTML = 'Data: ' + A.meta.sources.map(s => `<a href="${esc(s.url)}">${esc(s.text)}</a>`).join(' · ') + ` · built ${esc(A.meta.built)} · earcut (ISC)`;
-window.__docklands = { cam, draw, setView, L };
+
+// ---------- live data (on request only). Sources and checks: magpie/cwplans/feeds/feeds.json
+const G = A.meta.geo, geo = (lon, lat) => { const a = lon - G.lon0, b = lat - G.lat0, t = [1, a, b, a * b, a * a, b * b]; return [t.reduce((s, v, i) => s + v * G.x[i], 0), t.reduce((s, v, i) => s + v * G.z[i], 0)]; };
+const getJSON = async (url, timeoutMs = 20000) => { const c = new AbortController(), t = setTimeout(() => c.abort(), timeoutMs); try { const r = await fetch(url, { signal: c.signal }); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); } finally { clearTimeout(t); } };
+const when = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }); };
+const camLabels = [];
+async function loadLive() {
+  const out = $('liveOut'), parts = {}; $('liveGo').disabled = true; out.textContent = 'Loading…';
+  const show = () => { out.innerHTML = ['tide', 'weather', 'air', 'lines', 'overflows', 'cams'].map(k => parts[k] ? `<p>${parts[k]}</p>` : '').join(''); };
+  const job = async (k, fn) => { try { parts[k] = await fn(); } catch (e) { parts[k] = `<span class="warn">${esc(k)}: ${esc(e.message || e)}</span>`; } show(); };
+  await Promise.all([
+    job('tide', async () => {
+      const g = async id => (await getJSON(`https://environment.data.gov.uk/flood-monitoring/id/stations/${id}/readings?latest`)).items[0];
+      const [tp, sv] = await Promise.all([g('0007'), g('0001')]);
+      tidalLevel = tp.value; $('liveTide').disabled = false;
+      return `<b>Thames level</b> (Environment Agency tide gauges, m above Ordnance Datum): Tower Pier ${tp.value.toFixed(2)} m at ${when(tp.dateTime)}, Silvertown ${sv.value.toFixed(2)} m at ${when(sv.dateTime)}. The model's river is the LiDAR pass, about ${A.water.filter(w => w.tidal && !w.n).map(w => w.level)[0] ?? '2'} m. <a href="https://environment.data.gov.uk/flood-monitoring/id/stations/0007">Tower Pier station record</a>`;
+    }),
+    job('weather', async () => {
+      const d = await getJSON('https://api.open-meteo.com/v1/forecast?latitude=51.505&longitude=-0.02&current=temperature_2m,wind_speed_10m,wind_direction_10m,cloud_cover,precipitation&timezone=Europe/London');
+      const c = d.current; return `<b>Weather</b> at Canary Wharf (Open-Meteo model, ${esc(String(c.time).replace('T', ' '))} London time): ${c.temperature_2m} °C, wind ${c.wind_speed_10m} km/h from ${c.wind_direction_10m}°, cloud ${c.cloud_cover}%, precipitation ${c.precipitation} mm.`;
+    }),
+    job('air', async () => {
+      const d = await getJSON('https://api.erg.ic.ac.uk/AirQuality/Hourly/MonitoringIndex/SiteCode=TH4/Json'), site = d.HourlyAirQualityIndex.LocalAuthority.Site, sp = [].concat(site.species || []);
+      return `<b>Air quality</b>, ${esc(site['@SiteName'])} (London Air Quality Network, ${esc(site['@BulletinDate'])}): ` + sp.map(x => `${esc(x['@SpeciesCode'])} ${x['@AirQualityBand'] === 'No data' ? 'no data' : `index ${esc(x['@AirQualityIndex'])} (${esc(x['@AirQualityBand'])})`}`).join(', ') + '.';
+    }),
+    job('lines', async () => {
+      const d = await getJSON('https://api.tfl.gov.uk/Line/jubilee,dlr,elizabeth,windrush,london-cable-car/Status');
+      return '<b>Lines</b> (TfL): ' + d.map(l => `${esc(l.name)}: ${esc(l.lineStatuses.map(s => s.statusSeverityDescription).join(' / '))}`).join(' · ') + '.';
+    }),
+    job('overflows', async () => {
+      const d = await getJSON("https://services2.arcgis.com/g6o32ZDQ33GpCIu3/arcgis/rest/services/Thames_Water_Storm_Overflow_Activity_(Production)_view/FeatureServer/0/query?geometry=-0.095%2C51.474%2C0.015%2C51.522&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=Id%2CStatus%2CReceivingWaterCourse%2CLatestEventStart%2CLatestEventEnd&returnGeometry=false&f=json");
+      const f = d.features.map(x => x.attributes), n = v => f.filter(a => a.Status === v).length, on = f.filter(a => a.Status === 1);
+      return `<b>Storm overflows</b> in the box (Thames Water, Status 1 discharging, 0 not, -1 offline): ${f.length} monitored, ${n(1)} discharging, ${n(0)} not discharging, ${n(-1)} offline.` + (on.length ? ' Discharging now: ' + on.map(a => `${esc(a.Id)} into ${esc(a.ReceivingWaterCourse)}`).join('; ') + '.' : '');
+    }),
+    job('cams', async () => {
+      const d = await getJSON('https://api.tfl.gov.uk/Place?type=JamCam&lat=51.497&lon=-0.04&radius=4500'), places = d.places || d;
+      for (const c of places) {
+        const [x, z] = geo(c.lon, c.lat); if (x < A.meta.extent.x0 || x > A.meta.extent.x1 || z < A.meta.extent.z0 || z > A.meta.extent.z1) continue;
+        const prop = k => (c.additionalProperties.find(p => p.key === k) || {}).value;
+        const l = { name: c.commonName, x, z, y: 3, pri: 0, cls: 'cam', cam: { img: prop('imageUrl'), video: prop('videoUrl'), view: prop('view'), id: c.id } };
+        const el = document.createElement('button'); el.type = 'button'; el.className = 'lb cam'; el.textContent = 'cam'; el.title = c.commonName;
+        el.onclick = () => { info.innerHTML = `<b>${esc(c.commonName)}</b> <span class="small">TfL JamCam ${esc(c.id)}, ${esc(l.cam.view || '')}. TfL refreshes the still every few minutes.</span><br><img src="${esc(l.cam.img)}?t=${Date.now()}" alt="TfL traffic camera still: ${esc(c.commonName)}" style="max-width:100%;margin-top:6px;border-radius:6px"><div class="small"><a href="${esc(l.cam.video)}">short video clip</a></div>`; info.style.display = 'block'; };
+        labelBox.appendChild(el); l.el = el; l.camEl = true; labels.push(l); camLabels.push(l);
+      }
+      $('liveCams').disabled = false; draw();
+      return `<b>Traffic cameras</b> (TfL JamCams): ${camLabels.length} in the box, shown as "cam" markers. Tap one for its latest still.`;
+    }),
+  ]);
+  $('liveGo').textContent = 'Reload live data'; $('liveGo').disabled = false;
+}
+$('liveGo').onclick = () => { for (const l of camLabels.splice(0)) { l.el.remove(); labels.splice(labels.indexOf(l), 1); } loadLive(); };
+$('liveTide').onchange = () => { const keep = tidalLevel; if (!$('liveTide').checked) tidalLevel = null; buildTidal(); tidalLevel = keep; draw(); };
+$('liveCams').onchange = draw;
+window.__docklands = { cam, draw, setView, L, labels };
 outs(); setView('cw');
 hud.textContent = 'Drag: rotate · right-drag / shift-drag / two fingers: pan · wheel / pinch: zoom · tap a label';
 })();
