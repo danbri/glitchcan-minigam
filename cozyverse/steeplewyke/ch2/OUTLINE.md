@@ -1,11 +1,13 @@
 # Steeple Wyke, chapter 2: Plain Hunt (draft outline for the owner)
 
-Status: DRAFT for approval. No credits spent. Follows the photo-novel skill. Ten pages, the same format and host as
+Status: approved and made (October 2026): plainhunt.ink, pages.json, media/, index.html. The story follows this
+outline with the changes listed at the end. Voices are not recorded yet (see the photo-novel skill, A chapter, measured).
+The original draft follows. Follows the photo-novel skill. Ten pages, the same format and host as
 chapter 1 v2: <https://danbri.github.io/glitchcan-minigam/cozyverse/steeplewyke/v2/>
 
 ## The premise in three lines
 
-October, five weeks after the Marrow Show. St Aldhelm's has no vicar (chapter 1 saw to that) and an interim one who
+October, three months after the Marrow Show. St Aldhelm's has no vicar (chapter 1 saw to that) and an interim one who
 used to be an actuary. On Tuesday practice night, Hugh Daventry, local historian and quizmaster at the Plough, is
 found at the foot of the tower stair while six ringers swear they rang without a break. They did not: a phone
 recording of the practice says so, if you can read change ringing.
@@ -104,3 +106,16 @@ holding the treble rope Hugh never came up to ring.
 
 About 106,000 ElevenLabs credits (about $23): three character sheets (~4,000), forty panels (~75,000), ten short
 loops (~21,000), fifty sounds (~6,000), voices on eleven_v4 (0 while it is priced at 0). The ink is about 1,000 lines.
+
+## What changed in the making
+
+- The 40 seconds: the lights go out at 8.14 and Jeremy, on the four by the door and the light switch, goes down the
+  stair in the dark. The band rang on and thought nothing of it; Sam was on the bench and heard something fall.
+- Glenys numbers the four bells she hears by note, so the reader must find which bell was missing from Win's
+  napkin rows (`tools/rows.mjs` proves only the four fits). Then the swap: the blackboard says Win, but on Tuesday
+  the four was Jeremy.
+- The board route: the torn proof, question seven (Gill Sans, 1928), the round letters under the glass, the second
+  board being lettered in the barn, and on Sunday the swapped board under the cloth.
+- Evidence counts both routes; five holds an accusation. Page 9 is the vicarage kitchen, page 10 the Sunday service.
+- The canary peeks on the barn, the schoolhouse and the vicarage window, and sits on the tenor's wheel at the end.
+  The tower clip had no canary in it, so page 1 has none.

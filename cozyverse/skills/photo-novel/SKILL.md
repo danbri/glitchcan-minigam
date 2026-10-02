@@ -12,7 +12,8 @@ ridiculously animated scarecrow at a bar"; "some scenes flicker visibly as it lo
 a reader "squint and wait to see if it is a looper"; and the standard: "hit all the cosy archetypes while still
 having moments of genuine curiosity, creativity, humour and humanity. Showing we know the clichés is not enough."
 
-Live: https://danbri.github.io/glitchcan-minigam/cozyverse/steeplewyke/v2/ (v1 kept at `cozyverse/steeplewyke/`).
+Live: chapter 1 https://danbri.github.io/glitchcan-minigam/cozyverse/steeplewyke/v2/ (v1 kept at `cozyverse/steeplewyke/`);
+chapter 2 https://danbri.github.io/glitchcan-minigam/cozyverse/steeplewyke/ch2/ (tools take `STORY=ch2`).
 
 ## The format
 
@@ -135,6 +136,37 @@ the video paused at 0. `SHOTS=dir` saves `peek.png`. Look at a crop at the peak 
 ## A chapter, measured
 
 Steeple Wyke chapter one (ten pages): about 166,000 credits for v1 (40 panels, 30 event loops, 50 sounds, 260 v3
-takes) plus about 20,000 for v2 (nine short-loop clips); the v2 voices were free on v4. A second chapter that
-reuses the sheets, makes 40 panels, about 10 short loops and 50 sounds, and records v4 voices: about 100,000
-credits. The ink for a chapter is about 900 lines.
+takes) plus about 20,000 for v2 (nine short-loop clips); the v2 voices were free on v4. The ink for a chapter is about
+900 to 1,100 lines.
+
+Chapter two (Plain Hunt, `steeplewyke/ch2/`, October 2026), measured: 3 sheets 3,654; 40 panels 64,500 (a panel
+with N reference sheets costs 1,218 + 609 N, so the group shots are the expensive ones); 7 text fixes 12,790; 50
+sounds 6,200; 12 Kling clips 25,452. About 112,600 credits before voices, against an estimate of 106,000 with voices.
+**eleven_v4 is no longer free**: 1 credit per character per take, audio tags included. 230 lines are 21,446
+characters, so two takes cost about 43,000 credits and one take about 21,000. Price voices with `estimate_only`
+before promising a total. Until they are recorded, `voices.json` says `"recorded": false` and the host plays the
+sounds without asking for any voice file.
+
+What chapter two taught:
+
+- **Text in pictures is wrong first time, every time** it is more than a word or two: the ringing list came out as
+  ARTHUR, MAISIE, GEORGE; the door card said FRESH EGGS; the half-lettered board said THE CROWN; a crisp packet
+  carried a real brand. Fix it with a gemini-3-pro-image node wired to the panel's node (`creative_add_flow_node`
+  with `aspect_ratio` and `resolution` set: `creative_edit_image` has no aspect field, and gpt-image-2 returns 16:9).
+  All seven fixes were right first time. Then change the ink if the picture is closer to the truth than the text.
+- **Kling ignores the asked aspect** and keeps the still's shape (2208x936 for a strip, 1292x1604 for 4:5).
+- **Kling does not always do the event.** Of five canary prompts, one produced no bird at all (the tower: the bird
+  would have been 1 % of the frame); one put the bird in the frame from the first second. Measure every clip
+  (`tools/peek-window.py`) and look at a crop at the peak before using it. Of eight "almost still" clips, two broke
+  the rule: a bell came down through the ringing-chamber ceiling, and a strip light switched on. Those panels are
+  stills now (pages.json `note` says why).
+- **A guard counts as a visit.** `{p3_band > 1: brief}` with a guard `{p3_quaile == 0: -> p3_quaile}` showed the brief
+  on the first real visit after a tap had gone through the guard. Decide "revisited" by a variable set in the scenes
+  that matter (`asked_band`), not by the knot's read count.
+- **The line finder must try mixes of clues**, not only all true or all false: a line that needs one clue and not
+  another (Dilys asked, but no email yet) was never reached. `tools/lines.mjs` now adds 300 fixed random mixes and
+  reads the clue names from the story's own variables.
+- **A puzzle gets a checker.** `tools/rows.mjs` makes the plain hunt rows from the rule, checks every row the story
+  shows against it, and proves the answer is unique (only one silent bell fits Glenys's rows at any place in the hunt).
+- Random readers (`tools/walk.mjs`) with an evidence bar of four solved too easily (clues found on the way are
+  nearly free); five makes either route (the ringing, or the board) need its puzzle.
