@@ -8,9 +8,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { gunzipSync } from 'zlib';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import proj4 from 'proj4';
-import { fromArrayBuffer, fromFile } from 'geotiff';
-import earcut from 'earcut';
+import { bngProjector, mosaic, r1, pct, min, polyArea, clipRing as clipRingBox, cellsIn, mesh, joinRings as joinNodeRings } from './lib.mjs';
 import { BBOX_BNG } from './fetch-raw.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -18,28 +16,15 @@ const RAW = join(HERE, '..', 'data', 'raw');
 const OUT = join(HERE, '..', 'data', 'cwplans-data.js');
 const E0 = 535400, N0 = 179400;           // local origin, ~80 m south-west of Canada Water station
 const TERRAIN_CELL = 10;                   // metres per terrain grid cell
-const r1 = v => Math.round(v * 10) / 10;
 
 // ---- coordinates: WGS84 -> BNG through the OS OSTN15 grid (Helmert alone is ~1.8 m out here)
-const gridBuf = readFileSync(join(RAW, 'uk_os_OSTN15_NTv2_OSGBtoETRS.tif'));
-await proj4.nadgrid('ostn15', await fromArrayBuffer(gridBuf.buffer.slice(gridBuf.byteOffset, gridBuf.byteOffset + gridBuf.byteLength))).ready;
-proj4.defs('BNG', '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +units=m +no_defs +nadgrids=ostn15');
-const toBNG = proj4('EPSG:4326', 'BNG');
-const toLocal = (lon, lat) => { const [e, n] = toBNG.forward([lon, lat]); return [e - E0, -(n - N0)]; };
+const toBNG = await bngProjector();
+const toLocal = (lon, lat) => { const [e, n] = toBNG(lon, lat); return [e - E0, -(n - N0)]; };
 
-// ---- LiDAR rasters (EA composite, 1 m, BNG, metres above ODN)
-async function raster(name) {
-  const im = await (await fromFile(join(RAW, `${name}.tif`))).getImage();
-  const [ox, oy] = im.getOrigin();
-  return { a: (await im.readRasters())[0], w: im.getWidth(), h: im.getHeight(), ox, oy };
-}
-const DTM = await raster('dtm'), DSM = await raster('dsm');
-// value at local (x,z); null outside the raster
-const cellOf = (R, x, z) => { const c = Math.floor(x + E0 - R.ox), r = Math.floor(R.oy - (N0 - z)); return c < 0 || r < 0 || c >= R.w || r >= R.h ? -1 : r * R.w + c; };
-const at = (R, x, z) => { const i = cellOf(R, x, z); return i < 0 ? null : R.a[i]; };
+// ---- LiDAR rasters (EA composite, 1 m, BNG, metres above ODN); at(R, x, z) in local metres, null outside
+const DTM = await mosaic([join(RAW, 'dtm.tif')]), DSM = await mosaic([join(RAW, 'dsm.tif')]);
+const at = (R, x, z) => R.at(x + E0, N0 - z);
 function win(R, x, z, rad, pick) { const v = []; for (let dz = -rad; dz <= rad; dz++) for (let dx = -rad; dx <= rad; dx++) { const s = at(R, x + dx, z + dz); if (s !== null) v.push(s); } return v.length ? pick(v) : null; }
-const pct = (v, p) => { const s = [...v].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))]; };
-const min = v => Math.min(...v);
 const X0 = BBOX_BNG.e0 - E0, X1 = BBOX_BNG.e1 - E0, Z0 = -(BBOX_BNG.n1 - N0), Z1 = -(BBOX_BNG.n0 - N0);
 const inside = (x, z, m = 0) => x >= X0 + m && x <= X1 - m && z >= Z0 + m && z <= Z1 - m;
 
@@ -64,56 +49,10 @@ rels.push(...relById.values());
 const nodeXZ = new Map();
 const xz = id => { let p = nodeXZ.get(id); if (!p) { const n = nodes.get(id); p = toLocal(n.lon, n.lat); nodeXZ.set(id, p); } return p; };
 
-// Join member ways into closed rings (node-id chains). Returns null if any ring stays open.
-function joinRings(wayIds) {
-  const segs = wayIds.map(id => ways.get(id)?.nodes).filter(Boolean).map(a => [...a]);
-  if (segs.length !== wayIds.length) return null;
-  const rings = [];
-  while (segs.length) {
-    let ring = segs.shift();
-    while (ring[0] !== ring.at(-1)) {
-      const k = segs.findIndex(s => s[0] === ring.at(-1) || s.at(-1) === ring.at(-1));
-      if (k < 0) return null;
-      const s = segs.splice(k, 1)[0];
-      ring = ring.concat((s[0] === ring.at(-1) ? s : s.reverse()).slice(1));
-    }
-    rings.push(ring);
-  }
-  return rings;
-}
-// Sutherland-Hodgman clip of a ring (array of [x,z]) to the study box.
-function clipRing(ring) {
-  const edges = [[p => p[0] >= X0, (a, b) => X0, 0], [p => p[0] <= X1, () => X1, 0], [p => p[1] >= Z0, () => Z0, 1], [p => p[1] <= Z1, () => Z1, 1]];
-  let out = ring;
-  for (const [ins, val, axis] of edges) {
-    const src = out; out = [];
-    for (let i = 0; i < src.length; i++) {
-      const a = src[i], b = src[(i + 1) % src.length], ia = ins(a), ib = ins(b);
-      if (ia) out.push(a);
-      if (ia !== ib) { const v = val(), t = (v - a[axis]) / (b[axis] - a[axis]); out.push(axis ? [a[0] + t * (b[0] - a[0]), v] : [v, a[1] + t * (b[1] - a[1])]); }
-    }
-    if (out.length < 3) return null;
-  }
-  return out;
-}
-function polyArea(r) { let s = 0; for (let i = 0; i < r.length; i++) { const a = r[i], b = r[(i + 1) % r.length]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; }
-function pointIn(p, ring) { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const a = ring[i], b = ring[j]; if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
-// 1 m raster cells whose centre lies inside the outer ring and outside every hole
-function cellsIn(rings) {
-  const [outer, ...holes] = rings, out = [];
-  const xs = outer.map(p => p[0]), zs = outer.map(p => p[1]);
-  for (let z = Math.floor(Math.min(...zs)) + .5; z < Math.max(...zs); z++) for (let x = Math.floor(Math.min(...xs)) + .5; x < Math.max(...xs); x++)
-    if (pointIn([x, z], outer) && !holes.some(h => pointIn([x, z], h))) out.push([x, z]);
-  return out;
-}
-// Flatten rings for earcut and the page: {p: flat x,z, holes: start indices, t: triangle indices}
-function mesh(rings) {
-  rings = rings.map((r, k) => { r = r.at(-1)[0] === r[0][0] && r.at(-1)[1] === r[0][1] ? r.slice(0, -1) : r; const ccw = polyArea(r) > 0; return (k === 0) === ccw ? r : [...r].reverse(); });
-  const p = [], holes = [];
-  rings.forEach((r, k) => { if (k) holes.push(p.length / 2); for (const q of r) p.push(r1(q[0]), r1(q[1])); });
-  const t = earcut(p, holes.length ? holes : undefined, 2);
-  return t.length ? { p, holes, t } : null;
-}
+// Join member ways into closed rings (node-id chains); null if any ring stays open or a way is missing.
+const joinRings = wayIds => joinNodeRings(wayIds.map(id => ways.get(id)?.nodes));
+// clip a ring (array of [x,z]) to the study box
+const clipRing = ring => clipRingBox(ring, { x0: X0, x1: X1, z0: Z0, z1: Z1 });
 const ringsOf = el => {
   if (el.type === 'way') return el.nodes[0] === el.nodes.at(-1) ? [el.nodes] : null;
   const outer = joinRings(el.members.filter(m => m.type === 'way' && m.role !== 'inner').map(m => m.ref));

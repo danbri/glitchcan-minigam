@@ -266,7 +266,7 @@ function placeLabels() {
     if (c[3] <= 0) { el.style.display = 'none'; continue; }
     const sx = (c[0] / c[3] * .5 + .5) * w, sy = (1 - (c[1] / c[3] * .5 + .5)) * h, bw = l.name.length * 6.2 + 12;
     const r = [sx - bw / 2, sy - 18, sx + bw / 2, sy];
-    if (sx < 0 || sx > w || sy < 16 || sy > h || placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]) || placed.length > 60) { el.style.display = 'none'; continue; }
+    if (r[0] < 2 || r[2] > w - 2 || sy < 16 || sy > h || placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]) || placed.length > 60) { el.style.display = 'none'; continue; }
     placed.push(r); el.style.display = ''; el.style.left = sx + 'px'; el.style.top = sy + 'px';
   }
 }
