@@ -37,7 +37,7 @@
    "n": 1,
    "title": "The tower",
    "layout": "L1",
-   "bed": "an English village churchyard at dusk in October: rooks cawing and settling in tall trees, a light wind, a car passing on a lane, a gate latch, very distant pub noise",
+   "bed": "a quiet English country churchyard at dusk in October: rooks cawing and settling in tall trees some distance away, a light wind in a yew tree; no traffic, no doors",
    "panels": [
     {
      "knot": "tower",
@@ -65,7 +65,7 @@
      "cast": [],
      "alt": "A paper pub napkin on a bench, with columns of numbers pencilled on it, and a stub of pencil.",
      "prompt": "Close-up, top-down, of a white paper pub napkin printed with a small faded green plough logo in one corner, lying on a weathered wooden bench. Pencilled on it in a neat old person's hand, a narrow column of short rows of the digits one to five. A worn stub of pencil lies beside it. A wrinkled hand at the edge of the frame holds the napkin flat. Warm light from a church porch lamp.",
-     "sound": "pencil writing on paper, close; a church porch at dusk with a light wind"
+     "sound": "a soft pencil writing on a paper napkin, close and quiet, faint rooks far off"
     },
     {
      "knot": "win",
@@ -78,7 +78,7 @@
      ],
      "alt": "Win Haskett, small and white-haired, writes on a notepad for Sam, who stoops to read it, under the porch lamp.",
      "prompt": "Under a lantern in a stone church porch at dusk: WIN, small and fierce, writes on the notepad round her neck and holds it up for SAM, who stoops to read it, amused and attentive. A list of bell-ringers' names pinned on a noticeboard behind them.",
-     "sound": "a church porch: a heavy oak door creaking, a pencil scratching, a woman speaking loudly and briefly, wind"
+     "sound": "a stone church porch at dusk, a light wind, a pencil scratching on a small notepad, rooks far away; no doors"
     },
     {
      "knot": "achebe",

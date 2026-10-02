@@ -113,6 +113,8 @@ try {
     }
     // a short loop plays on the fire, and a looping panel has no vignette
     if (label === 'Listen to the questions') {
+      // the loop starts once its video has loaded: wait for it rather than sample the moment the page is built
+      await page.waitForFunction(() => [...document.getElementById('fire').querySelectorAll('video')].some((x) => x.style.opacity === '1' && !x.paused), null, { timeout: 8000 }).catch(() => {});
       const fire = await page.evaluate(() => { const s = document.getElementById('fire'); const v = [...s.querySelectorAll('video')].find((x) => x.style.opacity === '1');
         return { playing: !!v && !v.paused, shade: getComputedStyle(s, '::after').boxShadow !== 'none' }; });
       fire.playing && !fire.shade ? pass('the fire panel plays its short loop, with no vignette') : fail(`fire: ${JSON.stringify(fire)}`);

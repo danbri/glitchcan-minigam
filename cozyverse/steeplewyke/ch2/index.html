@@ -281,21 +281,15 @@ function canaryPeek(panel) {
 const SHARED = "media/";
 const data = await fetch("pages.json").then((r) => r.json());
 
-// ---- languages. ?lang=it shows the story and the page in Italian (plainhunt.it.ink, lang/it.json); ?voice=it plays
-// the Italian voices (voices.it.json, media/vo/it/). They are chosen apart, so the text can be the subtitles of the
-// voices in another language; voices that are not recorded fall back to English. tools/lang-check.mjs proves a
-// translation behaves like the English story. The start screen offers both choices and reloads with them.
+// ---- subtitles. The voices are always the English recording; ?lang=it shows the story and the page in Italian
+// (plainhunt.it.ink, lang/it.json), so the text is the subtitles. tools/lang-check.mjs proves a translation behaves
+// like the English story. The start screen offers the choice and reloads with it.
 const params = new URLSearchParams(location.search);
 const LANGS = data.languages || { en: "English" };
 const lang = LANGS[params.get("lang")] ? params.get("lang") : "en";
 const getJson = (u) => fetch(u).then((r) => (r.ok ? r.json() : Promise.reject(new Error(u))));
 const ui = await getJson(`lang/${lang}.json`).catch(() => getJson("lang/en.json"));
-const voiceFile = (l) => (l === "en" ? "voices.json" : `voices.${l}.json`);
-const recordedIn = Object.fromEntries(await Promise.all(Object.keys(LANGS).map((l) =>
-  getJson(voiceFile(l)).then((v) => [l, v.recorded !== false], () => [l, false]))));
-const wanted = params.get("voice") || lang;
-const voiceLang = recordedIn[wanted] ? wanted : "en";
-const voDir = voiceLang === "en" ? "media/vo/" : `media/vo/${voiceLang}/`;
+const voDir = "media/vo/";
 const say = (key, vars = {}) => String(ui[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 document.documentElement.lang = lang;
 let pageNo = 0;
@@ -379,8 +373,7 @@ page.addEventListener("storytags", (e) => {
     const mem = /^memory\s*:\s*(\w+)\s+([+-]\d+)\s+(.+)$/i.exec(t);
     if (mem) { saveVillage(); remember(mem[3]); }
   }
-  // a voice list may be partly recorded ("only": the ids that are): the other lines stay silent
-  const ids = tags.map((t) => /^voice\s*:\s*([\w-]+)$/i.exec(t)?.[1]).filter((id) => id && (!voiceList.only || voiceList.only.includes(id)));
+  const ids = tags.map((t) => /^voice\s*:\s*([\w-]+)$/i.exec(t)?.[1]).filter(Boolean);
   if (!ids.length || !voiced) return;
   cutVoice();
   stepsHeard.shift(); stepsHeard.push(thisStep); thisStep = new Set();
@@ -399,13 +392,13 @@ new MutationObserver(() => {
 window.__marrow = window.__plainhunt = {
   get page() { return pageNo; }, get sound() { return sound && !muted; }, get audio() { return ac?.state || null; },
   get bed() { return bed.file; }, get panelSound() { return panelLoop.file; }, get playing() { return playing?.url || null; },
-  get story() { return story; }, get voiced() { return voiced; }, get lang() { return lang; }, get voiceLang() { return voiceLang; }, get canary() { return { ...canary }; }, get village() { return readVillage(); }, get memory() { return memoryBox.classList.contains("on") ? memoryBox.textContent : null; },
+  get story() { return story; }, get voiced() { return voiced; }, get lang() { return lang; }, get canary() { return { ...canary }; }, get village() { return readVillage(); }, get memory() { return memoryBox.classList.contains("on") ? memoryBox.textContent : null; },
 };
 
 // the voices are recorded when voices.json says so ("recorded": true); until then the page plays its sound only.
 // Each line has "takes" takes (media/vo/<id>-1.mp3 ...), and the lines in "secondTake" have one more: a second take is
 // recorded only where the first one is weak.
-const voiceList = await fetch(voiceFile(voiceLang)).then((r) => r.json()).catch(() => ({ recorded: false }));
+const voiceList = await fetch("voices.json").then((r) => r.json()).catch(() => ({ recorded: false }));
 const voiced = voiceList.recorded !== false;
 const takesOf = (id) => (voiceList.takes || 2) + ((voiceList.secondTake || []).includes(id) ? 1 : 0);
 try {
@@ -456,7 +449,6 @@ if (Object.keys(LANGS).length > 1) {
     l.append(sel); langs.append(l);
   };
   pick("textLanguage", "lang", lang, Object.entries(LANGS));
-  pick("voiceLanguage", "voice", voiceLang, Object.entries(LANGS).filter(([c]) => recordedIn[c]));
   langs.hidden = false;
 }
 go.textContent = say("beginSound");

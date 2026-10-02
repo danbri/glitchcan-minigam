@@ -3,7 +3,6 @@
 # "say". Run from cozyverse/steeplewyke: python3 tools/directions.py <lines.json from tools/lines.mjs> -> v2/voices.json
 # A later chapter keeps its directions in <chapter>/directions.json ({"default": {...}, "say": {...}}):
 #   STORY=ch2 python3 tools/directions.py <lines.json> -> ch2/voices.json
-# A translation's voices: STORY=ch2 VOICE_LANG=it ... -> ch2/voices.it.json, with each speaker's default direction only.
 import json, os, re, sys
 DEFAULT = {
     'narrator': '[dry, unhurried]', 'quaile': '[drily]', 'sam': '[measured]', 'gerald': '[booming, pompous]',
@@ -144,11 +143,10 @@ SAY = {
 TAG = re.compile(r'\[[^\]]*\]\s*')
 def plain(s): return re.sub(r'\s+', ' ', TAG.sub('', s)).strip()
 STORY = os.environ.get('STORY', 'v2')
-LANG = os.environ.get('LANG_CODE') or os.environ.get('VOICE_LANG') or ''
-OUT = f'{STORY}/voices.{LANG}.json' if LANG else f'{STORY}/voices.json'
+OUT = f'{STORY}/voices.json'
 if os.path.exists(f'{STORY}/directions.json'):
     d = json.load(open(f'{STORY}/directions.json'))
-    DEFAULT, SAY = d['default'], ({} if LANG else d['say'])
+    DEFAULT, SAY = d['default'], d['say']
 lines = json.load(open(sys.argv[1]))
 voices = json.load(open('bible/characters.json'))
 vmap = {c['id']: c['voice'] for c in voices['characters']}; vmap['narrator'] = voices['narrator']['voice']
@@ -164,7 +162,7 @@ for k in sorted(lines):
 extra = [k for k in SAY if k not in lines]
 if bad or extra: sys.exit(f'directions out of step: {bad} {extra}')
 prev = json.load(open(OUT)) if os.path.exists(OUT) else {}
-extra_fields = {k: prev[k] for k in ('recorded', 'takes', 'secondTake', 'only') if k in prev}
+extra_fields = {k: prev[k] for k in ('recorded', 'takes', 'secondTake') if k in prev}
 json.dump({'takes': 2, **extra_fields, 'about': 'Every voiced line of the chapter\'s ink: who speaks it, the exact words shown on the page ("text"), and what the voice is given ("say": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves "text" matches the ink; tools/directions.py writes this file. Each line has "takes" takes, media/vo/<id>-1.mp3 and so on, and one more if its id is in "secondTake"; the page plays one at random.',
            'model': 'eleven_v4', 'voices': vmap, 'lines': out}, open(OUT, 'w'), indent=1, ensure_ascii=False)
 print(len(out), 'lines;', len(SAY), 'with their own direction')
