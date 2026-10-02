@@ -1,6 +1,6 @@
 // Steeple Wyke: The Marrow Show (cozyverse/steeplewyke/index.html) on a phone-sized touch screen: the solving path
 // through all ten pages, a voice take after every choice, each page's sound bed, a panel's own sound when a tap
-// takes the view into it, every picture, loop and sound file present, and the ending knowing it was solved.
+// takes the view into it, a looping panel going on from one loop to another, every picture, loop and sound file present, and the ending knowing it was solved.
 //   node inklet/finkapp/test/e2e-steeplewyke.mjs        (SHOTS=dir saves a screenshot of each page)
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -50,7 +50,7 @@ try {
     want.push(`media/sfx/bed-${p.n}.mp3`);
     for (const x of p.panels) {
       want.push(`media/p${p.n}-${x.knot}.jpg`, `media/sfx/p${p.n}-${x.knot}.mp3`);
-      if (x.loop) want.push(`media/p${p.n}-${x.knot}-loop.webm`, `media/p${p.n}-${x.knot}-loop.mp4`);
+      (x.loops || []).forEach((_, k) => want.push(`media/p${p.n}-${x.knot}-loop${k + 1}.webm`, `media/p${p.n}-${x.knot}-loop${k + 1}.mp4`));
     }
   }
   const absent = [];
@@ -96,8 +96,16 @@ try {
     .then(() => pass('a tap on the scarecrows panel takes the story there and brings in its sound'))
     .catch(async () => fail(`tap: ${JSON.stringify(await page.evaluate(() => ({ s: window.__marrow.panelSound, t: document.querySelector('.ink').textContent.slice(0, 80) })))}`));
 
-  const vids = await page.evaluate(() => [...document.querySelectorAll('video')].map((v) => ({ src: v.currentSrc.split('/').pop(), ready: v.readyState })));
-  vids.length && vids.every((v) => v.ready >= 2) ? pass(`page 1 loop plays: ${vids.map((v) => v.src).join(', ')}`) : fail(`loops: ${JSON.stringify(vids)}`);
+  // the looping panel plays one loop, keeps the next one waiting at its first frame, and goes on to a different one
+  const loopsOf = () => page.evaluate(() => [...document.querySelectorAll('#show video')].map((v) => ({
+    src: v.currentSrc.split('/').pop(), ready: v.readyState, shown: v.style.visibility !== 'hidden', paused: v.paused })));
+  const first = await loopsOf();
+  const shown0 = first.find((v) => v.shown);
+  first.length === 2 && shown0 && !shown0.paused && first.every((v) => v.ready >= 2) && first[0].src !== first[1].src
+    ? pass(`page 1 loop plays (${shown0.src}) with a different loop waiting`) : fail(`loops: ${JSON.stringify(first)}`);
+  await page.waitForFunction((s) => { const v = [...document.querySelectorAll('#show video')].find((x) => x.style.visibility !== 'hidden'); return v && !v.currentSrc.endsWith(s) && !v.paused; },
+    shown0?.src, { timeout: 15000 }).then(async () => pass(`at its end the panel goes on to ${(await loopsOf()).find((v) => v.shown).src}`))
+    .catch(async () => fail(`the loop did not change: ${JSON.stringify(await loopsOf())}`));
   const sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   sideways > 1 ? fail(`sideways scroll ${sideways} px`) : pass('no sideways scroll at 390 px');
   missing.length ? fail(`failed requests: ${missing.join(', ')}`) : pass('no failed requests');

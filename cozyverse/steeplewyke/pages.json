@@ -1,5 +1,5 @@
 {
- "about": "Steeple Wyke: The Marrow Show. Ten pages of four panels. index.html builds each page from this file; the generation prompts that made each picture, loop and sound are kept beside what they made. Panel 'cast' names the reference sheets (bible/sheets) wired into that picture. 'bed' is the page's background sound loop; each panel's 'sound' is a second loop that fades in over the bed while that panel is in view.",
+ "about": "Steeple Wyke: The Marrow Show. Ten pages of four panels. index.html builds each page from this file; the generation prompts that made each picture, loop and sound are kept beside what they made. Panel 'cast' names the reference sheets (bible/sheets) wired into that picture. A panel with 'loops' plays short videos that all begin and end on its still picture, so the page can go from one to another with no jump: index.html plays one, then a different one at random (media/p<n>-<knot>-loop<k>.webm/.mp4, k from 1). 'bed' is the page's background sound loop; each panel's 'sound' is a second loop that fades in over the bed while that panel is in view.",
  "layouts": {
   "L1": {
    "a": "26,26 1054,26 1054,520 26,562",
@@ -33,11 +33,14 @@
      "slot": "a",
      "ratio": "16:9",
      "cast": [],
-     "loop": true,
      "alt": "A village show on a sunny field: a white marquee, bunting, crowds, a brass band, and a church spire behind. Along the hedge, a line of scarecrows.",
      "prompt": "Wide establishing shot of an English village horticultural show on a mown field in July: a big white marquee with its side walls rolled up, strings of faded triangle bunting, families with pushchairs, a brass band in maroon jackets on hay bales, trestle tables. Behind the marquee, the honey-coloured stone spire of a village church above trees. Along the hedge at the right, a line of six life-size scarecrows dressed as villagers.",
-     "loopPrompt": "Locked-off camera. Bunting flaps gently and the crowd moves slightly. A single gust lifts a white paper plate off a trestle table and sends it rolling across the grass out of frame. Everything else stays still.",
-     "sound": "brass band playing a slow march close by, tubas and cornets, a little out of tune, with crowd chatter"
+     "sound": "brass band playing a slow march close by, tubas and cornets, a little out of tune, with crowd chatter",
+     "loops": [
+      "Locked-off camera. Bunting flaps gently and the crowd moves slightly. A single gust lifts a white paper plate off a trestle table and sends it rolling across the grass out of frame. Everything else stays still.",
+      "Locked-off camera. A small dog on a lead pulls its owner two steps towards the marquee, then sits down. Bunting flaps. Everything else stays still.",
+      "Locked-off camera. A child lets go of a red balloon; it rises slowly and drifts out of the top of the frame. The crowd moves slightly."
+     ]
     },
     {
      "knot": "chutney",
@@ -112,11 +115,14 @@
      "slot": "c",
      "ratio": "1:1",
      "cast": [],
-     "loop": true,
      "alt": "On the grass by the deckchair, a blue enamel flask with a brown luggage label on a string that says Church Hall.",
      "prompt": "Close-up on the grass beside the leg of a deckchair: a dented blue enamel drinks flask with its cup-lid off, half full of a pale cloudy cordial. Tied to its handle with string, a brown luggage label handwritten in black marker: CHURCH HALL. Daisies in the grass. Shallow depth of field.",
-     "loopPrompt": "Locked-off close-up. A single wasp crawls along the rim of the flask, stops, then flies away out of frame. The grass moves very slightly in the breeze.",
-     "sound": "a wasp buzzing close, landing and taking off, grass rustling"
+     "sound": "a wasp buzzing close, landing and taking off, grass rustling",
+     "loops": [
+      "Locked-off close-up. A single wasp crawls along the rim of the flask, stops, then flies away out of frame. The grass moves very slightly in the breeze.",
+      "Locked-off close-up. A ladybird climbs up the string of the luggage label and walks off its edge. The grass moves slightly.",
+      "Locked-off close-up. A breeze turns the luggage label slowly on its string so its writing faces away, then back again."
+     ]
     },
     {
      "knot": "kneel",
@@ -179,11 +185,14 @@
      "slot": "d",
      "ratio": "16:9",
      "cast": [],
-     "loop": true,
      "alt": "A long border of tall purple foxgloves against a stone wall, every stem standing. At the far end, a scarecrow in a panama hat.",
      "prompt": "A long cottage-garden border of tall purple and white foxgloves in full flower against a honey-coloured dry-stone wall, every stem intact and standing. At the far end of the border stands a scarecrow in a cream linen jacket and a panama hat with a red rosette, facing the camera. Afternoon sun.",
-     "loopPrompt": "Locked-off camera. A bumblebee climbs into one foxglove bell and backs out again. The foxgloves sway very slightly. The scarecrow does not move.",
-     "sound": "bumblebees in foxglove flowers, close, buzzing in and out of the bells"
+     "sound": "bumblebees in foxglove flowers, close, buzzing in and out of the bells",
+     "loops": [
+      "Locked-off camera. A bumblebee climbs into one foxglove bell and backs out again. The foxgloves sway very slightly. The scarecrow does not move.",
+      "Locked-off camera. A cabbage white butterfly crosses the border from left to right. The foxgloves sway slightly. The scarecrow does not move.",
+      "Locked-off camera. A gust bends the whole row of foxgloves one way and lets them stand again. The scarecrow does not move at all."
+     ]
     }
    ]
   },
@@ -236,11 +245,14 @@
      "slot": "d",
      "ratio": "16:9",
      "cast": [],
-     "loop": true,
      "alt": "Two giant marrows side by side. A drop of water weeps from a pinhole in each.",
      "prompt": "Close, low shot along a white-clothed table of giant green-striped marrows. Two of them in the foreground each have a tiny pinhole near the stalk with a bead of water weeping out and a wet patch on the cloth below. Soft marquee light.",
-     "loopPrompt": "Locked-off close shot. A bead of water swells at the pinhole in the nearest marrow and runs down its skin onto the cloth. Nothing else moves.",
-     "sound": "a single water drip falling slowly onto cloth, very close, with a quiet marquee around it"
+     "sound": "a single water drip falling slowly onto cloth, very close, with a quiet marquee around it",
+     "loops": [
+      "Locked-off close shot. A bead of water swells at the pinhole in the nearest marrow and runs down its skin onto the cloth. Nothing else moves.",
+      "Locked-off close shot. A housefly lands on the nearest marrow, walks to the pinhole, and flies off. Nothing else moves.",
+      "Locked-off close shot. The canvas light dims as a cloud passes over the marquee, then brightens again. Water glistens at the pinholes."
+     ]
     }
    ]
   },
@@ -291,11 +303,14 @@
      "slot": "d",
      "ratio": "16:9",
      "cast": [],
-     "loop": true,
      "alt": "Through the back window of the brass band's minibus: the straw vicar in a yellow jacket sits in a seat with its seatbelt on.",
      "prompt": "Through the rear side window of a parked white minibus in a field: a scarecrow with a sacking face, a bright yellow cycling jacket and a white dog collar sits upright in a passenger seat with its seatbelt fastened, among brass instrument cases. Reflections of sky on the glass.",
-     "loopPrompt": "Locked-off camera. The scarecrow's head turns slowly towards the window, holds, then turns slowly back to where it began. Nothing else moves.",
-     "sound": "inside a parked vehicle: a muffled ticking engine cooling, a seatbelt buckle tapping, straw rustling once"
+     "sound": "inside a parked vehicle: a muffled ticking engine cooling, a seatbelt buckle tapping, straw rustling once",
+     "loops": [
+      "Locked-off camera. The scarecrow's head turns slowly towards the window, holds, then turns slowly back to where it began. Nothing else moves.",
+      "Locked-off camera. A cloud reflection slides across the minibus window. The scarecrow does not move.",
+      "Locked-off camera. The scarecrow's straw hand lifts a little from its knee and settles back. Nothing else moves."
+     ]
     }
    ]
   },
@@ -343,11 +358,14 @@
      "slot": "d",
      "ratio": "16:9",
      "cast": [],
-     "loop": true,
      "alt": "The roof appeal board: a painted thermometer, red to eight thousand pounds, with four thousand more added in brighter red that has run.",
      "prompt": "A hand-painted wooden roof appeal board tied to church scaffolding: a tall painted thermometer with a scale in thousands of pounds up to 60,000 at the top and the words ROOF APPEAL above it. The thermometer is painted dull red up to 8,000, then a brighter, fresher red up to 12,000, which has dripped down in runs. Churchyard grass and yew behind.",
-     "loopPrompt": "Locked-off camera. One run of fresh red paint slides slowly down the board and stops. Nothing else moves.",
-     "sound": "scaffolding poles clinking in wind, a loose tarpaulin flapping on a church roof, rooks"
+     "sound": "scaffolding poles clinking in wind, a loose tarpaulin flapping on a church roof, rooks",
+     "loops": [
+      "Locked-off camera. One run of fresh red paint slides slowly down the board and stops. Nothing else moves.",
+      "Locked-off camera. A rook lands on the top of the scaffolding beside the board, looks about, and flies off. Nothing else moves.",
+      "Locked-off camera. A loose blue tarpaulin on the scaffolding lifts in the wind and falls back. The board stays still."
+     ]
     }
    ]
   },
@@ -385,11 +403,14 @@
      "slot": "c",
      "ratio": "1:1",
      "cast": [],
-     "loop": true,
      "alt": "Gerald's notebook open on the desk. In square capitals: Prize fund £4,000 short. Roof? Ask C. After marrows.",
      "prompt": "Overhead close-up of a small open notebook on a leather-topped desk, beside a fountain pen and a pair of half-moon glasses. On the right-hand page, in neat square handwritten capitals in blue ink, exactly these lines: SAT. / PRIZE FUND £4,000 SHORT / ROOF? / ASK C. AFTER MARROWS. Daylight from a window.",
-     "loopPrompt": "Locked-off overhead shot. A breeze from the window lifts the corner of the open page, it rises, then settles back down flat. Nothing else moves.",
-     "sound": "a notebook page lifting and falling in a breeze, paper rustle, a fountain pen rolling a little on leather"
+     "sound": "a notebook page lifting and falling in a breeze, paper rustle, a fountain pen rolling a little on leather",
+     "loops": [
+      "Locked-off overhead shot. A breeze from the window lifts the corner of the open page, it rises, then settles back down flat. Nothing else moves.",
+      "Locked-off overhead shot. The fountain pen rolls a few centimetres on the leather, then rolls back and stops. Nothing else moves.",
+      "Locked-off overhead shot. The shadow of a window frame moves across the page as a cloud passes and the sun returns. Nothing else moves."
+     ]
     },
     {
      "knot": "cups",
@@ -449,11 +470,14 @@
      "slot": "d",
      "ratio": "16:9",
      "cast": [],
-     "loop": true,
      "alt": "The pub bar: darts players, villagers, and on a bar stool the straw butcher scarecrow in a striped apron with a full pint in front of it.",
      "prompt": "Inside a crowded village pub: a dark wooden bar with brass pumps; locals, a darts team in matching polo shirts near a dartboard. On a bar stool, a scarecrow with a sacking face, curly red wool hair and a blue-and-white striped butcher's apron sits at the bar with a full pint of bitter in front of it. Nobody looks at it.",
-     "loopPrompt": "Locked-off camera. A dart thuds into the dartboard in the background. Foam slides slowly down the side of the scarecrow's pint glass. The people move only slightly.",
-     "sound": "a dart thudding into a dartboard, a small cheer, a pint glass set on a bar"
+     "sound": "a dart thudding into a dartboard, a small cheer, a pint glass set on a bar",
+     "loops": [
+      "Locked-off camera. A dart thuds into the dartboard in the background. Foam slides slowly down the side of the scarecrow's pint glass. The people move only slightly.",
+      "Locked-off camera. The barman reaches past the scarecrow, wipes the bar beside its pint, and moves on. The scarecrow does not move.",
+      "Locked-off camera. A man at the bar raises his glass towards the scarecrow, drinks, and turns back to his friends. The scarecrow does not move."
+     ]
     }
    ]
   },
@@ -497,11 +521,14 @@
      "cast": [
       "clement"
      ],
-     "loop": true,
      "alt": "Close on the vicar's hands holding the silver cup. The lid rattles.",
      "prompt": "Close-up of CLEMENT's hands, with the black clerical cuffs and a yellow cycling-jacket sleeve, holding a silver two-handled trophy cup with a lid, engraved THE PIKE CUP. His knuckles are tight on the handles.",
-     "loopPrompt": "Locked-off close-up. The hands tremble slightly and the lid of the cup rattles, then they steady again. Nothing else moves.",
-     "sound": "a silver cup lid rattling in shaking hands, a nervous breath"
+     "sound": "a silver cup lid rattling in shaking hands, a nervous breath",
+     "loops": [
+      "Locked-off close-up. The hands tremble slightly and the lid of the cup rattles, then they steady again. Nothing else moves.",
+      "Locked-off close-up. One thumb rubs the engraving on the cup twice, then stops. Nothing else moves.",
+      "Locked-off close-up. The hands tighten on the handles until the knuckles go pale, then relax. Nothing else moves."
+     ]
     },
     {
      "knot": "stand",
@@ -564,11 +591,14 @@
      "slot": "d",
      "ratio": "16:9",
      "cast": [],
-     "loop": true,
      "alt": "The scarecrows along the hedge. At the end of the row stands a new one in a navy rain mac, a loose tie and brown city shoes, holding a small black notebook. Its card says Our Village: D.S. Adeyemi.",
      "prompt": "A row of handmade scarecrows on posts along a hawthorn hedge on a misty morning, with sacking faces: a butcher in a striped apron, a man in a panama hat, and a gap where one is missing. At the end of the row, a new scarecrow with a dark brown sacking face and short black wool hair, wearing a navy rain mac, a white shirt and a loosened dark tie, grey trousers and brown leather city shoes, holding a small black notebook. A handwritten card on a stake in front of it reads: OUR VILLAGE / D.S. ADEYEMI.",
-     "loopPrompt": "Locked-off camera. A breeze lifts the new scarecrow's tie, then lets it fall back. The hedge stirs. Nothing else moves.",
-     "sound": "wind through a hedge and straw, a distant church bell, a crow"
+     "sound": "wind through a hedge and straw, a distant church bell, a crow",
+     "loops": [
+      "Locked-off camera. A breeze lifts the new scarecrow's tie, then lets it fall back. The hedge stirs. Nothing else moves.",
+      "Locked-off camera. A crow lands on the shoulder of the new scarecrow, looks at its notebook, and flies off. Nothing else moves.",
+      "Locked-off camera. The pages of the new scarecrow's small black notebook flip open in the wind and fall shut again. Nothing else moves."
+     ]
     }
    ]
   }
