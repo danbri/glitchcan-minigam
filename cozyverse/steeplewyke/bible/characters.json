@@ -1,5 +1,5 @@
 {
-  "about": "Steeple Wyke: The Marrow Show. The people, and the 'look' text pasted word for word into every picture prompt that shows them, with their photographic reference sheet (sheets/<id>.png, made with gemini-3-pro-image). Every person is invented; no real person's likeness is wanted. Voices are ElevenLabs voice ids.",
+  "about": "Steeple Wyke (chapter 1, The Marrow Show; chapter 2, Plain Hunt). The people, and the 'look' text pasted word for word into every picture prompt that shows them, with their photographic reference sheet (sheets/<id>.png, made with gemini-3-pro-image). Every person is invented; no real person's likeness is wanted. Voices are ElevenLabs voice ids.",
   "style": "A real photograph, hyper-photorealistic, full-frame camera, 35mm lens, natural light, true skin texture with pores and lines, slight film grain, the muted natural colour of a British TV drama. Not an illustration, not a painting, not CGI, no captions.",
   "place": "Steeple Wyke, a Cotswold village of honey-coloured stone with a church spire, in July.",
   "characters": [
@@ -51,10 +51,41 @@
       "voice": "NXaTw4ifg0LAguvKuIwZ",
       "role": "Gerald's son, an estate agent in Cirencester. Wants forty houses on his father's fields. Was on the phone.",
       "look": "a 36-year-old white British man with swept-back brown hair, a fresh tan and very white teeth, wearing a navy quilted gilet over a salmon-pink shirt, beige chinos and tan suede loafers without socks, a phone in his hand"
+    },
+    {
+      "id": "win",
+      "name": "Win Haskett",
+      "voice": "aAsWcN5jdLdiYG7Hq0YL",
+      "chapter": 2,
+      "role": "Tower captain of St Aldhelm's for forty-one years, 78. The bells took most of her hearing; she reads lips and writes on a notepad on a string. Rang the three on the night Hugh died.",
+      "look": "a 78-year-old white British woman, small and wiry, with cropped white hair, large square tortoiseshell glasses, strong freckled forearms, a beige hearing aid behind each ear, wearing a navy fisherman's jumper with the sleeves pushed up, a brown tweed skirt, thick tights and sturdy brown lace-up shoes, a small reporter's notepad and a pencil on a string round her neck"
+    },
+    {
+      "id": "jeremy",
+      "name": "Jeremy Cole",
+      "voice": "PXeRjE4VWrRQnsaBOFBc",
+      "chapter": 2,
+      "role": "Antiques dealer, Cole Antiques, a barn on the Cirencester road: 'restored with sympathy'. Sold the parish a fake 1897 peal board for nine thousand pounds. Rings the five. The culprit of chapter 2.",
+      "look": "a 52-year-old white British man, tall and soft round the middle, with collar-length greying hair swept back, a neat salt-and-pepper beard, half-moon reading glasses on a cord, wearing a mustard corduroy jacket over a checked shirt and a knitted green tie, brown moleskin trousers and polished brown brogues, a silk handkerchief in his breast pocket"
+    },
+    {
+      "id": "achebe",
+      "name": "The Reverend Dr Ruth Achebe",
+      "voice": "UWhYG4NgASy4ripg5Ov6",
+      "chapter": 2,
+      "role": "Interim vicar of St Aldhelm's since August, 44. An actuary for twenty years before ordination; gives everything a probability. Learning to ring; rings the tenor. Found Hugh.",
+      "look": "a 44-year-old Black British woman, tall, with short natural black hair, round gold-rimmed glasses and a calm, amused face, wearing a black clerical shirt with a white dog collar under a long grey cardigan, a dark green waxed jacket, black trousers and walking boots, a chunky digital calculator watch on her left wrist"
     }
   ],
   "narrator": {
     "name": "Narrator",
     "voice": "3XD5qTvPWht0mpTnYXY0"
+  },
+  "extras": {
+    "landlord": {
+      "name": "The landlord of the Plough",
+      "voice": "7rQX8r6PVq3gfJ8rZzyE",
+      "chapter": 2
+    }
   }
 }

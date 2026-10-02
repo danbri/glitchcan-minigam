@@ -1,0 +1,1170 @@
+{
+ "recorded": false,
+ "about": "Every voiced line of the chapter's ink: who speaks it, the exact words shown on the page (\"text\"), and what the voice is given (\"say\": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves \"text\" matches the ink; tools/directions.py writes this file. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3; the page plays one at random.",
+ "model": "eleven_v4",
+ "takes": 2,
+ "voices": {
+  "quaile": "XEoBW4iDmiawQP72xnAF",
+  "sam": "dqdOhmL2BvMSx2KtSAtN",
+  "margaret": "pbVD3LqiqlzGqszOvKuT",
+  "dilys": "Ky9j3wxFbp3dSAdrkOEv",
+  "toby": "NXaTw4ifg0LAguvKuIwZ",
+  "win": "aAsWcN5jdLdiYG7Hq0YL",
+  "jeremy": "PXeRjE4VWrRQnsaBOFBc",
+  "achebe": "UWhYG4NgASy4ripg5Ov6",
+  "narrator": "3XD5qTvPWht0mpTnYXY0",
+  "landlord": "7rQX8r6PVq3gfJ8rZzyE"
+ },
+ "lines": {
+  "evening": {
+   "speaker": "quaile",
+   "text": "That's Wednesday gone. Vicarage, Sam. She does a good biscuit for a statistician.",
+   "say": "[drily] That's Wednesday gone. Vicarage, Sam. She does a good biscuit for a statistician."
+  },
+  "hub-0": {
+   "speaker": "quaile",
+   "text": "The coroner sits on Friday. Five people to see and time for four. Where first?",
+   "say": "[drily] The coroner sits on Friday. Five people to see and time for four. Where first?"
+  },
+  "hub-3": {
+   "speaker": "quaile",
+   "text": "One more, then the vicarage. She's promised me a spreadsheet and a biscuit.",
+   "say": "[drily] One more, then the vicarage. She's promised me a spreadsheet and a biscuit."
+  },
+  "hub-n": {
+   "speaker": "quaile",
+   "text": "Where next?",
+   "say": "[drily] Where next?"
+  },
+  "loop-here": {
+   "speaker": "quaile",
+   "text": "We've been here, Sam.",
+   "say": "[drily, pointed] We've been here, Sam."
+  },
+  "morning": {
+   "speaker": "narrator",
+   "text": "Wednesday. You sleep for four hours, and wake to your phone.",
+   "say": "[dry, unhurried] Wednesday. You sleep for four hours, and wake to your phone."
+  },
+  "morning-drone": {
+   "speaker": "narrator",
+   "text": "A video from Toby Pike, sent at six. He was flying a drone over the schoolhouse on Tuesday night, and thought you might like it.",
+   "say": "[dry, unhurried] A video from Toby Pike, sent at six. He was flying a drone over the schoolhouse on Tuesday night, and thought you might like it."
+  },
+  "morning-rows": {
+   "speaker": "narrator",
+   "text": "An email from Dilys, forwarded from Perth, with the subject line Not your best.",
+   "say": "[dry, unhurried] An email from Dilys, forwarded from Perth, with the subject line Not your best."
+  },
+  "p1-again": {
+   "speaker": "narrator",
+   "text": "The tower, Tuesday evening.",
+   "say": "[dry, unhurried] The tower, Tuesday evening."
+  },
+  "p1-open": {
+   "speaker": "narrator",
+   "text": "St Aldhelm's, a Tuesday in October, twenty past seven. Three months after the Marrow Show, the interim vicar has talked you into learning to ring the bells.",
+   "say": "[wry] St Aldhelm's, a Tuesday in October, twenty past seven. [short pause] Three months after the Marrow Show, the interim vicar has talked you into learning to ring the bells."
+  },
+  "p10-again": {
+   "speaker": "narrator",
+   "text": "The Sunday service.",
+   "say": "[dry, unhurried] The Sunday service."
+  },
+  "p10-open": {
+   "speaker": "narrator",
+   "text": "Sunday, the harvest service. Marrows on the font, and on the wall the Jubilee board under a purple cloth, to be blessed after the notices. Jeremy Cole is in the front pew, in a suit.",
+   "say": "[dry, unhurried] Sunday, the harvest service. Marrows on the font, and on the wall the Jubilee board under a purple cloth, to be blessed after the notices. Jeremy Cole is in the front pew, in a suit."
+  },
+  "p10a-1": {
+   "speaker": "achebe",
+   "text": "Notices. The flower rota is in the porch. The roof fund stands at four thousand pounds, and a board.",
+   "say": "[calm, amused, precise] Notices. The flower rota is in the porch. The roof fund stands at four thousand pounds, and a board."
+  },
+  "p10a-2": {
+   "speaker": "achebe",
+   "text": "And Hugh Daventry's funeral will be here on Thursday. He asked for no hymns he hadn't checked.",
+   "say": "[calm, amused, precise] And Hugh Daventry's funeral will be here on Thursday. He asked for no hymns he hadn't checked."
+  },
+  "p10b-1": {
+   "speaker": "narrator",
+   "text": "Jeremy Cole sits very still, in the way a man sits who has been told to keep his hands off the furniture.",
+   "say": "[dry, unhurried] Jeremy Cole sits very still, in the way a man sits who has been told to keep his hands off the furniture."
+  },
+  "p10c-1": {
+   "speaker": "narrator",
+   "text": "You lift the corner of the purple cloth. The gold on the date is still tacky. The letters have little feet now.",
+   "say": "[dry, unhurried] You lift the corner of the purple cloth. The gold on the date is still tacky. The letters have little feet now."
+  },
+  "p10c-2": {
+   "speaker": "sam",
+   "text": "It's the board from his barn. He swapped them.",
+   "say": "[measured] It's the board from his barn. He swapped them."
+  },
+  "p10c-3": {
+   "speaker": "sam",
+   "text": "That's not the board I saw on Tuesday.",
+   "say": "[measured] That's not the board I saw on Tuesday."
+  },
+  "p10c-4": {
+   "speaker": "narrator",
+   "text": "Achebe stops the notices and looks at you over her glasses.",
+   "say": "[dry, unhurried] Achebe stops the notices and looks at you over her glasses."
+  },
+  "p10d-1": {
+   "speaker": "quaile",
+   "text": "Your church, Sergeant. Well, hers. Go on.",
+   "say": "[drily] Your church, Sergeant. Well, hers. Go on."
+  },
+  "p10e-brush": {
+   "speaker": "sam",
+   "text": "So you lettered a new one in your barn, and swapped it this week.",
+   "say": "[measured] So you lettered a new one in your barn, and swapped it this week."
+  },
+  "p10e-dark": {
+   "speaker": "sam",
+   "text": "And nobody left the church.",
+   "say": "[measured] And nobody left the church."
+  },
+  "p10e-hunch": {
+   "speaker": "jeremy",
+   "text": "I rang every blow, Sergeant. Ask anyone in the band.",
+   "say": "[smooth, warm] I rang every blow, Sergeant. Ask anyone in the band."
+  },
+  "p10e-named": {
+   "speaker": "sam",
+   "text": "On Tuesday the band moved up one, and you rang the four. When the lights went, the four stopped dead for forty seconds.",
+   "say": "[measured] On Tuesday the band moved up one, and you rang the four. When the lights went, the four stopped dead for forty seconds."
+  },
+  "p10e-proof": {
+   "speaker": "sam",
+   "text": "Hugh died holding the corner of a proof. Peal board, a correction. You have the rest of that page.",
+   "say": "[measured] Hugh died holding the corner of a proof. Peal board, a correction. You have the rest of that page."
+  },
+  "p10e-rows": {
+   "speaker": "sam",
+   "text": "When the lights went, one bell stopped dead for forty seconds.",
+   "say": "[measured] When the lights went, one bell stopped dead for forty seconds."
+  },
+  "p10e-sit": {
+   "speaker": "quaile",
+   "text": "Sit down, Sam. Not today.",
+   "say": "[drily] Sit down, Sam. Not today."
+  },
+  "p10e-typeface": {
+   "speaker": "sam",
+   "text": "The board you sold this church for nine thousand pounds is lettered in Gill Sans. Gill Sans was released in nineteen twenty-eight.",
+   "say": "[measured] The board you sold this church for nine thousand pounds is lettered in Gill Sans. Gill Sans was released in nineteen twenty-eight."
+  },
+  "p10f-achebe": {
+   "speaker": "achebe",
+   "text": "Eleven per cent, Sergeant. I did say.",
+   "say": "[calm, amused, precise] Eleven per cent, Sergeant. I did say."
+  },
+  "p10f-dilys": {
+   "speaker": "dilys",
+   "text": "I was ringing the two and talking to you, love. Both at once. It's a gift.",
+   "say": "[loud, cheerful] I was ringing the two and talking to you, love. Both at once. It's a gift."
+  },
+  "p10f-win": {
+   "speaker": "win",
+   "text": "What?",
+   "say": "[loud, brisk] What?"
+  },
+  "p10g-1": {
+   "speaker": "quaile",
+   "text": "Sit down, Sam. Mr Cole, Hugh was going to print a correction about your board. You went down the stair in the dark to get it back.",
+   "say": "[drily] Sit down, Sam. Mr Cole, Hugh was going to print a correction about your board. You went down the stair in the dark to get it back."
+  },
+  "p10g-2": {
+   "speaker": "quaile",
+   "text": "Sit down, Sam.",
+   "say": "[drily] Sit down, Sam."
+  },
+  "p10g-3": {
+   "speaker": "narrator",
+   "text": "Dr Achebe blesses the board. Nobody says Amen very loudly.",
+   "say": "[dry, unhurried] Dr Achebe blesses the board. Nobody says Amen very loudly."
+  },
+  "p10h-1": {
+   "speaker": "jeremy",
+   "text": "He was going to print it. In the magazine. Nine thousand pounds, and a correction, in the magazine.",
+   "say": "[breaking, bitter] He was going to print it. In the magazine. Nine thousand pounds, and a correction, in the magazine."
+  },
+  "p10h-2": {
+   "speaker": "jeremy",
+   "text": "I only wanted the page back. He wouldn't let go of it. Hugh never let go of anything.",
+   "say": "[quiet, hollow] I only wanted the page back. He wouldn't let go of it. [short pause] Hugh never let go of anything."
+  },
+  "p10h-3": {
+   "speaker": "quaile",
+   "text": "Neither do I, Mr Cole.",
+   "say": "[cold, quiet] Neither do I, Mr Cole."
+  },
+  "p10i-1": {
+   "speaker": "narrator",
+   "text": "After the service the band rings for the harvest. Five ropes. Win back on the four.",
+   "say": "[dry, unhurried] After the service the band rings for the harvest. Five ropes. Win back on the four."
+  },
+  "p10i-2": {
+   "speaker": "narrator",
+   "text": "Dr Achebe rings the five, and gets it right twice.",
+   "say": "[dry, unhurried] Dr Achebe rings the five, and gets it right twice."
+  },
+  "p10i-3": {
+   "speaker": "narrator",
+   "text": "Jeremy Cole rings the five, every blow.",
+   "say": "[dry, unhurried] Jeremy Cole rings the five, every blow."
+  },
+  "p10i-4": {
+   "speaker": "narrator",
+   "text": "When they stand, the tenor, which nobody has rung all week, speaks once on its own.",
+   "say": "[hushed] When they stand, the tenor, which nobody has rung all week, speaks once on its own."
+  },
+  "p10i-5": {
+   "speaker": "narrator",
+   "text": "Up on its wheel, something small and yellow looks down the tower at you.",
+   "say": "[very quiet] Up on its wheel, something small and yellow looks down the tower at you."
+  },
+  "p1a-1": {
+   "speaker": "narrator",
+   "text": "Rooks go round the spire. Up in the ringing chamber, a light is on.",
+   "say": "[dry, unhurried] Rooks go round the spire. Up in the ringing chamber, a light is on."
+  },
+  "p1a-2": {
+   "speaker": "narrator",
+   "text": "There is no bicycle in the rack by the lychgate. Hugh Daventry rings the treble, writes the parish magazine and sets the quiz at the Plough. Hugh is never late.",
+   "say": "[dry] There is no bicycle in the rack by the lychgate. Hugh Daventry rings the treble, writes the parish magazine and sets the quiz at the Plough. [short pause] Hugh is never late."
+  },
+  "p1b-1": {
+   "speaker": "achebe",
+   "text": "Sergeant Adeyemi. I had you at forty per cent to turn up.",
+   "say": "[pleased, precise] Sergeant Adeyemi. I had you at forty per cent to turn up."
+  },
+  "p1b-2": {
+   "speaker": "sam",
+   "text": "And now?",
+   "say": "[measured] And now?"
+  },
+  "p1b-3": {
+   "speaker": "achebe",
+   "text": "A hundred. It's very satisfying.",
+   "say": "[satisfied] A hundred. [short pause] It's very satisfying."
+  },
+  "p1b-4": {
+   "speaker": "narrator",
+   "text": "The Reverend Dr Ruth Achebe was an actuary for twenty years before she was a priest. She says the two jobs are closer than people think.",
+   "say": "[dry, unhurried] The Reverend Dr Ruth Achebe was an actuary for twenty years before she was a priest. She says the two jobs are closer than people think."
+  },
+  "p1b-again": {
+   "speaker": "achebe",
+   "text": "Still a hundred per cent, Sergeant.",
+   "say": "[calm, amused, precise] Still a hundred per cent, Sergeant."
+  },
+  "p1c-1": {
+   "speaker": "win",
+   "text": "Win Haskett. Tower captain. You'll be the policeman.",
+   "say": "[much too loud] Win Haskett. Tower captain. You'll be the policeman."
+  },
+  "p1c-2": {
+   "speaker": "narrator",
+   "text": "She is seventy-eight and has rung here for forty-one years. The bells took most of her hearing. A notepad on a string round her neck does the rest.",
+   "say": "[dry, unhurried] She is seventy-eight and has rung here for forty-one years. The bells took most of her hearing. A notepad on a string round her neck does the rest."
+  },
+  "p1c-3": {
+   "speaker": "win",
+   "text": "Watch the ropes, not the people. And don't touch anything with a rope on it.",
+   "say": "[loud, stern] Watch the ropes, not the people. [short pause] And don't touch anything with a rope on it."
+  },
+  "p1c-again": {
+   "speaker": "win",
+   "text": "Ropes, not people.",
+   "say": "[loud, brisk] Ropes, not people."
+  },
+  "p1d-1": {
+   "speaker": "narrator",
+   "text": "On a napkin from the Plough, in pencil, she writes the first thing every ringer learns.",
+   "say": "[dry, unhurried] On a napkin from the Plough, in pencil, she writes the first thing every ringer learns."
+  },
+  "p1d-2": {
+   "speaker": "win",
+   "text": "Plain hunt. Five bells, five ringers. Every row, the bells swap places in pairs. One and two, three and four. Then two and three, four and five. Then back again.",
+   "say": "[loud, brisk] Plain hunt. Five bells, five ringers. Every row, the bells swap places in pairs. One and two, three and four. Then two and three, four and five. Then back again."
+  },
+  "p1d-3": {
+   "speaker": "win",
+   "text": "Ten rows and you're home. The treble leads, the rest follow. Hugh has the treble, if he turns up.",
+   "say": "[loud, brisk] Ten rows and you're home. The treble leads, the rest follow. [drily] Hugh has the treble, if he turns up."
+  },
+  "p1d-4": {
+   "speaker": "sam",
+   "text": "There are six ropes up there.",
+   "say": "[measured] There are six ropes up there."
+  },
+  "p1d-5": {
+   "speaker": "win",
+   "text": "Six bells. Five tonight. The tenor stays down when we're short.",
+   "say": "[loud, brisk] Six bells. Five tonight. The tenor stays down when we're short."
+  },
+  "p2-again": {
+   "speaker": "narrator",
+   "text": "The ringing chamber.",
+   "say": "[dry, unhurried] The ringing chamber."
+  },
+  "p2-open": {
+   "speaker": "narrator",
+   "text": "The ringing chamber, up fourteen stone steps: six ropes with striped woollen grips, a bench, a tea tray and a blackboard. Five ringers, and one rope tied up out of reach.",
+   "say": "[dry, unhurried] The ringing chamber, up fourteen stone steps: six ropes with striped woollen grips, a bench, a tea tray and a blackboard. Five ringers, and one rope tied up out of reach."
+  },
+  "p2a-1": {
+   "speaker": "narrator",
+   "text": "Margaret Pike pours tea from a flask on the windowsill. She puts out two cups, looks at the second one, and puts it back in the basket.",
+   "say": "[quiet] Margaret Pike pours tea from a flask on the windowsill. She puts out two cups, looks at the second one, [short pause] and puts it back in the basket."
+  },
+  "p2a-2": {
+   "speaker": "margaret",
+   "text": "Sergeant. Milk's in the jam jar.",
+   "say": "[quiet, precise] Sergeant. Milk's in the jam jar."
+  },
+  "p2a-cold": {
+   "speaker": "narrator",
+   "text": "She hands you a cup without looking at you.",
+   "say": "[dry, unhurried] She hands you a cup without looking at you."
+  },
+  "p2b-1": {
+   "speaker": "narrator",
+   "text": "On the blackboard, in Hugh's square capitals: Tuesday. One, Hugh. Two, Margaret. Three, Dilys. Four, Win. Five, Jeremy. Six, Ruth.",
+   "say": "[dry, unhurried] On the blackboard, in Hugh's square capitals: Tuesday. One, Hugh. Two, Margaret. Three, Dilys. Four, Win. Five, Jeremy. Six, Ruth."
+  },
+  "p2b-2": {
+   "speaker": "dilys",
+   "text": "Hugh's not come, so we all move up one. Margaret takes the treble. Ruth's tenor stays down.",
+   "say": "[loud, cheerful] Hugh's not come, so we all move up one. Margaret takes the treble. Ruth's tenor stays down."
+  },
+  "p2b-3": {
+   "speaker": "dilys",
+   "text": "Don't write it on the board. Hugh hates anyone writing on his board.",
+   "say": "[loud, warning] Don't write it on the board. Hugh hates anyone writing on his board."
+  },
+  "p2b-cold": {
+   "speaker": "dilys",
+   "text": "Hugh's not come. Win will sort us out. Don't touch the board, love, you'll smudge him.",
+   "say": "[loud, cheerful] Hugh's not come. Win will sort us out. Don't touch the board, love, you'll smudge him."
+  },
+  "p2c-1": {
+   "speaker": "win",
+   "text": "Look to. Treble's going. She's gone.",
+   "say": "[loud, ringing call] Look to. Treble's going. [short pause] She's gone."
+  },
+  "p2c-2": {
+   "speaker": "narrator",
+   "text": "The bells start somewhere above your head, much closer than you expected. Five people in a circle, pulling, watching each other's ropes.",
+   "say": "[dry, unhurried] The bells start somewhere above your head, much closer than you expected. Five people in a circle, pulling, watching each other's ropes."
+  },
+  "p2c-3": {
+   "speaker": "narrator",
+   "text": "Jeremy Cole, the antiques dealer, stands nearest the door, under the light switch. At five past eight, between two pieces, he reads his phone and puts it away.",
+   "say": "[dry, unhurried] Jeremy Cole, the antiques dealer, stands nearest the door, under the light switch. At five past eight, between two pieces, he reads his phone and puts it away."
+  },
+  "p2c-again": {
+   "speaker": "narrator",
+   "text": "The ropes rise and fall. Ringing sounds tidier from the bench than it is.",
+   "say": "[dry, unhurried] The ropes rise and fall. Ringing sounds tidier from the bench than it is."
+  },
+  "p2d-1": {
+   "speaker": "narrator",
+   "text": "At a quarter past eight, the lights go out.",
+   "say": "[low] At a quarter past eight, the lights go out."
+  },
+  "p2d-2": {
+   "speaker": "narrator",
+   "text": "The ringing goes on in the dark, and goes wrong. A bell is missing from the pattern, or two are. You cannot tell. Somewhere below you, something falls.",
+   "say": "[tense, quiet] The ringing goes on in the dark, and goes wrong. A bell is missing from the pattern, or two are. You cannot tell. [short pause] Somewhere below you, something falls."
+  },
+  "p2d-3": {
+   "speaker": "narrator",
+   "text": "Forty seconds by your watch, and the lights come back. Everybody is where they were.",
+   "say": "[dry, unhurried] Forty seconds by your watch, and the lights come back. Everybody is where they were."
+  },
+  "p2d-4": {
+   "speaker": "jeremy",
+   "text": "Fuse box. It's older than the bells.",
+   "say": "[breezy, a little out of breath] Fuse box. It's older than the bells."
+  },
+  "p2d-5": {
+   "speaker": "narrator",
+   "text": "Win calls Stand, and the bells stop. Dr Achebe goes down the stair first, to put the kettle on.",
+   "say": "[dry, unhurried] Win calls Stand, and the bells stop. Dr Achebe goes down the stair first, to put the kettle on."
+  },
+  "p2d-6": {
+   "speaker": "narrator",
+   "text": "Then she shouts your name.",
+   "say": "[quiet] Then she shouts your name."
+  },
+  "p3-again": {
+   "speaker": "narrator",
+   "text": "The vestry, at the foot of the stair.",
+   "say": "[dry, unhurried] The vestry, at the foot of the stair."
+  },
+  "p3-open": {
+   "speaker": "narrator",
+   "text": "Hugh Daventry is at the foot of the tower stair, where it comes down into the vestry. Dr Achebe is kneeling beside him. She looks up and shakes her head.",
+   "say": "[quiet, grave] Hugh Daventry is at the foot of the tower stair, where it comes down into the vestry. Dr Achebe is kneeling beside him. [short pause] She looks up and shakes her head."
+  },
+  "p3a-1": {
+   "speaker": "narrator",
+   "text": "His bicycle clips are still on. His torch lies on the bottom step, still lit.",
+   "say": "[dry, unhurried] His bicycle clips are still on. His torch lies on the bottom step, still lit."
+  },
+  "p3a-2": {
+   "speaker": "narrator",
+   "text": "The stair is stone, narrow, and turns to the left. Fourteen steps up to the ringing chamber door.",
+   "say": "[dry, unhurried] The stair is stone, narrow, and turns to the left. Fourteen steps up to the ringing chamber door."
+  },
+  "p3a-3": {
+   "speaker": "achebe",
+   "text": "He texted the band at five past eight. On my way up. Something to say about the board. H.",
+   "say": "[calm, amused, precise] He texted the band at five past eight. On my way up. Something to say about the board. H."
+  },
+  "p3a-4": {
+   "speaker": "achebe",
+   "text": "I came down to put the kettle on. I found him. Statistically, that makes me interesting.",
+   "say": "[quiet, wry] I came down to put the kettle on. I found him. [short pause] Statistically, that makes me interesting."
+  },
+  "p3b-1": {
+   "speaker": "narrator",
+   "text": "His right hand is closed on the corner of a page, torn off. Printed on it: Peal board, a corre. And at the bottom, H.D.",
+   "say": "[dry, unhurried] His right hand is closed on the corner of a page, torn off. Printed on it: Peal board, a corre. And at the bottom, H.D."
+  },
+  "p3b-2": {
+   "speaker": "sam",
+   "text": "A proof. For the parish magazine.",
+   "say": "[measured] A proof. For the parish magazine."
+  },
+  "p3b-3": {
+   "speaker": "sam",
+   "text": "Somebody has the rest of that page.",
+   "say": "[measured] Somebody has the rest of that page."
+  },
+  "p3c-1": {
+   "speaker": "narrator",
+   "text": "Quaile arrives eleven minutes later, in a raincoat over pyjamas.",
+   "say": "[dry, unhurried] Quaile arrives eleven minutes later, in a raincoat over pyjamas."
+  },
+  "p3c-2": {
+   "speaker": "quaile",
+   "text": "I was in the bath, Sam. Tell me it's an accident.",
+   "say": "[weary] I was in the bath, Sam. [short pause] Tell me it's an accident."
+  },
+  "p3c-3": {
+   "speaker": "sam",
+   "text": "It might be.",
+   "say": "[measured] It might be."
+  },
+  "p3c-4": {
+   "speaker": "quaile",
+   "text": "Then why did you ring me and not just an ambulance?",
+   "say": "[sharp] Then why did you ring me and not just an ambulance?"
+  },
+  "p3c-5": {
+   "speaker": "sam",
+   "text": "I rang both, ma'am.",
+   "say": "[patient] I rang both, ma'am."
+  },
+  "p3c-6": {
+   "speaker": "quaile",
+   "text": "Old man, stone stair, lights out. The coroner will say he fell, and the coroner sits on Friday. One question for the band tonight. Make it a good one.",
+   "say": "[drily] Old man, stone stair, lights out. The coroner will say he fell, and the coroner sits on Friday. One question for the band tonight. Make it a good one."
+  },
+  "p3c-again": {
+   "speaker": "quaile",
+   "text": "One question for the band, Sam, then they go home to bed.",
+   "say": "[drily] One question for the band, Sam, then they go home to bed."
+  },
+  "p3d-1": {
+   "speaker": "narrator",
+   "text": "The band waits in the vestry in their coats: Win, Dilys, Margaret, Jeremy. Nobody sits down.",
+   "say": "[dry, unhurried] The band waits in the vestry in their coats: Win, Dilys, Margaret, Jeremy. Nobody sits down."
+  },
+  "p3d-again": {
+   "speaker": "narrator",
+   "text": "The band waits in their coats. They have answered one question, and would like to go home.",
+   "say": "[dry, unhurried] The band waits in their coats. They have answered one question, and would like to go home."
+  },
+  "p3e-1": {
+   "speaker": "dilys",
+   "text": "In the dark? Nobody could have found the door, love.",
+   "say": "[loud, cheerful] In the dark? Nobody could have found the door, love."
+  },
+  "p3e-2": {
+   "speaker": "jeremy",
+   "text": "We rang straight through, Sergeant. Ask Win.",
+   "say": "[smooth, warm] We rang straight through, Sergeant. Ask Win."
+  },
+  "p3e-3": {
+   "speaker": "win",
+   "text": "What?",
+   "say": "[loud, puzzled] What?"
+  },
+  "p3f-1": {
+   "speaker": "dilys",
+   "text": "I record every practice for my sister Glenys. She's in Perth. Rang here for thirty years, before her knees went.",
+   "say": "[loud, cheerful] I record every practice for my sister Glenys. She's in Perth. Rang here for thirty years, before her knees went."
+  },
+  "p3f-2": {
+   "speaker": "dilys",
+   "text": "She listens over her breakfast and marks us out of ten.",
+   "say": "[loud, cheerful] She listens over her breakfast and marks us out of ten."
+  },
+  "p3f-3": {
+   "speaker": "dilys",
+   "text": "I'll send it to her tonight. You'll have her marks by morning.",
+   "say": "[loud, cheerful] I'll send it to her tonight. You'll have her marks by morning."
+  },
+  "p3f-cold": {
+   "speaker": "dilys",
+   "text": "You can have it when I've decided whether I like you yet. Ask me tomorrow.",
+   "say": "[loud, cheerful] You can have it when I've decided whether I like you yet. Ask me tomorrow."
+  },
+  "p3g-1": {
+   "speaker": "margaret",
+   "text": "We moved up one, because Hugh hadn't come. I had the treble. It was my first time on the treble.",
+   "say": "[quiet, precise] We moved up one, because Hugh hadn't come. I had the treble. It was my first time on the treble."
+  },
+  "p3g-2": {
+   "speaker": "margaret",
+   "text": "Gerald never let me ring. He said it was bad for the hands.",
+   "say": "[quiet, precise] Gerald never let me ring. He said it was bad for the hands."
+  },
+  "p3g-cold": {
+   "speaker": "margaret",
+   "text": "Ask Win, Sergeant. She'll tell you. Loudly.",
+   "say": "[quiet, precise] Ask Win, Sergeant. She'll tell you. Loudly."
+  },
+  "p3g-cold2": {
+   "speaker": "narrator",
+   "text": "Win is already putting her coat on.",
+   "say": "[dry, unhurried] Win is already putting her coat on."
+  },
+  "p4-again": {
+   "speaker": "narrator",
+   "text": "Win's cottage.",
+   "say": "[dry, unhurried] Win's cottage."
+  },
+  "p4-open": {
+   "speaker": "narrator",
+   "text": "Win Haskett's cottage, the last in Church Row. A brass bell for a knocker, which she cannot hear, and beside it a button that makes a lamp flash inside.",
+   "say": "[dry, unhurried] Win Haskett's cottage, the last in Church Row. A brass bell for a knocker, which she cannot hear, and beside it a button that makes a lamp flash inside."
+  },
+  "p4a-1": {
+   "speaker": "narrator",
+   "text": "A card in the window, in capitals: Shoes off. This means you.",
+   "say": "[dry, unhurried] A card in the window, in capitals: Shoes off. This means you."
+  },
+  "p4b-1": {
+   "speaker": "win",
+   "text": "Come in. Tea's stewed. Sit there, not there.",
+   "say": "[loud, brisk] Come in. Tea's stewed. Sit there, not there."
+  },
+  "p4b-2": {
+   "speaker": "narrator",
+   "text": "Quaile reaches up and switches off her hearing aid.",
+   "say": "[dry, unhurried] Quaile reaches up and switches off her hearing aid."
+  },
+  "p4b-3": {
+   "speaker": "quaile",
+   "text": "In solidarity.",
+   "say": "[deadpan] In solidarity."
+  },
+  "p4b-4": {
+   "speaker": "narrator",
+   "text": "So the interview is done on Win's notepad. She gives you one page for questions, and makes it clear that it is one page.",
+   "say": "[dry, unhurried] So the interview is done on Win's notepad. She gives you one page for questions, and makes it clear that it is one page."
+  },
+  "p4b-again": {
+   "speaker": "narrator",
+   "text": "Win taps the notepad. One more page, it means, and then she has the flowers to do.",
+   "say": "[dry, unhurried] Win taps the notepad. One more page, it means, and then she has the flowers to do."
+  },
+  "p4b-warm": {
+   "speaker": "win",
+   "text": "Socks. Good. Sit there.",
+   "say": "[loud, brisk] Socks. Good. Sit there."
+  },
+  "p4c-1": {
+   "speaker": "narrator",
+   "text": "She writes a large 4, underlines it twice, and adds: Forty-one years.",
+   "say": "[dry, unhurried] She writes a large 4, underlines it twice, and adds: Forty-one years."
+  },
+  "p4c-2": {
+   "speaker": "narrator",
+   "text": "It is true of every Tuesday but the last one.",
+   "say": "[dry, unhurried] It is true of every Tuesday but the last one."
+  },
+  "p4c-3": {
+   "speaker": "narrator",
+   "text": "Underneath, Quaile writes: Is the tea always like this? Win writes: Yes.",
+   "say": "[dry, unhurried] Underneath, Quaile writes: Is the tea always like this? Win writes: Yes."
+  },
+  "p4d-1": {
+   "speaker": "narrator",
+   "text": "Win writes for a long time.",
+   "say": "[dry, unhurried] Win writes for a long time."
+  },
+  "p4d-2": {
+   "speaker": "narrator",
+   "text": "Hugh never came. We moved up one, rang plain hunt on five, tenor down. I had the three for once. Lights went at quarter past. I ring by watching ropes. In the dark there is nothing to watch.",
+   "say": "[dry, unhurried] Hugh never came. We moved up one, rang plain hunt on five, tenor down. I had the three for once. Lights went at quarter past. I ring by watching ropes. In the dark there is nothing to watch."
+  },
+  "p4d-3": {
+   "speaker": "narrator",
+   "text": "Then, underlined: Somebody went wrong. I could not tell you who. Glenys could.",
+   "say": "[dry, unhurried] Then, underlined: Somebody went wrong. I could not tell you who. Glenys could."
+  },
+  "p4e-1": {
+   "speaker": "narrator",
+   "text": "Her phone, on the mantelpiece by the clock. The band's group, Tuesday, five past eight. Hugh: On my way up. Something to say about the board. H.",
+   "say": "[dry, unhurried] Her phone, on the mantelpiece by the clock. The band's group, Tuesday, five past eight. Hugh: On my way up. Something to say about the board. H."
+  },
+  "p4e-2": {
+   "speaker": "win",
+   "text": "I don't look at my phone in the tower. Some do.",
+   "say": "[loud, pointed] I don't look at my phone in the tower. [short pause] Some do."
+  },
+  "p5-again": {
+   "speaker": "narrator",
+   "text": "The barn on the Cirencester road.",
+   "say": "[dry, unhurried] The barn on the Cirencester road."
+  },
+  "p5-open": {
+   "speaker": "narrator",
+   "text": "Cole Antiques: a stone barn on the Cirencester road, full of other people's chairs. Over the door, a sign: Restored with Sympathy.",
+   "say": "[dry, unhurried] Cole Antiques: a stone barn on the Cirencester road, full of other people's chairs. Over the door, a sign: Restored with Sympathy."
+  },
+  "p5a-1": {
+   "speaker": "narrator",
+   "text": "Every chair has a price on a luggage label, and every price is a little more than the chair.",
+   "say": "[dry, unhurried] Every chair has a price on a luggage label, and every price is a little more than the chair."
+  },
+  "p5a-2": {
+   "speaker": "narrator",
+   "text": "Dust turns slowly in the light from the high window.",
+   "say": "[dry, unhurried] Dust turns slowly in the light from the high window."
+  },
+  "p5b-1": {
+   "speaker": "jeremy",
+   "text": "Sergeant. Inspector. Terrible business. Hugh was a friend. Well. Hugh was a historian, which is nearly the same thing.",
+   "say": "[smooth, sorrowful] Sergeant. Inspector. Terrible business. Hugh was a friend. [short pause] Well. Hugh was a historian, which is nearly the same thing."
+  },
+  "p5b-2": {
+   "speaker": "quaile",
+   "text": "Was he.",
+   "say": "[flat] Was he."
+  },
+  "p5b-3": {
+   "speaker": "narrator",
+   "text": "He wipes his hands on a cloth that has gold on it. He has time for one question before the dresser.",
+   "say": "[dry, unhurried] He wipes his hands on a cloth that has gold on it. He has time for one question before the dresser."
+  },
+  "p5b-again": {
+   "speaker": "jeremy",
+   "text": "Anything else, Sergeant? I have a dresser coming at two.",
+   "say": "[smooth, warm] Anything else, Sergeant? I have a dresser coming at two."
+  },
+  "p5c-1": {
+   "speaker": "jeremy",
+   "text": "On the five, ringing, every blow, start to finish. Five is my bell. Ask anyone in the band.",
+   "say": "[smooth, confident] On the five, ringing, every blow, start to finish. Five is my bell. Ask anyone in the band."
+  },
+  "p5c-2": {
+   "speaker": "jeremy",
+   "text": "When the lights went I kept going. You do. Rope's in your hands.",
+   "say": "[smooth, warm] When the lights went I kept going. You do. Rope's in your hands."
+  },
+  "p5d-1": {
+   "speaker": "jeremy",
+   "text": "The Jubilee board? Found it in a barn at Bibury, under a tarpaulin. The tower's own, taken down in the sixties. Restored with sympathy.",
+   "say": "[smooth, warm] The Jubilee board? Found it in a barn at Bibury, under a tarpaulin. The tower's own, taken down in the sixties. Restored with sympathy."
+  },
+  "p5d-2": {
+   "speaker": "jeremy",
+   "text": "The parish paid nine thousand pounds for it, out of the roof fund. Generous of them, and fair of me.",
+   "say": "[smooth, warm] The parish paid nine thousand pounds for it, out of the roof fund. Generous of them, and fair of me."
+  },
+  "p5d-3": {
+   "speaker": "quaile",
+   "text": "The roof fund has had a hard year.",
+   "say": "[drily] The roof fund has had a hard year."
+  },
+  "p5e-1": {
+   "speaker": "narrator",
+   "text": "On a trestle at the back, a board under a dust sheet, and a sign-writer's brush across a pot of gold size. The gold is still wet.",
+   "say": "[dry, unhurried] On a trestle at the back, a board under a dust sheet, and a sign-writer's brush across a pot of gold size. The gold is still wet."
+  },
+  "p5e-2": {
+   "speaker": "narrator",
+   "text": "Under the sheet: a peal board, half lettered. Ninety-seven. Jubilee. The letters have little feet, the way old letters do.",
+   "say": "[dry, unhurried] Under the sheet: a peal board, half lettered. Ninety-seven. Jubilee. The letters have little feet, the way old letters do."
+  },
+  "p5e-3": {
+   "speaker": "jeremy",
+   "text": "A commission. Another church. I'm not at liberty.",
+   "say": "[smooth, quickly] A commission. Another church. [short pause] I'm not at liberty."
+  },
+  "p5f-1": {
+   "speaker": "narrator",
+   "text": "His van says Cole Antiques in gold, in plain round letters with no feet at all.",
+   "say": "[dry, unhurried] His van says Cole Antiques in gold, in plain round letters with no feet at all."
+  },
+  "p6-again": {
+   "speaker": "narrator",
+   "text": "The Plough, quiz night.",
+   "say": "[dry, unhurried] The Plough, quiz night."
+  },
+  "p6-open": {
+   "speaker": "narrator",
+   "text": "The Plough. The quiz goes ahead, because Hugh set it on Sunday and the landlord cannot bear to waste it. Six teams, a fire, and a chair left empty at the front.",
+   "say": "[dry, unhurried] The Plough. The quiz goes ahead, because Hugh set it on Sunday and the landlord cannot bear to waste it. Six teams, a fire, and a chair left empty at the front."
+  },
+  "p6a-1": {
+   "speaker": "narrator",
+   "text": "The fire has been lit since four. The dog in front of it has not moved since five.",
+   "say": "[dry, unhurried] The fire has been lit since four. The dog in front of it has not moved since five."
+  },
+  "p6b-1": {
+   "speaker": "landlord",
+   "text": "Round two. Question seven. In what year did Monotype release the typeface Gill Sans?",
+   "say": "[into a microphone, cheerful] Round two. Question seven. [short pause] In what year did Monotype release the typeface Gill Sans?"
+  },
+  "p6b-2": {
+   "speaker": "narrator",
+   "text": "At the bar, the landlord shows you Hugh's answer sheet. Against question seven, in pencil: Nineteen twenty-eight. And under it, smaller: Then look up in the tower.",
+   "say": "[dry, unhurried] At the bar, the landlord shows you Hugh's answer sheet. Against question seven, in pencil: Nineteen twenty-eight. And under it, smaller: Then look up in the tower."
+  },
+  "p6b-3": {
+   "speaker": "quaile",
+   "text": "He was going to ask the whole village. Then tell them the answer in print.",
+   "say": "[quiet, thoughtful] He was going to ask the whole village. Then tell them the answer in print."
+  },
+  "p6c-1": {
+   "speaker": "narrator",
+   "text": "Behind the bar, a photograph of Hugh in a bow tie, holding the quiz microphone like a man about to be strict.",
+   "say": "[dry, unhurried] Behind the bar, a photograph of Hugh in a bow tie, holding the quiz microphone like a man about to be strict."
+  },
+  "p6c-2": {
+   "speaker": "landlord",
+   "text": "He never let the same team win twice running. Said it was bad for the village.",
+   "say": "[warm, gruff] He never let the same team win twice running. Said it was bad for the village."
+  },
+  "p6d-1": {
+   "speaker": "dilys",
+   "text": "Did Glenys's email help? She wants to know if she's evidence. She's never been evidence.",
+   "say": "[loud, cheerful] Did Glenys's email help? She wants to know if she's evidence. She's never been evidence."
+  },
+  "p6d-2": {
+   "speaker": "dilys",
+   "text": "I was cross with you last night. I'm less cross now. Here.",
+   "say": "[loud, cheerful] I was cross with you last night. I'm less cross now. Here."
+  },
+  "p6d-3": {
+   "speaker": "narrator",
+   "text": "She forwards you an email from Perth. The subject line is Not your best.",
+   "say": "[dry, unhurried] She forwards you an email from Perth. The subject line is Not your best."
+  },
+  "p6d-4": {
+   "speaker": "dilys",
+   "text": "My sister's got a recording of Tuesday, if anyone had thought to ask. Nobody did. Here.",
+   "say": "[loud, cheerful] My sister's got a recording of Tuesday, if anyone had thought to ask. Nobody did. Here."
+  },
+  "p6d-again": {
+   "speaker": "dilys",
+   "text": "Shush, love, it's the music round.",
+   "say": "[loud, cheerful] Shush, love, it's the music round."
+  },
+  "p7-again": {
+   "speaker": "narrator",
+   "text": "The old schoolhouse.",
+   "say": "[dry, unhurried] The old schoolhouse."
+  },
+  "p7-open": {
+   "speaker": "narrator",
+   "text": "The old schoolhouse, closed since nineteen ninety-one, with a For Sale board. Toby Pike is flying a drone over it for the brochure.",
+   "say": "[dry, unhurried] The old schoolhouse, closed since nineteen ninety-one, with a For Sale board. Toby Pike is flying a drone over it for the brochure."
+  },
+  "p7a-1": {
+   "speaker": "narrator",
+   "text": "One swing left in the playground. The chains have been painted so many times they no longer clink.",
+   "say": "[dry, unhurried] One swing left in the playground. The chains have been painted so many times they no longer clink."
+  },
+  "p7b-1": {
+   "speaker": "toby",
+   "text": "Sergeant! Come to buy a schoolhouse? Four bedrooms, original features, a bell nobody's allowed to ring.",
+   "say": "[bright, salesman] Sergeant! Come to buy a schoolhouse? Four bedrooms, original features, a bell nobody's allowed to ring."
+  },
+  "p7b-again": {
+   "speaker": "toby",
+   "text": "Still here, Sergeant. Still selling.",
+   "say": "[breezy, quick] Still here, Sergeant. Still selling."
+  },
+  "p7b-cold": {
+   "speaker": "toby",
+   "text": "The sergeant who took my phone off me. I'm working.",
+   "say": "[breezy, quick] The sergeant who took my phone off me. I'm working."
+  },
+  "p7b-warm": {
+   "speaker": "toby",
+   "text": "Did you get the video? I sent it at six. I don't sleep, I'm selling a school.",
+   "say": "[breezy, quick] Did you get the video? I sent it at six. I don't sleep, I'm selling a school."
+  },
+  "p7c-1": {
+   "speaker": "toby",
+   "text": "Oh. Right. Well. I was going to send you something anyway. Probably.",
+   "say": "[breezy, quick] Oh. Right. Well. I was going to send you something anyway. Probably."
+  },
+  "p7d-1": {
+   "speaker": "narrator",
+   "text": "On his controller, Tuesday night, the church from the air, for the brochure's Village Life page.",
+   "say": "[dry, unhurried] On his controller, Tuesday night, the church from the air, for the brochure's Village Life page."
+  },
+  "p7d-2": {
+   "speaker": "narrator",
+   "text": "Eight thirteen: a man wheels a bicycle through the lychgate. Eight fourteen: the ringing chamber window goes dark. Eight fifteen: it lights again. Nobody comes out of the church door until twenty past.",
+   "say": "[dry, unhurried] Eight thirteen: a man wheels a bicycle through the lychgate. Eight fourteen: the ringing chamber window goes dark. Eight fifteen: it lights again. Nobody comes out of the church door until twenty past."
+  },
+  "p7d-3": {
+   "speaker": "sam",
+   "text": "So whoever it was never left the building.",
+   "say": "[measured] So whoever it was never left the building."
+  },
+  "p7d-4": {
+   "speaker": "toby",
+   "text": "That's not going in the brochure, is it.",
+   "say": "[deflated] That's not going in the brochure, is it."
+  },
+  "p7e-1": {
+   "speaker": "narrator",
+   "text": "Tall church windows, a bell turret with no bell in it, and a board by the gate: Pike and Lowe, For Sale. Above the roof a drone hangs in the wind, filming.",
+   "say": "[dry, unhurried] Tall church windows, a bell turret with no bell in it, and a board by the gate: Pike and Lowe, For Sale. Above the roof a drone hangs in the wind, filming."
+  },
+  "p8-again": {
+   "speaker": "narrator",
+   "text": "The ringing chamber, by daylight.",
+   "say": "[dry, unhurried] The ringing chamber, by daylight."
+  },
+  "p8-open": {
+   "speaker": "narrator",
+   "text": "The ringing chamber by daylight. Dr Achebe is waiting with a magnifying glass from the vestry, and on the wall, the Jubilee board.",
+   "say": "[dry, unhurried] The ringing chamber by daylight. Dr Achebe is waiting with a magnifying glass from the vestry, and on the wall, the Jubilee board."
+  },
+  "p8a-1": {
+   "speaker": "narrator",
+   "text": "Black, with gold letters. Saint Aldhelm's. On the Diamond Jubilee of Her Majesty Queen Victoria, the twenty-second of June, eighteen ninety-seven, a peal of five thousand and forty changes. Six names.",
+   "say": "[dry, unhurried] Black, with gold letters. Saint Aldhelm's. On the Diamond Jubilee of Her Majesty Queen Victoria, the twenty-second of June, eighteen ninety-seven, a peal of five thousand and forty changes. Six names."
+  },
+  "p8a-2": {
+   "speaker": "achebe",
+   "text": "The parish bought it in March. Mr Cole found it in a barn. Hugh unveiled it. Hugh was not happy about something, and wouldn't say what.",
+   "say": "[calm, amused, precise] The parish bought it in March. Mr Cole found it in a barn. Hugh unveiled it. Hugh was not happy about something, and wouldn't say what."
+  },
+  "p8b-1": {
+   "speaker": "narrator",
+   "text": "Under the glass the letters are clean and round. The R kicks its leg out straight. The small g has two loops, like spectacles.",
+   "say": "[dry, unhurried] Under the glass the letters are clean and round. The R kicks its leg out straight. The small g has two loops, like spectacles."
+  },
+  "p8b-2": {
+   "speaker": "quaile",
+   "text": "My father had a railway timetable in those letters. He kept it in the downstairs toilet.",
+   "say": "[fond, dry] My father had a railway timetable in those letters. He kept it in the downstairs toilet."
+  },
+  "p8b-3": {
+   "speaker": "sam",
+   "text": "Gill Sans. Nineteen twenty-eight. On a board from eighteen ninety-seven.",
+   "say": "[measured] Gill Sans. Nineteen twenty-eight. On a board from eighteen ninety-seven."
+  },
+  "p8b-4": {
+   "speaker": "sam",
+   "text": "They don't look Victorian.",
+   "say": "[measured] They don't look Victorian."
+  },
+  "p8b-5": {
+   "speaker": "achebe",
+   "text": "I'd put Victorian at four per cent.",
+   "say": "[calm, precise] I'd put Victorian at four per cent."
+  },
+  "p8c-1": {
+   "speaker": "achebe",
+   "text": "On base rates, Inspector, it is usually the person who found him. That's me. I'd put myself at eleven per cent.",
+   "say": "[calm, amused] On base rates, Inspector, it is usually the person who found him. That's me. [short pause] I'd put myself at eleven per cent."
+  },
+  "p8c-2": {
+   "speaker": "quaile",
+   "text": "And the others?",
+   "say": "[drily] And the others?"
+  },
+  "p8c-3": {
+   "speaker": "achebe",
+   "text": "I don't do my parishioners out loud. I do them at night.",
+   "say": "[calm] I don't do my parishioners out loud. [short pause] I do them at night."
+  },
+  "p8c-again": {
+   "speaker": "achebe",
+   "text": "Ask me a number, Sergeant. It's what I'm for.",
+   "say": "[calm, amused, precise] Ask me a number, Sergeant. It's what I'm for."
+  },
+  "p8d-1": {
+   "speaker": "achebe",
+   "text": "You, Sergeant? Sixty per cent to stay in the county past Christmas.",
+   "say": "[calm, amused, precise] You, Sergeant? Sixty per cent to stay in the county past Christmas."
+  },
+  "p8d-2": {
+   "speaker": "achebe",
+   "text": "Sixty-five, now that you've asked.",
+   "say": "[calm, amused, precise] Sixty-five, now that you've asked."
+  },
+  "p8e-1": {
+   "speaker": "narrator",
+   "text": "Dust in the light from the louvres. The ropes are tied up for the week, all but the treble.",
+   "say": "[dry, unhurried] Dust in the light from the louvres. The ropes are tied up for the week, all but the treble."
+  },
+  "p8e-2": {
+   "speaker": "narrator",
+   "text": "The treble rope hangs free, and holding it, as if waiting to be told Look to, is a scarecrow in a navy mac and brown city shoes.",
+   "say": "[dry, unhurried] The treble rope hangs free, and holding it, as if waiting to be told Look to, is a scarecrow in a navy mac and brown city shoes."
+  },
+  "p8e-3": {
+   "speaker": "achebe",
+   "text": "It was here this morning. I assumed it was a ringer.",
+   "say": "[mild] It was here this morning. I assumed it was a ringer."
+  },
+  "p9-again": {
+   "speaker": "narrator",
+   "text": "The vicarage kitchen.",
+   "say": "[dry, unhurried] The vicarage kitchen."
+  },
+  "p9-open": {
+   "speaker": "narrator",
+   "text": "The vicarage kitchen, eleven at night. Dr Achebe has a spreadsheet open and the kettle on. Quaile has her shoes off.",
+   "say": "[dry, unhurried] The vicarage kitchen, eleven at night. Dr Achebe has a spreadsheet open and the kettle on. Quaile has her shoes off."
+  },
+  "p9a-1": {
+   "speaker": "narrator",
+   "text": "On the table: Win's napkin from the Plough, three mugs, and a plate of biscuits that Quaile is counting.",
+   "say": "[dry, unhurried] On the table: Win's napkin from the Plough, three mugs, and a plate of biscuits that Quaile is counting."
+  },
+  "p9b-1": {
+   "speaker": "narrator",
+   "text": "Through the window, the tower against the rain. Somebody has left the light on in the ringing chamber.",
+   "say": "[dry, unhurried] Through the window, the tower against the rain. Somebody has left the light on in the ringing chamber."
+  },
+  "p9c-1": {
+   "speaker": "achebe",
+   "text": "From Glenys in Perth. Dear Dilys. Not your best. You were going nicely on five till fourteen minutes past, then somebody says lights, and one bell stops dead for forty seconds.",
+   "say": "[calm, amused, precise] From Glenys in Perth. Dear Dilys. Not your best. You were going nicely on five till fourteen minutes past, then somebody says lights, and one bell stops dead for forty seconds."
+  },
+  "p9c-2": {
+   "speaker": "achebe",
+   "text": "I can only hear four, so I've numbered them by note, highest first, as I hear them. Here's three rows.",
+   "say": "[calm, amused, precise] I can only hear four, so I've numbered them by note, highest first, as I hear them. Here's three rows."
+  },
+  "p9c-3": {
+   "speaker": "achebe",
+   "text": "Then it comes back late and clumsy, like somebody out of breath. Win stood you at sixteen minutes past. Four out of ten. Love, G.",
+   "say": "[calm, amused, precise] Then it comes back late and clumsy, like somebody out of breath. Win stood you at sixteen minutes past. Four out of ten. Love, G."
+  },
+  "p9c-4": {
+   "speaker": "achebe",
+   "text": "She can't tell which bell it was. She only hears the notes. But we have Win's napkin.",
+   "say": "[calm, amused, precise] She can't tell which bell it was. She only hears the notes. But we have Win's napkin."
+  },
+  "p9c-again": {
+   "speaker": "narrator",
+   "text": "Glenys's three rows, on the screen: 2 4 1 3. 4 2 3 1. 4 3 2 1.",
+   "say": "[dry, unhurried] Glenys's three rows, on the screen: 2 4 1 3. 4 2 3 1. 4 3 2 1."
+  },
+  "p9c-none": {
+   "speaker": "narrator",
+   "text": "Dr Achebe's spreadsheet has six columns headed One to Six, and nothing in them yet.",
+   "say": "[dry, unhurried] Dr Achebe's spreadsheet has six columns headed One to Six, and nothing in them yet."
+  },
+  "p9d-1": {
+   "speaker": "achebe",
+   "text": "Take the one out, and that first row would sound 3 1 4 2. Glenys heard 2 4 1 3.",
+   "say": "[calm, amused, precise] Take the one out, and that first row would sound 3 1 4 2. Glenys heard 2 4 1 3."
+  },
+  "p9d-2": {
+   "speaker": "achebe",
+   "text": "Take the two out, and that first row would sound 3 4 1 2. Glenys heard 2 4 1 3.",
+   "say": "[calm, amused, precise] Take the two out, and that first row would sound 3 4 1 2. Glenys heard 2 4 1 3."
+  },
+  "p9d-3": {
+   "speaker": "achebe",
+   "text": "Take the three out, and that first row would sound 3 2 4 1. Glenys heard 2 4 1 3.",
+   "say": "[calm, amused, precise] Take the three out, and that first row would sound 3 2 4 1. Glenys heard 2 4 1 3."
+  },
+  "p9d-4": {
+   "speaker": "achebe",
+   "text": "Take the four out. 4 2 5 1 3 becomes 2 5 1 3, and by note that's 2 4 1 3. Then 4 2 3 1. Then 4 3 2 1. Every row.",
+   "say": "[quick, pleased] Take the four out. 4 2 5 1 3 becomes 2 5 1 3, and by note that's 2 4 1 3. Then 4 2 3 1. Then 4 3 2 1. [short pause] Every row."
+  },
+  "p9d-5": {
+   "speaker": "achebe",
+   "text": "Take the five out, and that first row would sound 4 2 1 3. Close. Glenys heard 2 4 1 3.",
+   "say": "[calm, amused, precise] Take the five out, and that first row would sound 4 2 1 3. Close. Glenys heard 2 4 1 3."
+  },
+  "p9d-6": {
+   "speaker": "sam",
+   "text": "The four stopped for forty seconds, in the dark, and came back out of breath.",
+   "say": "[measured] The four stopped for forty seconds, in the dark, and came back out of breath."
+  },
+  "p9d-first": {
+   "speaker": "quaile",
+   "text": "First time. I'd have had a biscuit riding on the five.",
+   "say": "[drily] First time. I'd have had a biscuit riding on the five."
+  },
+  "p9e-1": {
+   "speaker": "achebe",
+   "text": "Don't ask me who had it. I was on a rope for the fourth time in my life. I couldn't have told you which one was mine.",
+   "say": "[calm, amused, precise] Don't ask me who had it. I was on a rope for the fourth time in my life. I couldn't have told you which one was mine."
+  },
+  "p9e-again": {
+   "speaker": "sam",
+   "text": "Who had the four on Tuesday?",
+   "say": "[measured] Who had the four on Tuesday?"
+  },
+  "p9f-1": {
+   "speaker": "sam",
+   "text": "The board says Win. Forty-one years on the four. But not on Tuesday. Hugh never came, so they all moved up one. Win had the three.",
+   "say": "[measured] The board says Win. Forty-one years on the four. But not on Tuesday. Hugh never came, so they all moved up one. Win had the three."
+  },
+  "p9f-2": {
+   "speaker": "sam",
+   "text": "The blackboard says Win. Four, Win.",
+   "say": "[measured] The blackboard says Win. Four, Win."
+  },
+  "p9f-3": {
+   "speaker": "quaile",
+   "text": "That's who usually stands there, Sam. Is it who stood there on Tuesday?",
+   "say": "[drily] That's who usually stands there, Sam. Is it who stood there on Tuesday?"
+  },
+  "p9g-1": {
+   "speaker": "sam",
+   "text": "Hugh never came, so they all moved up one. Jeremy's bell is the five. On Tuesday he rang the four, next to the door and the light switch.",
+   "say": "[measured] Hugh never came, so they all moved up one. Jeremy's bell is the five. On Tuesday he rang the four, next to the door and the light switch."
+  },
+  "p9g-2": {
+   "speaker": "sam",
+   "text": "And he told us he was on the five, every blow.",
+   "say": "[measured] And he told us he was on the five, every blow."
+  },
+  "p9g-3": {
+   "speaker": "quaile",
+   "text": "Well, now.",
+   "say": "[quietly] Well, now."
+  },
+  "p9g-4": {
+   "speaker": "sam",
+   "text": "Jeremy stood by the door.",
+   "say": "[measured] Jeremy stood by the door."
+  },
+  "p9g-5": {
+   "speaker": "quaile",
+   "text": "The board says Jeremy rings the five, Sam. You'd want more than where he stood.",
+   "say": "[drily] The board says Jeremy rings the five, Sam. You'd want more than where he stood."
+  },
+  "p9h-1": {
+   "speaker": "sam",
+   "text": "Dilys rings the three, and on Tuesday she moved up to the two. She was talking to me through most of it.",
+   "say": "[measured] Dilys rings the three, and on Tuesday she moved up to the two. She was talking to me through most of it."
+  },
+  "p9h-2": {
+   "speaker": "sam",
+   "text": "Margaret had the treble. Her first time on it. Glenys would have heard the treble go.",
+   "say": "[measured] Margaret had the treble. Her first time on it. Glenys would have heard the treble go."
+  },
+  "p9i-board": {
+   "speaker": "quaile",
+   "text": "Have you looked at the board, Sam, or only at the people standing under it?",
+   "say": "[drily] Have you looked at the board, Sam, or only at the people standing under it?"
+  },
+  "p9i-good": {
+   "speaker": "quaile",
+   "text": "I think you know. I'd like you to say it on Sunday, in front of the whole parish.",
+   "say": "[drily] I think you know. I'd like you to say it on Sunday, in front of the whole parish."
+  },
+  "p9i-rows": {
+   "speaker": "quaile",
+   "text": "Somebody's sister has a recording. Somebody's sister always has a recording.",
+   "say": "[drily] Somebody's sister has a recording. Somebody's sister always has a recording."
+  },
+  "p9i-swap": {
+   "speaker": "quaile",
+   "text": "Who was standing where on Tuesday? Not who usually stands there.",
+   "say": "[drily] Who was standing where on Tuesday? Not who usually stands there."
+  },
+  "p9i-warm": {
+   "speaker": "quaile",
+   "text": "You've learnt to ask me things, Sam. All right.",
+   "say": "[drily] You've learnt to ask me things, Sam. All right."
+  },
+  "p9n-brush": {
+   "speaker": "narrator",
+   "text": "In Jeremy's barn, a second Jubilee board, half lettered, the gold still wet.",
+   "say": "[dry, unhurried] In Jeremy's barn, a second Jubilee board, half lettered, the gold still wet."
+  },
+  "p9n-dark": {
+   "speaker": "narrator",
+   "text": "The drone: the chamber dark from eight fourteen to eight fifteen. Nobody left the church.",
+   "say": "[dry, unhurried] The drone: the chamber dark from eight fourteen to eight fifteen. Nobody left the church."
+  },
+  "p9n-empty": {
+   "speaker": "narrator",
+   "text": "Your notebook has the date in it, and the words plain hunt.",
+   "say": "[dry, unhurried] Your notebook has the date in it, and the words plain hunt."
+  },
+  "p9n-lie": {
+   "speaker": "narrator",
+   "text": "Jeremy says he rang the five, every blow.",
+   "say": "[dry, unhurried] Jeremy says he rang the five, every blow."
+  },
+  "p9n-lie-b": {
+   "speaker": "narrator",
+   "text": "Jeremy says he rang the five, every blow, which is what the blackboard says.",
+   "say": "[dry, unhurried] Jeremy says he rang the five, every blow, which is what the blackboard says."
+  },
+  "p9n-named": {
+   "speaker": "narrator",
+   "text": "The silent bell was the four, and on Tuesday the four was Jeremy.",
+   "say": "[dry, unhurried] The silent bell was the four, and on Tuesday the four was Jeremy."
+  },
+  "p9n-proof": {
+   "speaker": "narrator",
+   "text": "In his hand, the corner of a proof: Peal board, a corre. The rest of the page is gone.",
+   "say": "[dry, unhurried] In his hand, the corner of a proof: Peal board, a corre. The rest of the page is gone."
+  },
+  "p9n-quiz": {
+   "speaker": "narrator",
+   "text": "Hugh's question seven: Gill Sans, nineteen twenty-eight. Then look up in the tower.",
+   "say": "[dry, unhurried] Hugh's question seven: Gill Sans, nineteen twenty-eight. Then look up in the tower."
+  },
+  "p9n-rows": {
+   "speaker": "narrator",
+   "text": "Glenys in Perth: one bell stopped dead for forty seconds when the lights went, and came back out of breath.",
+   "say": "[dry, unhurried] Glenys in Perth: one bell stopped dead for forty seconds when the lights went, and came back out of breath."
+  },
+  "p9n-swap": {
+   "speaker": "narrator",
+   "text": "Hugh never came, so they all moved up one.",
+   "say": "[dry, unhurried] Hugh never came, so they all moved up one."
+  },
+  "p9n-text": {
+   "speaker": "narrator",
+   "text": "Hugh, at five past eight: on my way up, something to say about the board.",
+   "say": "[dry, unhurried] Hugh, at five past eight: on my way up, something to say about the board."
+  },
+  "p9n-typeface": {
+   "speaker": "narrator",
+   "text": "The Jubilee board is lettered in round letters with no feet.",
+   "say": "[dry, unhurried] The Jubilee board is lettered in round letters with no feet."
+  }
+ }
+}

@@ -1,0 +1,627 @@
+{
+ "about": "Steeple Wyke, chapter 2: Plain Hunt. Ten pages of four panels on the chapter 1 layouts; pictures are media/p<n>-<knot>.jpg, sounds media/sfx/. 'tiny' is a short ambient loop (tools/tiny-loop.sh from a kling clip, start frame only, prompt given); 'peek' is the canary (tools/peek-window.py and peek-clip.sh, the photo-novel skill's Peek panels). 'place' replaces the bible's place in the picture prompts.",
+ "place": "Steeple Wyke, a Cotswold village of honey-coloured stone with a church spire, in October.",
+ "layouts": {
+  "L1": {
+   "a": "26,26 1054,26 1054,520 26,562",
+   "b": "26,592 556,570 516,1146 26,1166",
+   "c": "586,569 1054,550 1054,1186 546,1147",
+   "d": "26,1196 1054,1216 1054,1494 26,1494"
+  },
+  "L2": {
+   "a": "26,26 1054,26 1054,318 26,298",
+   "b": "26,328 534,348 514,930 26,950",
+   "c": "564,348 1054,328 1054,950 544,930",
+   "d": "26,980 1054,960 1054,1494 26,1494"
+  },
+  "L3": {
+   "a": "26,26 512,26 492,1100 26,1100",
+   "b": "542,26 1054,26 1054,540 522,560",
+   "c": "522,590 1054,570 1054,1100 502,1100",
+   "d": "26,1130 1054,1130 1054,1494 26,1494"
+  }
+ },
+ "pages": [
+  {
+   "n": 1,
+   "title": "The tower",
+   "layout": "L1",
+   "bed": "an English village churchyard at dusk in October: rooks cawing and settling in tall trees, a light wind, a car passing on a lane, a gate latch, very distant pub noise",
+   "panels": [
+    {
+     "knot": "tower",
+     "ink": "p1_tower",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "The church tower of St Aldhelm's at dusk, rooks circling the spire, one lit window high up in the tower.",
+     "prompt": "Dusk in October. The square honey-stone tower and spire of an English village church seen from the churchyard, old leaning gravestones and a yew tree in the foreground. Rooks circle the spire against a pale violet sky. One small arched window high in the tower is lit warm yellow. A wooden lychgate at the right with an empty bicycle rack beside it.",
+     "sound": "rooks cawing and circling a church spire at dusk, wind in a yew tree",
+     "peek": {
+      "prompt": "Locked-off camera, no camera movement. For the first second nothing moves. Then a small bright canary-yellow canary pops its head up over the stone sill of the small lit window high in the tower, looks straight at the camera for about one second with a tiny tilt of the head, and ducks back down out of sight. Nothing else moves. The last frame is identical to the first frame."
+     },
+     "note": "peek clip made (kling-2.5-turbo, still on start and end frame) but no canary appeared in it: the panel is a still"
+    },
+    {
+     "knot": "napkin",
+     "ink": "p1_napkin",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A paper pub napkin on a bench, with columns of numbers pencilled on it, and a stub of pencil.",
+     "prompt": "Close-up, top-down, of a white paper pub napkin printed with a small faded green plough logo in one corner, lying on a weathered wooden bench. Pencilled on it in a neat old person's hand, a narrow column of short rows of the digits one to five. A worn stub of pencil lies beside it. A wrinkled hand at the edge of the frame holds the napkin flat. Warm light from a church porch lamp.",
+     "sound": "pencil writing on paper, close; a church porch at dusk with a light wind"
+    },
+    {
+     "knot": "win",
+     "ink": "p1_win",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "win",
+      "sam"
+     ],
+     "alt": "Win Haskett, small and white-haired, writes on a notepad for Sam, who stoops to read it, under the porch lamp.",
+     "prompt": "Under a lantern in a stone church porch at dusk: WIN, small and fierce, writes on the notepad round her neck and holds it up for SAM, who stoops to read it, amused and attentive. A list of bell-ringers' names pinned on a noticeboard behind them.",
+     "sound": "a church porch: a heavy oak door creaking, a pencil scratching, a woman speaking loudly and briefly, wind"
+    },
+    {
+     "knot": "achebe",
+     "ink": "p1_achebe",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [
+      "achebe"
+     ],
+     "alt": "Dr Achebe, the interim vicar, wheels her bicycle through the lychgate and raises a hand in greeting.",
+     "prompt": "Wide shot at dusk: ACHEBE wheels an old black bicycle through a wooden church lychgate and raises one hand in greeting, smiling. A lit lamp on the lychgate, the churchyard path, gravestones, the lane and a row of stone cottages with lit windows behind.",
+     "sound": "a bicycle being wheeled on gravel, the tick of its freewheel, a lychgate swinging shut"
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "title": "The ringing chamber",
+   "layout": "L3",
+   "bed": "inside a church bell tower during bell-ringing practice: six bells ringing rounds and changes overhead, loud and close, the creak of ropes and wheels, the thump of feet on boards",
+   "panels": [
+    {
+     "knot": "ropes",
+     "ink": "p2_ropes",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [
+      "dilys",
+      "jeremy",
+      "margaret"
+     ],
+     "alt": "The ringing chamber: five ringers in a circle pull bell ropes with striped woollen grips. Jeremy Cole stands by the door under the light switch.",
+     "prompt": "Inside a small square church bell-ringing chamber with whitewashed stone walls, lit by a bare bulb: five ringers stand in a circle each holding a long bell rope with a red, white and blue striped woollen grip. In front, DILYS pulls her rope with gusto; JEREMY stands nearest the narrow arched stair door, beside an old round brass light switch; MARGARET concentrates on the rope opposite. A sixth rope is tied up out of reach. Old framed boards on the walls. Ropes rise through holes in the wooden ceiling.",
+     "sound": "bell ropes creaking through ceiling guides and the soft thump of the striped grips, bells ringing overhead",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the tied-up bell rope and the hanging rope ends sway very slightly. The people stay completely still. No camera movement."
+     },
+     "note": "tiny clip made but a bell came down through the ceiling at 0.8 s: the panel is a still"
+    },
+    {
+     "knot": "tea",
+     "ink": "p2_tea",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [
+      "margaret"
+     ],
+     "alt": "Margaret Pike at the windowsill with a tartan flask and a basket of cups; two cups set out, one being put back.",
+     "prompt": "In a stone window recess of a church bell tower at night: MARGARET pours tea from an old tartan Thermos flask into a china cup. Beside it on the sill a wicker basket of mismatched cups; she is putting a second cup back into the basket. Bare bulb light, dark window.",
+     "sound": "tea poured from a flask into a china cup, a cup set down on stone, distant bells"
+    },
+    {
+     "knot": "list",
+     "ink": "p2_list",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A small blackboard on the stone wall with a chalked ringing list in square capitals, numbers one to six.",
+     "prompt": "A small old blackboard hanging on a whitewashed stone wall in a church bell-ringing chamber, with a chalked list in neat square capitals: six short numbered lines, each a number and a first name. A stub of chalk on the ledge. A striped bell rope hangs at the edge of the frame. Bare bulb light.",
+     "sound": "chalk on a blackboard, a bell rope creaking, bells ringing above"
+    },
+    {
+     "knot": "dark",
+     "ink": "p2_dark",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The ringing chamber in darkness: only the outlines of ropes against a dim window, and the faint grey of faces.",
+     "prompt": "The same small church bell-ringing chamber at night with the lights out: almost black, only a faint blue glow from a narrow arched window, the silhouettes of bell ropes and of five people pulling them, one shape near the door. Grainy, very dark, a real photograph taken in near darkness.",
+     "sound": "bells ringing in the dark going ragged and out of rhythm, a muffled thump from below, a sharp breath"
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "title": "The vestry",
+   "layout": "L1",
+   "bed": "a cold stone church vestry at night: a fluorescent light buzzing, rain on a window, a radiator ticking, voices kept low, a distant police car arriving",
+   "panels": [
+    {
+     "knot": "stair",
+     "ink": "p3_stair",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [
+      "achebe"
+     ],
+     "alt": "The foot of a narrow stone spiral stair in the vestry. Dr Achebe kneels beside a man in tweed lying at the bottom, out of sight but for his shoes and a lit torch on the step.",
+     "prompt": "The foot of a narrow stone spiral stair coming down into an old church vestry, a heavy oak door ajar beside it. ACHEBE kneels on the flagstones, very still and grave, beside a man lying at the foot of the stair who is mostly hidden by the curve of the wall: only his brown brogues, his tweed trouser legs with metal bicycle clips at the ankles, and one tweed sleeve are visible. A small torch lies on the bottom step, still lit. Cassocks on hooks, a fluorescent light. Discreet, respectful, nothing graphic.",
+     "sound": "a fluorescent light buzzing in a cold stone room, a woman breathing slowly, rain on glass",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the beam of the small torch on the step flickers very slightly and the fluorescent light flickers faintly. Nobody moves. No camera movement."
+     },
+     "note": "tiny clip made but the strip light switched on: the panel is a still"
+    },
+    {
+     "knot": "proof",
+     "ink": "p3_proof",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A man's closed hand on the flagstones, holding a torn corner of a printed page.",
+     "prompt": "Close-up on old church flagstones: an older man's hand, the cuff of a tweed jacket, loosely closed on the torn-off corner of a printed A4 page. Only the edge of large printed type shows on the scrap. A drop of rain on the stone. Cold fluorescent light. Discreet, still, nothing graphic.",
+     "sound": "paper tearing softly, rain on a window, a radiator ticking"
+    },
+    {
+     "knot": "quaile",
+     "ink": "p3_quaile",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "quaile"
+     ],
+     "alt": "DCI Quaile arrives in a raincoat over striped pyjamas and wellingtons, hair wet.",
+     "prompt": "In a church vestry doorway at night, rain behind her: QUAILE in a dark raincoat buttoned over blue-and-white striped pyjama trousers, wellington boots, her short grey hair damp, reading glasses pushed up, looking down at something out of frame with a professional, unimpressed face.",
+     "sound": "rain falling in a churchyard at night, a car door shutting, footsteps on wet flagstones"
+    },
+    {
+     "knot": "band",
+     "ink": "p3_band",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [
+      "win",
+      "dilys",
+      "jeremy",
+      "margaret"
+     ],
+     "alt": "The bell-ringers wait in their coats in the vestry: Win, Dilys, Jeremy and Margaret, nobody sitting.",
+     "prompt": "A row of four people standing in coats in an old church vestry at night under a fluorescent light, waiting, nobody sitting: WIN with her notepad, DILYS with her arms folded, JEREMY smoothing his beard, MARGARET very upright. A row of hymn books, a tea urn, cassocks on hooks.",
+     "sound": "people shifting their feet on stone, a coat rustling, a tea urn ticking as it cools"
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "title": "Win's cottage",
+   "layout": "L2",
+   "bed": "inside a quiet cottage on a rainy morning: a mantel clock ticking loudly, rain on the window, a kettle coming to the boil, a cat, a radio very low in another room",
+   "panels": [
+    {
+     "knot": "cottage",
+     "ink": "p4_cottage",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "A row of honey-stone cottages; at the end, a door with a brass bell for a knocker, a card in the window, and a net curtain.",
+     "prompt": "A row of small honey-coloured stone cottages on a quiet village lane, wet after rain on an October morning. The last cottage has a dark green door with a small brass bell as a door knocker, a white electric push-button beside the door, a handwritten card propped in the window, and a lace net curtain.",
+     "sound": "rain dripping from a gutter, a brass doorbell, a quiet lane",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the lace net curtain in the window stirs very slightly, and raindrops fall from the gutter. No camera movement."
+     },
+     "loopSrc": [
+      "media/p4-cottage-tiny"
+     ]
+    },
+    {
+     "knot": "notes",
+     "ink": "p4_win",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "win",
+      "quaile"
+     ],
+     "alt": "Win and Quaile at a small table, writing notes to each other on a notepad; two hearing aids lie on the table between the teacups.",
+     "prompt": "At a small cottage table with a lace cloth: WIN and QUAILE sit opposite each other, both writing on the same small reporter's notepad, passing it across. Two beige hearing aids lie on the table between two china teacups and a brown teapot. Morning light from a window.",
+     "sound": "pencil writing on a notepad, a page torn off, teacups on saucers, a clock ticking"
+    },
+    {
+     "knot": "win4",
+     "ink": "p4_win",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "win"
+     ],
+     "alt": "Win in her armchair under framed ringing certificates, holding up her notepad.",
+     "prompt": "WIN sits very upright in a worn floral armchair in a small cottage sitting room, holding up her notepad with one word written large in pencil, looking straight at the viewer, challenging. On the wall behind her, rows of framed bell-ringing certificates and a photograph of a tower band. A small brass handbell on the side table.",
+     "sound": "a woman tapping a pencil on a notepad, a mantel clock ticking, rain"
+    },
+    {
+     "knot": "phone",
+     "ink": "p4_phone",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "A mantelpiece: a clock, a china dog, and an old smartphone showing a message.",
+     "prompt": "Close-up of a cottage mantelpiece: a brass carriage clock, a china spaniel, a framed photo of a church tower, and propped against the clock an older smartphone with its screen lit, showing a group chat message bubble. Soft morning light.",
+     "sound": "a mantel clock ticking close, a phone buzzing once on wood"
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "title": "The barn",
+   "layout": "L1",
+   "bed": "inside a big old stone barn used as an antiques shop: a wood-burning stove crackling, a radio playing classical music quietly, pigeons in the rafters, a lorry passing on a main road outside",
+   "panels": [
+    {
+     "knot": "barn",
+     "ink": "p5_barn",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "Inside a stone barn full of antique furniture, with a shaft of light from a high window.",
+     "prompt": "Inside a large old Cotswold stone barn turned into an antiques shop: dressers, chairs, grandfather clocks and gilt mirrors crowded together, every piece with a brown luggage label. A shaft of sunlight comes down from a high small window through dust. Hand-painted sign over the inner door: Restored with Sympathy.",
+     "sound": "pigeons cooing in barn rafters, a creaking floorboard, a clock ticking among many",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the dust drifts slowly in the shaft of sunlight. Nothing else moves. No camera movement."
+     },
+     "loopSrc": [
+      "media/p5-barn-tiny"
+     ]
+    },
+    {
+     "knot": "jeremy",
+     "ink": "p5_jeremy",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [
+      "jeremy"
+     ],
+     "alt": "Jeremy Cole wipes his hands on a cloth smeared with gold, smiling.",
+     "prompt": "JEREMY stands in his antiques barn among old furniture, wiping his hands on a soft cloth smeared with gold leaf, smiling a practised, friendly smile. A grandfather clock behind him.",
+     "sound": "a cloth being folded, a man clearing his throat, a stove crackling"
+    },
+    {
+     "knot": "brush",
+     "ink": "p5_brush",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [],
+     "alt": "A sign-writer's brush across a pot of gold size; behind it, a half-lettered black peal board.",
+     "prompt": "Close-up on a workbench in a barn: a long sign-writer's brush laid across a small pot of wet gold size, a book of gold leaf, a mahl stick. Behind them, propped up and half covered by a dust sheet, a black wooden board with neat gold serif lettering only partly painted, the top line done. Sunlight from a high window.",
+     "sound": "a fine brush tapped on the rim of a tin, a dust sheet rustling",
+     "peek": {
+      "src": "media/p5-brush-canary",
+      "every": 8,
+      "first": 3,
+      "at": [
+       58,
+       25
+      ],
+      "rate": 2,
+      "prompt": "Locked-off close shot, no camera movement. For the first second nothing moves. Then a small bright canary-yellow canary pops its head up from behind the top edge of the black board in the background, looks straight at the camera for about one second with a tiny tilt of the head, and ducks back down out of sight. Nothing else moves. The last frame is identical to the first frame."
+     }
+    },
+    {
+     "knot": "van",
+     "ink": "p5_van",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "A dark green van outside the barn with 'Cole Antiques' lettered on its side in gold.",
+     "prompt": "A dark green Transit-type van parked on gravel outside a big stone barn, its side lettered in gold in plain round sans-serif capitals: COLE ANTIQUES, and beneath in smaller letters RESTORED WITH SYMPATHY. A main road and fields behind. Overcast October light.",
+     "sound": "a van door sliding shut on gravel, traffic on a main road"
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "title": "The Plough",
+   "layout": "L3",
+   "bed": "a cosy village pub on quiz night: a log fire crackling, low conversation and laughter, glasses clinking, a landlord's voice over a small microphone in another part of the room, a dog sighing",
+   "panels": [
+    {
+     "knot": "fire",
+     "ink": "p6_fire",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [],
+     "alt": "A stone fireplace with a log fire; an old dog asleep on the rug in front of it.",
+     "prompt": "A big stone inglenook fireplace in an old English village pub with a log fire burning, horse brasses on the beam above, and an old black Labrador asleep on a rag rug in front of it. Warm low light.",
+     "sound": "a log fire crackling and spitting, a dog sighing in its sleep",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the flames of the log fire move. The dog does not move. No camera movement."
+     },
+     "loopSrc": [
+      "media/p6-fire-tiny"
+     ]
+    },
+    {
+     "knot": "quiz",
+     "ink": "p6_quiz",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A quiz answer sheet on the bar, handwritten in pencil, next to a pint glass.",
+     "prompt": "Close-up on a polished wooden pub bar: a lined sheet of paper with a short numbered list of quiz questions and answers handwritten in pencil in a neat old hand, next to a half-drunk pint of bitter and a beer mat. Warm pub light.",
+     "sound": "a pub quiz master's microphone feedback, a sheet of paper turned over, pub chatter"
+    },
+    {
+     "knot": "photo",
+     "ink": "p6_photo",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A framed photograph behind the bar of an old man in a bow tie holding a quiz microphone.",
+     "prompt": "Behind the bar of an old pub, among bottles and a brass bell, a framed colour photograph of a 70-year-old white British man with a neat white beard, a tweed jacket and a red bow tie, holding a small microphone, looking stern and pleased. A small black ribbon has been tied across the corner of the frame.",
+     "sound": "glasses being polished, optics clinking, quiet pub conversation"
+    },
+    {
+     "knot": "dilys",
+     "ink": "p6_dilys",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [
+      "dilys"
+     ],
+     "alt": "Dilys Rudd with her quiz team at a pub table, pencils and pints, pointing at the answer sheet.",
+     "prompt": "Wide shot of a pub quiz team at a crowded wooden table: DILYS in the middle, pencil behind her ear, jabbing a finger at an answer sheet while her team-mates argue around her with pints and crisps. Fire glow, beams, other teams in the background.",
+     "sound": "a pub quiz team arguing in loud whispers, a pencil tapping, laughter"
+    }
+   ]
+  },
+  {
+   "n": 7,
+   "title": "The schoolhouse",
+   "layout": "L2",
+   "bed": "an empty village playground on a windy October afternoon: a drone buzzing overhead, leaves blowing across tarmac, a swing chain, distant sheep",
+   "panels": [
+    {
+     "knot": "school",
+     "ink": "p7_school",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "An old Victorian village schoolhouse with a small bell turret and a For Sale board.",
+     "prompt": "An old Victorian village schoolhouse of honey-coloured stone with tall pointed windows and a small open bell turret on the roof, a 'Pike & Lowe — For Sale' estate agent's board by the gate. Autumn trees, an overcast sky, a black drone hovering above the roof.",
+     "sound": "a drone buzzing overhead, wind in autumn trees",
+     "peek": {
+      "src": "media/p7-school-canary",
+      "every": 8,
+      "first": 3,
+      "at": [
+       36,
+       18
+      ],
+      "prompt": "Locked-off camera, no camera movement. For the first second nothing moves. Then a small bright canary-yellow canary pops its head up inside the small open bell turret on the schoolhouse roof, looks straight at the camera for about one second with a tiny tilt of the head, and ducks back down out of sight. The drone stays where it is. The last frame is identical to the first frame."
+     }
+    },
+    {
+     "knot": "toby",
+     "ink": "p7_toby",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "toby"
+     ],
+     "alt": "Toby Pike flies a drone with a controller, grinning, in a gilet and loafers on the playground.",
+     "prompt": "TOBY stands in a school playground holding a drone remote controller with a screen clipped to it, looking up and grinning, in an autumn wind. His loafers are muddy.",
+     "sound": "a drone controller beeping, a man laughing, wind"
+    },
+    {
+     "knot": "drone",
+     "ink": "p7_drone",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [],
+     "alt": "A drone controller's screen showing an aerial view of the church tower at dusk, one window dark.",
+     "prompt": "Close-up of a drone remote controller's screen held in a man's hands: a recorded aerial video frame of an English village church and tower at dusk, seen from above, the small tower window dark, a time stamp in the corner. Shallow depth of field.",
+     "sound": "a drone controller beeping, video scrubbing, wind"
+    },
+    {
+     "knot": "swing",
+     "ink": "p7_swing",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "One old swing in an empty school playground, thick with paint.",
+     "prompt": "An empty Victorian school playground on a grey October afternoon: one old swing with chains painted many times over hangs from a painted iron frame, leaves on the tarmac, the school wall behind.",
+     "sound": "a swing creaking slowly in the wind, leaves skittering on tarmac",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the empty swing sways very slightly and a few leaves stir on the ground. No camera movement."
+     },
+     "loopSrc": [
+      "media/p7-swing-tiny"
+     ]
+    }
+   ]
+  },
+  {
+   "n": 8,
+   "title": "The peal board",
+   "layout": "L3",
+   "bed": "inside a church bell tower on a quiet afternoon: wind through louvres, pigeons above, the slow tick of a tower clock mechanism, a distant tractor",
+   "panels": [
+    {
+     "knot": "board",
+     "ink": "p8_board",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [],
+     "alt": "A tall black peal board with gold lettering on the whitewashed wall of the ringing chamber.",
+     "prompt": "A tall black-painted wooden peal board hanging on the whitewashed stone wall of a church bell-ringing chamber, lettered in gold in clean round sans-serif capitals in the style of Gill Sans: a heading, a date line with 1897, and six short lines of names. Afternoon light from a small window. A striped bell rope at one side.",
+     "sound": "wind whistling through tower louvres, a clock mechanism ticking slowly"
+    },
+    {
+     "knot": "glass",
+     "ink": "p8_glass",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A magnifying glass held over gold letters on black, enlarging a round R and a double-looped g.",
+     "prompt": "Extreme close-up: a brass-handled magnifying glass held over gold sans-serif lettering on a black board, enlarging the capital letter R with a straight kicked leg and a lowercase g with two closed loops like spectacles, in the style of Gill Sans. A woman's dark fingers on the handle.",
+     "sound": "a magnifying glass tapped on wood, a woman humming one note"
+    },
+    {
+     "knot": "achebe8",
+     "ink": "p8_achebe",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [
+      "achebe"
+     ],
+     "alt": "Dr Achebe in the ringing chamber with a pocket notebook, looking over her glasses.",
+     "prompt": "ACHEBE stands in a whitewashed church bell-ringing chamber holding a small notebook and a pen, looking over her glasses with a calm, amused, calculating expression. Bell ropes looped up behind her.",
+     "sound": "a pen clicking, a notebook page turning, wind in the louvres"
+    },
+    {
+     "knot": "motes",
+     "ink": "p8_motes",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The ringing chamber by daylight; a scarecrow in a navy mac and city shoes stands holding the one free bell rope.",
+     "prompt": "Wide shot of a whitewashed church bell-ringing chamber by afternoon daylight, dust in the light from the louvred window. All the bell ropes are looped up out of reach except one with a red, white and blue striped grip, and holding that rope with both stuffed hands, as if about to ring, stands a life-size handmade scarecrow with a sacking face, dressed in a navy rain mac, a white shirt and loosened dark tie, grey trousers and brown leather city shoes.",
+     "sound": "dust and stillness in a bell tower, a single rope creaking",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the dust drifts in the light from the window. The scarecrow and the rope do not move. No camera movement."
+     },
+     "loopSrc": [
+      "media/p8-motes-tiny"
+     ]
+    }
+   ]
+  },
+  {
+   "n": 9,
+   "title": "The rows",
+   "layout": "L1",
+   "bed": "a vicarage kitchen late at night: rain against the window, a kettle coming to the boil, an Aga ticking, a church clock striking eleven far off",
+   "panels": [
+    {
+     "knot": "table",
+     "ink": "p9_table",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "A kitchen table at night: the pencilled napkin, a printed email, three mugs and a plate of biscuits.",
+     "prompt": "Top-down view of an old pine kitchen table at night under a warm lamp: a pencilled paper napkin, a printed email on white paper with three short rows of digits, three mugs of tea, a plate of biscuits, a pair of reading glasses.",
+     "sound": "a mug set down on a wooden table, paper rustling, rain"
+    },
+    {
+     "knot": "laptop",
+     "ink": "p9_email",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [
+      "achebe"
+     ],
+     "alt": "Dr Achebe at a laptop showing a spreadsheet of numbers.",
+     "prompt": "ACHEBE sits at a kitchen table at night typing on an old laptop showing a spreadsheet of small numbers in rows, her glasses reflecting the screen, a mug at her elbow, concentrating.",
+     "sound": "laptop keys typing quickly, a kettle starting to boil"
+    },
+    {
+     "knot": "quaile",
+     "ink": "p9_quaile",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "quaile"
+     ],
+     "alt": "Quaile in a kitchen chair with her shoes off and a mug of tea, her hearing aid on the table.",
+     "prompt": "QUAILE sits back in a wooden kitchen chair at night, shoes off, feet on another chair, a mug of tea in both hands, her hearing aid lying on the table beside a plate of biscuits, watching someone off-frame with patient amusement.",
+     "sound": "a woman sipping tea, a biscuit snapped, a clock ticking"
+    },
+    {
+     "knot": "window",
+     "ink": "p9_window",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "A rainy kitchen window at night; across the churchyard, the tower with one lit window.",
+     "prompt": "A wide vicarage kitchen window at night streaked with rain; on the sill a pot of herbs. Through the glass, across a dark churchyard, the church tower with one small window lit.",
+     "sound": "rain on a window, wind, a church clock striking far off",
+     "peek": {
+      "src": "media/p9-window-canary",
+      "every": 8,
+      "first": 4,
+      "at": [
+       46,
+       46
+      ],
+      "rate": 1.5,
+      "prompt": "Locked-off camera, no camera movement. For the first second nothing moves. Then a small bright canary-yellow canary pops its head up from behind the pot of herbs on the windowsill, outside the rainy glass, looks straight at the camera for about one second with a tiny tilt of the head, and ducks back down out of sight. Rain runs down the glass. The last frame is identical to the first frame."
+     }
+    }
+   ]
+  },
+  {
+   "n": 10,
+   "title": "Sunday",
+   "layout": "L2",
+   "bed": "a village church during a Sunday harvest service: an organ playing softly, a congregation shifting in pews, a child whispering, a door creaking, bells ringing far up",
+   "panels": [
+    {
+     "knot": "nave",
+     "ink": "p10_nave",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [
+      "achebe"
+     ],
+     "alt": "The church nave at harvest: marrows and apples on the font, Dr Achebe at the lectern, a board under a purple cloth on the wall.",
+     "prompt": "Wide shot down the nave of an English village church at a Sunday harvest service: pews of villagers in coats, sheaves of wheat, apples and giant marrows heaped round the stone font, ACHEBE in a white surplice reading notices at a brass eagle lectern, and on the wall a tall board covered with a purple cloth. Autumn sunlight through stained glass.",
+     "sound": "an organ playing softly, a congregation rustling, a cough echoing in stone"
+    },
+    {
+     "knot": "pew",
+     "ink": "p10_pew",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "jeremy"
+     ],
+     "alt": "Jeremy Cole in the front pew in a suit, hands folded, very still.",
+     "prompt": "JEREMY sits in the front pew of a village church in a dark suit and tie instead of his usual clothes, hands folded on his knee, very still, looking straight ahead, a hymn book closed beside him. Harvest flowers on the pew end.",
+     "sound": "a hymn book closed, a wooden pew creaking"
+    },
+    {
+     "knot": "cloth",
+     "ink": "p10_cloth",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [],
+     "alt": "A hand lifting the corner of a purple cloth from a black board; the gold letters underneath are serifed and still glossy.",
+     "prompt": "Close-up: a man's hand lifting the corner of a purple velvet cloth from a black wooden board on a church wall; under it, gold serif capitals that still look freshly painted and slightly glossy. Stained-glass light.",
+     "sound": "velvet cloth sliding, a sharp intake of breath in a quiet church"
+    },
+    {
+     "knot": "bell",
+     "ink": "p10_bell",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "The tenor bell hung mouth-down in its wooden frame in the belfry, a small yellow bird perched on its wheel.",
+     "prompt": "Inside the belfry of an English church tower: a large old bronze bell hanging mouth-down in its oak frame with its big wooden wheel and rope, light slanting through louvres. A small bright canary-yellow canary is perched on the rim of the wheel, looking down.",
+     "sound": "a single church bell striking once, close and huge, its hum dying away",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the small yellow bird on the wheel tilts its head very slightly. The bell and wheel do not move. No camera movement."
+     },
+     "loopSrc": [
+      "media/p10-bell-tiny"
+     ]
+    }
+   ]
+  }
+ ]
+}

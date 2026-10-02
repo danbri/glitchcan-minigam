@@ -1,7 +1,9 @@
 # Delivery directions for eleven_v4 (eleven_v3 takes the same tags): each voiced line's spoken text with audio tags ([drily], [sighs] ...). The tags
 # are for the voice only; voices.json keeps the plain text (what the page shows) in "text" and the directed text in
 # "say". Run from cozyverse/steeplewyke: python3 tools/directions.py <lines.json from tools/lines.mjs> -> v2/voices.json
-import json, re, sys
+# A later chapter keeps its directions in <chapter>/directions.json ({"default": {...}, "say": {...}}):
+#   STORY=ch2 python3 tools/directions.py <lines.json> -> ch2/voices.json
+import json, os, re, sys
 DEFAULT = {
     'narrator': '[dry, unhurried]', 'quaile': '[drily]', 'sam': '[measured]', 'gerald': '[booming, pompous]',
     'margaret': '[cool, precise]', 'clement': '[nervous, quickly]', 'dilys': '[loud, cheerful]', 'toby': '[breezy, smug]',
@@ -140,9 +142,15 @@ SAY = {
 # pause tags are [short pause], [pause] and [long pause] (ElevenLabs' guide for v4).
 TAG = re.compile(r'\[[^\]]*\]\s*')
 def plain(s): return re.sub(r'\s+', ' ', TAG.sub('', s)).strip()
+STORY = os.environ.get('STORY', 'v2')
+if os.path.exists(f'{STORY}/directions.json'):
+    d = json.load(open(f'{STORY}/directions.json'))
+    DEFAULT, SAY = d['default'], d['say']
 lines = json.load(open(sys.argv[1]))
 voices = json.load(open('bible/characters.json'))
 vmap = {c['id']: c['voice'] for c in voices['characters']}; vmap['narrator'] = voices['narrator']['voice']
+vmap.update({k: v['voice'] for k, v in voices.get('extras', {}).items()})
+vmap = {k: v for k, v in vmap.items() if any(l['speaker'] == k for l in lines.values())}
 bad = []
 out = {}
 for k in sorted(lines):
@@ -152,6 +160,8 @@ for k in sorted(lines):
     out[k] = {'speaker': v['speaker'], 'text': v['text'], 'say': say}
 extra = [k for k in SAY if k not in lines]
 if bad or extra: sys.exit(f'directions out of step: {bad} {extra}')
-json.dump({'about': 'Every voiced line of marrow.ink: who speaks it, the exact words shown on the page ("text"), and what the voice is given ("say": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves "text" matches the ink; tools/directions.py writes this file. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3; the page plays one at random.',
-           'model': 'eleven_v4', 'takes': 2, 'voices': vmap, 'lines': out}, open('v2/voices.json', 'w'), indent=1, ensure_ascii=False)
+prev = json.load(open(f'{STORY}/voices.json')) if os.path.exists(f'{STORY}/voices.json') else {}
+extra_fields = {'recorded': prev['recorded']} if 'recorded' in prev else {}
+json.dump({**extra_fields, 'about': 'Every voiced line of the chapter\'s ink: who speaks it, the exact words shown on the page ("text"), and what the voice is given ("say": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves "text" matches the ink; tools/directions.py writes this file. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3; the page plays one at random.',
+           'model': 'eleven_v4', 'takes': 2, 'voices': vmap, 'lines': out}, open(f'{STORY}/voices.json', 'w'), indent=1, ensure_ascii=False)
 print(len(out), 'lines;', len(SAY), 'with their own direction')

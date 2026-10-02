@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Steeple Wyke: Plain Hunt</title>
+<link rel="icon" href="data:,">
+<style>
+/* Steeple Wyke, chapter 2: Plain Hunt. The chapter 1 (v2) host with this chapter's own media (media/): pictures,
+   sounds, voices, short ambient loops and the canary's peeks. Ten graphic-novel pages on one <novel-page>
+   (drift-city/novel/novel-page.js). pages.json holds the pages; plainhunt.ink is the story. "# page: N" swaps the panels and the page's sound bed;
+   each panel has its own sound loop that fades in over the bed while that panel is in view; voices duck both. */
+html, body { margin: 0; height: 100%; background: #0d0c0a; overflow: hidden; }
+novel-page { height: 100vh; height: 100dvh; padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box;
+  transition: opacity 0.35s ease; }
+novel-page.turning { opacity: 0; }
+novel-page > section { background: #000; }
+novel-page > section > img, novel-page > section > video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+}
+/* a still is a still: no slow zoom (it made readers wait for movement), and a soft vignette marks it as a
+   photograph, where a looping panel has none */
+/* a peek: a slight glitch on the clip and a few sparks round the spot while the moment plays */
+novel-page > section.peeking > video { animation: glitch 0.9s steps(1) infinite; }
+@keyframes glitch {
+  0%, 100% { transform: none; filter: none; }
+  12% { transform: translate(2px, -1px); filter: hue-rotate(8deg) saturate(1.3); }
+  14% { transform: none; filter: none; }
+  47% { transform: translate(-3px, 0) skewX(-1deg); filter: brightness(1.15) hue-rotate(-10deg); }
+  50% { transform: none; filter: none; }
+  81% { transform: translate(1px, 1px); filter: contrast(1.2); }
+  83% { transform: none; filter: none; }
+}
+novel-page > section > .spark { position: absolute; left: var(--peek-x, 50%); top: var(--peek-y, 50%); width: 6px; height: 6px;
+  margin: -3px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, #fff9c4 0%, #ffe14d 40%, rgba(255, 225, 77, 0) 70%); }
+novel-page > section.peeking > .spark { animation: spark 0.8s ease-out calc(var(--i) * 0.13s) 1 both; }
+@keyframes spark {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc((var(--i) - 2) * 14px), calc(-18px - var(--i) * 4px)) scale(1.4); }
+}
+@media (prefers-reduced-motion: reduce) { novel-page > section.peeking > video { animation: none; } novel-page > section > .spark { display: none; } }
+novel-page > section:not([data-loops])::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 60px 18px rgba(0, 0, 0, 0.55); }
+@media (prefers-reduced-motion: reduce) { novel-page { transition: none; } }
+.ink { box-sizing: border-box; height: clamp(180px, 32vh, 310px); overflow: auto; padding: 12px 16px 16px;
+  font: 16px/1.45 Georgia, serif; color: #ece6d6; border-top: 1px solid #2c2a25; }
+.ink p { margin: 0 0 8px; }
+.ink p b { font: 600 13px/1 system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #c9b27c; }
+.ink .choice { display: block; width: 100%; min-height: 44px; margin: 6px 0 0; padding: 10px 12px; text-align: left;
+  font: 15px/1.3 system-ui, sans-serif; color: inherit; background: #1c1b17; border: 1px solid #3b3830; border-radius: 8px; }
+#folio { position: fixed; top: max(8px, env(safe-area-inset-top, 0px)); left: 10px; z-index: 5; pointer-events: none;
+  font: 600 12px/1 system-ui, sans-serif; letter-spacing: 0.05em; color: #f3eee2; background: rgba(13, 12, 10, 0.62);
+  padding: 6px 9px; border-radius: 6px; }
+#mute { position: fixed; top: max(6px, env(safe-area-inset-top, 0px)); right: 8px; z-index: 5; min-width: 44px; min-height: 44px;
+  font: 18px system-ui, sans-serif; color: #f3eee2; background: rgba(13, 12, 10, 0.62); border: 0; border-radius: 8px; }
+#mute[hidden] { display: none; }
+#start { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px; background: rgba(13, 12, 10, 0.9) url(media/p1-tower.jpg) center / cover;
+  background-blend-mode: multiply; color: #ece6d6; font: 16px/1.4 Georgia, serif; text-align: center; padding: 24px; }
+#start h1 { font: 600 26px/1.2 Georgia, serif; margin: 0 0 4px; }
+#start p { margin: 0 0 8px; max-width: 30em; }
+#start button { min-width: 230px; min-height: 48px; font: 16px system-ui, sans-serif; color: #0d0c0a; background: #d8c48f;
+  border: 0; border-radius: 10px; }
+#start button:disabled { opacity: 0.55; }
+#start button.quiet { background: rgba(13, 12, 10, 0.5); color: #ece6d6; border: 1px solid #6a6252; }
+#start[hidden] { display: none; }
+#start .village { font: 14px/1.4 system-ui, sans-serif; color: #c9b27c; }
+#start .forget { min-width: 0; min-height: 36px; padding: 0 12px; font-size: 13px; }
+#memory { position: fixed; left: 50%; top: max(52px, calc(env(safe-area-inset-top, 0px) + 44px)); z-index: 6;
+  transform: translate(-50%, -8px); max-width: min(92vw, 30em); box-sizing: border-box; padding: 9px 14px;
+  font: italic 15px/1.35 Georgia, serif; color: #1a1712; background: #e8dcbc; border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45); opacity: 0; pointer-events: none; transition: opacity 0.4s, transform 0.4s; }
+#memory.on { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { #memory { transition: none; } }
+</style>
+</head>
+<body>
+<novel-page id="page" width="1080" height="1520" zoom="2.2" duration="1300" easing="cubic-bezier(0.7, 0, 0.25, 1)" knot="p1"
+            aria-label="Steeple Wyke, Plain Hunt: a page of four panels">
+  <div slot="ink" class="ink" aria-live="polite"></div>
+</novel-page>
+<div id="folio" aria-live="polite"></div>
+<div id="memory" role="status" aria-live="polite"></div>
+<button id="mute" type="button" aria-pressed="false" aria-label="Sound off" hidden>🔊</button>
+<div id="start" role="dialog" aria-labelledby="start-title">
+  <h1 id="start-title">Steeple Wyke: Plain Hunt</h1>
+  <p>Chapter two. A death in the bell tower, in ten pages. Tap a panel to go into it; tap again or swipe to come out. Keep a pencil handy. Headphones help.</p>
+  <p class="village" id="village" hidden></p>
+  <button id="go-sound" type="button" disabled>Loading…</button>
+  <button id="go-quiet" class="quiet" type="button" disabled>Begin, no sound</button>
+  <button id="forget" class="quiet forget" type="button" hidden>Make the village forget you</button>
+</div>
+<script src="../../../third_party/ink/ink-full.js"></script>
+<script type="module">
+import "../../../drift-city/novel/novel-page.js";
+const page = document.getElementById("page");
+const ink = page.querySelector(".ink");
+const folio = document.getElementById("folio");
+
+// ---- sound: one AudioContext, three buses. The bed loops for the whole page, the panel loop fades in over it
+// while its panel is in view, and a voice ducks both.
+const LEVEL = { bed: 0.55, panel: 0.8, duck: 0.35, voice: 1 };
+let ac = null, bus = null, sound = false, muted = false;
+const buffers = new Map();
+const load = (url) => {
+  if (!ac) return Promise.resolve(null);
+  if (!buffers.has(url)) buffers.set(url, fetch(url).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`${url}: HTTP ${r.status}`))))
+    .then((b) => ac.decodeAudioData(b)).catch((e) => { console.warn("[marrow] sound:", e.message || e); return null; }));
+  return buffers.get(url);
+};
+const ramp = (g, v, t = 0.6) => { const now = ac.currentTime; g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(v, now + t); };
+function startAudio() {
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  const master = ac.createGain(); master.connect(ac.destination);
+  const mk = () => { const g = ac.createGain(); g.connect(master); return g; };
+  bus = { master, bed: mk(), panel: mk(), voice: mk() };
+  bus.bed.gain.value = LEVEL.bed; bus.panel.gain.value = LEVEL.panel; bus.voice.gain.value = LEVEL.voice;
+  document.addEventListener("visibilitychange", () => (document.hidden ? ac.suspend() : !muted && ac.resume()));
+}
+// A looping layer: fades out what it was playing and fades in the new file. `which` names it for the test hooks.
+function layer(target) {
+  let cur = null;
+  return {
+    get file() { return cur?.url || null; },
+    async play(url) {
+      if (!ac || cur?.url === url) return;
+      const old = cur; cur = url ? { url } : null;
+      if (old?.src) { old.g.gain.setTargetAtTime(0, ac.currentTime, 0.4); old.src.stop(ac.currentTime + 2.5); }
+      if (!url) return;
+      const buf = await load(url);
+      if (!buf || cur?.url !== url) return;
+      const g = ac.createGain(); g.gain.value = 0; g.connect(target());
+      const src = ac.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(g); src.start();
+      g.gain.setTargetAtTime(1, ac.currentTime, 0.5);
+      Object.assign(cur, { src, g });
+    },
+  };
+}
+const bed = layer(() => bus.bed), panelLoop = layer(() => bus.panel);
+
+// Voices: each "# voice: id" queues one of its two takes; a new step cuts the line before it, as a page turn would.
+let queue = [], playing = null;
+// a reader going straight back and forth (tap in, out, in) should not hear the same lines again: a line that played
+// in one of the last two steps is skipped. Counted in steps, not lines: a quick reader hears only the first line of
+// each step, and "the last three lines" then silenced a genuine "Where next?" three steps on.
+const stepsHeard = [new Set(), new Set()]; // the two steps before this one
+let thisStep = new Set();
+function playNext() {
+  if (playing || !queue.length || !sound) return;
+  const id = queue.shift();
+  if (stepsHeard.some((s) => s.has(id))) { setTimeout(playNext, 0); return; }
+  thisStep.add(id);
+  const url = `media/vo/${id}-${1 + Math.floor(Math.random() * 2)}.mp3`;
+  const mine = { url, src: null };
+  playing = mine;
+  ramp(bus.bed, LEVEL.bed * LEVEL.duck, 0.3); ramp(bus.panel, LEVEL.panel * LEVEL.duck, 0.3);
+  load(url).then((buf) => {
+    if (playing !== mine) return;
+    if (!buf) return done(mine);
+    const src = ac.createBufferSource(); src.buffer = buf; src.connect(bus.voice);
+    src.onended = () => done(mine);
+    mine.src = src; src.start();
+  });
+}
+function done(mine) {
+  if (playing !== mine) return;
+  playing = null;
+  if (!queue.length) { ramp(bus.bed, LEVEL.bed, 1.2); ramp(bus.panel, LEVEL.panel, 1.2); }
+  setTimeout(playNext, 280);
+}
+function cutVoice() { if (playing?.src) { playing.src.onended = null; playing.src.stop(); } playing = null; queue = []; }
+
+// ---- loops: a panel may have several short videos that all begin and end on its still picture. Two video elements
+// take turns, stacked: the waiting one sits at its first frame, and 0.3 s before the playing one ends it starts and
+// fades in over it. A hard switch at "ended" showed a frame of poster or black (visible flicker on a phone), and a
+// clip's last frame is never quite its first. novel-page plays every video in a panel after a tap; the waiting one
+// must stay at its first frame until its turn.
+const canWebm = document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== "";
+const FADE = 0.3;
+function loopPlayer(section, bases, poster) {
+  const count = bases.length;
+  const pick = (not) => { let k; do k = Math.floor(Math.random() * count); while (count > 1 && k === not); return k; };
+  const src = (k) => `${bases[k]}.${canWebm ? "webm" : "mp4"}`;
+  const make = () => {
+    const v = document.createElement("video");
+    Object.assign(v, { poster, muted: true, playsInline: true, preload: "auto" });
+    v.setAttribute("muted", ""); v.setAttribute("playsinline", "");
+    v.style.transition = `opacity ${FADE}s linear`;
+    section.appendChild(v); return v;
+  };
+  let k = pick(-1), front = make(), back = make(), fading = false;
+  front.src = src(k); front.autoplay = true; front.style.opacity = "1";
+  back.src = src(k = pick(k)); back.style.opacity = "0";
+  const playing = (v) => { const p = v.play(); if (p?.catch) p.catch(() => {}); };
+  const handOver = () => {
+    if (fading || back.readyState < 2) return;            // not decoded yet: let the front hold its last frame
+    fading = true;
+    back.currentTime = 0; playing(back);
+    back.style.zIndex = "1"; front.style.zIndex = "0"; back.style.opacity = "1";
+    setTimeout(() => {
+      const old = front; front = back; back = old;
+      back.pause(); back.style.opacity = "0"; back.style.zIndex = "0";
+      back.src = src(k = pick(k)); back.load();
+      fading = false;
+    }, FADE * 1000 + 30);
+  };
+  const watch = () => {
+    if (!section.isConnected) return;
+    if (!front.paused && front.duration && front.duration - front.currentTime < FADE) handOver();
+    requestAnimationFrame(watch);
+  };
+  requestAnimationFrame(watch);
+  for (const v of [front, back]) {
+    v.addEventListener("ended", () => { if (v === front) handOver(); });
+    v.addEventListener("canplay", () => { if (v === back && front.ended) handOver(); });
+    v.addEventListener("play", () => { if (v === back && !fading) { v.pause(); v.currentTime = 0; } });
+  }
+  section.dataset.loops = String(count);
+}
+
+// ---- a peek: a short clip shown every `every` seconds, with the panel's still held in between, so one second of
+// material fills any longer cycle. The clip plays from `from` to `to` (seconds; default all of it) at `rate`, then
+// cuts back to its first frame, which matches the still. While it plays the panel has the class "peeking" (a slight
+// glitch, and sparks at `at`, in % of the panel). Method, tools and measurements: the photo-novel skill, "Peek panels".
+function peekPlayer(section, peek, poster) {
+  const v = document.createElement("video");
+  Object.assign(v, { poster, muted: true, playsInline: true, preload: "auto" });
+  v.setAttribute("muted", ""); v.setAttribute("playsinline", "");
+  v.src = `${peek.src}.${canWebm ? "webm" : "mp4"}`;
+  section.appendChild(v);
+  if (peek.at) { section.style.setProperty("--peek-x", `${peek.at[0]}%`); section.style.setProperty("--peek-y", `${peek.at[1]}%`); }
+  for (let i = 0; i < 5; i++) { const sp = document.createElement("i"); sp.className = "spark"; sp.style.setProperty("--i", i); section.appendChild(sp); }
+  let showing = false;
+  const rest = () => { showing = false; section.classList.remove("peeking"); v.pause(); v.currentTime = 0; };
+  const show = () => {
+    if (!section.isConnected) return;
+    setTimeout(show, peek.every * 1000);
+    if (document.hidden || page.paused || v.readyState < 2) return;   // skip a beat rather than stutter
+    showing = true; section.classList.add("peeking");
+    v.currentTime = peek.from ?? 0; v.playbackRate = peek.rate ?? 1;
+    const p = v.play(); if (p?.catch) p.catch(rest);
+  };
+  // watch every frame, not "timeupdate" (about four a second, so the cut back could be a quarter-second late)
+  const watch = () => { if (!showing) return; if (v.currentTime >= (peek.to ?? Infinity) || v.ended) rest(); else requestAnimationFrame(watch); };
+  v.addEventListener("playing", () => { if (showing) requestAnimationFrame(watch); });
+  // novel-page plays every video in a panel after a tap; outside its moment this one keeps to the still
+  v.addEventListener("play", () => { if (!showing) { v.pause(); v.currentTime = 0; } });
+  v.addEventListener("loadeddata", () => { v.currentTime = 0; }, { once: true });
+  setTimeout(show, (peek.first ?? peek.every) * 1000);
+  section.dataset.loops = "peek";
+}
+
+// ---- pages. Every picture and sound is in this chapter's media/; a panel's "loopSrc" names its loop files and
+// "peek" its canary clip (without the extension), relative to this page.
+const SHARED = "media/";
+const data = await fetch("pages.json").then((r) => r.json());
+let pageNo = 0;
+function buildPage(n) {
+  const p = data.pages.find((q) => q.n === n);
+  if (!p || n === pageNo) return;
+  pageNo = n;
+  const lay = data.layouts[p.layout];
+  for (const s of [...page.querySelectorAll(":scope > section")]) s.remove();
+  for (const panel of p.panels) {
+    const s = document.createElement("section");
+    s.id = panel.knot; s.setAttribute("knot", panel.ink); s.setAttribute("points", lay[panel.slot]);
+    s.setAttribute("aria-label", panel.alt);
+    s.dataset.sound = `${SHARED}sfx/p${n}-${panel.knot}.mp3`;
+    const pic = `${SHARED}p${n}-${panel.knot}.jpg`;
+    if (panel.peek?.src) {
+      peekPlayer(s, panel.peek, pic);
+    } else if (panel.loopSrc?.length) {
+      loopPlayer(s, panel.loopSrc, pic);
+    } else {
+      const img = document.createElement("img"); img.src = pic; img.alt = ""; img.decoding = "async"; s.appendChild(img);
+    }
+    // where the crop centres when the picture's shape is not the panel's
+    if (panel.focus) for (const m of s.querySelectorAll("img, video")) m.style.objectPosition = panel.focus;
+    page.insertBefore(s, ink);
+  }
+  page.setAttribute("knot", `p${n}`);
+  page.setAttribute("aria-label", `Page ${n} of ${data.pages.length}, ${p.title}: four panels`);
+  folio.textContent = `${n} / ${data.pages.length} · ${p.title}`;
+  page.classList.add("turning"); requestAnimationFrame(() => requestAnimationFrame(() => page.classList.remove("turning")));
+  if (ac) { bed.play(`${SHARED}sfx/bed-${n}.mp3`); panelLoop.play(null); for (const panel of p.panels) load(`${SHARED}sfx/p${n}-${panel.knot}.mp3`); }
+}
+
+page.addEventListener("panelchange", (e) => {
+  const el = e.detail.index >= 0 ? page.panels[e.detail.index] : null;
+  panelLoop.play(el?.dataset.sound || null);
+});
+
+// ---- the village remembers: your standing with each person, kept in this browser between readings under one key
+// that every Steeple Wyke chapter reads (chapter 1 wrote the first four people). The story owns the numbers (rel_<who>); the page loads them before a
+// reading (and copies them to was_<who>, what they were when it began) and saves them after each "# memory:" tag.
+const VILLAGE_KEY = "cozyverse.steeplewyke.village";
+const PEOPLE = ["toby", "margaret", "dilys", "quaile", "win", "achebe"];
+const readVillage = () => { try { return JSON.parse(localStorage.getItem(VILLAGE_KEY)) || {}; } catch { return {}; } };
+const writeVillage = (v) => { try { localStorage.setItem(VILLAGE_KEY, JSON.stringify(v)); } catch { /* private window */ } };
+function loadVillage() {
+  const v = readVillage();
+  for (const who of PEOPLE) {
+    const n = Number.isInteger(v[who]) ? v[who] : 0;
+    story.variablesState[`rel_${who}`] = n; story.variablesState[`was_${who}`] = n;
+  }
+}
+function saveVillage() {
+  const v = readVillage();
+  for (const who of PEOPLE) v[who] = story.variablesState[`rel_${who}`];
+  writeVillage(v);
+}
+const memoryBox = document.getElementById("memory");
+let memoryTimer = 0, memories = [];
+function remember(text) {
+  memories.push(text);
+  if (memoryBox.classList.contains("on")) return;
+  const next = () => {
+    const t = memories.shift();
+    if (!t) { memoryBox.classList.remove("on"); return; }
+    memoryBox.textContent = t; memoryBox.classList.add("on");
+    clearTimeout(memoryTimer); memoryTimer = setTimeout(() => { memoryBox.classList.remove("on"); setTimeout(next, 450); }, 4200);
+  };
+  next();
+}
+
+let story = null;
+page.addEventListener("storytags", (e) => {
+  const tags = e.detail.tags.map((t) => t.trim());
+  for (const t of tags) {
+    const m = /^page\s*:\s*(\d+)$/i.exec(t);
+    if (m) buildPage(+m[1]);
+    if (/^restart$/i.test(t)) setTimeout(() => { story.ResetState(); loadVillage(); pageNo = 0; page.play(story); });
+    const mem = /^memory\s*:\s*(\w+)\s+([+-]\d+)\s+(.+)$/i.exec(t);
+    if (mem) { saveVillage(); remember(mem[3]); }
+  }
+  const ids = tags.map((t) => /^voice\s*:\s*([\w-]+)$/i.exec(t)?.[1]).filter(Boolean);
+  if (!ids.length || !voiced) return;
+  cutVoice();
+  stepsHeard.shift(); stepsHeard.push(thisStep); thisStep = new Set();
+  if (sound && !muted) { queue = ids; playNext(); }
+});
+
+// A line that starts "Name:" is that person speaking: show the name as a small label.
+new MutationObserver(() => {
+  for (const p of ink.querySelectorAll("p:not([data-said])")) {
+    p.dataset.said = "";
+    const m = /^([A-Z][a-z]+): (.*)$/s.exec(p.textContent);
+    if (m) { p.textContent = ""; const b = document.createElement("b"); b.textContent = m[1]; p.append(b, " ", m[2]); }
+  }
+}).observe(ink, { childList: true });
+
+window.__marrow = window.__plainhunt = {
+  get page() { return pageNo; }, get sound() { return sound && !muted; }, get audio() { return ac?.state || null; },
+  get bed() { return bed.file; }, get panelSound() { return panelLoop.file; }, get playing() { return playing?.url || null; },
+  get story() { return story; }, get voiced() { return voiced; }, get village() { return readVillage(); }, get memory() { return memoryBox.classList.contains("on") ? memoryBox.textContent : null; },
+};
+
+// the voices are recorded when voices.json says so ("recorded": true); until then the page plays its sound only
+const voiced = await fetch("voices.json").then((r) => r.json()).then((v) => v.recorded !== false, () => false);
+try {
+  const r = await fetch("plainhunt.ink");
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  story = new inkjs.Story(new inkjs.Compiler(await r.text()).Compile().ToJson());
+} catch (e) { console.error("plainhunt.ink:", e); }
+buildPage(1);
+
+const mute = document.getElementById("mute");
+mute.addEventListener("click", () => {
+  muted = !muted;
+  mute.textContent = muted ? "🔇" : "🔊"; mute.setAttribute("aria-pressed", String(muted));
+  mute.setAttribute("aria-label", muted ? "Sound on" : "Sound off");
+  if (muted) { cutVoice(); ac.suspend(); } else ac.resume();
+});
+const begin = (withSound) => {
+  sound = withSound;
+  if (story) loadVillage();
+  if (sound) {
+    startAudio(); mute.hidden = false;
+    const n = pageNo; pageNo = 0; buildPage(n);
+  }
+  document.getElementById("start").hidden = true;
+  if (story) page.play(story);
+};
+document.getElementById("go-sound").addEventListener("click", () => begin(true));
+document.getElementById("go-quiet").addEventListener("click", () => begin(false));
+// the buttons wait for the story: a tap before it has loaded would do nothing
+const go = document.getElementById("go-sound");
+go.textContent = "Begin, with sound";
+for (const b of document.querySelectorAll("#start button")) b.disabled = !story;
+if (!story) go.textContent = "The story did not load";
+// what the village already thinks of you, from earlier readings
+const villageLine = document.getElementById("village"), forget = document.getElementById("forget");
+function showVillage() {
+  const v = readVillage(), words = (n) => (n >= 2 ? "a friend" : n === 1 ? "warm" : n === -1 ? "wary" : n <= -2 ? "cold" : null);
+  const known = PEOPLE.filter((w) => words(v[w] || 0)).map((w) => `${w[0].toUpperCase()}${w.slice(1)} is ${words(v[w])}`);
+  villageLine.hidden = forget.hidden = !known.length;
+  villageLine.textContent = known.length ? `The village remembers you. ${known.join(", ")}.` : "";
+}
+forget.addEventListener("click", () => { writeVillage({}); showVillage(); });
+showVillage();
+</script>
+</body>
+</html>
