@@ -15,7 +15,7 @@ canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .hud{position:absolute;left:10px;top:10px;background:#111c;padding:6px 9px;border-radius:8px;font-size:12px;pointer-events:none;max-width:calc(100% - 40px)}
 #labels{position:absolute;inset:0;pointer-events:none}
 .lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:1px 5px;border-radius:5px;background:#0d1013d9;border:1px solid #39424b;color:var(--fg);pointer-events:auto;cursor:pointer}
-.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}
+.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}.lb.wt{border-color:var(--water);color:#bfe3ff}
 .panel{padding:12px 16px;background:var(--panel);border-top:1px solid var(--line)}
 .row{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;margin-top:8px}
 button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px}
@@ -45,7 +45,7 @@ details{margin-top:10px}summary{cursor:pointer}
   </div>
   <div class="row">
     <label>Buildings <select id="bmode"><option value="solid">solid</option><option value="ghost">ghost</option><option value="off">off</option></select></label>
-    <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label>
+    <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label><label><input type="checkbox" id="showFloors"> Floors (Canary Wharf)</label>
   </div>
   <div class="row">
     <span class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></span>
@@ -186,6 +186,15 @@ const L = {};
     for (let i = 3; i < q.length; i += 3) beam(road ? R : M, [q[i - 3], q[i - 1] + (road ? .3 : .8), q[i - 2]], [q[i], q[i + 2] + (road ? .3 : .8), q[i + 1]], w, road ? .4 : 1.4, col);
   }
   L.railOpen = M.upload(); L.roads = R.upload(); }
+// floor plates inside buildings with a known floor count (Canary Wharf box): evenly spaced from base to roof
+// drawn as outline rings so the floors read through the ghosted walls
+{ const M = new Mesh(), FC = [.98, .85, .45];
+  for (const b of A.buildings) if (b.fl) {
+    const f = dec(b.p), starts = [0, ...(b.holes || []), f.length / 2], y0 = b.b + (b.mh || 0), step = (b.h - (b.mh || 0)) / b.fl;
+    for (let k = 1; k < b.fl; k++) { const y = y0 + k * step;
+      for (let r = 0; r < starts.length - 1; r++) for (let i = starts[r]; i < starts[r + 1]; i++) { const j = i + 1 < starts[r + 1] ? i + 1 : starts[r]; beam(M, [f[2 * i], y, f[2 * i + 1]], [f[2 * j], y, f[2 * j + 1]], .5, .35, FC); } }
+  }
+  L.floors = M.upload(); }
 let tunnelKey = '';
 function buildTunnels(P) {
   const key = `${P.dmax}|${P.grad}|${P.ddeep}`; if (key === tunnelKey) return; tunnelKey = key;
@@ -236,11 +245,16 @@ const seen = new Set(), labels = [];
 for (const p of U.pois) if ((p.kind === 'station' || p.kind === 'place') && p.name && !seen.has(p.kind + p.name)) { seen.add(p.kind + p.name); labels.push({ ...p, y: p.g, pri: p.kind === 'station' ? 3 : 1, cls: p.kind === 'station' ? 'st' : 'pl' }); }
 const wdBy = new Map(A.places.map(p => [p.wd, p]));
 for (const p of A.places) if (/skyscraper|tower|high-rise|dock|tunnel|bridge|shopping|pier|cable car|aerial tramway|arena|basin|museum/i.test(p.cls.join(' '))) labels.push({ name: p.name, x: p.x, z: p.z, y: p.g, wd: p.wd, pri: /skyscraper|dock|tunnel/i.test(p.cls.join(' ')) ? 2 : 1, cls: '' });
+// named docks, basins and creeks, at the mean of their outline points; water level from the LiDAR
+for (const w of A.water) if (w.n && !seen.has('w' + w.n) && !/Pond|Fountain|Lake|Times Square|Stairs/.test(w.n)) {
+  seen.add('w' + w.n); const f = dec(w.p); let x = 0, z = 0; const n = f.length / 2; for (let i = 0; i < n; i++) { x += f[2 * i]; z += f[2 * i + 1]; }
+  labels.push({ name: w.n, x: x / n, z: z / n, y: w.level, pri: 2, cls: 'wt', water: w });
+}
 labels.forEach(l => { const el = document.createElement('button'); el.type = 'button'; el.className = 'lb ' + l.cls; el.textContent = l.name; el.onclick = () => showInfo(l); labelBox.appendChild(el); l.el = el; });
 labels.sort((a, b) => b.pri - a.pri);
 function showInfo(l) {
   const w = l.wd && wdBy.get(l.wd), facts = w && w.facts ? Object.entries(w.facts).map(([k, v]) => `<div><span class="small">${esc(k)}:</span> ${esc(v.join('; '))}</div>`).join('') : '';
-  info.innerHTML = `<b>${esc(l.name)}</b> ${w && w.desc ? `<span class="small">${esc(w.desc)}</span>` : ''}${facts}<div class="small">Ground ${l.y} m OD (LiDAR)${l.mode ? ' · ' + esc(l.mode) : ''}</div>` +
+  info.innerHTML = `<b>${esc(l.name)}</b> ${w && w.desc ? `<span class="small">${esc(w.desc)}</span>` : ''}${facts}<div class="small">${l.water ? `Water surface ${l.water.level} m OD in the LiDAR pass${l.water.tidal ? ' (tidal: one tide state)' : ''}` : `Ground ${l.y} m OD (LiDAR)`}${l.mode ? ' · ' + esc(l.mode) : ''}</div>` +
     `<div class="small">${l.wd ? `<a href="https://www.wikidata.org/wiki/${esc(l.wd)}">Wikidata ${esc(l.wd)}</a>` : ''}${w && w.wp ? ` · <a href="${esc(w.wp)}">Wikipedia</a>` : ''}${l.osm ? ` · <a href="https://www.openstreetmap.org/${esc(l.osm)}">OSM</a>` : ''}</div>`;
   info.style.display = 'block';
 }
@@ -276,6 +290,7 @@ function render() {
   drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if (!cutOn) drawMesh(L.water, 1);
   if ($('showUnder').checked) drawMesh(L.under, 1);
   if ($('showRoads').checked) drawMesh(L.roads, 1);
+  if ($('showFloors').checked) drawMesh(L.floors, 1);
   if (bm === 'solid') drawMesh(L.bld, 1);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (bm === 'ghost') drawMesh(L.bld, .22);
@@ -304,6 +319,7 @@ const end = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
 cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .001)); unview(); draw(); }, { passive: false });
 ['bmode', 'showLabels', 'showRoads', 'showUnder'].forEach(id => $(id).onchange = draw);
+$('showFloors').onchange = () => { if ($('showFloors').checked && $('bmode').value === 'solid') $('bmode').value = 'ghost'; draw(); };
 const FMT = { cut: v => +v >= 250 ? 'off' : v + ' m OD', vz: v => v + '×', storey: v => v + ' m', dmax: v => v + ' m', grad: v => v, ddeep: v => v + ' m' };
 function outs() { for (const k of ids) $(k + 'O').value = FMT[k](inp[k].value); }
 ids.forEach(k => inp[k].oninput = () => { outs(); if (k === 'storey') textTables(); unview(); draw(); });

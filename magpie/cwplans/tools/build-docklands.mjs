@@ -130,7 +130,10 @@ for (const o of [...outlines, ...parts]) {
   if (o.hasParts || h <= minH) continue;   // drawn by its parts
   const m = poly(o.rings); if (!m) continue;
   bstat[s]++;
-  buildings.push({ ...m, b: r1(base), h: r1(h), ...(minH ? { mh: r1(minH) } : {}), s: SRC[s], ...(o.focus && t.name ? { n: t.name } : {}), ...(o.focus && t.wikidata ? { wd: t.wikidata } : {}) });
+  // floors above ground (Canary Wharf box only): OSM building:levels (minus building:min_level on a part), else Wikidata P1101
+  const lvT = num(t['building:levels']), lvMin = num(t['building:min_level']) || 0, lvWd = !o.parent && t.wikidata ? wdNum(t.wikidata, 'P1101') : NaN;
+  const floors = isFinite(lvT) ? lvT - (o.parent ? lvMin : 0) : lvWd;
+  buildings.push({ ...m, b: r1(base), h: r1(h), ...(minH ? { mh: r1(minH) } : {}), s: SRC[s], ...(o.focus && t.name ? { n: t.name } : {}), ...(o.focus && t.wikidata ? { wd: t.wikidata } : {}), ...(o.focus && floors > 1 ? { fl: Math.round(floors) } : {}) });
 }
 console.log(`buildings ${buildings.length} (outlines ${outlines.length}, parts ${parts.length}) ${JSON.stringify(bstat)}, basements ${basements.length}`);
 
