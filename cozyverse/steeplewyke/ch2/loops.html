@@ -55,6 +55,7 @@ const motion = {
   "p1-tower-loop1": 0.24, "p1-tower-loop2": 0.28, "p4-cottage-tiny": 0.10, "p5-barn-loop1": 0.03, "p5-barn-tiny": 0.11,
   "p6-fire-loop1": 0.31, "p6-fire-loop2": 0.34, "p6-fire-tiny": 0.66, "p7-swing-loop1": 0.05, "p7-swing-loop2": 0.06,
   "p7-swing-tiny": 0.16, "p8-motes-tiny": 0.08, "p10-bell-tiny": 0.24,
+  "p4-cottage-wind1": 0.29, "p5-barn-steam1": 0.18, "p5-barn-steam2": 0.22, "p7-swing-wide1": 0.41,
   "p5-brush-canary": 0.08, "p7-school-canary": 0.02, "p9-window-canary": 0.02,
 };
 const data = await fetch("pages.json").then((r) => r.json());
@@ -63,7 +64,7 @@ for (const pg of data.pages) for (const x of pg.panels) {
   for (const s of x.loopSrc || []) used.set(s.replace(/^media\//, ""), { page: pg.n, panel: x });
   if (x.peek) peeks.set(x.peek.src.replace(/^media\//, ""), { page: pg.n, panel: x });
 }
-const panelOf = (name) => name.replace(/-(loop\d|tiny|canary)$/, "");
+const panelOf = (name) => name.replace(/-((loop|steam|wide|wind)\d|tiny|canary)$/, "");
 const cards = Object.keys(motion).sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1)) || a.localeCompare(b)).map((name) => {
   const kind = peeks.has(name) ? "peek" : used.has(name) ? "used" : "old";
   const info = used.get(name) || peeks.get(name);
