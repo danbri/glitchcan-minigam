@@ -10,7 +10,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const inkjs = createRequire(import.meta.url)('inkjs/full');
 // the story folder: v2 unless STORY names another (STORY=. for the first version)
 const story = join(here, '..', process.env.STORY || 'v2');
-const src = readFileSync(join(story, readdirSync(story).find((f) => f.endsWith('.ink'))), 'utf8');
+const src = readFileSync(join(story, process.env.INK || readdirSync(story).find((f) => /^[^.]+\.ink$/.test(f))), 'utf8');
 const json = new inkjs.Compiler(src).Compile().ToJson();
 const compiled = JSON.parse(json);  // parsed once: a Story made from the object skips re-reading the JSON text
 // the story's own variables, from the Story API: every true/false one is a clue (seen_ ones are places), was_ ones are

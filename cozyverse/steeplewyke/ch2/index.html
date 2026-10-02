@@ -68,6 +68,8 @@ novel-page > section:not([data-loops])::after { content: ""; position: absolute;
 #start[hidden] { display: none; }
 #start .village { font: 14px/1.4 system-ui, sans-serif; color: #c9b27c; }
 #start .forget { min-width: 0; min-height: 36px; padding: 0 12px; font-size: 13px; }
+#start .langs { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font: 14px system-ui, sans-serif; }
+#start .langs select { min-height: 36px; margin-left: 6px; font: inherit; color: #0d0c0a; background: #e8dcbc; border: 0; border-radius: 6px; }
 #memory { position: fixed; left: 50%; top: max(52px, calc(env(safe-area-inset-top, 0px) + 44px)); z-index: 6;
   transform: translate(-50%, -8px); max-width: min(92vw, 30em); box-sizing: border-box; padding: 9px 14px;
   font: italic 15px/1.35 Georgia, serif; color: #1a1712; background: #e8dcbc; border-radius: 8px;
@@ -91,6 +93,7 @@ novel-page > section:not([data-loops])::after { content: ""; position: absolute;
   <button id="go-sound" type="button" disabled>Loading…</button>
   <button id="go-quiet" class="quiet" type="button" disabled>Begin, no sound</button>
   <button id="forget" class="quiet forget" type="button" hidden>Make the village forget you</button>
+  <p class="langs" id="langs" hidden></p>
 </div>
 <script src="../../../third_party/ink/ink-full.js"></script>
 <script type="module">
@@ -152,7 +155,7 @@ function playNext() {
   const id = queue.shift();
   if (stepsHeard.some((s) => s.has(id))) { setTimeout(playNext, 0); return; }
   thisStep.add(id);
-  const url = `media/vo/${id}-${1 + Math.floor(Math.random() * takesOf(id))}.mp3`;
+  const url = `${voDir}${id}-${1 + Math.floor(Math.random() * takesOf(id))}.mp3`;
   const mine = { url, src: null };
   playing = mine;
   ramp(bus.bed, LEVEL.bed * LEVEL.duck, 0.3); ramp(bus.panel, LEVEL.panel * LEVEL.duck, 0.3);
@@ -259,7 +262,6 @@ function peekPlayer(section, peek, poster) {
 // "rare" mode one panel with a peek clip is chosen at random for each reading, and the canary shows there once, a
 // random number of seconds ("after") after that page is shown; if the page turns first, the wait starts again the
 // next time the page is shown. ?canary=<panel id> chooses the panel and shortens the wait to two seconds.
-const params = new URLSearchParams(location.search);
 const canary = { panel: null, done: false };
 function pickCanary() {
   const all = data.pages.flatMap((p) => p.panels.filter((x) => x.peek?.src).map((x) => x.knot));
@@ -278,6 +280,24 @@ function canaryPeek(panel) {
 // "peek" its canary clip (without the extension), relative to this page.
 const SHARED = "media/";
 const data = await fetch("pages.json").then((r) => r.json());
+
+// ---- languages. ?lang=it shows the story and the page in Italian (plainhunt.it.ink, lang/it.json); ?voice=it plays
+// the Italian voices (voices.it.json, media/vo/it/). They are chosen apart, so the text can be the subtitles of the
+// voices in another language; voices that are not recorded fall back to English. tools/lang-check.mjs proves a
+// translation behaves like the English story. The start screen offers both choices and reloads with them.
+const params = new URLSearchParams(location.search);
+const LANGS = data.languages || { en: "English" };
+const lang = LANGS[params.get("lang")] ? params.get("lang") : "en";
+const getJson = (u) => fetch(u).then((r) => (r.ok ? r.json() : Promise.reject(new Error(u))));
+const ui = await getJson(`lang/${lang}.json`).catch(() => getJson("lang/en.json"));
+const voiceFile = (l) => (l === "en" ? "voices.json" : `voices.${l}.json`);
+const recordedIn = Object.fromEntries(await Promise.all(Object.keys(LANGS).map((l) =>
+  getJson(voiceFile(l)).then((v) => [l, v.recorded !== false], () => [l, false]))));
+const wanted = params.get("voice") || lang;
+const voiceLang = recordedIn[wanted] ? wanted : "en";
+const voDir = voiceLang === "en" ? "media/vo/" : `media/vo/${voiceLang}/`;
+const say = (key, vars = {}) => String(ui[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+document.documentElement.lang = lang;
 let pageNo = 0;
 function buildPage(n) {
   const p = data.pages.find((q) => q.n === n);
@@ -288,7 +308,7 @@ function buildPage(n) {
   for (const panel of p.panels) {
     const s = document.createElement("section");
     s.id = panel.knot; s.setAttribute("knot", panel.ink); s.setAttribute("points", lay[panel.slot]);
-    s.setAttribute("aria-label", panel.alt);
+    s.setAttribute("aria-label", ui.alt?.[`p${n}-${panel.knot}`] || panel.alt);
     s.dataset.sound = `${SHARED}sfx/p${n}-${panel.knot}.mp3`;
     const pic = `${SHARED}p${n}-${panel.knot}.jpg`;
     const peek = panel.peek?.src ? canaryPeek(panel) : null;
@@ -304,8 +324,9 @@ function buildPage(n) {
     page.insertBefore(s, ink);
   }
   page.setAttribute("knot", `p${n}`);
-  page.setAttribute("aria-label", `Page ${n} of ${data.pages.length}, ${p.title}: four panels`);
-  folio.textContent = `${n} / ${data.pages.length} · ${p.title}`;
+  const title = ui.pages?.[n] || p.title;
+  page.setAttribute("aria-label", say("pageOf", { n, total: data.pages.length, title }));
+  folio.textContent = `${n} / ${data.pages.length} · ${title}`;
   page.classList.add("turning"); requestAnimationFrame(() => requestAnimationFrame(() => page.classList.remove("turning")));
   if (ac) { bed.play(`${SHARED}sfx/bed-${n}.mp3`); panelLoop.play(null); for (const panel of p.panels) load(`${SHARED}sfx/p${n}-${panel.knot}.mp3`); }
 }
@@ -358,7 +379,8 @@ page.addEventListener("storytags", (e) => {
     const mem = /^memory\s*:\s*(\w+)\s+([+-]\d+)\s+(.+)$/i.exec(t);
     if (mem) { saveVillage(); remember(mem[3]); }
   }
-  const ids = tags.map((t) => /^voice\s*:\s*([\w-]+)$/i.exec(t)?.[1]).filter(Boolean);
+  // a voice list may be partly recorded ("only": the ids that are): the other lines stay silent
+  const ids = tags.map((t) => /^voice\s*:\s*([\w-]+)$/i.exec(t)?.[1]).filter((id) => id && (!voiceList.only || voiceList.only.includes(id)));
   if (!ids.length || !voiced) return;
   cutVoice();
   stepsHeard.shift(); stepsHeard.push(thisStep); thisStep = new Set();
@@ -377,17 +399,17 @@ new MutationObserver(() => {
 window.__marrow = window.__plainhunt = {
   get page() { return pageNo; }, get sound() { return sound && !muted; }, get audio() { return ac?.state || null; },
   get bed() { return bed.file; }, get panelSound() { return panelLoop.file; }, get playing() { return playing?.url || null; },
-  get story() { return story; }, get voiced() { return voiced; }, get canary() { return { ...canary }; }, get village() { return readVillage(); }, get memory() { return memoryBox.classList.contains("on") ? memoryBox.textContent : null; },
+  get story() { return story; }, get voiced() { return voiced; }, get lang() { return lang; }, get voiceLang() { return voiceLang; }, get canary() { return { ...canary }; }, get village() { return readVillage(); }, get memory() { return memoryBox.classList.contains("on") ? memoryBox.textContent : null; },
 };
 
 // the voices are recorded when voices.json says so ("recorded": true); until then the page plays its sound only.
 // Each line has "takes" takes (media/vo/<id>-1.mp3 ...), and the lines in "secondTake" have one more: a second take is
 // recorded only where the first one is weak.
-const voiceList = await fetch("voices.json").then((r) => r.json()).catch(() => ({ recorded: false }));
+const voiceList = await fetch(voiceFile(voiceLang)).then((r) => r.json()).catch(() => ({ recorded: false }));
 const voiced = voiceList.recorded !== false;
 const takesOf = (id) => (voiceList.takes || 2) + ((voiceList.secondTake || []).includes(id) ? 1 : 0);
 try {
-  const r = await fetch("plainhunt.ink");
+  const r = await fetch(lang === "en" ? "plainhunt.ink" : `plainhunt.${lang}.ink`);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   story = new inkjs.Story(new inkjs.Compiler(await r.text()).Compile().ToJson());
 } catch (e) { console.error("plainhunt.ink:", e); }
@@ -397,7 +419,7 @@ const mute = document.getElementById("mute");
 mute.addEventListener("click", () => {
   muted = !muted;
   mute.textContent = muted ? "🔇" : "🔊"; mute.setAttribute("aria-pressed", String(muted));
-  mute.setAttribute("aria-label", muted ? "Sound on" : "Sound off");
+  mute.setAttribute("aria-label", muted ? say("soundOn") : say("soundOff"));
   if (muted) { cutVoice(); ac.suspend(); } else ac.resume();
 });
 const begin = (withSound) => {
@@ -416,16 +438,37 @@ document.getElementById("go-sound").addEventListener("click", () => begin(true))
 document.getElementById("go-quiet").addEventListener("click", () => begin(false));
 // the buttons wait for the story: a tap before it has loaded would do nothing
 const go = document.getElementById("go-sound");
-go.textContent = "Begin, with sound";
+// the page's own words in the chosen language, and the language choice
+document.title = say("title");
+document.getElementById("start-title").textContent = say("title");
+document.querySelector("#start > p:not([class])").textContent = say("intro");
+page.setAttribute("aria-label", say("pageLabel"));
+document.getElementById("go-quiet").textContent = say("beginQuiet");
+document.getElementById("forget").textContent = say("forget");
+mute.setAttribute("aria-label", say("soundOff"));
+const langs = document.getElementById("langs");
+if (Object.keys(LANGS).length > 1) {
+  const pick = (labelKey, key, value, options) => {
+    const l = document.createElement("label"); l.textContent = say(labelKey);
+    const sel = document.createElement("select");
+    for (const [code, name] of options) { const o = new Option(name, code, false, code === value); sel.add(o); }
+    sel.addEventListener("change", () => { const q = new URLSearchParams(location.search); q.set(key, sel.value); location.search = q; });
+    l.append(sel); langs.append(l);
+  };
+  pick("textLanguage", "lang", lang, Object.entries(LANGS));
+  pick("voiceLanguage", "voice", voiceLang, Object.entries(LANGS).filter(([c]) => recordedIn[c]));
+  langs.hidden = false;
+}
+go.textContent = say("beginSound");
 for (const b of document.querySelectorAll("#start button")) b.disabled = !story;
-if (!story) go.textContent = "The story did not load";
+if (!story) go.textContent = say("notLoaded");
 // what the village already thinks of you, from earlier readings
 const villageLine = document.getElementById("village"), forget = document.getElementById("forget");
 function showVillage() {
-  const v = readVillage(), words = (n) => (n >= 2 ? "a friend" : n === 1 ? "warm" : n === -1 ? "wary" : n <= -2 ? "cold" : null);
-  const known = PEOPLE.filter((w) => words(v[w] || 0)).map((w) => `${w[0].toUpperCase()}${w.slice(1)} is ${words(v[w])}`);
+  const v = readVillage(), words = (n) => (n === 0 ? null : ui.standing[String(Math.max(-2, Math.min(2, n)))]);
+  const known = PEOPLE.filter((w) => words(v[w] || 0)).map((w) => say("villageIs", { who: ui.people?.[w] || w, word: words(v[w]) }));
   villageLine.hidden = forget.hidden = !known.length;
-  villageLine.textContent = known.length ? `The village remembers you. ${known.join(", ")}.` : "";
+  villageLine.textContent = known.length ? `${say("villageIntro")} ${known.join(", ")}.` : "";
 }
 forget.addEventListener("click", () => { writeVillage({}); showVillage(); });
 showVillage();

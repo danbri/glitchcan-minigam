@@ -23,6 +23,7 @@ VAR named4 = false
 VAR guesses = 0
 VAR asked_dilys = false
 VAR asked_band = false
+VAR win_phone = false
 VAR visits = 0
 VAR seen_win = false
 VAR seen_barn = false
@@ -64,8 +65,9 @@ VAR was_achebe = 0
     # voice: p1-open
     St Aldhelm's, a Tuesday in October, twenty past seven. Three months after the Marrow Show, the interim vicar has talked you into learning to ring the bells.
 }
-+ [Meet the tower captain] -> p1_win
-+ [Look up at the tower] -> p1_tower
++ {p1_win == 0} [Meet the tower captain] -> p1_win
++ {p1_win > 0} [Go up to the ringing chamber] -> p2
++ {p1_tower == 0} [Look up at the tower] -> p1_tower
 
 === p1_tower ===
 # panel: tower
@@ -73,8 +75,9 @@ VAR was_achebe = 0
 Rooks go round the spire. Up in the ringing chamber, a light is on.
 # voice: p1a-2
 The bicycle rack by the lychgate is empty. Hugh Daventry rings the treble, edits the parish magazine and sets the Wednesday quiz at the Plough. He usually leaves his bicycle there by a quarter past.
-+ [Meet the vicar] -> p1_achebe
-+ [Meet the tower captain] -> p1_win
++ {p1_achebe == 0} [Meet the vicar] -> p1_achebe
++ {p1_win == 0} [Meet the tower captain] -> p1_win
++ {p1_win > 0} [Go up to the ringing chamber] -> p2
 
 === p1_achebe ===
 # panel: achebe
@@ -93,7 +96,8 @@ Achebe: She said you'd come if you'd said you would.
 The Reverend Dr Ruth Achebe has been the interim vicar since August. Before she was ordained she priced pension risk for an insurer in Croydon.
 -> p1_achebe_choices
 = p1_achebe_choices
-+ [Meet the tower captain] -> p1_win
++ {p1_win == 0} [Meet the tower captain] -> p1_win
++ {p1_win > 0} [Go up to the ringing chamber] -> p2
 
 === p1_win ===
 # panel: win
@@ -110,7 +114,8 @@ She is seventy-eight. She speaks a little too loudly, and she watches your mouth
 Win: You sit on the bench with your feet in, and you don't touch a rope. A bell can lift a grown man to the ceiling.
 -> p1_win_choices
 = p1_win_choices
-+ [Ask what plain hunt is] -> p1_napkin
++ {p1_napkin == 0} [Ask what plain hunt is] -> p1_napkin
++ {p1_napkin > 0} [Go up to the ringing chamber] -> p2
 
 === p1_napkin ===
 # panel: napkin
@@ -154,8 +159,9 @@ Win: Six bells. On five, the tenor stays down.
     # voice: p2-open
     The ringing chamber, up fourteen stone steps: six ropes with striped woollen grips, a bench, a tea tray and a blackboard. Five ringers, and one rope tied up out of reach.
 }
-+ [Read the blackboard] -> p2_list
-+ [Sit on the bench and watch] -> p2_ropes
++ {p2_list == 0} [Read the blackboard] -> p2_list
++ {p2_ropes == 0} [Sit on the bench and watch] -> p2_ropes
++ {p2_ropes > 0} [Wait] -> p2_dark
 
 === p2_tea ===
 # panel: tea
@@ -168,8 +174,9 @@ Margaret Pike pours tea from a flask on the windowsill. She puts out two cups, l
     # voice: p2a-2
     Margaret: Sergeant. Milk's in the jam jar.
 }
-+ [Read the blackboard] -> p2_list
-+ [Sit on the bench and watch] -> p2_ropes
++ {p2_list == 0} [Read the blackboard] -> p2_list
++ {p2_ropes == 0} [Sit on the bench and watch] -> p2_ropes
++ {p2_ropes > 0} [Wait] -> p2_dark
 
 === p2_list ===
 # panel: list
@@ -185,7 +192,8 @@ On the blackboard, in Hugh's square capitals: Tuesday. One, Hugh. Two, Margaret.
     # voice: p2b-3
     Dilys: Don't change the board, love. Hugh likes to rub it out himself.
 }
-+ [Sit on the bench and watch] -> p2_ropes
++ {p2_ropes == 0} [Sit on the bench and watch] -> p2_ropes
++ {p2_ropes > 0} [Wait] -> p2_dark
 
 === p2_ropes ===
 # panel: ropes
@@ -237,8 +245,10 @@ Then she shouts your name.
     # voice: p3-open
     Hugh Daventry is at the foot of the tower stair, where it comes down into the vestry. Dr Achebe is kneeling beside him. She looks up and shakes her head.
 }
-+ [Look at the stair] -> p3_stair
-+ [Look at his hand] -> p3_proof
++ {p3_stair == 0} [Look at the stair] -> p3_stair
++ {not proof} [Look at his hand] -> p3_proof
++ {p3_quaile == 0} [Wait for Quaile] -> p3_quaile
++ {p3_quaile > 0} [Go back to Quaile] -> p3_quaile
 
 === p3_stair ===
 # panel: stair
@@ -253,8 +263,9 @@ The stair is stone, narrow, and turns to the left. Fourteen steps up to the ring
 }
 # voice: p3a-4
 Achebe: I came down for the kettle and he was here. I haven't moved him.
-+ [Look at his hand] -> p3_proof
-+ [Wait for Quaile] -> p3_quaile
++ {not proof} [Look at his hand] -> p3_proof
++ {p3_quaile == 0} [Wait for Quaile] -> p3_quaile
++ {p3_quaile > 0} [Go back to Quaile] -> p3_quaile
 
 === p3_proof ===
 # panel: proof
@@ -266,7 +277,8 @@ His right hand is closed on the corner of a page, torn off. Printed on it: Peal 
 Sam: A proof. For the parish magazine.
 # voice: p3b-3
 Sam: Somebody has the rest of that page.
-+ [Wait for Quaile] -> p3_quaile
++ {p3_quaile == 0} [Wait for Quaile] -> p3_quaile
++ {p3_quaile > 0} [Go back to Quaile] -> p3_quaile
 
 === p3_quaile ===
 # panel: quaile
@@ -289,7 +301,8 @@ Sam: I rang both, ma'am.
 Quaile: Old man, stone stair, lights out. The coroner will say he fell, and the coroner sits on Friday. The band are cold and want their beds. You can ask them one thing tonight.
 -> p3_quaile_choices
 = p3_quaile_choices
-+ [Question the band] -> p3_band
++ {not asked_band} [Question the band] -> p3_band
++ {asked_band} [Let them go home] -> p3_home
 
 === p3_band ===
 # panel: band
@@ -465,15 +478,17 @@ Quaile: That's the day gone. Vicarage, Sam.
     # voice: p4-open
     Win Haskett's cottage, the last in Church Row. A brass bell for a knocker, which she cannot hear, and beside it a button that makes a lamp flash inside.
 }
-+ [Press the button] -> p4_win
-+ [Read the sign on the door] -> p4_cottage
++ {p4_win == 0} [Press the button] -> p4_win
++ {p4_win > 0} [Leave her to her flowers] -> inquiries
++ {p4_cottage == 0} [Read the sign on the door] -> p4_cottage
 
 === p4_cottage ===
 # panel: cottage
 # voice: p4a-1
 A card in the window, in capitals: Shoes off. This means you.
-+ [Take your shoes off] -> p4_shoes
-+ [Press the button] -> p4_win
++ {p4_shoes == 0} [Take your shoes off] -> p4_shoes
++ {p4_win == 0} [Press the button] -> p4_win
++ {p4_win > 0} [Leave her to her flowers] -> inquiries
 
 === p4_shoes ===
 {p4_shoes == 1:
@@ -504,7 +519,8 @@ Win tears one page off the notepad for your questions and pushes it across the t
 = p4_win_choices
 + {p4_bell == 0 && p4_tuesday == 0} [Write: Which bell do you ring?] -> p4_bell
 + {p4_bell == 0 && p4_tuesday == 0} [Write: What happened on Tuesday?] -> p4_tuesday
-+ [Look at her phone] -> p4_phone
++ {not win_phone} [Look at her phone] -> p4_phone
++ {p4_bell > 0 || p4_tuesday > 0} [Leave her to her flowers] -> inquiries
 
 === p4_bell ===
 # panel: notes
@@ -513,7 +529,7 @@ Win tears one page off the notepad for your questions and pushes it across the t
 She writes a large 4, underlines it twice, and adds: Forty-one years.
 # voice: p4c-3
 Underneath, Quaile writes: Is the tea always like this? Win writes: Yes.
-+ [Look at her phone] -> p4_phone
++ {not win_phone} [Look at her phone] -> p4_phone
 + [Leave her to her flowers] -> inquiries
 
 === p4_tuesday ===
@@ -526,12 +542,13 @@ Win writes for a long time.
 Hugh never came. Moved up one. Plain hunt on five, tenor down. I had the 3. Lights out at 8.14. Could not see the ropes, so I kept mine going and counted.
 # voice: p4d-3
 Underneath, underlined: Somebody dropped out. Ask Dilys for Glenys's tape.
-+ [Look at her phone] -> p4_phone
++ {not win_phone} [Look at her phone] -> p4_phone
 + [Leave her to her flowers] -> inquiries
 
 === p4_phone ===
 # panel: phone
 {p4_win == 0: -> p4_win}
+~ win_phone = true
 ~ text = true
 # voice: p4e-1
 Her phone, on the mantelpiece by the clock. The band's group, Tuesday, five past eight. Hugh: On my way up. Something to say about the board. H.
@@ -559,8 +576,9 @@ Win: I read it when I got home. Phones stay in coats in my tower.
     # voice: p5-open
     Cole Antiques: a stone barn on the Cirencester road, full of other people's chairs. Over the door, a sign: Restored with Sympathy.
 }
-+ [Find Jeremy Cole] -> p5_jeremy
-+ [Look round the barn] -> p5_barn
++ {p5_jeremy == 0} [Find Jeremy Cole] -> p5_jeremy
++ {p5_jeremy > 0} [Leave him to his dresser] -> inquiries
++ {p5_barn == 0} [Look round the barn] -> p5_barn
 
 === p5_barn ===
 # panel: barn
@@ -568,7 +586,8 @@ Win: I read it when I got home. Phones stay in coats in my tower.
 Every chair has a price on a brown luggage label. The cheapest is four hundred pounds.
 # voice: p5a-2
 A radio on the workbench is playing the shipping forecast.
-+ [Find Jeremy Cole] -> p5_jeremy
++ {p5_jeremy == 0} [Find Jeremy Cole] -> p5_jeremy
++ {p5_jeremy > 0} [Leave him to his dresser] -> inquiries
 
 === p5_jeremy ===
 # panel: jeremy
@@ -585,7 +604,8 @@ He wipes his hands on a cloth that has gold on it. He has time for one question 
 = p5_jeremy_choices
 + {p5_where == 0 && p5_board == 0} [Ask where he was at a quarter past eight] -> p5_where
 + {p5_where == 0 && p5_board == 0} [Ask about the peal board] -> p5_board
-+ [Look at the trestle at the back] -> p5_brush
++ {not brush} [Look at the trestle at the back] -> p5_brush
++ {p5_where > 0 || p5_board > 0} [Leave him to his dresser] -> inquiries
 
 === p5_where ===
 # panel: jeremy
@@ -595,9 +615,10 @@ He wipes his hands on a cloth that has gold on it. He has time for one question 
 Jeremy: On the five, ringing, every blow, start to finish. Five is my bell. Ask anyone in the band.
 # voice: p5c-2
 Jeremy: When the lights went I kept going. You do. Rope's in your hands.
-+ [Look at the trestle at the back] -> p5_brush
-+ [Go out past his van] -> p5_van
++ {not brush} [Look at the trestle at the back] -> p5_brush
++ {p5_van == 0} [Go out past his van] -> p5_van
 
++ [Leave him to his dresser] -> inquiries
 === p5_board ===
 # panel: jeremy
 {p5_jeremy == 0: -> p5_jeremy}
@@ -607,9 +628,10 @@ Jeremy: The Jubilee board? Found it in a barn at Bibury, under a tarpaulin. The 
 Jeremy: The parish paid nine thousand pounds, out of the roof fund. A pub in Bath offered me twelve.
 # voice: p5d-3
 Quaile: The roof fund has had a hard year.
-+ [Look at the trestle at the back] -> p5_brush
-+ [Go out past his van] -> p5_van
++ {not brush} [Look at the trestle at the back] -> p5_brush
++ {p5_van == 0} [Go out past his van] -> p5_van
 
++ [Leave him to his dresser] -> inquiries
 === p5_brush ===
 # panel: brush
 {p5_jeremy == 0: -> p5_jeremy}
@@ -620,8 +642,9 @@ On a trestle at the back, a board under a dust sheet, and a sign-writer's brush 
 Under the sheet: a peal board, half lettered. Jubilee, eighteen ninety-seven. These letters have small feet on them, like the lettering on old shop fronts.
 # voice: p5e-3
 Jeremy: A commission. Another church. I'm not at liberty.
-+ [Go out past his van] -> p5_van
++ {p5_van == 0} [Go out past his van] -> p5_van
 
++ [Leave him to his dresser] -> inquiries
 === p5_van ===
 # panel: van
 {p5_jeremy == 0: -> p5_jeremy}
@@ -649,14 +672,18 @@ His van says Cole Antiques in gold, in plain round letters with no feet at all.
     # voice: p6-open
     The Plough. The quiz goes ahead: Hugh set the questions on Sunday, and the landlord reads them out from Hugh's sheet. Six teams and a fire.
 }
-+ [Listen to the questions] -> p6_quiz
-+ [Look behind the bar] -> p6_photo
++ {not quiz} [Listen to the questions] -> p6_quiz
++ {p6_photo == 0} [Look behind the bar] -> p6_photo
++ {p6_dilys == 0} [Find Dilys's team] -> p6_dilys
++ [Leave the quiz] -> inquiries
 
 === p6_fire ===
 # panel: fire
 # voice: p6a-1
 The fire has been lit since four. The dog in front of it has not moved since five.
-+ [Listen to the questions] -> p6_quiz
++ {not quiz} [Listen to the questions] -> p6_quiz
++ {p6_dilys == 0} [Find Dilys's team] -> p6_dilys
++ [Leave the quiz] -> inquiries
 
 === p6_quiz ===
 # panel: quiz
@@ -667,18 +694,20 @@ Landlord: Round two. Question seven. In what year did Monotype release the typef
 At the bar, the landlord shows you Hugh's answer sheet. Against question seven, in pencil: Nineteen twenty-eight. And under it, smaller: Then look up in the tower.
 # voice: p6b-3
 Quaile: He was going to ask the whole village. Then tell them the answer in print.
-+ [Look behind the bar] -> p6_photo
-+ [Find Dilys's team] -> p6_dilys
++ {p6_photo == 0} [Look behind the bar] -> p6_photo
++ {p6_dilys == 0} [Find Dilys's team] -> p6_dilys
 
++ [Leave the quiz] -> inquiries
 === p6_photo ===
 # panel: photo
 # voice: p6c-1
 Behind the bar, a photograph of Hugh at last year's quiz, in a bow tie, with the microphone.
 # voice: p6c-2
 Landlord: He never let the same team win twice running. Said it was bad for the village.
-+ [Listen to the questions] -> p6_quiz
-+ [Find Dilys's team] -> p6_dilys
++ {not quiz} [Listen to the questions] -> p6_quiz
++ {p6_dilys == 0} [Find Dilys's team] -> p6_dilys
 
++ [Leave the quiz] -> inquiries
 === p6_dilys ===
 # panel: dilys
 {p6_dilys > 1:
@@ -732,20 +761,23 @@ Landlord: He never let the same team win twice running. Said it was bad for the 
     # voice: p7-open
     The old schoolhouse, closed since nineteen ninety-one, with a For Sale board. Toby Pike is flying a drone over it for the brochure.
 }
-+ [Talk to Toby] -> p7_toby
-+ [Look at the playground] -> p7_swing
++ {p7_toby == 0} [Talk to Toby] -> p7_toby
++ {p7_toby > 0} [Leave him to his buyers] -> inquiries
++ {p7_swing == 0} [Look at the playground] -> p7_swing
 
 === p7_school ===
 # panel: school
 # voice: p7e-1
 Tall church windows, a bell turret with no bell in it, and a board by the gate: Pike and Lowe, For Sale. Above the roof a drone hangs in the wind, filming.
-+ [Talk to Toby] -> p7_toby
++ {p7_toby == 0} [Talk to Toby] -> p7_toby
++ {p7_toby > 0} [Leave him to his buyers] -> inquiries
 
 === p7_swing ===
 # panel: swing
 # voice: p7a-1
 One swing left in the playground. The chains have been painted so many times they no longer clink.
-+ [Talk to Toby] -> p7_toby
++ {p7_toby == 0} [Talk to Toby] -> p7_toby
++ {p7_toby > 0} [Leave him to his buyers] -> inquiries
 
 === p7_toby ===
 # panel: toby
@@ -769,7 +801,8 @@ One swing left in the playground. The chains have been painted so many times the
 -> p7_toby_choices
 = p7_toby_choices
 + {was_toby <= -1 && p7_sorry == 0} [Say sorry for last summer] -> p7_sorry
-+ {was_toby > -1 || p7_sorry > 0} [Ask what his drone saw on Tuesday] -> p7_drone
++ {(was_toby > -1 || p7_sorry > 0) && p7_drone == 0} [Ask what his drone saw on Tuesday] -> p7_drone
++ {p7_drone > 0} [Leave him to his buyers] -> inquiries
 
 === p7_sorry ===
 {p7_sorry == 1:
@@ -814,8 +847,9 @@ Toby: Can I still use the bit before eight?
     # voice: p8-open
     The ringing chamber by daylight. Dr Achebe is waiting with a magnifying glass from the vestry, and on the wall, the Jubilee board.
 }
-+ [Look at the board] -> p8_board
-+ [Talk to Dr Achebe] -> p8_achebe
++ {p8_board == 0} [Look at the board] -> p8_board
++ {p8_achebe == 0} [Talk to Dr Achebe] -> p8_achebe
++ [Leave the tower] -> inquiries
 
 === p8_board ===
 # panel: board
@@ -823,9 +857,10 @@ Toby: Can I still use the bit before eight?
 Black, with gold letters. Saint Aldhelm's. On the Diamond Jubilee of Her Majesty Queen Victoria, the twenty-second of June, eighteen ninety-seven, a peal of five thousand and forty changes. Six names.
 # voice: p8a-2
 Achebe: The parish bought it in March. Mr Cole found it in a barn. Hugh unveiled it. Hugh was not happy about something, and wouldn't say what.
-+ [Look closely with the glass] -> p8_glass
-+ [Talk to Dr Achebe] -> p8_achebe
++ {not typeface} [Look closely with the glass] -> p8_glass
++ {p8_achebe == 0} [Talk to Dr Achebe] -> p8_achebe
 
++ [Leave the tower] -> inquiries
 === p8_glass ===
 # panel: glass
 {p8_board == 0: -> p8_board}
@@ -843,9 +878,10 @@ Quaile: My father had a railway timetable in those letters. He kept it in the do
 }
 # voice: p8b-5
 Achebe: Mr Cole told us he had regilded them.
-+ [Talk to Dr Achebe] -> p8_achebe
-+ [Look at the treble rope] -> p8_motes
++ {p8_achebe == 0} [Talk to Dr Achebe] -> p8_achebe
++ {p8_motes == 0} [Look at the treble rope] -> p8_motes
 
++ [Leave the tower] -> inquiries
 === p8_achebe ===
 # panel: achebe8
 {p8_achebe > 1:
@@ -862,7 +898,7 @@ Achebe: They were all in the dark with me. I can't give odds on people I couldn'
 -> p8_achebe_choices
 = p8_achebe_choices
 + {p8_you == 0} [Ask what she makes of you] -> p8_you
-+ [Look at the treble rope] -> p8_motes
++ {p8_motes == 0} [Look at the treble rope] -> p8_motes
 + [Leave the tower] -> inquiries
 
 === p8_you ===
@@ -883,7 +919,7 @@ Achebe: They were all in the dark with me. I can't give odds on people I couldn'
     # voice: p8d-3
     Achebe: She told me. She's bought a second chair.
 }
-+ [Look at the treble rope] -> p8_motes
++ {p8_motes == 0} [Look at the treble rope] -> p8_motes
 + [Leave the tower] -> inquiries
 
 === p8_motes ===
@@ -916,8 +952,8 @@ Achebe: It was here when I unlocked this morning. I thought one of the band had 
 = p9_choices
 + {rows && not bell4} [Read Glenys's email] -> p9_email
 + {bell4 && not named4} [Work out who rang that bell] -> p9_who
-+ [Go through your notebook] -> p9_notes
-+ [Ask Quaile what she thinks] -> p9_quaile
++ {p9_notes == 0} [Go through your notebook] -> p9_notes
++ {p9_quaile == 0} [Ask Quaile what she thinks] -> p9_quaile
 + [Go to bed. Sunday is the service] -> p10
 
 === p9_table ===
@@ -957,11 +993,11 @@ Achebe: Then it comes back late and clumsy, like somebody out of breath. Win sto
 Achebe: She can't tell which bell it was. She only hears the notes. But we have Win's napkin.
 -> p9_guess
 = p9_guess
-+ [The one went silent] -> p9_one
-+ [The two went silent] -> p9_two
-+ [The three went silent] -> p9_three
-+ [The four went silent] -> p9_four
-+ [The five went silent] -> p9_five
++ {p9_one == 0 && not bell4} [The one went silent] -> p9_one
++ {p9_two == 0 && not bell4} [The two went silent] -> p9_two
++ {p9_three == 0 && not bell4} [The three went silent] -> p9_three
++ {not bell4} [The four went silent] -> p9_four
++ {p9_five == 0 && not bell4} [The five went silent] -> p9_five
 + [Leave it for now] -> p9.p9_choices
 
 // what each silent bell would have sounded like, taken out of the napkin's rows 4 2 5 1 3, 4 5 2 3 1, 5 4 3 2 1 and
@@ -1017,10 +1053,10 @@ Sam: The four stopped for forty seconds, in the dark, and came back out of breat
     # voice: p9e-1
     Achebe: Don't ask me who had it. I was on a rope for the fourth time in my life. I couldn't have told you which one was mine.
 }
-+ [Win] -> p9_win
-+ [Jeremy] -> p9_jeremy
-+ [Dilys] -> p9_dilys
-+ [Margaret] -> p9_margaret
++ {p9_win == 0} [Win] -> p9_win
++ {p9_jeremy == 0} [Jeremy] -> p9_jeremy
++ {p9_dilys == 0} [Dilys] -> p9_dilys
++ {p9_margaret == 0} [Margaret] -> p9_margaret
 + [Leave it for now] -> p9.p9_choices
 
 === p9_win ===
@@ -1165,8 +1201,9 @@ Sam: Margaret had the treble. Her first time on it. Glenys would have heard the 
 -> p10_choices
 = p10_choices
 + {p10_cloth == 0} [Lift the cloth] -> p10_cloth
-+ [Listen to the notices] -> p10_nave
-+ [Stand up] -> p10_stand
++ {p10_nave == 0} [Listen to the notices] -> p10_nave
++ {accused == ""} [Stand up] -> p10_stand
++ {accused != ""} [Stay for the ringing] -> p10_bell
 
 === p10_nave ===
 # panel: nave
@@ -1328,9 +1365,7 @@ After the service the band rings for the harvest. Five ropes. Win back on the fo
     Jeremy Cole rings the five, every blow.
 }
 # voice: p10i-4
-When they stand, the tenor, which nobody has rung all week, speaks once on its own.
-# voice: p10i-5
-Up on its wheel, something small and yellow looks down the tower at you.
+The ropes come to rest. Win puts her hand flat on the wall, then looks up at the tenor's rope, still tied to its hook.
 -> credits
 
 === credits ===
