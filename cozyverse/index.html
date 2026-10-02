@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Graphic novel experiments</title>
+<meta name="description" content="Every graphic-novel style experiment in glitchcan-minigam: photographic panels, ink stories, sound, voices and loops.">
+<link rel="icon" href="data:,">
+<style>
+/* Index of the graphic-novel experiments, oldest first, so each one reads as the next step from the last.
+   Covers are the experiments' own pictures; a card's loop plays only while it is on screen and never with
+   reduced motion. The facts come from each experiment's pages.json, voices.json and media/. */
+:root {
+  --bg: #f3ede2; --card: #fffaf1; --ink: #2a241c; --dim: #6c6153; --rule: #ddd2bf; --accent: #8a4b1c; --chip: #efe5d4;
+  --btn: #2a241c; --btn-ink: #fffaf1;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12100d; --card: #1d1a15; --ink: #ece4d6; --dim: #a89c8a; --rule: #3a342b; --accent: #e0a46c; --chip: #2a251e;
+    --btn: #ece4d6; --btn-ink: #12100d;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12100d; --card: #1d1a15; --ink: #ece4d6; --dim: #a89c8a; --rule: #3a342b; --accent: #e0a46c; --chip: #2a251e;
+  --btn: #ece4d6; --btn-ink: #12100d;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 16px/1.5 Georgia, "Iowan Old Style", "Times New Roman", serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+header { margin-bottom: 28px; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.15; margin: 0 0 8px; font-weight: 600; }
+header p { margin: 0 0 8px; max-width: 62ch; color: var(--dim); }
+.list { display: grid; gap: 24px; }
+article { display: grid; grid-template-columns: 1fr; background: var(--card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+@media (min-width: 760px) { article { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } }
+.cover { position: relative; background: #000; aspect-ratio: 16 / 9; }
+@media (min-width: 760px) { .cover { aspect-ratio: auto; min-height: 300px; } }
+.cover img, .cover video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover video { opacity: 0; transition: opacity 0.6s ease; }
+.cover video.on { opacity: 1; }
+.num { position: absolute; left: 12px; top: 12px; background: #000b; color: #fff; font: 600 0.8rem/1 system-ui, sans-serif;
+  padding: 6px 9px; border-radius: 4px; letter-spacing: 0.04em; }
+.body { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+.meta { font: 0.8rem/1.3 system-ui, sans-serif; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
+h2 { font-size: 1.35rem; line-height: 1.25; margin: 0; font-weight: 600; }
+h2 a { color: inherit; text-decoration: none; }
+h2 a:hover, h2 a:focus-visible { text-decoration: underline; }
+.lede { margin: 0; }
+ul { margin: 0; padding-left: 1.2em; }
+li { margin: 2px 0; }
+.result { margin: 0; color: var(--dim); font-style: italic; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 2px 0 0; list-style: none; }
+.facts li { background: var(--chip); font: 0.8rem/1 system-ui, sans-serif; padding: 6px 9px; border-radius: 12px; margin: 0; }
+.links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.links a { font: 600 0.95rem/1 system-ui, sans-serif; text-decoration: none; border-radius: 6px; min-height: 44px;
+  display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--btn); color: var(--ink); }
+.links a.read { background: var(--btn); color: var(--btn-ink); }
+.links a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--dim); font-size: 0.95rem; }
+footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Graphic novel experiments</h1>
+    <p>Photographic panels, an ink story under each page, sound under each panel, recorded voices and a few short loops.
+      Oldest first: each one is the next step from the one before it.</p>
+    <p>Best on a phone, with sound on.</p>
+  </header>
+
+  <div class="list">
+    <article>
+      <a class="cover" href="../drift-city/novel/cellar.html" tabindex="-1" aria-hidden="true">
+        <img src="../drift-city/novel/media/cellar-lantern-poster.jpg" alt="" loading="lazy">
+        <video muted loop playsinline preload="none" data-src="../drift-city/novel/media/cellar-lantern-loop"></video>
+        <span class="num">1</span>
+      </a>
+      <div class="body">
+        <div class="meta">28 September 2026 · Drift City, Titan</div>
+        <h2><a href="../drift-city/novel/cellar.html">The Lantern Cellar</a></h2>
+        <p class="lede">The first page made with the <code>&lt;novel-page&gt;</code> component: a jam session in a cellar in Chinatown,
+          in the Drift City story Per Aspera, which opens this page on your first visit.</p>
+        <ul>
+          <li>Panels are polygons with angled gutters; the view moves from panel to panel.</li>
+          <li>The ink plays in a window below the page, in step with the view.</li>
+        </ul>
+        <ul class="facts"><li>1 page</li><li>4 panels</li><li>1 loop</li><li>ink window</li></ul>
+        <div class="links"><a class="read" href="../drift-city/novel/cellar.html">Read</a></div>
+      </div>
+    </article>
+
+    <article>
+      <a class="cover" href="../inklet/finkapp/?story=/glitchcan-minigam/cozyverse/larkspur.fink.js" tabindex="-1" aria-hidden="true">
+        <img src="larkspur/media/title.jpg" alt="" loading="lazy">
+        <video muted loop playsinline preload="none" data-src="larkspur/media/arrival" data-mp4-only></video>
+        <span class="num">2</span>
+      </a>
+      <div class="body">
+        <div class="meta">1 October 2026 · Larkspur Falls</div>
+        <h2><a href="../inklet/finkapp/?story=/glitchcan-minigam/cozyverse/larkspur.fink.js">Larkspur Falls: The Snowglobe Affair</a></h2>
+        <p class="lede">A holiday romance with a light mystery, in six scenes, as a FINK story: text and choices in the story
+          player, with a photograph or a short clip for each step. Not yet panels on a page.</p>
+        <ul>
+          <li>Photorealistic pictures made from a character bible, so each person looks the same in every scene.</li>
+          <li>The story runs in the foafos shell like the other FINK stories.</li>
+        </ul>
+        <ul class="facts"><li>6 scenes</li><li>10 pictures</li><li>3 clips</li><li>FINK player</li></ul>
+        <div class="links"><a class="read" href="../inklet/finkapp/?story=/glitchcan-minigam/cozyverse/larkspur.fink.js">Read</a></div>
+      </div>
+    </article>
+
+    <article>
+      <a class="cover" href="larkspur/novel/festival.html" tabindex="-1" aria-hidden="true">
+        <img src="larkspur/novel/media/c-box.jpg" alt="" loading="lazy">
+        <video muted loop playsinline preload="none" data-src="larkspur/novel/media/c-box-loop"></video>
+        <span class="num">3</span>
+      </a>
+      <div class="body">
+        <div class="meta">2 October 2026 · Larkspur Falls</div>
+        <h2><a href="larkspur/novel/festival.html">Larkspur Falls: The Lantern Festival</a></h2>
+        <p class="lede">The same town as a graphic-novel page: one page of the accusation scene, with voices.</p>
+        <ul>
+          <li>Recorded voices, two takes of each line, one chosen at random each time.</li>
+          <li>Two panels are loops that start and end on the same picture, so they close without a jump.</li>
+        </ul>
+        <ul class="facts"><li>1 page</li><li>4 panels</li><li>2 loops</li><li>voices</li></ul>
+        <div class="links"><a class="read" href="larkspur/novel/festival.html">Read</a></div>
+      </div>
+    </article>
+
+    <article>
+      <a class="cover" href="steeplewyke/" tabindex="-1" aria-hidden="true">
+        <img src="steeplewyke/media/p1-show.jpg" alt="" loading="lazy">
+        <video muted loop playsinline preload="none" data-src="steeplewyke/media/p1-show-loop1"></video>
+        <span class="num">4</span>
+      </a>
+      <div class="body">
+        <div class="meta">2 October 2026 · Steeple Wyke, chapter 1, first version</div>
+        <h2><a href="steeplewyke/">Steeple Wyke: The Marrow Show</a></h2>
+        <p class="lede">A village cosy mystery over ten pages. The brief: every panel photorealistic, and every panel
+          with its own sound over the page's sound.</p>
+        <ul>
+          <li>Three layers of sound: a bed for each page, a sound for each panel, and voices that lower both.</li>
+          <li>Each loop shows one small event (a wasp, a rook landing).</li>
+        </ul>
+        <p class="result">Owner's verdict: "very linear"; "voices sometimes v flat"; "some scenes flicker visibly as it loops".</p>
+        <ul class="facts"><li>10 pages</li><li>40 panels</li><li>10 looping panels</li><li>130 voiced lines</li></ul>
+        <div class="links"><a class="read" href="steeplewyke/">Read</a></div>
+      </div>
+    </article>
+
+    <article>
+      <a class="cover" href="steeplewyke/v2/" tabindex="-1" aria-hidden="true">
+        <img src="steeplewyke/media/p1-scarecrows.jpg" alt="" loading="lazy">
+        <video muted loop playsinline preload="none" data-src="steeplewyke/v2/media/p1-scarecrows-tiny"></video>
+        <span class="num">5</span>
+      </a>
+      <div class="body">
+        <div class="meta">2 October 2026 · Steeple Wyke, chapter 1, second version</div>
+        <h2><a href="steeplewyke/v2/">Steeple Wyke: The Marrow Show (v2)</a></h2>
+        <p class="lede">The same chapter, rebuilt after the first reading.</p>
+        <ul>
+          <li>A branching story: a list of inquiries you can take in any order, in place of one line through the pages.</li>
+          <li>Tap or double tap a panel to go into it.</li>
+          <li>Voices re-recorded with directions for each line.</li>
+          <li>Short loops that play forward and then back, in place of the event loops that flickered.</li>
+        </ul>
+        <ul class="facts"><li>10 pages</li><li>40 panels</li><li>16 short loops</li><li>198 voiced lines</li></ul>
+        <div class="links"><a class="read" href="steeplewyke/v2/">Read</a></div>
+      </div>
+    </article>
+
+    <article>
+      <a class="cover" href="steeplewyke/ch2/" tabindex="-1" aria-hidden="true">
+        <img src="steeplewyke/ch2/media/p1-tower.jpg" alt="" loading="lazy">
+        <video muted loop playsinline preload="none" data-src="steeplewyke/ch2/media/p1-tower-loop1"></video>
+        <span class="num">6</span>
+      </a>
+      <div class="body">
+        <div class="meta">2 October 2026 · Steeple Wyke, chapter 2</div>
+        <h2><a href="steeplewyke/ch2/">Steeple Wyke: Plain Hunt</a></h2>
+        <p class="lede">A bell-ringing mystery. One bell in the tower was silent; the ringers' rows tell you which.</p>
+        <ul>
+          <li>A puzzle with two routes to the answer, and a checker that proves the answer is the only one.</li>
+          <li>The village remembers what you said to people, from one reading to the next.</li>
+          <li>Subtitles: the text in Italian over the English voices.</li>
+          <li>Longer loops: rooks round the tower, the pub fire, wind in the lane, steam from a kettle, a swing.</li>
+        </ul>
+        <ul class="facts"><li>10 pages</li><li>40 panels</li><li>7 looping panels</li><li>229 voiced lines</li><li>English, Italian</li></ul>
+        <div class="links">
+          <a class="read" href="steeplewyke/ch2/">Read</a>
+          <a href="steeplewyke/ch2/?lang=it" hreflang="it">Italian subtitles</a>
+          <a href="steeplewyke/ch2/loops.html">Loop check</a>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <footer>
+    <p>How these are made, what each part costs and what failed:
+      <a href="https://github.com/danbri/glitchcan-minigam/blob/master/cozyverse/skills/photo-novel/SKILL.md">the photo-novel notes</a>.
+      Source: <a href="https://github.com/danbri/glitchcan-minigam/tree/master/cozyverse">cozyverse</a> and
+      <a href="https://github.com/danbri/glitchcan-minigam/tree/master/drift-city/novel">drift-city/novel</a>.</p>
+    <p><a href="../">All glitchcan minigames</a></p>
+  </footer>
+</main>
+<script>
+// a card's loop: loaded and played only while the card is on screen; reduced motion keeps the still
+(() => {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      const v = e.target.querySelector("video");
+      if (!v) continue;
+      if (e.isIntersecting) {
+        if (!v.dataset.loaded) {
+          const base = v.dataset.src;
+          v.innerHTML = (v.hasAttribute("data-mp4-only") ? "" : `<source src="${base}.webm" type="video/webm">`) + `<source src="${base}.mp4" type="video/mp4">`;
+          v.addEventListener("playing", () => v.classList.add("on"), { once: true });
+          v.load();
+          v.dataset.loaded = "1";
+        }
+        v.play().catch(() => {});
+      } else v.pause();
+    }
+  }, { threshold: 0.35 });
+  document.querySelectorAll(".cover").forEach((c) => io.observe(c));
+})();
+</script>
+</body>
+</html>
