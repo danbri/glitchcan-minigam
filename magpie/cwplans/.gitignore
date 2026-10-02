@@ -1,1 +1,4 @@
 data/raw/*.tif
+data/raw/docklands/*.pbf
+data/raw/docklands/lidar/
+data/raw/docklands/osm-clip.json.gz

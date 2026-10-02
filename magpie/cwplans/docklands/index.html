@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Docklands 3D</title>
+<style>
+:root{--bg:#0f1215;--panel:#15191d;--line:#323940;--fg:#e8eaec;--muted:#a9b1b9;--link:#9cc8ff;--warn:#ffd26f;
+  --ell:#ff8a3d;--eliz:#9b6cff;--jub:#c9ced6;--dlr:#2cc3b5;--rail:#d9544d;--road:#5c636b;--water:#3f8fc0;
+  --bld:#b9bec4;--bldlv:#e0b25a;--base:#b05cff;--corr:#3fd0ff;--plat:#ff8a3d;--room:#ff5fa2;--tun:#e6e08a}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,sans-serif}
+a{color:var(--link)}
+#wrap{position:relative;height:68vh;min-height:440px;overflow:hidden}
+canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.hud{position:absolute;left:10px;top:10px;background:#111c;padding:6px 9px;border-radius:8px;font-size:12px;pointer-events:none;max-width:calc(100% - 40px)}
+#labels{position:absolute;inset:0;pointer-events:none}
+.lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:1px 5px;border-radius:5px;background:#0d1013d9;border:1px solid #39424b;color:var(--fg);pointer-events:auto;cursor:pointer}
+.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}
+.panel{padding:12px 16px;background:var(--panel);border-top:1px solid var(--line)}
+.row{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;margin-top:8px}
+button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px}
+button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
+.ctl{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.ctl output{min-width:3.4em}
+input[type=range]{width:min(200px,56vw);vertical-align:middle}
+select{font:inherit;background:#293038;color:var(--fg);border:1px solid #59616a;border-radius:8px;padding:6px}
+.small{color:var(--muted);font-size:13px}.warn{color:var(--warn)}
+.legend{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:13px}
+.sw{width:12px;height:12px;display:inline-block;margin-right:5px;vertical-align:-1px;border-radius:2px}
+#info{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;display:none}
+table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
+details{margin-top:10px}summary{cursor:pointer}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" role="img" aria-label="3D model of London Docklands from London Bridge to Cody Dock, with Canary Wharf above and below ground, from OpenStreetMap, Environment Agency LiDAR and Wikidata"></canvas><div id="labels"></div><div class="hud" id="hud">Loading 1.9 MB of data…</div></div>
+<div class="panel">
+  <b>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</b>
+  <span class="small">· <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/README.md">feeds and APIs</a></span>
+  <div class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). "Cut away above" removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height below. Tunnel levels are modelled between the points the LiDAR can see (portals, open cuts).</div>
+  <div class="row">
+    <button type="button" data-view="area" aria-pressed="false">Whole area</button>
+    <button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button>
+    <button type="button" data-view="under" aria-pressed="false">Canary Wharf underground</button>
+    <button type="button" data-view="plan" aria-pressed="false">Plan</button>
+  </div>
+  <div class="row">
+    <label>Buildings <select id="bmode"><option value="solid">solid</option><option value="ghost">ghost</option><option value="off">off</option></select></label>
+    <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label>
+  </div>
+  <div class="row">
+    <span class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></span>
+    <span class="ctl"><label for="vz">Vertical ×</label><input id="vz" type="range" min="1" max="5" step="0.5" value="1"><output id="vzO">1×</output></span>
+  </div>
+  <details><summary>Model settings (assumptions)</summary>
+  <div class="row">
+    <span class="ctl"><label for="storey">Storey height for OSM levels and basements</label><input id="storey" type="range" min="2.5" max="6" step="0.1" value="4"><output id="storeyO">4 m</output></span>
+  </div>
+  <div class="row">
+    <span class="ctl"><label for="dmax">Tunnel dip below the line between measured points</label><input id="dmax" type="range" min="0" max="30" step="0.5" value="10"><output id="dmaxO">10 m</output></span>
+    <span class="ctl"><label for="grad">Max gradient 1 in</label><input id="grad" type="range" min="20" max="100" step="5" value="40"><output id="gradO">40</output></span>
+  </div>
+  <div class="row">
+    <span class="ctl"><label for="ddeep">Depth of tunnels with no measured point</label><input id="ddeep" type="range" min="5" max="45" step="1" value="25"><output id="ddeepO">25 m</output></span>
+  </div>
+  </details>
+  <div class="legend row">
+    <span><i class="sw" style="background:var(--bld)"></i>Building, LiDAR height</span><span><i class="sw" style="background:var(--bldlv)"></i>Building, OSM levels or newer than LiDAR</span>
+    <span><i class="sw" style="background:var(--base)"></i>Basement (storeys × height)</span><span><i class="sw" style="background:var(--corr)"></i>Indoor corridor / steps</span><span><i class="sw" style="background:var(--room)"></i>Shops, rooms, points with a level</span>
+    <span><i class="sw" style="background:var(--plat)"></i>Platform</span><span><i class="sw" style="background:var(--jub)"></i>Jubilee</span><span><i class="sw" style="background:var(--eliz)"></i>Elizabeth line</span><span><i class="sw" style="background:var(--dlr)"></i>DLR</span>
+    <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:var(--water)"></i>Water</span>
+  </div>
+  <div id="info" aria-live="polite"></div>
+  <details><summary>Canary Wharf below ground (text)</summary><div id="ugText" class="small"></div></details>
+  <p class="small" id="attrib"></p>
+</div>
+<script src="vendor/earcut.min.js"></script>
+<script src="data/area.js"></script>
+<script src="data/under.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id), hud = $('hud');
+const A = globalThis.DOCKLANDS_AREA, U = globalThis.DOCKLANDS_UNDER || { basements: [], indoor: [], pois: [] }, earcut = globalThis.earcut && globalThis.earcut.default;
+if (!A || !earcut) { hud.textContent = 'Data or earcut did not load'; return; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const css = n => { const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return [1, 3, 5].map(i => parseInt(v.slice(i, i + 2), 16) / 255); };
+const C = Object.fromEntries(['ell', 'eliz', 'jub', 'dlr', 'rail', 'road', 'water', 'bld', 'bldlv', 'base', 'corr', 'plat', 'room', 'tun'].map(k => [k, css('--' + k)]));
+C.ground = [.38, .41, .40]; C.green = [.30, .42, .31];
+const ids = ['cut', 'vz', 'storey', 'dmax', 'grad', 'ddeep'];
+const inp = Object.fromEntries(ids.map(k => [k, $(k)]));
+const par = () => Object.fromEntries(ids.map(k => [k, +inp[k].value]));
+
+// ---------- decoding (see tools/lib.mjs enc): running sums of whole decimetres
+function dec(q, stride = 2) { const o = new Float32Array(q.length), acc = new Array(stride).fill(0); for (let i = 0; i < q.length; i++) { acc[i % stride] += q[i]; o[i] = acc[i % stride] / 10; } return o; }
+const lineColour = l => {
+  const n = (l.name || '') + ' ' + l.k;
+  if (l.k === 'road' || l.k === 'foot') return l.tunnel ? C.tun : C.road;
+  if (/Jubilee/i.test(n)) return C.jub; if (/Elizabeth|Crossrail/i.test(n)) return C.eliz; if (l.k === 'light_rail' || /Docklands Light/i.test(n)) return C.dlr;
+  if (/East London|Overground/i.test(n)) return C.ell; return C.rail;
+};
+// ---------- tunnel model (same rules as the corridor page; README "Tunnel model")
+for (const l of A.lines) if (l.tunnel) {
+  l.ctl = []; if (l.ends[0] != null) l.ctl.push([0, l.ends[0]]);
+  for (const p of l.pts) if (p[4] != null) l.ctl.push([p[3], p[4]]);
+  if (l.ends[1] != null) l.ctl.push([l.len, l.ends[1]]);
+  l.ctl.sort((a, b) => a[0] - b[0]);
+}
+function tunnelY(l, p, P) {
+  if (p[4] != null) return p[4];
+  const s = p[3], n = P.grad; let a = null, b = null;
+  for (const c of l.ctl) { if (c[0] <= s) a = c; else { b = c; break; } }
+  if (!a && !b) return p[2] - (l.k === 'foot' || l.k === 'road' ? Math.min(P.ddeep, 15) : P.ddeep);
+  const dip = l.k === 'road' || l.k === 'foot' ? Math.min(P.dmax, 12) : P.dmax;
+  if (a && b) return a[1] + (b[1] - a[1]) * (s - a[0]) / Math.max(1, b[0] - a[0]) - Math.min(dip, (s - a[0]) / n, (b[0] - s) / n);
+  const c = a || b; return c[1] - Math.min(P.ddeep, Math.abs(s - c[0]) / n);
+}
+
+const cv = $('c'), gl = cv.getContext('webgl', { antialias: true, alpha: false });
+if (!gl || !gl.getExtension('OES_element_index_uint')) { hud.textContent = 'WebGL (with 32-bit indices) is not available: see the text tables below'; textTables(); return; }
+const vs = 'attribute vec3 p;attribute vec4 c;uniform mat4 m;uniform float vz;varying vec4 v;varying float wy;void main(){v=c;wy=p.y;gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
+const fs = 'precision mediump float;varying vec4 v;varying float wy;uniform float a;uniform float cut;void main(){if(wy>cut)discard;gl_FragColor=vec4(v.rgb,v.a*a);}';
+const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
+const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
+const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz');
+gl.enableVertexAttribArray(aP); gl.enableVertexAttribArray(aC);
+const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })();
+const shade = (col, nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1, k = .5 + .5 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / l); return [col[0] * k, col[1] * k, col[2] * k]; };
+
+// Mesh builder: interleaved [x y z] float + [r g b a] bytes = 16 bytes per vertex, 32-bit indices
+class Mesh {
+  constructor() { this.f = []; this.idx = []; this.n = 0; }
+  v(x, y, z, c, a = 1) { this.f.push(x, y, z, ((c[0] * 255) | 0) | (((c[1] * 255) | 0) << 8) | (((c[2] * 255) | 0) << 16) | (((a * 255) | 0) << 24)); return this.n++; }
+  tri(a, b, c) { this.idx.push(a, b, c); }
+  quad(p0, p1, p2, p3, col) { const n = norm3(p0, p1, p2), s = shade(col, ...n); const i = this.v(...p0, s), j = this.v(...p1, s), k = this.v(...p2, s), l = this.v(...p3, s); this.tri(i, j, k); this.tri(i, k, l); }
+  upload() {
+    const buf = new ArrayBuffer(this.f.length * 4), f32 = new Float32Array(buf), u32 = new Uint32Array(buf);
+    for (let i = 0; i < this.f.length; i++) { if (i % 4 === 3) u32[i] = this.f[i] >>> 0; else f32[i] = this.f[i]; }
+    this.vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.vb); gl.bufferData(gl.ARRAY_BUFFER, buf, gl.STATIC_DRAW);
+    this.ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(this.idx), gl.STATIC_DRAW);
+    this.count = this.idx.length; this.f = []; this.idx = []; return this;
+  }
+  free() { if (this.vb) { gl.deleteBuffer(this.vb); gl.deleteBuffer(this.ib); } }
+}
+function norm3(a, b, c) { const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]; let n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]; if (n[1] < 0) n = n.map(x => -x); return n; }
+// extruded polygon: rings from enc'd p, walls + top (and bottom when asked)
+function prism(M, o, y0, y1, col, bottom) {
+  const f = dec(o.p), holes = o.holes || [], nv = f.length / 2;
+  const tris = earcut(f, holes.length ? holes : undefined, 2), top = shade(col.map(c => Math.min(1, c * 1.05)), 0, 1, 0), base = M.n;
+  for (let i = 0; i < nv; i++) M.v(f[2 * i], y1, f[2 * i + 1], top);
+  for (let k = 0; k < tris.length; k += 3) M.tri(base + tris[k], base + tris[k + 1], base + tris[k + 2]);
+  if (bottom) { const b2 = M.n, bs = shade(col, 0, 1, 0).map(c => c * .6); for (let i = 0; i < nv; i++) M.v(f[2 * i], y0, f[2 * i + 1], bs); for (let k = 0; k < tris.length; k += 3) M.tri(b2 + tris[k], b2 + tris[k + 2], b2 + tris[k + 1]); }
+  const starts = [0, ...holes, nv];
+  for (let r = 0; r < starts.length - 1; r++) for (let k = starts[r]; k < starts[r + 1]; k++) {
+    const k2 = k + 1 < starts[r + 1] ? k + 1 : starts[r], x0 = f[2 * k], z0 = f[2 * k + 1], x1 = f[2 * k2], z1 = f[2 * k2 + 1];
+    const s = shade(col, z1 - z0, 0, -(x1 - x0)).map(c => c * .9);
+    const i = M.v(x0, y0, z0, s), j = M.v(x1, y0, z1, s), kk = M.v(x1, y1, z1, s), l = M.v(x0, y1, z0, s); M.tri(i, j, kk); M.tri(i, kk, l);
+  }
+}
+function flat(M, o, y, col, a = 1) { const f = dec(o.p), holes = o.holes || [], tris = earcut(f, holes.length ? holes : undefined, 2), s = shade(col, 0, 1, 0), base = M.n; for (let i = 0; i < f.length / 2; i++) M.v(f[2 * i], y, f[2 * i + 1], s, a); for (let k = 0; k < tris.length; k += 3) M.tri(base + tris[k], base + tris[k + 1], base + tris[k + 2]); }
+function beam(M, a, b, w, h, col) {
+  const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1, ox = -dz / l * w / 2, oz = dx / l * w / 2, H = h / 2;
+  const P = (q, sx, sy) => [q[0] + ox * sx, q[1] + H * sy, q[2] + oz * sx];
+  const a00 = P(a, -1, -1), a10 = P(a, 1, -1), a11 = P(a, 1, 1), a01 = P(a, -1, 1), b00 = P(b, -1, -1), b10 = P(b, 1, -1), b11 = P(b, 1, 1), b01 = P(b, -1, 1);
+  M.quad(a01, a11, b11, b01, col); M.quad(a00, b00, b10, a10, col.map(c => c * .7)); M.quad(a00, a01, b01, b00, col); M.quad(a10, b10, b11, a11, col);
+}
+const cube = (M, x, y, z, s, col) => { const h = s / 2; prism(M, { p: [Math.round((x - h) * 10), Math.round((z - h) * 10), s * 10, 0, 0, s * 10, -s * 10, 0] }, y - h, y + h, col, true); };
+
+// ---------- static layers
+const L = {};
+(function terrain() {
+  const T = A.terrain, h = (i, j) => T.dm[j * T.nx + i] / 10, M = new Mesh();
+  for (let j = 0; j < T.nz; j++) for (let i = 0; i < T.nx; i++) {
+    const nx = h(Math.max(0, i - 1), j) - h(Math.min(T.nx - 1, i + 1), j), nz = h(i, Math.max(0, j - 1)) - h(i, Math.min(T.nz - 1, j + 1));
+    M.v(T.x0 + i * T.cell, h(i, j), T.z0 + j * T.cell, shade(C.ground, nx, 2 * T.cell, nz));
+  }
+  for (let j = 0; j < T.nz - 1; j++) for (let i = 0; i < T.nx - 1; i++) { const a = j * T.nx + i; M.tri(a, a + 1, a + T.nx); M.tri(a + 1, a + T.nx + 1, a + T.nx); }
+  L.terrain = M.upload();
+})();
+{ const M = new Mesh(); for (const w of A.water) flat(M, w, w.level + .1, C.water); L.water = M.upload(); }
+{ const M = new Mesh(); const T = A.terrain; const gh = (x, z) => { const i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
+  for (const g of A.greens) { const f = dec(g.p); flat(M, g, gh(f[0], f[1]) + .4, C.green); } L.greens = M.upload(); }
+{ const M = new Mesh(); for (const b of A.buildings) prism(M, b, b.b + (b.mh || 0), b.b + b.h, b.s === 1 || b.s === 4 ? C.bldlv : C.bld, !!b.mh); L.bld = M.upload(); }
+{ const M = new Mesh(), R = new Mesh();
+  for (const l of A.lines) if (!l.tunnel) {
+    const q = dec(l.q, 3), col = lineColour(l), road = l.k === 'road', w = road ? [0, 10, 7, 4][l.c] : 3.5;
+    for (let i = 3; i < q.length; i += 3) beam(road ? R : M, [q[i - 3], q[i - 1] + (road ? .3 : .8), q[i - 2]], [q[i], q[i + 2] + (road ? .3 : .8), q[i + 1]], w, road ? .4 : 1.4, col);
+  }
+  L.railOpen = M.upload(); L.roads = R.upload(); }
+let tunnelKey = '';
+function buildTunnels(P) {
+  const key = `${P.dmax}|${P.grad}|${P.ddeep}`; if (key === tunnelKey) return; tunnelKey = key;
+  if (L.tunnels) L.tunnels.free(); const M = new Mesh();
+  for (const l of A.lines) if (l.tunnel) { const col = lineColour(l), w = l.k === 'road' ? 9 : l.k === 'foot' ? 3 : 6;
+    for (let i = 1; i < l.pts.length; i++) { const a = l.pts[i - 1], b = l.pts[i]; beam(M, [a[0], tunnelY(l, a, P) + w / 2, a[1]], [b[0], tunnelY(l, b, P) + w / 2, b[1]], w, w, col); } }
+  L.tunnels = M.upload();
+}
+let underKey = '';
+const indoorCol = k => k === 'platform' ? C.plat : k === 'room' ? C.room : k === 'area' ? C.room.map(c => c * .8) : C.corr;
+function buildUnder(P) {
+  const key = String(P.storey); if (key === underKey) return; underKey = key;
+  if (L.under) L.under.free(); const M = new Mesh();
+  for (const b of U.basements) prism(M, b, b.b - b.n * P.storey, b.b - .3, C.base, true);
+  for (const o of U.indoor) for (const lv of o.lv) {
+    const y = o.g + lv * P.storey + .2, col = indoorCol(o.kind);
+    if (o.p) flat(M, o, y, col);
+    else { const f = dec(o.line); for (let i = 2; i < f.length; i += 2) beam(M, [f[i - 2], y, f[i - 1]], [f[i], y, f[i + 1]], o.kind === 'steps' ? 2 : 3, .6, col); }
+  }
+  for (const p of U.pois) if (p.lv && p.kind === 'poi') cube(M, p.x, p.g + Math.min(...p.lv) * P.storey + 1.5, p.z, 3, C.room);
+  L.under = M.upload();
+}
+
+// ---------- camera
+const cam = { tx: 0, ty: 0, tz: 0, yaw: .6, pitch: .55, dist: 1500 };
+const VIEWS = {
+  area: { tx: -1400, ty: 0, tz: 800, yaw: .35, pitch: .62, dist: 8200, cut: 250, b: 'solid' },
+  cw: { tx: 50, ty: 0, tz: 40, yaw: .7, pitch: .5, dist: 1500, cut: 250, b: 'solid' },
+  under: { tx: 40, ty: -10, tz: 20, yaw: .75, pitch: .42, dist: 750, cut: 2, b: 'solid' },
+  plan: { tx: -1400, ty: 0, tz: 800, yaw: 0, pitch: 1.5695, dist: 9500, cut: 250, b: 'solid' },
+};
+const viewBtns = [...document.querySelectorAll('[data-view]')];
+function setView(k) {
+  const v = VIEWS[k]; Object.assign(cam, v); inp.cut.value = v.cut; $('bmode').value = v.b; outs();
+  viewBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === k))); draw();
+}
+viewBtns.forEach(b => b.onclick = () => setView(b.dataset.view));
+const unview = () => viewBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
+function mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) for (let k = 0; k < 4; k++) o[c * 4 + r] += a[k * 4 + r] * b[c * 4 + k]; return o; }
+function persp(f, a, n, fa) { const t = 1 / Math.tan(f / 2), o = new Float32Array(16); o[0] = t / a; o[5] = t; o[10] = (fa + n) / (n - fa); o[11] = -1; o[14] = 2 * fa * n / (n - fa); return o; }
+const sub = (a, b) => a.map((v, i) => v - b[i]), dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0), cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], nrm = a => { const l = Math.hypot(...a); return a.map(v => v / l); };
+function look(e, t, u) { const z = nrm(sub(e, t)), x = nrm(cross3(u, z)), y = cross3(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x, e), -dot(y, e), -dot(z, e), 1]); }
+let MVP = null, VZ = 1;
+
+// ---------- labels: stations, place names, named towers and docks; greedy overlap culling
+const labelBox = $('labels'), info = $('info');
+const seen = new Set(), labels = [];
+for (const p of U.pois) if ((p.kind === 'station' || p.kind === 'place') && p.name && !seen.has(p.kind + p.name)) { seen.add(p.kind + p.name); labels.push({ ...p, y: p.g, pri: p.kind === 'station' ? 3 : 1, cls: p.kind === 'station' ? 'st' : 'pl' }); }
+const wdBy = new Map(A.places.map(p => [p.wd, p]));
+for (const p of A.places) if (/skyscraper|tower|high-rise|dock|tunnel|bridge|shopping|pier|cable car|aerial tramway|arena|basin|museum/i.test(p.cls.join(' '))) labels.push({ name: p.name, x: p.x, z: p.z, y: p.g, wd: p.wd, pri: /skyscraper|dock|tunnel/i.test(p.cls.join(' ')) ? 2 : 1, cls: '' });
+labels.forEach(l => { const el = document.createElement('button'); el.type = 'button'; el.className = 'lb ' + l.cls; el.textContent = l.name; el.onclick = () => showInfo(l); labelBox.appendChild(el); l.el = el; });
+labels.sort((a, b) => b.pri - a.pri);
+function showInfo(l) {
+  const w = l.wd && wdBy.get(l.wd), facts = w && w.facts ? Object.entries(w.facts).map(([k, v]) => `<div><span class="small">${esc(k)}:</span> ${esc(v.join('; '))}</div>`).join('') : '';
+  info.innerHTML = `<b>${esc(l.name)}</b> ${w && w.desc ? `<span class="small">${esc(w.desc)}</span>` : ''}${facts}<div class="small">Ground ${l.y} m OD (LiDAR)${l.mode ? ' · ' + esc(l.mode) : ''}</div>` +
+    `<div class="small">${l.wd ? `<a href="https://www.wikidata.org/wiki/${esc(l.wd)}">Wikidata ${esc(l.wd)}</a>` : ''}${w && w.wp ? ` · <a href="${esc(w.wp)}">Wikipedia</a>` : ''}${l.osm ? ` · <a href="https://www.openstreetmap.org/${esc(l.osm)}">OSM</a>` : ''}</div>`;
+  info.style.display = 'block';
+}
+function placeLabels() {
+  const show = $('showLabels').checked, w = cv.clientWidth, h = cv.clientHeight, placed = [];
+  for (const l of labels) {
+    const el = l.el; if (!show) { el.style.display = 'none'; continue; }
+    const X = [l.x, l.y + 8 / VZ, l.z], c = [0, 1, 2, 3].map(r => MVP[r] * X[0] + MVP[4 + r] * X[1] * VZ + MVP[8 + r] * X[2] + MVP[12 + r]);
+    if (c[3] <= 0) { el.style.display = 'none'; continue; }
+    const sx = (c[0] / c[3] * .5 + .5) * w, sy = (1 - (c[1] / c[3] * .5 + .5)) * h, bw = l.name.length * 6.2 + 12;
+    const r = [sx - bw / 2, sy - 18, sx + bw / 2, sy];
+    if (sx < 0 || sx > w || sy < 16 || sy > h || placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]) || placed.length > 60) { el.style.display = 'none'; continue; }
+    placed.push(r); el.style.display = ''; el.style.left = sx + 'px'; el.style.top = sy + 'px';
+  }
+}
+
+// ---------- render
+let queued = false; function draw() { if (!queued) { queued = true; requestAnimationFrame(render); } }
+function drawMesh(M, alpha) {
+  if (!M || !M.count) return;
+  gl.bindBuffer(gl.ARRAY_BUFFER, M.vb); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 16, 0); gl.vertexAttribPointer(aC, 4, gl.UNSIGNED_BYTE, true, 16, 12);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, M.ib); gl.uniform1f(uA, alpha); gl.drawElements(gl.TRIANGLES, M.count, gl.UNSIGNED_INT, 0);
+}
+function render() {
+  queued = false; const P = par(); VZ = P.vz; buildTunnels(P); buildUnder(P);
+  const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  gl.viewport(0, 0, w, h); gl.clearColor(.059, .071, .082, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
+  const ce = Math.cos(cam.pitch), T = [cam.tx, cam.ty * VZ, cam.tz], eye = [T[0] + cam.dist * Math.sin(cam.yaw) * ce, T[1] + cam.dist * Math.sin(cam.pitch), T[2] + cam.dist * Math.cos(cam.yaw) * ce];
+  MVP = mul(persp(.8, w / h, Math.max(2, cam.dist / 400), cam.dist * 6 + 6000), look(eye, T, [0, 1, 0]));
+  const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
+  gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY);
+  gl.disable(gl.BLEND); gl.depthMask(true);
+  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if (!cutOn) drawMesh(L.water, 1);
+  if ($('showUnder').checked) drawMesh(L.under, 1);
+  if ($('showRoads').checked) drawMesh(L.roads, 1);
+  if (bm === 'solid') drawMesh(L.bld, 1);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+  if (bm === 'ghost') drawMesh(L.bld, .22);
+  // the cut removes structures; ground, greens and water stay as faint context so you can see where you are
+  gl.uniform1f(uCut, 1e9);
+  if (cutOn) drawMesh(L.water, .35);
+  drawMesh(L.greens, cutOn ? .2 : .55); drawMesh(L.terrain, cutOn ? .14 : .5); gl.depthMask(true);
+  placeLabels();
+}
+
+// ---------- input: drag rotates, right/shift/two-finger drag pans, wheel/pinch zooms
+const ptrs = new Map(); let pinch = null;
+const mid = () => { const v = [...ptrs.values()]; return [(v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2, Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1])]; };
+function pan(dx, dy) { const k = cam.dist * .0012, c = Math.cos(cam.yaw), s = Math.sin(cam.yaw); cam.tx -= (c * dx + s * dy) * k; cam.tz -= (-s * dx + c * dy) * k; }
+const zoom = f => { cam.dist = Math.max(80, Math.min(16000, cam.dist * f)); };
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY, e.button === 2 || e.shiftKey]); cv.setPointerCapture(e.pointerId); if (ptrs.size === 2) pinch = mid(); });
+cv.addEventListener('pointermove', e => {
+  const last = ptrs.get(e.pointerId); if (!last) return; const cur = [e.clientX, e.clientY, last[2]]; ptrs.set(e.pointerId, cur);
+  if (ptrs.size === 2 && pinch) { const m = mid(); zoom(pinch[2] / Math.max(1, m[2])); pan(m[0] - pinch[0], m[1] - pinch[1]); pinch = m; unview(); draw(); return; }
+  if (ptrs.size !== 1) return; const dx = cur[0] - last[0], dy = cur[1] - last[1];
+  if (cur[2]) pan(dx, dy); else { cam.yaw -= dx * .006; cam.pitch = Math.max(-.6, Math.min(1.5695, cam.pitch + dy * .006)); }
+  unview(); draw();
+});
+const end = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
+cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+cv.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .001)); unview(); draw(); }, { passive: false });
+['bmode', 'showLabels', 'showRoads', 'showUnder'].forEach(id => $(id).onchange = draw);
+const FMT = { cut: v => +v >= 250 ? 'off' : v + ' m OD', vz: v => v + '×', storey: v => v + ' m', dmax: v => v + ' m', grad: v => v, ddeep: v => v + ' m' };
+function outs() { for (const k of ids) $(k + 'O').value = FMT[k](inp[k].value); }
+ids.forEach(k => inp[k].oninput = () => { outs(); if (k === 'storey') textTables(); unview(); draw(); });
+addEventListener('resize', draw);
+
+// ---------- text route: what is below ground at Canary Wharf
+function textTables() {
+  const P = par(), F = A.meta.focus, inF = (x, z) => x >= F.x0 && x <= F.x1 && z >= F.z0 && z <= F.z1;
+  const byLevel = new Map();
+  for (const o of U.indoor) { const f = o.p ? dec(o.p) : dec(o.line); if (!inF(f[0], f[1])) continue; for (const lv of o.lv) if (lv < 0) { const k = byLevel.get(lv) || { n: 0, names: new Set(), kinds: {} }; k.n++; if (o.name) k.names.add(o.name); k.kinds[o.kind] = (k.kinds[o.kind] || 0) + 1; byLevel.set(lv, k); } }
+  for (const p of U.pois) if (p.lv && inF(p.x, p.z)) for (const lv of p.lv) if (lv < 0) { const k = byLevel.get(lv) || { n: 0, names: new Set(), kinds: {} }; k.n++; k.kinds[p.what || p.kind] = (k.kinds[p.what || p.kind] || 0) + 1; byLevel.set(lv, k); }
+  const rows = [...byLevel.entries()].sort((a, b) => b[0] - a[0]).map(([lv, k]) => `<tr><td>${lv}</td><td class="n">≈ ${(-lv * P.storey).toFixed(0)} m below</td><td class="n">${k.n}</td><td>${esc(Object.entries(k.kinds).map(([a, b]) => `${a} ${b}`).join(', '))}</td><td>${esc([...k.names].slice(0, 8).join(', '))}</td></tr>`).join('');
+  const bas = U.basements.filter(b => { const f = dec(b.p); return inF(f[0], f[1]); }).sort((a, b) => b.n - a.n)
+    .map(b => `<tr><td>${esc(b.name || 'unnamed building')}</td><td class="n">${b.n}</td><td class="n">≈ ${(b.n * P.storey).toFixed(0)} m below</td><td>${b.src === 'wikidata' ? `Wikidata <a href="https://www.wikidata.org/wiki/${esc(b.wd)}">${esc(b.wd)}</a> (floors below ground)` : 'OSM building:levels:underground'}</td></tr>`).join('');
+  $('ugText').innerHTML = `<p>OSM features with a level below 0 in the Canary Wharf box, by level. Depth is level × the storey height setting (${P.storey} m), not a measurement.</p>` +
+    `<table><tr><th>Level</th><th>Depth</th><th>Features</th><th>Kinds</th><th>Names</th></tr>${rows}</table>` +
+    `<p>Basements in the box (storeys from OSM or Wikidata).</p><table><tr><th>Building</th><th>Storeys below</th><th>Depth</th><th>Source</th></tr>${bas || '<tr><td colspan="4">none recorded</td></tr>'}</table>`;
+}
+textTables();
+$('attrib').innerHTML = 'Data: ' + A.meta.sources.map(s => `<a href="${esc(s.url)}">${esc(s.text)}</a>`).join(' · ') + ` · built ${esc(A.meta.built)} · earcut (ISC)`;
+window.__docklands = { cam, draw, setView, L };
+outs(); setView('cw');
+hud.textContent = 'Drag: rotate · right-drag / shift-drag / two fingers: pan · wheel / pinch: zoom · tap a label';
+})();
+</script>
+</body>
+</html>
