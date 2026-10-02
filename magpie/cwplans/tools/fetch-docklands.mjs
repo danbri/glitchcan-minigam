@@ -65,6 +65,21 @@ const jobs = {
     });
     return `${todo.length} tiles fetched, ${lidarTiles().length * 2} in the box`;
   },
+  // EA spatial flood defences (OGL): wall/embankment lines with design and surveyed crest levels. Owner and
+  // maintainer fields are dropped here: some describe private individuals and the model does not need them.
+  async defences() {
+    const [w, s, e, n] = BOX_WGS84, KEEP = ['asset_id', 'asset_sub_type', 'protection_type', 'design_sop', 'design_ucl', 'design_dcl', 'actual_ucl', 'actual_dcl', 'effective_cl', 'bank', 'local_authority', 'last_inspection_date'];
+    let url = `https://environment.data.gov.uk/spatialdata/spatial-flood-defences-including-standardised-attributes/ogc/features/v1/collections/Spatial_Flood_Defences_Including_Standardised_Attributes/items?bbox=${w},${s},${e},${n}&limit=500&f=json`;
+    const out = [];
+    while (url) {
+      const d = JSON.parse(await get(url));
+      for (const f of d.features) out.push({ geometry: f.geometry, properties: Object.fromEntries(KEEP.map(k => [k, f.properties[k] ?? null])) });
+      url = (d.links || []).find(l => l.rel === 'next')?.href || null;
+      if (!d.features.length) url = null;
+    }
+    writeFileSync(join(DIR, 'ea-defences.json.gz'), gzipSync(JSON.stringify({ fetched: new Date().toISOString().slice(0, 10), type: 'FeatureCollection', features: out }), { level: 9 }));
+    return `ea-defences.json.gz (${out.length} features)`;
+  },
   async wikidata() {
     writeFileSync(join(DIR, 'wikidata-items.json.gz'), gzipSync(await sparql(WD_ITEMS), { level: 9 }));
     writeFileSync(join(DIR, 'wikidata-facts.json.gz'), gzipSync(await sparql(WD_FACTS), { level: 9 }));

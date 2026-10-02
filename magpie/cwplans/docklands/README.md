@@ -15,13 +15,13 @@ A 3D model of the Thames from London Bridge to Cody Dock and from Limehouse to G
 | `facts.json`, `FACTS.md` | 360 cited facts about station depths, tunnels, towers, docks and ground, each with a quote from the page it came from |
 | `vendor/earcut.min.js` | polygon triangulation in the browser (earcut, ISC licence, `vendor/earcut.LICENSE`) |
 | `../data/sourced-levels.json` | the published levels the model uses (a hand-picked subset of `facts.json`) |
-| `../feeds/` | 200 checked data sources and APIs for the area |
+| `../feeds/` | 200 checked data sources and APIs for the area; browsable at https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/ |
 | `../tools/fetch-docklands.mjs`, `osm-clip-docklands.mjs`, `build-docklands.mjs`, `lib.mjs` | the pipeline |
 
 Rebuild (raw files are not committed except the Wikidata snapshots):
 
     node magpie/cwplans/tools/fetch-raw.mjs grid                               # OSTN15 grid
-    node magpie/cwplans/tools/fetch-docklands.mjs                              # OSM extract (150 MB), 96 LiDAR tiles, Wikidata
+    node magpie/cwplans/tools/fetch-docklands.mjs                              # OSM extract (150 MB), 96 LiDAR tiles, EA flood defences, Wikidata
     node --max-old-space-size=6000 magpie/cwplans/tools/osm-clip-docklands.mjs  # about 1 minute
     node --max-old-space-size=8000 magpie/cwplans/tools/build-docklands.mjs     # about 30 seconds
 
@@ -38,6 +38,7 @@ Rebuild (raw files are not committed except the Wikidata snapshots):
 | buildings, parts, water, greens, roads, railways, tunnels, indoor ways, stations, points with a level | OpenStreetMap, Greater London extract from download.openstreetmap.fr (2026-10-02) | ODbL 1.0, © OpenStreetMap contributors |
 | ground (DTM) and surface (first-return DSM), 1 m | Environment Agency LiDAR Composite, WCS, 48 tiles of 1 km | Open Government Licence v3.0 |
 | names, descriptions, heights, floors above and below ground | Wikidata SPARQL, items in the box | CC0 |
+| tidal flood walls, embankments, flood gates with crest levels | Environment Agency Spatial Flood Defences (OGC API Features), 995 segments; owner and maintainer fields dropped | Open Government Licence v3.0 |
 | published levels | see `../data/sourced-levels.json`: Wikipedia, Crossrail Learning Legacy (Arup paper), Canal & River Trust, Architects' Journal | each value is quoted with its URL |
 | live panel | EA flood-monitoring API, Open-Meteo, London Air Quality Network, TfL Unified API, Thames Water storm overflow feed (ArcGIS) | see `../feeds/feeds.json` for each licence |
 
@@ -51,7 +52,7 @@ Geofabrik and Overpass were unreachable from the build container, so the OSM dat
 - Water: OSM areas at the 25th percentile of the LiDAR inside them. The impounded docks come out at 3.3–4.2 m OD. The Canal & River Trust full impound level for West India and Millwall Docks is 4.23 m OD, which agrees. The tidal Thames is one tide state (about 2–3 m OD in the LiDAR pass). The live panel can redraw it at the current Tower Pier gauge level.
 - Basements (102): OSM `building:levels:underground`, else Wikidata "floors below ground" (for example 8 Canada Square 4, Newfoundland 3, One Park Drive 2). Depth = storeys × the storey-height setting (default 4 m). This is an assumption, not a measurement.
 - Indoor and underground detail (2,184 ways, 903 points): OSM features with a `level` tag, drawn at ground + level × storey height. At Canary Wharf this is the malls (levels −1 and −2), the Jubilee line platforms (−3) and steps and corridors down to −4. An OSM level is an index, not a height, so these positions are approximate.
-- Open track and roads: OSM geometry at the LiDAR level (DSM on bridges and viaducts). Where the DLR viaduct runs under a station roof or a building, the DSM sees the roof: within 120 m of Canary Wharf DLR station the drawn track ranges from 8.1 to 41.1 m OD. No source for the viaduct height was found, so this is not corrected.
+- Open track and roads: OSM geometry at the LiDAR level (DSM on bridges and viaducts). Where a viaduct runs under a station roof or a building, the DSM sees the roof. Bridge points more than 20 m above the LiDAR ground are therefore replaced by interpolation from the nearest lower points on the same way (42 points, mostly the DLR through Canary Wharf). Within 120 m of Canary Wharf DLR station the drawn track now ranges from 8.1 to 23.6 m OD (before the fix: up to 41.1 m). Points up to 20 m above the ground are kept, so a low roof can still lift the track; no source for the viaduct height was found to set a better limit.
 - Tunnels (572 chains): OSM tunnel ways joined between portals. The level is known at three kinds of control:
   - portals: the LiDAR level of the open track or road at the tunnel mouth
   - open cuts and shafts: points where the LiDAR ground is more than 6 m below its surroundings
@@ -67,6 +68,8 @@ Geofabrik and Overpass were unreachable from the build container, so the OSM dat
 
   Between two controls the track follows the straight line between them and dips by at most the "dip" setting, limited by the gradient setting. A chain with one published level and no other control stays flat at that level. A chain with no control lies at the "no measured point" depth below ground. These are model settings, shown in the page under "Model settings (assumptions)".
 - Published structures: the eight Crossrail Place slab levels (Arup paper, Figure 6: platform −18.05 m OD, base slab −20.40 m OD, roof garden +17.10 m OD). The paper gives levels in mATD; the conversion OD = mATD − 100 m is inferred from the dock water level in the same figure (104.300), which matches the Canal & River Trust 4.23 m OD. North Dock is drawn as a water volume from its bed (−5.365 m OD, Canal & River Trust) to the full impound level.
+
+- Flood defences: 995 EA segments (942 walls, 30 bridge abutments, 11 embankments, 8 engineered high ground, 4 flood gates), drawn from the LiDAR ground up to the surveyed crest level (`actual_ucl`, else `actual_dcl`, else the design level). Crests in the box run from 5.07 to 8.75 m AOD, median 5.62 m; most design levels are 5.23 or 5.28 m AOD. With the live data loaded, the page compares the Tower Pier tide with the lowest crest.
 
 ## Known gaps
 

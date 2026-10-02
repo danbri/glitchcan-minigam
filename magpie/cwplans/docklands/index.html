@@ -35,7 +35,7 @@ details{margin-top:10px}summary{cursor:pointer}
 <div id="wrap"><canvas id="c" role="img" aria-label="3D model of London Docklands from London Bridge to Cody Dock, with Canary Wharf above and below ground, from OpenStreetMap, Environment Agency LiDAR and Wikidata"></canvas><div id="labels"></div><div class="hud" id="hud">Loading 1.9 MB of data…</div></div>
 <div class="panel">
   <b>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</b>
-  <span class="small">· <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/README.md">feeds and APIs</a></span>
+  <span class="small">· <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a></span>
   <div class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). "Cut away above" removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height below. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</div>
   <div class="row">
     <button type="button" data-view="area" aria-pressed="false">Whole area</button>
@@ -45,7 +45,7 @@ details{margin-top:10px}summary{cursor:pointer}
   </div>
   <div class="row">
     <label>Buildings <select id="bmode"><option value="solid">solid</option><option value="ghost">ghost</option><option value="off">off</option></select></label>
-    <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label><label><input type="checkbox" id="showFloors"> Floors (Canary Wharf)</label>
+    <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label><label><input type="checkbox" id="showFloors"> Floors (Canary Wharf)</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label>
   </div>
   <div class="row">
     <span class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></span>
@@ -67,11 +67,11 @@ details{margin-top:10px}summary{cursor:pointer}
     <span><i class="sw" style="background:var(--bld)"></i>Building, LiDAR height</span><span><i class="sw" style="background:var(--bldlv)"></i>Building, OSM levels or newer than LiDAR</span>
     <span><i class="sw" style="background:var(--base)"></i>Basement (storeys × height)</span><span><i class="sw" style="background:var(--corr)"></i>Indoor corridor / steps</span><span><i class="sw" style="background:var(--room)"></i>Shops, rooms, points with a level</span>
     <span><i class="sw" style="background:var(--plat)"></i>Platform</span><span><i class="sw" style="background:var(--jub)"></i>Jubilee</span><span><i class="sw" style="background:var(--eliz)"></i>Elizabeth line</span><span><i class="sw" style="background:var(--dlr)"></i>DLR</span>
-    <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:#f9c75a"></i>Published slab levels (Crossrail Place)</span><span><i class="sw" style="background:var(--water)"></i>Water</span>
+    <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:#f9c75a"></i>Published slab levels (Crossrail Place)</span><span><i class="sw" style="background:var(--water)"></i>Water</span><span><i class="sw" style="background:#e07a3f"></i>Tidal flood walls to their crest level (EA)</span>
   </div>
   <div id="info" aria-live="polite"></div>
   <details id="liveBox"><summary>Live data</summary>
-    <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of 200 checked sources is in <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/README.md">feeds/README.md</a>.</p>
+    <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of 200 checked sources is at <a href="../feeds/">feeds</a>.</p>
     <div class="row"><button type="button" id="liveGo">Load live data</button><label><input type="checkbox" id="liveTide" disabled> Draw the tidal Thames at the Tower Pier level</label><label><input type="checkbox" id="liveCams" disabled checked> Traffic cameras</label></div>
     <div id="liveOut" class="small" aria-live="polite"></div>
   </details>
@@ -208,6 +208,10 @@ buildTidal();
       for (let r = 0; r < starts.length - 1; r++) for (let i = starts[r]; i < starts[r + 1]; i++) { const j = i + 1 < starts[r + 1] ? i + 1 : starts[r]; beam(M, [f[2 * i], y, f[2 * i + 1]], [f[2 * j], y, f[2 * j + 1]], .5, .35, FC); } }
   }
   L.floors = M.upload(); }
+// EA flood defences: a 0.8 m slab from the LiDAR ground to the surveyed crest level of each segment
+{ const M = new Mesh(), WC = [.88, .48, .25];
+  for (const d of A.defences || []) { const q = dec(d.q, 3); for (let i = 3; i < q.length; i += 3) { const g = Math.min(q[i - 1], q[i + 2], d.c - .3), h = d.c - g; beam(M, [q[i - 3], g + h / 2, q[i - 2]], [q[i], g + h / 2, q[i + 1]], .8, h, WC); } }
+  L.walls = M.upload(); }
 let tunnelKey = '';
 function buildTunnels(P) {
   const key = `${P.dmax}|${P.grad}|${P.ddeep}`; if (key === tunnelKey) return; tunnelKey = key;
@@ -314,6 +318,7 @@ function render() {
   if ($('showUnder').checked) drawMesh(L.under, 1);
   if ($('showRoads').checked) drawMesh(L.roads, 1);
   if ($('showFloors').checked) drawMesh(L.floors, 1);
+  if ($('showWalls').checked) drawMesh(L.walls, 1);
   if (bm === 'solid') drawMesh(L.bld, 1);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (bm === 'ghost') drawMesh(L.bld, .22);
@@ -342,6 +347,7 @@ const end = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
 cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .001)); unview(); draw(); }, { passive: false });
 ['bmode', 'showLabels', 'showRoads', 'showUnder'].forEach(id => $(id).onchange = draw);
+$('showWalls').onchange = draw;
 $('showFloors').onchange = () => { if ($('showFloors').checked && $('bmode').value === 'solid') $('bmode').value = 'ghost'; draw(); };
 const FMT = { cut: v => +v >= 250 ? 'off' : v + ' m OD', vz: v => v + '×', storey: v => v + ' m', dmax: v => v + ' m', grad: v => v, ddeep: v => v + ' m' };
 function outs() { for (const k of ids) $(k + 'O').value = FMT[k](inp[k].value); }
@@ -378,7 +384,8 @@ async function loadLive() {
       const g = async id => (await getJSON(`https://environment.data.gov.uk/flood-monitoring/id/stations/${id}/readings?latest`)).items[0];
       const [tp, sv] = await Promise.all([g('0007'), g('0001')]);
       tidalLevel = tp.value; $('liveTide').disabled = false;
-      return `<b>Thames level</b> (Environment Agency tide gauges, m above Ordnance Datum): Tower Pier ${tp.value.toFixed(2)} m at ${when(tp.dateTime)}, Silvertown ${sv.value.toFixed(2)} m at ${when(sv.dateTime)}. The model's river is the LiDAR pass, about ${A.water.filter(w => w.tidal && !w.n).map(w => w.level)[0] ?? '2'} m. <a href="https://environment.data.gov.uk/flood-monitoring/id/stations/0007">Tower Pier station record</a>`;
+      const crests = (A.defences || []).map(d => d.c).sort((a, b) => a - b), lo = crests[0], med = crests[crests.length >> 1];
+      return `<b>Thames level</b> (Environment Agency tide gauges, m above Ordnance Datum): Tower Pier ${tp.value.toFixed(2)} m at ${when(tp.dateTime)}, Silvertown ${sv.value.toFixed(2)} m at ${when(sv.dateTime)}. The model's river is the LiDAR pass, about ${A.water.filter(w => w.tidal && !w.n).map(w => w.level)[0] ?? '2'} m. ${crests.length ? `The EA tidal flood walls in the box have surveyed crests from ${lo.toFixed(2)} m (median ${med.toFixed(2)} m), so the water is ${(lo - tp.value).toFixed(2)} m below the lowest crest.` : ''} <a href="https://environment.data.gov.uk/flood-monitoring/id/stations/0007">Tower Pier station record</a>`;
     }),
     job('weather', async () => {
       const d = await getJSON('https://api.open-meteo.com/v1/forecast?latitude=51.505&longitude=-0.02&current=temperature_2m,wind_speed_10m,wind_direction_10m,cloud_cover,precipitation&timezone=Europe/London');
