@@ -1,25 +1,40 @@
 // Every voiced line of marrow.ink, from the real ink compiler and Story API (no text parsing of the ink).
-// Visits each knot twice, once with every clue true and once with every clue false, so the lines inside
-// {clue: ...} blocks are found too. Prints JSON: { "<voice id>": { "speaker": "...", "text": "..." } }.
-//   node cozyverse/steeplewyke/tools/lines.mjs [--check voices.json]
+// Visits each knot under many mixes of: every clue true or false, which places were seen, each ending, and the
+// first/middle/last visit, so the lines inside conditional blocks are found too. Prints JSON: { "<voice id>": { "speaker": "...", "text": "..." } }.
+//   node cozyverse/steeplewyke/tools/lines.mjs [--check cozyverse/steeplewyke/v2/voices.json]   (STORY=. for version 1)
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 const here = dirname(fileURLToPath(import.meta.url));
 const inkjs = createRequire(import.meta.url)('inkjs/full');
-const src = readFileSync(join(here, '..', 'marrow.ink'), 'utf8');
+// the story folder: v2 unless STORY names another (STORY=. for the first version)
+const story = join(here, '..', process.env.STORY || 'v2');
+const src = readFileSync(join(story, 'marrow.ink'), 'utf8');
 const json = new inkjs.Compiler(src).Compile().ToJson();
-const CLUES = ['flask', 'green', 'foxglove', 'notebook', 'syringe', 'alibi'];
+const CLUES = ['flask', 'green', 'foxglove', 'notebook', 'syringe', 'alibi', 'poured', 'argument', 'clement_study', 'rattled', 'toby_vicar'];
+const SEEN = ['seen_margaret', 'seen_tent', 'seen_carpark', 'seen_vicarage', 'seen_study'];
+// which places count as seen: none, all, each one alone, and all but each one
+const SEEN_SETS = [[], SEEN, ...SEEN.map((x) => [x]), ...SEEN.map((x) => SEEN.filter((y) => y !== x))];
+const MIXES = [];
+for (const on of [true, false]) for (const seen of SEEN_SETS) for (const ending of ['solved', 'quaile', 'denied', 'none', ''])
+  for (const visits of [0, 1, 3]) MIXES.push({ on, seen, ending, visits });
 const probe = new inkjs.Story(json);
-const knots = [...probe.mainContentContainer.namedContent.keys()].filter((k) => !k.startsWith('global'));
+const knots = [...probe.mainContentContainer.namedContent.keys()].filter((k) => !k.startsWith('global') && k !== 'evidence');
 const out = {};
-for (const knot of knots) for (const on of [true, false]) {
+for (const knot of knots) for (const { on, seen, ending, visits } of MIXES) {
   const s = new inkjs.Story(json);
   for (const c of CLUES) s.variablesState[c] = on;
+  for (const c of SEEN) s.variablesState[c] = seen.includes(c);
+  s.variablesState.ending = ending; s.variablesState.visits = visits;
+  // what the village thought before this reading: warm on the all-true mixes, cold on the all-false ones
+  for (const who of ['toby', 'margaret', 'dilys', 'quaile']) s.variablesState[`was_${who}`] = on ? 1 : -1;
   s.ChoosePathString(knot);
+  // a forced mix can be a state no reading reaches (every place seen after one visit): stop there quietly
+  s.onError = () => {};
   while (s.canContinue) {
-    const line = s.Continue().trim();
+    let line;
+    try { line = s.Continue().trim(); } catch { break; }
     for (const t of s.currentTags) {
       const id = /^voice\s*:\s*([\w-]+)$/.exec(t.trim())?.[1];
       if (!id) continue;

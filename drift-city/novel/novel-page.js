@@ -13,7 +13,8 @@
 //
 // Touch. Overview: a tap on a panel zooms to it, centred. Zoomed in: the other panels are frosted and faded; a tap
 // goes back to the overview; a drag moves the page with the finger, and on release the page keeps its momentum and
-// either springs back or crosses into the panel it was thrown towards, which then un-frosts and centres.
+// either springs back or crosses into the panel it was thrown towards, which then un-frosts and centres. A double
+// tap counts as one tap.
 // Keys: Enter on a focused panel, arrows (reading order), Escape.
 //
 // API: zoomTo(i), overview(), next(), prev(), .current (-1 = overview), .panels, play(story).
@@ -401,6 +402,10 @@ class NovelPage extends HTMLElement {
     if (!d || e.pointerId !== d.id) return;
     this._down = null;
     if (!d.moved) {
+      // a double tap is one tap: readers try both, and the second half would undo the first (in, then out again)
+      const now = performance.now(), last = this._lastTap;
+      this._lastTap = { t: now, x: e.clientX, y: e.clientY };
+      if (last && now - last.t < 350 && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 30) { this._lastTap = null; return; }
       if (this._cur >= 0) this.overview("tap");
       else {
         const [px, py] = this._toPage(e.clientX, e.clientY);
