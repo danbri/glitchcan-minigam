@@ -164,7 +164,7 @@ Constable: It was by the top gate, ma'am. It's off the hire boat. Dutch couple. 
     {day_name()}. {visits == 0: Two visits today.|One more visit today.}
 }
 {day == 2 && pm && not pm2_asked:
-    The body is released tomorrow at noon, unless the coroner orders more.
+    The body is released tomorrow at noon. If you want a second post-mortem, today is the last day to ask the coroner.
 }
 + [Walk up the flight to the lock cottage] -> go(2)
 + [Go down to the hire boat] -> go(3)
@@ -805,13 +805,27 @@ Clive: Hollins and Daughter. Ted Hollins is a craftsman; I was at school with hi
 = p9_show
 + {pub && not clive1_broke} [Pete Garrow saw your car in the lock car park at 23:40] -> p9_broke1
 + {cloud && clive1_broke} [Neville's photographs at 23:13] -> p9_broke2
++ {box} [The reserve statement: Meridian, and the gift in June] -> p9_box
++ {plate} [HOLLINS 1987 on the top gate] -> p9_plate
++ {grease && clive_windlass} [New grease on the chain of fourteen, and on your windlass] -> p9_grease
 + {photos} [Maaike's photographs at 22:41] -> p9_wrong
 + {windlass} [The hire-boat windlass] -> p9_wrong
-+ {plate} [HOLLINS 1987 on the top gate] -> p9_wrong
 + [Put it away] -> p9_choices
 
 = p9_wrong
 Clive: {&I'm not sure what you want me to say about that, Mrs Kettering; it's a very sad business, and I've told you all I know.|I don't see how that bears on the chairman's death, though I'm sure you have a reason for asking.}
+-> p9_choices
+
+= p9_box
+Clive: Meridian was a mistake, and it was mine; the committee approved the investment, and the fund failed, as funds do. The gift in June came from someone who loves this canal and wants no thanks for it, and I have respected that, as I'd respect it from anyone.
+-> p9_choices
+
+= p9_plate
+Clive: Reclaimed ironwork, perhaps. A good maker reuses a sound plate, and Ted Hollins is a very good maker. You would have to ask him; I only sign for the work, I don't build it.
+-> p9_choices
+
+= p9_grease
+Clive: Every windlass on this canal has grease on it, Mrs Kettering, and every paddle on the flight was greased in the spring. I did sixteen on Wednesday. Fourteen is Kit's job, not mine.
 -> p9_choices
 
 = p9_broke1
