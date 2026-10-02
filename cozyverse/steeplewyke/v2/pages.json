@@ -543,10 +543,7 @@
       "Locked-off camera. The barman reaches past the scarecrow, wipes the bar beside its pint, and moves on. The scarecrow does not move.",
       "Locked-off camera. A man at the bar raises his glass towards the scarecrow, drinks, and turns back to his friends. The scarecrow does not move."
      ],
-     "tiny": true,
-     "loopSrc": [
-      "media/p8-bar-tiny"
-     ]
+     "note": "No loop in version 2: every bar clip moved the scarecrow or walked a man into the frame."
     }
    ]
   },
