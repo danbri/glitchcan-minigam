@@ -180,6 +180,8 @@ function buildPage(n) {
     } else {
       const img = document.createElement("img"); img.src = pic; img.alt = ""; img.decoding = "async"; s.appendChild(img);
     }
+    // where the crop centres when the picture's shape is not the panel's
+    if (panel.focus) for (const m of s.querySelectorAll("img, video")) m.style.objectPosition = panel.focus;
     page.insertBefore(s, ink);
   }
   page.setAttribute("knot", `p${n}`);

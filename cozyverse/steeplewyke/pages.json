@@ -65,7 +65,8 @@
      ],
      "alt": "Gerald Pike in a panama hat speaks into a microphone on a stage of hay bales, in front of a table of giant marrows.",
      "prompt": "GERALD stands on a low stage of hay bales speaking into an old chrome microphone on a stand, one finger raised. Behind him a table of giant green-striped marrows; the biggest has a red first-prize card. A grey horn loudspeaker is tied to a pole. Bright afternoon sun.",
-     "sound": "an old public address system: microphone feedback whine, a thump on the microphone, crackle and hum from a horn loudspeaker outdoors"
+     "sound": "an old public address system: microphone feedback whine, a thump on the microphone, crackle and hum from a horn loudspeaker outdoors",
+     "focus": "64% 50%"
     },
     {
      "knot": "scarecrows",
@@ -358,8 +359,8 @@
      "slot": "d",
      "ratio": "16:9",
      "cast": [],
-     "alt": "The roof appeal board: a painted thermometer, red to eight thousand pounds, with four thousand more added in brighter red that has run.",
-     "prompt": "A hand-painted wooden roof appeal board tied to church scaffolding: a tall painted thermometer with a scale in thousands of pounds up to 60,000 at the top and the words ROOF APPEAL above it. The thermometer is painted dull red up to 8,000, then a brighter, fresher red up to 12,000, which has dripped down in runs. Churchyard grass and yew behind.",
+     "alt": "The roof appeal board: a painted thermometer with a scale to sixty thousand pounds, red up to twenty thousand. The top of the red is wet and has run.",
+     "prompt": "(made with gpt-image-2, no reference sheets) Outside a Cotswold stone church wrapped in steel scaffolding, a weathered hand-painted white board tied to the scaffolding: ROOF APPEAL, a painted thermometer with a scale of £0 to £60,000, the old faded red topped by a short band of fresh, wet scarlet paint that has run in thin drips. Long churchyard grass and a yew tree.",
      "sound": "scaffolding poles clinking in wind, a loose tarpaulin flapping on a church roof, rooks",
      "loops": [
       "Locked-off camera. One run of fresh red paint slides slowly down the board and stops. Nothing else moves.",
@@ -410,7 +411,8 @@
       "Locked-off overhead shot. A breeze from the window lifts the corner of the open page, it rises, then settles back down flat. Nothing else moves.",
       "Locked-off overhead shot. The fountain pen rolls a few centimetres on the leather, then rolls back and stops. Nothing else moves.",
       "Locked-off overhead shot. The shadow of a window frame moves across the page as a cloud passes and the sun returns. Nothing else moves."
-     ]
+     ],
+     "focus": "64% 50%"
     },
     {
      "knot": "cups",

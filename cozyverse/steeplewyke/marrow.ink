@@ -302,9 +302,9 @@ Clement: One always goes walkabout at the show. Gerald's very strict about it. W
 === p6_roof ===
 # panel: roof
 # voice: p6d-1
-The roof appeal board: a thermometer painted red up to eight thousand pounds. The target is sixty.
+The roof appeal board: a thermometer painted red up to twenty thousand pounds. The target is sixty.
 # voice: p6d-2
-Someone has added four thousand in a brighter red, very recently, and it has run.
+The top of the red is still wet. It has run down over the old paint.
 # voice: p6d-3
 Quaile: Generous parish.
 # voice: p6d-4
