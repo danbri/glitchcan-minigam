@@ -285,11 +285,8 @@
       "Locked-off close shot. A housefly lands on the nearest marrow, walks to the pinhole, and flies off. Nothing else moves.",
       "Locked-off close shot. The canvas light dims as a cloud passes over the marquee, then brightens again. Water glistens at the pinholes."
      ],
-     "loopSrc": [
-      "../media/p4-marrows-loop1",
-      "../media/p4-marrows-loop2",
-      "../media/p4-marrows-loop3"
-     ]
+     "peek": { "src": "media/p4-marrows-canary", "every": 8, "first": 3, "at": [52.9, 42.1] },
+     "note": "loops: v1's three loops (a drip, a fly, a cloud) are not used in v2; the fly was ugly. The panel holds its still and a canary peeps above the far marrow every 8 s (tools/peek-window.py, tools/peek-clip.sh, from a 5 s kling-2.5-turbo clip with the still as start frame)"
     }
    ]
   },

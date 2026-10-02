@@ -21,6 +21,27 @@ novel-page > section > img, novel-page > section > video {
 }
 /* a still is a still: no slow zoom (it made readers wait for movement), and a soft vignette marks it as a
    photograph, where a looping panel has none */
+/* a peek: a slight glitch on the clip and a few sparks round the spot while the moment plays */
+novel-page > section.peeking > video { animation: glitch 0.9s steps(1) infinite; }
+@keyframes glitch {
+  0%, 100% { transform: none; filter: none; }
+  12% { transform: translate(2px, -1px); filter: hue-rotate(8deg) saturate(1.3); }
+  14% { transform: none; filter: none; }
+  47% { transform: translate(-3px, 0) skewX(-1deg); filter: brightness(1.15) hue-rotate(-10deg); }
+  50% { transform: none; filter: none; }
+  81% { transform: translate(1px, 1px); filter: contrast(1.2); }
+  83% { transform: none; filter: none; }
+}
+novel-page > section > .spark { position: absolute; left: var(--peek-x, 50%); top: var(--peek-y, 50%); width: 6px; height: 6px;
+  margin: -3px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, #fff9c4 0%, #ffe14d 40%, rgba(255, 225, 77, 0) 70%); }
+novel-page > section.peeking > .spark { animation: spark 0.8s ease-out calc(var(--i) * 0.13s) 1 both; }
+@keyframes spark {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc((var(--i) - 2) * 14px), calc(-18px - var(--i) * 4px)) scale(1.4); }
+}
+@media (prefers-reduced-motion: reduce) { novel-page > section.peeking > video { animation: none; } novel-page > section > .spark { display: none; } }
 novel-page > section:not([data-loops])::after { content: ""; position: absolute; inset: 0; pointer-events: none;
   box-shadow: inset 0 0 60px 18px rgba(0, 0, 0, 0.55); }
 @media (prefers-reduced-motion: reduce) { novel-page { transition: none; } }
@@ -200,6 +221,38 @@ function loopPlayer(section, bases, poster) {
   section.dataset.loops = String(count);
 }
 
+// ---- a peek: a short clip shown every `every` seconds, with the panel's still held in between, so one second of
+// material fills any longer cycle. The clip plays from `from` to `to` (seconds; default all of it) at `rate`, then
+// cuts back to its first frame, which matches the still. While it plays the panel has the class "peeking" (a slight
+// glitch, and sparks at `at`, in % of the panel). Method, tools and measurements: the photo-novel skill, "Peek panels".
+function peekPlayer(section, peek, poster) {
+  const v = document.createElement("video");
+  Object.assign(v, { poster, muted: true, playsInline: true, preload: "auto" });
+  v.setAttribute("muted", ""); v.setAttribute("playsinline", "");
+  v.src = `${peek.src}.${canWebm ? "webm" : "mp4"}`;
+  section.appendChild(v);
+  if (peek.at) { section.style.setProperty("--peek-x", `${peek.at[0]}%`); section.style.setProperty("--peek-y", `${peek.at[1]}%`); }
+  for (let i = 0; i < 5; i++) { const sp = document.createElement("i"); sp.className = "spark"; sp.style.setProperty("--i", i); section.appendChild(sp); }
+  let showing = false;
+  const rest = () => { showing = false; section.classList.remove("peeking"); v.pause(); v.currentTime = 0; };
+  const show = () => {
+    if (!section.isConnected) return;
+    setTimeout(show, peek.every * 1000);
+    if (document.hidden || page.paused || v.readyState < 2) return;   // skip a beat rather than stutter
+    showing = true; section.classList.add("peeking");
+    v.currentTime = peek.from ?? 0; v.playbackRate = peek.rate ?? 1;
+    const p = v.play(); if (p?.catch) p.catch(rest);
+  };
+  // watch every frame, not "timeupdate" (about four a second, so the cut back could be a quarter-second late)
+  const watch = () => { if (!showing) return; if (v.currentTime >= (peek.to ?? Infinity) || v.ended) rest(); else requestAnimationFrame(watch); };
+  v.addEventListener("playing", () => { if (showing) requestAnimationFrame(watch); });
+  // novel-page plays every video in a panel after a tap; outside its moment this one keeps to the still
+  v.addEventListener("play", () => { if (!showing) { v.pause(); v.currentTime = 0; } });
+  v.addEventListener("loadeddata", () => { v.currentTime = 0; }, { once: true });
+  setTimeout(show, (peek.first ?? peek.every) * 1000);
+  section.dataset.loops = "peek";
+}
+
 // ---- pages. Version 1's pictures, sounds and longer loops are shared; a panel's "loopSrc" names its loop files
 // (without the extension), relative to this page.
 const SHARED = "../media/";
@@ -217,7 +270,9 @@ function buildPage(n) {
     s.setAttribute("aria-label", panel.alt);
     s.dataset.sound = `${SHARED}sfx/p${n}-${panel.knot}.mp3`;
     const pic = `${SHARED}p${n}-${panel.knot}.jpg`;
-    if (panel.loopSrc?.length) {
+    if (panel.peek) {
+      peekPlayer(s, panel.peek, pic);
+    } else if (panel.loopSrc?.length) {
       loopPlayer(s, panel.loopSrc, pic);
     } else {
       const img = document.createElement("img"); img.src = pic; img.alt = ""; img.decoding = "async"; s.appendChild(img);

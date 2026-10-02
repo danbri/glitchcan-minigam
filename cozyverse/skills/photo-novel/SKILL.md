@@ -69,6 +69,39 @@ Live: https://danbri.github.io/glitchcan-minigam/cozyverse/steeplewyke/v2/ (v1 k
 
 Encode loops VP9 WebM first and H.264 MP4 second (the Playwright Chromium has no H.264). Voices: mono 96 kbit/s.
 
+## Peek panels: one second of material on a longer cycle
+
+Owner, October 2026, about the fly on the marrows: "an enigmatic and slightly sparkly, slightly glitching cheery
+yellow canary which is largely in background, just peeps above the marrow every 8 seconds for a second. Use js to
+stretch out shorter material to cover that period." A loop cannot do this: a 5 s Kling clip with an event in it
+either repeats every 5 s or needs 8 s of footage. The peek holds the still and plays the event on a timer.
+
+1. **Generate** one kling-2.5-turbo clip from the panel's still (start frame only, 2,121 credits) with ONE small
+   event in the background. The canary's prompt: "Locked-off close shot of marrows on a white cloth in a marquee.
+   For the first second nothing moves. Then a small bright canary-yellow canary pops its head and shoulders up from
+   behind the far marrow in the background, looks straight at the camera for about one second with a tiny tilt of
+   the head, and ducks back down out of sight. For the rest of the clip nothing moves. The last frame is identical
+   to the first frame." (It did not duck back down; step 3 fixes that.)
+2. **Measure** with `tools/peek-window.py clip.mp4`. It compares each frame with the first, per cell of an 8x5
+   grid, and uses the cell that changes most. The first version averaged the whole frame and found nothing: a
+   canary is 1 % of the picture, so its change (5.4 in its cell) was 1.2 over the whole frame, under any threshold.
+   It prints `from` (the event starts), `peak` (largest), `to` (back near rest, or null) and `at` (the centre, in %).
+3. **Cut** with `tools/peek-clip.sh clip.mp4 v2/media/<panel>-<name> <from> <peak>`: from..peak forward, then
+   backward. Kling's canary came up at 0.6 s, was highest at 1.3 s and never fully went down (its head still showed
+   at 2.3 s); playing the rise backward makes it go down, and the clip starts and ends on frames that match the
+   still. 1.5 s, 54 kB.
+4. **Wire** it in `pages.json`: `"peek": {"src", "every": 8, "first": 3, "at": [x, y]}`, with optional `from`, `to`
+   (seconds in the clip; default all of it) and `rate`. The host's `peekPlayer` keeps one `<video>` paused on its
+   first frame (the poster is the still, so nothing shows), and a `setTimeout` every `every` seconds seeks to
+   `from`, plays, and watches each animation frame (not `timeupdate`, about four a second) until `to` or the end,
+   then pauses and seeks to 0. It skips a beat when the page is hidden, paused or the clip is not loaded, rather
+   than stutter. novel-page plays every video in a panel after a tap, so a `play` outside the moment is undone.
+5. **Dress** it: while it plays the panel has the class `peeking`. The CSS gives the video a slight stepped glitch
+   (small translate, hue-rotate, brightness) and five small yellow sparks at `at`. Reduced motion: neither.
+
+Check: `e2e-steeplewyke-v2.mjs` waits for `peeking` on the marrows panel within one cycle, then for it to end with
+the video paused at 0. `SHOTS=dir` saves `peek.png`. Look at a crop at the peak frame before using a clip.
+
 ## Checking it
 
 - `tools/walk.mjs` — 2,000 random readings with the Story API, a quarter of the moves being taps: dead ends, endings,

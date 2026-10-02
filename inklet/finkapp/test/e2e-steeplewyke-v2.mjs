@@ -58,6 +58,7 @@ try {
     for (const x of p.panels) {
       want.push(`../media/p${p.n}-${x.knot}.jpg`, `../media/sfx/p${p.n}-${x.knot}.mp3`);
       for (const b of x.loopSrc || []) want.push(`${b}.webm`, `${b}.mp4`);
+      if (x.peek) want.push(`${x.peek.src}.webm`, `${x.peek.src}.mp4`);
     }
   }
   const absent = [];
@@ -83,6 +84,18 @@ try {
     if (st.page !== n || st.sections !== 4) pageWrong.push(`${label}: page ${st.page}, ${st.sections} panels`);
     if (st.bed !== `../media/sfx/bed-${n}.mp3`) bedWrong.push(`${label}: ${st.bed}`);
     if (!memSeen) memSeen = await page.evaluate(() => window.__marrow.memory);
+    // the marrows panel holds its still and shows the canary's moment every few seconds
+    if (label === 'Look at her marrow') {
+      const kind = await page.evaluate(() => document.getElementById('marrows')?.dataset.loops);
+      await page.waitForFunction(() => document.getElementById('marrows')?.classList.contains('peeking'), null, { timeout: 12000 })
+        .then(() => pass('the marrows panel shows its peek (the canary) within one cycle'))
+        .catch(() => fail(`no peek on the marrows panel (data-loops ${kind})`));
+      if (process.env.SHOTS) { await wait(700); await page.locator('#marrows').screenshot({ path: `${process.env.SHOTS}/peek.png` }); }
+      await page.waitForFunction(() => { const s = document.getElementById('marrows'), v = s?.querySelector('video');
+        return s && !s.classList.contains('peeking') && v.paused && v.currentTime === 0; }, null, { timeout: 4000 })
+        .then(() => pass('the peek ends and the panel holds its still again'))
+        .catch(() => fail('the peek did not end'));
+    }
     if (!seenPages.has(n)) { seenPages.add(n); await shot(n); }
   }
   quiet.length ? fail(`no voice after: ${quiet.join('; ')}`) : pass(`a voice take plays after each of the ${PATH.length} choices`);
