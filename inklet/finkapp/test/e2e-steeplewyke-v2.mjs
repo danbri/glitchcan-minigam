@@ -86,7 +86,7 @@ try {
     if (!seenPages.has(n)) { seenPages.add(n); await shot(n); }
   }
   quiet.length ? fail(`no voice after: ${quiet.join('; ')}`) : pass(`a voice take plays after each of the ${PATH.length} choices`);
-  pageWrong.length ? fail(`wrong page: ${pageWrong.join('; ')}`) : pass(`all ten pages turned, four panels each (${[...seenPages].join(', ')})`);
+  pageWrong.length ? fail(`wrong page: ${pageWrong.join('; ')}`) : pass(`${seenPages.size} pages turned in the order this route takes, four panels each (${[...seenPages].join(', ')})`);
   bedWrong.length ? fail(`wrong bed: ${bedWrong.join('; ')}`) : pass('each page plays its own sound bed');
   small ? fail(`${small} choice buttons under 44 px`) : pass('every choice button is at least 44 px tall');
 
@@ -114,7 +114,9 @@ try {
     .then(() => pass('a tap on the scarecrows panel takes the story there and brings in its sound'))
     .catch(async () => fail(`tap: ${JSON.stringify(await page.evaluate(() => ({ s: window.__marrow.panelSound, t: document.querySelector('.ink').textContent.slice(0, 80) })))}`));
 
-  // a double tap counts as one tap: back to the overview, then a double tap on the show panel leaves the view in it
+  // a double tap counts as one tap: back to the overview, then a double tap on the show panel leaves the view in it.
+  // Wait first: a second tap within 350 ms at the same point IS a double tap, and would be taken as one.
+  await wait(600);
   await page.mouse.click(box.x, box.y);
   await page.waitForFunction(() => document.getElementById('page').current === -1, null, { timeout: 5000 }).catch(() => {});
   await wait(1600);
