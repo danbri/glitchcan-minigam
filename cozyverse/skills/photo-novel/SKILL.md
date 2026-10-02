@@ -100,6 +100,13 @@ either repeats every 5 s or needs 8 s of footage. The peek holds the still and p
 5. **Dress** it: while it plays the panel has the class `peeking`. The CSS gives the video a slight stepped glitch
    (small translate, hue-rotate, brightness) and five small yellow sparks at `at`. Reduced motion: neither.
 
+**Rare, not regular.** Owner, October 2026, after chapter 2 put the canary on three panels every 8 s: "Canary should
+be occasional. Rare. Special." Chapter 2's `pages.json` has `"canary": {"mode": "rare", "after": [20, 45]}`: for
+each reading the host picks ONE panel that has a peek clip, and the canary shows there ONCE, 20 to 45 s after that
+page is shown (the wait starts again if the page turns first); every other canary panel is a plain still that
+reading. `?canary=<panel id>` picks the panel and waits 2 s (the test uses it). Chapter 1's marrows keep the
+owner's own spec, every 8 s.
+
 Check: `e2e-steeplewyke-v2.mjs` waits for `peeking` on the marrows panel within one cycle, then for it to end with
 the video paused at 0. `SHOTS=dir` saves `peek.png`. Look at a crop at the peak frame before using a clip.
 

@@ -236,9 +236,12 @@ function peekPlayer(section, peek, poster) {
   const rest = () => { showing = false; section.classList.remove("peeking"); v.pause(); v.currentTime = 0; };
   const show = () => {
     if (!section.isConnected) return;
-    setTimeout(show, peek.every * 1000);
-    if (document.hidden || page.paused || v.readyState < 2) return;   // skip a beat rather than stutter
+    const ready = !(document.hidden || page.paused || v.readyState < 2);
+    // a repeating peek skips a beat rather than stutter; a once-only peek tries again shortly
+    if (!peek.once) setTimeout(show, peek.every * 1000); else if (!ready) setTimeout(show, 2000);
+    if (!ready) return;
     showing = true; section.classList.add("peeking");
+    peek.onShow?.();
     v.currentTime = peek.from ?? 0; v.playbackRate = peek.rate ?? 1;
     const p = v.play(); if (p?.catch) p.catch(rest);
   };
@@ -250,6 +253,25 @@ function peekPlayer(section, peek, poster) {
   v.addEventListener("loadeddata", () => { v.currentTime = 0; }, { once: true });
   setTimeout(show, (peek.first ?? peek.every) * 1000);
   section.dataset.loops = "peek";
+}
+
+// ---- the canary is rare (owner, October 2026: "occasional, rare, special"). pages.json "canary" says how: in
+// "rare" mode one panel with a peek clip is chosen at random for each reading, and the canary shows there once, a
+// random number of seconds ("after") after that page is shown; if the page turns first, the wait starts again the
+// next time the page is shown. ?canary=<panel id> chooses the panel and shortens the wait to two seconds.
+const params = new URLSearchParams(location.search);
+const canary = { panel: null, done: false };
+function pickCanary() {
+  const all = data.pages.flatMap((p) => p.panels.filter((x) => x.peek?.src).map((x) => x.knot));
+  canary.panel = all.includes(params.get("canary")) ? params.get("canary") : all[Math.floor(Math.random() * all.length)] || null;
+  canary.done = false;
+}
+function canaryPeek(panel) {
+  if (data.canary?.mode !== "rare") return panel.peek;
+  if (panel.knot !== canary.panel || canary.done) return null;
+  const [lo, hi] = data.canary.after || [20, 45];
+  const wait = params.get("canary") === panel.knot ? 2 : lo + Math.random() * (hi - lo);
+  return { ...panel.peek, once: true, first: wait, onShow: () => { canary.done = true; } };
 }
 
 // ---- pages. Every picture and sound is in this chapter's media/; a panel's "loopSrc" names its loop files and
@@ -269,8 +291,9 @@ function buildPage(n) {
     s.setAttribute("aria-label", panel.alt);
     s.dataset.sound = `${SHARED}sfx/p${n}-${panel.knot}.mp3`;
     const pic = `${SHARED}p${n}-${panel.knot}.jpg`;
-    if (panel.peek?.src) {
-      peekPlayer(s, panel.peek, pic);
+    const peek = panel.peek?.src ? canaryPeek(panel) : null;
+    if (peek) {
+      peekPlayer(s, peek, pic);
     } else if (panel.loopSrc?.length) {
       loopPlayer(s, panel.loopSrc, pic);
     } else {
@@ -331,7 +354,7 @@ page.addEventListener("storytags", (e) => {
   for (const t of tags) {
     const m = /^page\s*:\s*(\d+)$/i.exec(t);
     if (m) buildPage(+m[1]);
-    if (/^restart$/i.test(t)) setTimeout(() => { story.ResetState(); loadVillage(); pageNo = 0; page.play(story); });
+    if (/^restart$/i.test(t)) setTimeout(() => { story.ResetState(); loadVillage(); pickCanary(); pageNo = 0; page.play(story); });
     const mem = /^memory\s*:\s*(\w+)\s+([+-]\d+)\s+(.+)$/i.exec(t);
     if (mem) { saveVillage(); remember(mem[3]); }
   }
@@ -354,7 +377,7 @@ new MutationObserver(() => {
 window.__marrow = window.__plainhunt = {
   get page() { return pageNo; }, get sound() { return sound && !muted; }, get audio() { return ac?.state || null; },
   get bed() { return bed.file; }, get panelSound() { return panelLoop.file; }, get playing() { return playing?.url || null; },
-  get story() { return story; }, get voiced() { return voiced; }, get village() { return readVillage(); }, get memory() { return memoryBox.classList.contains("on") ? memoryBox.textContent : null; },
+  get story() { return story; }, get voiced() { return voiced; }, get canary() { return { ...canary }; }, get village() { return readVillage(); }, get memory() { return memoryBox.classList.contains("on") ? memoryBox.textContent : null; },
 };
 
 // the voices are recorded when voices.json says so ("recorded": true); until then the page plays its sound only
@@ -375,6 +398,8 @@ mute.addEventListener("click", () => {
 });
 const begin = (withSound) => {
   sound = withSound;
+  pickCanary();
+  if (!withSound) { const n = pageNo; pageNo = 0; buildPage(n); }   // with sound, the page is rebuilt below
   if (story) loadVillage();
   if (sound) {
     startAudio(); mute.hidden = false;
