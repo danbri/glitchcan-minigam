@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plain Hunt: loop check</title>
+<link rel="icon" href="data:,">
+<style>
+/* Every moving clip in chapter 2's media/, for checking by eye: the loops the chapter plays, the loops it no longer
+   plays, and the canary peeks. Each card says which panel it belongs to, whether pages.json uses it, and how much it
+   moves (mean change per frame, from tools/loop-motion.py; the fire is about 0.3). Tap a clip to see the still. */
+:root { --bg: #0d0c0a; --card: #1b1916; --ink: #ece6da; --dim: #a39a8a; --used: #7fc98a; --old: #d9a35b; --peek: #f2d23c; --bar: #5b8fd9; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, sans-serif; }
+main { max-width: 1200px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
+h1 { font-size: 1.3rem; margin: 0 0 0.3rem; }
+p { margin: 0 0 0.8rem; color: var(--dim); }
+.bar-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 1rem; }
+.bar-row button { font: inherit; color: var(--ink); background: var(--card); border: 1px solid #3a352d; border-radius: 6px;
+  min-height: 44px; padding: 0 14px; }
+.bar-row button[aria-pressed="true"] { border-color: var(--ink); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+figure { margin: 0; background: var(--card); border-radius: 8px; overflow: hidden; }
+.clip { position: relative; background: #000; cursor: pointer; }
+.clip video, .clip img { display: block; width: 100%; height: auto; }
+.clip img { position: absolute; inset: 0; height: 100%; object-fit: cover; opacity: 0; }
+.clip.still img { opacity: 1; }
+.clip.still::after { content: "still"; position: absolute; top: 8px; right: 8px; background: #000a; padding: 2px 8px; border-radius: 4px; }
+figcaption { padding: 10px 12px 12px; }
+.name { font-family: ui-monospace, monospace; font-size: 0.85rem; word-break: break-all; }
+.tag { display: inline-block; font-size: 0.8rem; padding: 1px 8px; border-radius: 10px; margin-right: 6px; color: #111; }
+.tag.used { background: var(--used); } .tag.old { background: var(--old); } .tag.peek { background: var(--peek); }
+.meter { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.85rem; color: var(--dim); }
+.meter span { flex: 1; height: 8px; background: #2c2924; border-radius: 4px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--bar); }
+.note { font-size: 0.85rem; color: var(--dim); margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Plain Hunt: loop check</h1>
+  <p>Every moving clip in chapter 2. Green: the chapter plays it. Amber: not used now. Yellow: a canary peek (in the
+    chapter it plays once, rarely). The bar is the mean change per frame; the fire is about 0.3. Tap a clip to hold the still
+    picture over it, and tap again to see the motion.</p>
+  <div class="bar-row" role="group" aria-label="Show">
+    <button type="button" data-f="all" aria-pressed="true">All</button>
+    <button type="button" data-f="used" aria-pressed="false">Used</button>
+    <button type="button" data-f="old" aria-pressed="false">Not used</button>
+    <button type="button" data-f="peek" aria-pressed="false">Canary</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+<script type="module">
+// change per frame, measured with tools/loop-motion.py on the encoded files (2 October 2026)
+const motion = {
+  "p1-tower-loop1": 0.24, "p1-tower-loop2": 0.28, "p4-cottage-tiny": 0.10, "p5-barn-loop1": 0.03, "p5-barn-tiny": 0.11,
+  "p6-fire-loop1": 0.31, "p6-fire-loop2": 0.34, "p6-fire-tiny": 0.66, "p7-swing-loop1": 0.05, "p7-swing-loop2": 0.06,
+  "p7-swing-tiny": 0.16, "p8-motes-tiny": 0.08, "p10-bell-tiny": 0.24,
+  "p5-brush-canary": 0.08, "p7-school-canary": 0.02, "p9-window-canary": 0.02,
+};
+const data = await fetch("pages.json").then((r) => r.json());
+const used = new Map(), peeks = new Map();
+for (const pg of data.pages) for (const x of pg.panels) {
+  for (const s of x.loopSrc || []) used.set(s.replace(/^media\//, ""), { page: pg.n, panel: x });
+  if (x.peek) peeks.set(x.peek.src.replace(/^media\//, ""), { page: pg.n, panel: x });
+}
+const panelOf = (name) => name.replace(/-(loop\d|tiny|canary)$/, "");
+const cards = Object.keys(motion).sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1)) || a.localeCompare(b)).map((name) => {
+  const kind = peeks.has(name) ? "peek" : used.has(name) ? "used" : "old";
+  const info = used.get(name) || peeks.get(name);
+  const fig = document.createElement("figure");
+  fig.dataset.kind = kind;
+  const m = motion[name];
+  fig.innerHTML = `<div class="clip" role="button" tabindex="0" aria-label="${name}: tap to show the still">
+      <video muted loop playsinline autoplay preload="metadata" poster="media/${panelOf(name)}.jpg">
+        <source src="media/${name}.webm" type="video/webm"><source src="media/${name}.mp4" type="video/mp4"></video>
+      <img src="media/${panelOf(name)}.jpg" alt=""></div>
+    <figcaption><span class="tag ${kind}">${{ used: "used", old: "not used", peek: "canary" }[kind]}</span>
+      <span class="name">${name}</span>
+      <div class="meter"><span><i style="width:${Math.min(100, (m / 0.4) * 100)}%"></i></span>${m.toFixed(2)}</div>
+      <div class="note">${info ? `page ${info.page}, ${info.panel.ink}` : `page ${parseInt(name.slice(1))}, replaced`}${info?.panel.note ? `: ${info.panel.note}` : ""}</div>
+    </figcaption>`;
+  const clip = fig.querySelector(".clip");
+  const flip = () => { clip.classList.toggle("still"); clip.setAttribute("aria-label", `${name}: ${clip.classList.contains("still") ? "still shown, tap for the motion" : "tap to show the still"}`); };
+  clip.addEventListener("click", flip);
+  clip.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } });
+  const v = fig.querySelector("video");
+  if (peeks.get(name)?.panel.peek.rate) v.playbackRate = peeks.get(name).panel.peek.rate;
+  return fig;
+});
+document.getElementById("grid").append(...cards);
+// only the clips on screen play, so a phone is not decoding sixteen videos at once
+const io = new IntersectionObserver((es) => es.forEach((e) => { const v = e.target.querySelector("video"); e.isIntersecting ? v.play().catch(() => {}) : v.pause(); }), { threshold: 0.2 });
+cards.forEach((c) => io.observe(c));
+document.querySelectorAll(".bar-row button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".bar-row button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  cards.forEach((c) => { c.hidden = b.dataset.f !== "all" && c.dataset.kind !== b.dataset.f; });
+}));
+window.__loops = { count: cards.length, kinds: cards.map((c) => c.dataset.kind) };
+</script>
+</body>
+</html>
