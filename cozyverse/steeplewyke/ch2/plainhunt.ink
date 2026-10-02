@@ -72,7 +72,7 @@ VAR was_achebe = 0
 # voice: p1a-1
 Rooks go round the spire. Up in the ringing chamber, a light is on.
 # voice: p1a-2
-There is no bicycle in the rack by the lychgate. Hugh Daventry rings the treble, writes the parish magazine and sets the quiz at the Plough. Hugh is never late.
+The bicycle rack by the lychgate is empty. Hugh Daventry rings the treble, edits the parish magazine and sets the Wednesday quiz at the Plough. He usually leaves his bicycle there by a quarter past.
 + [Meet the vicar] -> p1_achebe
 + [Meet the tower captain] -> p1_win
 
@@ -80,17 +80,17 @@ There is no bicycle in the rack by the lychgate. Hugh Daventry rings the treble,
 # panel: achebe
 {p1_achebe > 1:
     # voice: p1b-again
-    Achebe: Still a hundred per cent, Sergeant.
+    Achebe: Win's waiting for you, Sergeant.
     -> p1_achebe_choices
 }
 # voice: p1b-1
-Achebe: Sergeant Adeyemi. I had you at forty per cent to turn up.
+Achebe: Sergeant Adeyemi. You came. I told Margaret forty per cent.
 # voice: p1b-2
-Sam: And now?
+Sam: What did Margaret say?
 # voice: p1b-3
-Achebe: A hundred. It's very satisfying.
+Achebe: She said you'd come if you'd said you would.
 # voice: p1b-4
-The Reverend Dr Ruth Achebe was an actuary for twenty years before she was a priest. She says the two jobs are closer than people think.
+The Reverend Dr Ruth Achebe has been the interim vicar since August. Before she was ordained she priced pension risk for an insurer in Croydon.
 -> p1_achebe_choices
 = p1_achebe_choices
 + [Meet the tower captain] -> p1_win
@@ -99,15 +99,15 @@ The Reverend Dr Ruth Achebe was an actuary for twenty years before she was a pri
 # panel: win
 {p1_win > 1:
     # voice: p1c-again
-    Win: Ropes, not people.
+    Win: Bench. Feet in.
     -> p1_win_choices
 }
 # voice: p1c-1
-Win: Win Haskett. Tower captain. You'll be the policeman.
+Win: You're the policeman. I'm Win. Tower captain.
 # voice: p1c-2
-She is seventy-eight and has rung here for forty-one years. The bells took most of her hearing. A notepad on a string round her neck does the rest.
+She is seventy-eight. She speaks a little too loudly, and she watches your mouth while you answer. A reporter's notebook and a pencil hang on a string round her neck.
 # voice: p1c-3
-Win: Watch the ropes, not the people. And don't touch anything with a rope on it.
+Win: You sit on the bench with your feet in, and you don't touch a rope. A bell can lift a grown man to the ceiling.
 -> p1_win_choices
 = p1_win_choices
 + [Ask what plain hunt is] -> p1_napkin
@@ -116,9 +116,9 @@ Win: Watch the ropes, not the people. And don't touch anything with a rope on it
 # panel: napkin
 {p1_win == 0: -> p1_win}
 # voice: p1d-1
-On a napkin from the Plough, in pencil, she writes the first thing every ringer learns.
+On the back of a napkin from the Plough she writes out the first thing every ringer learns.
 # voice: p1d-2
-Win: Plain hunt. Five bells, five ringers. Every row, the bells swap places in pairs. One and two, three and four. Then two and three, four and five. Then back again.
+Win: Plain hunt. Five bells. In one row the pairs swap: one with two, three with four. In the next, two with three, four with five. Then the first again.
 1 2 3 4 5
 2 1 4 3 5
 2 4 1 5 3
@@ -131,11 +131,11 @@ Win: Plain hunt. Five bells, five ringers. Every row, the bells swap places in p
 1 3 2 5 4
 1 2 3 4 5
 # voice: p1d-3
-Win: Ten rows and you're home. The treble leads, the rest follow. Hugh has the treble, if he turns up.
+Win: Ten rows and you're back in rounds. Hugh rings the treble. If he isn't here by half past, we ring on five.
 # voice: p1d-4
-Sam: There are six ropes up there.
+Sam: There are six ropes.
 # voice: p1d-5
-Win: Six bells. Five tonight. The tenor stays down when we're short.
+Win: Six bells. On five, the tenor stays down.
 + [Put the napkin in your pocket and go up] -> p2
 
 // ---------------------------------------------------------------- page 2: the ringing chamber
@@ -177,13 +177,13 @@ Margaret Pike pours tea from a flask on the windowsill. She puts out two cups, l
 On the blackboard, in Hugh's square capitals: Tuesday. One, Hugh. Two, Margaret. Three, Dilys. Four, Win. Five, Jeremy. Six, Ruth.
 {was_dilys <= -1:
     # voice: p2b-cold
-    Dilys: Hugh's not come. Win will sort us out. Don't touch the board, love, you'll smudge him.
+    Dilys: Hugh's not come. Win'll sort us out.
 - else:
     ~ swap = true
     # voice: p2b-2
-    Dilys: Hugh's not come, so we all move up one. Margaret takes the treble. Ruth's tenor stays down.
+    Dilys: Hugh's not come, so we all move up one. Margaret, you're on the treble. Ruth, you sit this one out.
     # voice: p2b-3
-    Dilys: Don't write it on the board. Hugh hates anyone writing on his board.
+    Dilys: Don't change the board, love. Hugh likes to rub it out himself.
 }
 + [Sit on the bench and watch] -> p2_ropes
 
@@ -191,13 +191,13 @@ On the blackboard, in Hugh's square capitals: Tuesday. One, Hugh. Two, Margaret.
 # panel: ropes
 {p2_ropes > 1:
     # voice: p2c-again
-    The ropes rise and fall. Ringing sounds tidier from the bench than it is.
+    The ropes go up and down. Win's lips move as she counts.
     -> p2_ropes_wait
 }
 # voice: p2c-1
 Win: Look to. Treble's going. She's gone.
 # voice: p2c-2
-The bells start somewhere above your head, much closer than you expected. Five people in a circle, pulling, watching each other's ropes.
+The bells start overhead, loud enough to feel through the bench. Five people stand in a circle, each watching somebody else's rope.
 # voice: p2c-3
 Jeremy Cole, the antiques dealer, stands nearest the door, under the light switch. At five past eight, between two pieces, he reads his phone and puts it away.
 -> p2_ropes_wait
@@ -210,11 +210,11 @@ Jeremy Cole, the antiques dealer, stands nearest the door, under the light switc
 # voice: p2d-1
 At a quarter past eight, the lights go out.
 # voice: p2d-2
-The ringing goes on in the dark, and goes wrong. A bell is missing from the pattern, or two are. You cannot tell. Somewhere below you, something falls.
+The ringing goes on in the dark, and goes wrong: a bell is missing from the pattern, or two are. Below you, through the floor, there is a thud and a short metal rattle.
 # voice: p2d-3
 Forty seconds by your watch, and the lights come back. Everybody is where they were.
 # voice: p2d-4
-Jeremy: Fuse box. It's older than the bells.
+Jeremy: That switch does it every winter. You have to hold it up.
 # voice: p2d-5
 Win calls Stand, and the bells stop. Dr Achebe goes down the stair first, to put the kettle on.
 # voice: p2d-6
@@ -252,7 +252,7 @@ The stair is stone, narrow, and turns to the left. Fourteen steps up to the ring
     Achebe: He texted the band at five past eight. On my way up. Something to say about the board. H.
 }
 # voice: p3a-4
-Achebe: I came down to put the kettle on. I found him. Statistically, that makes me interesting.
+Achebe: I came down for the kettle and he was here. I haven't moved him.
 + [Look at his hand] -> p3_proof
 + [Wait for Quaile] -> p3_quaile
 
@@ -272,7 +272,7 @@ Sam: Somebody has the rest of that page.
 # panel: quaile
 {p3_quaile > 1:
     # voice: p3c-again
-    Quaile: One question for the band, Sam, then they go home to bed.
+    Quaile: One question for the band, Sam, then they go home.
     -> p3_quaile_choices
 }
 # voice: p3c-1
@@ -286,7 +286,7 @@ Quaile: Then why did you ring me and not just an ambulance?
 # voice: p3c-5
 Sam: I rang both, ma'am.
 # voice: p3c-6
-Quaile: Old man, stone stair, lights out. The coroner will say he fell, and the coroner sits on Friday. One question for the band tonight. Make it a good one.
+Quaile: Old man, stone stair, lights out. The coroner will say he fell, and the coroner sits on Friday. The band are cold and want their beds. You can ask them one thing tonight.
 -> p3_quaile_choices
 = p3_quaile_choices
 + [Question the band] -> p3_band
@@ -384,7 +384,7 @@ Wednesday. You sleep for four hours, and wake to your phone.
     Quaile: The coroner sits on Friday. Five people to see and time for four. Where first?
 - 3:
     # voice: hub-3
-    Quaile: One more, then the vicarage. She's promised me a spreadsheet and a biscuit.
+    Quaile: One more, then the vicarage. Dr Achebe says she's made a spreadsheet.
 - else:
     # voice: hub-n
     Quaile: Where next?
@@ -398,7 +398,7 @@ Wednesday. You sleep for four hours, and wake to your phone.
 
 === evening ===
 # voice: evening
-Quaile: That's Wednesday gone. Vicarage, Sam. She does a good biscuit for a statistician.
+Quaile: That's the day gone. Vicarage, Sam.
 + [Go to the vicarage] -> p9
 
 === function standing(n) ===
@@ -486,7 +486,7 @@ A card in the window, in capitals: Shoes off. This means you.
 # panel: win4
 {p4_win > 1:
     # voice: p4b-again
-    Win taps the notepad. One more page, it means, and then she has the flowers to do.
+    Win taps the notepad and looks at the clock.
     -> p4_win_choices
 }
 {was_win >= 1 || p4_shoes > 0:
@@ -497,11 +497,9 @@ A card in the window, in capitals: Shoes off. This means you.
     Win: Come in. Tea's stewed. Sit there, not there.
 }
 # voice: p4b-2
-Quaile reaches up and switches off her hearing aid.
-# voice: p4b-3
-Quaile: In solidarity.
+Quaile takes out her hearing aid and puts it down by the teapot.
 # voice: p4b-4
-So the interview is done on Win's notepad. She gives you one page for questions, and makes it clear that it is one page.
+Win tears one page off the notepad for your questions and pushes it across the table.
 -> p4_win_choices
 = p4_win_choices
 + {p4_bell == 0 && p4_tuesday == 0} [Write: Which bell do you ring?] -> p4_bell
@@ -513,10 +511,6 @@ So the interview is done on Win's notepad. She gives you one page for questions,
 {p4_win == 0: -> p4_win}
 # voice: p4c-1
 She writes a large 4, underlines it twice, and adds: Forty-one years.
-{swap:
-    # voice: p4c-2
-    It is true of every Tuesday but the last one.
-}
 # voice: p4c-3
 Underneath, Quaile writes: Is the tea always like this? Win writes: Yes.
 + [Look at her phone] -> p4_phone
@@ -529,9 +523,9 @@ Underneath, Quaile writes: Is the tea always like this? Win writes: Yes.
 # voice: p4d-1
 Win writes for a long time.
 # voice: p4d-2
-Hugh never came. We moved up one, rang plain hunt on five, tenor down. I had the three for once. Lights went at quarter past. I ring by watching ropes. In the dark there is nothing to watch.
+Hugh never came. Moved up one. Plain hunt on five, tenor down. I had the 3. Lights out at 8.14. Could not see the ropes, so I kept mine going and counted.
 # voice: p4d-3
-Then, underlined: Somebody went wrong. I could not tell you who. Glenys could.
+Underneath, underlined: Somebody dropped out. Ask Dilys for Glenys's tape.
 + [Look at her phone] -> p4_phone
 + [Leave her to her flowers] -> inquiries
 
@@ -542,7 +536,7 @@ Then, underlined: Somebody went wrong. I could not tell you who. Glenys could.
 # voice: p4e-1
 Her phone, on the mantelpiece by the clock. The band's group, Tuesday, five past eight. Hugh: On my way up. Something to say about the board. H.
 # voice: p4e-2
-Win: I don't look at my phone in the tower. Some do.
+Win: I read it when I got home. Phones stay in coats in my tower.
 + [Leave her to her flowers] -> inquiries
 
 // ---------------------------------------------------------------- page 5: Jeremy's barn
@@ -571,9 +565,9 @@ Win: I don't look at my phone in the tower. Some do.
 === p5_barn ===
 # panel: barn
 # voice: p5a-1
-Every chair has a price on a luggage label, and every price is a little more than the chair.
+Every chair has a price on a brown luggage label. The cheapest is four hundred pounds.
 # voice: p5a-2
-Dust turns slowly in the light from the high window.
+A radio on the workbench is playing the shipping forecast.
 + [Find Jeremy Cole] -> p5_jeremy
 
 === p5_jeremy ===
@@ -584,9 +578,7 @@ Dust turns slowly in the light from the high window.
     -> p5_jeremy_choices
 }
 # voice: p5b-1
-Jeremy: Sergeant. Inspector. Terrible business. Hugh was a friend. Well. Hugh was a historian, which is nearly the same thing.
-# voice: p5b-2
-Quaile: Was he.
+Jeremy: Sergeant. Inspector. I heard this morning. Hugh and I didn't always agree, but he was good company on quiz nights.
 # voice: p5b-3
 He wipes his hands on a cloth that has gold on it. He has time for one question before the dresser.
 -> p5_jeremy_choices
@@ -612,7 +604,7 @@ Jeremy: When the lights went I kept going. You do. Rope's in your hands.
 # voice: p5d-1
 Jeremy: The Jubilee board? Found it in a barn at Bibury, under a tarpaulin. The tower's own, taken down in the sixties. Restored with sympathy.
 # voice: p5d-2
-Jeremy: The parish paid nine thousand pounds for it, out of the roof fund. Generous of them, and fair of me.
+Jeremy: The parish paid nine thousand pounds, out of the roof fund. A pub in Bath offered me twelve.
 # voice: p5d-3
 Quaile: The roof fund has had a hard year.
 + [Look at the trestle at the back] -> p5_brush
@@ -625,7 +617,7 @@ Quaile: The roof fund has had a hard year.
 # voice: p5e-1
 On a trestle at the back, a board under a dust sheet, and a sign-writer's brush across a pot of gold size. The gold is still wet.
 # voice: p5e-2
-Under the sheet: a peal board, half lettered. Ninety-seven. Jubilee. The letters have little feet, the way old letters do.
+Under the sheet: a peal board, half lettered. Jubilee, eighteen ninety-seven. These letters have small feet on them, like the lettering on old shop fronts.
 # voice: p5e-3
 Jeremy: A commission. Another church. I'm not at liberty.
 + [Go out past his van] -> p5_van
@@ -655,7 +647,7 @@ His van says Cole Antiques in gold, in plain round letters with no feet at all.
 }
 {p6 == 1:
     # voice: p6-open
-    The Plough. The quiz goes ahead, because Hugh set it on Sunday and the landlord cannot bear to waste it. Six teams, a fire, and a chair left empty at the front.
+    The Plough. The quiz goes ahead: Hugh set the questions on Sunday, and the landlord reads them out from Hugh's sheet. Six teams and a fire.
 }
 + [Listen to the questions] -> p6_quiz
 + [Look behind the bar] -> p6_photo
@@ -681,7 +673,7 @@ Quaile: He was going to ask the whole village. Then tell them the answer in prin
 === p6_photo ===
 # panel: photo
 # voice: p6c-1
-Behind the bar, a photograph of Hugh in a bow tie, holding the quiz microphone like a man about to be strict.
+Behind the bar, a photograph of Hugh at last year's quiz, in a bow tie, with the microphone.
 # voice: p6c-2
 Landlord: He never let the same team win twice running. Said it was bad for the village.
 + [Listen to the questions] -> p6_quiz
@@ -696,7 +688,7 @@ Landlord: He never let the same team win twice running. Said it was bad for the 
 }
 {rows:
     # voice: p6d-1
-    Dilys: Did Glenys's email help? She wants to know if she's evidence. She's never been evidence.
+    Dilys: Glenys rang me at six this morning to ask if she's evidence.
 - else:
     {asked_dilys:
         # voice: p6d-2
@@ -799,7 +791,7 @@ Eight thirteen: a man wheels a bicycle through the lychgate. Eight fourteen: the
 # voice: p7d-3
 Sam: So whoever it was never left the building.
 # voice: p7d-4
-Toby: That's not going in the brochure, is it.
+Toby: Can I still use the bit before eight?
 + [Leave him to his buyers] -> inquiries
 
 // ---------------------------------------------------------------- page 8: the peal board
@@ -850,7 +842,7 @@ Quaile: My father had a railway timetable in those letters. He kept it in the do
     Sam: They don't look Victorian.
 }
 # voice: p8b-5
-Achebe: I'd put Victorian at four per cent.
+Achebe: Mr Cole told us he had regilded them.
 + [Talk to Dr Achebe] -> p8_achebe
 + [Look at the treble rope] -> p8_motes
 
@@ -858,7 +850,7 @@ Achebe: I'd put Victorian at four per cent.
 # panel: achebe8
 {p8_achebe > 1:
     # voice: p8c-again
-    Achebe: Ask me a number, Sergeant. It's what I'm for.
+    Achebe: Anything else up here, Sergeant? I have a funeral to plan.
     -> p8_achebe_choices
 }
 # voice: p8c-1
@@ -866,10 +858,10 @@ Achebe: On base rates, Inspector, it is usually the person who found him. That's
 # voice: p8c-2
 Quaile: And the others?
 # voice: p8c-3
-Achebe: I don't do my parishioners out loud. I do them at night.
+Achebe: They were all in the dark with me. I can't give odds on people I couldn't see.
 -> p8_achebe_choices
 = p8_achebe_choices
-+ {p8_you == 0} [Ask her for a number on you] -> p8_you
++ {p8_you == 0} [Ask what she makes of you] -> p8_you
 + [Look at the treble rope] -> p8_motes
 + [Leave the tower] -> inquiries
 
@@ -878,12 +870,19 @@ Achebe: I don't do my parishioners out loud. I do them at night.
 {p8_achebe == 0: -> p8_achebe}
 {p8_you == 1:
     ~ rel_achebe += 1
-    # memory: achebe +1 You asked Dr Achebe for a number. She will remember that.
+    # memory: achebe +1 You asked Dr Achebe what she made of you. She will remember that.
 }
-# voice: p8d-1
-Achebe: You, Sergeant? Sixty per cent to stay in the county past Christmas.
-# voice: p8d-2
-Achebe: Sixty-five, now that you've asked.
+{was_margaret <= -1:
+    # voice: p8d-cold
+    Achebe: You, Sergeant? You'll still be here at Christmas. You keep turning up to things you were only asked to once.
+- else:
+    # voice: p8d-1
+    Achebe: You, Sergeant? You'll still be here at Christmas. Margaret has asked you to Sunday lunch, and you haven't said no.
+    # voice: p8d-2
+    Sam: How do you know that?
+    # voice: p8d-3
+    Achebe: She told me. She's bought a second chair.
+}
 + [Look at the treble rope] -> p8_motes
 + [Leave the tower] -> inquiries
 
@@ -894,7 +893,7 @@ Dust in the light from the louvres. The ropes are tied up for the week, all but 
 # voice: p8e-2
 The treble rope hangs free, and holding it, as if waiting to be told Look to, is a scarecrow in a navy mac and brown city shoes.
 # voice: p8e-3
-Achebe: It was here this morning. I assumed it was a ringer.
+Achebe: It was here when I unlocked this morning. I thought one of the band had brought it up.
 + [Leave the tower] -> inquiries
 
 // ---------------------------------------------------------------- page 9: the rows (Wednesday night, the vicarage)
@@ -1002,7 +1001,7 @@ Achebe: Take the five out, and that first row would sound 4 2 1 3. Close. Glenys
 Achebe: Take the four out. 4 2 5 1 3 becomes 2 5 1 3, and by note that's 2 4 1 3. Then 4 2 3 1. Then 4 3 2 1. Every row.
 {guesses == 0:
     # voice: p9d-first
-    Quaile: First time. I'd have had a biscuit riding on the five.
+    Quaile: First go.
 }
 # voice: p9d-6
 Sam: The four stopped for forty seconds, in the dark, and came back out of breath.
@@ -1049,7 +1048,7 @@ Sam: The four stopped for forty seconds, in the dark, and came back out of breat
         Sam: And he told us he was on the five, every blow.
     }
     # voice: p9g-3
-    Quaile: Well, now.
+    Quaile: Write that down.
 - else:
     # voice: p9g-4
     Sam: Jeremy stood by the door.
@@ -1082,14 +1081,14 @@ Sam: Margaret had the treble. Her first time on it. Glenys would have heard the 
 - else:
     {not typeface:
         # voice: p9i-board
-        Quaile: Have you looked at the board, Sam, or only at the people standing under it?
+        Quaile: Hugh wanted to say something about the board. Has anyone looked at it properly?
     - else:
         {not swap:
             # voice: p9i-swap
-            Quaile: Who was standing where on Tuesday? Not who usually stands there.
+            Quaile: Hugh didn't come. So who was on which rope?
         - else:
             # voice: p9i-rows
-            Quaile: Somebody's sister has a recording. Somebody's sister always has a recording.
+            Quaile: Dilys records every practice. Has anyone asked her for Tuesday's?
         }
     }
 }
@@ -1172,15 +1171,15 @@ Sam: Margaret had the treble. Her first time on it. Glenys would have heard the 
 === p10_nave ===
 # panel: nave
 # voice: p10a-1
-Achebe: Notices. The flower rota is in the porch. The roof fund stands at four thousand pounds, and a board.
+Achebe: Notices. The flower rota is in the porch. The roof fund stands at four thousand two hundred pounds.
 # voice: p10a-2
-Achebe: And Hugh Daventry's funeral will be here on Thursday. He asked for no hymns he hadn't checked.
+Achebe: Hugh Daventry's funeral will be here on Thursday at eleven. Margaret is doing the flowers.
 -> p10.p10_choices
 
 === p10_pew ===
 # panel: pew
 # voice: p10b-1
-Jeremy Cole sits very still, in the way a man sits who has been told to keep his hands off the furniture.
+Jeremy Cole sits in the front pew with his hymn book shut. He has not looked at the cloth.
 -> p10.p10_choices
 
 === p10_cloth ===
@@ -1202,7 +1201,7 @@ Achebe stops the notices and looks at you over her glasses.
 === p10_stand ===
 # panel: nave
 # voice: p10d-1
-Quaile: Your church, Sergeant. Well, hers. Go on.
+Quaile: Go on, then.
 + [Name Jeremy Cole] -> p10_jeremy
 + [Name Win Haskett] -> p10_win
 + [Name Dilys Rudd] -> p10_dilys
@@ -1255,7 +1254,7 @@ Quaile: Your church, Sergeant. Well, hers. Go on.
     # memory: win -2 You accused Win Haskett in church. She did not hear it, and she will not forget it.
 }
 # voice: p10f-win
-Win: What?
+Win: I had the three, Sergeant. I kept it going in the dark. Ask Glenys.
 -> p10_quaile
 
 === p10_dilys ===
@@ -1266,7 +1265,7 @@ Win: What?
     # memory: dilys -2 You accused Dilys Rudd in church. She will not forget it.
 }
 # voice: p10f-dilys
-Dilys: I was ringing the two and talking to you, love. Both at once. It's a gift.
+Dilys: I was on the two, love, and talking to you the whole time. You heard me.
 -> p10_quaile
 
 === p10_achebe ===
@@ -1291,7 +1290,7 @@ Achebe: Eleven per cent, Sergeant. I did say.
     # voice: p10g-2
     Quaile: Sit down, Sam.
     # voice: p10g-3
-    Dr Achebe blesses the board. Nobody says Amen very loudly.
+    Dr Achebe blesses the board. Jeremy Cole holds the cloth for her.
     ~ ending = "none"
     -> p10_after
 }
@@ -1304,11 +1303,13 @@ Achebe: Eleven per cent, Sergeant. I did say.
     # memory: quaile +1 You named Jeremy Cole yourself. Quaile will remember that.
 }
 # voice: p10h-1
-Jeremy: He was going to print it. In the magazine. Nine thousand pounds, and a correction, in the magazine.
+Jeremy: He was going to print it in the November magazine. Every house in the village gets one.
 # voice: p10h-2
-Jeremy: I only wanted the page back. He wouldn't let go of it. Hugh never let go of anything.
+Jeremy: I went down to ask him for the page. He held on to it and stepped back, and there isn't a step there.
 # voice: p10h-3
-Quaile: Neither do I, Mr Cole.
+Quaile: And then you went back up and rang.
+# voice: p10h-4
+Jeremy: I didn't know what else to do.
 -> p10_after
 
 === p10_after ===

@@ -34,7 +34,7 @@ const PATH = [
   ['Call on Jeremy Cole at his barn', 5], ['Find Jeremy Cole', 5], ['Ask where he was at a quarter past eight', 5],
   ['Look at the trestle at the back', 5], ['Go out past his van', 5], ['Leave him to his dresser', 5],
   ['Look at the peal board in the tower', 8], ['Look at the board', 8], ['Look closely with the glass', 8],
-  ['Talk to Dr Achebe', 8], ['Ask her for a number on you', 8], ['Look at the treble rope', 8], ['Leave the tower', 8],
+  ['Talk to Dr Achebe', 8], ['Ask what she makes of you', 8], ['Look at the treble rope', 8], ['Leave the tower', 8],
   ['Go to the quiz at the Plough', 6], ['Listen to the questions', 6], ["Find Dilys's team", 6], ['Leave the quiz', 6],
   ['Find Toby Pike at the old schoolhouse', 7], ['Talk to Toby', 7], ['Ask what his drone saw on Tuesday', 7],
   ['Leave him to his buyers', 7], ['Go to the vicarage', 9],
