@@ -39,6 +39,7 @@ novel-page > section > img { animation: drift 26s ease-in-out infinite alternate
 #start p { margin: 0 0 8px; max-width: 30em; }
 #start button { min-width: 230px; min-height: 48px; font: 16px system-ui, sans-serif; color: #0d0c0a; background: #d8c48f;
   border: 0; border-radius: 10px; }
+#start button:disabled { opacity: 0.55; }
 #start button.quiet { background: rgba(13, 12, 10, 0.5); color: #ece6d6; border: 1px solid #6a6252; }
 #start[hidden] { display: none; }
 </style>
@@ -53,8 +54,8 @@ novel-page > section > img { animation: drift 26s ease-in-out infinite alternate
 <div id="start" role="dialog" aria-labelledby="start-title">
   <h1 id="start-title">Steeple Wyke: The Marrow Show</h1>
   <p>A village murder in ten pages. Tap a panel to go into it; tap again or swipe to come out. Headphones help.</p>
-  <button id="go-sound" type="button">Begin, with sound</button>
-  <button id="go-quiet" class="quiet" type="button">Begin, no sound</button>
+  <button id="go-sound" type="button" disabled>Loading…</button>
+  <button id="go-quiet" class="quiet" type="button" disabled>Begin, no sound</button>
 </div>
 <script src="../../third_party/ink/ink-full.js"></script>
 <script type="module">
@@ -251,6 +252,11 @@ const begin = (withSound) => {
 };
 document.getElementById("go-sound").addEventListener("click", () => begin(true));
 document.getElementById("go-quiet").addEventListener("click", () => begin(false));
+// the buttons wait for the story: a tap before it has loaded would do nothing
+const go = document.getElementById("go-sound");
+go.textContent = "Begin, with sound";
+for (const b of document.querySelectorAll("#start button")) b.disabled = !story;
+if (!story) go.textContent = "The story did not load";
 </script>
 </body>
 </html>

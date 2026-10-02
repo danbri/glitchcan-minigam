@@ -58,7 +58,7 @@ try {
   absent.length ? fail(`files missing: ${absent.join(', ')}`) : pass(`all ${want.length} pictures, loops and sounds are present`);
 
   await page.goto(BASE);
-  await page.waitForSelector('#go-sound');
+  await page.waitForSelector('#go-sound:not([disabled])');
   await page.click('#go-sound');
   await page.waitForFunction(() => window.__marrow.page === 1 && (window.__marrow.playing || '').includes('/vo/p1-open-'), null, { timeout: 15000 })
     .then(() => pass('Begin with sound: page 1, the opening line plays')).catch(() => fail('the opening line did not play'));
