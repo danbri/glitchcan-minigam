@@ -1,0 +1,15 @@
+{
+ "about": "Lock Fourteen, gate 2 draft: page and panel map only (ids and ink knots), so tools/walk.mjs can make taps. Layouts, pictures, beds and sounds come at gate 3.",
+ "pages": [
+  { "n": 1, "title": "Lock fourteen", "panels": [ { "id": "clive", "ink": "p1_clive" }, { "id": "fifteen", "ink": "p1_fifteen" }, { "id": "bag", "ink": "p1_bag" } ] },
+  { "n": 2, "title": "The flight and the lock cottage", "panels": [ { "id": "coat", "ink": "p2_coat" }, { "id": "minutes", "ink": "p2_minutes" }, { "id": "kit", "ink": "p2_kit" } ] },
+  { "n": 3, "title": "Wren", "panels": [ { "id": "joost", "ink": "p3_joost" }, { "id": "maaike", "ink": "p3_maaike" }, { "id": "hooks", "ink": "p3_hooks" } ] },
+  { "n": 4, "title": "Mill Lane", "panels": [ { "id": "annette", "ink": "p4_annette" }, { "id": "notebook", "ink": "p4_notebook" } ] },
+  { "n": 5, "title": "Canal Row", "panels": [ { "id": "door", "ink": "p5_door" }, { "id": "pete", "ink": "p5_pete" } ] },
+  { "n": 6, "title": "The coroner's office", "panels": [ { "id": "phone", "ink": "p6_shah" }, { "id": "sam", "ink": "p6_sam" } ] },
+  { "n": 7, "title": "The top gate", "panels": [ { "id": "plate", "ink": "p7_plate" }, { "id": "post", "ink": "p7_post" }, { "id": "pound", "ink": "p7_pound" } ] },
+  { "n": 8, "title": "The case board", "panels": [ { "id": "board", "ink": "p8_board" }, { "id": "notes", "ink": "p8_notes" } ] },
+  { "n": 9, "title": "Wyke Hill", "panels": [ { "id": "clive", "ink": "p9_clive" }, { "id": "car", "ink": "p9_car" } ] },
+  { "n": 10, "title": "Monday", "panels": [ { "id": "report", "ink": "p10_conclusion" }, { "id": "quaile", "ink": "p10_quaile" }, { "id": "clive", "ink": "p10_clive" } ] }
+ ]
+}

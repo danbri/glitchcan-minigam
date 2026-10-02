@@ -166,6 +166,12 @@ the video paused at 0. `SHOTS=dir` saves `peek.png`. Look at a crop at the peak 
   from what they want in the scene, keep a running gag to two uses, and end a scene on what happens, not on a line.
 - Spending without a ceiling: the account quota is 300,000 credits a period and ran out mid-recording. Price runs
   with `estimate_only`; Kling was refused while v4 still worked.
+- Calls that are administration, not making things. Owner, October 2026: "be parsimonious with API call discipline
+  (do not waste tokens ie money on administrivia; but do not skimp on quality or advanced models)." So: no repeated
+  voice or model listings (keep the ids in `voices.json` and this skill), no status polls faster than the
+  `poll_after_seconds` the tool gives, one `estimate_only` per batch rather than per item, and no test generations
+  of lines whose text is not final. Do use the best model for the job (eleven_v4 voices, Kling for loops,
+  gemini-3-pro-image for text fixes); the saving is in the calls around the work, not in the work.
 
 ## A chapter, measured
 
