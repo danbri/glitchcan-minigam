@@ -96,6 +96,38 @@ pages"), four inked panels, two of them loops, eight voiced lines with two takes
 Test on a phone-sized screen: `inklet/finkapp/test/e2e-larkspur.mjs` (390 x 844, touch) plays the solving
 path and checks media, 44 px tap targets, posters and sideways scroll; `SHOTS=dir` saves a screenshot per step.
 
+### Photographic pages with layered sound, ten pages (October 2026)
+
+Owner, October 2026: "Every panel must be photorealistic, hyper photorealistic. Drawn art styles induce anti-AI
+rage. Every panel needs audio blended into the page bg audio." Sample: `cozyverse/steeplewyke/` (The Marrow Show,
+a village murder after Midsomer Murders): ten pages of four panels on ONE `<novel-page>`, one ink story.
+- One story, many pages: `marrow.ink` holds all ten; `# page: N` makes `index.html` swap the panels (built from
+  `pages.json`: layouts as polygons, panels with their ink knot, picture, sound, loops). Put `# panel: page` on the
+  same step, so the view goes to the overview, which needs no panel of the old page. Clue VARs then carry across
+  pages with nothing passed in the URL.
+- Sound is three Web Audio buses: a 22 s looping bed per page, a 10 s looping sound per panel that fades in over
+  the bed while that panel is in view (`panelchange`), and the voices, which duck both to 35 %. All from
+  eleven_text_to_sound_v2 with `loop: true` (about 10 credits per second). One AudioContext, made on the
+  "Begin, with sound" tap.
+- Several loops per panel: every loop of a panel starts and ends on the panel's still (kling-2.5-turbo, the still
+  on `start_frame` AND `end_frame`), so the page can go from any loop to any other without a jump. Two `<video>`
+  elements take turns; the waiting one must stay at frame 0, because novel-page plays every video in a panel
+  after a tap.
+- Photographic people: gemini-3-pro-image character sheets first (four views, plain background, "not a painting,
+  not an illustration, not CGI"), then each panel with the sheets of its cast wired in, in cast order, and each
+  name in the prompt replaced by "the person in reference photograph N (<look>)" (`tools/prompts.mjs`). 1,218
+  credits a panel plus 609 per sheet. The faces held across all 40.
+- Small exact things still fail and must be looked at, not assumed: "green-striped marrows" came out as
+  watermelons; a notebook page came out as two lines of scribble; a painted thermometer scale came out in the
+  wrong order twice. gpt-image-2 edits fixed the first two (about 420 credits each) but RETURN 16:9 whatever the
+  original shape, so the panel needs a crop point (`focus` in pages.json); the scale needed a fresh gpt-image-2
+  picture, and then the story text was changed to say what the picture shows.
+- Voices: `voices.json` lists every voiced line; `tools/lines.mjs` walks the compiled story with the Story API (each
+  knot with every clue on and off) and `--check` fails when the file and the ink differ. A line that starts
+  "Name:" is spoken by that person; the page shows the name as a small label.
+- Test: `inklet/finkapp/test/e2e-steeplewyke.mjs` (390 x 844, touch): the solving path through all ten pages, a
+  voice after every choice, each page's bed, a tap bringing in a panel's sound, a loop going on to another loop.
+
 ## The story map
 
 - `inklet/toc.fink.js` — main menu; episode knots carry `# FINK: <path>`
