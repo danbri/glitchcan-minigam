@@ -39,6 +39,8 @@ platform grows a slot and the content fills it.
 
 ## Generated pictures and video with the same people in every shot (October 2026)
 
+The current method for photographic pages is the photo-novel skill; this section is the Larkspur record.
+
 Larkspur Falls (`cozyverse/larkspur.fink.js`) was made this way, through the ElevenLabs creative tools.
 Its record is `cozyverse/larkspur/bible/`: `characters.json` (each person's look and wardrobe, as strings),
 `prompts.json` (model, flow node, references and credits for every file), `sheets/` (the character sheets).
@@ -96,66 +98,11 @@ pages"), four inked panels, two of them loops, eight voiced lines with two takes
 Test on a phone-sized screen: `inklet/finkapp/test/e2e-larkspur.mjs` (390 x 844, touch) plays the solving
 path and checks media, 44 px tap targets, posters and sideways scroll; `SHOTS=dir` saves a screenshot per step.
 
-### Photographic pages with layered sound, ten pages (October 2026)
+### Photographic pages with layered sound (Steeple Wyke, October 2026)
 
-Owner, October 2026: "Every panel must be photorealistic, hyper photorealistic. Drawn art styles induce anti-AI
-rage. Every panel needs audio blended into the page bg audio." Sample: `cozyverse/steeplewyke/` (The Marrow Show,
-a village murder after Midsomer Murders): ten pages of four panels on ONE `<novel-page>`, one ink story.
-- One story, many pages: `marrow.ink` holds all ten; `# page: N` makes `index.html` swap the panels (built from
-  `pages.json`: layouts as polygons, panels with their ink knot, picture, sound, loops). Put `# panel: page` on the
-  same step, so the view goes to the overview, which needs no panel of the old page. Clue VARs then carry across
-  pages with nothing passed in the URL.
-- Sound is three Web Audio buses: a 22 s looping bed per page, a 10 s looping sound per panel that fades in over
-  the bed while that panel is in view (`panelchange`), and the voices, which duck both to 35 %. All from
-  eleven_text_to_sound_v2 with `loop: true` (about 10 credits per second). One AudioContext, made on the
-  "Begin, with sound" tap.
-- Several loops per panel: every loop of a panel starts and ends on the panel's still (kling-2.5-turbo, the still
-  on `start_frame` AND `end_frame`), so the page can go from any loop to any other without a jump. Two `<video>`
-  elements take turns; the waiting one must stay at frame 0, because novel-page plays every video in a panel
-  after a tap.
-- Photographic people: gemini-3-pro-image character sheets first (four views, plain background, "not a painting,
-  not an illustration, not CGI"), then each panel with the sheets of its cast wired in, in cast order, and each
-  name in the prompt replaced by "the person in reference photograph N (<look>)" (`tools/prompts.mjs`). 1,218
-  credits a panel plus 609 per sheet. The faces held across all 40.
-- Small exact things still fail and must be looked at, not assumed: "green-striped marrows" came out as
-  watermelons; a notebook page came out as two lines of scribble; a painted thermometer scale came out in the
-  wrong order twice. gpt-image-2 edits fixed the first two (about 420 credits each) but RETURN 16:9 whatever the
-  original shape, so the panel needs a crop point (`focus` in pages.json); the scale needed a fresh gpt-image-2
-  picture, and then the story text was changed to say what the picture shows.
-- Voices: `voices.json` lists every voiced line; `tools/lines.mjs` walks the compiled story with the Story API (each
-  knot with every clue on and off) and `--check` fails when the file and the ink differ. A line that starts
-  "Name:" is spoken by that person; the page shows the name as a small label.
-- Revision 2, after the owner played it twice: "very linear ... almost identical routes". Measured: 40 of 56 stops
-  offered ONE choice, the clues were on the main path, and every accusation led to the same ending. The fix was ink
-  only, on the same pictures: after the body, a hub of inquiries (four visits of five places, any order, the page
-  of each place reused); the ORDER changes what is found (the vicar has been in the study if you go to the
-  vicarage first); each interview allows one question; an `evidence()` function decides whether an accusation
-  holds, and four endings change page 10's lines. `tools/walk.mjs` plays 2,000 random readings with the Story API:
-  no dead ends, 400 page orders and 1,998 different texts, where before there was one page order. Measure it this
-  way before calling a story branching.
-- Voices revision 2: the first recording had no audio tags ("flat", the owner said). `tools/directions.py` gives
-  every line eleven_v3 tags (a default per speaker, 118 lines their own); voices.json keeps the shown "text" and the
-  spoken "say" apart, and the check compares only "text". Narration voices sound flat in character parts: Toby and
-  the vicar moved to character voices. Gerald's tannoy lines get an ffmpeg loudspeaker filter
-  (`tools/voices-post.sh`). Takes are mono at 96 kbit/s (the first set was 64, chosen for size alone).
-- Version 2 lives at `cozyverse/steeplewyke/v2/` (owner: "save it at new v2 url"); version 1 is left exactly as
-  merged, and v2 shares its pictures, sounds and longer loops through `../media/`. A page one folder deeper needs one
-  more `../` on its script paths: the first v2 run loaded neither the ink engine nor novel-page and showed nothing.
-- Short ambient loops (owner: "tiny loops like one or two seconds ... leaves waving slightly ... better than a
-  ridiculously animated scarecrow at a bar"): a Kling clip from the still with NO end frame, then the first 0.8 to
-  1.6 s played forward and back (`tools/tiny-loop.sh`), so it starts and ends on the still. About 100 to 230 kB each.
-  Kling keeps the still's own shape (2208x936 for a strip), so keep it on encoding. Measure each clip's change from
-  its first frame before using it: the bar clip walked a man into the frame and was dropped.
-- The village memory: `rel_<who>` in the story, kept by the page in localStorage under
-  `cozyverse.steeplewyke.village` (one key for every Steeple Wyke episode); `was_<who>` is the value when a reading
-  began, so reactions answer an earlier reading, not a choice made a minute ago. `# memory: <who> <+n> <sentence>`
-  shows the sentence as a notice and saves.
-- ElevenLabs, October 2026: the account quota is 300,000 credits a period, and it ran out mid-recording. eleven_v4
-  takes the same tags as v3 (not `[beat]`: use `[short pause]`; stage directions such as `[grinning]` are not
-  performed) and was priced at 0 credits while v3 and Kling were refused. Check a price with `estimate_only` before a
-  long run.
-- Tests: `e2e-steeplewyke-v2.mjs` (v2, with the hub, memory and double tap) and `e2e-steeplewyke.mjs` (v1). (390 x 844, touch): the solving path through all ten pages, a
-  voice after every choice, each page's bed, a tap bringing in a panel's sound, a loop going on to another loop.
+Everything learned making and fixing Steeple Wyke (ink patterns for tap-driven pages, the village memory, the
+media pipeline, costs, checks and the list of things that failed) is in the **photo-novel** skill
+(`cozyverse/skills/photo-novel/SKILL.md`). Read it before a new chapter.
 
 ## The story map
 

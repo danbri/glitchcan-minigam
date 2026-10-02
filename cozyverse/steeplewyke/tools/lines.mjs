@@ -29,20 +29,47 @@ for (const knot of knots) for (const { on, seen, ending, visits } of MIXES) {
   s.variablesState.ending = ending; s.variablesState.visits = visits;
   // what the village thought before this reading: warm on the all-true mixes, cold on the all-false ones
   for (const who of ['toby', 'margaret', 'dilys', 'quaile']) s.variablesState[`was_${who}`] = on ? 1 : -1;
-  s.ChoosePathString(knot);
-  // a forced mix can be a state no reading reaches (every place seen after one visit): stop there quietly
-  s.onError = () => {};
-  while (s.canContinue) {
-    let line;
-    try { line = s.Continue().trim(); } catch { break; }
-    for (const t of s.currentTags) {
-      const id = /^voice\s*:\s*([\w-]+)$/.exec(t.trim())?.[1];
-      if (!id) continue;
-      const who = /^([A-Z][a-z]+): /.exec(line);
-      out[id] = { speaker: who ? who[1].toLowerCase() : 'narrator', text: who ? line.slice(who[0].length) : line };
+  for (let pass = 0; pass < 2; pass++) {
+    try { s.ChoosePathString(knot); } catch { break; }
+    // a forced mix can be a state no reading reaches (every place seen after one visit): stop there quietly
+    s.onError = () => {};
+    while (s.canContinue) {
+      let line;
+      try { line = s.Continue().trim(); } catch { break; }
+      for (const t of s.currentTags) {
+        const id = /^voice\s*:\s*([\w-]+)$/.exec(t.trim())?.[1];
+        if (!id) continue;
+        const who = /^([A-Z][a-z]+): /.exec(line);
+        out[id] = { speaker: who ? who[1].toLowerCase() : 'narrator', text: who ? line.slice(who[0].length) : line };
+      }
     }
   }
 }
+// a scene visited again says something shorter (pN > 1, a conversation revisited): visit each knot three times
+for (const knot of knots) {
+  const s = new inkjs.Story(json);
+  s.onError = () => {};
+  for (let n = 0; n < 3; n++) {
+    try { s.ChoosePathString(knot); } catch { break; }
+    while (s.canContinue) {
+      let line;
+      try { line = s.Continue().trim(); } catch { break; }
+      for (const t of s.currentTags) {
+        const id = /^voice\s*:\s*([\w-]+)$/.exec(t.trim())?.[1];
+        if (!id || out[id]) continue;
+        const who = /^([A-Z][a-z]+): /.exec(line);
+        out[id] = { speaker: who ? who[1].toLowerCase() : 'narrator', text: who ? line.slice(who[0].length) : line };
+      }
+    }
+  }
+}
+// every voice tag the compiler emitted must have been reached (inkjs writes a tag as "#", "^voice: id", "/#")
+const tagged = new Set();
+(function walk(o) { if (Array.isArray(o)) o.forEach(walk); else if (o && typeof o === 'object') Object.values(o).forEach(walk);
+  else if (typeof o === 'string') { const id = /^\^voice\s*:\s*([\w-]+)$/.exec(o.trim())?.[1]; if (id) tagged.add(id); } })(JSON.parse(json));
+if (!tagged.size) { console.error('found no voice tags in the compiled story: the tag format has changed'); process.exit(2); }
+const unreached = [...tagged].filter((id) => !out[id]);
+if (unreached.length) { console.error('voice tags never reached:', unreached); process.exit(2); }
 const i = process.argv.indexOf('--check');
 if (i > 0) {
   const want = JSON.parse(readFileSync(process.argv[i + 1], 'utf8')).lines;

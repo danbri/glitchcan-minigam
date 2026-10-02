@@ -33,10 +33,25 @@
    "text": "Where next?",
    "say": "[brisk] Where next?"
   },
+  "loop-here": {
+   "speaker": "quaile",
+   "text": "We've been here, Sam.",
+   "say": "[drily, pointed] We've been here, Sam."
+  },
+  "p1-again": {
+   "speaker": "narrator",
+   "text": "The show field: chutney, the tannoy, the scarecrows.",
+   "say": "[dry, unhurried] The show field: chutney, the tannoy, the scarecrows."
+  },
   "p1-open": {
    "speaker": "narrator",
    "text": "The Steeple Wyke Horticultural Show, the hundred and twelfth. You have been a detective sergeant in this county for nineteen days.",
    "say": "[warm, wry] The Steeple Wyke Horticultural Show, the hundred and twelfth. [short pause] You have been a detective sergeant in this county for nineteen days."
+  },
+  "p10-again": {
+   "speaker": "narrator",
+   "text": "Sunday morning.",
+   "say": "[dry, unhurried] Sunday morning."
   },
   "p10-open": {
    "speaker": "narrator",
@@ -183,6 +198,11 @@
    "text": "Behind the produce tent, somebody screams. It is a short scream, and then a very English apology.",
    "say": "[deadpan] Behind the produce tent, somebody screams. [short pause] It is a short scream, and then a very English apology."
   },
+  "p2-again": {
+   "speaker": "narrator",
+   "text": "Behind the produce tent. Gerald in his deckchair.",
+   "say": "[dry, unhurried] Behind the produce tent. Gerald in his deckchair."
+  },
   "p2-open": {
    "speaker": "narrator",
    "text": "Gerald Pike is in a deckchair behind the produce tent, with his hat over his face. The woman who screamed is still apologising.",
@@ -243,6 +263,11 @@
    "text": "The prize-giving is at seven, and the whole village will be in one room. We have till then.",
    "say": "[brisk] The prize-giving is at seven, and the whole village will be in one room. We have till then."
   },
+  "p3-again": {
+   "speaker": "narrator",
+   "text": "Margaret's garden.",
+   "say": "[dry, unhurried] Margaret's garden."
+  },
   "p3-open": {
    "speaker": "narrator",
    "text": "Margaret Pike is in her garden, two fields from the show, deadheading roses. Nobody has told her. You have to.",
@@ -272,6 +297,11 @@
    "speaker": "margaret",
    "text": "He'd have wanted to be in front of it.",
    "say": "[dry, not unkind] He'd have wanted to be in front of it."
+  },
+  "p3a-again": {
+   "speaker": "narrator",
+   "text": "Margaret has gone back to her roses. She cuts one, and waits for your question.",
+   "say": "[quiet] Margaret has gone back to her roses. She cuts one, and waits for your question."
   },
   "p3a-b1": {
    "speaker": "margaret",
@@ -343,6 +373,11 @@
    "text": "He must have been thirsty today.",
    "say": "[quietly, pointed] He must have been thirsty today."
   },
+  "p4-again": {
+   "speaker": "narrator",
+   "text": "The marrow tent.",
+   "say": "[dry, unhurried] The marrow tent."
+  },
   "p4-open": {
    "speaker": "narrator",
    "text": "The marrow tent. Forty marrows on trestles, and one woman in a butcher's apron, who has not left.",
@@ -377,6 +412,11 @@
    "speaker": "narrator",
    "text": "The tannoy is calling her to the scales. You have time for one question.",
    "say": "[dry, unhurried] The tannoy is calling her to the scales. You have time for one question."
+  },
+  "p4b-again": {
+   "speaker": "dilys",
+   "text": "Still here, love. Scales are waiting.",
+   "say": "[loud, cheerful] Still here, love. Scales are waiting."
   },
   "p4b-warm": {
    "speaker": "dilys",
@@ -438,6 +478,11 @@
    "text": "She goes to the scales without a backward look.",
    "say": "[dry, unhurried] She goes to the scales without a backward look."
   },
+  "p5-again": {
+   "speaker": "narrator",
+   "text": "The car park.",
+   "say": "[dry, unhurried] The car park."
+  },
   "p5-open": {
    "speaker": "narrator",
    "text": "The car park is a field. Toby Pike is in the middle of it, on the phone, in suede loafers.",
@@ -467,6 +512,11 @@
    "speaker": "narrator",
    "text": "His phone is already buzzing again. He will give you one answer.",
    "say": "[dry, unhurried] His phone is already buzzing again. He will give you one answer."
+  },
+  "p5b-again": {
+   "speaker": "narrator",
+   "text": "Toby has the phone back at his ear. He holds up one finger.",
+   "say": "[dry] Toby has the phone back at his ear. He holds up one finger."
   },
   "p5b-cold": {
    "speaker": "toby",
@@ -518,6 +568,11 @@
    "text": "Sorry, I have to take this. It's Swindon.",
    "say": "[distracted] Sorry, I have to take this. It's Swindon."
   },
+  "p6-again": {
+   "speaker": "narrator",
+   "text": "St Aldhelm's and its scaffolding.",
+   "say": "[dry, unhurried] St Aldhelm's and its scaffolding."
+  },
   "p6-open": {
    "speaker": "narrator",
    "text": "St Aldhelm's: the church, the hall, the vicarage, and a roof that has been under scaffolding since Easter.",
@@ -537,6 +592,11 @@
    "speaker": "clement",
    "text": "No. Quite. Sorry. Cordial?",
    "say": "[embarrassed laugh] No. Quite. Sorry. [brightly] Cordial?"
+  },
+  "p6a-again": {
+   "speaker": "clement",
+   "text": "More questions? Of course. Cordial?",
+   "say": "[nervous, brightly] More questions? Of course. Cordial?"
   },
   "p6b-1": {
    "speaker": "narrator",
@@ -602,6 +662,11 @@
    "speaker": "narrator",
    "text": "The vicar puts both hands on his bicycle, as if it might leave without him.",
    "say": "[dry, unhurried] The vicar puts both hands on his bicycle, as if it might leave without him."
+  },
+  "p7-again": {
+   "speaker": "narrator",
+   "text": "Gerald's study.",
+   "say": "[dry, unhurried] Gerald's study."
   },
   "p7-open": {
    "speaker": "narrator",
@@ -687,6 +752,11 @@
    "speaker": "quaile",
    "text": "I'm deaf in one ear, Sam. I can say what I like.",
    "say": "[cheerfully] I'm deaf in one ear, Sam. I can say what I like."
+  },
+  "p8-again": {
+   "speaker": "narrator",
+   "text": "The Plough.",
+   "say": "[dry, unhurried] The Plough."
   },
   "p8-open": {
    "speaker": "narrator",
@@ -807,6 +877,11 @@
    "speaker": "quaile",
    "text": "Nobody's been to look at the vicar's garden. I'd have looked at the vicar's garden.",
    "say": "[pointed] Nobody's been to look at the vicar's garden. I'd have looked at the vicar's garden."
+  },
+  "p9-again": {
+   "speaker": "narrator",
+   "text": "The village hall.",
+   "say": "[dry, unhurried] The village hall."
   },
   "p9-open": {
    "speaker": "narrator",

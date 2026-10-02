@@ -5,6 +5,9 @@
 // After the body (page 2) the inquiries knot is a hub: four visits of five places (pages 3 to 7), in any order. The
 // order changes what is found, each interview allows one question, and evidence() decides whether an accusation
 // holds; the ending ("solved", "quaile", "denied", "none") changes page 10's lines.
+// A page's overview read again gets a short line (pN > 1), and Quaile notices a third time; a conversation revisited
+// gets one line and its choices. A tap can reach a panel before the scene it depends on: that knot starts with a
+// guard that goes to the scene first ({p3_margaret == 0: -> p3_margaret}).
 // The scarecrows are the wrong note (nocliches skill, rule F7): they are never explained.
 VAR flask = false
 VAR green = false
@@ -44,8 +47,18 @@ VAR ending = ""
 === p1 ===
 # page: 1
 # panel: page
-# voice: p1-open
-The Steeple Wyke Horticultural Show, the hundred and twelfth. You have been a detective sergeant in this county for nineteen days.
+{p1 > 1:
+    {p1 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p1-again
+    The show field: chutney, the tannoy, the scarecrows.
+}
+{p1 == 1:
+    # voice: p1-open
+    The Steeple Wyke Horticultural Show, the hundred and twelfth. You have been a detective sergeant in this county for nineteen days.
+}
 + [Find DCI Quaile] -> p1_chutney
 + [Listen to the man on the tannoy] -> p1_tannoy
 
@@ -93,8 +106,18 @@ Behind the produce tent, somebody screams. It is a short scream, and then a very
 === p2 ===
 # page: 2
 # panel: page
-# voice: p2-open
-Gerald Pike is in a deckchair behind the produce tent, with his hat over his face. The woman who screamed is still apologising.
+{p2 > 1:
+    {p2 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p2-again
+    Behind the produce tent. Gerald in his deckchair.
+}
+{p2 == 1:
+    # voice: p2-open
+    Gerald Pike is in a deckchair behind the produce tent, with his hat over his face. The woman who screamed is still apologising.
+}
 + [Check on him] -> p2_chair
 + [Keep the crowd back] -> p2_crowd
 
@@ -116,6 +139,7 @@ Quaile: Don't move him. Ring it in. Then look at what's on the grass.
 
 === p2_flask ===
 # panel: flask
+{p2_chair == 0: -> p2_chair}
 ~ flask = true
 # voice: p2c-1
 A blue enamel flask, half full of something pale. A brown label on a string: Church Hall.
@@ -128,6 +152,7 @@ Quaile: Then why has he got one?
 
 === p2_kneel ===
 # panel: kneel
+{p2_flask == 0: -> p2_flask}
 # voice: p2d-1
 Quaile: Seventy-two, heavy, red in the face, a hot day. The doctor will say heart.
 # voice: p2d-2
@@ -207,18 +232,33 @@ Quaile: That's the light gone. Pub, Sam. I'm buying, so it's halves.
     ~ visits += 1
     ~ seen_margaret = true
 }
-{seen_study:
-    # voice: p3-open-b
-    Margaret Pike is back in her garden, deadheading roses, as if the afternoon were any other.
-    + [Talk to her] -> p3_margaret
-- else:
-    # voice: p3-open
-    Margaret Pike is in her garden, two fields from the show, deadheading roses. Nobody has told her. You have to.
-    + [Tell her] -> p3_margaret
+{p3 > 1:
+    {p3 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p3-again
+    Margaret's garden.
 }
+{p3 == 1:
+    {seen_study:
+        # voice: p3-open-b
+        Margaret Pike is back in her garden, deadheading roses, as if the afternoon were any other.
+    - else:
+        # voice: p3-open
+        Margaret Pike is in her garden, two fields from the show, deadheading roses. Nobody has told her. You have to.
+    }
+}
++ {not seen_study && p3_margaret == 0} [Tell her] -> p3_margaret
++ {seen_study || p3_margaret > 0} [Talk to her] -> p3_margaret
 
 === p3_margaret ===
 # panel: margaret
+{p3_margaret > 1:
+    # voice: p3a-again
+    Margaret has gone back to her roses. She cuts one, and waits for your question.
+    -> p3_margaret_choices
+}
 {was_margaret <= -1:
     # voice: p3a-cold
     Margaret: Come to count my foxgloves again, Sergeant?
@@ -238,11 +278,14 @@ Quaile: That's the light gone. Pub, Sam. I'm buying, so it's halves.
     # voice: p3a-4
     Margaret: He'd have wanted to be in front of it.
 }
+-> p3_margaret_choices
+= p3_margaret_choices
 + [Ask about his flask] -> p3_green
 + [Ask about the foxgloves] -> p3_border
 
 === p3_green ===
 # panel: green
+{p3_margaret == 0: -> p3_margaret}
 ~ green = true
 # voice: p3b-1
 Margaret: Gerald only drank from the green flask. Elderflower. He made it himself, and nobody else would touch it.
@@ -258,6 +301,7 @@ Margaret: Not today. I had the roses.
 
 === p3_shown ===
 # panel: green
+{p3_margaret == 0: -> p3_margaret}
 ~ poured = true
 # voice: p3e-1
 Margaret: That's the vicar's. Clement takes Gerald a cup of his cordial at every show, and Gerald tips it on the nearest roses when Clement has gone.
@@ -267,6 +311,7 @@ Margaret: He must have been thirsty today.
 
 === p3_secateurs ===
 # panel: secateurs
+{p3_margaret == 0: -> p3_margaret}
 # voice: p3c-1
 Red handles, clean blades. She wears them on a cord round her neck.
 # voice: p3c-2
@@ -274,12 +319,15 @@ Margaret: If you want to know whether I've cut any foxgloves, Sergeant, count th
 + [Count them] -> p3_count
 
 === p3_count ===
-~ rel_margaret -= 1
-# memory: margaret -1 You counted Margaret's foxgloves in front of her. She will remember that.
+{p3_count == 1:
+    ~ rel_margaret -= 1
+    # memory: margaret -1 You counted Margaret's foxgloves in front of her. She will remember that.
+}
 -> p3_border
 
 === p3_border ===
 # panel: border
+{p3_margaret == 0: -> p3_margaret}
 # voice: p3d-1
 Forty-one foxgloves along the back wall. You count them twice. Every stem is standing.
 # voice: p3d-2
@@ -296,8 +344,18 @@ Margaret: That's not ours.
     ~ visits += 1
     ~ seen_tent = true
 }
-# voice: p4-open
-The marrow tent. Forty marrows on trestles, and one woman in a butcher's apron, who has not left.
+{p4 > 1:
+    {p4 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p4-again
+    The marrow tent.
+}
+{p4 == 1:
+    # voice: p4-open
+    The marrow tent. Forty marrows on trestles, and one woman in a butcher's apron, who has not left.
+}
 + [Talk to her] -> p4_dilys
 + [Look for Gerald's marrow] -> p4_tent
 
@@ -311,6 +369,11 @@ Dilys: He judged it himself. Every year. Nobody said anything, because it was Ge
 
 === p4_dilys ===
 # panel: dilys
+{p4_dilys > 1:
+    # voice: p4b-again
+    Dilys: Still here, love. Scales are waiting.
+    -> p4_dilys_choices
+}
 {was_dilys >= 1:
     # voice: p4b-warm
     Dilys: My favourite policeman. Ask me anything, love. One thing.
@@ -323,15 +386,20 @@ Quaile: I'm told he was going to disqualify you this year.
 Dilys: He was going to try.
 # voice: p4b-4
 The tannoy is calling her to the scales. You have time for one question.
+-> p4_dilys_choices
+= p4_dilys_choices
 + {not syringe && not argument} [Ask what's in her apron pocket] -> p4_syringe
 + {not syringe && not argument} [Ask who Gerald argued with today] -> p4_argue
 + {syringe || argument} [Look at her marrow] -> p4_marrows
 
 === p4_syringe ===
 # panel: syringe
+{p4_dilys == 0: -> p4_dilys}
 ~ syringe = true
-~ rel_dilys += 1
-# memory: dilys +1 You asked Dilys a straight question. She will remember that.
+{p4_syringe == 1:
+    ~ rel_dilys += 1
+    # memory: dilys +1 You asked Dilys a straight question. She will remember that.
+}
 # voice: p4c-1
 In her apron pocket, a veterinary syringe the size of a cucumber.
 # voice: p4c-2
@@ -344,6 +412,7 @@ Dilys: To marrows, yes.
 
 === p4_argue ===
 # panel: dilys
+{p4_dilys == 0: -> p4_dilys}
 ~ argument = true
 # voice: p4f-1
 Dilys: The vicar. Behind the produce tent, about one. Gerald was waving his little notebook at him.
@@ -355,6 +424,7 @@ She goes to the scales without a backward look.
 
 === p4_marrows ===
 # panel: marrows
+{p4_dilys == 0: -> p4_dilys}
 {syringe:
     # voice: p4d-1
     Her marrow is weeping water from a hole the size of a pin. So is Gerald's.
@@ -376,8 +446,18 @@ She goes to the scales without a backward look.
     ~ visits += 1
     ~ seen_carpark = true
 }
-# voice: p5-open
-The car park is a field. Toby Pike is in the middle of it, on the phone, in suede loafers.
+{p5 > 1:
+    {p5 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p5-again
+    The car park.
+}
+{p5 == 1:
+    # voice: p5-open
+    The car park is a field. Toby Pike is in the middle of it, on the phone, in suede loafers.
+}
 + [Wait for him to finish] -> p5_wait
 + [Look round the car park] -> p5_field
 
@@ -388,17 +468,26 @@ Range Rovers, a tractor, the brass band's minibus. Somebody has parked across th
 + [Get him off the phone] -> p5_interrupt
 
 === p5_wait ===
-~ rel_toby += 1
-# memory: toby +1 You waited for Toby to finish his call. He will remember that.
+{p5_wait == 1:
+    ~ rel_toby += 1
+    # memory: toby +1 You waited for Toby to finish his call. He will remember that.
+}
 -> p5_toby
 
 === p5_interrupt ===
-~ rel_toby -= 1
-# memory: toby -1 You took Toby off his phone mid-sentence. He will remember that.
+{p5_interrupt == 1:
+    ~ rel_toby -= 1
+    # memory: toby -1 You took Toby off his phone mid-sentence. He will remember that.
+}
 -> p5_toby
 
 === p5_toby ===
 # panel: toby
+{p5_toby > 1:
+    # voice: p5b-again
+    Toby has the phone back at his ear. He holds up one finger.
+    -> p5_toby_choices
+}
 {was_toby >= 1:
     # voice: p5b-warm
     Toby: Sergeant! The one who waits. I like a man who waits.
@@ -415,12 +504,15 @@ Sam: I'm sorry.
 Toby: Right. Right. Is there a form for probate, or do I just ring someone?
 # voice: p5b-4
 His phone is already buzzing again. He will give you one answer.
+-> p5_toby_choices
+= p5_toby_choices
 + {not alibi && not toby_vicar} [Ask where he was at two o'clock] -> p5_alibi
 + {not alibi && not toby_vicar} [Ask what his father thought of the vicar] -> p5_father
 + {alibi || toby_vicar} [Walk him back to his car] -> p5_minibus
 
 === p5_alibi ===
 # panel: alibi
+{p5_toby == 0: -> p5_toby}
 ~ alibi = true
 # voice: p5c-1
 Toby: In the car, on a call to a man in Swindon from half one till twenty past two. He wants a barn.
@@ -435,6 +527,7 @@ Toby: Forty houses, if the parish council sees sense. Dad wouldn't. I'm not hidi
 
 === p5_father ===
 # panel: toby
+{p5_toby == 0: -> p5_toby}
 ~ toby_vicar = true
 # voice: p5e-1
 Toby: The vicar? Dad said he couldn't add up. Said it twice this week, which for Dad is practically a sermon.
@@ -445,6 +538,7 @@ Toby: Sorry, I have to take this. It's Swindon.
 
 === p5_minibus ===
 # panel: minibus
+{p5_toby == 0: -> p5_toby}
 # voice: p5d-1
 There is mud to his ankles and no straw on him anywhere. He has not been near the produce tent.
 # voice: p5d-2
@@ -459,24 +553,42 @@ In the back of the brass band's minibus, the straw vicar sits with its seatbelt 
     ~ visits += 1
     ~ seen_vicarage = true
 }
-# voice: p6-open
-St Aldhelm's: the church, the hall, the vicarage, and a roof that has been under scaffolding since Easter.
+{p6 > 1:
+    {p6 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p6-again
+    St Aldhelm's and its scaffolding.
+}
+{p6 == 1:
+    # voice: p6-open
+    St Aldhelm's: the church, the hall, the vicarage, and a roof that has been under scaffolding since Easter.
+}
 + [Find the vicar] -> p6_vicar
 
 === p6_vicar ===
 # panel: vicar
+{p6_vicar > 1:
+    # voice: p6a-again
+    Clement: More questions? Of course. Cordial?
+    -> p6_vicar_choices
+}
 # voice: p6a-1
 Clement: Sergeant! Inspector! Dreadful. I've been on the cake stall all afternoon, you can ask anyone.
 # voice: p6a-2
 Quaile: Nobody's asked you yet, Vicar.
 # voice: p6a-3
 Clement: No. Quite. Sorry. Cordial?
+-> p6_vicar_choices
+= p6_vicar_choices
 + {notebook && not rattled} [Show him Gerald's notebook] -> p6_shown
 + [Ask about his garden] -> p6_garden
 + [Ask to see the hall kitchen] -> p6_hooks
 
 === p6_shown ===
 # panel: vicar
+{p6_vicar == 0: -> p6_vicar}
 ~ rattled = true
 # voice: p6e-1
 Clement: Gerald wrote everything down. He once wrote down my sermon. And timed it.
@@ -489,6 +601,7 @@ The vicar puts both hands on his bicycle, as if it might leave without him.
 
 === p6_garden ===
 # panel: garden
+{p6_vicar == 0: -> p6_vicar}
 ~ foxglove = true
 # voice: p6b-1
 The vicarage border: foxgloves, and six of them cut down to the stalk. Clean cuts, this week.
@@ -502,6 +615,7 @@ Clement: Very determined slugs.
 
 === p6_hooks ===
 # panel: hooks
+{p6_vicar == 0: -> p6_vicar}
 # voice: p6c-1
 The church-hall kitchen. Seven hooks, numbered in marker pen. Six blue flasks.
 # voice: p6c-2
@@ -510,6 +624,7 @@ Clement: One always goes walkabout at the show. Gerald's very strict about it. W
 
 === p6_roof ===
 # panel: roof
+{p6_vicar == 0: -> p6_vicar}
 # voice: p6d-1
 The roof appeal board: a thermometer painted red up to twenty thousand pounds. The target is sixty.
 # voice: p6d-2
@@ -528,12 +643,24 @@ Clement: An anonymous donor.
     ~ visits += 1
     ~ seen_study = true
 }
-{seen_margaret:
-    # voice: p7-open
-    Gerald's study. Margaret lets you in, and stays in the doorway.
+{p7 > 1:
+    {p7 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p7-again
+    Gerald's study.
+}
+{p7 > 1:
+    // the brief above is enough
 - else:
+    {seen_margaret:
+        # voice: p7-open
+        Gerald's study. Margaret lets you in, and stays in the doorway.
+    - else:
     # voice: p7-open-b
-    Margaret Pike opens the door. Someone has already told her; she does not say who. She lets you into the study and stays in the doorway.
+        Margaret Pike opens the door. Someone has already told her; she does not say who. She lets you into the study and stays in the doorway.
+    }
 }
 + [Search the desk] -> p7_notebook
 + [Ask Margaret about the Society's money] -> p7_margaret
@@ -594,8 +721,18 @@ Quaile: I'm deaf in one ear, Sam. I can say what I like.
 === p8 ===
 # page: 8
 # panel: page
-# voice: p8-open
-The Plough, half past six. The whole village is in, and pretending not to listen to you.
+{p8 > 1:
+    {p8 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p8-again
+    The Plough.
+}
+{p8 == 1:
+    # voice: p8-open
+    The Plough, half past six. The whole village is in, and pretending not to listen to you.
+}
 + [Sit down with Quaile] -> p8_quaile
 
 === p8_outside ===
@@ -619,8 +756,10 @@ Quaile: Foxglove's digitalis. On a hot day it stops a big man's heart, and it lo
 
 === p8_hint ===
 # panel: quaile
-~ rel_quaile += 1
-# memory: quaile +1 You asked Quaile what she thought. She will remember that.
+{p8_hint == 1:
+    ~ rel_quaile += 1
+    # memory: quaile +1 You asked Quaile what she thought. She will remember that.
+}
 # voice: p8e-1
 The landlord comes over to talk about the quiz. Quaile turns her hearing aid off and smiles at him until he goes.
 {evidence() >= 3:
@@ -710,8 +849,18 @@ Quaile: Don't. It happens every year. Nobody owns up.
 === p9 ===
 # page: 9
 # panel: page
-# voice: p9-open
-The village hall. The prize-giving goes ahead, because Gerald would have wanted it, says the vicar, who is giving the prizes.
+{p9 > 1:
+    {p9 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p9-again
+    The village hall.
+}
+{p9 == 1:
+    # voice: p9-open
+    The village hall. The prize-giving goes ahead, because Gerald would have wanted it, says the vicar, who is giving the prizes.
+}
 + [Listen to the vicar] -> p9_hall
 + [Stand up] -> p9_stand
 
@@ -787,8 +936,10 @@ Quaile: Your hall, Sergeant.
 === p9_margaret ===
 # panel: crowd9
 ~ accused = "margaret"
-~ rel_margaret -= 2
-# memory: margaret -2 You accused Margaret Pike in front of the village. She will not forget it.
+{p9_margaret == 1:
+    ~ rel_margaret -= 2
+    # memory: margaret -2 You accused Margaret Pike in front of the village. She will not forget it.
+}
 # voice: p9f-margaret
 Margaret: I had forty-one foxgloves this morning, Sergeant. I still have forty-one. Count them.
 -> p9_quaile
@@ -796,8 +947,10 @@ Margaret: I had forty-one foxgloves this morning, Sergeant. I still have forty-o
 === p9_dilys ===
 # panel: crowd9
 ~ accused = "dilys"
-~ rel_dilys -= 2
-# memory: dilys -2 You accused Dilys Rudd in front of the village. She will not forget it.
+{p9_dilys == 1:
+    ~ rel_dilys -= 2
+    # memory: dilys -2 You accused Dilys Rudd in front of the village. She will not forget it.
+}
 # voice: p9f-dilys
 Dilys: I put water in marrows, love. Not in men.
 -> p9_quaile
@@ -805,8 +958,10 @@ Dilys: I put water in marrows, love. Not in men.
 === p9_toby ===
 # panel: crowd9
 ~ accused = "toby"
-~ rel_toby -= 2
-# memory: toby -2 You accused Toby Pike in front of the village. He will not forget it.
+{p9_toby == 1:
+    ~ rel_toby -= 2
+    # memory: toby -2 You accused Toby Pike in front of the village. He will not forget it.
+}
 # voice: p9f-toby
 Toby: I was in a field with a man from Swindon. There's a video. It's very long.
 -> p9_quaile
@@ -849,8 +1004,18 @@ Quaile: The roof will still leak, Vicar.
 === p10 ===
 # page: 10
 # panel: page
-# voice: p10-open
-Sunday. The marquee is coming down, and the marrows have gone to the pig farm.
+{p10 > 1:
+    {p10 > 2:
+        # voice: loop-here
+        Quaile: We've been here, Sam.
+    }
+    # voice: p10-again
+    Sunday morning.
+}
+{p10 == 1:
+    # voice: p10-open
+    Sunday. The marquee is coming down, and the marrows have gone to the pig farm.
+}
 + [Say goodbye to Margaret] -> p10_margaret
 + [Walk to the car] -> p10_car
 

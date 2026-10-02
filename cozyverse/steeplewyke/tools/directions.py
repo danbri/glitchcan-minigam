@@ -129,6 +129,11 @@ SAY = {
     'p3a-cold': '[icy, dry] Come to count my foxgloves again, Sergeant?',
     'p4b-warm': '[warm, loud] My favourite policeman. Ask me anything, love. [short pause] One thing.',
     'p8b-warm': '[drily, pleased] You\'ve learnt to ask me things, Sam. Don\'t let it go to your head.',
+    'loop-here': '[drily, pointed] We\'ve been here, Sam.',
+    'p3a-again': '[quiet] Margaret has gone back to her roses. She cuts one, and waits for your question.',
+    'p4b-again': '[loud, cheerful] Still here, love. Scales are waiting.',
+    'p5b-again': '[dry] Toby has the phone back at his ear. He holds up one finger.',
+    'p6a-again': '[nervous, brightly] More questions? Of course. Cordial?',
     'p10d-6': '[very quiet] Nobody entered it. [short pause] The card on the straw vicar beside it says Best in Show.',
 }
 # Tags describe how a line is spoken; stage directions ([grinning], [cupping an ear]) are not performed, and the

@@ -123,6 +123,7 @@ verified July 2026.
 | `container-improver` | `.claude/skills/` | you are about to write "this container has no X" — try installing it first; apt/pip/npm/cargo all work here. Also names the limits that are real (no GPU, no WebGPU, no `gh`) |
 | `fink` | `.claude/skills/` | FINK platform + the foafos shell: file format, ink compilation, sandbox, capabilities, brokers, chrome, testing discipline |
 | `glitchcanary` | `.claude/skills/` | story/game CONTENT — authoring `.fink.js`, episode linking, `# MINIGAME:` |
+| `photo-novel` | `cozyverse/skills/` | the photographic graphic-novel chapters (Steeple Wyke): tap-safe ink patterns, the village memory, pictures, loops, sound and voices, costs, and what failed |
 | `story-game-sync` | `inklet/minigames/skills/` | a story depends on an attached game: pause/play/resume `# MINIGAME:` guests vs Drift city's live in-page sync, what each cannot do yet, and the text route every world-only clue needs (no GPU, screen readers) |
 | `drift-city` | `drift-city/skills/` | `drift-city/` — the Titan city: build, seeing WGSL changes headless (Dawn on lavapipe, `tests/walkers.html`), the walker frame rule, the Titan design brief, the dorms |
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
