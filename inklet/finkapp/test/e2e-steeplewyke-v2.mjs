@@ -1,9 +1,10 @@
-// Steeple Wyke: The Marrow Show (cozyverse/steeplewyke/index.html) on a phone-sized touch screen: one solving
+// Steeple Wyke: The Marrow Show, version 2 (cozyverse/steeplewyke/v2/index.html), on a phone-sized touch screen: one solving
 // route through all ten pages (the hub of inquiries between them), a voice take after every choice, each page's
 // sound bed, a panel's own sound when a tap takes the view into it, a double tap counting as one tap, a looping
 // panel going on from one loop to another, every picture, loop and sound file present, and the ending knowing it
-// was solved. The variety of routes is checked offline: node cozyverse/steeplewyke/tools/walk.mjs
-//   node inklet/finkapp/test/e2e-steeplewyke.mjs        (SHOTS=dir saves a screenshot of each page)
+// was solved, and the village remembering what you did (the notice, the saved standing, and the next reading starting
+// from it). The variety of routes is checked offline: node cozyverse/steeplewyke/tools/walk.mjs
+//   node inklet/finkapp/test/e2e-steeplewyke-v2.mjs        (SHOTS=dir saves a screenshot of each page)
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join, basename } from 'node:path';
@@ -14,7 +15,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
 const PORT = 8179;
 const EXE = process.env.PW_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-const BASE = `http://127.0.0.1:${PORT}/${basename(repoRoot)}/cozyverse/steeplewyke/`;
+const BASE = `http://127.0.0.1:${PORT}/${basename(repoRoot)}/cozyverse/steeplewyke/v2/`;
 const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1', '--directory', join(repoRoot, '..')], { stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 900));
 let failed = 0;
@@ -40,7 +41,7 @@ const PATH = [
   ['Say goodbye to Margaret', 10], ['Walk to the car', 10], ['Drive past the scarecrows', 10],
 ];
 
-const data = JSON.parse(readFileSync(join(repoRoot, 'cozyverse/steeplewyke/pages.json'), 'utf8'));
+const data = JSON.parse(readFileSync(join(repoRoot, 'cozyverse/steeplewyke/v2/pages.json'), 'utf8'));
 const browser = await chromium.launch({ headless: true, executablePath: EXE, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [], missing = [];
 try {
@@ -53,10 +54,10 @@ try {
   // every file the ten pages name is there
   const want = [];
   for (const p of data.pages) {
-    want.push(`media/sfx/bed-${p.n}.mp3`);
+    want.push(`../media/sfx/bed-${p.n}.mp3`);
     for (const x of p.panels) {
-      want.push(`media/p${p.n}-${x.knot}.jpg`, `media/sfx/p${p.n}-${x.knot}.mp3`);
-      (x.loops || []).forEach((_, k) => want.push(`media/p${p.n}-${x.knot}-loop${k + 1}.webm`, `media/p${p.n}-${x.knot}-loop${k + 1}.mp4`));
+      want.push(`../media/p${p.n}-${x.knot}.jpg`, `../media/sfx/p${p.n}-${x.knot}.mp3`);
+      for (const b of x.loopSrc || []) want.push(`${b}.webm`, `${b}.mp4`);
     }
   }
   const absent = [];
@@ -71,7 +72,7 @@ try {
 
   const shot = async (n) => { if (process.env.SHOTS) { await wait(1500); await page.screenshot({ path: `${process.env.SHOTS}/page${String(n).padStart(2, '0')}.png` }); } };
   await shot(1);
-  let quiet = [], pageWrong = [], bedWrong = [], small = 0, seenPages = new Set([1]);
+  let quiet = [], pageWrong = [], bedWrong = [], small = 0, seenPages = new Set([1]), memSeen = null;
   for (const [label, n] of PATH) {
     const ok = await page.waitForFunction((t) => [...document.querySelectorAll('.ink .choice')].some((b) => b.textContent === t), label, { timeout: 15000 }).then(() => true, () => false);
     if (!ok) { fail(`no choice "${label}"; offered: ${await page.evaluate(() => [...document.querySelectorAll('.ink .choice')].map((b) => b.textContent).join(' | '))}`); break; }
@@ -80,7 +81,8 @@ try {
     await page.waitForFunction(() => (window.__marrow.playing || '').includes('/vo/'), null, { timeout: 10000 }).catch(() => quiet.push(label));
     const st = await page.evaluate(() => ({ page: window.__marrow.page, bed: window.__marrow.bed, sections: document.querySelectorAll('#page > section').length }));
     if (st.page !== n || st.sections !== 4) pageWrong.push(`${label}: page ${st.page}, ${st.sections} panels`);
-    if (st.bed !== `media/sfx/bed-${n}.mp3`) bedWrong.push(`${label}: ${st.bed}`);
+    if (st.bed !== `../media/sfx/bed-${n}.mp3`) bedWrong.push(`${label}: ${st.bed}`);
+    if (!memSeen) memSeen = await page.evaluate(() => window.__marrow.memory);
     if (!seenPages.has(n)) { seenPages.add(n); await shot(n); }
   }
   quiet.length ? fail(`no voice after: ${quiet.join('; ')}`) : pass(`a voice take plays after each of the ${PATH.length} choices`);
@@ -93,14 +95,22 @@ try {
   end.ending === 'solved' && /You solved the Marrow Show/.test(end.text) && end.evidence >= 5
     ? pass(`the ending says the case is solved (evidence ${end.evidence} of 7)`) : fail(`ending: ${JSON.stringify(end)}`);
 
+  // the village remembers: asking Quaile (page 8) and naming the vicar yourself each raise her opinion of you; the
+  // standing is saved, and the next reading starts from it (was_quaile), so her first line at the pub changes
+  const vil = await page.evaluate(() => window.__marrow.village);
+  vil.quaile === 2 ? pass('the village remembers: Quaile +2 saved in this browser') : fail(`village after the reading: ${JSON.stringify(vil)}`);
+  memSeen ? pass(`a memory notice showed: "${memSeen}"`) : fail('no memory notice showed');
+
   // Begin again, then a tap into a panel: the story follows the tap and that panel's own sound comes in over the bed
   await page.evaluate(() => [...document.querySelectorAll('.ink .choice')].find((b) => b.textContent === 'Begin again').click());
   await page.waitForFunction(() => window.__marrow.page === 1 && window.__marrow.story.variablesState.visits === 0 && window.__marrow.story.variablesState.flask === false, null, { timeout: 10000 })
     .then(() => pass('Begin again goes back to page 1 with no clues')).catch(() => fail('Begin again did not reset'));
+  const was = await page.evaluate(() => [window.__marrow.story.variablesState.was_quaile, window.__marrow.story.variablesState.rel_quaile]);
+  was[0] === 2 && was[1] === 2 ? pass('the next reading starts from what the village remembers') : fail(`next reading: was/rel quaile ${was}`);
   await wait(1200);
   const box = await page.evaluate(() => { const r = document.getElementById('scarecrows').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await page.mouse.click(box.x, box.y);
-  await page.waitForFunction(() => window.__marrow.panelSound === 'media/sfx/p1-scarecrows.mp3' && /scarecrow competition/.test(document.querySelector('.ink').textContent), null, { timeout: 10000 })
+  await page.waitForFunction(() => window.__marrow.panelSound === '../media/sfx/p1-scarecrows.mp3' && /scarecrow competition/.test(document.querySelector('.ink').textContent), null, { timeout: 10000 })
     .then(() => pass('a tap on the scarecrows panel takes the story there and brings in its sound'))
     .catch(async () => fail(`tap: ${JSON.stringify(await page.evaluate(() => ({ s: window.__marrow.panelSound, t: document.querySelector('.ink').textContent.slice(0, 80) })))}`));
 

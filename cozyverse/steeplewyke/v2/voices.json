@@ -1,6 +1,6 @@
 {
  "about": "Every voiced line of marrow.ink: who speaks it, the exact words shown on the page (\"text\"), and what the voice is given (\"say\": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves \"text\" matches the ink; tools/directions.py writes this file. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3; the page plays one at random.",
- "model": "eleven_v3",
+ "model": "eleven_v4",
  "takes": 2,
  "voices": {
   "quaile": "XEoBW4iDmiawQP72xnAF",
@@ -16,12 +16,12 @@
   "evening": {
    "speaker": "quaile",
    "text": "That's the light gone. Pub, Sam. I'm buying, so it's halves.",
-   "say": "[sighs, then brightly] That's the light gone. Pub, Sam. I'm buying, so it's halves."
+   "say": "[sighs] [brightly] That's the light gone. Pub, Sam. I'm buying, so it's halves."
   },
   "hub-0": {
    "speaker": "quaile",
    "text": "Five people to see before seven, and time for four. Where first?",
-   "say": "[brisk] Five people to see before seven, and time for four. [beat] Where first?"
+   "say": "[brisk] Five people to see before seven, and time for four. [short pause] Where first?"
   },
   "hub-3": {
    "speaker": "quaile",
@@ -36,7 +36,7 @@
   "p1-open": {
    "speaker": "narrator",
    "text": "The Steeple Wyke Horticultural Show, the hundred and twelfth. You have been a detective sergeant in this county for nineteen days.",
-   "say": "[warm, wry] The Steeple Wyke Horticultural Show, the hundred and twelfth. [beat] You have been a detective sergeant in this county for nineteen days."
+   "say": "[warm, wry] The Steeple Wyke Horticultural Show, the hundred and twelfth. [short pause] You have been a detective sergeant in this county for nineteen days."
   },
   "p10-open": {
    "speaker": "narrator",
@@ -81,7 +81,7 @@
   "p10c-4": {
    "speaker": "quaile",
    "text": "Hm? Other side, Sam. That one's off.",
-   "say": "[loudly, cupping an ear] Hm? Other side, Sam. That one's off."
+   "say": "[loudly] Hm? Other side, Sam. That one's off."
   },
   "p10c-5": {
    "speaker": "quaile",
@@ -111,7 +111,7 @@
   "p10d-3": {
    "speaker": "quaile",
    "text": "Twenty days, and they've made you already. That's quick.",
-   "say": "[amused, then uneasy] Twenty days, and they've made you already. That's quick."
+   "say": "[amused] Twenty days, and they've made you already. That's quick."
   },
   "p10d-4": {
    "speaker": "narrator",
@@ -126,7 +126,7 @@
   "p10d-6": {
    "speaker": "narrator",
    "text": "Nobody entered it. The card on the straw vicar beside it says Best in Show.",
-   "say": "[very quiet] Nobody entered it. [beat] The card on the straw vicar beside it says Best in Show."
+   "say": "[very quiet] Nobody entered it. [short pause] The card on the straw vicar beside it says Best in Show."
   },
   "p1a-1": {
    "speaker": "narrator",
@@ -151,17 +151,17 @@
   "p1b-3": {
    "speaker": "quaile",
    "text": "It is. Nobody has ever been murdered over chutney.",
-   "say": "[cheerfully] It is. [beat] Nobody has ever been murdered over chutney."
+   "say": "[cheerfully] It is. [short pause] Nobody has ever been murdered over chutney."
   },
   "p1c-1": {
    "speaker": "gerald",
    "text": "Gerald Pike, chairman. The marrow results are delayed. Would whoever has moved the marrows please put them back.",
-   "say": "[shouting into a microphone, pompous] Gerald Pike, chairman. The marrow results are delayed. [irritated] Would whoever has moved the marrows please put them back."
+   "say": "[shouting, pompous] Gerald Pike, chairman. The marrow results are delayed. [irritated] Would whoever has moved the marrows please put them back."
   },
   "p1c-2": {
    "speaker": "gerald",
    "text": "And the vicar's cordial is in the church-hall flasks again. Do not take them home.",
-   "say": "[shouting into a microphone, stern] And the vicar's cordial is in the church-hall flasks again. Do not take them home."
+   "say": "[shouting, stern] And the vicar's cordial is in the church-hall flasks again. Do not take them home."
   },
   "p1c-3": {
    "speaker": "narrator",
@@ -176,12 +176,12 @@
   "p1d-2": {
    "speaker": "narrator",
    "text": "The straw Gerald has a red rosette, and faces the wrong way.",
-   "say": "[slightly uneasy] The straw Gerald has a red rosette, and faces the wrong way."
+   "say": "[uneasy] The straw Gerald has a red rosette, and faces the wrong way."
   },
   "p1d-3": {
    "speaker": "narrator",
    "text": "Behind the produce tent, somebody screams. It is a short scream, and then a very English apology.",
-   "say": "[deadpan] Behind the produce tent, somebody screams. [beat] It is a short scream, and then a very English apology."
+   "say": "[deadpan] Behind the produce tent, somebody screams. [short pause] It is a short scream, and then a very English apology."
   },
   "p2-open": {
    "speaker": "narrator",
@@ -251,7 +251,7 @@
   "p3-open-b": {
    "speaker": "narrator",
    "text": "Margaret Pike is back in her garden, deadheading roses, as if the afternoon were any other.",
-   "say": "[slightly unsettled] Margaret Pike is back in her garden, deadheading roses, as if the afternoon were any other."
+   "say": "[uneasy] Margaret Pike is back in her garden, deadheading roses, as if the afternoon were any other."
   },
   "p3a-1": {
    "speaker": "sam",
@@ -261,7 +261,7 @@
   "p3a-2": {
    "speaker": "margaret",
    "text": "At the show?",
-   "say": "[flat, after a pause] At the show?"
+   "say": "[pause] [flat] At the show?"
   },
   "p3a-3": {
    "speaker": "sam",
@@ -306,7 +306,7 @@
   "p3b-4": {
    "speaker": "margaret",
    "text": "Not today. I had the roses.",
-   "say": "[cool] Not today. [beat] I had the roses."
+   "say": "[cool] Not today. [short pause] I had the roses."
   },
   "p3c-1": {
    "speaker": "narrator",
@@ -371,7 +371,7 @@
   "p4b-3": {
    "speaker": "dilys",
    "text": "He was going to try.",
-   "say": "[grinning] He was going to try."
+   "say": "[amused] He was going to try."
   },
   "p4b-4": {
    "speaker": "narrator",
@@ -381,7 +381,7 @@
   "p4b-warm": {
    "speaker": "dilys",
    "text": "My favourite policeman. Ask me anything, love. One thing.",
-   "say": "[warm, loud] My favourite policeman. Ask me anything, love. [beat] One thing."
+   "say": "[warm, loud] My favourite policeman. Ask me anything, love. [short pause] One thing."
   },
   "p4c-1": {
    "speaker": "narrator",
@@ -426,7 +426,7 @@
   "p4f-1": {
    "speaker": "dilys",
    "text": "The vicar. Behind the produce tent, about one. Gerald was waving his little notebook at him.",
-   "say": "[lowering her voice, enjoying it] The vicar. Behind the produce tent, about one. Gerald was waving his little notebook at him."
+   "say": "[whispers] [mischievously] The vicar. Behind the produce tent, about one. Gerald was waving his little notebook at him."
   },
   "p4f-2": {
    "speaker": "dilys",
@@ -451,7 +451,7 @@
   "p5b-1": {
    "speaker": "toby",
    "text": "Sorry, sorry. Clients. Toby Pike, Pike and Lowe, Cirencester. Is it Dad?",
-   "say": "[distracted, smooth] Sorry, sorry. Clients. Toby Pike, Pike and Lowe, Cirencester. [beat] Is it Dad?"
+   "say": "[distracted, smooth] Sorry, sorry. Clients. Toby Pike, Pike and Lowe, Cirencester. [short pause] Is it Dad?"
   },
   "p5b-2": {
    "speaker": "sam",
@@ -516,7 +516,7 @@
   "p5e-2": {
    "speaker": "toby",
    "text": "Sorry, I have to take this. It's Swindon.",
-   "say": "[already turning away] Sorry, I have to take this. It's Swindon."
+   "say": "[distracted] Sorry, I have to take this. It's Swindon."
   },
   "p6-open": {
    "speaker": "narrator",
@@ -536,7 +536,7 @@
   "p6a-3": {
    "speaker": "clement",
    "text": "No. Quite. Sorry. Cordial?",
-   "say": "[embarrassed laugh] No. Quite. Sorry. [too bright] Cordial?"
+   "say": "[embarrassed laugh] No. Quite. Sorry. [brightly] Cordial?"
   },
   "p6b-1": {
    "speaker": "narrator",
@@ -546,7 +546,7 @@
   "p6b-2": {
    "speaker": "clement",
    "text": "Slugs.",
-   "say": "[too quickly] Slugs."
+   "say": "[quickly] Slugs."
   },
   "p6b-3": {
    "speaker": "sam",
@@ -566,7 +566,7 @@
   "p6c-2": {
    "speaker": "clement",
    "text": "One always goes walkabout at the show. Gerald's very strict about it. Was.",
-   "say": "[babbling] One always goes walkabout at the show. Gerald's very strict about it. [catches himself] Was."
+   "say": "[babbling] One always goes walkabout at the show. Gerald's very strict about it. [short pause] Was."
   },
   "p6d-1": {
    "speaker": "narrator",
@@ -586,7 +586,7 @@
   "p6d-4": {
    "speaker": "clement",
    "text": "An anonymous donor.",
-   "say": "[too quickly] An anonymous donor."
+   "say": "[quickly] An anonymous donor."
   },
   "p6e-1": {
    "speaker": "clement",
@@ -701,7 +701,7 @@
   "p8b-1": {
    "speaker": "quaile",
    "text": "Go on, then. Who did it?",
-   "say": "[mouth half full, amused] Go on, then. Who did it?"
+   "say": "[amused] Go on, then. Who did it?"
   },
   "p8b-2": {
    "speaker": "quaile",
@@ -796,7 +796,7 @@
   "p8e-good": {
    "speaker": "quaile",
    "text": "I think you know, and I think you'd like me to say it. I shan't.",
-   "say": "[smiling] I think you know, and I think you'd like me to say it. [beat] I shan't."
+   "say": "[smiling] I think you know, and I think you'd like me to say it. [short pause] I shan't."
   },
   "p8e-study": {
    "speaker": "quaile",
@@ -816,7 +816,7 @@
   "p9a-1": {
    "speaker": "clement",
    "text": "The Pike Cup for the heaviest marrow goes this year to Mrs Dilys Rudd.",
-   "say": "[over-bright, into a microphone] The Pike Cup for the heaviest marrow goes this year to Mrs Dilys Rudd."
+   "say": "[over bright] The Pike Cup for the heaviest marrow goes this year to Mrs Dilys Rudd."
   },
   "p9a-2": {
    "speaker": "narrator",
@@ -861,7 +861,7 @@
   "p9e-hunch": {
    "speaker": "clement",
    "text": "I was on the cake stall all afternoon. Ask anyone.",
-   "say": "[relieved, too loud] I was on the cake stall all afternoon. Ask anyone."
+   "say": "[relieved, loudly] I was on the cake stall all afternoon. Ask anyone."
   },
   "p9e-notebook": {
    "speaker": "sam",
@@ -896,12 +896,12 @@
   "p9f-toby": {
    "speaker": "toby",
    "text": "I was in a field with a man from Swindon. There's a video. It's very long.",
-   "say": "[offended, smug] I was in a field with a man from Swindon. There's a video. [beat] It's very long."
+   "say": "[offended, smug] I was in a field with a man from Swindon. There's a video. [short pause] It's very long."
   },
   "p9g-1": {
    "speaker": "quaile",
    "text": "Sit down, Sam. Vicar, the prize fund is four thousand short, and your roof is not. Gerald was going to say so, after the marrows.",
-   "say": "[firm, unhurried] Sit down, Sam. [beat] Vicar, the prize fund is four thousand short, and your roof is not. Gerald was going to say so, after the marrows."
+   "say": "[firm, unhurried] Sit down, Sam. [short pause] Vicar, the prize fund is four thousand short, and your roof is not. Gerald was going to say so, after the marrows."
   },
   "p9g-2": {
    "speaker": "quaile",
@@ -916,12 +916,12 @@
   "p9h-1": {
    "speaker": "clement",
    "text": "He was going to stand up here and say it. In front of everyone. In front of the roof.",
-   "say": "[breaking, fast] He was going to stand up here and say it. In front of everyone. [voice cracking] In front of the roof."
+   "say": "[breaking, fast] He was going to stand up here and say it. In front of everyone. [trembling voice] In front of the roof."
   },
   "p9h-2": {
    "speaker": "clement",
    "text": "I only wanted him to be ill. For the afternoon.",
-   "say": "[small, ashamed] I only wanted him to be ill. For the afternoon."
+   "say": "[softly] [ashamed] I only wanted him to be ill. For the afternoon."
   },
   "p9h-3": {
    "speaker": "quaile",
