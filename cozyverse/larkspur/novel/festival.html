@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Larkspur Falls: The Lantern Festival</title>
+<style>
+/* Larkspur Falls, the accusation, as one graphic-novel page on <novel-page> (drift-city/novel/novel-page.js).
+   Two panels are short loops (same picture as first and last frame, so they close without a jump); the voices are
+   recorded lines with two takes each, one chosen at random each time (festival.ink, "# voice:"). */
+html, body { margin: 0; height: 100%; background: #0a0908; overflow: hidden; }
+novel-page { height: 100vh; height: 100dvh; padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; }
+novel-page > section { background: #000; }
+novel-page > section > img, novel-page > section > video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+}
+novel-page > section > img { animation: drift 24s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.08) translate(-1%, 0.8%); } }
+@media (prefers-reduced-motion: reduce) { novel-page > section > img { animation: none; } }
+.b > img { object-position: 72% 50%; }
+.d > video { object-position: 50% 32%; }
+.ink { box-sizing: border-box; height: clamp(170px, 31vh, 300px); overflow: auto; padding: 12px 16px 16px;
+  font: 16px/1.45 Georgia, serif; color: #efe4c8; border-top: 1px solid #2a2520; }
+.ink p { margin: 0 0 8px; }
+.ink .choice { display: block; width: 100%; min-height: 44px; margin: 6px 0 0; padding: 10px 12px; text-align: left;
+  font: 15px/1.3 system-ui, sans-serif; color: inherit; background: #1b1814; border: 1px solid #3a332b; border-radius: 8px; }
+#start { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px; background: rgba(10, 9, 8, 0.86); color: #efe4c8; font: 16px/1.4 Georgia, serif;
+  text-align: center; padding: 24px; }
+#start h1 { font: 600 24px/1.2 Georgia, serif; margin: 0 0 6px; }
+#start button { min-width: 220px; min-height: 48px; font: 16px system-ui, sans-serif; color: #0a0908; background: #e0b36a;
+  border: 0; border-radius: 10px; }
+#start button.quiet { background: transparent; color: #efe4c8; border: 1px solid #5a4f42; }
+#start[hidden] { display: none; }
+</style>
+</head>
+<body>
+<novel-page id="page" width="1080" height="1520" zoom="2.2" duration="1300" easing="cubic-bezier(0.7, 0, 0.25, 1)" knot="page"
+            aria-label="The Lantern Festival: a page of four panels">
+  <section class="a" knot="crowd" points="26,26 1054,26 1054,520 26,562"
+           aria-label="At night, the whole town stands before a lantern-hung gazebo. In it, Nora holds a red notebook while the mayor points at her from the microphone. At the left edge of the crowd, one man with a wreath faces the other way.">
+    <img src="media/a-festival.jpg" alt="">
+  </section>
+  <section class="b" knot="agatha" points="26,592 556,570 516,1146 26,1166"
+           aria-label="Close on Agatha Pruitt: half her face in shadow, her hand holding a white bakery box by its string, a sticking plaster on her finger.">
+    <img src="media/b-agatha.jpg" alt="">
+  </section>
+  <section class="c" knot="box" points="586,569 1054,550 1054,1186 546,1147"
+           aria-label="Inside the bakery box, a mended glass snowglobe. Its snow is rising.">
+    <video poster="media/c-box.jpg" autoplay muted loop playsinline preload="auto"><source src="media/c-box-loop.webm" type='video/webm; codecs="vp9"'><source src="media/c-box-loop.mp4" type="video/mp4"></video>
+  </section>
+  <section class="d" knot="wreath" points="26,1196 1054,1216 1054,1494 26,1494"
+           aria-label="A row of townspeople in profile, all facing the gazebo. Among them, the man with the wreath faces out of the page.">
+    <video poster="media/d-wreath.jpg" autoplay muted loop playsinline preload="auto"><source src="media/d-wreath-loop.webm" type='video/webm; codecs="vp9"'><source src="media/d-wreath-loop.mp4" type="video/mp4"></video>
+  </section>
+  <div slot="ink" class="ink" aria-live="polite"></div>
+</novel-page>
+<div id="start" role="dialog" aria-labelledby="start-title">
+  <h1 id="start-title">Larkspur Falls</h1>
+  <p>The Lantern Festival. One page, with voices.</p>
+  <button id="go-sound" type="button">Begin, with sound</button>
+  <button id="go-quiet" class="quiet" type="button">Begin, no sound</button>
+</div>
+<script src="../../../third_party/ink/ink-full.js"></script>
+<script type="module">
+import "../../../drift-city/novel/novel-page.js";
+const page = document.getElementById("page");
+
+// Voices: each "# voice: id" in the step queues one take of that line, chosen at random from TAKES[id].
+const TAKES = { page: 2, mayor: 2, agree: 2, box: 2, waiting: 2, snowing: 2, wreath: 2, confess: 2 };
+let sound = false, queue = [], playing = null;
+const playNext = () => {
+  if (playing || !queue.length) return;
+  const id = queue.shift();
+  const a = new Audio(`media/vo/${id}-${1 + Math.floor(Math.random() * (TAKES[id] || 1))}.mp3`);
+  playing = a;
+  const done = () => { if (playing === a) { playing = null; setTimeout(playNext, 250); } };
+  a.addEventListener("ended", done); a.addEventListener("error", done);
+  a.play().catch(done);
+};
+page.addEventListener("storytags", (e) => {
+  const ids = e.detail.tags.map((t) => /^\s*voice\s*:\s*([\w-]+)\s*$/i.exec(t)?.[1]).filter(Boolean);
+  if (!sound || !ids.length) return;
+  if (playing) { playing.pause(); playing = null; }     // a new step cuts the old line, as a page turn would
+  queue = ids; playNext();
+});
+window.__festival = { get sound() { return sound; }, get queue() { return [...queue]; }, get playing() { return playing?.src || null; } };
+
+let story = null;
+try {
+  const r = await fetch("festival.ink");
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  story = new inkjs.Story(new inkjs.Compiler(await r.text()).Compile().ToJson());
+} catch (e) { console.error("festival.ink:", e); }
+const begin = (withSound) => {
+  sound = withSound;
+  document.getElementById("start").hidden = true;
+  if (story) page.play(story);
+};
+document.getElementById("go-sound").addEventListener("click", () => begin(true));
+document.getElementById("go-quiet").addEventListener("click", () => begin(false));
+</script>
+</body>
+</html>
