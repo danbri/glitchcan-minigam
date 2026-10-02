@@ -152,7 +152,7 @@ function playNext() {
   const id = queue.shift();
   if (stepsHeard.some((s) => s.has(id))) { setTimeout(playNext, 0); return; }
   thisStep.add(id);
-  const url = `media/vo/${id}-${1 + Math.floor(Math.random() * 2)}.mp3`;
+  const url = `media/vo/${id}-${1 + Math.floor(Math.random() * takesOf(id))}.mp3`;
   const mine = { url, src: null };
   playing = mine;
   ramp(bus.bed, LEVEL.bed * LEVEL.duck, 0.3); ramp(bus.panel, LEVEL.panel * LEVEL.duck, 0.3);
@@ -380,8 +380,12 @@ window.__marrow = window.__plainhunt = {
   get story() { return story; }, get voiced() { return voiced; }, get canary() { return { ...canary }; }, get village() { return readVillage(); }, get memory() { return memoryBox.classList.contains("on") ? memoryBox.textContent : null; },
 };
 
-// the voices are recorded when voices.json says so ("recorded": true); until then the page plays its sound only
-const voiced = await fetch("voices.json").then((r) => r.json()).then((v) => v.recorded !== false, () => false);
+// the voices are recorded when voices.json says so ("recorded": true); until then the page plays its sound only.
+// Each line has "takes" takes (media/vo/<id>-1.mp3 ...), and the lines in "secondTake" have one more: a second take is
+// recorded only where the first one is weak.
+const voiceList = await fetch("voices.json").then((r) => r.json()).catch(() => ({ recorded: false }));
+const voiced = voiceList.recorded !== false;
+const takesOf = (id) => (voiceList.takes || 2) + ((voiceList.secondTake || []).includes(id) ? 1 : 0);
 try {
   const r = await fetch("plainhunt.ink");
   if (!r.ok) throw new Error(`HTTP ${r.status}`);

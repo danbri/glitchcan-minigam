@@ -67,7 +67,7 @@ try {
     }
   }
   if (VOICED) for (const id of Object.keys(voices.lines))
-    want.push(`media/vo/${id}-1.mp3`, `media/vo/${id}-2.mp3`);
+    for (let k = 1; k <= (voices.takes || 2) + ((voices.secondTake || []).includes(id) ? 1 : 0); k++) want.push(`media/vo/${id}-${k}.mp3`);
   const absent = [];
   for (const f of want) if (!(await page.request.head(BASE + f)).ok()) absent.push(f);
   absent.length ? fail(`files missing (${absent.length}): ${absent.slice(0, 8).join(', ')}`) : pass(`all ${want.length} pictures, loops, sounds and voice takes are present`);

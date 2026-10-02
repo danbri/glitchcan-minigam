@@ -161,7 +161,7 @@ for k in sorted(lines):
 extra = [k for k in SAY if k not in lines]
 if bad or extra: sys.exit(f'directions out of step: {bad} {extra}')
 prev = json.load(open(f'{STORY}/voices.json')) if os.path.exists(f'{STORY}/voices.json') else {}
-extra_fields = {'recorded': prev['recorded']} if 'recorded' in prev else {}
-json.dump({**extra_fields, 'about': 'Every voiced line of the chapter\'s ink: who speaks it, the exact words shown on the page ("text"), and what the voice is given ("say": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves "text" matches the ink; tools/directions.py writes this file. Each line has two takes, media/vo/<id>-1.mp3 and -2.mp3; the page plays one at random.',
-           'model': 'eleven_v4', 'takes': 2, 'voices': vmap, 'lines': out}, open(f'{STORY}/voices.json', 'w'), indent=1, ensure_ascii=False)
+extra_fields = {k: prev[k] for k in ('recorded', 'takes', 'secondTake') if k in prev}
+json.dump({'takes': 2, **extra_fields, 'about': 'Every voiced line of the chapter\'s ink: who speaks it, the exact words shown on the page ("text"), and what the voice is given ("say": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves "text" matches the ink; tools/directions.py writes this file. Each line has "takes" takes, media/vo/<id>-1.mp3 and so on, and one more if its id is in "secondTake"; the page plays one at random.',
+           'model': 'eleven_v4', 'voices': vmap, 'lines': out}, open(f'{STORY}/voices.json', 'w'), indent=1, ensure_ascii=False)
 print(len(out), 'lines;', len(SAY), 'with their own direction')
