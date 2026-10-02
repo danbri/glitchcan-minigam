@@ -233,7 +233,8 @@
      },
      "loopSrc": [
       "media/p4-cottage-tiny"
-     ]
+     ],
+     "note": "two kling-2.5-turbo 5 s takes made; neither had visible motion (only edge shimmer), so the short loop stays"
     },
     {
      "knot": "notes",
@@ -291,8 +292,9 @@
       "prompt": "Locked-off camera, almost a still photograph. Only the dust drifts slowly in the shaft of sunlight. Nothing else moves. No camera movement."
      },
      "loopSrc": [
-      "media/p5-barn-tiny"
-     ]
+      "media/p5-barn-loop1"
+     ],
+     "note": "two kling-2.5-turbo 5 s takes, still on start and end frame; take 1 had no visible motion and was not used, take 2 (the man working at the bench) loops alone"
     },
     {
      "knot": "jeremy",
@@ -358,8 +360,10 @@
       "prompt": "Locked-off camera, almost a still photograph. Only the flames of the log fire move. The dog does not move. No camera movement."
      },
      "loopSrc": [
-      "media/p6-fire-tiny"
-     ]
+      "media/p6-fire-loop1",
+      "media/p6-fire-loop2"
+     ],
+     "note": "two kling-2.5-turbo 5 s takes, still on start and end frame, cross-faded"
     },
     {
      "knot": "quiz",
@@ -456,8 +460,10 @@
       "prompt": "Locked-off camera, almost a still photograph. Only the empty swing sways very slightly and a few leaves stir on the ground. No camera movement."
      },
      "loopSrc": [
-      "media/p7-swing-tiny"
-     ]
+      "media/p7-swing-loop1",
+      "media/p7-swing-loop2"
+     ],
+     "note": "two kling-2.5-turbo 5 s takes, still on start and end frame, cross-faded"
     }
    ]
   },
