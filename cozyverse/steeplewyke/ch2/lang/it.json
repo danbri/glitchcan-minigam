@@ -12,8 +12,7 @@
  "forget": "Fai dimenticare il paese di te",
  "soundOff": "Audio spento",
  "soundOn": "Audio acceso",
- "textLanguage": "Testo",
- "voiceLanguage": "Voci",
+ "textLanguage": "Sottotitoli",
  "villageIntro": "Il paese si ricorda di te.",
  "villageIs": "{who}: {word}",
  "standing": {

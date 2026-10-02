@@ -12,8 +12,7 @@
  "forget": "Make the village forget you",
  "soundOff": "Sound off",
  "soundOn": "Sound on",
- "textLanguage": "Text",
- "voiceLanguage": "Voices",
+ "textLanguage": "Subtitles",
  "villageIntro": "The village remembers you.",
  "villageIs": "{who} is {word}",
  "standing": {

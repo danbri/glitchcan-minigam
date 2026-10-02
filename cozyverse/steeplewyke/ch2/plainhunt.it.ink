@@ -111,7 +111,7 @@ Win: Lei è il poliziotto. Io sono Win. Capitana della torre.
 # voice: p1c-2
 Ha settantotto anni. Parla un po' troppo forte, e ti guarda la bocca mentre rispondi. Al collo, appesi a uno spago, un taccuino da cronista e una matita.
 # voice: p1c-3
-Win: Si siede sulla panca con i piedi dentro, e non tocca nessuna corda. Una campana può sollevare un uomo adulto fino al soffitto.
+Win: Lei si siede sulla panca, con i piedi dentro, e non tocca le corde. Una campana può sollevare un uomo adulto fino al soffitto.
 -> p1_win_choices
 = p1_win_choices
 + {p1_napkin == 0} [Chiedi che cos'è il plain hunt] -> p1_napkin
@@ -639,7 +639,7 @@ Quaile: Il fondo per il tetto ha avuto un anno difficile.
 # voice: p5e-1
 Su un cavalletto in fondo, una tavola sotto un telo antipolvere, e un pennello da insegnista appoggiato su un vasetto di missione per doratura. L'oro è ancora umido.
 # voice: p5e-2
-Sotto il telo: una tavola del concerto, scritta a metà. Giubileo, milleottocentonovantasette. Queste lettere hanno piccoli piedi, come le scritte sulle vecchie insegne dei negozi.
+Sotto il telo: una tavola del concerto, scritta a metà. Giubileo, milleottocentonovantasette. Queste lettere hanno i piedini, come le scritte sulle vecchie insegne delle botteghe.
 # voice: p5e-3
 Jeremy: Una commissione. Un'altra chiesa. Non posso dire di più.
 + {p5_van == 0} [Esci passando accanto al furgone] -> p5_van
@@ -649,7 +649,7 @@ Jeremy: Una commissione. Un'altra chiesa. Non posso dire di più.
 # panel: van
 {p5_jeremy == 0: -> p5_jeremy}
 # voice: p5f-1
-Sul suo furgone c'è scritto Cole Antiques in oro, in lettere tonde e semplici, senza nessun piede.
+Sul suo furgone c'è scritto Cole Antiques in oro, in lettere tonde e semplici, senza piedini.
 + [Lascialo alla sua credenza] -> inquiries
 
 // ---------------------------------------------------------------- page 6: the Plough, quiz night
@@ -1170,7 +1170,7 @@ Sam: Margaret aveva la campana più acuta. La sua prima volta. Glenys l'avrebbe 
 }
 {typeface:
     # voice: p9n-typeface
-    La tavola del Giubileo è scritta in lettere tonde, senza piedi.
+    La tavola del Giubileo è scritta in lettere tonde, senza piedini.
 }
 {brush:
     # voice: p9n-brush
@@ -1223,7 +1223,7 @@ Jeremy Cole siede nel primo banco con il libro degli inni chiuso. Non ha guardat
 # panel: cloth
 ~ swapped = true
 # voice: p10c-1
-Sollevi l'angolo del drappo viola. L'oro sulla data è ancora appiccicoso. Adesso le lettere hanno piccoli piedi.
+Sollevi l'angolo del drappo viola. L'oro sulla data è ancora appiccicoso. Adesso le lettere hanno i piedini.
 {brush:
     # voice: p10c-2
     Sam: È la tavola del suo fienile. Le ha scambiate.

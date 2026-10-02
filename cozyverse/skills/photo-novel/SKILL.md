@@ -72,25 +72,25 @@ Encode loops VP9 WebM first and H.264 MP4 second (the Playwright Chromium has no
 
 ## Translations and subtitles
 
-Owner, October 2026: "We need to make translations and subtitles for audio possible." Chapter 2 does it this way:
+Owner, October 2026: "We need to make translations and subtitles for audio possible", and then, firmly: the voices
+stay the English recording in every language ("leave voice english audio! We can't afford 100x the token bill ...
+I said SUBTITLES"). An Italian voice sample was made and removed. So a translation is TEXT ONLY:
 
-- The text language and the voice language are chosen apart: `?lang=it` shows `plainhunt.it.ink` and `lang/it.json`
-  (the words around the story: title, buttons, page titles, panel descriptions, the village line); `?voice=it` plays
-  `voices.it.json` from `media/vo/it/`. Italian text over English voices makes the text the subtitles, and the
-  reverse works the same way. The start screen offers both choices (`pages.json` `languages`) and reloads with them.
-  A voice language that is not recorded falls back to English; a partly recorded one lists its ids in `"only"`.
+- `?lang=it` shows the story and the page in Italian (`plainhunt.it.ink`, `lang/it.json`: title, buttons, page
+  titles, panel descriptions, the village line) over the English voices; the text is the subtitles. The start screen
+  offers "Subtitles: English / Italiano" (`pages.json` `languages`) and reloads with the choice.
 - A translation is the story file copied line for line with only the words translated: the same knots, tags, voice
   ids, variables and conditions. `tools/lang-check.mjs it` plays both with the Story API through the same random
   choices and taps and compares tags, choice counts and variables at every step (600 readings, about 30,000 steps);
   it also checks `lang/it.json` has every key. A copy with one voice id changed fails at step 1.
-- Tools take `INK=plainhunt.it.ink` (lines.mjs, walk.mjs) and `VOICE_LANG=it` (directions.py writes voices.it.json
-  with each speaker's default direction). eleven_v4 speaks Italian with the same voice ids and English direction
-  tags; a local multilingual transcript (faster-whisper "base", language it) matched the Italian text.
-- Translation notes for change ringing (the translator's choices): the treble "la campana più acuta", bells "la
-  uno ... la cinque", the tenor "il tenore", rounds "l'ordine di partenza", peal board "la tavola del concerto",
-  "move up one" "scalare di un posto"; "plain hunt", "Look to" and "Stand" stay in English. A literal "Not your
-  best" ("Non al vostro meglio") read as a calque and became "Non la vostra serata migliore".
-- Tests: `e2e-steeplewyke-ch2-lang.mjs` (Italian start screen, Italian voice, Italian text over English voice).
+- Take care with the story's own unconventional words. Sam calls serifs "feet" because he does not know the trade
+  word; the Italian must not "correct" that to "grazie" (the typographer's term) or render it literally ("piccoli
+  piedi", which reads as translated). It is "piedini", the same word in every place it occurs (four lines).
+- Other terms (the translator's choices): the treble "la campana più acuta", bells "la uno ... la cinque", the tenor
+  "il tenore", rounds "l'ordine di partenza", peal board "la tavola del concerto", "move up one" "scalare di un
+  posto"; "plain hunt", "Look to" and "Stand" stay in English. "Not your best" became "Non la vostra serata migliore"
+  (the literal "Non al vostro meglio" is a calque).
+- Tests: `e2e-steeplewyke-ch2-lang.mjs` (Italian start screen and story, English voice under it).
 
 ## Peek panels: one second of material on a longer cycle
 
