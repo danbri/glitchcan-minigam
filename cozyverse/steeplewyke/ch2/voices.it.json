@@ -1,0 +1,1185 @@
+{
+ "recorded": true,
+ "takes": 1,
+ "only": [
+  "p1-again",
+  "p1-open",
+  "p1a-1",
+  "p1a-2",
+  "p1b-1",
+  "p1b-2",
+  "p1b-3",
+  "p1b-4",
+  "p1b-again",
+  "p1c-1",
+  "p1c-2",
+  "p1c-3",
+  "p1c-again",
+  "p1d-1",
+  "p1d-2",
+  "p1d-3",
+  "p1d-4",
+  "p1d-5"
+ ],
+ "about": "Every voiced line of the chapter's ink: who speaks it, the exact words shown on the page (\"text\"), and what the voice is given (\"say\": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves \"text\" matches the ink; tools/directions.py writes this file. Each line has \"takes\" takes, media/vo/<id>-1.mp3 and so on, and one more if its id is in \"secondTake\"; the page plays one at random.",
+ "model": "eleven_v4",
+ "voices": {
+  "quaile": "XEoBW4iDmiawQP72xnAF",
+  "sam": "dqdOhmL2BvMSx2KtSAtN",
+  "margaret": "pbVD3LqiqlzGqszOvKuT",
+  "dilys": "Ky9j3wxFbp3dSAdrkOEv",
+  "toby": "NXaTw4ifg0LAguvKuIwZ",
+  "win": "aAsWcN5jdLdiYG7Hq0YL",
+  "jeremy": "PXeRjE4VWrRQnsaBOFBc",
+  "achebe": "UWhYG4NgASy4ripg5Ov6",
+  "narrator": "3XD5qTvPWht0mpTnYXY0",
+  "landlord": "7rQX8r6PVq3gfJ8rZzyE"
+ },
+ "lines": {
+  "evening": {
+   "speaker": "quaile",
+   "text": "La giornata è andata. In canonica, Sam.",
+   "say": "[drily] La giornata è andata. In canonica, Sam."
+  },
+  "hub-0": {
+   "speaker": "quaile",
+   "text": "Il coroner si riunisce venerdì. Cinque persone da vedere e tempo per quattro. Da chi cominciamo?",
+   "say": "[drily] Il coroner si riunisce venerdì. Cinque persone da vedere e tempo per quattro. Da chi cominciamo?"
+  },
+  "hub-3": {
+   "speaker": "quaile",
+   "text": "Ancora una, poi la canonica. La dottoressa Achebe dice di aver fatto un foglio di calcolo.",
+   "say": "[drily] Ancora una, poi la canonica. La dottoressa Achebe dice di aver fatto un foglio di calcolo."
+  },
+  "hub-n": {
+   "speaker": "quaile",
+   "text": "E adesso dove?",
+   "say": "[drily] E adesso dove?"
+  },
+  "loop-here": {
+   "speaker": "quaile",
+   "text": "Ci siamo già stati, Sam.",
+   "say": "[drily] Ci siamo già stati, Sam."
+  },
+  "morning": {
+   "speaker": "narrator",
+   "text": "Mercoledì. Dormi quattro ore, e ti sveglia il telefono.",
+   "say": "[dry, unhurried] Mercoledì. Dormi quattro ore, e ti sveglia il telefono."
+  },
+  "morning-drone": {
+   "speaker": "narrator",
+   "text": "Un video di Toby Pike, mandato alle sei. Martedì sera faceva volare un drone sopra la vecchia scuola, e ha pensato che ti potesse interessare.",
+   "say": "[dry, unhurried] Un video di Toby Pike, mandato alle sei. Martedì sera faceva volare un drone sopra la vecchia scuola, e ha pensato che ti potesse interessare."
+  },
+  "morning-rows": {
+   "speaker": "narrator",
+   "text": "Una mail di Dilys, inoltrata da Perth, con l'oggetto Non la vostra serata migliore.",
+   "say": "[dry, unhurried] Una mail di Dilys, inoltrata da Perth, con l'oggetto Non la vostra serata migliore."
+  },
+  "p1-again": {
+   "speaker": "narrator",
+   "text": "La torre, martedì sera.",
+   "say": "[dry, unhurried] La torre, martedì sera."
+  },
+  "p1-open": {
+   "speaker": "narrator",
+   "text": "St Aldhelm's, un martedì di ottobre, le sette e venti. Tre mesi dopo la Mostra delle Zucche, la vicaria ad interim ti ha convinto a imparare a suonare le campane.",
+   "say": "[dry, unhurried] St Aldhelm's, un martedì di ottobre, le sette e venti. Tre mesi dopo la Mostra delle Zucche, la vicaria ad interim ti ha convinto a imparare a suonare le campane."
+  },
+  "p10-again": {
+   "speaker": "narrator",
+   "text": "La funzione della domenica.",
+   "say": "[dry, unhurried] La funzione della domenica."
+  },
+  "p10-open": {
+   "speaker": "narrator",
+   "text": "Domenica, la funzione del raccolto. Zucche sul fonte battesimale, e sul muro la tavola del Giubileo sotto un drappo viola, da benedire dopo gli avvisi. Jeremy Cole è nel primo banco, in completo.",
+   "say": "[dry, unhurried] Domenica, la funzione del raccolto. Zucche sul fonte battesimale, e sul muro la tavola del Giubileo sotto un drappo viola, da benedire dopo gli avvisi. Jeremy Cole è nel primo banco, in completo."
+  },
+  "p10a-1": {
+   "speaker": "achebe",
+   "text": "Avvisi. I turni per i fiori sono nel portico. Il fondo per il tetto è a quattromiladuecento sterline.",
+   "say": "[calm, amused, precise] Avvisi. I turni per i fiori sono nel portico. Il fondo per il tetto è a quattromiladuecento sterline."
+  },
+  "p10a-2": {
+   "speaker": "achebe",
+   "text": "Il funerale di Hugh Daventry sarà qui giovedì alle undici. I fiori li fa Margaret.",
+   "say": "[calm, amused, precise] Il funerale di Hugh Daventry sarà qui giovedì alle undici. I fiori li fa Margaret."
+  },
+  "p10b-1": {
+   "speaker": "narrator",
+   "text": "Jeremy Cole siede nel primo banco con il libro degli inni chiuso. Non ha guardato il drappo.",
+   "say": "[dry, unhurried] Jeremy Cole siede nel primo banco con il libro degli inni chiuso. Non ha guardato il drappo."
+  },
+  "p10c-1": {
+   "speaker": "narrator",
+   "text": "Sollevi l'angolo del drappo viola. L'oro sulla data è ancora appiccicoso. Adesso le lettere hanno piccoli piedi.",
+   "say": "[dry, unhurried] Sollevi l'angolo del drappo viola. L'oro sulla data è ancora appiccicoso. Adesso le lettere hanno piccoli piedi."
+  },
+  "p10c-2": {
+   "speaker": "sam",
+   "text": "È la tavola del suo fienile. Le ha scambiate.",
+   "say": "[measured] È la tavola del suo fienile. Le ha scambiate."
+  },
+  "p10c-3": {
+   "speaker": "sam",
+   "text": "Non è la tavola che ho visto martedì.",
+   "say": "[measured] Non è la tavola che ho visto martedì."
+  },
+  "p10c-4": {
+   "speaker": "narrator",
+   "text": "La dottoressa Achebe interrompe gli avvisi e ti guarda da sopra gli occhiali.",
+   "say": "[dry, unhurried] La dottoressa Achebe interrompe gli avvisi e ti guarda da sopra gli occhiali."
+  },
+  "p10d-1": {
+   "speaker": "quaile",
+   "text": "Avanti, allora.",
+   "say": "[drily] Avanti, allora."
+  },
+  "p10e-brush": {
+   "speaker": "sam",
+   "text": "Così ne ha scritta una nuova nel suo fienile, e l'ha scambiata questa settimana.",
+   "say": "[measured] Così ne ha scritta una nuova nel suo fienile, e l'ha scambiata questa settimana."
+  },
+  "p10e-dark": {
+   "speaker": "sam",
+   "text": "E nessuno è uscito dalla chiesa.",
+   "say": "[measured] E nessuno è uscito dalla chiesa."
+  },
+  "p10e-hunch": {
+   "speaker": "jeremy",
+   "text": "Ho suonato ogni colpo, Sergente. Chieda a chiunque del gruppo.",
+   "say": "[smooth, warm] Ho suonato ogni colpo, Sergente. Chieda a chiunque del gruppo."
+  },
+  "p10e-named": {
+   "speaker": "sam",
+   "text": "Martedì il gruppo ha scalato di un posto, e lei ha suonato la quattro. Quando è andata via la luce, la quattro si è fermata di colpo per quaranta secondi.",
+   "say": "[measured] Martedì il gruppo ha scalato di un posto, e lei ha suonato la quattro. Quando è andata via la luce, la quattro si è fermata di colpo per quaranta secondi."
+  },
+  "p10e-proof": {
+   "speaker": "sam",
+   "text": "Hugh è morto stringendo l'angolo di una bozza. Tavola del concerto, una correzione. Il resto di quella pagina ce l'ha lei.",
+   "say": "[measured] Hugh è morto stringendo l'angolo di una bozza. Tavola del concerto, una correzione. Il resto di quella pagina ce l'ha lei."
+  },
+  "p10e-rows": {
+   "speaker": "sam",
+   "text": "Quando è andata via la luce, una campana si è fermata di colpo per quaranta secondi.",
+   "say": "[measured] Quando è andata via la luce, una campana si è fermata di colpo per quaranta secondi."
+  },
+  "p10e-sit": {
+   "speaker": "quaile",
+   "text": "Siediti, Sam. Non oggi.",
+   "say": "[drily] Siediti, Sam. Non oggi."
+  },
+  "p10e-typeface": {
+   "speaker": "sam",
+   "text": "La tavola che ha venduto a questa chiesa per novemila sterline è scritta in Gill Sans. Il Gill Sans è uscito nel millenovecentoventotto.",
+   "say": "[measured] La tavola che ha venduto a questa chiesa per novemila sterline è scritta in Gill Sans. Il Gill Sans è uscito nel millenovecentoventotto."
+  },
+  "p10f-achebe": {
+   "speaker": "achebe",
+   "text": "Undici per cento, Sergente. L'avevo detto.",
+   "say": "[calm, amused, precise] Undici per cento, Sergente. L'avevo detto."
+  },
+  "p10f-dilys": {
+   "speaker": "dilys",
+   "text": "Ero sulla due, tesoro, e parlavo con lei tutto il tempo. Mi ha sentita.",
+   "say": "[loud, cheerful] Ero sulla due, tesoro, e parlavo con lei tutto il tempo. Mi ha sentita."
+  },
+  "p10f-win": {
+   "speaker": "win",
+   "text": "Avevo la tre, Sergente. L'ho tenuta al buio. Chieda a Glenys.",
+   "say": "[loud, brisk] Avevo la tre, Sergente. L'ho tenuta al buio. Chieda a Glenys."
+  },
+  "p10g-1": {
+   "speaker": "quaile",
+   "text": "Siediti, Sam. Signor Cole, Hugh voleva stampare una correzione sulla sua tavola. Lei è sceso per la scala al buio per riprendersi la pagina.",
+   "say": "[drily] Siediti, Sam. Signor Cole, Hugh voleva stampare una correzione sulla sua tavola. Lei è sceso per la scala al buio per riprendersi la pagina."
+  },
+  "p10g-2": {
+   "speaker": "quaile",
+   "text": "Siediti, Sam.",
+   "say": "[drily] Siediti, Sam."
+  },
+  "p10g-3": {
+   "speaker": "narrator",
+   "text": "La dottoressa Achebe benedice la tavola. Jeremy Cole le tiene il drappo.",
+   "say": "[dry, unhurried] La dottoressa Achebe benedice la tavola. Jeremy Cole le tiene il drappo."
+  },
+  "p10h-1": {
+   "speaker": "jeremy",
+   "text": "Voleva stamparla nel bollettino di novembre. Ne arriva una copia in ogni casa del paese.",
+   "say": "[smooth, warm] Voleva stamparla nel bollettino di novembre. Ne arriva una copia in ogni casa del paese."
+  },
+  "p10h-2": {
+   "speaker": "jeremy",
+   "text": "Sono sceso a chiedergli la pagina. Lui l'ha tenuta stretta ed è arretrato di un passo, e lì non c'è nessun gradino.",
+   "say": "[smooth, warm] Sono sceso a chiedergli la pagina. Lui l'ha tenuta stretta ed è arretrato di un passo, e lì non c'è nessun gradino."
+  },
+  "p10h-3": {
+   "speaker": "quaile",
+   "text": "E poi è tornato su e ha suonato.",
+   "say": "[drily] E poi è tornato su e ha suonato."
+  },
+  "p10h-4": {
+   "speaker": "jeremy",
+   "text": "Non sapevo cos'altro fare.",
+   "say": "[smooth, warm] Non sapevo cos'altro fare."
+  },
+  "p10i-1": {
+   "speaker": "narrator",
+   "text": "Dopo la funzione il gruppo suona per il raccolto. Cinque corde. Win di nuovo sulla quattro.",
+   "say": "[dry, unhurried] Dopo la funzione il gruppo suona per il raccolto. Cinque corde. Win di nuovo sulla quattro."
+  },
+  "p10i-2": {
+   "speaker": "narrator",
+   "text": "La dottoressa Achebe suona la cinque, e per due volte va giusta.",
+   "say": "[dry, unhurried] La dottoressa Achebe suona la cinque, e per due volte va giusta."
+  },
+  "p10i-3": {
+   "speaker": "narrator",
+   "text": "Jeremy Cole suona la cinque, ogni colpo.",
+   "say": "[dry, unhurried] Jeremy Cole suona la cinque, ogni colpo."
+  },
+  "p10i-4": {
+   "speaker": "narrator",
+   "text": "Le corde si fermano. Win appoggia la mano aperta sul muro, poi alza gli occhi alla corda del tenore, ancora legata al suo gancio.",
+   "say": "[dry, unhurried] Le corde si fermano. Win appoggia la mano aperta sul muro, poi alza gli occhi alla corda del tenore, ancora legata al suo gancio."
+  },
+  "p1a-1": {
+   "speaker": "narrator",
+   "text": "Le cornacchie girano intorno alla guglia. Su nella camera dei campanari c'è una luce accesa.",
+   "say": "[dry, unhurried] Le cornacchie girano intorno alla guglia. Su nella camera dei campanari c'è una luce accesa."
+  },
+  "p1a-2": {
+   "speaker": "narrator",
+   "text": "La rastrelliera accanto al cancello coperto del sagrato è vuota. Hugh Daventry suona la campana più acuta, cura il bollettino parrocchiale e prepara il quiz del mercoledì al Plough. Di solito lascia lì la bicicletta entro le sette e un quarto.",
+   "say": "[dry, unhurried] La rastrelliera accanto al cancello coperto del sagrato è vuota. Hugh Daventry suona la campana più acuta, cura il bollettino parrocchiale e prepara il quiz del mercoledì al Plough. Di solito lascia lì la bicicletta entro le sette e un quarto."
+  },
+  "p1b-1": {
+   "speaker": "achebe",
+   "text": "Sergente Adeyemi. È venuto. Avevo detto a Margaret quaranta per cento.",
+   "say": "[calm, amused, precise] Sergente Adeyemi. È venuto. Avevo detto a Margaret quaranta per cento."
+  },
+  "p1b-2": {
+   "speaker": "sam",
+   "text": "E Margaret cosa ha detto?",
+   "say": "[measured] E Margaret cosa ha detto?"
+  },
+  "p1b-3": {
+   "speaker": "achebe",
+   "text": "Che sarebbe venuto, se aveva detto che veniva.",
+   "say": "[calm, amused, precise] Che sarebbe venuto, se aveva detto che veniva."
+  },
+  "p1b-4": {
+   "speaker": "narrator",
+   "text": "La reverenda dottoressa Ruth Achebe è vicaria ad interim da agosto. Prima dell'ordinazione calcolava il rischio pensionistico per un assicuratore di Croydon.",
+   "say": "[dry, unhurried] La reverenda dottoressa Ruth Achebe è vicaria ad interim da agosto. Prima dell'ordinazione calcolava il rischio pensionistico per un assicuratore di Croydon."
+  },
+  "p1b-again": {
+   "speaker": "achebe",
+   "text": "Win la aspetta, Sergente.",
+   "say": "[calm, amused, precise] Win la aspetta, Sergente."
+  },
+  "p1c-1": {
+   "speaker": "win",
+   "text": "Lei è il poliziotto. Io sono Win. Capitana della torre.",
+   "say": "[loud, brisk] Lei è il poliziotto. Io sono Win. Capitana della torre."
+  },
+  "p1c-2": {
+   "speaker": "narrator",
+   "text": "Ha settantotto anni. Parla un po' troppo forte, e ti guarda la bocca mentre rispondi. Al collo, appesi a uno spago, un taccuino da cronista e una matita.",
+   "say": "[dry, unhurried] Ha settantotto anni. Parla un po' troppo forte, e ti guarda la bocca mentre rispondi. Al collo, appesi a uno spago, un taccuino da cronista e una matita."
+  },
+  "p1c-3": {
+   "speaker": "win",
+   "text": "Si siede sulla panca con i piedi dentro, e non tocca nessuna corda. Una campana può sollevare un uomo adulto fino al soffitto.",
+   "say": "[loud, brisk] Si siede sulla panca con i piedi dentro, e non tocca nessuna corda. Una campana può sollevare un uomo adulto fino al soffitto."
+  },
+  "p1c-again": {
+   "speaker": "win",
+   "text": "Panca. Piedi dentro.",
+   "say": "[loud, brisk] Panca. Piedi dentro."
+  },
+  "p1d-1": {
+   "speaker": "narrator",
+   "text": "Sul retro di un tovagliolo del Plough scrive la prima cosa che impara ogni campanaro.",
+   "say": "[dry, unhurried] Sul retro di un tovagliolo del Plough scrive la prima cosa che impara ogni campanaro."
+  },
+  "p1d-2": {
+   "speaker": "win",
+   "text": "Plain hunt. Cinque campane. In una riga le coppie si scambiano: la prima con la seconda, la terza con la quarta. Nella successiva, la seconda con la terza, la quarta con la quinta. Poi di nuovo la prima.",
+   "say": "[loud, brisk] Plain hunt. Cinque campane. In una riga le coppie si scambiano: la prima con la seconda, la terza con la quarta. Nella successiva, la seconda con la terza, la quarta con la quinta. Poi di nuovo la prima."
+  },
+  "p1d-3": {
+   "speaker": "win",
+   "text": "Dieci righe e si torna all'ordine di partenza. Hugh suona la campana più acuta. Se non è qui per la mezza, suoniamo in cinque.",
+   "say": "[loud, brisk] Dieci righe e si torna all'ordine di partenza. Hugh suona la campana più acuta. Se non è qui per la mezza, suoniamo in cinque."
+  },
+  "p1d-4": {
+   "speaker": "sam",
+   "text": "Le corde sono sei.",
+   "say": "[measured] Le corde sono sei."
+  },
+  "p1d-5": {
+   "speaker": "win",
+   "text": "Sei campane. In cinque, il tenore resta fermo.",
+   "say": "[loud, brisk] Sei campane. In cinque, il tenore resta fermo."
+  },
+  "p2-again": {
+   "speaker": "narrator",
+   "text": "La camera dei campanari.",
+   "say": "[dry, unhurried] La camera dei campanari."
+  },
+  "p2-open": {
+   "speaker": "narrator",
+   "text": "La camera dei campanari, quattordici gradini di pietra più su: sei corde con impugnature di lana a righe, una panca, un vassoio del tè e una lavagna. Cinque campanari, e una corda legata in alto, fuori portata.",
+   "say": "[dry, unhurried] La camera dei campanari, quattordici gradini di pietra più su: sei corde con impugnature di lana a righe, una panca, un vassoio del tè e una lavagna. Cinque campanari, e una corda legata in alto, fuori portata."
+  },
+  "p2a-1": {
+   "speaker": "narrator",
+   "text": "Margaret Pike versa il tè da un thermos sul davanzale. Tira fuori due tazze, guarda la seconda e la rimette nel cestino.",
+   "say": "[dry, unhurried] Margaret Pike versa il tè da un thermos sul davanzale. Tira fuori due tazze, guarda la seconda e la rimette nel cestino."
+  },
+  "p2a-2": {
+   "speaker": "margaret",
+   "text": "Sergente. Il latte è nel barattolo della marmellata.",
+   "say": "[quiet, precise] Sergente. Il latte è nel barattolo della marmellata."
+  },
+  "p2a-cold": {
+   "speaker": "narrator",
+   "text": "Ti porge una tazza senza guardarti.",
+   "say": "[dry, unhurried] Ti porge una tazza senza guardarti."
+  },
+  "p2b-1": {
+   "speaker": "narrator",
+   "text": "Sulla lavagna, nelle maiuscole squadrate di Hugh: Martedì. Uno, Hugh. Due, Margaret. Tre, Dilys. Quattro, Win. Cinque, Jeremy. Sei, Ruth.",
+   "say": "[dry, unhurried] Sulla lavagna, nelle maiuscole squadrate di Hugh: Martedì. Uno, Hugh. Due, Margaret. Tre, Dilys. Quattro, Win. Cinque, Jeremy. Sei, Ruth."
+  },
+  "p2b-2": {
+   "speaker": "dilys",
+   "text": "Hugh non è venuto, quindi scaliamo tutti di un posto. Margaret, tu prendi la campana più acuta. Ruth, tu stai fuori da questo giro.",
+   "say": "[loud, cheerful] Hugh non è venuto, quindi scaliamo tutti di un posto. Margaret, tu prendi la campana più acuta. Ruth, tu stai fuori da questo giro."
+  },
+  "p2b-3": {
+   "speaker": "dilys",
+   "text": "Non cambiare la lavagna, tesoro. A Hugh piace cancellarla da sé.",
+   "say": "[loud, cheerful] Non cambiare la lavagna, tesoro. A Hugh piace cancellarla da sé."
+  },
+  "p2b-cold": {
+   "speaker": "dilys",
+   "text": "Hugh non è venuto. Ci pensa Win.",
+   "say": "[loud, cheerful] Hugh non è venuto. Ci pensa Win."
+  },
+  "p2c-1": {
+   "speaker": "win",
+   "text": "Look to. Parte la campana più acuta. Partita.",
+   "say": "[loud, brisk] Look to. Parte la campana più acuta. Partita."
+  },
+  "p2c-2": {
+   "speaker": "narrator",
+   "text": "Le campane attaccano sopra di te, abbastanza forte da sentirle attraverso la panca. Cinque persone in cerchio, ognuna guarda la corda di qualcun altro.",
+   "say": "[dry, unhurried] Le campane attaccano sopra di te, abbastanza forte da sentirle attraverso la panca. Cinque persone in cerchio, ognuna guarda la corda di qualcun altro."
+  },
+  "p2c-3": {
+   "speaker": "narrator",
+   "text": "Jeremy Cole, l'antiquario, sta più vicino alla porta, sotto l'interruttore della luce. Alle otto e cinque, tra un pezzo e l'altro, legge il telefono e lo mette via.",
+   "say": "[dry, unhurried] Jeremy Cole, l'antiquario, sta più vicino alla porta, sotto l'interruttore della luce. Alle otto e cinque, tra un pezzo e l'altro, legge il telefono e lo mette via."
+  },
+  "p2c-again": {
+   "speaker": "narrator",
+   "text": "Le corde salgono e scendono. Win muove le labbra mentre conta.",
+   "say": "[dry, unhurried] Le corde salgono e scendono. Win muove le labbra mentre conta."
+  },
+  "p2d-1": {
+   "speaker": "narrator",
+   "text": "Alle otto e un quarto si spengono le luci.",
+   "say": "[dry, unhurried] Alle otto e un quarto si spengono le luci."
+  },
+  "p2d-2": {
+   "speaker": "narrator",
+   "text": "Il suono continua al buio, e va storto: nello schema manca una campana, o due. Sotto di te, attraverso il pavimento, un tonfo e un breve tintinnio metallico.",
+   "say": "[dry, unhurried] Il suono continua al buio, e va storto: nello schema manca una campana, o due. Sotto di te, attraverso il pavimento, un tonfo e un breve tintinnio metallico."
+  },
+  "p2d-3": {
+   "speaker": "narrator",
+   "text": "Quaranta secondi al tuo orologio, e le luci tornano. Sono tutti dov'erano.",
+   "say": "[dry, unhurried] Quaranta secondi al tuo orologio, e le luci tornano. Sono tutti dov'erano."
+  },
+  "p2d-4": {
+   "speaker": "jeremy",
+   "text": "Quell'interruttore lo fa ogni inverno. Bisogna tenerlo su.",
+   "say": "[smooth, warm] Quell'interruttore lo fa ogni inverno. Bisogna tenerlo su."
+  },
+  "p2d-5": {
+   "speaker": "narrator",
+   "text": "Win chiama Stand, e le campane si fermano. La dottoressa Achebe scende per prima, a mettere su il bollitore.",
+   "say": "[dry, unhurried] Win chiama Stand, e le campane si fermano. La dottoressa Achebe scende per prima, a mettere su il bollitore."
+  },
+  "p2d-6": {
+   "speaker": "narrator",
+   "text": "Poi grida il tuo nome.",
+   "say": "[dry, unhurried] Poi grida il tuo nome."
+  },
+  "p3-again": {
+   "speaker": "narrator",
+   "text": "La sagrestia, ai piedi della scala.",
+   "say": "[dry, unhurried] La sagrestia, ai piedi della scala."
+  },
+  "p3-open": {
+   "speaker": "narrator",
+   "text": "Hugh Daventry è ai piedi della scala della torre, dove sbocca nella sagrestia. La dottoressa Achebe è in ginocchio accanto a lui. Alza gli occhi e scuote la testa.",
+   "say": "[dry, unhurried] Hugh Daventry è ai piedi della scala della torre, dove sbocca nella sagrestia. La dottoressa Achebe è in ginocchio accanto a lui. Alza gli occhi e scuote la testa."
+  },
+  "p3a-1": {
+   "speaker": "narrator",
+   "text": "Ha ancora le mollette da ciclista ai pantaloni. La torcia è sull'ultimo gradino, ancora accesa.",
+   "say": "[dry, unhurried] Ha ancora le mollette da ciclista ai pantaloni. La torcia è sull'ultimo gradino, ancora accesa."
+  },
+  "p3a-2": {
+   "speaker": "narrator",
+   "text": "La scala è di pietra, stretta, e gira a sinistra. Quattordici gradini fino alla porta della camera dei campanari.",
+   "say": "[dry, unhurried] La scala è di pietra, stretta, e gira a sinistra. Quattordici gradini fino alla porta della camera dei campanari."
+  },
+  "p3a-3": {
+   "speaker": "achebe",
+   "text": "Ha scritto al gruppo alle otto e cinque. Sto salendo. Devo dire una cosa sulla tavola. H.",
+   "say": "[calm, amused, precise] Ha scritto al gruppo alle otto e cinque. Sto salendo. Devo dire una cosa sulla tavola. H."
+  },
+  "p3a-4": {
+   "speaker": "achebe",
+   "text": "Sono scesa per il bollitore e lui era qui. Non l'ho spostato.",
+   "say": "[calm, amused, precise] Sono scesa per il bollitore e lui era qui. Non l'ho spostato."
+  },
+  "p3b-1": {
+   "speaker": "narrator",
+   "text": "La mano destra è chiusa su un angolo di pagina, strappato. Stampato sopra: Tavola del concerto, una corre. E in fondo, H.D.",
+   "say": "[dry, unhurried] La mano destra è chiusa su un angolo di pagina, strappato. Stampato sopra: Tavola del concerto, una corre. E in fondo, H.D."
+  },
+  "p3b-2": {
+   "speaker": "sam",
+   "text": "Una bozza. Per il bollettino parrocchiale.",
+   "say": "[measured] Una bozza. Per il bollettino parrocchiale."
+  },
+  "p3b-3": {
+   "speaker": "sam",
+   "text": "Qualcuno ha il resto di quella pagina.",
+   "say": "[measured] Qualcuno ha il resto di quella pagina."
+  },
+  "p3c-1": {
+   "speaker": "narrator",
+   "text": "Quaile arriva undici minuti dopo, con un impermeabile sopra il pigiama.",
+   "say": "[dry, unhurried] Quaile arriva undici minuti dopo, con un impermeabile sopra il pigiama."
+  },
+  "p3c-2": {
+   "speaker": "quaile",
+   "text": "Ero nella vasca, Sam. Dimmi che è un incidente.",
+   "say": "[drily] Ero nella vasca, Sam. Dimmi che è un incidente."
+  },
+  "p3c-3": {
+   "speaker": "sam",
+   "text": "Potrebbe esserlo.",
+   "say": "[measured] Potrebbe esserlo."
+  },
+  "p3c-4": {
+   "speaker": "quaile",
+   "text": "Allora perché hai chiamato me e non solo un'ambulanza?",
+   "say": "[drily] Allora perché hai chiamato me e non solo un'ambulanza?"
+  },
+  "p3c-5": {
+   "speaker": "sam",
+   "text": "Ho chiamato tutte e due, capo.",
+   "say": "[measured] Ho chiamato tutte e due, capo."
+  },
+  "p3c-6": {
+   "speaker": "quaile",
+   "text": "Un anziano, una scala di pietra, la luce che va via. Il coroner dirà che è caduto, e il coroner si riunisce venerdì. Il gruppo ha freddo e vuole andare a letto. Stasera puoi fare una domanda sola.",
+   "say": "[drily] Un anziano, una scala di pietra, la luce che va via. Il coroner dirà che è caduto, e il coroner si riunisce venerdì. Il gruppo ha freddo e vuole andare a letto. Stasera puoi fare una domanda sola."
+  },
+  "p3c-again": {
+   "speaker": "quaile",
+   "text": "Una domanda al gruppo, Sam, poi vanno a casa.",
+   "say": "[drily] Una domanda al gruppo, Sam, poi vanno a casa."
+  },
+  "p3d-1": {
+   "speaker": "narrator",
+   "text": "Il gruppo aspetta in sagrestia con i cappotti addosso: Win, Dilys, Margaret, Jeremy. Nessuno si siede.",
+   "say": "[dry, unhurried] Il gruppo aspetta in sagrestia con i cappotti addosso: Win, Dilys, Margaret, Jeremy. Nessuno si siede."
+  },
+  "p3d-again": {
+   "speaker": "narrator",
+   "text": "Il gruppo aspetta con i cappotti addosso. Hanno risposto a una domanda, e vorrebbero andare a casa.",
+   "say": "[dry, unhurried] Il gruppo aspetta con i cappotti addosso. Hanno risposto a una domanda, e vorrebbero andare a casa."
+  },
+  "p3e-1": {
+   "speaker": "dilys",
+   "text": "Al buio? Nessuno avrebbe trovato la porta, tesoro.",
+   "say": "[loud, cheerful] Al buio? Nessuno avrebbe trovato la porta, tesoro."
+  },
+  "p3e-2": {
+   "speaker": "jeremy",
+   "text": "Abbiamo suonato senza fermarci, Sergente. Chieda a Win.",
+   "say": "[smooth, warm] Abbiamo suonato senza fermarci, Sergente. Chieda a Win."
+  },
+  "p3e-3": {
+   "speaker": "win",
+   "text": "Cosa?",
+   "say": "[loud, brisk] Cosa?"
+  },
+  "p3f-1": {
+   "speaker": "dilys",
+   "text": "Registro ogni prova per mia sorella Glenys. Sta a Perth. Ha suonato qui per trent'anni, prima che le cedessero le ginocchia.",
+   "say": "[loud, cheerful] Registro ogni prova per mia sorella Glenys. Sta a Perth. Ha suonato qui per trent'anni, prima che le cedessero le ginocchia."
+  },
+  "p3f-2": {
+   "speaker": "dilys",
+   "text": "Ci ascolta a colazione e ci dà un voto su dieci.",
+   "say": "[loud, cheerful] Ci ascolta a colazione e ci dà un voto su dieci."
+  },
+  "p3f-3": {
+   "speaker": "dilys",
+   "text": "Glielo mando stasera. Domattina avrà i suoi voti.",
+   "say": "[loud, cheerful] Glielo mando stasera. Domattina avrà i suoi voti."
+  },
+  "p3f-cold": {
+   "speaker": "dilys",
+   "text": "Lo avrà quando avrò deciso se mi è simpatico. Me lo richieda domani.",
+   "say": "[loud, cheerful] Lo avrà quando avrò deciso se mi è simpatico. Me lo richieda domani."
+  },
+  "p3g-1": {
+   "speaker": "margaret",
+   "text": "Abbiamo scalato tutti di un posto, perché Hugh non era venuto. Io avevo la campana più acuta. Era la prima volta che la suonavo.",
+   "say": "[quiet, precise] Abbiamo scalato tutti di un posto, perché Hugh non era venuto. Io avevo la campana più acuta. Era la prima volta che la suonavo."
+  },
+  "p3g-2": {
+   "speaker": "margaret",
+   "text": "Gerald non mi ha mai lasciato suonare. Diceva che faceva male alle mani.",
+   "say": "[quiet, precise] Gerald non mi ha mai lasciato suonare. Diceva che faceva male alle mani."
+  },
+  "p3g-cold": {
+   "speaker": "margaret",
+   "text": "Chieda a Win, Sergente. Glielo dirà lei. Ad alta voce.",
+   "say": "[quiet, precise] Chieda a Win, Sergente. Glielo dirà lei. Ad alta voce."
+  },
+  "p3g-cold2": {
+   "speaker": "narrator",
+   "text": "Win si sta già mettendo il cappotto.",
+   "say": "[dry, unhurried] Win si sta già mettendo il cappotto."
+  },
+  "p4-again": {
+   "speaker": "narrator",
+   "text": "La casa di Win.",
+   "say": "[dry, unhurried] La casa di Win."
+  },
+  "p4-open": {
+   "speaker": "narrator",
+   "text": "La casa di Win Haskett, l'ultima di Church Row. Come battente, una campanella d'ottone, che lei non può sentire, e accanto un pulsante che fa lampeggiare una lampada dentro casa.",
+   "say": "[dry, unhurried] La casa di Win Haskett, l'ultima di Church Row. Come battente, una campanella d'ottone, che lei non può sentire, e accanto un pulsante che fa lampeggiare una lampada dentro casa."
+  },
+  "p4a-1": {
+   "speaker": "narrator",
+   "text": "Un cartoncino alla finestra, in stampatello: Togliersi le scarpe. Vale anche per te.",
+   "say": "[dry, unhurried] Un cartoncino alla finestra, in stampatello: Togliersi le scarpe. Vale anche per te."
+  },
+  "p4b-1": {
+   "speaker": "win",
+   "text": "Entri. Il tè è troppo carico. Si sieda lì, non lì.",
+   "say": "[loud, brisk] Entri. Il tè è troppo carico. Si sieda lì, non lì."
+  },
+  "p4b-2": {
+   "speaker": "narrator",
+   "text": "Quaile si toglie l'apparecchio acustico e lo posa vicino alla teiera.",
+   "say": "[dry, unhurried] Quaile si toglie l'apparecchio acustico e lo posa vicino alla teiera."
+  },
+  "p4b-4": {
+   "speaker": "narrator",
+   "text": "Win stacca un foglio dal taccuino per le vostre domande e lo spinge sul tavolo.",
+   "say": "[dry, unhurried] Win stacca un foglio dal taccuino per le vostre domande e lo spinge sul tavolo."
+  },
+  "p4b-again": {
+   "speaker": "narrator",
+   "text": "Win batte sul taccuino e guarda l'orologio.",
+   "say": "[dry, unhurried] Win batte sul taccuino e guarda l'orologio."
+  },
+  "p4b-warm": {
+   "speaker": "win",
+   "text": "Calze. Bene. Si sieda lì.",
+   "say": "[loud, brisk] Calze. Bene. Si sieda lì."
+  },
+  "p4c-1": {
+   "speaker": "narrator",
+   "text": "Scrive un grande 4, lo sottolinea due volte, e aggiunge: Quarantun anni.",
+   "say": "[dry, unhurried] Scrive un grande 4, lo sottolinea due volte, e aggiunge: Quarantun anni."
+  },
+  "p4c-3": {
+   "speaker": "narrator",
+   "text": "Sotto, Quaile scrive: Il tè è sempre così? Win scrive: Sì.",
+   "say": "[dry, unhurried] Sotto, Quaile scrive: Il tè è sempre così? Win scrive: Sì."
+  },
+  "p4d-1": {
+   "speaker": "narrator",
+   "text": "Win scrive a lungo.",
+   "say": "[dry, unhurried] Win scrive a lungo."
+  },
+  "p4d-2": {
+   "speaker": "narrator",
+   "text": "Hugh mai arrivato. Scalati di un posto. Plain hunt in cinque, tenore fermo. Io avevo la 3. Luci spente alle 8.14. Non vedevo le corde, quindi ho tenuto la mia e ho contato.",
+   "say": "[dry, unhurried] Hugh mai arrivato. Scalati di un posto. Plain hunt in cinque, tenore fermo. Io avevo la 3. Luci spente alle 8.14. Non vedevo le corde, quindi ho tenuto la mia e ho contato."
+  },
+  "p4d-3": {
+   "speaker": "narrator",
+   "text": "Sotto, sottolineato: Qualcuno si è fermato. Chiedete a Dilys il nastro di Glenys.",
+   "say": "[dry, unhurried] Sotto, sottolineato: Qualcuno si è fermato. Chiedete a Dilys il nastro di Glenys."
+  },
+  "p4e-1": {
+   "speaker": "narrator",
+   "text": "Il suo telefono, sulla mensola del camino accanto all'orologio. La chat del gruppo, martedì, otto e cinque. Hugh: Sto salendo. Devo dire una cosa sulla tavola. H.",
+   "say": "[dry, unhurried] Il suo telefono, sulla mensola del camino accanto all'orologio. La chat del gruppo, martedì, otto e cinque. Hugh: Sto salendo. Devo dire una cosa sulla tavola. H."
+  },
+  "p4e-2": {
+   "speaker": "win",
+   "text": "L'ho letto quando sono tornata a casa. Nella mia torre i telefoni restano nei cappotti.",
+   "say": "[loud, brisk] L'ho letto quando sono tornata a casa. Nella mia torre i telefoni restano nei cappotti."
+  },
+  "p5-again": {
+   "speaker": "narrator",
+   "text": "Il fienile sulla strada per Cirencester.",
+   "say": "[dry, unhurried] Il fienile sulla strada per Cirencester."
+  },
+  "p5-open": {
+   "speaker": "narrator",
+   "text": "Cole Antiques: un fienile di pietra sulla strada per Cirencester, pieno di sedie di altri. Sopra la porta, un'insegna: Restauri con rispetto.",
+   "say": "[dry, unhurried] Cole Antiques: un fienile di pietra sulla strada per Cirencester, pieno di sedie di altri. Sopra la porta, un'insegna: Restauri con rispetto."
+  },
+  "p5a-1": {
+   "speaker": "narrator",
+   "text": "Ogni sedia ha il prezzo su un'etichetta marrone da bagaglio. La più economica costa quattrocento sterline.",
+   "say": "[dry, unhurried] Ogni sedia ha il prezzo su un'etichetta marrone da bagaglio. La più economica costa quattrocento sterline."
+  },
+  "p5a-2": {
+   "speaker": "narrator",
+   "text": "Una radio sul banco da lavoro trasmette il bollettino del mare.",
+   "say": "[dry, unhurried] Una radio sul banco da lavoro trasmette il bollettino del mare."
+  },
+  "p5b-1": {
+   "speaker": "jeremy",
+   "text": "Sergente. Ispettrice. L'ho saputo stamattina. Io e Hugh non andavamo sempre d'accordo, ma alle serate del quiz era di buona compagnia.",
+   "say": "[smooth, warm] Sergente. Ispettrice. L'ho saputo stamattina. Io e Hugh non andavamo sempre d'accordo, ma alle serate del quiz era di buona compagnia."
+  },
+  "p5b-3": {
+   "speaker": "narrator",
+   "text": "Si pulisce le mani con uno straccio sporco d'oro. Ha tempo per una domanda prima della credenza.",
+   "say": "[dry, unhurried] Si pulisce le mani con uno straccio sporco d'oro. Ha tempo per una domanda prima della credenza."
+  },
+  "p5b-again": {
+   "speaker": "jeremy",
+   "text": "Altro, Sergente? Alle due mi arriva una credenza.",
+   "say": "[smooth, warm] Altro, Sergente? Alle due mi arriva una credenza."
+  },
+  "p5c-1": {
+   "speaker": "jeremy",
+   "text": "Sulla cinque, a suonare, ogni colpo, dall'inizio alla fine. La cinque è la mia campana. Chieda a chiunque del gruppo.",
+   "say": "[smooth, warm] Sulla cinque, a suonare, ogni colpo, dall'inizio alla fine. La cinque è la mia campana. Chieda a chiunque del gruppo."
+  },
+  "p5c-2": {
+   "speaker": "jeremy",
+   "text": "Quando è andata via la luce ho continuato. Si fa così. Hai la corda in mano.",
+   "say": "[smooth, warm] Quando è andata via la luce ho continuato. Si fa così. Hai la corda in mano."
+  },
+  "p5d-1": {
+   "speaker": "jeremy",
+   "text": "La tavola del Giubileo? L'ho trovata in un fienile a Bibury, sotto un telone. Era della torre, l'avevano tolta negli anni Sessanta. Restaurata con rispetto.",
+   "say": "[smooth, warm] La tavola del Giubileo? L'ho trovata in un fienile a Bibury, sotto un telone. Era della torre, l'avevano tolta negli anni Sessanta. Restaurata con rispetto."
+  },
+  "p5d-2": {
+   "speaker": "jeremy",
+   "text": "La parrocchia l'ha pagata novemila sterline, dal fondo per il tetto. Un pub di Bath me ne offriva dodici.",
+   "say": "[smooth, warm] La parrocchia l'ha pagata novemila sterline, dal fondo per il tetto. Un pub di Bath me ne offriva dodici."
+  },
+  "p5d-3": {
+   "speaker": "quaile",
+   "text": "Il fondo per il tetto ha avuto un anno difficile.",
+   "say": "[drily] Il fondo per il tetto ha avuto un anno difficile."
+  },
+  "p5e-1": {
+   "speaker": "narrator",
+   "text": "Su un cavalletto in fondo, una tavola sotto un telo antipolvere, e un pennello da insegnista appoggiato su un vasetto di missione per doratura. L'oro è ancora umido.",
+   "say": "[dry, unhurried] Su un cavalletto in fondo, una tavola sotto un telo antipolvere, e un pennello da insegnista appoggiato su un vasetto di missione per doratura. L'oro è ancora umido."
+  },
+  "p5e-2": {
+   "speaker": "narrator",
+   "text": "Sotto il telo: una tavola del concerto, scritta a metà. Giubileo, milleottocentonovantasette. Queste lettere hanno piccoli piedi, come le scritte sulle vecchie insegne dei negozi.",
+   "say": "[dry, unhurried] Sotto il telo: una tavola del concerto, scritta a metà. Giubileo, milleottocentonovantasette. Queste lettere hanno piccoli piedi, come le scritte sulle vecchie insegne dei negozi."
+  },
+  "p5e-3": {
+   "speaker": "jeremy",
+   "text": "Una commissione. Un'altra chiesa. Non posso dire di più.",
+   "say": "[smooth, warm] Una commissione. Un'altra chiesa. Non posso dire di più."
+  },
+  "p5f-1": {
+   "speaker": "narrator",
+   "text": "Sul suo furgone c'è scritto Cole Antiques in oro, in lettere tonde e semplici, senza nessun piede.",
+   "say": "[dry, unhurried] Sul suo furgone c'è scritto Cole Antiques in oro, in lettere tonde e semplici, senza nessun piede."
+  },
+  "p6-again": {
+   "speaker": "narrator",
+   "text": "Il Plough, serata del quiz.",
+   "say": "[dry, unhurried] Il Plough, serata del quiz."
+  },
+  "p6-open": {
+   "speaker": "narrator",
+   "text": "Il Plough. Il quiz si fa lo stesso: Hugh ha preparato le domande domenica, e l'oste le legge dal suo foglio. Sei squadre e un camino acceso.",
+   "say": "[dry, unhurried] Il Plough. Il quiz si fa lo stesso: Hugh ha preparato le domande domenica, e l'oste le legge dal suo foglio. Sei squadre e un camino acceso."
+  },
+  "p6a-1": {
+   "speaker": "narrator",
+   "text": "Il fuoco è acceso dalle quattro. Il cane davanti non si muove dalle cinque.",
+   "say": "[dry, unhurried] Il fuoco è acceso dalle quattro. Il cane davanti non si muove dalle cinque."
+  },
+  "p6b-1": {
+   "speaker": "landlord",
+   "text": "Secondo turno. Domanda sette. In che anno Monotype ha pubblicato il carattere Gill Sans?",
+   "say": "[warm, gruff] Secondo turno. Domanda sette. In che anno Monotype ha pubblicato il carattere Gill Sans?"
+  },
+  "p6b-2": {
+   "speaker": "narrator",
+   "text": "Al bancone, l'oste ti mostra il foglio delle risposte di Hugh. Accanto alla domanda sette, a matita: Millenovecentoventotto. E sotto, più piccolo: Poi guardate su nella torre.",
+   "say": "[dry, unhurried] Al bancone, l'oste ti mostra il foglio delle risposte di Hugh. Accanto alla domanda sette, a matita: Millenovecentoventotto. E sotto, più piccolo: Poi guardate su nella torre."
+  },
+  "p6b-3": {
+   "speaker": "quaile",
+   "text": "Voleva fare la domanda a tutto il paese. Poi dare la risposta stampata.",
+   "say": "[drily] Voleva fare la domanda a tutto il paese. Poi dare la risposta stampata."
+  },
+  "p6c-1": {
+   "speaker": "narrator",
+   "text": "Dietro il bancone, una foto di Hugh al quiz dell'anno scorso, con il papillon e il microfono.",
+   "say": "[dry, unhurried] Dietro il bancone, una foto di Hugh al quiz dell'anno scorso, con il papillon e il microfono."
+  },
+  "p6c-2": {
+   "speaker": "landlord",
+   "text": "Non lasciava mai vincere la stessa squadra due volte di fila. Diceva che faceva male al paese.",
+   "say": "[warm, gruff] Non lasciava mai vincere la stessa squadra due volte di fila. Diceva che faceva male al paese."
+  },
+  "p6d-1": {
+   "speaker": "dilys",
+   "text": "Glenys mi ha chiamata alle sei di stamattina per chiedermi se è una prova.",
+   "say": "[loud, cheerful] Glenys mi ha chiamata alle sei di stamattina per chiedermi se è una prova."
+  },
+  "p6d-2": {
+   "speaker": "dilys",
+   "text": "Ieri sera ero arrabbiata con lei. Adesso meno. Ecco.",
+   "say": "[loud, cheerful] Ieri sera ero arrabbiata con lei. Adesso meno. Ecco."
+  },
+  "p6d-3": {
+   "speaker": "narrator",
+   "text": "Ti inoltra una mail da Perth. L'oggetto è Non la vostra serata migliore.",
+   "say": "[dry, unhurried] Ti inoltra una mail da Perth. L'oggetto è Non la vostra serata migliore."
+  },
+  "p6d-4": {
+   "speaker": "dilys",
+   "text": "Mia sorella ha una registrazione di martedì, se a qualcuno fosse venuto in mente di chiederla. A nessuno. Ecco.",
+   "say": "[loud, cheerful] Mia sorella ha una registrazione di martedì, se a qualcuno fosse venuto in mente di chiederla. A nessuno. Ecco."
+  },
+  "p6d-again": {
+   "speaker": "dilys",
+   "text": "Sst, tesoro, è il giro della musica.",
+   "say": "[loud, cheerful] Sst, tesoro, è il giro della musica."
+  },
+  "p7-again": {
+   "speaker": "narrator",
+   "text": "La vecchia scuola.",
+   "say": "[dry, unhurried] La vecchia scuola."
+  },
+  "p7-open": {
+   "speaker": "narrator",
+   "text": "La vecchia scuola, chiusa dal millenovecentonovantuno, con un cartello Vendesi. Toby Pike ci fa volare sopra un drone per la brochure.",
+   "say": "[dry, unhurried] La vecchia scuola, chiusa dal millenovecentonovantuno, con un cartello Vendesi. Toby Pike ci fa volare sopra un drone per la brochure."
+  },
+  "p7a-1": {
+   "speaker": "narrator",
+   "text": "Nel cortile è rimasta una sola altalena. Le catene sono state verniciate così tante volte che non tintinnano più.",
+   "say": "[dry, unhurried] Nel cortile è rimasta una sola altalena. Le catene sono state verniciate così tante volte che non tintinnano più."
+  },
+  "p7b-1": {
+   "speaker": "toby",
+   "text": "Sergente! Viene a comprare una scuola? Quattro camere da letto, elementi originali, una campana che nessuno può suonare.",
+   "say": "[breezy, quick] Sergente! Viene a comprare una scuola? Quattro camere da letto, elementi originali, una campana che nessuno può suonare."
+  },
+  "p7b-again": {
+   "speaker": "toby",
+   "text": "Sempre qui, Sergente. Sempre a vendere.",
+   "say": "[breezy, quick] Sempre qui, Sergente. Sempre a vendere."
+  },
+  "p7b-cold": {
+   "speaker": "toby",
+   "text": "Il sergente che mi ha tolto il telefono. Sto lavorando.",
+   "say": "[breezy, quick] Il sergente che mi ha tolto il telefono. Sto lavorando."
+  },
+  "p7b-warm": {
+   "speaker": "toby",
+   "text": "Ha visto il video? L'ho mandato alle sei. Io non dormo, sto vendendo una scuola.",
+   "say": "[breezy, quick] Ha visto il video? L'ho mandato alle sei. Io non dormo, sto vendendo una scuola."
+  },
+  "p7c-1": {
+   "speaker": "toby",
+   "text": "Ah. Bene. Be'. Tanto le avrei mandato qualcosa comunque. Probabilmente.",
+   "say": "[breezy, quick] Ah. Bene. Be'. Tanto le avrei mandato qualcosa comunque. Probabilmente."
+  },
+  "p7d-1": {
+   "speaker": "narrator",
+   "text": "Sul suo controller, martedì sera, la chiesa vista dall'alto, per la pagina Vita di paese della brochure.",
+   "say": "[dry, unhurried] Sul suo controller, martedì sera, la chiesa vista dall'alto, per la pagina Vita di paese della brochure."
+  },
+  "p7d-2": {
+   "speaker": "narrator",
+   "text": "Otto e tredici: un uomo spinge una bicicletta attraverso il cancello coperto del sagrato. Otto e quattordici: la finestra della camera dei campanari diventa buia. Otto e quindici: si riaccende. Nessuno esce dalla porta della chiesa fino alle otto e venti.",
+   "say": "[dry, unhurried] Otto e tredici: un uomo spinge una bicicletta attraverso il cancello coperto del sagrato. Otto e quattordici: la finestra della camera dei campanari diventa buia. Otto e quindici: si riaccende. Nessuno esce dalla porta della chiesa fino alle otto e venti."
+  },
+  "p7d-3": {
+   "speaker": "sam",
+   "text": "Quindi chiunque fosse non è mai uscito dall'edificio.",
+   "say": "[measured] Quindi chiunque fosse non è mai uscito dall'edificio."
+  },
+  "p7d-4": {
+   "speaker": "toby",
+   "text": "Posso usare lo stesso il pezzo prima delle otto?",
+   "say": "[breezy, quick] Posso usare lo stesso il pezzo prima delle otto?"
+  },
+  "p7e-1": {
+   "speaker": "narrator",
+   "text": "Alte finestre da chiesa, un campaniletto senza campana, e un cartello accanto al cancello: Pike and Lowe, Vendesi. Sopra il tetto un drone resta sospeso nel vento, e filma.",
+   "say": "[dry, unhurried] Alte finestre da chiesa, un campaniletto senza campana, e un cartello accanto al cancello: Pike and Lowe, Vendesi. Sopra il tetto un drone resta sospeso nel vento, e filma."
+  },
+  "p8-again": {
+   "speaker": "narrator",
+   "text": "La camera dei campanari, di giorno.",
+   "say": "[dry, unhurried] La camera dei campanari, di giorno."
+  },
+  "p8-open": {
+   "speaker": "narrator",
+   "text": "La camera dei campanari alla luce del giorno. La dottoressa Achebe aspetta con una lente d'ingrandimento presa in sagrestia, e sul muro c'è la tavola del Giubileo.",
+   "say": "[dry, unhurried] La camera dei campanari alla luce del giorno. La dottoressa Achebe aspetta con una lente d'ingrandimento presa in sagrestia, e sul muro c'è la tavola del Giubileo."
+  },
+  "p8a-1": {
+   "speaker": "narrator",
+   "text": "Nera, con lettere d'oro. Saint Aldhelm's. Per il Giubileo di Diamante di Sua Maestà la Regina Vittoria, il ventidue giugno milleottocentonovantasette, un concerto di cinquemilaquaranta cambi. Sei nomi.",
+   "say": "[dry, unhurried] Nera, con lettere d'oro. Saint Aldhelm's. Per il Giubileo di Diamante di Sua Maestà la Regina Vittoria, il ventidue giugno milleottocentonovantasette, un concerto di cinquemilaquaranta cambi. Sei nomi."
+  },
+  "p8a-2": {
+   "speaker": "achebe",
+   "text": "La parrocchia l'ha comprata a marzo. Il signor Cole l'ha trovata in un fienile. Hugh l'ha inaugurata. C'era qualcosa che a Hugh non andava, e non voleva dire cosa.",
+   "say": "[calm, amused, precise] La parrocchia l'ha comprata a marzo. Il signor Cole l'ha trovata in un fienile. Hugh l'ha inaugurata. C'era qualcosa che a Hugh non andava, e non voleva dire cosa."
+  },
+  "p8b-1": {
+   "speaker": "narrator",
+   "text": "Sotto la lente le lettere sono pulite e tonde. La R allunga la gamba dritta. La g minuscola ha due occhielli, come un paio d'occhiali.",
+   "say": "[dry, unhurried] Sotto la lente le lettere sono pulite e tonde. La R allunga la gamba dritta. La g minuscola ha due occhielli, come un paio d'occhiali."
+  },
+  "p8b-2": {
+   "speaker": "quaile",
+   "text": "Mio padre aveva un orario dei treni scritto con queste lettere. Lo teneva nel bagno di sotto.",
+   "say": "[drily] Mio padre aveva un orario dei treni scritto con queste lettere. Lo teneva nel bagno di sotto."
+  },
+  "p8b-3": {
+   "speaker": "sam",
+   "text": "Gill Sans. Millenovecentoventotto. Su una tavola del milleottocentonovantasette.",
+   "say": "[measured] Gill Sans. Millenovecentoventotto. Su una tavola del milleottocentonovantasette."
+  },
+  "p8b-4": {
+   "speaker": "sam",
+   "text": "Non sembrano vittoriane.",
+   "say": "[measured] Non sembrano vittoriane."
+  },
+  "p8b-5": {
+   "speaker": "achebe",
+   "text": "Il signor Cole ci aveva detto di averle ridorate.",
+   "say": "[calm, amused, precise] Il signor Cole ci aveva detto di averle ridorate."
+  },
+  "p8c-1": {
+   "speaker": "achebe",
+   "text": "In base alle frequenze di riferimento, Ispettrice, di solito è la persona che l'ha trovato. Cioè io. Mi darei un undici per cento.",
+   "say": "[calm, amused, precise] In base alle frequenze di riferimento, Ispettrice, di solito è la persona che l'ha trovato. Cioè io. Mi darei un undici per cento."
+  },
+  "p8c-2": {
+   "speaker": "quaile",
+   "text": "E gli altri?",
+   "say": "[drily] E gli altri?"
+  },
+  "p8c-3": {
+   "speaker": "achebe",
+   "text": "Erano tutti al buio con me. Non posso dare quote su persone che non vedevo.",
+   "say": "[calm, amused, precise] Erano tutti al buio con me. Non posso dare quote su persone che non vedevo."
+  },
+  "p8c-again": {
+   "speaker": "achebe",
+   "text": "Altro, qui sopra, Sergente? Ho un funerale da organizzare.",
+   "say": "[calm, amused, precise] Altro, qui sopra, Sergente? Ho un funerale da organizzare."
+  },
+  "p8d-1": {
+   "speaker": "achebe",
+   "text": "Lei, Sergente? A Natale sarà ancora qui. Margaret l'ha invitato a pranzo per domenica, e lei non ha detto di no.",
+   "say": "[calm, amused, precise] Lei, Sergente? A Natale sarà ancora qui. Margaret l'ha invitato a pranzo per domenica, e lei non ha detto di no."
+  },
+  "p8d-2": {
+   "speaker": "sam",
+   "text": "Come fa a saperlo?",
+   "say": "[measured] Come fa a saperlo?"
+  },
+  "p8d-3": {
+   "speaker": "achebe",
+   "text": "Me l'ha detto lei. Ha comprato una seconda sedia.",
+   "say": "[calm, amused, precise] Me l'ha detto lei. Ha comprato una seconda sedia."
+  },
+  "p8d-cold": {
+   "speaker": "achebe",
+   "text": "Lei, Sergente? A Natale sarà ancora qui. Continua a presentarsi a cose a cui l'hanno invitato una volta sola.",
+   "say": "[calm, amused, precise] Lei, Sergente? A Natale sarà ancora qui. Continua a presentarsi a cose a cui l'hanno invitato una volta sola."
+  },
+  "p8e-1": {
+   "speaker": "narrator",
+   "text": "Polvere nella luce che entra dalle persiane del campanile. Le corde sono legate per la settimana, tutte tranne quella della campana più acuta.",
+   "say": "[dry, unhurried] Polvere nella luce che entra dalle persiane del campanile. Le corde sono legate per la settimana, tutte tranne quella della campana più acuta."
+  },
+  "p8e-2": {
+   "speaker": "narrator",
+   "text": "La corda della campana più acuta pende libera, e a tenerla, come in attesa che qualcuno dica Look to, c'è uno spaventapasseri con un impermeabile blu scuro e scarpe marroni da città.",
+   "say": "[dry, unhurried] La corda della campana più acuta pende libera, e a tenerla, come in attesa che qualcuno dica Look to, c'è uno spaventapasseri con un impermeabile blu scuro e scarpe marroni da città."
+  },
+  "p8e-3": {
+   "speaker": "achebe",
+   "text": "Era qui quando ho aperto stamattina. Pensavo l'avesse portato su qualcuno del gruppo.",
+   "say": "[calm, amused, precise] Era qui quando ho aperto stamattina. Pensavo l'avesse portato su qualcuno del gruppo."
+  },
+  "p9-again": {
+   "speaker": "narrator",
+   "text": "La cucina della canonica.",
+   "say": "[dry, unhurried] La cucina della canonica."
+  },
+  "p9-open": {
+   "speaker": "narrator",
+   "text": "La cucina della canonica, le undici di sera. La dottoressa Achebe ha un foglio di calcolo aperto e il bollitore acceso. Quaile si è tolta le scarpe.",
+   "say": "[dry, unhurried] La cucina della canonica, le undici di sera. La dottoressa Achebe ha un foglio di calcolo aperto e il bollitore acceso. Quaile si è tolta le scarpe."
+  },
+  "p9a-1": {
+   "speaker": "narrator",
+   "text": "Sul tavolo: il tovagliolo di Win del Plough, tre tazze e un piatto di biscotti che Quaile sta contando.",
+   "say": "[dry, unhurried] Sul tavolo: il tovagliolo di Win del Plough, tre tazze e un piatto di biscotti che Quaile sta contando."
+  },
+  "p9b-1": {
+   "speaker": "narrator",
+   "text": "Fuori dalla finestra, la torre contro la pioggia. Qualcuno ha lasciato la luce accesa nella camera dei campanari.",
+   "say": "[dry, unhurried] Fuori dalla finestra, la torre contro la pioggia. Qualcuno ha lasciato la luce accesa nella camera dei campanari."
+  },
+  "p9c-1": {
+   "speaker": "achebe",
+   "text": "Da Glenys, a Perth. Cara Dilys. Non la vostra serata migliore. Andavate bene in cinque fino alle e quattordici, poi qualcuno dice luci, e una campana si ferma di colpo per quaranta secondi.",
+   "say": "[calm, amused, precise] Da Glenys, a Perth. Cara Dilys. Non la vostra serata migliore. Andavate bene in cinque fino alle e quattordici, poi qualcuno dice luci, e una campana si ferma di colpo per quaranta secondi."
+  },
+  "p9c-2": {
+   "speaker": "achebe",
+   "text": "Ne sento solo quattro, quindi le ho numerate per nota, dalla più acuta, come le sento. Ecco tre righe.",
+   "say": "[calm, amused, precise] Ne sento solo quattro, quindi le ho numerate per nota, dalla più acuta, come le sento. Ecco tre righe."
+  },
+  "p9c-3": {
+   "speaker": "achebe",
+   "text": "Poi rientra in ritardo e goffa, come qualcuno senza fiato. Win vi ha fermati alle e sedici. Quattro su dieci. Baci, G.",
+   "say": "[calm, amused, precise] Poi rientra in ritardo e goffa, come qualcuno senza fiato. Win vi ha fermati alle e sedici. Quattro su dieci. Baci, G."
+  },
+  "p9c-4": {
+   "speaker": "achebe",
+   "text": "Non può dire quale campana fosse. Sente solo le note. Ma abbiamo il tovagliolo di Win.",
+   "say": "[calm, amused, precise] Non può dire quale campana fosse. Sente solo le note. Ma abbiamo il tovagliolo di Win."
+  },
+  "p9c-again": {
+   "speaker": "narrator",
+   "text": "Le tre righe di Glenys, sullo schermo: 2 4 1 3. 4 2 3 1. 4 3 2 1.",
+   "say": "[dry, unhurried] Le tre righe di Glenys, sullo schermo: 2 4 1 3. 4 2 3 1. 4 3 2 1."
+  },
+  "p9c-none": {
+   "speaker": "narrator",
+   "text": "Il foglio di calcolo della dottoressa Achebe ha sei colonne intitolate da Uno a Sei, ancora vuote.",
+   "say": "[dry, unhurried] Il foglio di calcolo della dottoressa Achebe ha sei colonne intitolate da Uno a Sei, ancora vuote."
+  },
+  "p9d-1": {
+   "speaker": "achebe",
+   "text": "Togli la uno, e quella prima riga suonerebbe 3 1 4 2. Glenys ha sentito 2 4 1 3.",
+   "say": "[calm, amused, precise] Togli la uno, e quella prima riga suonerebbe 3 1 4 2. Glenys ha sentito 2 4 1 3."
+  },
+  "p9d-2": {
+   "speaker": "achebe",
+   "text": "Togli la due, e quella prima riga suonerebbe 3 4 1 2. Glenys ha sentito 2 4 1 3.",
+   "say": "[calm, amused, precise] Togli la due, e quella prima riga suonerebbe 3 4 1 2. Glenys ha sentito 2 4 1 3."
+  },
+  "p9d-3": {
+   "speaker": "achebe",
+   "text": "Togli la tre, e quella prima riga suonerebbe 3 2 4 1. Glenys ha sentito 2 4 1 3.",
+   "say": "[calm, amused, precise] Togli la tre, e quella prima riga suonerebbe 3 2 4 1. Glenys ha sentito 2 4 1 3."
+  },
+  "p9d-4": {
+   "speaker": "achebe",
+   "text": "Togli la quattro. 4 2 5 1 3 diventa 2 5 1 3, e per nota fa 2 4 1 3. Poi 4 2 3 1. Poi 4 3 2 1. Ogni riga.",
+   "say": "[calm, amused, precise] Togli la quattro. 4 2 5 1 3 diventa 2 5 1 3, e per nota fa 2 4 1 3. Poi 4 2 3 1. Poi 4 3 2 1. Ogni riga."
+  },
+  "p9d-5": {
+   "speaker": "achebe",
+   "text": "Togli la cinque, e quella prima riga suonerebbe 4 2 1 3. Ci siamo quasi. Glenys ha sentito 2 4 1 3.",
+   "say": "[calm, amused, precise] Togli la cinque, e quella prima riga suonerebbe 4 2 1 3. Ci siamo quasi. Glenys ha sentito 2 4 1 3."
+  },
+  "p9d-6": {
+   "speaker": "sam",
+   "text": "La quattro si è fermata per quaranta secondi, al buio, ed è tornata senza fiato.",
+   "say": "[measured] La quattro si è fermata per quaranta secondi, al buio, ed è tornata senza fiato."
+  },
+  "p9d-first": {
+   "speaker": "quaile",
+   "text": "Al primo colpo.",
+   "say": "[drily] Al primo colpo."
+  },
+  "p9e-1": {
+   "speaker": "achebe",
+   "text": "Non chieda a me chi l'aveva. Era la quarta volta in vita mia che tenevo una corda. Non avrei saputo dire quale fosse la mia.",
+   "say": "[calm, amused, precise] Non chieda a me chi l'aveva. Era la quarta volta in vita mia che tenevo una corda. Non avrei saputo dire quale fosse la mia."
+  },
+  "p9e-again": {
+   "speaker": "sam",
+   "text": "Chi aveva la quattro martedì?",
+   "say": "[measured] Chi aveva la quattro martedì?"
+  },
+  "p9f-1": {
+   "speaker": "sam",
+   "text": "La lavagna dice Win. Quarantun anni sulla quattro. Ma non martedì. Hugh non è venuto, quindi hanno scalato tutti di un posto. Win aveva la tre.",
+   "say": "[measured] La lavagna dice Win. Quarantun anni sulla quattro. Ma non martedì. Hugh non è venuto, quindi hanno scalato tutti di un posto. Win aveva la tre."
+  },
+  "p9f-2": {
+   "speaker": "sam",
+   "text": "La lavagna dice Win. Quattro, Win.",
+   "say": "[measured] La lavagna dice Win. Quattro, Win."
+  },
+  "p9f-3": {
+   "speaker": "quaile",
+   "text": "Lì di solito c'è lei, Sam. Ma martedì c'era lei?",
+   "say": "[drily] Lì di solito c'è lei, Sam. Ma martedì c'era lei?"
+  },
+  "p9g-1": {
+   "speaker": "sam",
+   "text": "Hugh non è venuto, quindi hanno scalato tutti di un posto. La campana di Jeremy è la cinque. Martedì ha suonato la quattro, vicino alla porta e all'interruttore della luce.",
+   "say": "[measured] Hugh non è venuto, quindi hanno scalato tutti di un posto. La campana di Jeremy è la cinque. Martedì ha suonato la quattro, vicino alla porta e all'interruttore della luce."
+  },
+  "p9g-2": {
+   "speaker": "sam",
+   "text": "E ci ha detto che era sulla cinque, ogni colpo.",
+   "say": "[measured] E ci ha detto che era sulla cinque, ogni colpo."
+  },
+  "p9g-3": {
+   "speaker": "quaile",
+   "text": "Scrivilo.",
+   "say": "[drily] Scrivilo."
+  },
+  "p9g-4": {
+   "speaker": "sam",
+   "text": "Jeremy stava vicino alla porta.",
+   "say": "[measured] Jeremy stava vicino alla porta."
+  },
+  "p9g-5": {
+   "speaker": "quaile",
+   "text": "La lavagna dice che Jeremy suona la cinque, Sam. Ti serve più di dove stava.",
+   "say": "[drily] La lavagna dice che Jeremy suona la cinque, Sam. Ti serve più di dove stava."
+  },
+  "p9h-1": {
+   "speaker": "sam",
+   "text": "Dilys suona la tre, e martedì è passata alla due. Ha parlato con me quasi tutto il tempo.",
+   "say": "[measured] Dilys suona la tre, e martedì è passata alla due. Ha parlato con me quasi tutto il tempo."
+  },
+  "p9h-2": {
+   "speaker": "sam",
+   "text": "Margaret aveva la campana più acuta. La sua prima volta. Glenys l'avrebbe sentita fermarsi.",
+   "say": "[measured] Margaret aveva la campana più acuta. La sua prima volta. Glenys l'avrebbe sentita fermarsi."
+  },
+  "p9i-board": {
+   "speaker": "quaile",
+   "text": "Hugh voleva dire qualcosa sulla tavola. Qualcuno l'ha guardata per bene?",
+   "say": "[drily] Hugh voleva dire qualcosa sulla tavola. Qualcuno l'ha guardata per bene?"
+  },
+  "p9i-good": {
+   "speaker": "quaile",
+   "text": "Credo che tu lo sappia. Vorrei che lo dicessi domenica, davanti a tutta la parrocchia.",
+   "say": "[drily] Credo che tu lo sappia. Vorrei che lo dicessi domenica, davanti a tutta la parrocchia."
+  },
+  "p9i-rows": {
+   "speaker": "quaile",
+   "text": "Dilys registra ogni prova. Qualcuno le ha chiesto quella di martedì?",
+   "say": "[drily] Dilys registra ogni prova. Qualcuno le ha chiesto quella di martedì?"
+  },
+  "p9i-swap": {
+   "speaker": "quaile",
+   "text": "Hugh non è venuto. Allora chi era su quale corda?",
+   "say": "[drily] Hugh non è venuto. Allora chi era su quale corda?"
+  },
+  "p9i-warm": {
+   "speaker": "quaile",
+   "text": "Hai imparato a chiedermi le cose, Sam. Va bene.",
+   "say": "[drily] Hai imparato a chiedermi le cose, Sam. Va bene."
+  },
+  "p9n-brush": {
+   "speaker": "narrator",
+   "text": "Nel fienile di Jeremy, una seconda tavola del Giubileo, scritta a metà, l'oro ancora umido.",
+   "say": "[dry, unhurried] Nel fienile di Jeremy, una seconda tavola del Giubileo, scritta a metà, l'oro ancora umido."
+  },
+  "p9n-dark": {
+   "speaker": "narrator",
+   "text": "Il drone: la camera buia dalle otto e quattordici alle otto e quindici. Nessuno è uscito dalla chiesa.",
+   "say": "[dry, unhurried] Il drone: la camera buia dalle otto e quattordici alle otto e quindici. Nessuno è uscito dalla chiesa."
+  },
+  "p9n-empty": {
+   "speaker": "narrator",
+   "text": "Nel taccuino hai la data, e le parole plain hunt.",
+   "say": "[dry, unhurried] Nel taccuino hai la data, e le parole plain hunt."
+  },
+  "p9n-lie": {
+   "speaker": "narrator",
+   "text": "Jeremy dice di aver suonato la cinque, ogni colpo.",
+   "say": "[dry, unhurried] Jeremy dice di aver suonato la cinque, ogni colpo."
+  },
+  "p9n-lie-b": {
+   "speaker": "narrator",
+   "text": "Jeremy dice di aver suonato la cinque, ogni colpo, ed è quello che dice la lavagna.",
+   "say": "[dry, unhurried] Jeremy dice di aver suonato la cinque, ogni colpo, ed è quello che dice la lavagna."
+  },
+  "p9n-named": {
+   "speaker": "narrator",
+   "text": "La campana muta era la quattro, e martedì la quattro era Jeremy.",
+   "say": "[dry, unhurried] La campana muta era la quattro, e martedì la quattro era Jeremy."
+  },
+  "p9n-proof": {
+   "speaker": "narrator",
+   "text": "Nella sua mano, l'angolo di una bozza: Tavola del concerto, una corre. Il resto della pagina non c'è.",
+   "say": "[dry, unhurried] Nella sua mano, l'angolo di una bozza: Tavola del concerto, una corre. Il resto della pagina non c'è."
+  },
+  "p9n-quiz": {
+   "speaker": "narrator",
+   "text": "La domanda sette di Hugh: Gill Sans, millenovecentoventotto. Poi guardate su nella torre.",
+   "say": "[dry, unhurried] La domanda sette di Hugh: Gill Sans, millenovecentoventotto. Poi guardate su nella torre."
+  },
+  "p9n-rows": {
+   "speaker": "narrator",
+   "text": "Glenys, da Perth: una campana si è fermata di colpo per quaranta secondi quando è andata via la luce, ed è tornata senza fiato.",
+   "say": "[dry, unhurried] Glenys, da Perth: una campana si è fermata di colpo per quaranta secondi quando è andata via la luce, ed è tornata senza fiato."
+  },
+  "p9n-swap": {
+   "speaker": "narrator",
+   "text": "Hugh non è venuto, quindi hanno scalato tutti di un posto.",
+   "say": "[dry, unhurried] Hugh non è venuto, quindi hanno scalato tutti di un posto."
+  },
+  "p9n-text": {
+   "speaker": "narrator",
+   "text": "Hugh, alle otto e cinque: sto salendo, devo dire una cosa sulla tavola.",
+   "say": "[dry, unhurried] Hugh, alle otto e cinque: sto salendo, devo dire una cosa sulla tavola."
+  },
+  "p9n-typeface": {
+   "speaker": "narrator",
+   "text": "La tavola del Giubileo è scritta in lettere tonde, senza piedi.",
+   "say": "[dry, unhurried] La tavola del Giubileo è scritta in lettere tonde, senza piedi."
+  }
+ }
+}

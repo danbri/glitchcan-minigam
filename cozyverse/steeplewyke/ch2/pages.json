@@ -8,6 +8,10 @@
    45
   ]
  },
+ "languages": {
+  "en": "English",
+  "it": "Italiano"
+ },
  "layouts": {
   "L1": {
    "a": "26,26 1054,26 1054,520 26,562",
