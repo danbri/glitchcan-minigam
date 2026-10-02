@@ -177,5 +177,69 @@
   }
  },
  "encoding": "Stills: 1024 px wide progressive JPEG, quality 80. Videos: the 1924x1076 masters scaled to 960 px wide, H.264 main CRF 26, AAC 96k, +faststart (about 0.5 MB each instead of 10 MB).",
- "note_on_prompts": "The full prompt text of every file is on the flow (each node keeps its prompt). Every prompt starts with the style string of characters.json and names each person by the look and wardrobe strings there."
+ "note_on_prompts": "The full prompt text of every file is on the flow (each node keeps its prompt). Every prompt starts with the style string of characters.json and names each person by the look and wardrobe strings there.",
+ "novel_page": {
+  "page": "cozyverse/larkspur/novel/festival.html (+ festival.ink)",
+  "panels": {
+   "a-festival.jpg": {
+    "model": "gemini-3-pro-image",
+    "node": "cJrXUkfv3z7Aqlc8Fe3n",
+    "refs": [
+     "nora",
+     "delphine",
+     "extra"
+    ],
+    "credits": 3045
+   },
+   "b-agatha.jpg": {
+    "model": "gemini-3-pro-image",
+    "node": "24xVD5JXqVhpphG7dn4E",
+    "refs": [
+     "pruitt"
+    ],
+    "credits": 1827
+   },
+   "c-box.jpg": {
+    "model": "gemini-3-pro-image",
+    "node": "AX64CKxfUpwS09ehIJbZ",
+    "refs": [],
+    "credits": 1218
+   },
+   "d-wreath.jpg": {
+    "model": "gemini-3-pro-image",
+    "node": "Dk5b0nf2pOUMgj4QriBW",
+    "refs": [
+     "extra"
+    ],
+    "credits": 1827
+   }
+  },
+  "loops": {
+   "c-box-loop": {
+    "model": "kling-2.5-turbo",
+    "node": "diI5jeA2MCQVkcs8fySc",
+    "start_and_end_frame": "c-box.jpg",
+    "seconds": 5,
+    "credits": 2121
+   },
+   "d-wreath-loop": {
+    "model": "kling-2.5-turbo",
+    "node": "A1ndNyduBVT3PRrTNN8x",
+    "start_and_end_frame": "d-wreath.jpg",
+    "seconds": 5,
+    "credits": 2121
+   }
+  },
+  "voices": {
+   "model": "eleven_v3",
+   "takes_per_line": 2,
+   "narrator": "Lily Warm British Audio Book Narrator (3XD5qTvPWht0mpTnYXY0)",
+   "mayor": "Talia (xt1AC3mKnyqJYvD3KK90)",
+   "agatha": "Mora - Gritty and Enigmatic (YHcCpa6SBWnKDaCPZJQR)",
+   "lines": 8,
+   "credits": 1224
+  },
+  "style": "Graphic-novel panel, hand-inked: heavy black brush ink lines and solid black shadows, flat muted colours (deep blue night, cream, warm lantern orange) with one accent of red, coarse halftone dots in the mid-tones, no text.",
+  "total_credits": 13383
+ }
 }

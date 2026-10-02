@@ -67,6 +67,32 @@ What the models do not do, and the fix:
   and without a poster the beat opens on a black box.
 - Brand marks can appear on clothes (a work-jacket logo appeared on Wes). Look for them before publishing.
 
+Owner's verdict on the result (October 2026): the TV-style clips were "bland and inconsequential and barely worth
+hitting play. Nothing happens in it", and $200 for 15 minutes of that is too much. A clip of ambient motion (snow,
+a turn of the head, steam) is not an event. The direction since: the graphic-novel page.
+
+### The graphic-novel page with voices (October 2026)
+
+Sample: `cozyverse/larkspur/novel/festival.html`, the accusation as one `<novel-page>` (the drift-city skill, "Novel
+pages"), four inked panels, two of them loops, eight voiced lines with two takes each. About 13,400 credits ($2.94).
+- Panels: gemini-3-pro-image with the character sheets as references and the inked style string in
+  `bible/prompts.json` (`novel_page.style`). The faces held. The model sometimes draws its own panel border or splits
+  a panel in two; crop the border off.
+- Loops: kling-2.5-turbo ($0.47 for 5 s, less than half the price of Kling 3.0 Pro per second) with the SAME picture
+  wired to `start_frame` and `end_frame` (`creative_add_flow_node`, then `creative_connect_flow_nodes` with
+  `target_port: "end_frame"`, then `creative_run_flow_nodes`): the loop closes without a jump. One event per loop
+  (he turns to look at the reader and blinks; the light in the box goes out and comes back), not ambient drift.
+- Encode each loop twice: VP9 WebM first and H.264 MP4 second. The Playwright Chromium here has no H.264 decoder,
+  so an MP4-only `<video>` stays at readyState 0 in tests.
+- Voices: eleven_v3 (audio tags such as [whispers], [drily]) at about 1 credit per character, so one line costs one
+  to three US cents. `# voice: <id>` tags in the page's ink; the page plays one take of `media/vo/<id>-N.mp3` at
+  random, queues the lines of a step, and cuts them when the reader moves on. Phones play sound only after a tap,
+  so the page opens on "Begin, with sound / Begin, no sound". The ink text is the spoken text (subtitles, screen
+  readers).
+- Prices measured for cheaper video (5 to 6 s, image to video): LTX 2 Fast $0.32 (1080p, sound), Runway Gen-4 Turbo
+  $0.33 (720p, silent, needs a start frame), Kling 2.5 Turbo $0.47, Veo 3.1 Lite $0.53, Wan 2.6 $0.67.
+- Test: `inklet/finkapp/test/e2e-larkspur-novel.mjs` (390 x 844, touch).
+
 Test on a phone-sized screen: `inklet/finkapp/test/e2e-larkspur.mjs` (390 x 844, touch) plays the solving
 path and checks media, 44 px tap targets, posters and sideways scroll; `SHOTS=dir` saves a screenshot per step.
 
