@@ -82,8 +82,8 @@ Each clue has the page where it appears, the condition that shows it, and what i
 | 7 | The hire-company windlass found on the lockside (police bag) | 1 | looks bad for the van Dams; explained by Joost's second statement |
 | 8 | Neville's phone bill: Clive at 22:55 (Clive also says so himself on page 1) | 4 (from Annette) | Neville asked Clive to come |
 | 9 | Cloud photographs at 23:13: "HOLLINS 1987", plugged holes, and the chained paddle post behind the plate | 4 (needs Annette's consent) | Neville alive at 23:13, looking at the gates; lock 14 empty and already chained. With 2 and 4: someone unlocked the chain after 23:13 to fill the lock, and only Clive's key was not in Neville's pocket |
-| 10 | Doorbell camera: van Dams 23:02, headlights 23:09 | 5, Friday only (the camera keeps two days) | the van Dams were walking away before 23:13; a car came |
-| 11 | Pete: van Dams in the pub 23:05–23:40; green estate with trust sticker at 23:40 | 5 | van Dams cleared for the death; Clive's car there late |
+| 10 | Doorbell camera: van Dams 23:02, headlights 23:09 | 5, Friday only (the camera keeps 24 hours) | the van Dams were walking away before 23:13; a car came |
+| 11 | Pete: van Dams in the pub 23:05–23:40; Clive Amory's green estate (he parks it there on quiz nights) in the lock car park at 23:40, someone in it. Joost adds that a car sat there with its lights off when they walked back | 5, 3 | van Dams cleared for the death; Clive's car there late |
 | 12 | Post-mortem (Dr Shah, by phone, Saturday or Sunday): drowning; broken left thigh; a bruise on the back of the head whose force she cannot yet measure; low alcohol | 6 | he was alive in the water; not whether he was awake |
 | 12a | Second post-mortem, if Ros asks the coroner on Saturday (one action; the body is released on Sunday at noon): no skull injury, so he was conscious; torn nails with brick in them; a conscious man can sit up in half a metre of water | Sunday evening, by phone | he drowned because the water got deeper |
 | 13 | Gate plate and plugged bolt holes, seen in person | 7 | the "new" gates are old |
@@ -96,8 +96,10 @@ wrong join closes that question until the next day. Six cards; each opens a ques
 
 - 2 + (1 or 3) → "Someone filled lock 14 after the last boat" → *who would be at a lock at night?*
 - 12 + that card → "He was alive when the lock was filled" → *not an accident* (with 12a, it holds in court).
-- 9 + 4 → "The chain was unlocked after 23:13, and only Clive's key was free" → *Clive must say where he was.*
-- 8 + (11 or 10) → "Clive went to lock 14 after the call" → *why did he say he went to bed?*
+- 9 + 4 → "Whoever filled the lock had the third key, Clive's" → *Clive must say where he was.* The proof is the
+  unlocking after 23:13: a padlock snaps shut without a key, so the chain on at dawn proves nothing. Neville's own
+  key is marked N.S.; Clive shows his, marked C.A., on his car keys if asked (page 9).
+- 8 + (11, or 16 with the grease on the chain of 14) → "Clive went to lock 14 after the call" → *why did he say he went to bed?*
 - 13 + (14 or 5) → "The gates are old" → *who signed to say they were new?*
 - 14 (reserve) + (14 grant or 13) → "The gate money went round in a circle" → *why steal money and give it back?*
 
@@ -153,8 +155,8 @@ On page 10 Ros completes her report in three parts:
 3. **Whom she names to the police, and why**: nobody; the van Dams; Kit; Clive for theft; Clive for the death, to
    hide the lost reserve.
 
-Quaile asks one question about the chain when the report names Clive for the death; the right answer needs the
-chain card.
+Quaile asks one question when the report names Clive for the death: "Who unlocked it?" Naming Clive holds only with
+the chain card; without it Ros can say only "I think so".
 
 | what the reader chooses | ending (`ending`) |
 |---|---|
@@ -182,8 +184,9 @@ As in Steeple Wyke, one rare panel shows a small yellow bird once in a reading. 
 
 ## The owner's answers (October 2026)
 
-1. Ros's one power: yes. She can ask the coroner for a second post-mortem, on Saturday only. It costs an action,
-   moves the funeral, and Annette hears it from the undertaker unless Ros tells her first. Without it the right
+1. Ros's one power: yes. She can ask the coroner for a second post-mortem, on Saturday only. It costs an action and
+   moves the funeral. If Ros sees Annette the same day she tells her herself; on Sunday Annette has heard it from the
+   undertaker and will not show the photographs that day. Without it the right
    answer gives the `thin` ending.
 2. How much Clive says: "Enough to seed ideas for other episodes/chapters but no llm waffle!"
 3. Sam's scene on page 6: "For now."

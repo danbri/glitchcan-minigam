@@ -17,22 +17,22 @@ const day1 = ['Take the coffee', 'Ask him how a lock works', 'Walk up to lock fi
   'Go down to the hire boat', 'Knock at the side hatch', 'Talk to the man on the roof', 'Show him something', "Maaike's photograph at 22:41", 'Ask where they went', 'Leave',
   'Go to Canal Row', 'Ring the doorbell', 'Go into the Navigation', 'Ask what he saw at closing', 'Ask about the Dutch couple', 'Leave',
   'Phone the heritage grant office',
-  'Look at the board before bed', 'Lock fourteen full', 'How a lock works', 'Neville rang Clive', 'A green estate', 'Leave the board', 'Go to bed'];
+  'Look at the board before bed', 'Lock fourteen full', 'How a lock works', 'Neville rang Clive', "Clive's green estate", 'Leave the board', 'Go to bed'];
 const day2pm2 = ["Go to the coroner's office", 'Take the call', 'Thank her', 'Talk to Sam', 'Leave',
   'Ask the coroner for a second post-mortem',
-  'Call on Annette', 'Talk to Annette', 'Tell her why', 'Ask about Thursday', 'Ask to see the photographs', 'Ask about the gates', 'Leave',
+  'Call on Annette', 'Talk to Annette', 'Ask about Thursday', 'Ask to see the photographs', 'Ask about the gates', 'Leave',
   'Walk up the flight', 'Knock at the flat', 'Show her something', 'The key labelled K.R.', 'Leave',
   'Look at the board before bed', 'He drowned', 'Someone filled', 'The chained post', 'Two keys', '£150,000 into the reserve', '£180,000 paid out', 'Leave the board', 'Go to bed'];
 const day3 = ['Look at the top gate', 'Look at the end of the gate beam', 'Leave',
   'Call on Clive', 'Talk to Clive', 'Show him something', 'Pete Garrow saw', 'Show him something', "Neville's photographs at 23:13", 'Ask to see the windlass', 'Leave',
   'Stop for the day', 'Look at the board before bed', 'HOLLINS 1987', '£180,000 for new oak gates', 'Leave the board', 'Go to bed'];
-const solve = ['Write the report', 'Unlawful killing', 'drowned when someone filled it', 'for the death', 'Whoever had a key'];
+const solve = ['Write the report', 'Unlawful killing', 'drowned when someone filled it', 'for the death', 'Clive Amory'];
 
 const routes = {
   full: [...day1, ...day2pm2, ...day3, ...solve],
   // the same reading without the second post-mortem
   thin: [...day1, ...day2pm2.filter((c) => !/second post-mortem|Tell her why/.test(c)).flatMap((c) => (c === 'Look at the board before bed' ? ['Stop for the day', c] : [c])), ...day3, ...solve],
-  pushed: [...day1, ...day2pm2, ...day3, 'Write the report', 'Unlawful killing', 'He was pushed', 'for the death', 'Whoever had a key'],
+  pushed: [...day1, ...day2pm2, ...day3, 'Write the report', 'Unlawful killing', 'He was pushed', 'for the death', 'Clive Amory'],
   fraud: [...day1, ...day2pm2, ...day3, 'Write the report', 'Accident', 'He fell into the empty lock and drowned', 'for the gate money'],
   kit: [...day1, ...day2pm2, ...day3, 'Write the report', 'Unlawful killing', 'He was pushed', 'Kit Rowe'],
 };
