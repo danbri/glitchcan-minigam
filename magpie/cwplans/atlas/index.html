@@ -304,6 +304,7 @@ svg .muted { fill: var(--muted); }
 <aside id="dossier" aria-live="polite" aria-label="Selected record"><div class="head"><h2 id="dTitle"></h2><button class="close" type="button" id="dClose" aria-label="Close">✕</button></div><div class="body" id="dBody"></div></aside>
 
 <script src="vendor/leaflet/leaflet.js"></script>
+<script src="../docklands/opening-hours.js"></script>
 <script>
 'use strict';
 (() => {
@@ -441,8 +442,13 @@ async function openBuilding(id) {
     if (ab.lv && ab.lv - 1 > top) rows.unshift(`<div class="lv">+${ab.lv - 1}</div><div class="fl small">top floor (${ab.lv} floors above ground${ab.wh ? `, ${ab.wh} m` : ''})</div>`);
     stack = `<h3>Floors</h3><div class="stack">${rows.join('')}</div><p class="small">Occupants are placed by their OSM <code>level</code>, which is a floor index, not a height.${noLevel.length ? ` ${noLevel.length} occupants have no level.` : ''}</p>`;
   }
-  const occ = b.occupants.map(o => `<div class="occ"><b>${esc(o.name)}</b> <span class="tag">${esc(o.role)}</span>${o.level != null ? ` <span class="tag">level ${esc(o.level)}</span>` : ''}${o.brand ? ` <a href="#" data-open="brand/${esc(o.brand)}" class="tag">${esc(o.brand)}</a>` : ''}${o.rating ? ` <span class="tag">FSA ${esc(o.rating)}</span>` : ''}${o.mall ? ` <span class="tag">${esc(o.mall)}${o.level_cwg ? ', ' + esc(o.level_cwg) : ''}</span>` : ''}
-    <div class="links small">${o.osm ? a('https://www.openstreetmap.org/' + o.osm, 'OSM') : ''}${o.url ? a(o.url, 'FSA') : ''}${o.wikidata ? a('https://www.wikidata.org/wiki/' + o.wikidata, 'Wikidata') : ''}${o.cwg_archived ? a(o.cwg_archived, 'CWG page (archived)') : ''}${o.store_url ? a(o.store_url, 'store page') : ''}</div></div>`).join('');
+  // opening hours: the occupant's own page (web facts) first, else its OSM tag; open now in London time
+  const ohLine = o => { const h = o.web && o.web.opening_hours && o.web.scope !== 'chain' ? [o.web.opening_hours, 'web page'] : o.opening_hours ? [o.opening_hours, 'OSM'] : o.web && o.web.opening_hours ? [o.web.opening_hours, 'chain web page'] : null;
+    const ph = (o.web && o.web.phone) || o.phone; if (!h && !ph) return '';
+    const st = h && window.OpeningHours ? OpeningHours.openState(h[0]) : null;
+    return `<div class="small">${h ? `${st ? (st.open ? `<b style="color:#2e8b57">open${st.until ? ' to ' + st.until : ''}</b> · ` : `closed${st.from ? ', opens ' + st.from : ''} · `) : ''}${esc(h[0])} <span class="tag">${h[1]}</span>` : ''}${ph ? `${h ? ' · ' : ''}${esc(ph)}` : ''}</div>`; };
+  const occ = b.occupants.map(o => `<div class="occ"><b>${esc(o.name)}</b> <span class="tag">${esc(o.role)}</span>${o.level != null ? ` <span class="tag">level ${esc(o.level)}</span>` : ''}${o.brand ? ` <a href="#" data-open="brand/${esc(o.brand)}" class="tag">${esc(o.brand)}</a>` : ''}${o.rating ? ` <span class="tag">FSA ${esc(o.rating)}</span>` : ''}${o.mall ? ` <span class="tag">${esc(o.mall)}${o.level_cwg ? ', ' + esc(o.level_cwg) : ''}</span>` : ''}${ohLine(o)}
+    <div class="links small">${o.web && o.web.page ? a(o.web.page, 'its web page') : ''}${o.osm ? a('https://www.openstreetmap.org/' + o.osm, 'OSM') : ''}${o.url ? a(o.url, 'FSA') : ''}${o.wikidata ? a('https://www.wikidata.org/wiki/' + o.wikidata, 'Wikidata') : ''}${o.cwg_archived ? a(o.cwg_archived, 'CWG page (archived)') : ''}${o.store_url ? a(o.store_url, 'store page') : ''}</div></div>`).join('');
   const facts = Object.entries(b.facts || {}).filter(([k]) => k !== 'classes').map(([k, v]) => `<tr><th style="position:static">${esc(k)}</th><td>${v.map(esc).join(', ')}</td></tr>`).join('');
   const homes = b.homes && typeof b.homes === 'object' ? `<h3>Homes</h3><p>${typeof b.homes.count === 'number' ? N(b.homes.count) : esc(b.homes.count)} homes <span class="small">(${esc(b.homes.source || 'GLA London Building Stock Model 2')})</span></p>${['property_type', 'construction_age_band', 'epc_rating'].filter(k => b.homes[k]).map(k => `<div class="small">${esc(k.replace(/_/g, ' '))}: ${Object.entries(b.homes[k]).map(([x, n]) => `${esc(x)} ${N(n)}`).join(', ')}</div>`).join('')}` : '';
   const sales = b.sales ? `<h3>Sales (HM Land Registry)</h3><p>${N(b.sales.homes_sold_since_1995)} homes sold since 1995 in ${N(b.sales.sales)} sales, ${esc(b.sales.first)} to ${esc(b.sales.last)}; median ${money(b.sales.median_price)}${b.sales.new_build_sales ? `; ${N(b.sales.new_build_sales)} new-build sales` : ''}.</p>${sparkYears(b.sales.sales_by_year)}` : '';

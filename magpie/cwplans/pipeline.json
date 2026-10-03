@@ -1941,6 +1941,38 @@
       ]
     },
     {
+      "id": "join-web-facts",
+      "tool": "tools/join-web-facts.mjs",
+      "command": "node magpie/cwplans/tools/join-web-facts.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "registry/buildings.json"
+        },
+        {
+          "file": "registry/sources/web/structured-facts.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/buildings.json"
+        }
+      ],
+      "method": "Adds the facts read from the entities' own web pages (schema.org opening hours, telephone, events, menu, price range, cuisine) to the building occupants as occupants[].web, with the page, the fetch date, the scope and the confidence of the match.",
+      "rules": [
+        "Keys: \"cwb-NNNN|name\" (occupant name in that building, case and accents folded), \"branch:<brand QID>@<element>\" (the occupant's OSM element, the building's OSM way, fhrs/<FSA id> or a bare FSA id, cwg/<slug>), \"charity:<number>\", \"cwg:<directory slug>\".",
+        "One record per occupant: branch scope beats organisation beats chain; then high, medium, low confidence.",
+        "A fact record with no hours, phone, events, menu, price range or cuisine is not joined; records that match no occupant are counted (summary.joins.web_facts).",
+        "Run after build-registry (which rewrites buildings.json without web facts) and before build-categories and build-atlas."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "build-registry",
+        "extract-structured-data"
+      ]
+    },
+    {
       "id": "build-categories",
       "tool": "tools/build-categories.mjs",
       "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-categories.mjs",

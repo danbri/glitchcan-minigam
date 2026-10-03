@@ -2216,6 +2216,46 @@
    ]
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/join-web-facts",
+   "@type": "prov:Activity",
+   "rdfs:label": "join-web-facts",
+   "dct:description": "Adds the facts read from the entities' own web pages (schema.org opening hours, telephone, events, menu, price range, cuisine) to the building occupants as occupants[].web, with the page, the fetch date, the scope and the confidence of the match.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/web/structured-facts.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/join-web-facts.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/join-web-facts.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Keys: \"cwb-NNNN|name\" (occupant name in that building, case and accents folded), \"branch:<brand QID>@<element>\" (the occupant's OSM element, the building's OSM way, fhrs/<FSA id> or a bare FSA id, cwg/<slug>), \"charity:<number>\", \"cwg:<directory slug>\".",
+    "One record per occupant: branch scope beats organisation beats chain; then high, medium, low confidence.",
+    "A fact record with no hours, phone, events, menu, price range or cuisine is not joined; records that match no occupant are counted (summary.joins.web_facts).",
+    "Run after build-registry (which rewrites buildings.json without web facts) and before build-categories and build-atlas."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/extract-structured-data"
+    }
+   ]
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-categories",
    "@type": "prov:Activity",
    "rdfs:label": "build-categories",
@@ -4305,7 +4345,7 @@
     }
    ],
    "prov:wasGeneratedBy": {
-    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry"
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/join-web-facts"
    },
    "cwp:osmUse": "derived",
    "cwp:review": "occupants include CWG page links, mall names and levels from cwg-directory.json; 106 occupants come from the CWG directory alone, placed by street address, mall host outline or postcode with a confidence; cwg_unplaced lists the entries with no building and why. Business phone and email from OSM are kept under the cwplans exception (owner, 2026-10-03). Register links keep the key (UPRN, register point, mall, street address, name, postcode), its precision and a confidence; registers_unplaced and registers_uprn_rejected list what was not placed and why. Charity contact addresses are placed only by UPRN or a non-residential building (owner, 2026-10-03)"
@@ -5995,6 +6035,20 @@
     "dcat:Distribution"
    ],
    "dct:title": "hand-off of data-register and pipeline entries for the headless render and the Factoidal extraction (delete after merging, or keep with this entry)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/opening-hours.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: a small reader for OSM opening_hours text that says whether a place is open now in London time (used by the 3D page and the atlas records)",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
