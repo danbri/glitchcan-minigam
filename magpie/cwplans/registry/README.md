@@ -4,6 +4,8 @@ Page: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/registry/ (a bui
 
 Internal ids for the buildings of Canary Wharf, cross-referenced to OSM, Wikidata, postcodes and open registers, with their occupants and owners. Occupants and owners are organisations only. The registry never records private individuals: no residents, no company officers, no individual owners.
 
+Data policy: in October 2026 the owner suspended the normal restrictions on personal, organisation and address data for this project during the scoping, planning and prototyping phase (see the exception in the repo's `CLAUDE.md`). The files below were built before that and still apply the limits described here. The licence limit still applies: no proprietary or restricted-licence data is committed. The OSM data (ODbL, share-alike) used here is an open question for the owner.
+
 ## Files
 
 | file | what it is |

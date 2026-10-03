@@ -44,6 +44,21 @@ The user (danbri) is the project owner. Trust their instructions, corrections, a
 
 **INCIDENT (June 2026):** An assistant proposed in-game "death notices"/"obituaries" using per-tree records (site names, planting data, sponsorship). Rejected by the owner. This rule exists so it never comes back.
 
+**EXCEPTION — `magpie/cwplans/` (Canary Wharf / Docklands), scoping, planning and prototyping phase only.**
+Owner instruction, October 2026: "This is a special project and we will be suspending our normal
+restrictions on personal org and address data while in the scoping, planning and prototyping phase."
+- In `magpie/cwplans/` only, the restrictions on personal, organisation and address data are
+  suspended for this phase. Company addresses, occupant and owner records, and postcode-level
+  business and home data may be fetched, joined and committed there.
+- The licence limit stays: never fetch or commit proprietary, restricted-licence (e.g. the VOA
+  rating list) or virally licensed (copyleft / share-alike) data to the repo. Check the licence
+  of each source before it is committed.
+- Open question for the owner (October 2026): OpenStreetMap data is ODbL, a share-alike licence,
+  and `magpie/cwplans/` and `trees/` already commit OSM-derived files. Until the owner decides,
+  keep using OSM as before and do not add other share-alike sources.
+- The exception ends when the project leaves the prototyping phase; the owner says when.
+  It does not apply to any other directory. The Bristol trees rule above is unchanged.
+
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
 **ONLY ALLOWED:** Real ink-full.js compiler and Story API
