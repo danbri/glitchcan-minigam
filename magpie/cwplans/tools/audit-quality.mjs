@@ -213,6 +213,23 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
   c.population = pop; c.crosswalk = Object.entries(pairs).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ pair: k, n }));
 }
 
+{
+  const c = { id: 'AT-5', cls: 'attribute conflict', dim: 'accuracy', title: 'Station and tunnel levels from different sources disagree', sources: ['tfl', 'wikipedia', 'press', 'crossrail'],
+    method: 'Published levels in data/sourced-levels.json grouped by station and line. A depth below ground is turned into m OD with the LiDAR ground at the station node (docklands/data/area.js). Pairs more than 2 m apart are flagged; the control marked superseded_by is the one not applied.', rule: 'A level against a stated datum from the asset owner (TfL rail levels, Crossrail slab levels) outranks a rounded depth from a secondary source. Keep the others as evidence, never average them. A depth "below ground" needs its reference point (street, ticket hall, ground outside the station) before it can be compared.' };
+  const add = check(c), L = json('data/sourced-levels.json'), rows = [];
+  globalThis.window = globalThis; new Function(readFileSync(join(CW, 'docklands/data/area.js'), 'utf8'))();
+  const A = globalThis.DOCKLANDS_AREA, G = A.meta.geo, T = A.terrain;
+  const geo = (lon, lat) => { const a = lon - G.lon0, b = lat - G.lat0, t = [1, a, b, a * b, a * a, b * b]; return [t.reduce((s, v, i) => s + v * G.x[i], 0), t.reduce((s, v, i) => s + v * G.z[i], 0)]; };
+  const ground = (lon, lat) => { const [x, z] = geo(lon, lat), i = Math.round((x - T.x0) / T.cell), j = Math.round((z - T.z0) / T.cell); return T.dm[j * T.nx + i] / 10; };
+  const od = k => k.level.od ?? Math.round((ground(k.lon, k.lat) - k.level.below_ground) * 10) / 10;
+  const by = new Map(); for (const k of L.controls) { const key = `${k.place} | ${k.line}`; by.set(key, [...(by.get(key) || []), k]); }
+  for (const [key, ks] of by) { if (ks.length < 2) continue;
+    for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const a = ks[i], b = ks[j], d = Math.abs(od(a) - od(b));
+      rows.push({ station: key, a: `${a.id} ${od(a)} m OD`, b: `${b.id} ${od(b)} m OD`, diff_m: Math.round(d * 10) / 10, applied: [a, b].filter(k => !k.superseded_by).map(k => k.id).join(', ') });
+      if (d > 2) add({ ent: 'level', id: (a.superseded_by ? a : b).id, lat: a.lat, lon: a.lon, sev: d > 5 ? 'high' : 'medium', note: `${key}: ${a.id} ${od(a)} m OD vs ${b.id} ${od(b)} m OD (${(Math.round(d * 10) / 10)} m apart)` }); } }
+  c.population = by.size; ex(c, rows);
+}
+
 // ===== D. validity and format
 {
   const c = { id: 'VA-1', cls: 'validity', dim: 'validity', title: 'Repeated word in an address', sources: ['fsa', 'osm', 'cwg'],

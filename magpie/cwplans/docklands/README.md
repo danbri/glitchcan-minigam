@@ -82,11 +82,35 @@ Geofabrik and Overpass were unreachable from the build container, so the OSM dat
 - Pins: heritage records (`registry/sources/museums/`), data-quality issues by severity (`quality/issues.json`), and crime for the latest month from police.uk (live, on request; police.uk locations are anonymised points, Open Government Licence).
 - Satellite colours: the terrain coloured from the least cloudy recent Sentinel-2 true-colour image (13 August 2026, 0.01% cloud, 10 m), sampled once per terrain vertex. Rebuild with `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-imagery.mjs 2026-06-01` (reads only the model window of the COG by HTTP range requests). Copernicus licence; not share-alike.
 
+## Using the page on a phone (redesigned 2026-10-03)
+
+The model fills the screen; nothing important sits below it.
+- Top: one search box for buildings (registry), labelled places and every routable place in the walking network (shops, platforms, exits). A result flies the camera there; a place below ground also cuts the model away just above its level.
+- Left edge: the depth gauge. Drag the handle down to remove everything above that level (m OD), so the malls, platforms and tunnels show; the top of the track is "off".
+- Bottom: four tabs (Record, Route, Layers, About) open a sheet. Drag its handle to resize it or tap the handle to step through the sizes.
+- Tap a building or a label for its record. Records have "Route from here" and "Route to here".
+- Press and hold anywhere on the model: a menu offers "Route from here" and "Route to here" at the nearest mapped walkway or platform on screen (among the points not cut away). When both ends are set, the route is found at once.
+- On a wide screen the sheet docks on the left.
+
+## Ground images (added 2026-10-03)
+
+Layers, "Ground image", drapes one of these over the terrain:
+| choice | what | resolution in the page | built by |
+|---|---|---|---|
+| Aerial photo 2008 | EA vertical aerial photography, colour, 40 cm, flown 25 August 2007 to 18 October 2008 | 3 m a pixel, 2048 px texture | `tools/build-aerial.py rgb2008` |
+| Night 2012 | EA night-time aerial photography, 20 cm, January to April 2012 | 3 m | `tools/build-aerial.py night2012` |
+| LiDAR intensity 2020 | National LiDAR Programme return intensity, 1 m (how strongly each surface reflects the laser: roads dark, roofs and paint bright, sun glint on water) | 3 m | `tools/build-aerial.py intensity2020` |
+| Satellite 2026 | Sentinel-2 true colour, 13 August 2026, 10 m, one colour per 20 m terrain point | vertex colours | `tools/build-imagery.mjs` |
+
+All EA images are OGL v3.0 and come from the survey download service (`https://environment.data.gov.uk/tiles/collections/survey/<product>/<year>/<res>/<tile>`, tiles TQ3075, TQ3080, TQ3575, TQ3580; about 2.8 GB as ZIPs in `data/raw/imagery/`, not committed). The aerial photographs are ECW files: no decoder in the container's GDAL reads them, so `tools/native/ecw2ppm.c` is compiled against the ECW 3.3 SDK (see the `docklands-data-curation` skill, "Imagery"). The intensity tiles are GeoTIFF. Coverage limits: the 2008 photography has no tile north-west of Shadwell, and the west tiles come from a different flight (bluer); the night survey stops near Whitechapel Road. These gaps are black in the image.
+
+Not used: EOX cloudless mosaics (CC BY-NC-SA), Google photorealistic tiles (key and caching terms). The EA also has a 2017 oblique photograph of the Thames Barrier (TQ3575, OGL), outside the model box.
+
 ## Walking network and routes (added 2026-10-03)
 
 - `data/indoor.js` (built by `node magpie/cwplans/tools/build-indoor.mjs`, about 1 minute): the OSM walking network of the Canary Wharf area with each point on its level: 10,647 points, 13,044 links (277 stair, 46 escalator and 47 lift links), levels -4 to +2, and 789 named places (shops, food and drink, entertainment, services, platforms, entrances).
 - How it is built: one network point per (OSM node, level); stairs and escalators are oriented by the levels their ends touch (or `incline`); lifts join their listed levels; walkable areas (platforms, concourses, indoor corridors and rooms) get a hub joined to every path end inside them or within 3 m of their edge; nodes that ways reach at two levels with no connector are joined and counted as faults.
-- In the page: "Walking network" draws it (pink indoor, orange stairs, yellow escalators, blue lifts); "Route from … to …" finds the quickest route (walking 1.3 m/s, stairs 0.5 m/s, escalators 0.75 m/s, lifts 25 s + 4 s a level), with a step-free option that uses lifts and ramps only, and lists the steps. A typed name with several branches resolves to the one nearest the start.
+- In the page (Route tab): "Show the walking network" draws it (pink indoor, orange stairs, yellow escalators, blue lifts); "Route from … to …" finds the quickest route (walking 1.3 m/s, stairs 0.5 m/s, escalators 0.75 m/s, lifts 25 s + 4 s a level), with a step-free option that uses lifts and ramps only, and lists the steps. A typed name with several branches resolves to the one nearest the start.
 - Example: Jubilee line westbound platform (level -3) to Rituals (Jubilee Place, level -2): 192 m by escalator; step-free 284 m by lift.
 - Stations: TfL's step-free topology (GTFS pathways, 2026-08-03) adds 68 station points and 51 lift links with TfL's level numbers; they join the OSM network at street level only, because TfL and OSM number levels below the street differently (audit NET-5). Routes read TfL's live lift faults (`api.tfl.gov.uk/Disruptions/Lifts/v2`) and avoid lifts that are out of service. Powered by TfL Open Data.
 - Limits, measured by the audit (NET-1 to NET-5): 42 unjoined parts; 192 points where OSM joins two levels with no connector; 18 escalators and 11 lifts without their levels; 46 places with no corridor on their own level. Heights are ground + level × storey height. Estate and station plans are being collected to close these gaps.
@@ -96,10 +120,12 @@ Geofabrik and Overpass were unreachable from the build container, so the OSM dat
 From `FACTS.md`, not found in any source fetched:
 - the height of the DLR viaduct at Canary Wharf, Heron Quays and West India Quay
 - platform depths at Wapping, Rotherhithe, Canning Town and Island Gardens
-- depths of the Blackwall Tunnel and of the Jubilee line under the Thames
+- depths of the Jubilee line under the Thames between stations (TfL refused tunnel alignments in FOI 1700-1213 on security grounds); Blackwall Tunnel inverts are known only from a desk study (about -20.4 and -24.4 m OD), not yet used
 - the levels of the Canada Place, Cabot Place and Churchill Place malls, and the service roads under the estate
 - present water depths of docks other than North Dock
 - a numeric ground log at Canary Wharf itself
+
+Jubilee line rail levels (added 2026-10-03): TfL FOI-0493-2223 gives the rail level in every Jubilee platform in London Underground Datum (OD - 100 m): Canary Wharf -15.6, Canada Water -13.3, North Greenwich -13.5, Bermondsey -12.5, London Bridge -23.2 (Northern line -19.6) m OD. They are tunnel controls now. They replace two rounded depths (Canada Water "22 m down", North Greenwich "25 m down"), which were 4 and 6 m deeper (audit AT-5). Source records for the whole underground estate: `../feeds/underground/README.md`.
 
 The model also has these limits:
 - The Jubilee line pit at Canary Wharf ("24 m deep", Wikipedia) has no stated reference level, so it is not used as a control.

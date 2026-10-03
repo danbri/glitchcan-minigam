@@ -159,6 +159,7 @@ export function poly(rings) {
 export function applyControls(lines, file, toLocal, ground) {
   const { controls } = JSON.parse(readFileSync(file, 'utf8')), used = [];
   for (const c of controls) {
+    if (c.superseded_by) continue;   // kept in the file as evidence, not applied
     const [cx, cz] = toLocal(c.lon, c.lat), g = ground(cx, cz);
     const level = c.level.od ?? (g === null ? null : g - c.level.below_ground);
     if (level === null) continue;

@@ -24,7 +24,7 @@ before and after), and what is still open.
 
 ## Catalogue first
 
-`tools/audit-quality.mjs` runs the same checks on every rebuild (32 in October 2026, eight classes:
+`tools/audit-quality.mjs` runs the same checks on every rebuild (34 in October 2026, eight classes:
 identity, position, attribute conflict, validity, pipeline, currency, coverage, meaning). Output:
 `quality/issues.json`, `quality/CATALOGUE.md`; the analysis and the proposed compositing layers are in
 `quality/README.md`. When you find a wrong value:
@@ -56,10 +56,37 @@ Faults found in this project's joins and tools. "Open" means catalogued and meas
 | F9 | 2026-10-03 | OSM level and CWG mall level use different schemes; the offset depends on the mall | attribute conflict (source schemes) | open: needs a per-mall offset table | AT-3: 46 of 72 differ; Cabot Place −1 for 19 of 26, Jubilee Place 0 for 11 of 13 |
 | F10 | 2026-10-02/03 | Earlier faults, fixed when found: `simplify()` collapsed closed rings; incomplete Thames multipolygons dropped (needed relation members); DLR drawn on station roofs (DSM) until bridge points over 20 m were interpolated; scripts ran side effects when imported (main guards added) | pipeline | fixed | ACTIVITY-LOG.md, 2026-10-02 |
 | F11 | 2026-10-02/03 | Wrong claims in our own text, fixed: an FSA search URL and a flood-check link that returned 404; a guessed Wikidata id; a feed marked verified behind a bot challenge; wrong bearings in a README; "Geofabrik" named as the OSM source (it was openstreetmap.fr) | documentation | fixed | ACTIVITY-LOG.md |
-
 | F12 | 2026-10-03 | The OSM walking network below ground is thin and inconsistent: platforms and concourses drawn as areas that paths do not share nodes with; escalators without levels; levels joined with no connector | routing network (source) | open; areas joined by hubs in `build-indoor.mjs`, the rest measured | NET-1 to NET-4: 42 parts, 192 level joins, 30 connectors without levels, 46 places off their level |
 
+| F13 | 2026-10-03 | Tunnel controls from secondary sources: Canada Water Jubilee "22 m down" (Wikipedia) and North Greenwich "25 m down" (an interview) were 4 m and 6 m deeper than TfL's measured rail levels; a depth "below ground" has no stated reference point | attribute conflict (source precedence) | fixed: TfL FOI rail levels added as controls, the old ones kept with `superseded_by` and not applied (`applyControls` skips them) | AT-5: 2 |
+
 Add new faults here with the next F number, and in the activity log.
+
+## Imagery
+
+Ground textures for the 3D page come from the EA survey download service (OGL): find what covers a box with
+`POST https://environment.data.gov.uk/backend/catalog/api/tiles/collections/survey/search` (body: a GeoJSON
+polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over the model: colour aerial 2008
+(40 cm), night-time aerial 2012 (20 cm), LiDAR intensity 2018 and 2020 (1 m), DSM and DTM for 1999, 2003,
+2005, 2007, 2012, 2015, 2018, 2020 and 2022, and one 2017 oblique photograph.
+
+- **The aerial photographs are ECW.** Debian's GDAL has no ECW driver and the Hexagon SDK needs a login. The
+  ECW 3.3 SDK source (`git clone https://github.com/makinacorpus/libecw`) builds with
+  `./configure CXXFLAGS="-O1 -w -std=gnu++98 -fpermissive" --prefix=/opt/ecw && make && make install` (the
+  install step fails on headers after the libraries are in `/opt/ecw/lib`; that is enough). Then
+  `g++ -x c++ -DLINUX -DPOSIX -D_LARGEFILE64_SOURCE tools/native/ecw2ppm.c -I<src>/Source/include -L/opt/ecw/lib -lNCSEcw -lNCSUtil -lNCSCnet -lpthread -o tools/native/ecw2ppm`
+  (the binary is gitignored). Without `-DLINUX -DPOSIX` the headers stop with "unknown machine type". Its
+  licence allows decoding in free software; we commit only the decoded, resampled JPEGs (the imagery is OGL).
+- **Python here has no working numpy** (Debian's numpy fails to import after a pip install). `build-aerial.py`
+  uses Pillow alone; float GeoTIFFs open as mode "F" and `point()` takes only linear functions on them.
+- **Mosaics:** paste each tile with integer start and end pixels plus one pixel of overlap, or 1-pixel black
+  seams appear at every tile edge (first build, 2026-10-03). Mask pure black: ECW tiles are black outside the
+  flown area.
+- **Coverage is uneven:** the 2008 colour tiles west of Limehouse come from another flight and are bluer; the
+  north-west corner has no 2008 tile; the night survey stops near Whitechapel Road. Say so where the image is
+  shown, do not colour-match.
+- WebGL: draw the texture through the terrain's own x, z (uv from the box in `textures.json`); resample to
+  2048 × 2048 on a canvas so the GPU can mipmap it.
 
 ## Measured lessons (the reasons behind the rules)
 
@@ -76,6 +103,9 @@ Add new faults here with the next F number, and in the activity log.
 - **A registered office is not an occupant.** E14 5HU has 2,652 registered companies (SE-1).
 - **Links need dates** (F8). Company status, FSA rating dates, CWG archive dates and the LiDAR survey date
   travel with the values they qualify.
+- **Depths need a datum and an owner.** "22 m down" has no reference point; TfL's rail level has a datum
+  (London Underground Datum = OD - 100 m). The asset owner's level outranks a rounded secondary depth; keep
+  the loser as evidence with `superseded_by` (F13, AT-5).
 - **Heights.** LiDAR for buildings older than the survey; nine buildings show under half their
   floor-count height and are newer (AT-1).
 

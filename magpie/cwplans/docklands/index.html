@@ -2,98 +2,182 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Docklands 3D</title>
 <style>
-:root{--bg:#0f1215;--panel:#15191d;--line:#323940;--fg:#e8eaec;--muted:#a9b1b9;--link:#9cc8ff;--warn:#ffd26f;
+:root{--bg:#0f1215;--panel:#15191df2;--line:#323940;--fg:#e8eaec;--muted:#a9b1b9;--link:#9cc8ff;--warn:#ffd26f;--acc:#5fd17a;
   --ell:#ff8a3d;--eliz:#9b6cff;--jub:#c9ced6;--dlr:#2cc3b5;--rail:#d9544d;--road:#5c636b;--water:#3f8fc0;
-  --bld:#b9bec4;--bldlv:#e0b25a;--base:#b05cff;--corr:#3fd0ff;--plat:#ff8a3d;--room:#ff5fa2;--tun:#e6e08a}
-html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,sans-serif}
+  --bld:#b9bec4;--bldlv:#e0b25a;--base:#b05cff;--corr:#3fd0ff;--plat:#ff8a3d;--room:#ff5fa2;--tun:#e6e08a;
+  --tabs:56px;--safe:env(safe-area-inset-bottom,0px)}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,sans-serif;overscroll-behavior:none}
 a{color:var(--link)}
-#wrap{position:relative;height:68vh;min-height:440px;overflow:hidden}
+#wrap{position:fixed;inset:0}
 canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-.hud{position:absolute;left:10px;top:10px;background:#111c;padding:6px 9px;border-radius:8px;font-size:12px;pointer-events:none;max-width:calc(100% - 40px)}
-#labels{position:absolute;inset:0;pointer-events:none}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:1px 5px;border-radius:5px;background:#0d1013d9;border:1px solid #39424b;color:var(--fg);pointer-events:auto;cursor:pointer}
-.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border-color:#ffd26f}.lb.src{border-color:#ffd26f;color:#ffe7a8}.lb.occ{border-color:#ff5fa2;color:#ffd1e6;font-size:10px}.lb.her{border-color:#b48cff;color:#e2d4ff}
-.panel{padding:12px 16px;background:var(--panel);border-top:1px solid var(--line)}
-.row{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;margin-top:8px}
-button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px}
+.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border-color:#ffd26f}.lb.src{border-color:#ffd26f;color:#ffe7a8}.lb.occ{border-color:#ff5fa2;color:#ffd1e6;font-size:10px}.lb.her{border-color:#b48cff;color:#e2d4ff}.lb.end{border-color:var(--acc);color:#c9ffd6;font-weight:600}
+button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px;cursor:pointer}
 button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
-.ctl{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.ctl output{min-width:3.4em}
-input[type=range]{width:min(200px,56vw);vertical-align:middle}
-select,input[list]{font:inherit;background:#293038;color:var(--fg);border:1px solid #59616a;border-radius:8px;padding:6px}
-input[list]{width:min(220px,40vw)}
+/* top: search and views */
+#top{position:absolute;left:12px;right:12px;top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#top>*{pointer-events:auto}
+#searchRow{display:flex;gap:6px;max-width:560px}
+#q{flex:1;min-width:0;font:inherit;font-size:16px;background:#15191de8;color:var(--fg);border:1px solid #59616a;border-radius:22px;padding:9px 14px}
+#qres{list-style:none;margin:0;padding:4px;max-width:560px;max-height:46vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:none}
+#qres li button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 10px}
+#qres li button:hover,#qres li button:focus{background:#2a323a}
+#views{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;max-width:100%}
+#views button{flex:none;padding:6px 11px;border-radius:16px;font-size:13px;background:#15191de0}
+#views button[aria-pressed=true]{background:#3d4a57}
+#hud{align-self:flex-start;background:#111c;padding:5px 9px;border-radius:8px;font-size:12px;max-width:100%;pointer-events:none;transition:opacity .6s}
+/* depth gauge: drag to cut away everything above a level */
+#gauge{position:absolute;left:6px;top:200px;bottom:calc(var(--tabs) + var(--safe) + 70px);width:46px;touch-action:none;user-select:none}
+#gauge .track{position:absolute;left:20px;top:0;bottom:0;width:6px;border-radius:3px;background:linear-gradient(#5d7a8f,#5d7a8f 10%,#8a6a4a 48%,#4a3426)}
+#gauge .mk{position:absolute;left:28px;font-size:10px;color:var(--muted);transform:translateY(-50%);white-space:nowrap;text-shadow:0 0 3px #000}
+#gauge .h{position:absolute;left:8px;width:30px;height:30px;margin-top:-15px;border-radius:50%;background:#e8eaec;border:3px solid #15191d;box-shadow:0 1px 4px #000a}
+#gauge output{position:absolute;left:44px;transform:translateY(-50%);font-size:12px;font-weight:600;background:#111d;padding:2px 6px;border-radius:6px;white-space:nowrap}
+/* bottom: tab bar and sheet */
+#tabs{position:absolute;left:0;right:0;bottom:0;height:calc(var(--tabs) + var(--safe));padding-bottom:var(--safe);display:flex;background:#15191d;border-top:1px solid var(--line);z-index:3}
+#tabs button{flex:1;border:0;border-radius:0;background:none;font-size:13px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted)}
+#tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+#tabs button[aria-selected=true]{color:var(--fg);background:#20262c}
+#sheet{position:absolute;left:0;right:0;bottom:calc(var(--tabs) + var(--safe));height:0;background:var(--panel);border-top:1px solid var(--line);border-radius:14px 14px 0 0;z-index:2;display:flex;flex-direction:column;transition:height .2s ease;box-shadow:0 -4px 16px #0008}
+#sheet.drag{transition:none}
+#grip{flex:none;height:22px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:ns-resize}
+#grip::before{content:"";width:44px;height:5px;border-radius:3px;background:#59616a}
+#sheetBody{flex:1;overflow:auto;padding:0 16px 14px;overscroll-behavior:contain}
+.pane{display:none}.pane.on{display:block}
+#toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs) + var(--safe) + 22px);width:max-content;max-width:min(calc(100vw - 32px),560px);box-sizing:border-box;background:#1b2128f2;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;z-index:4;display:none}
+#attribLine{position:absolute;right:6px;bottom:calc(var(--tabs) + var(--safe) + 4px);font-size:10px;color:#c9ced6;background:#0d1013b0;padding:1px 6px;border-radius:5px;max-width:70vw;text-align:right}
+#attribLine a{color:#c9ced6}
+#press{position:absolute;z-index:5;display:none;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 4px 14px #000a}
+#press button{text-align:left;padding:10px 14px}
+@media (min-width:900px){
+  #sheet{left:12px;right:auto;width:440px;bottom:calc(var(--tabs) + 10px);border-radius:14px;border:1px solid var(--line)}
+  #tabs{left:12px;right:auto;width:440px;bottom:10px;border-radius:12px;border:1px solid var(--line);height:var(--tabs);padding:0}
+  #attribLine{bottom:6px}
+  #toast{left:470px;transform:none;bottom:14px}
+  #gauge{left:auto;right:64px;top:110px;bottom:120px}
+}
+/* panes */
+h2{font-size:15px;margin:4px 0 8px}
+h3{font-size:13px;margin:14px 0 6px;color:var(--muted);font-weight:600;text-transform:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips label{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border:1px solid #59616a;border-radius:18px;background:#232a31;font-size:13px;cursor:pointer;user-select:none}
+.chips input{position:absolute;opacity:0;width:1px;height:1px}
+.chips label:has(input:checked){background:#3d5a48;border-color:var(--acc);color:#fff}
+.chips label:has(input:focus-visible){outline:2px solid var(--link)}
+.chips label:has(input:disabled){opacity:.45}
+.row{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%}.ctl output{min-width:3.4em}
+input[type=range]{flex:1;min-width:140px}
+select,input[list]{font:inherit;font-size:16px;background:#293038;color:var(--fg);border:1px solid #59616a;border-radius:8px;padding:7px;max-width:100%}
+.ends{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.ends input{width:100%;box-sizing:border-box}
 .small{color:var(--muted);font-size:13px}.warn{color:var(--warn)}
 .legend{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:13px}
 .sw{width:12px;height:12px;display:inline-block;margin-right:5px;vertical-align:-1px;border-radius:2px}
-#info{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;display:none;max-height:60vh;overflow:auto}
 .ramp{display:inline-block;width:120px;height:9px;border-radius:4px;vertical-align:middle;margin:0 6px}
 .tag{display:inline-block;padding:0 5px;border-radius:4px;background:#232a31;color:var(--muted);font-size:12px;margin-left:3px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.acts button{font-size:13px;padding:7px 11px}
 table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
+.tw{overflow-x:auto;max-width:100%}
 details{margin-top:10px}summary{cursor:pointer}
 </style>
 </head>
 <body>
-<div id="wrap"><canvas id="c" role="img" aria-label="3D model of London Docklands from London Bridge to Cody Dock, with Canary Wharf above and below ground, from OpenStreetMap, Environment Agency LiDAR and Wikidata"></canvas><div id="labels"></div><div class="hud" id="hud">Loading 1.9 MB of data…</div></div>
-<div class="panel">
-  <b>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</b>
-  <span class="small">· <a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · map data <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA LiDAR and flood defences (OGL), UKHO (OGL), Wikidata (CC0) · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data licences</a></span>
-  <div class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). "Cut away above" removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height below. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</div>
-  <div class="row">
-    <button type="button" data-view="area" aria-pressed="false">Whole area</button>
-    <button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button>
-    <button type="button" data-view="under" aria-pressed="false">Canary Wharf underground</button>
-    <button type="button" data-view="plan" aria-pressed="false">Plan</button>
+<div id="wrap"><canvas id="c" role="img" aria-label="3D model of London Docklands from London Bridge to Cody Dock, with Canary Wharf above and below ground, from OpenStreetMap, Environment Agency LiDAR and Wikidata"></canvas><div id="labels"></div>
+  <div id="top">
+    <div id="searchRow"><input id="q" type="search" placeholder="Find a building, shop, platform or place" autocomplete="off" aria-label="Find a building, shop, platform or place" aria-controls="qres"></div>
+    <ul id="qres" aria-label="Search results"></ul>
+    <div id="views" role="group" aria-label="Views">
+      <button type="button" data-view="area" aria-pressed="false">Whole area</button>
+      <button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button>
+      <button type="button" data-view="under" aria-pressed="false">Underground</button>
+      <button type="button" data-view="plan" aria-pressed="false">Plan</button>
+    </div>
+    <div id="hud">Loading 1.9 MB of data…</div>
   </div>
-  <div class="row">
-    <label>Buildings <select id="bmode"><option value="solid">solid</option><option value="ghost">ghost</option><option value="off">off</option></select></label>
-    <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label><label><input type="checkbox" id="showFloors"> Floors (Canary Wharf)</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label>
-  </div>
-  <div class="row">
-    <label>Colour buildings by <select id="colourBy"><option value="source">height source</option><option value="height">height</option><option value="occupants">occupants</option><option value="homes">homes</option><option value="companies">registered companies</option><option value="below">floors below ground</option><option value="quality">data-quality issues</option></select></label>
-    <span id="rampKey" class="small"></span>
-  </div>
-  <div class="row">
-    <label><input type="checkbox" id="showHeritage"> Heritage records</label><label><input type="checkbox" id="showQuality"> Quality issues</label><label><input type="checkbox" id="showCrime"> Crime, latest month (police.uk, live)</label><label><input type="checkbox" id="showSat"> Satellite colours (Sentinel-2)</label>
-    <span class="small" id="dataNote">Tap a building at Canary Wharf for its record.</span>
-  </div>
-  <div class="row">
-    <label><input type="checkbox" id="showWalk"> Walking network (OSM: corridors, stairs, escalators, lifts)</label>
-    <span class="ctl"><label for="rFrom">Route from</label><input id="rFrom" list="placeList" placeholder="e.g. Platform A" autocomplete="off"><label for="rTo">to</label><input id="rTo" list="placeList" placeholder="e.g. Boots" autocomplete="off"></span>
-    <label><input type="checkbox" id="stepFree"> step-free</label><button type="button" id="rGo">Find route</button>
-    <datalist id="placeList"></datalist>
-  </div>
-  <div class="row">
-    <span class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></span>
-    <span class="ctl"><label for="vz">Vertical ×</label><input id="vz" type="range" min="1" max="5" step="0.5" value="1"><output id="vzO">1×</output></span>
-  </div>
-  <details><summary>Model settings (assumptions)</summary>
-  <div class="row">
-    <span class="ctl"><label for="storey">Storey height for OSM levels and basements</label><input id="storey" type="range" min="2.5" max="6" step="0.1" value="4"><output id="storeyO">4 m</output></span>
-  </div>
-  <div class="row">
-    <span class="ctl"><label for="dmax">Tunnel dip below the line between measured points</label><input id="dmax" type="range" min="0" max="30" step="0.5" value="10"><output id="dmaxO">10 m</output></span>
-    <span class="ctl"><label for="grad">Max gradient 1 in</label><input id="grad" type="range" min="20" max="100" step="5" value="40"><output id="gradO">40</output></span>
-  </div>
-  <div class="row">
-    <span class="ctl"><label for="ddeep">Depth of tunnels with no measured point</label><input id="ddeep" type="range" min="5" max="45" step="1" value="25"><output id="ddeepO">25 m</output></span>
-  </div>
-  </details>
-  <div class="legend row">
-    <span><i class="sw" style="background:var(--bld)"></i>Building, LiDAR height</span><span><i class="sw" style="background:var(--bldlv)"></i>Building, OSM levels or newer than LiDAR</span>
-    <span><i class="sw" style="background:var(--base)"></i>Basement (storeys × height)</span><span><i class="sw" style="background:var(--corr)"></i>Indoor corridor / steps</span><span><i class="sw" style="background:var(--room)"></i>Shops, rooms, points with a level</span>
-    <span><i class="sw" style="background:var(--plat)"></i>Platform</span><span><i class="sw" style="background:var(--jub)"></i>Jubilee</span><span><i class="sw" style="background:var(--eliz)"></i>Elizabeth line</span><span><i class="sw" style="background:var(--dlr)"></i>DLR</span>
-    <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:#f9c75a"></i>Published slab levels (Crossrail Place)</span><span><i class="sw" style="background:var(--water)"></i>Water</span><span><i class="sw" style="background:#e07a3f"></i>Tidal flood walls to their crest level (EA)</span><span><i class="sw" style="background:#2a4a6b"></i>Thames riverbed, UKHO soundings in m OD (seen with the cut-away or through the river)</span>
-  </div>
-  <div id="info" aria-live="polite"></div>
-  <details id="liveBox"><summary>Live data</summary>
-    <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of 200 checked sources is at <a href="../feeds/">feeds</a>.</p>
-    <div class="row"><button type="button" id="liveGo">Load live data</button><label><input type="checkbox" id="liveTide" disabled> Draw the tidal Thames at the Tower Pier level</label><label><input type="checkbox" id="liveCams" disabled checked> Traffic cameras</label></div>
-    <div id="liveOut" class="small" aria-live="polite"></div>
-  </details>
-  <details><summary>Canary Wharf below ground (text)</summary><div id="ugText" class="small"></div></details>
-  <p class="small" id="attrib"></p>
+  <div id="gauge" role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
+  <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="press" role="menu"></div>
+  <section id="sheet" aria-label="Details"><div id="grip" aria-hidden="true"></div><div id="sheetBody">
+    <div class="pane" id="paneInfo"><div id="info" aria-live="polite"><p class="small">Tap a building, a label or a pin for its record. Press and hold anywhere to start or end a route there.</p></div></div>
+    <div class="pane" id="paneRoute">
+      <h2>Route on foot, above and below ground</h2>
+      <div class="ends"><label for="rFrom">From</label><input id="rFrom" type="text" list="placeList" placeholder="shop, platform, exit…" autocomplete="off"><button type="button" id="rSwap" aria-label="Swap start and end">⇅</button>
+        <label for="rTo">To</label><input id="rTo" type="text" list="placeList" placeholder="shop, platform, exit…" autocomplete="off"><span></span></div>
+      <datalist id="placeList"></datalist>
+      <div class="row chips"><label><input type="checkbox" id="stepFree"> Step-free (lifts and ramps only)</label><label><input type="checkbox" id="showWalk"> Show the walking network</label></div>
+      <div class="row"><button type="button" id="rGo">Find route</button></div>
+      <p class="small">Or press and hold on the model: "route from here" and "route to here" pick the nearest mapped walkway or platform. Use the depth gauge on the left first to look below ground.</p>
+      <div id="routeOut" class="small"></div>
+    </div>
+    <div class="pane" id="paneLayers">
+      <h3>Ground image</h3>
+      <div class="chips" role="radiogroup" aria-label="Ground image">
+        <label><input type="radio" name="ground" value="none" checked> Plain</label>
+        <label><input type="radio" name="ground" value="rgb2008"> Aerial photo 2008</label>
+        <label><input type="radio" name="ground" value="night2012"> Night 2012</label>
+        <label><input type="radio" name="ground" value="intensity2020"> LiDAR intensity 2020</label>
+        <label><input type="radio" name="ground" value="s2"> Satellite 2026</label>
+      </div>
+      <p class="small" id="groundNote"></p>
+      <h3>Buildings</h3>
+      <div class="chips" role="radiogroup" aria-label="Buildings">
+        <label><input type="radio" name="bmodeR" value="solid" checked> Solid</label><label><input type="radio" name="bmodeR" value="ghost"> See-through</label><label><input type="radio" name="bmodeR" value="off"> Hidden</label>
+      </div>
+      <select id="bmode" hidden><option value="solid">solid</option><option value="ghost">ghost</option><option value="off">off</option></select>
+      <div class="row"><label>Colour by <select id="colourBy"><option value="source">height source</option><option value="height">height</option><option value="occupants">occupants</option><option value="homes">homes</option><option value="companies">registered companies</option><option value="below">floors below ground</option><option value="quality">data-quality issues</option></select></label></div>
+      <div id="rampKey" class="small"></div>
+      <h3>Show</h3>
+      <div class="chips">
+        <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground</label><label><input type="checkbox" id="showFloors"> Floors</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label>
+      </div>
+      <h3>Data on the model</h3>
+      <div class="chips">
+        <label><input type="checkbox" id="showHeritage"> Heritage records</label><label><input type="checkbox" id="showQuality"> Quality issues</label><label><input type="checkbox" id="showCrime"> Crime, latest month (live)</label>
+      </div>
+      <p class="small" id="dataNote">Tap a building at Canary Wharf for its record.</p>
+      <h3>Shape</h3>
+      <div class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></div>
+      <div class="ctl"><label for="vz">Height ×</label><input id="vz" type="range" min="1" max="5" step="0.5" value="1"><output id="vzO">1×</output></div>
+      <details><summary>Model settings (assumptions)</summary>
+        <div class="ctl"><label for="storey">Storey height for OSM levels and basements</label><input id="storey" type="range" min="2.5" max="6" step="0.1" value="4"><output id="storeyO">4 m</output></div>
+        <div class="ctl"><label for="dmax">Tunnel dip below the line between measured points</label><input id="dmax" type="range" min="0" max="30" step="0.5" value="10"><output id="dmaxO">10 m</output></div>
+        <div class="ctl"><label for="grad">Max gradient 1 in</label><input id="grad" type="range" min="20" max="100" step="5" value="40"><output id="gradO">40</output></div>
+        <div class="ctl"><label for="ddeep">Depth of tunnels with no measured point</label><input id="ddeep" type="range" min="5" max="45" step="1" value="25"><output id="ddeepO">25 m</output></div>
+      </details>
+      <details><summary>Key to colours</summary>
+      <div class="legend row">
+        <span><i class="sw" style="background:var(--bld)"></i>Building, LiDAR height</span><span><i class="sw" style="background:var(--bldlv)"></i>Building, OSM levels or newer than LiDAR</span>
+        <span><i class="sw" style="background:var(--base)"></i>Basement (storeys × height)</span><span><i class="sw" style="background:var(--corr)"></i>Indoor corridor / steps</span><span><i class="sw" style="background:var(--room)"></i>Shops, rooms, points with a level</span>
+        <span><i class="sw" style="background:var(--plat)"></i>Platform</span><span><i class="sw" style="background:var(--jub)"></i>Jubilee</span><span><i class="sw" style="background:var(--eliz)"></i>Elizabeth line</span><span><i class="sw" style="background:var(--dlr)"></i>DLR</span>
+        <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:#f9c75a"></i>Published slab levels (Crossrail Place)</span><span><i class="sw" style="background:var(--water)"></i>Water</span><span><i class="sw" style="background:#e07a3f"></i>Tidal flood walls to their crest level (EA)</span><span><i class="sw" style="background:#2a4a6b"></i>Thames riverbed, UKHO soundings in m OD</span>
+      </div></details>
+    </div>
+    <div class="pane" id="paneAbout">
+      <h2>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</h2>
+      <p class="small"><a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · map data <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA LiDAR, aerial photography and flood defences (OGL), UKHO (OGL), Wikidata (CC0), Copernicus Sentinel-2 · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data licences</a></p>
+      <p class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). The depth gauge on the left removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height setting. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</p>
+      <p class="small">One finger: rotate. Two fingers: move and zoom. Tap: record. Press and hold: route from or to that point.</p>
+      <details id="liveBox"><summary>Live data</summary>
+        <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of checked sources is at <a href="../feeds/">feeds</a>.</p>
+        <div class="row"><button type="button" id="liveGo">Load live data</button></div>
+        <div class="row chips"><label><input type="checkbox" id="liveTide" disabled> Tidal Thames at the Tower Pier level</label><label><input type="checkbox" id="liveCams" disabled checked> Traffic cameras</label></div>
+        <div id="liveOut" class="small" aria-live="polite"></div>
+      </details>
+      <details><summary>Canary Wharf below ground (text)</summary><div id="ugText" class="small tw"></div></details>
+      <p class="small" id="attrib"></p>
+    </div>
+  </div></section>
+  <nav id="tabs" role="tablist" aria-label="Panels">
+    <button type="button" role="tab" data-pane="paneInfo" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Record</button>
+    <button type="button" role="tab" data-pane="paneRoute" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Route</button>
+    <button type="button" role="tab" data-pane="paneLayers" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>Layers</button>
+    <button type="button" role="tab" data-pane="paneAbout" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>About</button>
+  </nav>
 </div>
 <script src="vendor/earcut.min.js"></script>
 <script src="data/area.js"></script>
@@ -141,11 +225,14 @@ function tunnelY(l, p, P) {
 
 const cv = $('c'), gl = cv.getContext('webgl', { antialias: true, alpha: false });
 if (!gl || !gl.getExtension('OES_element_index_uint')) { hud.textContent = 'WebGL (with 32-bit indices) is not available: see the text tables below'; textTables(); return; }
-const vs = 'attribute vec3 p;attribute vec4 c;uniform mat4 m;uniform float vz;varying vec4 v;varying float wy;void main(){v=c;wy=p.y;gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
-const fs = 'precision mediump float;varying vec4 v;varying float wy;uniform float a;uniform float cut;uniform float mono;void main(){if(wy>cut)discard;gl_FragColor=mono>.5?vec4(0.,0.,0.,1.):vec4(v.rgb,v.a*a);}';
+// one program for everything. The terrain alone may sample a ground image (useTex): texture coordinates come from x, z and the
+// image box (docklands/data/tex/textures.json); the vertex colour then carries only the hill shading. dim darkens the rest at night.
+const vs = 'attribute vec3 p;attribute vec4 c;uniform mat4 m;uniform float vz;uniform vec4 box;varying vec4 v;varying float wy;varying vec2 uv;void main(){v=c;wy=p.y;uv=(p.xz-box.xy)/box.zw;gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
+const fs = 'precision mediump float;varying vec4 v;varying float wy;varying vec2 uv;uniform float a;uniform float cut;uniform float mono;uniform float useTex;uniform float dim;uniform sampler2D tx;void main(){if(wy>cut)discard;if(mono>.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}vec3 col=useTex>.5?min(vec3(1.),texture2D(tx,uv).rgb*v.rgb*1.35):v.rgb*dim;gl_FragColor=vec4(col,v.a*a);}';
 const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
-const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono');
+const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono'), uTex = U_('useTex'), uDim = U_('dim'), uBox = U_('box');
+gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.uniform4f(uBox, 0, 0, 1, 1); gl.uniform1i(U_('tx'), 0);
 gl.enableVertexAttribArray(aP); gl.enableVertexAttribArray(aC);
 const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })();
 const shade = (col, nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1, k = .5 + .5 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / l); return [col[0] * k, col[1] * k, col[2] * k]; };
@@ -193,12 +280,13 @@ const cube = (M, x, y, z, s, col) => { const h = s / 2; prism(M, { p: [Math.roun
 // ---------- static layers
 const L = {};
 // terrain grid; colours from the ground colour, or per vertex from imagery (rgb: Uint8Array, 3 bytes per vertex)
-function buildTerrain(rgb) {
+function buildTerrain(rgb) {   // rgb: per-vertex colours, 'tex' (shading only, the image comes from the texture) or null
   if (L.terrain) L.terrain.free();
+  const white = rgb === 'tex'; if (white) rgb = null;
   const T = A.terrain, h = (i, j) => T.dm[j * T.nx + i] / 10, M = new Mesh();
   for (let j = 0; j < T.nz; j++) for (let i = 0; i < T.nx; i++) {
     const nx = h(Math.max(0, i - 1), j) - h(Math.min(T.nx - 1, i + 1), j), nz = h(i, Math.max(0, j - 1)) - h(i, Math.min(T.nz - 1, j + 1)), k = 3 * (j * T.nx + i);
-    const col = rgb ? [rgb[k] / 255, rgb[k + 1] / 255, rgb[k + 2] / 255] : C.ground;
+    const col = white ? [1, 1, 1] : rgb ? [rgb[k] / 255, rgb[k + 1] / 255, rgb[k + 2] / 255] : C.ground;
     M.v(T.x0 + i * T.cell, h(i, j), T.z0 + j * T.cell, rgb ? shade(col, nx, 2 * T.cell, nz).map(c => Math.min(1, c * 1.2)) : shade(col, nx, 2 * T.cell, nz));
   }
   for (let j = 0; j < T.nz - 1; j++) for (let i = 0; i < T.nx - 1; i++) { const a = j * T.nx + i; M.tri(a, a + 1, a + T.nx); M.tri(a + 1, a + T.nx + 1, a + T.nx); }
@@ -278,7 +366,7 @@ const VIEWS = {
 };
 const viewBtns = [...document.querySelectorAll('[data-view]')];
 function setView(k) {
-  const v = VIEWS[k]; Object.assign(cam, v); inp.cut.value = v.cut; $('bmode').value = v.b; outs();
+  const v = VIEWS[k]; Object.assign(cam, v); inp.cut.value = v.cut; $('bmode').value = v.b; outs(); if (typeof syncGauge === 'function') { syncGauge(); syncBmode(); }
   viewBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === k))); draw();
 }
 viewBtns.forEach(b => b.onclick = () => setView(b.dataset.view));
@@ -287,7 +375,7 @@ function mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++)
 function persp(f, a, n, fa) { const t = 1 / Math.tan(f / 2), o = new Float32Array(16); o[0] = t / a; o[5] = t; o[10] = (fa + n) / (n - fa); o[11] = -1; o[14] = 2 * fa * n / (n - fa); return o; }
 const sub = (a, b) => a.map((v, i) => v - b[i]), dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0), cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], nrm = a => { const l = Math.hypot(...a); return a.map(v => v / l); };
 function look(e, t, u) { const z = nrm(sub(e, t)), x = nrm(cross3(u, z)), y = cross3(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x, e), -dot(y, e), -dot(z, e), 1]); }
-let MVP = null, VZ = 1, satOn = false;
+let MVP = null, VZ = 1, satOn = false, ground = 'none', groundTex = null;
 
 // ---------- labels: stations, place names, named towers and docks; greedy overlap culling
 const labelBox = $('labels'), info = $('info');
@@ -309,12 +397,12 @@ function showInfo(l) {
   if (l.pub || l.st) {
     const o = l.pub || l.st, rows = l.st && l.st.slabs ? '<table>' + l.st.slabs.map(([n, y]) => `<tr><td>${esc(n)}</td><td class="n">${y} m OD</td></tr>`).join('') + '</table>' : '';
     info.innerHTML = `<b>${esc(o.place)}</b><div>${l.pub ? `${esc(o.what)}: <b>${o.level} m OD</b>${o.ground != null ? ` (LiDAR ground ${o.ground} m OD)` : ''}` : l.st.bed != null ? `Water ${l.st.water} m OD (full impound), bed ${l.st.bed} m OD; the LiDAR saw the surface at ${l.st.lidarLevel} m OD` : 'Structural slab levels, OD = mATD - 100 m (datum inferred from the dock water level in the same figure)'}</div>${rows}<div class="small">Source: <a href="${esc(o.source)}">${esc(o.source.replace(/^https?:\/\//, '').slice(0, 70))}…</a> — "${esc(o.quote)}"</div>`;
-    info.style.display = 'block'; return;
+    openPane('paneInfo'); return;
   }
   const w = l.wd && wdBy.get(l.wd), facts = w && w.facts ? Object.entries(w.facts).map(([k, v]) => `<div><span class="small">${esc(k)}:</span> ${esc(v.join('; '))}</div>`).join('') : '';
   info.innerHTML = `<b>${esc(l.name)}</b> ${w && w.desc ? `<span class="small">${esc(w.desc)}</span>` : ''}${facts}<div class="small">${l.water ? `Water surface ${l.water.level} m OD in the LiDAR pass${l.water.tidal ? ' (tidal: one tide state)' : ''}` : `Ground ${l.y} m OD (LiDAR)`}${l.mode ? ' · ' + esc(l.mode) : ''}</div>` +
-    `<div class="small">${l.wd ? `<a href="https://www.wikidata.org/wiki/${esc(l.wd)}">Wikidata ${esc(l.wd)}</a>` : ''}${w && w.wp ? ` · <a href="${esc(w.wp)}">Wikipedia</a>` : ''}${l.osm ? ` · <a href="https://www.openstreetmap.org/${esc(l.osm)}">OSM</a>` : ''}</div>`;
-  info.style.display = 'block';
+    `<div class="small">${l.wd ? `<a href="https://www.wikidata.org/wiki/${esc(l.wd)}">Wikidata ${esc(l.wd)}</a>` : ''}${w && w.wp ? ` · <a href="${esc(w.wp)}">Wikipedia</a>` : ''}${l.osm ? ` · <a href="https://www.openstreetmap.org/${esc(l.osm)}">OSM</a>` : ''}</div>${routeBtns(Math.round(l.x), Math.round(l.z), l.name)}`;
+  openPane('paneInfo');
 }
 function placeLabels() {
   const show = $('showLabels').checked, w = cv.clientWidth, h = cv.clientHeight, placed = [];
@@ -339,11 +427,11 @@ function drawMesh(M, alpha) {
 function render() {
   queued = false; const P = par(); VZ = P.vz; buildTunnels(P); buildUnder(P); if (NET) buildWalk();
   const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-  gl.viewport(0, 0, w, h); gl.clearColor(.059, .071, .082, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
+  gl.viewport(0, 0, w, h); const night = ground === 'night2012'; gl.clearColor(night ? .02 : .059, night ? .025 : .071, night ? .035 : .082, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
   const ce = Math.cos(cam.pitch), T = [cam.tx, cam.ty * VZ, cam.tz], eye = [T[0] + cam.dist * Math.sin(cam.yaw) * ce, T[1] + cam.dist * Math.sin(cam.pitch), T[2] + cam.dist * Math.cos(cam.yaw) * ce];
   MVP = mul(persp(.8, w / h, Math.max(2, cam.dist / 400), cam.dist * 6 + 6000), look(eye, T, [0, 1, 0]));
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
-  gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0);
+  gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); gl.uniform1f(uDim, night ? .45 : 1);
   gl.disable(gl.BLEND); gl.depthMask(true);
   drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }
   if ($('showUnder').checked) drawMesh(L.under, 1);
@@ -357,7 +445,9 @@ function render() {
   // the cut removes structures; ground, greens and water stay as faint context so you can see where you are
   gl.uniform1f(uCut, 1e9);
   if (cutOn) { drawMesh(L.water, .35); drawMesh(L.tidal, .35); drawMesh(L.dockVol, .3); }
-  drawMesh(L.greens, cutOn ? .2 : .55); drawMesh(L.terrain, cutOn ? .14 : satOn ? .95 : .5); gl.depthMask(true);
+  if (!satOn) drawMesh(L.greens, cutOn ? .2 : .55);
+  if (groundTex) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); gl.uniform1f(uTex, 1); }
+  drawMesh(L.terrain, cutOn ? .14 : satOn ? .97 : .5); gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.depthMask(true);
   if (L.hi || L.route) { gl.disable(gl.DEPTH_TEST); drawMesh(L.hi, .9); drawMesh(L.route, .95); gl.enable(gl.DEPTH_TEST); }
   placeLabels();
 }
@@ -381,10 +471,10 @@ cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end)
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .001)); unview(); draw(); }, { passive: false });
 ['bmode', 'showLabels', 'showRoads', 'showUnder'].forEach(id => $(id).onchange = draw);
 $('showWalls').onchange = draw; $('showBed').onchange = draw;
-$('showFloors').onchange = () => { if ($('showFloors').checked && $('bmode').value === 'solid') $('bmode').value = 'ghost'; draw(); };
+$('showFloors').onchange = () => { if ($('showFloors').checked && $('bmode').value === 'solid') { $('bmode').value = 'ghost'; syncBmode(); } draw(); };
 const FMT = { cut: v => +v >= 250 ? 'off' : v + ' m OD', vz: v => v + '×', storey: v => v + ' m', dmax: v => v + ' m', grad: v => v, ddeep: v => v + ' m' };
 function outs() { for (const k of ids) $(k + 'O').value = FMT[k](inp[k].value); }
-ids.forEach(k => inp[k].oninput = () => { outs(); if (k === 'storey') textTables(); unview(); draw(); });
+ids.forEach(k => inp[k].oninput = () => { outs(); if (k === 'cut') syncGauge(); if (k === 'storey') textTables(); unview(); draw(); });
 addEventListener('resize', draw);
 
 // ---------- text route: what is below ground at Canary Wharf
@@ -444,7 +534,7 @@ async function loadLive() {
         const prop = k => (c.additionalProperties.find(p => p.key === k) || {}).value;
         const l = { name: c.commonName, x, z, y: 3, pri: 0, cls: 'cam', cam: { img: prop('imageUrl'), video: prop('videoUrl'), view: prop('view'), id: c.id } };
         const el = document.createElement('button'); el.type = 'button'; el.className = 'lb cam'; el.textContent = 'cam'; el.title = c.commonName;
-        el.onclick = () => { info.innerHTML = `<b>${esc(c.commonName)}</b> <span class="small">TfL JamCam ${esc(c.id)}, ${esc(l.cam.view || '')}. TfL refreshes the still every few minutes.</span><br><img src="${esc(l.cam.img)}?t=${Date.now()}" alt="TfL traffic camera still: ${esc(c.commonName)}" style="max-width:100%;margin-top:6px;border-radius:6px"><div class="small"><a href="${esc(l.cam.video)}">short video clip</a></div>`; info.style.display = 'block'; };
+        el.onclick = () => { info.innerHTML = `<b>${esc(c.commonName)}</b> <span class="small">TfL JamCam ${esc(c.id)}, ${esc(l.cam.view || '')}. TfL refreshes the still every few minutes.</span><br><img src="${esc(l.cam.img)}?t=${Date.now()}" alt="TfL traffic camera still: ${esc(c.commonName)}" style="max-width:100%;margin-top:6px;border-radius:6px"><div class="small"><a href="${esc(l.cam.video)}">short video clip</a></div>`; openPane('paneInfo'); };
         labelBox.appendChild(el); l.el = el; l.camEl = true; labels.push(l); camLabels.push(l);
       }
       $('liveCams').disabled = false; draw();
@@ -463,7 +553,7 @@ const regOf = new Int32Array(A.buildings.length).fill(-1);
 const loadJSON = u => fetch(u).then(r => { if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.json(); });
 const getReg = () => REG || (REG = loadJSON('../registry/buildings.json').then(d => new Map(d.buildings.map(b => [b.id, b]))));
 const getQI = () => QI || (QI = loadJSON('../quality/issues.json').then(q => { const by = new Map(); for (const i of q.issues) { const k = `${i.ent}/${i.id}`; if (!by.has(k)) by.set(k, []); by.get(k).push(i); } return { q, by }; }));
-const note = t => { $('dataNote').textContent = t; };
+const note = t => { $('dataNote').textContent = t; if (t) toast(t); };
 const HT = b => b.wh || b.h || b.mh || 0;
 const rampCol = t => { const S = [[44, 123, 182], [171, 217, 233], [255, 255, 191], [253, 174, 97], [215, 25, 28]]; t = Math.max(0, Math.min(1, t)) * 4; const i = Math.min(3, Math.floor(t)), f = t - i; return [0, 1, 2].map(c => (S[i][c] + (S[i + 1][c] - S[i][c]) * f) / 255); };
 loadJSON('../atlas/data/atlas.json').then(d => {
@@ -497,7 +587,7 @@ function pickAt(cx, cy) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(true);
   const P = par(); gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, P.cut < 250 ? P.cut : 1e9);
-  gl.uniform1f(uMono, 1); drawMesh(L.terrain, 1); gl.uniform1f(uMono, 0);
+  gl.uniform1f(uDim, 1); gl.uniform1f(uTex, 0); gl.uniform1f(uMono, 1); drawMesh(L.terrain, 1); gl.uniform1f(uMono, 0);
   if ($('bmode').value !== 'off') drawMesh(L.pick, 1);
   const px = new Uint8Array(4), s = w / cv.clientWidth;
   gl.readPixels(Math.round(cx * s), Math.round(h - cy * s), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
@@ -524,7 +614,7 @@ async function selectBuilding(k) {
   clearSelection(); selected = k; const ab = AT.buildings[k], M = new Mesh();
   for (const i of ab.mi) { const b = A.buildings[i]; outline(M, b, b.b + (b.mh || 0), b.b + b.h + .5, [1, .25, .65]); }
   L.hi = M.upload(); draw();
-  info.innerHTML = `<b>${esc(ab.n || ab.id)}</b> <span class="small">${esc(ab.id)} · loading the record…</span>`; info.style.display = 'block';
+  info.innerHTML = `<b>${esc(ab.n || ab.id)}</b> <span class="small">${esc(ab.id)} · loading the record…</span>`; openPane('paneInfo');
   const [reg, qi] = await Promise.all([getReg(), getQI().catch(() => null)]);
   if (selected !== k) return;
   const b = reg.get(ab.id), base = Math.min(...ab.mi.map(i => A.buildings[i].b)), storey = par().storey;
@@ -543,8 +633,9 @@ async function selectBuilding(k) {
     <div class="small">Homes: ${b.homes ? esc(b.homes.count) : 0} · companies: ${comp} · postcodes: ${b.postcodes.map(esc).join(', ') || '—'}</div>
     ${occ.length ? `<table>${levels.map(lv => `<tr><td>${typeof lv === 'number' ? (lv === 0 ? 'ground' : (lv > 0 ? '+' : '') + lv) : 'no level'}</td><td>${byLv.get(lv).map(o => esc(o.name)).join(' · ')}</td></tr>`).join('')}</table><div class="small">${withLv.length} occupants drawn at their floor (OSM level or CWG mall level × ${storey} m storey height; a level is a floor index, not a measured height).</div>` : '<div class="small">No occupants recorded.</div>'}
     ${issues.length ? `<div class="small" style="margin-top:6px"><b>Data quality (${issues.length})</b><br>${issues.slice(0, 12).map(i => `${esc(i.check)} <span class="tag">${esc(i.sev)}</span> ${esc(i.note)}`).join('<br>')}</div>` : ''}
+    ${routeBtns(Math.round(ab.x), Math.round(ab.z), b.name || ab.id)}
     <div class="small" style="margin-top:6px"><a href="../atlas/#map/b/${esc(ab.id)}">full record in the atlas</a>${b.osm[0] ? ` · <a href="https://www.openstreetmap.org/${esc(b.osm[0])}">OSM</a>` : ''}${b.wikidata ? ` · <a href="https://www.wikidata.org/wiki/${esc(b.wikidata)}">Wikidata</a>` : ''} · <a href="#" id="unselect">clear</a></div>`;
-  $('unselect').onclick = e => { e.preventDefault(); clearSelection(); info.style.display = 'none'; draw(); };
+  $('unselect').onclick = e => { e.preventDefault(); clearSelection(); resetInfo(); draw(); };
   draw();
 }
 
@@ -568,7 +659,7 @@ async function buildPins() {
   for (const l of labels.filter(l => l.pin)) { l.el.remove(); labels.splice(labels.indexOf(l), 1); }
   const M = new Mesh(), stick = (x, z, y0, hgt, w, col) => beam(M, [x, y0, z], [x + .01, y0 + hgt, z], w, w, col), addLabel = (name, x, y, z, cls, onclick) => { const l = { name, x, y, z, pri: 2, cls, pin: true }; const el = document.createElement('button'); el.type = 'button'; el.className = 'lb ' + cls; el.textContent = name; el.onclick = onclick; labelBox.appendChild(el); l.el = el; labels.push(l); };
   if ($('showHeritage').checked && AT) for (const g of AT.heritage) { const [x, z] = geo(g.lon, g.lat), y = groundAt(x, z), hgt = 6 + 4 * Math.sqrt(g.n); stick(x, z, y, hgt, 3, [.71, .55, 1]);
-    if (g.n >= 30) addLabel(`${g.label || 'records'}: ${g.n.toLocaleString('en-GB')}`, x, y + hgt, z, 'her', () => { info.innerHTML = `<b>${esc(g.label || 'Heritage records')}</b><div class="small">${g.n} records · ${Object.entries(g.src).map(([s, n]) => `${esc(s)} ${n}`).join(', ')}<br>${g.types.map(t => `${esc(t[0])} ${t[1]}`).join(', ')}</div><div class="small"><a href="../atlas/#heritage">heritage in the atlas</a></div>`; info.style.display = 'block'; }); }
+    if (g.n >= 30) addLabel(`${g.label || 'records'}: ${g.n.toLocaleString('en-GB')}`, x, y + hgt, z, 'her', () => { info.innerHTML = `<b>${esc(g.label || 'Heritage records')}</b><div class="small">${g.n} records · ${Object.entries(g.src).map(([s, n]) => `${esc(s)} ${n}`).join(', ')}<br>${g.types.map(t => `${esc(t[0])} ${t[1]}`).join(', ')}</div><div class="small"><a href="../atlas/#heritage">heritage in the atlas</a></div>`; openPane('paneInfo'); }); }
   if ($('showQuality').checked && AT) { const { q } = await getQI(); const by = new Map(); for (const i of q.issues) if (i.ent === 'b') { const s = by.get(i.id) || { n: 0, high: 0, med: 0 }; s.n++; if (i.sev === 'high') s.high++; else if (i.sev === 'medium') s.med++; by.set(i.id, s); }
     const ix = new Map(AT.buildings.map(b => [b.id, b]));
     for (const [id, s] of by) { const b = ix.get(id); if (!b || !b.mi.length) continue; const top = Math.max(...b.mi.map(i => A.buildings[i].b + A.buildings[i].h)); stick(b.x, b.z, top, 4 + 3 * s.n, 2.5, s.high ? [.95, .2, .2] : s.med ? [1, .7, .2] : [.6, .65, .7]); } }
@@ -585,13 +676,34 @@ async function buildPins() {
 }
 ['showHeritage', 'showQuality', 'showCrime'].forEach(id => $(id).onchange = () => { if (!AT && id !== 'showCrime') { note('The atlas index is still loading.'); $(id).checked = false; return; } buildPins(); });
 
-// satellite colours on the terrain (docklands/data/imagery.js, built by tools/build-imagery.mjs)
-$('showSat').onchange = () => {
-  const on = $('showSat').checked;
-  const apply = () => { const I = globalThis.DOCKLANDS_IMAGERY; if (!I) { note('Imagery did not load.'); $('showSat').checked = false; return; } satOn = on; buildTerrain(on ? Uint8Array.from(atob(I.rgb), c => c.charCodeAt(0)) : null); note(on ? I.attribution : ''); draw(); };
-  if (!on || globalThis.DOCKLANDS_IMAGERY) return apply();
-  note('Loading imagery…'); const sc = document.createElement('script'); sc.src = 'data/imagery.js'; sc.onload = apply; sc.onerror = () => { note('Imagery file did not load.'); $('showSat').checked = false; }; document.head.appendChild(sc);
-};
+// ground image: Sentinel-2 colours per terrain vertex (data/imagery.js, tools/build-imagery.mjs) or an EA image as a texture
+// (data/tex/*.jpg and textures.json, tools/build-aerial.py). Textures are resampled to 2048 x 2048 so the GPU can mipmap them.
+let TEXIDX = null; const texCache = new Map();
+const loadScript = src => new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error(src + ' did not load')); document.head.appendChild(sc); });
+async function loadTexture(name) {
+  if (texCache.has(name)) return texCache.get(name);
+  TEXIDX = TEXIDX || await loadJSON('data/tex/textures.json');
+  const t = TEXIDX.textures[name]; if (!t) throw new Error('no texture ' + name);
+  const img = new Image(); img.src = 'data/tex/' + t.file; await img.decode();
+  const n = Math.min(2048, gl.getParameter(gl.MAX_TEXTURE_SIZE)), cnv = document.createElement('canvas'); cnv.width = cnv.height = n; cnv.getContext('2d').drawImage(img, 0, 0, n, n);
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, cnv); gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const r = { tex, meta: t }; texCache.set(name, r); return r;
+}
+async function setGround(kind) {
+  try {
+    if (kind === 'none') { buildTerrain(null); groundTex = null; satOn = false; $('attribImg').textContent = ''; $('groundNote').textContent = ''; }
+    else if (kind === 's2') { if (!globalThis.DOCKLANDS_IMAGERY) { toast('Loading satellite colours…'); await loadScript('data/imagery.js'); }
+      const I = globalThis.DOCKLANDS_IMAGERY; buildTerrain(Uint8Array.from(atob(I.rgb), c => c.charCodeAt(0))); groundTex = null; satOn = true; $('attribImg').textContent = ' · Sentinel-2 ' + I.date; $('groundNote').textContent = I.attribution + '. One colour per 20 m terrain point.'; toast('Satellite colours, ' + I.date); }
+    else { toast('Loading the ground image…'); const { tex, meta } = await loadTexture(kind), B = TEXIDX.box;
+      gl.uniform4f(uBox, B.x0, B.z0, B.x1 - B.x0, B.z1 - B.z0); buildTerrain('tex'); groundTex = tex; satOn = true; $('attribImg').textContent = ' · ' + meta.attribution.replace(/ ©.*/, '') + ' © EA (OGL)';
+      $('groundNote').textContent = `${meta.what}; ${B.res} m a pixel in this view. ${meta.attribution}. Gaps are areas the survey did not fly.`; toast(meta.attribution.replace(/ ©.*/, '')); }
+    ground = kind; draw();
+  } catch (e) { toast('The ground image did not load: ' + e.message); document.querySelector('input[name=ground][value=none]').checked = true; }
+}
+document.querySelectorAll('input[name=ground]').forEach(r => r.onchange = () => r.checked && setGround(r.value));
 
 // ---------- walking network and routes (docklands/data/indoor.js, built by tools/build-indoor.mjs from OSM)
 let NET = null;
@@ -659,13 +771,13 @@ const findPlace = (q, near) => { q = q.trim().toLowerCase(); if (!q) return null
   if (near) m.sort((a, b) => Math.hypot(vX(a.v) - vX(near.v), vZ(a.v) - vZ(near.v)) - Math.hypot(vX(b.v) - vX(near.v), vZ(b.v) - vZ(near.v))); return m[0]; };
 async function doRoute() {
   try { await loadNet(); } catch (e) { note(e.message); return; }
-  const A0 = findPlace($('rFrom').value), B0 = findPlace($('rTo').value, A0);
-  if (!A0 || !B0) { note(`No place matches ${!A0 ? `"${$('rFrom').value}"` : `"${$('rTo').value}"`}. Start typing to see the list.`); return; }
+  const A0 = endOf('rFrom') || findPlace($('rFrom').value), B0 = endOf('rTo') || findPlace($('rTo').value, A0);
+  if (!A0 || !B0) { openPane('paneRoute'); note(`No place matches ${!A0 ? `"${$('rFrom').value}"` : `"${$('rTo').value}"`}. Start typing to see the list.`); return; }
   const faults = await loadLiftFaults(), r = route(A0.v, B0.v, $('stepFree').checked, faults);
   const ours = new Set(NET.liftOf.values()), near = [...faults.entries()].filter(([id]) => ours.has(id));
   const faultTxt = near.length ? `<div class="small warn">Lifts out of service now (TfL live feed), not used in this route: ${near.map(([id, m]) => `${esc(id)}: ${esc(m)}`).join(' · ')}</div>` : '';
   if (L.route) { L.route.free(); L.route = null; }
-  if (!r) { info.innerHTML = `<b>No route</b> from ${esc(A0.label)} to ${esc(B0.label)}${$('stepFree').checked ? ' without stairs or escalators' : ''} in the mapped network. The OSM network has gaps below ground: see the network notes.${[A0, B0].some(p => p.kind === 'station point') ? ' TfL station points are reached only through TfL\'s step-free lifts and paths; for a route by stairs or escalator, choose the OSM platform instead (for example "Westbound platform 1").' : ''}${faultTxt}`; info.style.display = 'block'; draw(); return; }
+  if (!r) { $('routeOut').innerHTML = `<b>No route</b> from ${esc(A0.label)} to ${esc(B0.label)}${$('stepFree').checked ? ' without stairs or escalators' : ''} in the mapped network. The OSM network has gaps below ground: see the network notes.${[A0, B0].some(p => p.kind === 'station point') ? ' TfL station points are reached only through TfL\'s step-free lifts and paths; for a route by stairs or escalator, choose the OSM platform instead (for example "Westbound platform 1").' : ''}${faultTxt}`; openPane('paneRoute'); draw(); return; }
   const st = par().storey, M = new Mesh();
   for (let j = 1; j < r.path.length; j++) { const a = r.path[j - 1], b = r.path[j]; beam(M, [vX(a), vY(a, st) + 2, vZ(a)], [vX(b) + .01, vY(b, st) + 2, vZ(b)], 3.2, 1.6, [.35, 1, .45]); }
   L.route = M.upload();
@@ -673,23 +785,143 @@ async function doRoute() {
   Object.assign(cam, { tx: (x0 + x1) / 2, tz: (z0 + z1) / 2, ty: 0, dist: Math.max(250, 1.6 * Math.hypot(x1 - x0, z1 - z0)) }); unview();
   const metres = r.path.slice(1).reduce((s, v, j) => s + Math.hypot(vX(v) - vX(r.path[j]), vZ(v) - vZ(r.path[j])), 0);
   const warn = [A0, B0].filter(p => !p.same).map(p => `${esc(p.name)} has no mapped corridor on level ${p.lv}; the route uses the nearest mapped point (${p.d} m away).`);
-  info.innerHTML = `<b>${esc(A0.name)} → ${esc(B0.name)}</b> <span class="small">${Math.round(metres)} m · about ${Math.max(1, Math.round(r.secs / 60))} min${$('stepFree').checked ? ' · step-free (lifts and ramps only)' : ''}</span>
+  $('routeOut').innerHTML = `<b>${esc(A0.name)} → ${esc(B0.name)}</b> <span class="small">${Math.round(metres)} m · about ${Math.max(1, Math.round(r.secs / 60))} min${$('stepFree').checked ? ' · step-free (lifts and ramps only)' : ''}</span>
     <ol class="small">${describe(r).map(s => `<li>${esc(s)}</li>`).join('')}</ol>
     <div class="small">${NET.P.filter(p => p.name === B0.name).length > 1 ? `${NET.P.filter(p => p.name === B0.name).length} places are called ${esc(B0.name)}; this is the nearest one. ` : ''}From ${esc(A0.label)} to ${esc(B0.label)}.</div>
     ${warn.length ? `<div class="small warn">${warn.join(' ')}</div>` : ''}${faultTxt}
     <div class="small">Route on the OpenStreetMap walking network (ODbL). Heights: ground + OSM level × ${st} m storey height, so the vertical positions are approximate. Times assume 1.3 m/s walking, stairs 0.5 m/s, escalators 0.75 m/s, lifts 25 s wait + 4 s a level. Station lifts and levels: TfL step-free topology (Powered by TfL Open Data).</div>`;
-  info.style.display = 'block'; draw();
+  openPane('paneRoute'); markEnds(A0, B0); $('routeOut').scrollIntoView({ block: 'start' }); draw();
 }
 $('rGo').onclick = doRoute;
 ['rFrom', 'rTo'].forEach(id => $(id).addEventListener('focus', () => loadNet().catch(e => note(e.message)), { once: true }));
 $('showWalk').onchange = async () => { if ($('showWalk').checked) { try { await loadNet(); await loadLiftFaults(); } catch (e) { note(e.message); $('showWalk').checked = false; return; } const m = NET.D.meta; note(`Walking network (OSM): ${m.counts.vertices.toLocaleString('en-GB')} points, ${m.counts.by_kind.steps} stair, ${m.counts.by_kind.escalator} escalator and ${m.counts.by_kind.lift} lift links on levels ${m.counts.levels.join(', ')}; ${m.islands.count} unconnected parts (largest ${m.islands.largest.toLocaleString('en-GB')} points). Colours: pink indoor, orange stairs, yellow escalators, blue lifts, red lifts out of service now (TfL).`); } walkKey = ''; draw(); };
 
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; } };
+
+// ---------- touch-first controls: sheet with tabs, toast, views, depth gauge, search, press-and-hold routes
+const sheet = $('sheet'), body = $('sheetBody'), tabs = [...document.querySelectorAll('#tabs [data-pane]')];
+const SNAP = () => { const H = innerHeight - 56; return innerWidth >= 900 ? [0, H - 150] : [0, Math.round(H * .42), Math.round(H * .86)]; };
+let sheetH = 0, pane = null;
+function setSheet(h) { sheetH = h; sheet.style.height = h + 'px'; }
+function openPane(id, keep) {
+  pane = id; tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.pane === id))); document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === id));
+  if (!sheetH || !keep) setSheet(Math.max(sheetH, SNAP()[1])); if (id === 'paneRoute') loadNet().catch(e => note(e.message));
+}
+function closeSheet() { setSheet(0); pane = null; tabs.forEach(t => t.setAttribute('aria-selected', 'false')); }
+tabs.forEach(t => t.onclick = () => pane === t.dataset.pane && sheetH ? closeSheet() : openPane(t.dataset.pane));
+function resetInfo() { info.innerHTML = '<p class="small">Tap a building, a label or a pin for its record. Press and hold anywhere to start or end a route there.</p>'; }
+{ let y0 = null, h0 = 0; const g = $('grip');
+  g.addEventListener('pointerdown', e => { y0 = e.clientY; h0 = sheetH; sheet.classList.add('drag'); g.setPointerCapture(e.pointerId); });
+  g.addEventListener('pointermove', e => { if (y0 != null) setSheet(Math.max(0, Math.min(innerHeight - 120, h0 + y0 - e.clientY))); });
+  const up = e => { if (y0 == null) return; sheet.classList.remove('drag'); const moved = Math.abs(e.clientY - y0); y0 = null; const S = SNAP();
+    if (moved < 6) { const i = S.indexOf(h0); return setSheet(S[(i + 1) % S.length] || S[1]); }   // tap on the grip: next size
+    const near = S.reduce((a, b) => Math.abs(b - sheetH) < Math.abs(a - sheetH) ? b : a); near ? setSheet(near) : closeSheet(); };
+  g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up); }
+let toastT = 0;
+function toast(t) { const el = $('toast'); el.textContent = t; el.style.display = t ? 'block' : 'none'; clearTimeout(toastT); if (t) toastT = setTimeout(() => { el.style.display = 'none'; }, Math.max(4000, t.length * 70)); }
+$('toast').onclick = () => toast('');
+// building display: chips drive the hidden select the renderer reads
+document.querySelectorAll('input[name=bmodeR]').forEach(r => r.onchange = () => { $('bmode').value = r.value; draw(); });
+const syncBmode = () => { const r = document.querySelector(`input[name=bmodeR][value=${$('bmode').value}]`); if (r) r.checked = true; };
+// depth gauge: drag the handle down to cut the model away above that level (m OD). Top 10% of the track is "off".
+const gauge = $('gauge'), gH = gauge.querySelector('.h'), gO = $('gaugeO');
+const G_TOP = 60, G_BOT = -40, gVal = t => t < .1 ? 250 : Math.round(G_TOP + (G_BOT - G_TOP) * (t - .1) / .9), gPos = v => v >= 250 ? 0 : .1 + .9 * (G_TOP - Math.max(G_BOT, Math.min(G_TOP, v))) / (G_TOP - G_BOT);
+for (const [v, t] of [[250, 'off'], [50, '50'], [5, 'street'], [-15, '−15'], [-30, '−30']]) { const m = document.createElement('span'); m.className = 'mk'; m.textContent = t; m.style.top = (gPos(v) * 100) + '%'; gauge.appendChild(m); }
+function syncGauge() { const v = +inp.cut.value, t = gPos(v); gH.style.top = gO.style.top = (t * 100) + '%'; gO.textContent = v >= 250 ? 'cut off' : `${v} m OD`; gauge.setAttribute('aria-valuenow', v); gauge.setAttribute('aria-valuetext', gO.textContent); }
+function gaugeTo(e) { const r = gauge.getBoundingClientRect(), t = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)); inp.cut.value = gVal(t); outs(); syncGauge(); if (+inp.cut.value < 250 && $('bmode').value === 'off') $('bmode').value = 'solid'; unview(); draw(); }
+gauge.addEventListener('pointerdown', e => { gauge.setPointerCapture(e.pointerId); gaugeTo(e); });
+gauge.addEventListener('pointermove', e => { if (gauge.hasPointerCapture(e.pointerId)) gaugeTo(e); });
+gauge.addEventListener('keydown', e => { const d = { ArrowUp: 2, ArrowDown: -2, PageUp: 10, PageDown: -10 }[e.key]; if (d == null) return; e.preventDefault(); let v = +inp.cut.value; v = v >= 250 ? (d < 0 ? G_TOP : 250) : v + d; inp.cut.value = v > G_TOP ? 250 : Math.max(G_BOT, v); outs(); syncGauge(); draw(); });
+// camera flights
+function flyTo(x, z, dist, ms = 700) {
+  const s0 = { tx: cam.tx, tz: cam.tz, dist: cam.dist }, t0 = performance.now(); unview();
+  const step = now => { const t = Math.min(1, (now - t0) / ms), k = t * t * (3 - 2 * t); cam.tx = s0.tx + (x - s0.tx) * k; cam.tz = s0.tz + (z - s0.tz) * k; cam.dist = s0.dist + ((dist ?? s0.dist) - s0.dist) * k; render(); if (t < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+// search: buildings with registry records, labelled places, and (once loaded) every routable place in the walking network
+const qIn = $('q'), qRes = $('qres');
+function searchItems(q) {
+  q = q.trim().toLowerCase(); if (q.length < 2) return [];
+  const out = [], has = t => t && t.toLowerCase().includes(q);
+  if (AT) AT.buildings.forEach((b, k) => { if (has(b.n) || b.id === q) out.push({ t: b.n || b.id, k: 'building', go: () => { selectBuilding(k); flyTo(b.x, b.z, Math.max(350, Math.min(cam.dist, 900))); } }); });
+  for (const l of labels) if (!l.pin && !l.camEl && l.cls !== 'occ' && has(l.name)) out.push({ t: l.name, k: l.cls === 'st' ? 'station' : l.cls === 'wt' ? 'water' : l.cls === 'src' ? 'published level' : 'place', go: () => { showInfo(l); flyTo(l.x, l.z, Math.max(400, Math.min(cam.dist, 1200))); } });
+  if (NET) for (const p of NET.P) if (has(p.name)) out.push({ t: p.name, k: `${p.kind}, level ${p.lv}`, go: () => showPlace(p) });
+  out.sort((a, b) => (a.t.toLowerCase().startsWith(q) ? 0 : 1) - (b.t.toLowerCase().startsWith(q) ? 0 : 1)); return out.slice(0, 14);
+}
+function runSearch() {
+  const items = searchItems(qIn.value); qRes.innerHTML = ''; qRes.style.display = items.length ? 'block' : 'none';
+  for (const it of items) { const li = document.createElement('li'), b = document.createElement('button'); b.type = 'button'; b.innerHTML = `${esc(it.t)} <span class="tag">${esc(it.k)}</span>`; b.onclick = () => { qRes.style.display = 'none'; qIn.blur(); it.go(); }; li.appendChild(b); qRes.appendChild(li); }
+}
+qIn.addEventListener('input', runSearch); qIn.addEventListener('focus', () => { loadNet().then(runSearch).catch(() => {}); });
+qIn.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = qRes.querySelector('button'); if (b) b.click(); } if (e.key === 'Escape') { qRes.style.display = 'none'; qIn.blur(); } });
+cv.addEventListener('pointerdown', () => { qRes.style.display = 'none'; if (document.activeElement === qIn) qIn.blur(); });
+// route ends picked on the model are network vertices; typed ends are looked up by name (findPlace)
+const ends = { rFrom: null, rTo: null };
+const endOf = id => ends[id] && $(id).value === ends[id].label ? ends[id] : null;
+function setEnd(id, e) { ends[id] = e; $(id).value = e.label; markEnds(endOf('rFrom'), endOf('rTo')); if (endOf('rFrom') && endOf('rTo')) doRoute(); else { openPane('paneRoute'); toast(id === 'rFrom' ? 'Start set. Now press and hold where you want to go.' : 'End set. Now press and hold where you start.'); } }
+let endLabels = [];
+function markEnds(a, b) {
+  for (const l of endLabels) { l.el.remove(); labels.splice(labels.indexOf(l), 1); } endLabels = [];
+  if (!NET) return; const st = par().storey;
+  [[a, 'A'], [b, 'B']].forEach(([p, tag]) => { if (!p) return; const l = { name: `${tag} ${p.name}`, x: vX(p.v), z: vZ(p.v), y: vY(p.v, st) + 3, pri: 5, cls: 'end' };
+    const el = document.createElement('button'); el.type = 'button'; el.className = 'lb end'; el.textContent = l.name; el.onclick = () => openPane('paneRoute'); labelBox.appendChild(el); l.el = el; labels.unshift(l); endLabels.push(l); });
+  draw();
+}
+$('rSwap').onclick = () => { const a = $('rFrom').value, b = $('rTo').value; [ends.rFrom, ends.rTo] = [ends.rTo, ends.rFrom]; $('rFrom').value = b; $('rTo').value = a; markEnds(endOf('rFrom'), endOf('rTo')); };
+// the name of a network vertex: the nearest named place on the same level within 40 m
+function vertexEnd(v) {
+  let best = null, bd = 40; for (const p of NET.P) { if (Math.round(p.lv) !== Math.round(vL(v))) continue; const d = Math.hypot(vX(p.v) - vX(v), vZ(p.v) - vZ(v)); if (d < bd) { bd = d; best = p; } }
+  const lv = Math.round(vL(v)), name = best ? (bd < 8 ? best.name : `near ${best.name}`) : `walkway on level ${lv}`;
+  return { v, name, kind: 'point', lv, same: true, d: 0, label: `${name} (level ${lv}, picked on the model)` };
+}
+// nearest network vertex to a screen point, among those not cut away; within 70 px
+function vertexAt(cx, cy) {
+  const w = cv.clientWidth, h = cv.clientHeight, st = par().storey, cut = par().cut, N = NET.D.nodes; let best = -1, bd = 70 * 70;
+  for (let i = 0; i < NET.n; i++) { const y = vY(i, st); if (cut < 250 && y > cut) continue;
+    const X = N[4 * i], Z = N[4 * i + 1], c3 = MVP[3] * X + MVP[7] * y * VZ + MVP[11] * Z + MVP[15]; if (c3 <= 0) continue;
+    const sx = ((MVP[0] * X + MVP[4] * y * VZ + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * w - cx, sy = (1 - ((MVP[1] * X + MVP[5] * y * VZ + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * h - cy, d = sx * sx + sy * sy;
+    if (d < bd) { bd = d; best = i; } }
+  return best;
+}
+// a place from the search list: fly there, cut the model just above it when it is below ground, offer route buttons
+function showPlace(p) {
+  const st = par().storey, y = vY(p.v, st), g = groundAt(vX(p.v), vZ(p.v));
+  if (y < g - 3) { inp.cut.value = Math.round(y + st + 2); outs(); syncGauge(); }
+  flyTo(vX(p.v), vZ(p.v), 320);
+  info.innerHTML = `<b>${esc(p.name)}</b> <span class="small">${esc(p.kind)}, level ${p.lv}${p.osm ? ` · <a href="https://www.openstreetmap.org/${esc(p.osm)}">OSM</a>` : ''}</span>${p.same ? '' : `<div class="small warn">No mapped walkway on its level; routes use the nearest mapped point, ${p.d} m away.</div>`}${y < g - 3 ? `<div class="small">Below ground: the model is cut away above ${inp.cut.value} m OD to show it. Drag the gauge on the left to change.</div>` : ''}
+    <div class="acts"><button type="button" data-end="rFrom">Route from here</button><button type="button" data-end="rTo">Route to here</button></div>`;
+  info.querySelectorAll('[data-end]').forEach(b => b.onclick = () => setEnd(b.dataset.end, { v: p.v, name: p.name, kind: p.kind, lv: p.lv, same: p.same, d: p.d, label: p.label }));
+  openPane('paneInfo');
+}
+// route buttons in building and place records: the nearest street-level vertex to the point
+async function endNear(x, z, name) { await loadNet(); let best = -1, bd = Infinity; for (let i = 0; i < NET.n; i++) { if (vL(i) !== 0) continue; const d = Math.hypot(vX(i) - x, vZ(i) - z); if (d < bd) { bd = d; best = i; } } return { ...vertexEnd(best), name, label: `${name} (street level)` }; }
+info.addEventListener('click', async e => { const b = e.target.closest('[data-near]'); if (!b) return; const [x, z] = b.dataset.near.split(',').map(Number); setEnd(b.dataset.end, await endNear(x, z, b.dataset.name)); });
+const routeBtns = (x, z, name) => `<div class="acts"><button type="button" data-end="rFrom" data-near="${x},${z}" data-name="${esc(name)}">Route from here</button><button type="button" data-end="rTo" data-near="${x},${z}" data-name="${esc(name)}">Route to here</button></div>`;
+// press and hold: a small menu at the finger
+const pressMenu = $('press'); let holdT = 0, holdAt = null;
+function hidePress() { pressMenu.style.display = 'none'; }
+cv.addEventListener('pointerdown', e => { hidePress(); clearTimeout(holdT); if (ptrs.size > 1) return; holdAt = [e.clientX, e.clientY]; holdT = setTimeout(() => openPress(holdAt[0], holdAt[1]), 550); });
+cv.addEventListener('pointermove', e => { if (holdAt && Math.hypot(e.clientX - holdAt[0], e.clientY - holdAt[1]) > 8) clearTimeout(holdT); });
+['pointerup', 'pointercancel'].forEach(t => cv.addEventListener(t, () => clearTimeout(holdT)));
+async function openPress(px, py) {
+  tap = null; try { await loadNet(); } catch (e) { note(e.message); return; }
+  const r = cv.getBoundingClientRect(), v = vertexAt(px - r.left, py - r.top);
+  if (v < 0) { toast('No mapped walkway near that point. Zoom in, or drag the depth gauge to look below ground.'); return; }
+  const e = vertexEnd(v); if (navigator.vibrate) navigator.vibrate(15);
+  pressMenu.innerHTML = `<div class="small" style="padding:2px 6px">${esc(e.name)}, level ${e.lv}</div><button type="button" data-k="rFrom">Route from here</button><button type="button" data-k="rTo">Route to here</button>`;
+  pressMenu.querySelectorAll('button').forEach(b => b.onclick = () => { hidePress(); setEnd(b.dataset.k, e); });
+  pressMenu.style.display = 'flex'; const mw = pressMenu.offsetWidth, mh = pressMenu.offsetHeight;
+  pressMenu.style.left = Math.max(8, Math.min(innerWidth - mw - 8, px - mw / 2)) + 'px'; pressMenu.style.top = Math.max(8, Math.min(innerHeight - mh - 70, py - mh - 16)) + 'px';
+}
+addEventListener('resize', () => { if (sheetH) setSheet(Math.min(sheetH, innerHeight - 120)); });
+syncGauge();
+
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; },
+  screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
 outs(); setView('cw');
 // #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)
 const atM = /(?:^#|&)at=(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?/.exec(location.hash);
 if (atM) { Object.assign(cam, { tx: +atM[1], tz: +atM[2], ty: 0, dist: +(atM[3] || 600) }); unview(); draw(); }
-hud.textContent = 'Drag: rotate · right-drag / shift-drag / two fingers: pan · wheel / pinch: zoom · tap a label';
+hud.textContent = 'One finger: rotate · two: move and zoom · tap: record · press and hold: route'; setTimeout(() => { hud.style.opacity = 0; }, 6000);
 })();
 </script>
 </body>

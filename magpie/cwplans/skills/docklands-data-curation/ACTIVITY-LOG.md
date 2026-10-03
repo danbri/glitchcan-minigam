@@ -101,6 +101,32 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 - `build-indoor.mjs` adds 68 TfL station points, 51 lift links and 29 paths. First version joined TfL points to OSM wherever the level numbers matched; a test route then reached the Jubilee platforms around the faulty lift through a false join (TfL -2 is the Jubilee platforms, OSM -2 the concourse above). Now joined at street level (0) only. New audit check NET-5 (22 of 68 TfL points differ from the nearest OSM level).
 - 3D routes skip lifts that TfL reports out of service and list the faults; the network layer draws them red.
 
+## 2026-10-03: ground images, phone layout, rail levels, underground sources
+
+- Ground images (owner: "piece together some imagery to try"): EA survey downloads over the model (tiles TQ3075, TQ3080,
+  TQ3575, TQ3580, 2.8 GB, not committed): colour aerial 2008 (40 cm), night-time aerial 2012 (20 cm), LiDAR
+  intensity 2020 (1 m). The aerial photos are ECW; built the ECW 3.3 decoder from source and `tools/native/ecw2ppm.c`
+  (skill, "Imagery"). `tools/build-aerial.py` mosaics each product to one 2500 × 1866 JPEG at 3 m a pixel
+  (0.8 to 1.8 MB) in `docklands/data/tex/`. First build had 1-pixel black seams at tile edges (rounding); fixed by
+  integer edges and one pixel of overlap. Source faults recorded, not corrected: the 2008 west tiles are from another
+  flight (bluer); no 2008 tile in the north-west corner; the night survey stops near Whitechapel Road.
+- 3D page redesigned for phones (owner: "tiny form widgets offscreen below are not practical"): full-screen model,
+  search box, depth gauge on the left edge, bottom tabs with a resizable sheet, route ends set by press-and-hold on
+  the model or from records, ground-image chips, night mode. Tested headless at 390 × 844 (touch) and 1280 × 800:
+  no horizontal scroll, no page errors; press-and-hold at Cabot Square to Waitrose found a 486 m route and reported
+  the faulty Jubilee lift.
+- Tunnel agent: no public 3D model of a station or tunnel exists (TfL drawings are TfL copyright; Sketchfab CC BY
+  items need a login and are trains or one rotunda). TfL FOI-0493-2223 (2022) gives Jubilee rail levels; checked
+  against the live CSV. Added as tunnel controls; the Wikipedia and interview depths at Canada Water and North
+  Greenwich were 4 m and 6 m deeper (F13; new check AT-5: 2 issues). Rebuilt `area.js` and `cwplans-data.js`.
+- Estate agent: CWG estate and mall maps 2003 to 2025 in the Internet Archive (all rights reserved); Living Map runs
+  map.canarywharf.com (venue API without key: 9 levels -4 to 2, 8 areas; no licence stated, reference only);
+  AccessAble 2022 guides give lift floors and step counts. Catalogues of all four agents (117 sources, 64
+  exclusions) committed in `feeds/underground/` with a generated README.
+- Data register: textures, the four catalogues, the TfL FOI source, and `data/raw/docklands/tfl-stationdata-gtfs.zip`
+  (committed in a1b0dd4 without an entry: found by the check). Audit: 34 checks, 1,686 records (9 high, 819 medium,
+  858 low); before: 1,684 (8 high).
+
 ## Open, in the order proposed
 
 1. Fix F2 and F3 in the parsers, with fixture tests; expect PL-1 and PL-2 to fall to 0.
@@ -111,4 +137,6 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 6. F8: Wikidata P580/P582 and dissolution dates; company status dates.
 7. Re-crawl the CWG directory and expire entries not seen.
 8. Privacy limits: the owner approved removal (2026-10-03); the change was blocked by the environment's safety check. Waiting on the owner.
-9. 3D: time slider from Wikidata inception and Tower Hamlets planning completions; live trains from TfL arrivals; the 2012 EA night photography as a night texture; Overture building heights where OSM has none.
+9. 3D: time slider from the EA DSM series (1999 to 2022, all fetched by the same survey API) with Wikidata inception and Tower Hamlets planning completions; live trains from TfL arrivals; Overture building heights where OSM has none. (Night texture: done.)
+10. Mall levels: compare the Living Map venue levels (-4, -3, -2, -1, -1M, 0, M, 1, 2) and the AccessAble lift floors with OSM and CWG levels, as input to the F9 offset table.
+11. Tunnel controls still unused: Blackwall Tunnel inverts (desk study), Silvertown Tunnel road levels (DCO sections), the Crossrail long section (digitised, licence not stated: ask the owner before committing).

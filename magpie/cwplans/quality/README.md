@@ -7,17 +7,17 @@ Re-run after any rebuild:
 
     node magpie/cwplans/tools/audit-quality.mjs
 
-The audit does not correct anything. It measures the same 28 checks on every rebuild, so that the rules for combining sources (the compositing layers) are designed from the error classes that actually occur, and so that a rule change shows up as a change in the counts.
+The audit does not correct anything. It measures the same 34 checks on every rebuild, so that the rules for combining sources (the compositing layers) are designed from the error classes that actually occur, and so that a rule change shows up as a change in the counts.
 
 ## Summary (2026-10-03)
 
-1,684 issue records from 28 checks. 159 of the 1,129 buildings and 44 postcodes have at least one issue. Severity: 8 high, 818 medium, 858 low.
+1,686 issue records from 34 checks (the five routing-network checks NET-1 to NET-5 report counts only). 159 of the 1,129 buildings and 44 postcodes have at least one issue. Severity: 9 high, 819 medium, 858 low.
 
 | class | what goes wrong | checks | main numbers |
 |---|---|---|---|
 | identity | one thing has two records, or two things share one record | ID-1 to ID-4 | 3 Wikidata items on 2 outlines each (OSM tags the same item twice); 78 occupants recorded by two sources and not merged, 5 mapped twice in OSM; 20 buildings named after an occupant |
 | position | a point is placed in the wrong building, or its position means something else | SP-1 to SP-6 | 86 of 181 mall or below-ground occupants are placed by a 2D test in an outline that is not their mall (the malls run under several buildings); 412 of 764 FSA positions (54%) are postcode centres or shared points; 161 of 761 named OSM occupants are outside every outline; OSM and FSA put the same branch a median 34 m apart (90th percentile 107 m, maximum 258 m) |
-| attribute conflict | sources give different values for one attribute | AT-1 to AT-4 | 46 of 72 occupants have a CWG mall level that differs from the OSM level, in a pattern that depends on the mall; 9 buildings are newer than the LiDAR; 6 floor counts differ between OSM and Wikidata |
+| attribute conflict | sources give different values for one attribute | AT-1 to AT-5 | 46 of 72 occupants have a CWG mall level that differs from the OSM level, in a pattern that depends on the mall; 9 buildings are newer than the LiDAR; 6 floor counts differ between OSM and Wikidata; the Jubilee line levels we took from Wikipedia and an interview are 4 m (Canada Water) and 6 m (North Greenwich) deeper than TfL's measured rail levels |
 | validity | a value is not in the form the tools expect | VA-1 to VA-4 | 100 of 881 OSM level values are lists or fractions ("0;1", "-3;-2", "0.5"); 20 features carry a terminated postcode |
 | pipeline | our own tools damage the data | PL-1, PL-2 | 79 OSM features carry several postcodes in one tag and our tools read the list as one invalid postcode: 247 postcode links lost; 52 branch addresses read "Unit Unit" because a tool adds "Unit " to a value that has it |
 | currency | a value was true once | TM-1 to TM-4 | 1,902 of 16,619 companies at Canary Wharf postcodes (11%) are not active; the CWG directory copies are a median 322 days old; no Wikidata occupant link has a date |
@@ -55,6 +55,7 @@ The classes above suggest five layers. Each layer is rebuilt from the one below;
    | height | LiDAR (buildings older than the survey) | OSM tag or Wikidata for newer buildings | differ by more than 10 m and 10% (AT-1) |
    | floors above ground | OSM `building:levels` | Wikidata | differ by 2 or more, or storey height outside 2.5–6 m (AT-2) |
    | floors below ground | OSM `building:levels:underground` | Wikidata | no source: unknown, not zero |
+   | station and tunnel level | asset owner's level against a stated datum (TfL rail levels, Crossrail slab levels) | a rounded depth "below ground" from a secondary source, only with its reference point | sources more than 2 m apart (AT-5) |
    | occupant container | CWG mall or OSM indoor area with level | OSM point inside the outline (street-level shops only) | the mall and the footprint building differ (SP-6) |
    | occupant position | OSM point | FSA point only if not a postcode centre | OSM and FSA more than 50 m apart (SP-4) |
    | occupant level | OSM level (index) | CWG level through the per-mall offset table | the two disagree after the offset |
