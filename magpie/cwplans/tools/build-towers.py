@@ -394,13 +394,13 @@ def fit_building(b, A, surveys, judge):
     surface = raw['2022c']
     M_fp0 = rasterize([fp], out_shape=shp, transform=tr).astype(bool)
     # many dropouts and a 2018 flight of the finished building: dropouts fall on different cells in each flight, so
-    # the higher of the two surveys per cell recovers the roof (cranes and masts are thinner than MIN_FEATURE)
+    # the higher of the two surveys in a 2022 dropout cell recovers the roof
     fused = False
     d22 = float(dropouts(raw['2022c'])[M_fp0].mean())
     if J.get('fuse_2018', d22 > .15) and np.isfinite(raw['2018'][M_fp0]).mean() > .8:
-        p22, p18 = np.nanpercentile(raw['2022c'][M_fp0], 90), np.nanpercentile(raw['2018'][M_fp0], 90)
-        if abs(p22 - p18) < 3:
-            surface = np.fmax(raw['2022c'], raw['2018']); fused = True
+        q22, q18 = (np.nanpercentile(raw[k][M_fp0], [50, 90]) for k in ('2022c', '2018'))
+        if np.all(np.abs(q22 - q18) < 3):   # the same building in both flights
+            surface = np.where(dropouts(raw['2022c']), np.fmax(raw['2022c'], raw['2018']), raw['2022c']); fused = True
     H, drop = pit_fill(surface - base, J.get('closing', 5))
     expected = max(b.get('wh') or 0, b.get('h') or 0, b.get('mh') or 0)
     rec = dict(id=b['id'], name=b.get('n'), mi=b['mi'], base=base, ground=J.get('ground_m_od'), X0=X0, Z0=Z0, shape=shp,
