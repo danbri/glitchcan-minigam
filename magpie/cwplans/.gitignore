@@ -2,3 +2,7 @@ data/raw/*.tif
 data/raw/docklands/*.pbf
 data/raw/docklands/lidar/
 data/raw/docklands/osm-clip.json.gz
+data/raw/registry/*
+!data/raw/registry/osm-cw.json.gz
+!data/raw/registry/wikidata-cw.json
+!data/raw/registry/fhrs/
