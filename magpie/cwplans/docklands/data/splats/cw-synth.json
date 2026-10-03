@@ -16,7 +16,7 @@
   "z1": 1040.1752066158806
  },
  "ground_step_m": 4,
- "method": "synthesised from the model, not trained: ground discs coloured from the 2008 EA aerial photograph, roofs (aerial colour under 40 m), walls on a 3.6 m storey grid with two window discs per cell; colours carry the page shader's fixed light",
+ "method": "synthesised from the model, not trained: ground discs coloured from the 2008 EA aerial photograph, roofs (aerial colour under 40 m), walls on a 3.6 m storey grid with one glass-band disc per 7.2 m cell; colours carry the page shader's fixed light",
  "sources": [
   "osm",
   "ea-lidar",

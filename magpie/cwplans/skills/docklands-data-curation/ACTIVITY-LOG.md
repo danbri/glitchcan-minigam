@@ -167,6 +167,22 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 - VA-2 redefined as values our parser cannot read: 100 → 0 (86 ";" lists, 11 comma lists, 2 fractions, 1 range, all
   read). No other count changed. Audit: 1,463 records (9 high, 758 medium, 696 low).
 
+## 2026-10-03: skyline by year; provenance manifest checked
+
+- `tools/fetch-dsm.sh` and `tools/build-skyline.mjs`: EA LiDAR DSM tiles 1999 to 2022 over the estate (16 ZIPs,
+  1 GB, local), heights of 2,389 model buildings per survey, with flight dates; `docklands/data/skyline.json`
+  (85 kB) and a year slider with play in the 3D page. Faults found and handled: the 2012 1 m request for TQ3580
+  returns a server error (only 0.5 m exists); the 2015 survey did not fly the estate (tile 99% empty), so years that
+  fly under 20% of the buildings are left out and listed; a cleared site with hoardings measured 5 to 8 m and showed
+  future towers as low blocks, so "standing" now needs a quarter of today's height. Buildings a survey did not fly
+  are drawn in slate blue at today's height.
+- Checked against known dates: 8 Canada Square absent 1999, 209 m from 2007; Landmark Pinnacle 87 m (2018) then
+  234 m; Newfoundland 160 m (2018) then 218 m.
+- `pipeline.json` (57 activities + fetch-dsm, 5 libraries, 2 tests) committed; its 11 header mismatches corrected
+  in the tools, which now point to their activity; 9 source keys added to the register (OSTN15 grid, PLA and CRT
+  ArcGIS, VOA, GOV.UK search, Wikipedia search, FSA API, EA DSM history, feed providers); register entries that
+  disagreed with the code corrected (postcodes/queries.json sources, hand-made museum and UKHO files).
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
@@ -177,6 +193,6 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 6. F8: done for occupant links (QLever qualifiers); still to do: drop or mark former occupants in the registry itself, and company status dates.
 7. Re-crawl the CWG directory and expire entries not seen.
 8. Privacy limits: the owner approved removal (2026-10-03); the change was blocked by the environment's safety check. Waiting on the owner.
-9. 3D: time slider from the EA DSM series (1999 to 2022, all fetched by the same survey API) with Wikidata inception and Tower Hamlets planning completions; live trains from TfL arrivals; Overture building heights where OSM has none. (Night texture: done.)
+9. 3D: (skyline slider from the EA DSM series: done) add Wikidata inception and Tower Hamlets planning completions to it; live trains from TfL arrivals; Overture building heights where OSM has none. (Night texture: done.)
 10. Mall levels: compare the Living Map venue levels (-4, -3, -2, -1, -1M, 0, M, 1, 2) and the AccessAble lift floors with OSM and CWG levels, as input to the F9 offset table.
 11. Tunnel controls still unused: Blackwall Tunnel inverts (desk study), Silvertown Tunnel road levels (DCO sections), the Crossrail long section (digitised, licence not stated: ask the owner before committing).

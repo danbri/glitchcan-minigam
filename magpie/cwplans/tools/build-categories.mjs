@@ -7,7 +7,8 @@
 //      Wikidata via QLever: occupant classes and dated occupant links (cached in data/raw/registry/wikidata-occupant-classes.json)
 // out: registry/categories.json  { rules, buildings: { cwb-id: { finance: [{ name, source, why, link?, start?, end? }], ... } }, former: { ... } }
 // Rules: a category comes only from a class stated by a source (an OSM tag, a Wikidata class or industry, the FSA
-// business type, the CWG directory section). Names are never used to guess a class. Companies House registered
+// business type, or the branch role from the brand table, whose category comes from the brand's NSI or OSM tag).
+// Every input and output, with endpoints and rules: magpie/cwplans/pipeline.json, activity "build-categories". Names are never used to guess a class. Companies House registered
 // offices are not occupants (audit SE-1) and are not used. Wikidata occupant links: an end date or a dissolved
 // organisation makes the entry "former" and it does not count; most links have no qualifier and are marked "undated".
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -75,7 +76,7 @@ for (const b of REG.buildings) {
 }
 writeFileSync(join(CW, 'registry/categories.json'), JSON.stringify({
   generated: new Date().toISOString().slice(0, 10),
-  rules: 'A category comes only from a class a source states: OSM tags (amenity, office, shop, leisure, tourism), Wikidata P31 instance of and P452 industry, the FSA business type, the CWG directory section. Names are not used. Companies House registered offices are not used (SE-1). Wikidata occupant links: link former (an end date or a dissolved organisation; listed under former, not counted), current (a start date), undated (no qualifier).',
+  rules: 'A category comes only from a class a source states: OSM tags (amenity, office, shop, leisure, tourism), Wikidata P31 instance of and P452 industry, the FSA business type, the branch role from the brand table (its category from the brand\'s NSI or OSM tag). Names are not used. Companies House registered offices are not used (SE-1). Wikidata occupant links: link former (an end date or a dissolved organisation; listed under former, not counted), current (a start date), undated (no qualifier).',
   totals, buildings: out, former,
 }));
 console.log('categories.json:', JSON.stringify(totals));

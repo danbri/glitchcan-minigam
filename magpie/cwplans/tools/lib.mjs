@@ -1,5 +1,5 @@
 // Shared pieces for the magpie/cwplans data tools: HTTP, coordinates (OSTN15), LiDAR rasters, polygon helpers.
-// Used by fetch-docklands.mjs and build-docklands.mjs. README: magpie/cwplans/docklands/README.md.
+// Shared helpers imported by most tools in magpie/cwplans/tools (pipeline.json "libraries"). README: magpie/cwplans/docklands/README.md.
 import { readFileSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';

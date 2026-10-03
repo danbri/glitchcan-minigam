@@ -24,8 +24,8 @@ const problems = [];
 
 const tracked = execFileSync('git', ['ls-files', '--cached', '--', '.'], { cwd: CW, encoding: 'utf8' })
   .split('\n').filter(Boolean);
-const isData = p => !/\.(mjs|py|c|html)$/.test(p) && !p.endsWith('.gitignore') && !p.includes('vendor/') && !p.startsWith('skills/')
-  && !['data-register.json', 'DATA-REGISTER.md', 'pipeline.json', 'pipeline.jsonld'].includes(p);
+const isData = p => !/\.(mjs|py|c|sh|html)$/.test(p) && !p.endsWith('.gitignore') && !p.includes('vendor/') && !p.startsWith('skills/')
+  && !['data-register.json', 'DATA-REGISTER.md'].includes(p);
 const byPath = new Map(reg.files.map(f => [f.path, f]));
 
 for (const p of tracked.filter(isData)) if (!byPath.has(p)) problems.push(`not in the register: ${p}`);
@@ -67,7 +67,7 @@ if (pipe) {
   for (const f of reg.files) if (/tools\/[\w-]+\.(mjs|py|sh)/.test(f.produced_by || '') && !made.has(f.path)) problems.push(`pipeline.json: no activity generates ${f.path} (register: produced by ${f.produced_by})`);
 }
 
-const size = p => { const n = statSync(join(CW, p)).size; return n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.ceil(n / 1e3)} kB`; };
+const size = p => { if (!existsSync(join(CW, p))) return '(written below)'; const n = statSync(join(CW, p)).size; return n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.ceil(n / 1e3)} kB`; };
 const osmRows = reg.files.filter(f => f.osm.use !== 'none');
 const reviews = reg.files.filter(f => f.review);
 console.log(`${reg.files.length} files registered, ${tracked.filter(isData).length} data files tracked; ${osmRows.length} use OSM (${[...odblFiles].length} hold OSM data); ${reviews.length} marked for review.`);
@@ -125,8 +125,9 @@ if (process.argv.includes('--write')) {
   console.log('wrote DATA-REGISTER.md');
   if (pipe) {   // JSON-LD for a knowledge graph: activities, the files they used and made, and the external sources
     const BASE = 'https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/', REG = 'https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#';
-    const fileId = p => BASE + p, srcId = k => REG + 'source/' + k, actId = id => REG + 'activity/' + id, localId = p => 'urn:cwplans:local:' + p;
-    const ref = u => u.file ? { '@id': fileId(u.file) } : u.local ? { '@id': localId(u.local) } : { '@id': srcId(u.source), ...(u.endpoint ? { 'dcat:accessURL': u.endpoint } : {}), ...(u.request ? { 'dct:description': u.request } : {}) };
+    const fileId = p => BASE + p, srcId = k => REG + 'source/' + k, actId = id => REG + 'activity/' + id, localId = p => 'urn:cwplans:local:' + encodeURI(p);
+    // a local path with a placeholder (<run>, <E>_<N>) is a pattern, not one file: a blank node with the pattern
+    const ref = u => u.file ? { '@id': fileId(u.file) } : u.local ? (/[<>]/.test(u.local) ? { 'cwp:pathPattern': u.local } : { '@id': localId(u.local) }) : { '@id': srcId(u.source), ...(u.endpoint ? { 'dcat:accessURL': u.endpoint } : {}), ...(u.request ? { 'dct:description': u.request } : {}) };
     const graph = [];
     for (const a of pipe.activities) graph.push({ '@id': actId(a.id), '@type': 'prov:Activity', 'rdfs:label': a.id, 'dct:description': a.method, 'prov:used': (a.used || []).map(ref), 'prov:generated': (a.generated || []).map(ref),
       'cwp:tool': { '@id': fileId(a.tool) }, 'cwp:command': a.command, 'cwp:kind': a.kind, 'cwp:rule': a.rules || [], 'cwp:network': !!a.network, 'cwp:deterministic': a.deterministic !== false, 'cwp:after': (a.after || []).map(d => ({ '@id': actId(d) })) });

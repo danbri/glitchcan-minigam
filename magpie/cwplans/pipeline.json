@@ -1,0 +1,2553 @@
+{
+  "about": "Provenance of every transform in magpie/cwplans, modelled on W3C PROV (prov:Activity used / generated). Checked and exported to pipeline.jsonld by tools/check-data-register.mjs. Edit by hand when a tool changes.",
+  "conventions": "Paths are relative to magpie/cwplans. \"file\" = tracked in git; \"local\" = not committed (gitignored raw data, caches, excluded outputs, or files a tool takes as arguments); \"source\" = a key of data-register.json sources. A source entry with \"access\": \"manual download\" means the file was downloaded by hand before the run and the tool reads only the local copy. Read from the code on 2026-10-03.",
+  "activities": [
+    {
+      "id": "fetch-raw-grid",
+      "tool": "tools/fetch-raw.mjs",
+      "command": "node magpie/cwplans/tools/fetch-raw.mjs grid",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "os-ostn15",
+          "endpoint": "https://cdn.proj.org/uk_os_OSTN15_NTv2_OSGBtoETRS.tif",
+          "request": "the OS OSTN15 NTv2 transformation grid (GeoTIFF) as distributed by the PROJ CDN"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+        }
+      ],
+      "method": "Downloads the OSTN15 grid that every WGS84 to British National Grid conversion in the project uses (tools/lib.mjs bngProjector).",
+      "rules": [
+        "The file is written as fetched; no change."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "fetch-raw-osm",
+      "tool": "tools/fetch-raw.mjs",
+      "command": "node magpie/cwplans/tools/fetch-raw.mjs osm",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "osm",
+          "endpoint": "https://api.openstreetmap.org/api/0.6/map.json?bbox=-0.062,51.488,-0.038,51.507",
+          "request": "OSM API map call for the corridor box (Canada Water)"
+        },
+        {
+          "source": "osm",
+          "endpoint": "https://api.openstreetmap.org/api/0.6/relation/{id}/full.json",
+          "request": "full member lists of natural=water multipolygons that have member ways outside the box"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/osm-map.json.gz"
+        },
+        {
+          "file": "data/raw/osm-water-full.json.gz"
+        }
+      ],
+      "method": "Fetches the OSM map call for the small corridor box, then the full geometry of water multipolygons whose member ways the map call leaves out (the Pool of London).",
+      "rules": [
+        "Box WGS84 west -0.0620, south 51.4880, east -0.0380, north 51.5070.",
+        "A relation is fetched in full when it is type=multipolygon, natural=water and has a member way that is not in the map call."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "note": "fetch-raw.mjs is also imported as a module by build-data.mjs (BBOX_BNG)."
+    },
+    {
+      "id": "fetch-raw-lidar",
+      "tool": "tools/fetch-raw.mjs",
+      "command": "node magpie/cwplans/tools/fetch-raw.mjs lidar",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "ea-lidar",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/lidar-composite-digital-terrain-model-dtm-1m/wcs",
+          "request": "WCS 2.0.1 GetCoverage, DTM 1 m, GeoTIFF, subset E(534600,536300) N(178300,180500)"
+        },
+        {
+          "source": "ea-lidar",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/lidar-composite-digital-surface-model-first-return-dsm-1m/wcs",
+          "request": "WCS 2.0.1 GetCoverage, first-return DSM 1 m, GeoTIFF, same subset"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/dtm.tif"
+        },
+        {
+          "local": "data/raw/dsm.tif"
+        }
+      ],
+      "method": "Downloads one DTM and one DSM GeoTIFF over the corridor box.",
+      "rules": [
+        "BNG box E 534600-536300, N 178300-180500."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "fetch-raw-wikidata",
+      "tool": "tools/fetch-raw.mjs",
+      "command": "node magpie/cwplans/tools/fetch-raw.mjs wikidata",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "wikidata",
+          "endpoint": "https://query.wikidata.org/sparql",
+          "request": "SPARQL: wikibase:around Point(-0.0497 51.4975) radius 1.3 km: item, label, description, coordinate, distance, P31 class, P571 inception, English Wikipedia article"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://query.wikidata.org/sparql",
+          "request": "SPARQL: statements P31, P571, P1619, P2043, P2044, P2048, P1448, P576, P2046, P127, P137, P1435 (with units) of 12 fixed items (Q1190691, Q800610, Q801499, Q175256, Q801580, Q1032006, Q2368643, Q1544727, Q128924146, Q26665615, Q7604796, Q17642970)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/wikidata-around.json"
+        },
+        {
+          "file": "data/raw/wikidata-facts.json"
+        }
+      ],
+      "method": "Stores two Wikidata query results as returned: items near Canada Water and selected facts for named items.",
+      "rules": [
+        "Results are written as the endpoint returns them."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "fetch-docklands-osm",
+      "tool": "tools/fetch-docklands.mjs",
+      "command": "node magpie/cwplans/tools/fetch-docklands.mjs osm",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "osm",
+          "endpoint": "https://download.openstreetmap.fr/extracts/europe/united_kingdom/england/greater_london-latest.osm.pbf",
+          "request": "the daily Greater London extract (data register osm_extracts: osmfr-greater-london)"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf"
+        }
+      ],
+      "method": "Downloads the Greater London OSM extract that every OSM clip and scan in the project reads.",
+      "rules": [
+        "The file is written as fetched."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "note": "fetch-docklands.mjs is also imported as a module (DIR, BOX_WGS84, BOX_BNG, ORIGIN, lidarTiles, tileFile) by osm-clip-docklands, build-docklands, postcodes, registry-osm, build-registry, build-atlas, build-indoor, build-imagery and build-skyline."
+    },
+    {
+      "id": "fetch-docklands-lidar",
+      "tool": "tools/fetch-docklands.mjs",
+      "command": "node magpie/cwplans/tools/fetch-docklands.mjs lidar",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "ea-lidar",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/lidar-composite-digital-terrain-model-dtm-1m/wcs",
+          "request": "WCS 2.0.1 GetCoverage, DTM 1 m, one GeoTIFF per 1 km tile of BNG E 532400-539900, N 176700-182300"
+        },
+        {
+          "source": "ea-lidar",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/lidar-composite-digital-surface-model-first-return-dsm-1m/wcs",
+          "request": "WCS 2.0.1 GetCoverage, first-return DSM 1 m, same tiles"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/docklands/lidar/dtm_<E>_<N>.tif"
+        },
+        {
+          "local": "data/raw/docklands/lidar/dsm_<E>_<N>.tif"
+        }
+      ],
+      "method": "Downloads the DTM and DSM of the Docklands box as 1 km tiles (48 tiles each).",
+      "rules": [
+        "A tile is fetched only when its file is missing or smaller than 1000 bytes.",
+        "Four downloads run at a time; each is tried up to 4 times with a growing pause."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "fetch-docklands-defences",
+      "tool": "tools/fetch-docklands.mjs",
+      "command": "node magpie/cwplans/tools/fetch-docklands.mjs defences",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "ea-defences",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/spatial-flood-defences-including-standardised-attributes/ogc/features/v1/collections/Spatial_Flood_Defences_Including_Standardised_Attributes/items?bbox=-0.095,51.474,0.015,51.522&limit=500&f=json",
+          "request": "OGC API Features items in the Docklands box, following rel=next pages"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/docklands/ea-defences.json.gz"
+        }
+      ],
+      "method": "Fetches the EA flood defence lines in the Docklands box and keeps only the crest-level and type fields.",
+      "rules": [
+        "Kept properties: asset_id, asset_sub_type, protection_type, design_sop, design_ucl, design_dcl, actual_ucl, actual_dcl, effective_cl, bank, local_authority, last_inspection_date.",
+        "Owner and maintainer fields are dropped (some describe private individuals).",
+        "Paging stops when a page has no features or no next link."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "fetch-docklands-wikidata",
+      "tool": "tools/fetch-docklands.mjs",
+      "command": "node magpie/cwplans/tools/fetch-docklands.mjs wikidata",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "wikidata",
+          "endpoint": "https://query.wikidata.org/sparql",
+          "request": "SPARQL: wikibase:box Point(-0.0950 51.4740) to Point(0.0150 51.5220): every item with P625, its P31 classes, English label, description and English Wikipedia article"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://query.wikidata.org/sparql",
+          "request": "SPARQL: same box; statements P2048, P1101, P1139, P2044, P2043, P4511, P2610, P571, P1619, P2046 with their units"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/docklands/wikidata-items.json.gz"
+        },
+        {
+          "file": "data/raw/docklands/wikidata-facts.json.gz"
+        }
+      ],
+      "method": "Stores two Wikidata query results for the Docklands box, gzipped as returned.",
+      "rules": [
+        "Results are written as the endpoint returns them."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "fetch_wet-soundings",
+      "tool": "registry/sources/pla/fetch_wet.py",
+      "command": "python3 magpie/cwplans/registry/sources/pla/fetch_wet.py soundings",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "ukho",
+          "endpoint": "https://datahub.admiralty.co.uk/Bathy_Data/Prodbathy/bathymetry/<file>.csv",
+          "request": "three survey CSVs by curl: 'River Thames Teddington Lock to Greenwich Reach 25m', 'River Thames Greenwich Reach to Coalhouse Point 50m' (survey RSDRA2018000117951), 'River Thames HMS Belfast' (RSDRA2015000255836)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/pla/ukho_thames_teddington_greenwich_25m.geojson"
+        },
+        {
+          "file": "registry/sources/pla/ukho_thames_greenwich_coalhouse_50m.geojson"
+        },
+        {
+          "file": "registry/sources/pla/ukho_thames_hms_belfast_berth.geojson"
+        },
+        {
+          "local": "data/raw/registry/pla/ukho_<file name with spaces as _>.csv"
+        }
+      ],
+      "method": "Downloads the UKHO bathymetry CSVs and keeps the soundings inside the Docklands box as GeoJSON points with the height above chart datum.",
+      "rules": [
+        "Box WGS84 -0.0950, 51.4740 to 0.0150, 51.5220.",
+        "z_cd is the file value as a height above Admiralty Chart Datum; negative is below chart datum.",
+        "Lines that do not parse as lat, lon, z (headers) are skipped."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "note": "Child process: curl. The two ukho_wrecks_obstructions_*.geojson files were made by hand (registry/sources/pla/README.md), not by this script, although data-register.json names fetch_wet.py as their producer."
+    },
+    {
+      "id": "fetch_wet-layers",
+      "tool": "registry/sources/pla/fetch_wet.py",
+      "command": "python3 magpie/cwplans/registry/sources/pla/fetch_wet.py layers",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "pla-arcgis",
+          "endpoint": "https://services8.arcgis.com/QgdzYlEcjteGD0VH/arcgis/rest/services/<layer>/FeatureServer/<n>/query",
+          "request": "ArcGIS envelope query over the box, outSR 4326, GeoJSON, paged by 1000: 11 Port of London Authority layers (navigational limit, navigation channels, MHWM, hydrographic product areas, foreshore digging and standard permits, restrictions, port masterplan sites, sediment samples, vessel licensing areas, 1968 limits removed by the HRO)"
+        },
+        {
+          "source": "crt-arcgis",
+          "endpoint": "https://services.arcgis.com/DknzyjEEie5tEW0u/arcgis/rest/services/<layer>/FeatureServer/<n>/query",
+          "request": "same query for 10 Canal & River Trust layers (docks, waterway basins, locks, bridges, canals, culverts, mooring sites, towpath, outfalls, stop plank grooves)"
+        }
+      ],
+      "generated": [
+        {
+          "local": "registry/sources/pla/pla_*.geojson"
+        },
+        {
+          "local": "registry/sources/pla/crt_*.geojson"
+        },
+        {
+          "local": "data/raw/registry/pla/pla_*.geojson"
+        },
+        {
+          "local": "data/raw/registry/pla/crt_*.geojson"
+        }
+      ],
+      "method": "Fetches the PLA and Canal & River Trust layers that intersect the Docklands box and clips them to the box with ogr2ogr.",
+      "rules": [
+        "Only the listed outFields are kept per layer ('*' for some).",
+        "Every layer except pla_hydrographic_product_areas is clipped to the box (ogr2ogr -clipsrc).",
+        "Arguments 'pla' or 'crt' run one provider only."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "note": "Child processes: curl, ogr2ogr. The outputs are present in the working tree but not tracked by git (.git/info/exclude covers registry/sources/)."
+    },
+    {
+      "id": "fetch_records",
+      "tool": "registry/sources/museums/fetch_records.py",
+      "command": "python3 magpie/cwplans/registry/sources/museums/fetch_records.py",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "SPARQL, three queries over the Docklands box: objects in a collection (P195) whose location (P276) is in the box; objects with their own P625 in the box; objects whose place of discovery (P189) or creation (P1071) is in the box; with label, P31, P571, P217, P195"
+        },
+        {
+          "source": "historic-england",
+          "endpoint": "https://services-eu1.arcgis.com/ZOdPfBS3aqqDYPUQ/arcgis/rest/services/",
+          "request": "ArcGIS envelope queries: NHLE scheduled monuments (layer 6), scheduled wrecks (layer 24), research reports (layer 475), heritage harbours inventory (layer 0), Greater London Archaeological Priority Areas (layer 1, GeoJSON)"
+        },
+        {
+          "source": "ads-ariadne",
+          "endpoint": "https://archaeologydataservice.ac.uk/data-catalogue-api/api/search",
+          "request": "catalogue search in the box, 50 a page, six samples: publisher British Museum (PAS), contributor MOLA, subject Fieldwork report, subject Maritime, publisher and contributor Historic England"
+        }
+      ],
+      "generated": [
+        {
+          "local": "registry/sources/museums/records.json"
+        },
+        {
+          "file": "registry/sources/museums/apa_greater_london.geojson"
+        },
+        {
+          "local": "data/raw/registry/museums/wikidata_<query>.json"
+        },
+        {
+          "local": "data/raw/registry/museums/he_<layer>.json"
+        },
+        {
+          "local": "data/raw/registry/museums/he_apas.geojson"
+        },
+        {
+          "local": "data/raw/registry/museums/ads_<sample>.json"
+        }
+      ],
+      "method": "Collects geocoded museum objects, heritage records and archaeological catalogue records inside the Docklands box into one record list, and the APA polygons clipped to the box.",
+      "rules": [
+        "Wikidata objects of type human remains, skeleton, mummy or bog body, and abstract coin types, are left out.",
+        "Records outside the box are left out; duplicates (same source, id, relation, place, position) are dropped.",
+        "BNG points are converted with pyproj (Helmert, about 2 m; no OSTN15 grid).",
+        "ADS owner names are kept only for organisations in a fixed list; no finder, landowner, donor or author names are kept.",
+        "A record whose title, type, place or summary mentions burial, grave, cemetery, memorial and similar words gets the flag 'sensitive'."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "note": "Child processes: curl, ogr2ogr. The committed registry/sources/museums/records-open.json is a subset of records.json (CC0, OGL, CC-BY records without the sensitive flag, README 'Published subset'); no script in the repository writes it, although data-register.json names fetch_records.py as its producer."
+    },
+    {
+      "id": "fetch-cwg",
+      "tool": "registry/sources/brands/tools/fetch-cwg.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/registry/sources/brands/tools/fetch-cwg.mjs",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "cwg-site",
+          "endpoint": "https://web.archive.org/web/20260304id_/https://canarywharf.com/{shop,restaurant,stay,seedo}-sitemap.xml",
+          "request": "the site's Yoast sitemaps as archived on 2026-03-04 (the directory entries)"
+        },
+        {
+          "source": "cwg-site",
+          "endpoint": "https://web.archive.org/cdx/search/cdx?url=canarywharf.com/<prefix>/&matchType=prefix&from=2025",
+          "request": "CDX capture listings for six URL prefixes (status 200, no query strings)"
+        },
+        {
+          "source": "cwg-site",
+          "endpoint": "https://web.archive.org/web/<timestamp>id_/<entry url>",
+          "request": "the archived copy of each directory entry page"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/cwg-directory.json"
+        },
+        {
+          "local": "data/raw/registry/cwg/"
+        }
+      ],
+      "method": "Reads the Canary Wharf Group directory from Internet Archive copies (the live site blocks scripts) and extracts each entry's title, categories, address lines, mall, level, postcode and website.",
+      "rules": [
+        "Capture order per entry: its own URL from the CDX list, its 2025 URL (eating-drinking/ or shops-services/ directory), then the capture closest to 2026-03-04.",
+        "Captures of the Incapsula bot-challenge page are skipped and counted.",
+        "Mall = the first name from a fixed list found in the address lines; level = the first address line that names a level, floor, unit or kiosk; postcode = the first E14 or E16 postcode in the address.",
+        "Raw pages are cached and not fetched again."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "postcodes-fetch",
+      "tool": "tools/postcodes.mjs",
+      "command": "node magpie/cwplans/tools/postcodes.mjs fetch",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "onspd",
+          "endpoint": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/ONS_Postcode_Directory_(August_2026)_(Hosted_Table)/FeatureServer/0/query",
+          "request": "object ids where pcds LIKE 'E14 %', then rows by 200 ids with pcds, dointr, doterm, usrtypind, east1m, north1m, gridind, lat, long, wd26cd, lad26cd, oa21cd, lsoa21cd"
+        },
+        {
+          "source": "ons-boundaries",
+          "endpoint": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/WD_MAY_2026_UK_BFE/FeatureServer/0/query",
+          "request": "WD26CD, WD26NM, LAD26NM of every ward the rows name; the geometry of ward E05009323 (Canary Wharf) as GeoJSON in EPSG:4326"
+        },
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf",
+          "note": "read when present; addr:postcode tally"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/postcodes/onspd-aug2026.json.gz"
+        },
+        {
+          "file": "data/raw/postcodes/wards.json"
+        },
+        {
+          "file": "data/raw/postcodes/osm-addr-postcodes.json"
+        }
+      ],
+      "method": "Fetches every ONSPD row in district E14 and the ward names and Canary Wharf ward boundary, then tallies the OSM features that carry each E14 postcode.",
+      "rules": [
+        "Row batches are retried up to 4 times.",
+        "OSM: an addr:postcode ';' list counts the feature under each postcode (fault F2); kinds counted: shop, amenity:<value>, office, building, entrance, other; streets from addr:street."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "fetch-docklands-osm"
+      ],
+      "note": "The ward GeoJSON is stored inside wards.json; postcodes/canary-wharf-ward.geojson is written by the build mode, not by fetch (data-register.json says fetch)."
+    },
+    {
+      "id": "registry-wikidata",
+      "tool": "tools/registry-wikidata.mjs",
+      "command": "node magpie/cwplans/tools/registry-wikidata.mjs",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "SPARQL: items with P625 within 1.1 km of POINT(-0.0175 51.5040) that are not Q5, with English label and description"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "SPARQL by VALUES (150 items a query): P31, P127, P466, P1101, P1139, P2048, P571, P576, P1619, P281, P6375, P669, P670, P856, P84, P631, P1435, P159, P452, P749 with English value labels"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "SPARQL: organisations (not Q5, no P576) whose P159 headquarters is an item in the radius, with P856 website"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/registry/wikidata-cw.json"
+        }
+      ],
+      "method": "Collects the Wikidata items around Canary Wharf with the properties the registry uses, and the organisations headquartered in them.",
+      "rules": [
+        "People (Q5) are excluded as items and as property values, except architect (P84) and structural engineer (P631).",
+        "Items whose P31 label matches memorial, grave, cemetery, tomb or plaque are dropped.",
+        "Duplicate property values are removed."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "registry-fhrs",
+      "tool": "tools/registry-fhrs.mjs",
+      "command": "node magpie/cwplans/tools/registry-fhrs.mjs",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "fsa",
+          "endpoint": "https://ratings.food.gov.uk/api/open-data-files/FHRS530en-GB.json",
+          "request": "the whole Tower Hamlets open-data file"
+        },
+        {
+          "file": "data/raw/registry/fhrs/FHRS530-2026-10-03.json.gz",
+          "note": "earlier dated snapshots in this folder are read to list changes"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/registry/fhrs/FHRS530-2026-10-03.json.gz",
+          "note": "written as FHRS530-<run date>.json.gz"
+        },
+        {
+          "local": "registry/fhrs-changes.json",
+          "note": "written only when two or more snapshots exist; not present yet"
+        }
+      ],
+      "method": "Saves a dated snapshot of the E14 premises in the FSA Tower Hamlets file and, when an earlier snapshot exists, lists the premises added and removed between the last two.",
+      "rules": [
+        "Kept: postcode starting E14 and at least one address line.",
+        "Premises without address lines (home businesses whose address the FSA withholds) are not kept."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "osm-clip-docklands",
+      "tool": "tools/osm-clip-docklands.mjs",
+      "command": "node --max-old-space-size=6000 magpie/cwplans/tools/osm-clip-docklands.mjs",
+      "kind": "clip",
+      "used": [
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/docklands/osm-clip.json.gz"
+        }
+      ],
+      "method": "Streams the Greater London PBF three times and keeps the ways, relations and points the Docklands model uses, with their node coordinates.",
+      "rules": [
+        "Node box: the Docklands box plus a 0.004 degree margin (about 300 m).",
+        "Ways kept (KEEP_WAY): buildings and parts, water, railways, main roads, tunnels, bridges, indoor and level-tagged highways, underground parking, piers and shafts, platforms, parks and greens, named places.",
+        "Relations kept: multipolygon or building relations with a kept member way; their member ways outside the box are pulled in whole.",
+        "Points kept: stations and entrances, named places, shafts, entrances with a level, piers; and in the Canary Wharf focus box (-0.0300, 51.4980 to -0.0050, 51.5100) every node with shop, amenity, level, indoor or name.",
+        "Only tags that match the TAG list are kept.",
+        "A way that touches the box is kept whole; its nodes outside the box come from a second pass."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "fetch-docklands-osm"
+      ]
+    },
+    {
+      "id": "registry-osm",
+      "tool": "tools/registry-osm.mjs",
+      "command": "node --max-old-space-size=6000 magpie/cwplans/tools/registry-osm.mjs",
+      "kind": "clip",
+      "used": [
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/registry/osm-cw.json.gz"
+        }
+      ],
+      "method": "Extracts every tagged OSM node, every way with a node in the Canary Wharf box, and the building or named multipolygon relations that use those ways, with full tags.",
+      "rules": [
+        "Box -0.0300, 51.4980 to -0.0050, 51.5100 plus a 0.0015 degree margin.",
+        "Tags dropped: contact:email, contact:phone, contact:mobile, email, phone, mobile, fax, operator:person, addr:flats, note, fixme, FIXME, source*, created_by.",
+        "Relations kept: type multipolygon or building with building, building:part or name, and at least one kept member way."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "fetch-docklands-osm"
+      ],
+      "note": "Also imported as a module by build-registry.mjs (CW_BOX)."
+    },
+    {
+      "id": "osm-scan",
+      "tool": "registry/sources/brands/tools/osm-scan.mjs",
+      "command": "node magpie/cwplans/registry/sources/brands/tools/osm-scan.mjs",
+      "kind": "clip",
+      "used": [
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/registry/osm-box-features.json"
+        }
+      ],
+      "method": "Lists every OSM feature in the Canary Wharf box that carries a business or name tag, placed at its node or at the mean of its nodes.",
+      "rules": [
+        "Kept: shop, amenity, office, tourism, leisure, craft, healthcare, brand, brand:wikidata or name.",
+        "Nodes within 0.003 degree of the box are read so ways at the edge get a position; a way or relation is kept when its mean position is in the box."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "fetch-docklands-osm"
+      ]
+    },
+    {
+      "id": "london-brand-counts",
+      "tool": "registry/sources/brands/tools/london-brand-counts.mjs",
+      "command": "node magpie/cwplans/registry/sources/brands/tools/london-brand-counts.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/registry/london-brand-counts.json"
+        }
+      ],
+      "method": "Counts, for each brand:wikidata value, the OSM business features across Greater London (the brand size measure for the store-page check).",
+      "rules": [
+        "A feature counts when it has brand:wikidata and a shop, amenity, office, tourism, leisure, healthcare or craft key.",
+        "A ';' list of QIDs counts once for each QID."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "fetch-docklands-osm"
+      ]
+    },
+    {
+      "id": "postcodes-osm",
+      "tool": "tools/postcodes.mjs",
+      "command": "node magpie/cwplans/tools/postcodes.mjs osm",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf",
+          "note": "read when present; otherwise an empty tally is written"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/raw/postcodes/osm-addr-postcodes.json"
+        }
+      ],
+      "method": "Only the OSM address tally of the fetch mode, without network: features, streets and kinds per E14 postcode.",
+      "rules": [
+        "An addr:postcode ';' list counts the feature under each postcode (fault F2)."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "fetch-docklands-osm"
+      ]
+    },
+    {
+      "id": "build-data",
+      "tool": "tools/build-data.mjs",
+      "command": "node magpie/cwplans/tools/build-data.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+        },
+        {
+          "local": "data/raw/dtm.tif"
+        },
+        {
+          "local": "data/raw/dsm.tif"
+        },
+        {
+          "file": "data/raw/osm-map.json.gz"
+        },
+        {
+          "file": "data/raw/osm-water-full.json.gz"
+        },
+        {
+          "file": "data/raw/wikidata-around.json"
+        },
+        {
+          "file": "data/raw/wikidata-facts.json"
+        },
+        {
+          "file": "data/sourced-levels.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/cwplans-data.js"
+        }
+      ],
+      "method": "Builds the corridor model (Canada Water): a 10 m terrain grid, building footprints with heights, water levels, railways with tunnel chains and open cuts, roads, and stations and Wikidata places, in local metres around E0 535400, N0 179400.",
+      "rules": [
+        "Terrain: median of the DTM in a 7 x 7 m window every 10 m.",
+        "Building height: OSM height tag; else the 90th percentile of DSM - DTM inside the footprint (at least 6 cells, at least 2 m) unless it is under half of building:levels x 3 m; else building:levels x 3 m + 1 m ('newer' when LiDAR exists); else the LiDAR value; else 6 m (0 for building=construction).",
+        "Buildings: centroid inside the box with a 2 m margin; single-outer multipolygons only.",
+        "Water: natural=water, waterway=dock or landuse=basin over 50 m2; level = 25th percentile of the DTM inside.",
+        "Tunnel portals: tunnel nodes shared with an open railway way, at the open track level (DSM on bridges, DTM otherwise).",
+        "Open cut: a tunnel point where the DTM is more than 6 m below the ground 25-35 m around; each run of cut points takes its lowest bed.",
+        "Published levels from data/sourced-levels.json are applied to the nearest tunnel point within 150 m (lib.mjs applyControls); superseded controls are skipped.",
+        "Places: OSM railway=station nodes, then Wikidata items of a fixed list of transport, water and landform classes that are not already a station."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "fetch-raw-grid",
+        "fetch-raw-osm",
+        "fetch-raw-lidar",
+        "fetch-raw-wikidata"
+      ]
+    },
+    {
+      "id": "build-docklands",
+      "tool": "tools/build-docklands.mjs",
+      "command": "node --max-old-space-size=8000 magpie/cwplans/tools/build-docklands.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+        },
+        {
+          "local": "data/raw/docklands/lidar/dtm_<E>_<N>.tif"
+        },
+        {
+          "local": "data/raw/docklands/lidar/dsm_<E>_<N>.tif"
+        },
+        {
+          "local": "data/raw/docklands/osm-clip.json.gz"
+        },
+        {
+          "file": "data/raw/docklands/wikidata-facts.json.gz"
+        },
+        {
+          "file": "data/raw/docklands/wikidata-items.json.gz"
+        },
+        {
+          "file": "data/raw/docklands/ea-defences.json.gz"
+        },
+        {
+          "file": "registry/sources/pla/ukho_thames_teddington_greenwich_25m.geojson"
+        },
+        {
+          "file": "registry/sources/pla/ukho_thames_greenwich_coalhouse_50m.geojson"
+        },
+        {
+          "file": "registry/sources/pla/ukho_thames_hms_belfast_berth.geojson"
+        },
+        {
+          "file": "data/sourced-levels.json"
+        },
+        {
+          "source": "pla-tide-booklet",
+          "request": "two chart-datum-to-ODN offsets written into the code: 3.20 m at London Bridge, 3.35 m at North Woolwich"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "docklands/data/under.js"
+        }
+      ],
+      "method": "Builds the Docklands 3D model (terrain, water, greens, buildings and parts, roads, railways, tunnels, places, flood defences, riverbed) into area.js, and the Canary Wharf underground detail (basements, indoor ways, level-tagged points, published structures) into under.js, in local metres around E0 537550, N0 180300.",
+      "rules": [
+        "Terrain: median of the DTM in a 7 x 7 m window every 20 m.",
+        "Building height: OSM height; else LiDAR 90th percentile of DSM - DTM (at least 6 cells, at least 2 m) unless under half of building:levels x 3 m; else Wikidata P2048 (outlines only); else building:levels x 3 m + 1 m ('newer' when LiDAR exists); else LiDAR; else 6 m (0 for construction, roof, ruins).",
+        "An outline that contains building parts is drawn by its parts; a part's base is its min_height, else building:min_level x 3 m.",
+        "Outside the Canary Wharf focus box, outlines under 12 m2 are dropped and rings are simplified at 0.6 m (0.2 m inside).",
+        "Basements: OSM building:levels:underground, else Wikidata P1139.",
+        "Floors (focus box only): OSM building:levels (minus building:min_level on a part), else Wikidata P1101.",
+        "Water level: 25th percentile of the DTM inside the area; areas under 40 m2 (water) or 300 m2 (greens) are dropped.",
+        "Bridge points more than 20 m above the DTM are taken as covered by a roof and interpolated from the nearest uncovered points on the same way.",
+        "Tunnel chains for rail, road and foot tunnels; portals at the open level; open cut where the DTM is more than 6 m below the ground 25-35 m around.",
+        "Riverbed: each UKHO sounding in the box as z_cd minus the chart datum offset interpolated by longitude between 3.20 m and 3.35 m.",
+        "Flood defence crest: actual_ucl, else actual_dcl, else design_ucl; lines without a crest are dropped.",
+        "Published levels from data/sourced-levels.json are tunnel controls (nearest point within 150 m); structures with footprint_osm or water_name are drawn from their OSM way or water area.",
+        "Wikidata places: classes matching the KEEP pattern; classes matching memorial, war memorial, grave or cemetery are left out.",
+        "Level tags are read by tools/osm-values.mjs osmLevels."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "fetch-raw-grid",
+        "fetch-docklands-lidar",
+        "osm-clip-docklands",
+        "fetch-docklands-wikidata",
+        "fetch-docklands-defences",
+        "fetch_wet-soundings"
+      ]
+    },
+    {
+      "id": "postcodes-build",
+      "tool": "tools/postcodes.mjs",
+      "command": "node magpie/cwplans/tools/postcodes.mjs build",
+      "kind": "join",
+      "used": [
+        {
+          "file": "data/raw/postcodes/onspd-aug2026.json.gz"
+        },
+        {
+          "file": "data/raw/postcodes/wards.json"
+        },
+        {
+          "file": "data/raw/postcodes/osm-addr-postcodes.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "file": "postcodes/postcodes.csv"
+        },
+        {
+          "file": "postcodes/canary-wharf-ward.geojson"
+        }
+      ],
+      "method": "Lists every syntactically possible unit postcode in the E14 sectors ONSPD knows, marks each as never allocated, live or terminated, joins ward, Canary Wharf box and OSM address counts, and gives each a tier.",
+      "rules": [
+        "Possible units: every sector in the rows times two letters from ABDEFGHJLNPQRSTUWXYZ.",
+        "Live: no termination date (doterm).",
+        "In the Canary Wharf ward: wd26cd is E05009323. In the box: ONSPD lat/long inside -0.0300, 51.4980 to -0.0050, 51.5100.",
+        "Tiers: possible-unallocated; terminated-cw or terminated-other; cw-core (box and ward), cw-ward, cw-box-other-ward, e14-other.",
+        "large_user: usrtypind = 1. Distance to One Canada Square from east1m/north1m to E 537550, N 180300.",
+        "The CSV leaves out the never-allocated codes."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "postcodes-fetch",
+        "postcodes-osm"
+      ]
+    },
+    {
+      "id": "postcodes-query",
+      "tool": "tools/postcodes.mjs",
+      "command": "node magpie/cwplans/tools/postcodes.mjs query [tier ...]",
+      "kind": "fetch",
+      "used": [
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "source": "govuk-search",
+          "endpoint": "https://www.gov.uk/api/search.json",
+          "request": "\"<postcode>\" in 16 allowed document formats (news, notices, consultations, guidance, accident reports, CMA cases, statistics and others), 10 results: title, link, date, format"
+        },
+        {
+          "source": "wikipedia-search",
+          "endpoint": "https://en.wikipedia.org/w/api.php?action=query&list=search",
+          "request": "full-text search for \"<postcode>\", 10 results: titles and URLs"
+        },
+        {
+          "source": "fsa-api",
+          "endpoint": "https://api.ratings.food.gov.uk/Establishments?address=<postcode>&pageSize=200",
+          "request": "FSA ratings API, premises at the postcode"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://query.wikidata.org/sparql",
+          "request": "SPARQL: items whose P281 postal code is one of the postcodes (200 a query)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "postcodes/queries.json"
+        }
+      ],
+      "method": "Runs postcode-keyed searches for the Canary Wharf postcodes against GOV.UK, Wikipedia, the FSA API and Wikidata, and stores hit counts, titles and links, with search-engine templates for manual use.",
+      "rules": [
+        "Default tiers: cw-core, cw-ward, cw-box-other-ward.",
+        "Per host one request about every second; each request is tried 3 times.",
+        "FSA results keep only premises whose postcode is the one asked and that have an address line (home businesses are skipped)."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "postcodes-build"
+      ],
+      "note": "data-register.json lists only onspd and own as the sources of postcodes/queries.json."
+    },
+    {
+      "id": "registry-uprn",
+      "tool": "tools/registry-uprn.mjs",
+      "command": "node magpie/cwplans/tools/registry-uprn.mjs",
+      "kind": "clip",
+      "used": [
+        {
+          "source": "os-open-uprn",
+          "endpoint": "https://api.os.uk/downloads/v1/products/OpenUPRN/downloads and https://api.os.uk/downloads/v1/products/LIDS/downloads",
+          "request": "national OS Open UPRN CSV and the two LIDS link files",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/registry/osopenuprn_202609_csv.zip",
+          "note": "the newest osopenuprn_*_csv.zip"
+        },
+        {
+          "local": "data/raw/registry/lids-2026-09_csv_BLPU-UPRN-TopographicArea-TOID-5.zip"
+        },
+        {
+          "local": "data/raw/registry/lids-2026-09_csv_BLPU-UPRN-Street-USRN-11.zip"
+        },
+        {
+          "file": "postcodes/postcodes.json"
+        }
+      ],
+      "generated": [
+        {
+          "local": "registry/sources/uprn/uprn-canary-wharf.csv"
+        },
+        {
+          "local": "registry/sources/uprn/uprn-linked-ids-canary-wharf.csv"
+        },
+        {
+          "file": "registry/sources/uprn/uprn-summary.json"
+        }
+      ],
+      "method": "Keeps the UPRNs whose point is in the Canary Wharf box, with their TOID and USRN links, the nearest live postcode centroid, and summary counts.",
+      "rules": [
+        "Kept: UPRN latitude and longitude inside the Canary Wharf box; the Docklands box is only counted.",
+        "nearest_postcode_centroid: the nearest live ONSPD centroid by BNG distance (an approximation; Open UPRN has no postcode).",
+        "LIDS rows are kept when their UPRN is one of the kept UPRNs."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "postcodes-build"
+      ],
+      "note": "Child process: unzip -p."
+    },
+    {
+      "id": "registry-lbsm",
+      "tool": "tools/registry-lbsm.mjs",
+      "command": "node magpie/cwplans/tools/registry-lbsm.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "source": "lbsm",
+          "endpoint": "https://data.london.gov.uk/dataset/2k55d",
+          "request": "LBSM2 Tower Hamlets CSV (one row per home)",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/registry/lbsm/LBSMv2_Tower_Hamlets.csv"
+        },
+        {
+          "local": "registry/sources/uprn/uprn-canary-wharf.csv"
+        },
+        {
+          "file": "postcodes/postcodes.json"
+        }
+      ],
+      "generated": [
+        {
+          "local": "registry/sources/uprn/lbsm2-homes-summary.json"
+        }
+      ],
+      "method": "Aggregates the LBSM2 homes in the Canary Wharf postcodes or box per postcode and per MasterMap TOID: homes, property type, built form, age band, EPC band, floor area median, maximum floor count.",
+      "rules": [
+        "A home is kept when its postcode_locator is a Canary Wharf postcode (cwPostcodes, terminated included) or its UPRN is in uprn-canary-wharf.csv.",
+        "Only the fields property_type, built_form, construction_age_band(_known), epc_rating(_known), total_floor_area, estimated_floor_count, building_use are read; household fields (tenure, fuel poverty, deprivation) are never read out.",
+        "No per-home rows are written."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "postcodes-build",
+        "registry-uprn"
+      ]
+    },
+    {
+      "id": "registry-inspire",
+      "tool": "tools/registry-inspire.mjs",
+      "command": "node magpie/cwplans/tools/registry-inspire.mjs",
+      "kind": "clip",
+      "used": [
+        {
+          "source": "hmlr-inspire",
+          "endpoint": "https://use-land-property-data.service.gov.uk/datasets/inspire/download/London_Borough_of_Tower_Hamlets.zip",
+          "request": "the Tower Hamlets INSPIRE Index Polygons GML",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/registry/inspire/Land_Registry_Cadastral_Parcels.gml"
+        },
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/landregistry/inspire-canary-wharf.geojson"
+        }
+      ],
+      "method": "Keeps the INSPIRE freehold index polygons that intersect the Canary Wharf box, converted from BNG to WGS84 through OSTN15, with area and centroid computed in BNG.",
+      "rules": [
+        "Prefilter: a polygon with a vertex in the box's BNG bounds plus 50 m, or whose bounding box overlaps them.",
+        "Kept when an exterior vertex is in the box, a box corner is inside the exterior, or an exterior edge crosses the box.",
+        "Area: exterior minus holes, summed over the polygons of a member."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "fetch-raw-grid"
+      ]
+    },
+    {
+      "id": "registry-companies",
+      "tool": "tools/registry-companies.mjs",
+      "command": "node magpie/cwplans/tools/registry-companies.mjs [path/to/BasicCompanyDataAsOneFile-YYYY-MM-DD.zip]",
+      "kind": "parse",
+      "used": [
+        {
+          "source": "companies-house",
+          "endpoint": "https://download.companieshouse.gov.uk/en_output.html",
+          "request": "Basic Company Data, one-file CSV in a ZIP (about 0.5 GB)",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/registry/BasicCompanyDataAsOneFile-2026-10-01.zip",
+          "note": "the newest BasicCompanyDataAsOneFile-*.zip unless a path is given"
+        },
+        {
+          "file": "postcodes/postcodes.json"
+        }
+      ],
+      "generated": [
+        {
+          "local": "registry/sources/companies/companies-by-postcode.json"
+        },
+        {
+          "local": "registry/sources/companies/companies-summary.json"
+        }
+      ],
+      "method": "Streams the national company file and keeps the companies whose registered-office postcode is a Canary Wharf postcode, with company-level fields only, plus a summary by postcode, status, category, SIC and year.",
+      "rules": [
+        "Kept: RegAddress.PostCode, normalised, in cwPostcodes() (tiers cw-core, cw-ward, cw-box-other-ward, terminated-cw).",
+        "A 'care of' clause in an address line that does not look like an organisation (ORG word list) is replaced by '[withheld]'; a CareOf field is kept only when it looks like an organisation.",
+        "No officers or persons with significant control are read (the product has none)."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "postcodes-build"
+      ],
+      "note": "Child process: unzip -p."
+    },
+    {
+      "id": "registry-landregistry",
+      "tool": "tools/registry-landregistry.mjs",
+      "command": "node magpie/cwplans/tools/registry-landregistry.mjs",
+      "kind": "fetch",
+      "used": [
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "source": "hmlr-price-paid",
+          "endpoint": "https://landregistry.data.gov.uk/landregistry/query",
+          "request": "SPARQL, 20 postcodes a query: transactions at addresses with those postcodes: price, date, property type, new build, estate type, transaction category, PAON, SAON, street, town"
+        }
+      ],
+      "generated": [
+        {
+          "local": "registry/sources/landregistry/price-paid-by-postcode.json"
+        },
+        {
+          "local": "registry/sources/landregistry/price-paid-summary.json"
+        }
+      ],
+      "method": "Fetches every Price Paid transaction for the Canary Wharf postcodes and writes them per postcode with a summary of homes, sales, years, types and median prices.",
+      "rules": [
+        "Postcodes: cwPostcodes() (terminated-cw included).",
+        "Rows repeated by the OPTIONAL joins are removed by transaction id.",
+        "Homes = distinct SAON + PAON + street of types other than 'other'."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "postcodes-build"
+      ]
+    },
+    {
+      "id": "registry-voa",
+      "tool": "tools/registry-voa.mjs",
+      "command": "node magpie/cwplans/tools/registry-voa.mjs [path/to/list-entries.zip]",
+      "kind": "parse",
+      "used": [
+        {
+          "source": "voa-rating-list",
+          "endpoint": "https://voaratinglists.blob.core.windows.net/html/rlidata.htm",
+          "request": "VOA non-domestic rating list 2026, list entries ZIP",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/registry/voa/ndr-2026-listentries-*.zip"
+        },
+        {
+          "file": "postcodes/postcodes.json"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/registry/voa/voa-ndr-2026-canary-wharf.json"
+        },
+        {
+          "local": "registry/sources/companies/voa-ndr-2026-summary.json"
+        }
+      ],
+      "method": "Filters the 2026 rating list to the Canary Wharf postcodes: a per-property extract kept locally, and per-postcode aggregates of entries, rateable value, streets and descriptions.",
+      "rules": [
+        "Kept: list entries whose postcode (field 14) is in cwPostcodes().",
+        "The firm's-name field is never read."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "postcodes-build"
+      ],
+      "note": "Child process: unzip -p. Both outputs are uncommitted, as the licence requires (CLAUDE.md names the VOA list as restricted)."
+    },
+    {
+      "id": "build-uk-brands",
+      "tool": "registry/sources/brands/tools/build-uk-brands.mjs",
+      "command": "node magpie/cwplans/registry/sources/brands/tools/build-uk-brands.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "source": "nsi",
+          "endpoint": "npm install name-suggestion-index@8.0.20260918 @rapideditor/location-conflation @rapideditor/country-coder (in data/raw/registry/nsi)",
+          "request": "the NSI package, installed by hand",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/nsi.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/featureCollection.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/brands-uk.json"
+        }
+      ],
+      "method": "Lists the NSI brand items whose location set, resolved by location-conflation, contains One Canada Square.",
+      "rules": [
+        "Only the brands/* tree of NSI.",
+        "Kept when the resolved locationSet contains [-0.0195, 51.5049].",
+        "scope 'uk' when the include list names GB, a GB subdivision or a custom .geojson area valid at the point; otherwise 'wider'."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": []
+    },
+    {
+      "id": "wikidata-brands",
+      "tool": "registry/sources/brands/tools/wikidata-brands.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/registry/sources/brands/tools/wikidata-brands.mjs",
+      "kind": "fetch",
+      "used": [
+        {
+          "file": "registry/sources/brands/brands-uk.json"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "SPARQL by VALUES (400 QIDs a query): English label, P856 websites, P749 parents with labels; count of items with P1716 = the brand and a P625"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "SPARQL spatialSearch (s2, 1000 m) around POINT(-0.0195 51.5049) over P625; then labels, P31 labels and P1716, P127, P749, P137 links of those items"
+        },
+        {
+          "local": "data/raw/registry/qlever/<sha1>.json",
+          "note": "cached responses; a cached query is not sent again"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/wikidata-brands.json"
+        },
+        {
+          "file": "registry/sources/brands/wikidata-near.json"
+        },
+        {
+          "local": "data/raw/registry/qlever/<sha1>.json"
+        }
+      ],
+      "method": "Adds Wikidata facts (label, website, parent organisation, number of located items) to the NSI brand QIDs, and lists the items within 1 km of One Canada Square with any brand, owner, parent or operator link to an NSI brand.",
+      "rules": [
+        "nsi_brand_links: P1716, P127, P749 or P137 links whose target is an NSI UK brand QID."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "build-uk-brands"
+      ]
+    },
+    {
+      "id": "match-osm",
+      "tool": "registry/sources/brands/tools/match-osm.mjs",
+      "command": "node magpie/cwplans/registry/sources/brands/tools/match-osm.mjs",
+      "kind": "join",
+      "used": [
+        {
+          "local": "data/raw/registry/osm-box-features.json"
+        },
+        {
+          "file": "registry/sources/brands/brands-uk.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/nsi.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/featureCollection.json"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/registry/osm-branches.json"
+        }
+      ],
+      "method": "Finds the branded OSM business features in the box.",
+      "rules": [
+        "A business feature is a branch when (1) its brand:wikidata is an NSI UK brand QID, or (2) the NSI Matcher matches its name, brand, name:en or official_name under its own key=value at its position, or (3) it has brand or brand:wikidata that NSI does not list.",
+        "For a QID with several NSI items, the item whose key=value agrees with the feature is preferred.",
+        "Disused features and opening_hours=closed are skipped.",
+        "Street furniture (post boxes, ATMs, bicycle rental, lockers, vending machines and similar) is counted apart, not as branches."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "osm-scan",
+        "build-uk-brands"
+      ]
+    },
+    {
+      "id": "match-fsa-fetch",
+      "tool": "registry/sources/brands/tools/match-fsa.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/registry/sources/brands/tools/match-fsa.mjs --fetch",
+      "kind": "join",
+      "used": [
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "file": "postcodes/queries.json"
+        },
+        {
+          "file": "registry/sources/brands/brands-uk.json"
+        },
+        {
+          "file": "registry/sources/brands/tools/fsa-decisions.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/nsi.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/featureCollection.json"
+        },
+        {
+          "source": "fsa-api",
+          "endpoint": "https://api.ratings.food.gov.uk/Establishments/{fhrs_id}",
+          "request": "address and geocode of each kept premises not yet cached"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/registry/fsa-branches.json"
+        },
+        {
+          "local": "data/raw/registry/fsa-detail/<fhrs_id>.json"
+        }
+      ],
+      "method": "Matches the FSA premises found by postcodes-query in the Canary Wharf postcodes to NSI UK brands by name, fetches the address and position of each kept match, and writes the FSA branch list.",
+      "rules": [
+        "Premises: results[pc].fsa.items of postcodes/queries.json for postcodes in tiers cw-core, cw-ward, cw-box-other-ward.",
+        "Name variants (full, cut, strip, prefix) are tried in order; a hit must be 'primary' or 'alternate'.",
+        "Hits are ranked: primary before alternate, then key=value fitting the FSA business type, then scope uk.",
+        "A 'prefix' variant, an alternate hit or a type that does not fit needs a decision in fsa-decisions.json; undecided and rejected matches are listed apart."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "postcodes-build",
+        "postcodes-query",
+        "build-uk-brands"
+      ]
+    },
+    {
+      "id": "match-fsa",
+      "tool": "registry/sources/brands/tools/match-fsa.mjs",
+      "command": "node magpie/cwplans/registry/sources/brands/tools/match-fsa.mjs",
+      "kind": "join",
+      "used": [
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "file": "postcodes/queries.json"
+        },
+        {
+          "file": "registry/sources/brands/brands-uk.json"
+        },
+        {
+          "file": "registry/sources/brands/tools/fsa-decisions.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/nsi.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/featureCollection.json"
+        },
+        {
+          "local": "data/raw/registry/fsa-detail/<fhrs_id>.json",
+          "note": "cached details, read when present"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/registry/fsa-branches.json"
+        }
+      ],
+      "method": "The same match as match-fsa-fetch without network: addresses and positions come only from the cached details.",
+      "rules": [
+        "As match-fsa-fetch."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "postcodes-build",
+        "postcodes-query",
+        "build-uk-brands",
+        "match-fsa-fetch"
+      ]
+    },
+    {
+      "id": "build-branches",
+      "tool": "registry/sources/brands/tools/build-branches.mjs",
+      "command": "node magpie/cwplans/registry/sources/brands/tools/build-branches.mjs",
+      "kind": "join",
+      "used": [
+        {
+          "local": "data/raw/registry/osm-branches.json"
+        },
+        {
+          "local": "data/raw/registry/fsa-branches.json"
+        },
+        {
+          "file": "registry/sources/brands/cwg-directory.json"
+        },
+        {
+          "file": "registry/sources/brands/wikidata-near.json"
+        },
+        {
+          "file": "registry/sources/brands/wikidata-brands.json"
+        },
+        {
+          "file": "registry/sources/brands/storelocator.json",
+          "note": "read when present (second pass)"
+        },
+        {
+          "file": "registry/sources/brands/tools/cwg-decisions.json"
+        },
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "file": "registry/sources/brands/brands-uk.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/nsi.json"
+        },
+        {
+          "local": "data/raw/registry/nsi/node_modules/name-suggestion-index/dist/json/featureCollection.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/branches.json"
+        }
+      ],
+      "method": "Merges the OSM, FSA, Wikidata, CWG directory and store-page evidence into one list of chain-store branches in the Canary Wharf box, with sources, position, mall, level and a confidence.",
+      "rules": [
+        "Records join only when they are the same brand family (same Wikidata QID or a P749 parent, else same NSI id) and the same place: within 120 m (160 m when a position is approximate), or the same postcode, or the same mall.",
+        "Two named malls decide a join by themselves; Canada Place and One Canada Square count as one level.",
+        "An OSM feature whose fhrs:id equals the FSA premises id is the same branch.",
+        "Wikidata items join a branch within 300 m.",
+        "A CWG entry needs an NSI match (or a decision in cwg-decisions.json); a 'prefix' or 'alternate' match or a type that does not fit the CWG section is left undecided; otherwise a CWG title that names a branch already found (5 or more letters, whole words) joins it.",
+        "Postcode to mall: kept when 4 or more CWG entries share the postcode and 85% or more name the same mall.",
+        "Position: OSM feature, else FSA geocode, else mall centre or ONSPD postcode centroid (flagged).",
+        "Confidence: high with two or more sources; low for a single prefix or alternate FSA match or a note that says low confidence; else medium.",
+        "Category from the key=value (bank, pharmacy, supermarket, cafe, takeaway, restaurant, bar, gym, hotel, leisure, health, childcare, office, motoring, service, shop, other)."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "match-osm",
+        "match-fsa-fetch",
+        "fetch-cwg",
+        "wikidata-brands",
+        "build-uk-brands",
+        "postcodes-build",
+        "storelocator"
+      ],
+      "note": "Runs twice (brands README): a first merge, then storelocator, then a final merge that attaches the store pages. The 'after' cycle with storelocator is real."
+    },
+    {
+      "id": "storelocator",
+      "tool": "registry/sources/brands/tools/storelocator.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/registry/sources/brands/tools/storelocator.mjs",
+      "kind": "fetch",
+      "used": [
+        {
+          "file": "registry/sources/brands/branches.json"
+        },
+        {
+          "local": "data/raw/registry/london-brand-counts.json"
+        },
+        {
+          "file": "registry/sources/brands/wikidata-brands.json"
+        },
+        {
+          "file": "registry/sources/brands/tools/storelocator-manual.json"
+        },
+        {
+          "local": "data/raw/registry/storelocator-cache.json"
+        },
+        {
+          "source": "brand-sites",
+          "endpoint": "the branch's store page URL (OSM website=* below the brand's domain, or a URL found by hand)",
+          "request": "one GET per URL, identifying User-Agent, redirects followed, at most 1 request a second per host"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/storelocator.json"
+        },
+        {
+          "local": "data/raw/registry/storelocator-cache.json"
+        }
+      ],
+      "method": "Checks the brand's own page for each Canary Wharf branch of the 30 largest brand families present in the box.",
+      "rules": [
+        "Brand family: a brand and its Wikidata parent count as one; size = the largest Greater London OSM branch count of the family.",
+        "Candidate URL: the manual entry for the branch, else OSM website=* when it is not canarywharf.com and not a bare home page.",
+        "verified: HTTP 2xx, no bot-challenge page, and the page text or the URL path names Canary Wharf, the postcode or the mall; 401, 403, 429 or a challenge page = blocked.",
+        "A URL with a stored status is not fetched again."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "build-branches",
+        "london-brand-counts",
+        "wikidata-brands"
+      ]
+    },
+    {
+      "id": "readme-tables",
+      "tool": "registry/sources/brands/tools/readme-tables.mjs",
+      "command": "node magpie/cwplans/registry/sources/brands/tools/readme-tables.mjs > /tmp/tables.md",
+      "kind": "export",
+      "used": [
+        {
+          "file": "registry/sources/brands/branches.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/README.md",
+          "note": "the tool prints Markdown tables to stdout; a person pastes them between the TABLE markers"
+        }
+      ],
+      "method": "Prints the branch table, the top brands and the unmatched CWG entries as Markdown for the brands README.",
+      "rules": [
+        "One row per branch: brand, category, name, where (mall, level, postcode or address), sources, confidence, links."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "build-branches"
+      ]
+    },
+    {
+      "id": "build-registry",
+      "tool": "tools/build-registry.mjs",
+      "command": "node magpie/cwplans/tools/build-registry.mjs",
+      "kind": "join",
+      "used": [
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+        },
+        {
+          "file": "data/raw/registry/osm-cw.json.gz"
+        },
+        {
+          "file": "data/raw/registry/wikidata-cw.json"
+        },
+        {
+          "file": "data/raw/registry/fhrs/FHRS530-2026-10-03.json.gz",
+          "note": "the newest FHRS530-*.json.gz"
+        },
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "file": "registry/ids.json"
+        },
+        {
+          "local": "registry/sources/uprn/uprn-canary-wharf.csv",
+          "note": "joined when present"
+        },
+        {
+          "local": "registry/sources/uprn/uprn-linked-ids-canary-wharf.csv",
+          "note": "joined when present"
+        },
+        {
+          "local": "registry/sources/uprn/lbsm2-homes-summary.json",
+          "note": "joined when present"
+        },
+        {
+          "file": "registry/sources/landregistry/inspire-canary-wharf.geojson"
+        },
+        {
+          "local": "registry/sources/companies/companies-by-postcode.json",
+          "note": "joined when present"
+        },
+        {
+          "local": "registry/sources/landregistry/price-paid-by-postcode.json",
+          "note": "joined when present"
+        },
+        {
+          "file": "registry/sources/brands/branches.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/buildings.json"
+        },
+        {
+          "file": "registry/ids.json"
+        },
+        {
+          "file": "registry/companies-by-postcode.json"
+        },
+        {
+          "file": "registry/homes-by-postcode.json"
+        }
+      ],
+      "method": "Builds the Canary Wharf building registry: one record per OSM building outline with a stable cwb- id, its parts, occupants (OSM, FSA, Wikidata, chain-store branches), owners, postcodes, Wikidata facts, and company and property joins.",
+      "rules": [
+        "A building is an OSM building outline (way or multipolygon) whose vertex mean is in the Canary Wharf box; building:part shapes are listed under the outline that contains their centre.",
+        "Ids: reused from registry/ids.json by OSM element; new outlines get the next number in reading order (north to south in 100 m bands, then west to east); a retired id is never reused.",
+        "OSM occupants: named features with a shop, food and drink, office, amenity, leisure, tourism, healthcare, craft or transport role, placed in the outline that contains them or the nearest outline within 12 m; artworks, information boards, viewpoints and attractions are features, not occupants.",
+        "FSA premises with a position in the box are placed the same way; the others are listed under their postcode when its tier is cw-*.",
+        "Wikidata: an OSM wikidata tag wins; else the one building-like item whose coordinate is in the outline (within 5 m) and no other building-like item is inside it; an item already named by an OSM tag is not attached to a second outline; other items inside are occupants 'located here'.",
+        "The Wikidata label replaces the OSM name; the OSM name is kept as osm_name.",
+        "Owners: Wikidata P127. Occupants also from P466 and from organisations whose P159 is the building.",
+        "UPRN points inside the outline (no tolerance) give UPRN counts, TOIDs and USRNs; LBSM2 homes are summed over the building's TOIDs.",
+        "Home figures are given only where at least 5 homes are counted (K = 5); otherwise 'fewer than 5'.",
+        "INSPIRE polygons that contain the building's centre are linked by INSPIRE id.",
+        "Companies and price-paid sales join a building when the postcode is one of its postcodes and the normalised address contains one of its keys (address, name, OSM name, Wikidata street address), and exactly one building matches.",
+        "A residential building lists only the count of registered companies, not their names.",
+        "Branches enrich the occupant with the same OSM or FSA id, else are placed by position (marked approximate when the position is a mall or postcode centre)."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "fetch-raw-grid",
+        "registry-osm",
+        "registry-wikidata",
+        "registry-fhrs",
+        "postcodes-build",
+        "registry-uprn",
+        "registry-lbsm",
+        "registry-inspire",
+        "registry-companies",
+        "registry-landregistry",
+        "build-branches"
+      ]
+    },
+    {
+      "id": "build-categories",
+      "tool": "tools/build-categories.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-categories.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "registry/buildings.json"
+        },
+        {
+          "file": "data/raw/registry/osm-cw.json.gz"
+        },
+        {
+          "local": "data/raw/registry/wikidata-occupant-classes.json",
+          "note": "cache; QLever is asked only when it is missing or lacks an occupant item"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "SPARQL: P31 and P452 classes (English labels) of every Wikidata occupant item in registry/buildings.json; P466 and P159 statements of every registry building item with P580 and P582 qualifiers and the organisation's P576"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/categories.json"
+        },
+        {
+          "local": "data/raw/registry/wikidata-occupant-classes.json"
+        }
+      ],
+      "method": "Gives each registry building its occupant categories (finance, shop, catering, leisure, entertainment) from the classes the sources state, for the glow outlines and the atlas.",
+      "rules": [
+        "finance: OSM amenity bank, bureau_de_change or money_transfer, or office financial, insurance, financial_advisor or tax_advisor; or a Wikidata P31 or P452 label matching bank, finance, insurance, investment and similar; or the role 'service: bank' or 'branch: bank'.",
+        "shop: an OSM shop tag, the role 'shop' or 'branch: shop', or an FSA type starting 'Retailers'.",
+        "catering: OSM amenity restaurant, cafe, bar, pub, fast_food, food_court, ice_cream or biergarten; the role 'food and drink' or a food branch; or an FSA catering type.",
+        "leisure: OSM leisure fitness_centre, sports_centre, swimming_pool, sauna, dance or sports_hall; a hotel role or FSA hotel type.",
+        "entertainment: OSM cinema, theatre, nightclub, arts centre, casino, events or music venue, planetarium, amusement and bowling leisure, museum or gallery; or a Wikidata class matching those.",
+        "Names are never used to guess a class; Companies House registered offices are not used.",
+        "Wikidata occupant links: an end date (P582) or a dissolved organisation (P576) makes the entry 'former' and it is not counted; a start date and no end makes it 'current'; no qualifier makes it 'undated'."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "build-registry",
+        "registry-osm"
+      ],
+      "note": "network is true only when the cache is missing or incomplete; tools/lib.mjs qlever paces the calls."
+    },
+    {
+      "id": "build-atlas",
+      "tool": "tools/build-atlas.mjs",
+      "command": "node magpie/cwplans/tools/build-atlas.mjs",
+      "kind": "join",
+      "used": [
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+        },
+        {
+          "file": "registry/buildings.json"
+        },
+        {
+          "file": "registry/categories.json"
+        },
+        {
+          "file": "data/raw/registry/osm-cw.json.gz"
+        },
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "file": "registry/companies-by-postcode.json"
+        },
+        {
+          "file": "registry/homes-by-postcode.json"
+        },
+        {
+          "file": "registry/sources/museums/records-open.json"
+        },
+        {
+          "file": "registry/sources/pla/ukho_thames_teddington_greenwich_25m.geojson"
+        },
+        {
+          "file": "registry/sources/pla/ukho_thames_greenwich_coalhouse_50m.geojson"
+        },
+        {
+          "file": "registry/sources/pla/ukho_thames_hms_belfast_berth.geojson"
+        },
+        {
+          "file": "registry/sources/pla/ukho_wrecks_obstructions_points.geojson"
+        },
+        {
+          "file": "data/raw/docklands/ea-defences.json.gz"
+        },
+        {
+          "file": "data/raw/docklands/wikidata-items.json.gz"
+        },
+        {
+          "file": "data/sourced-levels.json"
+        },
+        {
+          "file": "docklands/facts.json"
+        },
+        {
+          "file": "feeds/feeds.json"
+        },
+        {
+          "file": "feeds/events.json"
+        },
+        {
+          "file": "registry/sources/brands/branches.json"
+        },
+        {
+          "file": "data-register.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "atlas/data/atlas.json"
+        }
+      ],
+      "method": "Builds the compact index the atlas page loads first: buildings with outlines and model heights, postcodes with company and home totals, heritage groups, riverbed soundings, wrecks, flood defences, Wikidata items, published levels and overview counts.",
+      "rules": [
+        "Model buildings (area.js) belong to a registry building when their vertex mean lies inside its outline; the tallest gives the model height and source.",
+        "Heritage records in the Docklands box are grouped by position rounded to 5 decimals.",
+        "Soundings: z_cd minus the chart datum offset interpolated by longitude between 3.20 m and 3.35 m (same rule as build-docklands).",
+        "Defence crest: actual_ucl, else actual_dcl, else design_ucl; a line is kept when one of its points is in the box.",
+        "Wikidata items without an English label are left out.",
+        "Levels: the sourced levels used by the 3D build, CWG structures (slabs, water, dock bed), the deepest and median sounding off the Isle of Dogs, and the 8 tallest named buildings (Wikidata, else OSM, else LiDAR height on the LiDAR ground, or 5 m OD when unknown, marked approx)."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "build-registry",
+        "build-categories",
+        "build-docklands",
+        "postcodes-build",
+        "fetch_records",
+        "fetch_wet-soundings",
+        "fetch-docklands-defences",
+        "fetch-docklands-wikidata",
+        "build-branches",
+        "registry-osm",
+        "fetch-raw-grid"
+      ]
+    },
+    {
+      "id": "build-indoor",
+      "tool": "tools/build-indoor.mjs",
+      "command": "node magpie/cwplans/tools/build-indoor.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf"
+        },
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+        },
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "data/raw/docklands/tfl-stationdata-gtfs.zip"
+        },
+        {
+          "source": "tfl-open-data",
+          "endpoint": "https://api.tfl.gov.uk/stationdata/tfl-stationdata-gtfs.zip",
+          "request": "TfL station topology (GTFS stops and pathways), fetched only when the local copy is absent"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/indoor.js"
+        },
+        {
+          "file": "data/raw/docklands/tfl-stationdata-gtfs.zip",
+          "note": "written only when absent"
+        }
+      ],
+      "method": "Builds the Canary Wharf walking network in 3D from OSM (footways, corridors, stairs, escalators, lifts, platforms, streets) with each point on its level, adds TfL's step-free station topology, attaches named places, and records faults for the audit.",
+      "rules": [
+        "Box -0.0330, 51.4960 to -0.0020, 51.5120; walkable highway values, not access=private or foot=no, plus platforms, conveying ways and indoor areas, corridors and rooms.",
+        "Level: level, else level:ref (tools/osm-values.mjs osmLevels), else layer when the way is a tunnel, indoor or underground with layer < 0, else 0.",
+        "One vertex per (OSM node, level); stairs and escalators are oriented by the levels their ends touch, else by incline, else counted as unresolved.",
+        "A lift node joins its copies at the levels it lists, in order.",
+        "Walkable areas get a hub joined to every vertex on their level inside them or within 3 m of their edge.",
+        "A node that ordinary ways reach at two levels with no connector is joined as 'ramp' and counted as a level jump.",
+        "TfL points join the nearest OSM vertex within 35 m only at street level (TfL level 0 = OSM level 0); TfL lifts (pathway_mode 5) and paths join TfL points; nearest-vertex level pairs are recorded per station.",
+        "Places attach to the nearest vertex on their own level within 40 m, else the nearest vertex on any level within 40 m (marked)."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "fetch-docklands-osm",
+        "build-docklands",
+        "fetch-raw-grid"
+      ],
+      "note": "network is true only when the GTFS ZIP is absent. Child process: unzip -p."
+    },
+    {
+      "id": "build-imagery",
+      "tool": "tools/build-imagery.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-imagery.mjs [from-date]",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "source": "copernicus-sentinel",
+          "endpoint": "https://earth-search.aws.element84.com/v1/search",
+          "request": "STAC search: collection sentinel-2-l2a intersecting POINT(-0.0195 51.5049) from the from-date (default 120 days before the run) to now, eo:cloud_cover < 10, sorted by cloud cover, limit 1"
+        },
+        {
+          "source": "copernicus-sentinel",
+          "endpoint": "the scene's 'visual' (TCI) Cloud-Optimised GeoTIFF on S3",
+          "request": "HTTP range requests for the pixel window over the model box only"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/imagery.js"
+        }
+      ],
+      "method": "Colours each terrain vertex of the Docklands model from the least cloudy recent Sentinel-2 true-colour image.",
+      "rules": [
+        "Model metres to BNG to UTM with a Helmert transform (about 2 m, inside a 10 m pixel).",
+        "Each vertex takes the mean of the pixels within half a terrain cell of it."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "build-docklands"
+      ]
+    },
+    {
+      "id": "build-aerial-rgb2008",
+      "tool": "tools/build-aerial.py",
+      "command": "python3 magpie/cwplans/tools/build-aerial.py rgb2008",
+      "kind": "derive",
+      "used": [
+        {
+          "source": "ea-dsm-history",
+          "endpoint": "https://environment.data.gov.uk/tiles/collections/survey/vertical_aerial_photography_tiles_rgb/2008/0.4/<tile>",
+          "request": "tiles TQ3075, TQ3080, TQ3575, TQ3580 (ECW in ZIP)",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/imagery/vertical_aerial_photography_tiles_rgb-2008-0.4-*.zip"
+        },
+        {
+          "local": "tools/native/ecw2ppm",
+          "note": "ECW decoder compiled from tools/native/ecw2ppm.c against the ECW 3.3 SDK (child process)"
+        },
+        {
+          "file": "docklands/data/tex/textures.json",
+          "note": "read and rewritten (index of textures)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/tex/rgb2008.jpg"
+        },
+        {
+          "file": "docklands/data/tex/textures.json"
+        },
+        {
+          "local": "data/raw/imagery/rgb2008.ppm"
+        }
+      ],
+      "method": "Decodes the 2008 colour aerial photographs, pastes them onto one canvas over the model box at 3 m a pixel and saves a JPEG.",
+      "rules": [
+        "Model box x -5150 to 2350, z -2000 to 3600 (local metres), 3 m a pixel.",
+        "ECW decoded at every 5th pixel; black (0,0,0) outside the flown area is not pasted; one pixel of overlap between tiles."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": []
+    },
+    {
+      "id": "build-aerial-night2012",
+      "tool": "tools/build-aerial.py",
+      "command": "python3 magpie/cwplans/tools/build-aerial.py night2012",
+      "kind": "derive",
+      "used": [
+        {
+          "source": "ea-dsm-history",
+          "endpoint": "https://environment.data.gov.uk/tiles/collections/survey/vertical_aerial_photography_tiles_night_time/2012/0.2/<tile>",
+          "request": "tiles TQ3075, TQ3080, TQ3575, TQ3580 (ECW in ZIP)",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/imagery/vertical_aerial_photography_tiles_night_time-2012-0.2-*.zip"
+        },
+        {
+          "local": "tools/native/ecw2ppm",
+          "note": "ECW decoder (child process)"
+        },
+        {
+          "file": "docklands/data/tex/textures.json",
+          "note": "read and rewritten"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/tex/night2012.jpg"
+        },
+        {
+          "file": "docklands/data/tex/textures.json"
+        },
+        {
+          "local": "data/raw/imagery/night2012.ppm"
+        }
+      ],
+      "method": "As build-aerial-rgb2008 for the 2012 night-time aerial photographs.",
+      "rules": [
+        "ECW decoded at every 10th pixel; black outside the flown area is not pasted."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": []
+    },
+    {
+      "id": "build-aerial-intensity2020",
+      "tool": "tools/build-aerial.py",
+      "command": "python3 magpie/cwplans/tools/build-aerial.py intensity2020",
+      "kind": "derive",
+      "used": [
+        {
+          "source": "ea-dsm-history",
+          "endpoint": "https://environment.data.gov.uk/tiles/collections/survey/national_lidar_programme_intensity/2020/1/<tile>",
+          "request": "tiles TQ3075, TQ3080, TQ3575, TQ3580 (GeoTIFF with TFW in ZIP)",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/imagery/national_lidar_programme_intensity-2020-1-*.zip"
+        },
+        {
+          "file": "docklands/data/tex/textures.json",
+          "note": "read and rewritten"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/tex/intensity2020.jpg"
+        },
+        {
+          "file": "docklands/data/tex/textures.json"
+        },
+        {
+          "local": "data/raw/imagery/intensity2020.ppm"
+        }
+      ],
+      "method": "Mosaics the 2020 LiDAR intensity tiles over the model box at 3 m a pixel, stretches them and saves a grey JPEG.",
+      "rules": [
+        "Negative values are set to 0.",
+        "Stretch between the 1st and 99th percentile of the non-zero pixels (on a 0-4096 scale), then gamma 0.6."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": []
+    },
+    {
+      "id": "fetch-dsm",
+      "tool": "tools/fetch-dsm.sh",
+      "command": "bash magpie/cwplans/tools/fetch-dsm.sh",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "ea-dsm-history",
+          "endpoint": "https://environment.data.gov.uk/tiles/collections/survey/<product>/<year>/<res>/<tile>",
+          "request": "GET a ZIP per product, year and tile: lidar_tiles_dsm 1999 (2 m), 2003 (1 m), 2007 (0.5 m), 2012 (1 m and 0.5 m), 2015 (1 m); national_lidar_programme_dsm 2018 and 2020 (1 m); lidar_composite_first_return_dsm 2022 (1 m); tiles TQ3575 and TQ3580"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/dsm/<product>-<year>-<res>-<tile>.zip"
+        }
+      ],
+      "method": "Downloads the EA LiDAR surface model tiles over the Canary Wharf estate for every survey year; skips files already present.",
+      "rules": [
+        "2012 TQ3580 exists only at 0.5 m; the 1 m request returns a server error, not a ZIP",
+        "a ZIP already present is not fetched again"
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "build-skyline",
+      "tool": "tools/build-skyline.mjs",
+      "command": "node magpie/cwplans/tools/build-skyline.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/dsm/<product>-<year>-<res>-<tile>.zip"
+        },
+        {
+          "source": "ea-dsm-history",
+          "endpoint": "https://environment.data.gov.uk/tiles/collections/survey/<product>/<year>/<res>/<tile>",
+          "request": "DSM tiles TQ3575 and TQ3580 for 1999, 2003, 2007, 2012, 2015, 2018, 2020, 2022 (fetched by data/raw/dsm/fetch.sh, not by this tool)",
+          "access": "manual download"
+        },
+        {
+          "local": "data/raw/dsm/<product>-<year>-<res>-<tile>.zip"
+        },
+        {
+          "file": "docklands/data/area.js"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/skyline.json"
+        }
+      ],
+      "method": "Measures the height of each model building on the Canary Wharf estate and 300 m round it in every EA LiDAR surface model from 1999 to 2022, for the year slider.",
+      "rules": [
+        "height = 90th percentile of the DSM inside today's OSM outline (1 m sampling, at most 4000 points) minus the model ground",
+        "not standing: under 3 m or under a quarter of today's height (a cleared site with hoardings)",
+        "null: under 30% of the outline's points have data in that survey",
+        "a survey that flew under 20% of the buildings is left out (2015)"
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "build-docklands",
+        "fetch-dsm"
+      ],
+      "note": "Child processes: unzip, find."
+    },
+    {
+      "id": "build-splats",
+      "tool": "tools/build-splats.mjs",
+      "command": "node magpie/cwplans/tools/build-splats.mjs [--ground 4] [--cell 7.2] [--box x0,x1,z0,z1]",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "docklands/data/tex/textures.json"
+        },
+        {
+          "local": "data/raw/imagery/rgb2008.ppm"
+        },
+        {
+          "file": "docklands/data/splats/index.json",
+          "note": "read and rewritten"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/splats/cw-synth.splat.gz"
+        },
+        {
+          "file": "docklands/data/splats/cw-synth.json"
+        },
+        {
+          "file": "docklands/data/splats/index.json"
+        },
+        {
+          "local": "data/raw/splats/cw-synth.ply"
+        }
+      ],
+      "method": "Synthesises Gaussian splats straight from the model (no training): ground discs coloured from the 2008 aerial photograph, roof discs, and wall discs with a glass band, written as .splat and as a 3DGS PLY.",
+      "rules": [
+        "Box: the model's focus box plus 300 m unless --box is given.",
+        "Ground discs every 4 m (--ground) where no building covers the cell, coloured bilinearly from rgb2008.ppm.",
+        "Roof discs every 4 m inside the outline: aerial colour on buildings under 40 m, else the building colour.",
+        "Walls: one disc per 3.6 m storey and 7.2 m (--cell) of wall, and one glass-band disc 3 cm in front per cell (buildings 4 m or taller).",
+        "The set entry 'cw-synth' replaces any earlier one in index.json; other entries are kept."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "build-docklands",
+        "build-aerial-rgb2008"
+      ]
+    },
+    {
+      "id": "drone-flight",
+      "tool": "tools/drone-flight.mjs",
+      "command": "node magpie/cwplans/tools/drone-flight.mjs [--out path.json] [--svg plan.svg] [--coverage 480]",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "atlas/data/atlas.json",
+          "note": "with --coverage only"
+        }
+      ],
+      "generated": [
+        {
+          "local": "<--out path.json>",
+          "note": "the 30 fps flight path, when --out is given"
+        },
+        {
+          "local": "<--svg plan.svg>",
+          "note": "top-down plan, when --svg is given"
+        }
+      ],
+      "method": "Plans a synthetic drone flight over the Canary Wharf estate in the 3D model for splat training captures, checks it against limits, and optionally writes the path, a plan and a coverage estimate.",
+      "rules": [
+        "Centripetal Catmull-Rom splines through eye and target waypoints.",
+        "Limits: 30 m from every building prism, 15 m above the terrain, altitude 40-350 m, pitch 10-70 degrees, yaw rate 15 degrees/s, along-track acceleration 0.6 m/s2, lateral 1.5 m/s2, turn rate 10 degrees/s; waypoints are raised until the clearances hold."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "build-docklands",
+        "build-atlas"
+      ],
+      "note": "Also imported as a module by drone-capture.mjs."
+    },
+    {
+      "id": "drone-capture",
+      "tool": "tools/drone-capture.mjs",
+      "command": "python3 -m http.server 8765 --bind 127.0.0.1 & node magpie/cwplans/tools/drone-capture.mjs --run trial --frames 480",
+      "kind": "render",
+      "used": [
+        {
+          "file": "docklands/index.html",
+          "note": "rendered in headless Chromium (SwiftShader) from a local http server"
+        },
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "docklands/data/under.js"
+        },
+        {
+          "file": "atlas/data/atlas.json"
+        },
+        {
+          "file": "docklands/data/tex/textures.json"
+        },
+        {
+          "file": "docklands/data/tex/rgb2008.jpg",
+          "note": "default --ground; night2012.jpg, intensity2020.jpg or imagery.js with other values"
+        },
+        {
+          "local": "<--path path.json>",
+          "note": "a drone-flight.mjs path; planned on the fly when absent"
+        }
+      ],
+      "generated": [
+        {
+          "local": "data/raw/drone/<run>/images/frame_NNNNN.jpg"
+        },
+        {
+          "local": "data/raw/drone/<run>/frames.jsonl"
+        },
+        {
+          "local": "data/raw/drone/<run>/run.json"
+        },
+        {
+          "local": "data/raw/drone/<run>/transforms.json"
+        },
+        {
+          "local": "data/raw/drone/<run>/sparse/0/cameras.txt"
+        },
+        {
+          "local": "data/raw/drone/<run>/sparse/0/images.txt"
+        },
+        {
+          "local": "data/raw/drone/<run>/sparse/0/points3D.txt"
+        },
+        {
+          "local": "data/raw/drone/<run>/sparse_pc.ply"
+        },
+        {
+          "local": "data/raw/drone/<run>/coverage.json"
+        },
+        {
+          "local": "data/raw/drone/<run>/posecheck.json"
+        },
+        {
+          "local": "data/raw/drone/<run>/posecheck_NNNNN.jpg"
+        },
+        {
+          "local": "data/raw/drone/<run>/preview.mp4"
+        },
+        {
+          "local": "data/raw/drone/<run>/contact.jpg"
+        }
+      ],
+      "method": "Renders the drone flight in the Docklands 3D page and writes a Gaussian-splat training set: images, nerfstudio transforms, a COLMAP text model, an initial point cloud sampled from the model surfaces, per-frame building visibility, a pose check, a preview video and a contact sheet.",
+      "rules": [
+        "A building counts as seen in a frame when at least 30 of its pixels are visible in the pick layer.",
+        "Resumable: frames already in images/ and frames.jsonl are skipped unless --redo; a run with different size, field of view, ground or spacing is refused.",
+        "The initial point cloud is randomly jittered over terrain, water and building surfaces (Math.random)."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "drone-flight",
+        "build-docklands",
+        "build-atlas",
+        "build-aerial-rgb2008"
+      ],
+      "note": "Child processes: Chromium through Playwright, ffmpeg."
+    },
+    {
+      "id": "train-splat",
+      "tool": "tools/train-splat.sh",
+      "command": "magpie/cwplans/tools/train-splat.sh DATASET [-n 7000] [-d 2] [--sh 3] [--name NAME]",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "DATASET/transforms.json",
+          "note": "a nerfstudio dataset, e.g. data/raw/drone/<run>/ from drone-capture, with its images and sparse_pc.ply; a COLMAP sparse/ folder also works"
+        },
+        {
+          "local": "DATASET/images/"
+        },
+        {
+          "local": "DATASET/sparse_pc.ply"
+        },
+        {
+          "local": "/opt/opensplat/build/opensplat",
+          "note": "OpenSplat 1.2.2 on libtorch CPU, installed by hand (child process)"
+        }
+      ],
+      "generated": [
+        {
+          "local": "DATASET/NAME.ply"
+        },
+        {
+          "local": "DATASET/NAME.splat"
+        },
+        {
+          "local": "DATASET/NAME.sog"
+        },
+        {
+          "local": "DATASET/NAME.log"
+        },
+        {
+          "local": "DATASET/NAME.progress"
+        }
+      ],
+      "method": "Trains a 3D Gaussian splat on the CPU with OpenSplat from a nerfstudio dataset, then converts the result to .splat (ply-to-splat.mjs) and .sog (splat-transform).",
+      "rules": [
+        "Poses are passed to OpenSplat unchanged (OpenGL / nerfstudio camera-to-world; checked with splat-pose-test.py).",
+        "Defaults: 7000 iterations, image downscale 2, SH degree 3, at most 1,500,000 gaussians, refine every 500 steps."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "drone-capture"
+      ],
+      "note": "Child processes: opensplat, node ply-to-splat.mjs, splat-transform (falls back to 'npx -y @playcanvas/splat-transform', which downloads from npm when it is not installed). The log carries the run date. data-register.json names this script as a producer of docklands/data/splats/index.json; the code does not write that file."
+    },
+    {
+      "id": "ply-to-splat",
+      "tool": "tools/ply-to-splat.mjs",
+      "command": "node magpie/cwplans/tools/ply-to-splat.mjs in.ply out.splat",
+      "kind": "export",
+      "used": [
+        {
+          "local": "<in.ply>",
+          "note": "a 3DGS training PLY (INRIA layout, binary little-endian, float properties)"
+        }
+      ],
+      "generated": [
+        {
+          "local": "<out.splat>"
+        }
+      ],
+      "method": "Converts a 3DGS PLY to the antimatter15 32-byte .splat format.",
+      "rules": [
+        "scale = exp(log scale); rgb = 0.5 + SH_C0 x f_dc; alpha = sigmoid(opacity); quaternion normalised and stored as q x 128 + 128.",
+        "Sorted by exp(sum of log scales) x opacity, largest first; non-finite gaussians are dropped; f_rest is ignored."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "train-splat"
+      ],
+      "note": "Called by train-splat.sh; also runs alone."
+    },
+    {
+      "id": "audit-quality",
+      "tool": "tools/audit-quality.mjs",
+      "command": "node magpie/cwplans/tools/audit-quality.mjs",
+      "kind": "audit",
+      "used": [
+        {
+          "file": "registry/buildings.json"
+        },
+        {
+          "file": "atlas/data/atlas.json"
+        },
+        {
+          "file": "postcodes/postcodes.json"
+        },
+        {
+          "file": "data/raw/registry/osm-cw.json.gz"
+        },
+        {
+          "file": "data/raw/registry/wikidata-cw.json"
+        },
+        {
+          "file": "data/raw/registry/fhrs/FHRS530-2026-10-03.json.gz",
+          "note": "the newest FHRS530-*.json.gz"
+        },
+        {
+          "file": "registry/sources/brands/branches.json"
+        },
+        {
+          "file": "registry/sources/brands/cwg-directory.json"
+        },
+        {
+          "file": "registry/companies-by-postcode.json"
+        },
+        {
+          "file": "data/sourced-levels.json"
+        },
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "docklands/data/indoor.js"
+        },
+        {
+          "local": "data/raw/registry/wikidata-occupant-classes.json",
+          "note": "read when present (TM-4)"
+        },
+        {
+          "file": "registry/sources/museums/records-open.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "quality/issues.json"
+        },
+        {
+          "file": "quality/CATALOGUE.md"
+        }
+      ],
+      "method": "Runs 34 data-quality checks over every Canary Wharf source (identity, spatial, attribute, validity, parsing, network, timeliness, coverage, semantics) and writes one record per issue with counts, rates and examples, and a generated Markdown catalogue.",
+      "rules": [
+        "Checks ID-1 to ID-4, SP-1 to SP-6, AT-1 to AT-5, VA-1 to VA-4, PL-1, PL-2, NET-1 to NET-5, TM-1 to TM-4, CV-1, CV-2, SE-1, SE-2.",
+        "The audit date is fixed in the code (2026-10-03): FSA ratings before 2023-10-03 are 'older than 3 years'; CWG copy ages are counted to that date.",
+        "VA-2 issues are the level tokens tools/osm-values.mjs cannot read (osmLevelsUnread).",
+        "Each issue has a severity (high, medium, low) and an entity (building, postcode, OSM element, FSA premises and others)."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "build-registry",
+        "build-atlas",
+        "build-categories",
+        "postcodes-build",
+        "registry-osm",
+        "registry-wikidata",
+        "registry-fhrs",
+        "build-branches",
+        "fetch-cwg",
+        "build-docklands",
+        "build-indoor"
+      ]
+    },
+    {
+      "id": "check-feeds",
+      "tool": "feeds/check-feeds.mjs",
+      "command": "node magpie/cwplans/feeds/check-feeds.mjs [source ids] [--json] [--live]",
+      "kind": "check",
+      "used": [
+        {
+          "file": "feeds/feeds.json"
+        },
+        {
+          "source": "feed-providers",
+          "endpoint": "every url, api and sample URL in feeds/feeds.json",
+          "request": "HTTP GET with Origin https://danbri.github.io; status, content type, CORS"
+        }
+      ],
+      "generated": [],
+      "method": "Re-checks every catalogued feed and prints its HTTP status and CORS answer, and where it differs from feeds.json.",
+      "rules": [
+        "An api is fetched only when the source has no sample; CORS counts when Access-Control-Allow-Origin is * or the site origin."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "check-events",
+      "tool": "feeds/check-events.mjs",
+      "command": "node magpie/cwplans/feeds/check-events.mjs [source ids] [--json] [--live] [--url URL]",
+      "kind": "check",
+      "used": [
+        {
+          "file": "feeds/events.json"
+        },
+        {
+          "source": "feed-providers",
+          "endpoint": "every event and real-time feed URL in feeds/events.json",
+          "request": "HTTP GET, with and without the Origin header; items and newest date by small generic parsers (ICS, RSS, Atom, JSON, schema.org Event JSON-LD)"
+        }
+      ],
+      "generated": [],
+      "method": "Re-checks the event and real-time feeds and prints status, CORS, item count, newest item date and the first titles.",
+      "rules": [
+        "Item counts come from generic parsers and can differ from the hand-tuned samples in events.json."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": []
+    },
+    {
+      "id": "check-data-register",
+      "tool": "tools/check-data-register.mjs",
+      "command": "node magpie/cwplans/tools/check-data-register.mjs",
+      "kind": "check",
+      "used": [
+        {
+          "file": "data-register.json"
+        },
+        {
+          "file": "pipeline.json"
+        },
+        {
+          "file": "index.html"
+        },
+        {
+          "file": "atlas/index.html"
+        },
+        {
+          "file": "docklands/index.html"
+        },
+        {
+          "file": "postcodes/index.html"
+        },
+        {
+          "file": "registry/index.html"
+        },
+        {
+          "file": "schematic.html"
+        },
+        {
+          "file": "feeds/index.html"
+        }
+      ],
+      "generated": [],
+      "method": "Checks the data register against the files git tracks (git ls-files) and the pages, and pipeline.json against the tools and files; exits 1 on a problem.",
+      "rules": [
+        "Every tracked data file (not .mjs, .py, .c, .html, .gitignore, vendor/, skills/, the register and pipeline files) has a register entry; every entry's file exists.",
+        "Every source and OSM extract named is defined; osm.use agrees with the sources.",
+        "A page that loads a file holding OSM data (use raw, derived or counts) shows '\u00a9 OpenStreetMap contributors' linked to https://www.openstreetmap.org/copyright.",
+        "pipeline.json: every tracked tools/*.{mjs,py,sh} and registry/sources/*/tools/*.{mjs,py,sh} is an activity, library or test; every tool, committed input and output exists; every source key is defined; every 'after' names an activity; every register file produced by a tools/ script is generated by an activity.",
+        "The repository paths in data-register.json osm_elsewhere_in_repo exist."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [],
+      "note": "Child process: git ls-files. Run last, after every rebuild."
+    },
+    {
+      "id": "check-data-register-write",
+      "tool": "tools/check-data-register.mjs",
+      "command": "node magpie/cwplans/tools/check-data-register.mjs --write",
+      "kind": "export",
+      "used": [
+        {
+          "file": "data-register.json"
+        },
+        {
+          "file": "pipeline.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "DATA-REGISTER.md"
+        },
+        {
+          "file": "pipeline.jsonld"
+        }
+      ],
+      "method": "Runs the same checks, then writes the readable register and exports the provenance as JSON-LD for a knowledge graph.",
+      "rules": [
+        "Activities become prov:Activity with prov:used and prov:generated; register files become prov:Entity and dcat:Distribution with prov:wasDerivedFrom their sources and prov:wasGeneratedBy the activity that generates them; sources become dcat:Dataset.",
+        "Committed files are identified by their GitHub URL, local files by urn:cwplans:local:<path>."
+      ],
+      "network": false,
+      "deterministic": false,
+      "after": [
+        "check-data-register"
+      ],
+      "note": "DATA-REGISTER.md carries the run date."
+    }
+  ],
+  "libraries": [
+    {
+      "tool": "tools/lib.mjs",
+      "provides": "HTTP get with the project User-Agent; QLever (paced, one call at a time, retried on 429 and 5xx) and query.wikidata.org SPARQL helpers; EA LiDAR WCS URLs; WGS84 to BNG through the OSTN15 grid (reads data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif); LiDAR tile mosaics; polygon helpers (area, point in polygon, box clip, cells, earcut mesh, ring joining, Douglas-Peucker, delta encoding); applyControls (published levels from data/sourced-levels.json as tunnel controls)."
+    },
+    {
+      "tool": "tools/registry-lib.mjs",
+      "provides": "Paths for registry/sources and data/raw/registry; the Canary Wharf and Docklands boxes; cwPostcodes() (reads postcodes/postcodes.json; tiers cw-core, cw-ward, cw-box-other-ward, and terminated-cw unless told not to); postcode normaliser; CSV line splitter; sleep; inBox."
+    },
+    {
+      "tool": "tools/osm-values.mjs",
+      "provides": "Parsers for OSM tag values: osmList (';' lists), unitLabel (adds 'Unit' to a bare designator), osmLevels (lists, comma lists, ranges, fractions) and osmLevelsUnread (tokens it cannot read)."
+    },
+    {
+      "tool": "registry/sources/brands/tools/lib.mjs",
+      "provides": "Paths for the brands source (OUT, CW, RAW, NSI_DIR), the Canary Wharf box, One Canada Square, User-Agent, a require for the NSI packages installed in data/raw/registry/nsi, readJSON, sleep, inBox."
+    },
+    {
+      "tool": "registry/sources/brands/tools/nsi-matcher.mjs",
+      "provides": "At import, builds the NSI Matcher over the brands/* tree with its location index (reads data/raw/registry/nsi/.../dist/json/nsi.json and featureCollection.json) and loads registry/sources/brands/brands-uk.json; exports matcher, brands, byId, byWd, KVS, hits(), nameVariants(), matchAny()."
+    }
+  ],
+  "tests": [
+    {
+      "tool": "tools/test/osm-values.test.mjs",
+      "what": "Fixture tests (node --test) for osmList, unitLabel, osmLevels and osmLevelsUnread in tools/osm-values.mjs."
+    },
+    {
+      "tool": "tools/splat-pose-test.py",
+      "what": "Pose-convention test for the 3DGS trainer: 'gen OUT' writes a synthetic nerfstudio dataset of coloured boxes on a chequered ground with known OpenGL camera-to-world matrices (images, transforms.json, sparse_pc.ply; --init grey, --flip opencv as a negative control); 'points OUT N' rewrites sparse_pc.ply with about N points; 'check PLY' reports per box how many opaque gaussians of a trained PLY lie inside it and their mean colour. Needs numpy and Pillow."
+    }
+  ],
+  "header_mismatches_resolved": {
+    "date": "2026-10-03",
+    "tools": [
+      "tools/lib.mjs",
+      "tools/osm-values.mjs",
+      "tools/fetch-docklands.mjs",
+      "tools/postcodes.mjs",
+      "tools/build-atlas.mjs",
+      "tools/audit-quality.mjs",
+      "tools/build-categories.mjs",
+      "tools/build-splats.mjs",
+      "registry/sources/brands/tools/build-branches.mjs",
+      "registry/sources/brands/tools/storelocator.mjs",
+      "registry/sources/brands/tools/match-fsa.mjs"
+    ],
+    "how": "headers corrected; each now points to its activity here for the full list"
+  }
+}

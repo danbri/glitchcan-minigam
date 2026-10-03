@@ -366,7 +366,8 @@ let buildingColour = (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld;   // re
 // skyline year: measured heights replace the model's for buildings in docklands/data/skyline.json (null: not flown, keep)
 let SKY = null, skyIdx = -1;
 const heightOf = (b, i) => { if (!SKY || skyIdx < 0) return b.h; const v = SKY.buildings[i]; if (!v || v[skyIdx] == null) return b.h; return v[skyIdx] / 10; };
-function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, buildingColour(b, i), !!b.mh); }); L.bld = M.upload(); }
+const notFlown = i => SKY && skyIdx >= 0 && SKY.buildings[i] && SKY.buildings[i][skyIdx] == null;   // that survey did not cover it: today's height, slate colour
+function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, notFlown(i) ? [.36, .42, .52] : buildingColour(b, i), !!b.mh); }); L.bld = M.upload(); }
 buildBld();
 { const M = new Mesh(), R = new Mesh();
   for (const l of A.lines) if (!l.tunnel) {
@@ -1002,7 +1003,7 @@ function setSkyYear(k) {
   if (!SKY) return; skyIdx = k >= SKY.years.length ? -1 : k; $('skyYear').value = k;
   const sv = skyIdx < 0 ? null : SKY.surveys[skyIdx], standing = skyIdx < 0 ? null : Object.values(SKY.buildings).filter(v => v[skyIdx] > 0).length;
   $('skyYearO').value = skyIdx < 0 ? 'today' : String(SKY.years[skyIdx]);
-  if (sv) $('skyNote').textContent = `${sv.year}: EA LiDAR surface model (${sv.product.replace(/_/g, ' ')}, ${sv.res_m} m); ${standing} of ${Object.keys(SKY.buildings).length} buildings on the estate standing (over 3 m), ${sv.buildings_flown} with data. Today's OSM outlines; demolished buildings do not appear.`;
+  if (sv) $('skyNote').textContent = `${sv.year}: EA LiDAR surface model (${sv.product.replace(/_/g, ' ')}, ${sv.res_m} m); ${standing} of ${Object.keys(SKY.buildings).length} buildings on the estate standing (over 3 m), ${sv.buildings_flown} with data; the others keep today's height in slate blue. Today's OSM outlines; demolished buildings do not appear.`;
   buildBld(); if (AT) buildPick(); if (glowOn.length) buildGlow(); draw();
 }
 $('skyYear').oninput = () => setSkyYear(+$('skyYear').value);

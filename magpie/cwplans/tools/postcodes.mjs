@@ -4,7 +4,7 @@
 // against open web sources.
 //   node magpie/cwplans/tools/postcodes.mjs fetch    # ONSPD rows for the districts, ward names, ward boundary, OSM addresses
 //   node magpie/cwplans/tools/postcodes.mjs osm      # only the OSM address tally (no network)
-//   node magpie/cwplans/tools/postcodes.mjs build    # -> magpie/cwplans/postcodes/postcodes.json, .csv
+//   node magpie/cwplans/tools/postcodes.mjs build    # -> magpie/cwplans/postcodes/postcodes.json, .csv, canary-wharf-ward.geojson
 //   node magpie/cwplans/tools/postcodes.mjs query    # -> magpie/cwplans/postcodes/queries.json (GOV.UK, Wikipedia, FSA, Wikidata)
 // Method, definitions and limits: magpie/cwplans/postcodes/README.md.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, createReadStream } from 'fs';

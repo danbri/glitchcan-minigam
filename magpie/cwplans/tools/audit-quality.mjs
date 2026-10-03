@@ -7,7 +7,9 @@
 // in:  registry/buildings.json, atlas/data/atlas.json, postcodes/postcodes.json,
 //      data/raw/registry/osm-cw.json.gz, data/raw/registry/fhrs/FHRS530-*.json.gz, data/raw/registry/wikidata-cw.json,
 //      registry/sources/brands/branches.json, registry/sources/brands/cwg-directory.json,
-//      registry/companies-by-postcode.json, registry/homes-by-postcode.json
+//      registry/companies-by-postcode.json, data/sourced-levels.json, docklands/data/area.js, docklands/data/indoor.js,
+//      data/raw/registry/wikidata-occupant-classes.json, registry/sources/museums/records-open.json
+// Every input and output, with endpoints and rules: magpie/cwplans/pipeline.json, activity "audit-quality".
 // out: quality/issues.json (checks with counts, rates and examples; one record per issue)
 //      quality/CATALOGUE.md (generated tables). The analysis is quality/README.md (hand-written).
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';

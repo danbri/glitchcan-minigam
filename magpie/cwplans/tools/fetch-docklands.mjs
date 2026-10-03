@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Fetch raw open data for the Docklands model (London Bridge to Cody Dock, Limehouse to Greenwich)
 // into magpie/cwplans/data/raw/docklands/. Only the Wikidata results (gzipped) are committed.
-//   node magpie/cwplans/tools/fetch-docklands.mjs [osm|lidar|wikidata ...]   (default: all)
+//   node magpie/cwplans/tools/fetch-docklands.mjs [osm|lidar|wikidata|defences ...]   (default: all four)
+// Every input and output, with endpoints and rules: magpie/cwplans/pipeline.json, activity "fetch-docklands-*".
 // The OSTN15 grid comes from: node magpie/cwplans/tools/fetch-raw.mjs grid
 // Sources and licences: magpie/cwplans/docklands/README.md.
 import { writeFileSync, mkdirSync, existsSync, statSync } from 'fs';

@@ -1,4 +1,5 @@
-// Parsers for OSM tag values that are not single plain values. Used by every tool that reads OSM tags, so the
+// Parsers for OSM tag values that are not single plain values. Meant for every tool that reads OSM tags (pipeline.json
+// "libraries" lists which do so far; build-data, build-categories and the brands tools still read tags directly), so the
 // rules live in one place and have fixture tests (tools/test/osm-values.test.mjs; run: node --test magpie/cwplans/tools/test/*.test.mjs).
 // Why: faults F2 and F3 in the docklands-data-curation skill.
 

@@ -1,13 +1,14 @@
 // Measured skyline by year: the height of each model building on the Canary Wharf estate (and 300 m round it) in every
 // EA LiDAR surface model from 1999 to 2022. Drives the year slider in the 3D page.
 //
-//   bash magpie/cwplans/data/raw/dsm/fetch.sh      # the DSM tiles (TQ3575, TQ3580; about 1 GB of ZIPs, not committed)
+//   bash magpie/cwplans/tools/fetch-dsm.sh          # the DSM tiles (TQ3575, TQ3580; about 1 GB of ZIPs, not committed)
 //   node magpie/cwplans/tools/build-skyline.mjs
 //
 // in:  data/raw/dsm/<product>-<year>-<res>-<tile>.zip (GeoTIFF or ESRI ASCII grid inside), docklands/data/area.js
 // out: docklands/data/skyline.json  { years, surveys, buildings: { <model building index>: [dm per year | null] } }
 // Rule: height in a year = 90th percentile of the DSM cells inside the footprint (1 m sampling) minus the building's
-// ground level in the model (the 2020s DTM). Under 3 m: not there that year (0). No cells with data: null (not flown).
+// ground level in the model (the 2020s DTM). Under 3 m, or under a quarter of today's height (a cleared site with
+// hoardings): not there that year (0). No cells with data: null (not flown). A survey that flew under 20% of the box is left out.
 // The footprints are today's OSM outlines, so buildings demolished before today do not appear (limit, said in the page).
 import { readFileSync, writeFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -58,7 +59,7 @@ A.buildings.forEach((b, i) => {
   // sample points inside the footprint, 1 m apart (at least the centre)
   const pts = []; for (let z = z0 + .5; z < z1; z += 1) for (let x = x0 + .5; x < x1; x += 1) if (pointIn([x, z], ring)) pts.push([x + ORIGIN.E0, -z + ORIGIN.N0]);
   if (!pts.length) pts.push([cx + ORIGIN.E0, -cz + ORIGIN.N0]);
-  blds.push({ i, base: b.b, pts: pts.length > 4000 ? pts.filter((_, k) => k % Math.ceil(pts.length / 4000) === 0) : pts });
+  blds.push({ i, base: b.b, today: b.h, pts: pts.length > 4000 ? pts.filter((_, k) => k % Math.ceil(pts.length / 4000) === 0) : pts });
 });
 console.log(`${blds.length} buildings in the box`);
 
@@ -73,14 +74,17 @@ for (const y of years) {
     const v = b.pts.map(([E, N]) => sample(grids, E, N)).filter(v => v != null);
     if (v.length < Math.max(1, b.pts.length * .3)) { H.get(b.i).push(null); continue; }
     flown++; v.sort((p, q) => p - q); const h = v[Math.floor(v.length * .9)] - b.base;
-    H.get(b.i).push(h < 3 ? 0 : Math.round(h * 10));
+    H.get(b.i).push(h < Math.max(3, b.today * .25) ? 0 : Math.round(h * 10));   // a site with hoardings is not the tower yet
   }
   const s = byYear.get(y)[0], d = grids.filter(g => g.from), iso = v => `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}`;
   surveys.push({ year: y, product: s.product, res_m: s.res, tiles: byYear.get(y).map(z => z.tile), flown_from: d.length ? iso(d.map(g => g.from).sort()[0]) : null, flown_to: d.length ? iso(d.map(g => g.to).sort().at(-1)) : null, buildings_flown: flown });
   console.log(`${y}: ${s.product} ${s.res} m, ${grids.length} rasters, ${flown} of ${blds.length} buildings with data`);
 }
-const out = { built: new Date().toISOString().slice(0, 10), years, surveys, box: { x0: BOX[0], x1: BOX[1], z0: BOX[2], z1: BOX[3] },
-  rule: 'height = 90th percentile of the DSM inside today\'s OSM footprint minus the model ground; 0 = under 3 m (not there); null = not flown. Decimetres.',
+// a survey that flew less than a fifth of the box is listed under not_used and left out of the slider
+const keep = surveys.map(sv => sv.buildings_flown >= blds.length * .2), not_used = surveys.filter((_, k) => !keep[k]).map(sv => ({ ...sv, reason: 'flew less than 20% of the buildings in the box' }));
+for (const [i, h] of H) H.set(i, h.filter((_, k) => keep[k]));
+const out = { built: new Date().toISOString().slice(0, 10), years: years.filter((_, k) => keep[k]), surveys: surveys.filter((_, k) => keep[k]), not_used, box: { x0: BOX[0], x1: BOX[1], z0: BOX[2], z1: BOX[3] },
+  rule: 'height = 90th percentile of the DSM inside today\'s OSM footprint minus the model ground; 0 = under 3 m or under a quarter of today\'s height (not there); null = not flown. Decimetres.',
   attribution: 'EA LiDAR DSM 1999-2022 © Environment Agency (OGL v3.0); footprints © OpenStreetMap contributors (ODbL)',
   buildings: Object.fromEntries([...H].map(([i, h]) => [i, h])) };
 writeFileSync(join(CW, 'docklands/data/skyline.json'), JSON.stringify(out));

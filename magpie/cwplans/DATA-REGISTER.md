@@ -43,8 +43,9 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `docklands/data/indoor.js` | 434 kB | derived | walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances | osmfr-greater-london | docklands/index.html |
 | `registry/categories.json` | 66 kB | derived | occupant names and the OSM tags that state their kind (amenity, office, shop, leisure, tourism) | osmfr-greater-london | docklands/index.html |
 | `docklands/data/splats/cw-synth.splat.gz` | 4.8 MB | derived | building outlines and heights as splat positions and sizes | osmfr-greater-london | docklands/index.html |
+| `docklands/data/skyline.json` | 85 kB | derived | model building indices (today's OSM outlines) as the keys of the heights | osmfr-greater-london | docklands/index.html |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 21 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 23 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -100,7 +101,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `data/raw/postcodes/wards.json` | 13 kB | ward codes and names | ONS ward names and boundaries (OGL v3.0) |
 | `postcodes/postcodes.json` | 1.2 MB | all 4,000 candidate E14 postcodes with status, tier, dates, ward, position, OSM streets | ONS Postcode Directory, August 2026 (OGL v3.0); ONS ward names and boundaries (OGL v3.0); OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
 | `postcodes/postcodes.csv` | 356 kB | the same as CSV | ONS Postcode Directory, August 2026 (OGL v3.0); ONS ward names and boundaries (OGL v3.0); OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
-| `postcodes/queries.json` | 291 kB | web search templates per postcode | ONS Postcode Directory, August 2026 (OGL v3.0); written or computed in this project (repository licence) |
+| `postcodes/queries.json` | 291 kB | per-postcode results of GOV.UK, Wikipedia and FSA API searches (658 postcodes; titles, links, dates), Wikidata items with the postcode, and web search templates | GOV.UK search API (OGL v3.0); Wikipedia search API (article text CC BY-SA (not stored); titles and URLs only); Food Standards Agency food hygiene rating API (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); written or computed in this project (repository licence) |
 | `postcodes/canary-wharf-ward.geojson` | 12 kB | Canary Wharf ward boundary | ONS ward names and boundaries (OGL v3.0) |
 | `data/raw/registry/osm-cw.json.gz` | 840 kB | OSM features with full tags in the Canary Wharf box | OpenStreetMap (ODbL 1.0) |
 | `data/raw/registry/wikidata-cw.json` | 138 kB | Wikidata items, headquarters, occupants and owners in the box (QLever) | Wikidata (CC0 1.0) |
@@ -150,6 +151,9 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `docklands/data/splats/cw-synth.splat.gz` | 4.8 MB | Gaussian splats synthesised from the 3D model for the Canary Wharf estate and 300 m round it (669,306 splats; ground coloured from the 2008 aerial photograph) | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Environment Agency survey downloads: vertical aerial photography 2008 (OGL v3.0) |
 | `docklands/data/splats/index.json` | 1 kB | list of the splat sets the 3D page offers | written or computed in this project (repository licence) |
 | `docklands/data/splats/cw-synth.json` | 1 kB | metadata of the synthesised splat set: box, counts, method | written or computed in this project (repository licence) |
+| `docklands/data/skyline.json` | 85 kB | measured height of each model building on the Canary Wharf estate and 300 m round it in every EA LiDAR surface model that flew it (1999 to 2022), with survey dates | Environment Agency LiDAR DSM survey tiles 1999 to 2022 (OGL v3.0); OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0) |
+| `pipeline.json` | 107 kB | provenance of every transform: one W3C PROV activity a tool (used, generated, rules) | written or computed in this project (repository licence) |
+| `pipeline.jsonld` | 208 kB | pipeline.json and this register as JSON-LD (PROV-O, DCAT, Dublin Core) for a knowledge graph | written or computed in this project (repository licence) |
 | `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
 | `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
@@ -162,7 +166,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 21 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 23 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 
@@ -192,6 +196,15 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | copernicus-sentinel | Copernicus Sentinel-2 L2A (via Earth Search / Element 84) | Copernicus Sentinel data: free, full and open (attribution) | Contains modified Copernicus Sentinel data |
 | ea-survey-imagery | Environment Agency survey downloads: vertical aerial photography 2008 (RGB, 40 cm) and 2012 (night-time, 20 cm), National LiDAR Programme intensity 2020 (1 m) | OGL v3.0 | © Environment Agency copyright and/or database right. All rights reserved (OGL v3.0) |
 | tfl-foi | TfL FOI-0493-2223 (2022): station depths, rail levels in London Underground Datum | FOI disclosure; no open licence stated. Only six cited values are used, as facts with their source row; re-check before production |  |
+| os-ostn15 | Ordnance Survey OSTN15 transformation grid (NTv2 GeoTIFF, via the PROJ CDN, cdn.proj.org) | free to use as published by OS; licence text to be recorded before production | used only to transform coordinates; no data from it is committed |
+| pla-arcgis | Port of London Authority ArcGIS feature layers (sediment samples, licensing areas and others) | not stated on the layers (see registry/sources/pla/README.md); re-check before production |  |
+| crt-arcgis | Canal & River Trust ArcGIS feature layers (docks, basins, locks, bridges) | Canal & River Trust data licence (see registry/sources/pla/README.md) |  |
+| voa-rating-list | Valuation Office Agency non-domestic rating list 2026 | VOA licence with restrictions: never committed (CLAUDE.md licence limit); local use only |  |
+| govuk-search | GOV.UK search API | OGL v3.0 |  |
+| wikipedia-search | Wikipedia search API (titles and links only) | article text CC BY-SA (not stored); titles and URLs only |  |
+| fsa-api | Food Standards Agency food hygiene rating API | OGL v3.0 |  |
+| ea-dsm-history | Environment Agency LiDAR DSM survey tiles 1999 to 2022 (survey download service) | OGL v3.0 |  |
+| feed-providers | the publishers of the feeds and APIs listed in feeds/feeds.json and feeds/events.json (each with its own terms, recorded per entry) | per entry in feeds.json |  |
 | tfl-open-data | Transport for London open data: step-free station topology (GTFS pathways, 2026-08-03) and the live lift disruption feed | TfL open data terms (Powered by TfL Open Data; OGL-based); the terms page was not readable from the container: re-check before production | Powered by TfL Open Data |
 | web-quotes | short quotations from published pages (Wikipedia 169 of 360 in facts.json, also Crossrail Learning Legacy, Tideway, Canal & River Trust, trade press and others) | Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved | each quote is one sentence or less, kept with its URL to cite a number |
 | own | written or computed in this project (method, decisions, URLs, search templates) | repository licence |  |

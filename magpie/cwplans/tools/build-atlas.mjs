@@ -2,8 +2,10 @@
 //
 //   node magpie/cwplans/tools/build-atlas.mjs        # about 5 seconds
 //
-// in:  registry/buildings.json, registry/ids.json, data/raw/registry/osm-cw.json.gz (outlines),
-//      postcodes/postcodes.json, registry/companies-by-postcode.json, registry/homes-by-postcode.json,
+// Every input and output, with endpoints and rules: magpie/cwplans/pipeline.json, activity "build-atlas".
+// in:  registry/buildings.json, registry/categories.json, data/raw/registry/osm-cw.json.gz (outlines),
+//      postcodes/postcodes.json, registry/companies-by-postcode.json, registry/homes-by-postcode.json, docklands/facts.json,
+//      feeds/feeds.json, feeds/events.json, registry/sources/brands/branches.json, data-register.json, the OSTN15 grid,
 //      registry/sources/museums/records-open.json, registry/sources/pla/ukho_*.geojson,
 //      data/raw/docklands/ea-defences.json.gz, data/raw/docklands/wikidata-items.json.gz,
 //      docklands/data/area.js (published levels with their LiDAR ground), data/sourced-levels.json

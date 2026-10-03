@@ -1,8 +1,9 @@
 // Gaussian splats synthesised straight from the Docklands 3D model (no training): the Canary Wharf Group estate and
 // about 300 m round it. Ground discs take the 2008 EA aerial photograph; roofs of low buildings too; walls are
-// wall-colour discs with a disc per window in front, on the same 3.6 m storey and 1.8 m window grid as the page shader.
+// wall-colour discs per 3.6 m storey and 7.2 m of wall (--cell), each with one glass-band disc in front.
 //
-//   node magpie/cwplans/tools/build-splats.mjs [--ground 3] [--box x0,x1,z0,z1]
+//   node magpie/cwplans/tools/build-splats.mjs [--ground 4] [--cell 7.2] [--box x0,x1,z0,z1]
+// Every input and output, with endpoints and rules: magpie/cwplans/pipeline.json, activity "build-splats".
 //
 // in:  docklands/data/area.js (buildings, terrain), data/raw/imagery/rgb2008.ppm (raw copy written by tools/build-aerial.py)
 // out: docklands/data/splats/cw-synth.splat.gz  standard 32-byte .splat records (position 3 x f32, scale 3 x f32 as sigma
@@ -110,7 +111,7 @@ const gz = gzipSync(buf, { level: 9 });
 writeFileSync(join(CW, 'docklands/data/splats/cw-synth.splat.gz'), gz);
 const meta = { built: new Date().toISOString().slice(0, 10), file: 'cw-synth.splat.gz', format: 'antimatter15 .splat, 32 bytes a splat, gzip; model metres and axes (x east, y up, z south)', count: N,
   counts: { ground: nGround, roof: nRoof, wall: nWall, window: nWin }, box: { x0: BOX[0], x1: BOX[1], z0: BOX[2], z1: BOX[3] }, ground_step_m: GSTEP,
-  method: 'synthesised from the model, not trained: ground discs coloured from the 2008 EA aerial photograph, roofs (aerial colour under 40 m), walls on a 3.6 m storey grid with two window discs per cell; colours carry the page shader\'s fixed light', sources: ['osm', 'ea-lidar', 'ea-survey-imagery'] };
+  method: 'synthesised from the model, not trained: ground discs coloured from the 2008 EA aerial photograph, roofs (aerial colour under 40 m), walls on a 3.6 m storey grid with one glass-band disc per 7.2 m cell; colours carry the page shader\'s fixed light', sources: ['osm', 'ea-lidar', 'ea-survey-imagery'] };
 writeFileSync(join(CW, 'docklands/data/splats/cw-synth.json'), JSON.stringify(meta, null, 1));
 // the page's list of splat sets: keep the other entries, replace this one
 const IX = join(CW, 'docklands/data/splats/index.json'); let ix = { sets: [] }; try { ix = JSON.parse(readFileSync(IX, 'utf8')); } catch {}
