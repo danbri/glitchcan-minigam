@@ -1,0 +1,156 @@
+# Data register: magpie/cwplans
+
+Generated from `data-register.json` by `tools/check-data-register.mjs --write` on 2026-10-03. Edit the JSON, not this file.
+
+## Policy
+
+- personal org address data: Restrictions suspended for this project during scoping, planning and prototyping (owner, October 2026; CLAUDE.md, Data ethics, exception).
+- licence limit: Never fetch or commit proprietary, restricted-licence or virally licensed data.
+- odbl: OpenStreetMap data (ODbL 1.0, share-alike) is allowed for now (owner, 2026-10-03). Its use is to be reviewed in full during planning and prototyping. Every committed file that holds OSM data, or data derived from it, is listed here with osm.use other than 'none'.
+
+## OpenStreetMap (ODbL) use
+
+Attribution on every page that shows OSM data: "© OpenStreetMap contributors", linked to https://www.openstreetmap.org/copyright.
+
+| extract | OSM data as of | fetched | committed |
+|---|---|---|---|
+| osmfr-greater-london: https://download.openstreetmap.fr/extracts/europe/united_kingdom/england/greater_london-latest.osm.pbf | 2026-10-01T01:43:50Z (osmosis_replication_timestamp in the PBF header) | 2026-10-02 | no (data/raw/docklands/greater_london-latest.osm.pbf) |
+| osm-api-corridor: https://api.openstreetmap.org/api/0.6/map.json (corridor box) and /api/0.6/relation/{id}/full.json for incomplete water relations | (API, live) | 2026-10-02 | yes |
+
+| file | size | use | what OSM data | extract | shown on |
+|---|---|---|---|---|---|
+| `data/cwplans-data.js` | 715 kB | derived | building outlines and levels, water, roads, railways, stations, tunnels | osm-api-corridor | index.html |
+| `data/raw/osm-map.json.gz` | 1.4 MB | raw | all elements in the box | osm-api-corridor |  |
+| `data/raw/osm-water-full.json.gz` | 17 kB | raw | relation members | osm-api-corridor |  |
+| `data/sourced-levels.json` | 5 kB | ids | OSM node and way ids that place each station |  |  |
+| `docklands/data/area.js` | 5.6 MB | derived | building outlines, parts and levels, water, greens, roads, railways, tunnels, place names | osmfr-greater-london | docklands/index.html |
+| `docklands/data/under.js` | 296 kB | derived | building:levels:underground, indoor ways and points with a level tag | osmfr-greater-london | docklands/index.html |
+| `data/raw/postcodes/osm-addr-postcodes.json` | 133 kB | counts | counts, street names and feature kinds per postcode | osmfr-greater-london |  |
+| `postcodes/postcodes.json` | 1.2 MB | counts | osm_features, osm_streets, osm_kinds per postcode | osmfr-greater-london | postcodes/index.html |
+| `postcodes/postcodes.csv` | 353 kB | counts | as postcodes.json | osmfr-greater-london |  |
+| `data/raw/registry/osm-cw.json.gz` | 840 kB | raw | buildings, parts, shops, offices, amenities, entrances, with all tags | osmfr-greater-london |  |
+| `registry/buildings.json` | 1.9 MB | derived | building outlines (centroid, area), names, levels, addresses, occupant names, brands and levels | osmfr-greater-london | registry/index.html |
+| `registry/ids.json` | 36 kB | ids | OSM way and relation ids of building outlines | osmfr-greater-london |  |
+| `registry/sources/brands/branches.json` | 221 kB | derived | OSM ids, names, brand tags, levels, positions, match rules | osmfr-greater-london |  |
+| `registry/sources/brands/storelocator.json` | 33 kB | counts | Greater London branch counts per brand, and website=* tags used to find URLs | osmfr-greater-london |  |
+| `registry/sources/brands/README.md` | 72 kB | notes | branch table with OSM ids, names and levels |  |  |
+| `README.md` | 10 kB | notes | describes the OSM layers |  |  |
+| `docklands/README.md` | 11 kB | notes | describes the OSM layers and counts |  |  |
+| `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
+| `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
+
+Use values: **raw**: OSM elements as downloaded (tags and geometry); **derived**: a database built from OSM data together with other sources (geometry, names, tags); **counts**: only counts or short lists (street names, kinds) computed from OSM; **ids**: only OSM element ids, as links or join keys; **notes**: documentation that quotes or tabulates OSM-derived values; **none**: no OSM data.
+
+### OSM elsewhere in the repository (not this project)
+
+Outside this project; listed so that the ODbL review sees the whole repository. Found with: git grep -l -i -E 'openstreetmap|odbl' and git ls-files | grep -i osm (2026-10-03).
+
+- `trees/data/bristol.osm.pbf`: raw, complete OSM Bristol extract (Geofabrik)
+- `trees/data/fabric-bristol.json`: derived, buildings (and .gz copy)
+- `trees/data/roads-bristol.json`: derived, roads (and .gz copy)
+- `trees/data/water-bristol.json`: derived, water (and .gz copy)
+- `trees/data/greens-bristol.json`: derived, parks (and .gz copy)
+- `trees/data/pubs-bristol.json`: derived, pubs (and .gz copy)
+- `trees/data/shops-bristol.json`: derived, shops (and .gz copy)
+- `magpie/ua17/data/buildings-london.json`: derived, tall buildings, Overpass, 2026-07-01
+- `magpie/ua17/data/buildings-nyc.json`: derived, tall buildings, Overpass
+- `magpie/edot/maps/js/maps-config.js`: tiles, loads tile.openstreetmap.org raster tiles at run time; no OSM data committed
+
+## Marked for review
+
+- `data/sourced-levels.json`: quotes include Wikipedia text (CC BY-SA)
+- `docklands/facts.json`: 169 quotes are Wikipedia text (CC BY-SA 4.0, share-alike); the rest are short quotes from all-rights-reserved pages. Decide in the review whether to keep the quote text or only the value and URL.
+- `docklands/FACTS.md`: as docklands/facts.json
+- `registry/buildings.json`: occupants include CWG page links and mall names from cwg-directory.json
+- `registry/sources/brands/branches.json`: includes CWG directory fields (see cwg-directory.json)
+- `registry/sources/brands/cwg-directory.json`: Copied from canarywharf.com (through Internet Archive copies). The site states no open licence, so under the licence limit this is probably proprietary data. Committed on 2026-10-03, before this register. Owner decision needed: keep, reduce to URLs only, or remove.
+
+## All registered files
+
+| file | size | what | sources (licence) |
+|---|---|---|---|
+| `data/cwplans-data.js` | 715 kB | corridor 3D model data (Canada Water corridor page) | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Wikidata (CC0 1.0); short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved) |
+| `data/raw/osm-map.json.gz` | 1.4 MB | OSM API map.json for the corridor box | OpenStreetMap (ODbL 1.0) |
+| `data/raw/osm-water-full.json.gz` | 17 kB | full water relations (the Thames, Pool of London) | OpenStreetMap (ODbL 1.0) |
+| `data/raw/wikidata-around.json` | 307 kB | Wikidata items near the corridor | Wikidata (CC0 1.0) |
+| `data/raw/wikidata-facts.json` | 33 kB | Wikidata heights, floors and dates | Wikidata (CC0 1.0) |
+| `data/sourced-levels.json` | 5 kB | published station and structure levels used as tunnel controls | short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved); written or computed in this project (repository licence); OpenStreetMap (ODbL 1.0) |
+| `data/raw/docklands/ea-defences.json.gz` | 35 kB | EA flood defences in the Docklands box | Environment Agency Spatial Flood Defences (OGL v3.0) |
+| `data/raw/docklands/wikidata-facts.json.gz` | 13 kB | Wikidata facts for the Docklands box | Wikidata (CC0 1.0) |
+| `data/raw/docklands/wikidata-items.json.gz` | 212 kB | Wikidata items in the Docklands box | Wikidata (CC0 1.0) |
+| `docklands/data/area.js` | 5.6 MB | Docklands 3D model: terrain, water, greens, 41,803 buildings, railways, roads, tunnels, places, flood defences, riverbed | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Wikidata (CC0 1.0); Environment Agency Spatial Flood Defences (OGL v3.0); UKHO INSPIRE bathymetry and wrecks (OGL v3.0); PLA Tide Booklet 2025 (two published numbers used as facts); short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved) |
+| `docklands/data/under.js` | 296 kB | basements, indoor ways, points with a level, published structures | OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0); short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved) |
+| `docklands/facts.json` | 166 kB | 360 cited facts (depths, tunnels, towers, docks, ground) | short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved); Wikidata (CC0 1.0) |
+| `docklands/FACTS.md` | 89 kB | the same facts as a table | short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved); Wikidata (CC0 1.0) |
+| `data/raw/postcodes/onspd-aug2026.json.gz` | 58 kB | ONSPD rows for E14 | ONS Postcode Directory, August 2026 (OGL v3.0) |
+| `data/raw/postcodes/osm-addr-postcodes.json` | 133 kB | per postcode: number of OSM features with that addr:postcode, their streets and kinds | OpenStreetMap (ODbL 1.0) |
+| `data/raw/postcodes/wards.json` | 13 kB | ward codes and names | ONS ward names and boundaries (OGL v3.0) |
+| `postcodes/postcodes.json` | 1.2 MB | all 4,000 candidate E14 postcodes with status, tier, dates, ward, position, OSM streets | ONS Postcode Directory, August 2026 (OGL v3.0); ONS ward names and boundaries (OGL v3.0); OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
+| `postcodes/postcodes.csv` | 353 kB | the same as CSV | ONS Postcode Directory, August 2026 (OGL v3.0); ONS ward names and boundaries (OGL v3.0); OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
+| `postcodes/queries.json` | 291 kB | web search templates per postcode | ONS Postcode Directory, August 2026 (OGL v3.0); written or computed in this project (repository licence) |
+| `postcodes/canary-wharf-ward.geojson` | 12 kB | Canary Wharf ward boundary | ONS ward names and boundaries (OGL v3.0) |
+| `data/raw/registry/osm-cw.json.gz` | 840 kB | OSM features with full tags in the Canary Wharf box | OpenStreetMap (ODbL 1.0) |
+| `data/raw/registry/wikidata-cw.json` | 138 kB | Wikidata items, headquarters, occupants and owners in the box (QLever) | Wikidata (CC0 1.0) |
+| `data/raw/registry/fhrs/FHRS530-2026-10-03.json.gz` | 35 kB | FSA food premises snapshot, E14 | FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0) |
+| `registry/buildings.json` | 1.9 MB | 1,129 buildings with ids, names, occupants, owners, postcodes and joins | OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); ONS Postcode Directory, August 2026 (OGL v3.0); OS Open UPRN and Open Linked Identifiers (OGL v3.0); GLA London Building Stock Model 2 (OGL v3.0); HM Land Registry INSPIRE Index Polygons (OGL v3.0 with conditions); HM Land Registry Price Paid Data (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Canary Wharf Group directory pages (none stated (all rights reserved by default)); written or computed in this project (repository licence) |
+| `registry/ids.json` | 36 kB | id register: OSM element to cwb-NNNN | OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
+| `registry/companies-by-postcode.json` | 2.8 MB | companies per postcode (number, name, status, category, dates, SIC) | Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)) |
+| `registry/homes-by-postcode.json` | 95 kB | price-paid totals per postcode, at least 5 homes | HM Land Registry Price Paid Data (OGL v3.0) |
+| `registry/sources/uprn/uprn-summary.json` | 14 kB | UPRN counts in the box | OS Open UPRN and Open Linked Identifiers (OGL v3.0) |
+| `registry/sources/landregistry/inspire-canary-wharf.geojson` | 1.5 MB | INSPIRE index polygons touching the box | HM Land Registry INSPIRE Index Polygons (OGL v3.0 with conditions) |
+| `registry/sources/brands/brands-uk.json` | 443 kB | UK brands from the name-suggestion-index | OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause) |
+| `registry/sources/brands/wikidata-brands.json` | 345 kB | Wikidata facts for the brands | Wikidata (CC0 1.0) |
+| `registry/sources/brands/wikidata-near.json` | 35 kB | Wikidata branch items near Canary Wharf | Wikidata (CC0 1.0) |
+| `registry/sources/brands/branches.json` | 221 kB | 271 chain-store branches with evidence per source | OpenStreetMap (ODbL 1.0); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Wikidata (CC0 1.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)); brand store-locator pages (none stated); written or computed in this project (repository licence) |
+| `registry/sources/brands/storelocator.json` | 33 kB | store-locator URLs checked for the top 30 brand families | brand store-locator pages (none stated); OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
+| `registry/sources/brands/cwg-directory.json` | 226 kB | 374 entries of the Canary Wharf Group shop, restaurant and venue directory | Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
+| `registry/sources/brands/tools/cwg-decisions.json` | 4 kB | hand decisions on CWG directory matches | written or computed in this project (repository licence); Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
+| `registry/sources/brands/tools/fsa-decisions.json` | 7 kB | hand decisions on FSA matches | written or computed in this project (repository licence); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0) |
+| `registry/sources/brands/tools/storelocator-manual.json` | 2 kB | store-locator URLs found by hand | written or computed in this project (repository licence); brand store-locator pages (none stated) |
+| `registry/sources/brands/README.md` | 72 kB | method and the full branch table | written or computed in this project (repository licence); OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
+| `registry/sources/museums/records-open.json` | 3.5 MB | 6,629 open museum and heritage records with positions | Wikidata (CC0 1.0); Historic England open data hub (OGL v3.0); ADS / ARIADNE catalogue records (per record: OGL v3.0 or CC-BY (Portable Antiquities Scheme)) |
+| `registry/sources/museums/apa_greater_london.geojson` | 354 kB | Greater London Archaeological Priority Areas | Historic England open data hub (OGL v3.0) |
+| `registry/sources/pla/ukho_thames_teddington_greenwich_25m.geojson` | 395 kB | Thames soundings, 25 m | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
+| `registry/sources/pla/ukho_thames_greenwich_coalhouse_50m.geojson` | 286 kB | Thames soundings, 50 m | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
+| `registry/sources/pla/ukho_thames_hms_belfast_berth.geojson` | 4 kB | HMS Belfast berth survey | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
+| `registry/sources/pla/ukho_wrecks_obstructions_areas.geojson` | 2 kB | UKHO wrecks and obstructions, areas | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
+| `registry/sources/pla/ukho_wrecks_obstructions_points.geojson` | 13 kB | UKHO wrecks and obstructions, points | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
+| `feeds/feeds.json` | 180 kB | 200 checked data sources and APIs (catalogue) | written or computed in this project (repository licence) |
+| `feeds/events.json` | 163 kB | 124 event, calendar, news and openings sources (catalogue) | written or computed in this project (repository licence) |
+| `feeds/README.md` | 113 kB | the feeds catalogue as text | written or computed in this project (repository licence) |
+| `feeds/EVENTS.md` | 50 kB | the events catalogue as text | written or computed in this project (repository licence) |
+| `registry/sources/SOURCES-companies-property.md` | 17 kB | access and licence notes for company and property data | written or computed in this project (repository licence) |
+| `registry/sources/museums/README.md` | 11 kB | museum records method and licences | written or computed in this project (repository licence) |
+| `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
+| `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
+| `README.md` | 10 kB | corridor notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 11 kB | Docklands notes | written or computed in this project (repository licence) |
+| `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
+| `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
+
+## Sources
+
+| key | source | licence | attribution or note |
+|---|---|---|---|
+| osm | OpenStreetMap | ODbL 1.0 | © OpenStreetMap contributors |
+| nsi | OSM name-suggestion-index 8.0.20260918 | BSD-3-Clause | a separate project from the OSM database; its brand list is not ODbL data |
+| wikidata | Wikidata (SPARQL; QLever for the registry) | CC0 1.0 |  |
+| ea-lidar | Environment Agency LiDAR Composite DTM/DSM 1 m (WCS) | OGL v3.0 |  |
+| ea-defences | Environment Agency Spatial Flood Defences (OGC API Features) | OGL v3.0 | owner and maintainer fields dropped |
+| ukho | UKHO INSPIRE bathymetry and wrecks (PLA multibeam survey 2013–2017) | OGL v3.0 | Contains public sector information, licensed under the Open Government Licence v3.0, from the UK Hydrographic Office not for navigation |
+| pla-tide-booklet | PLA Tide Booklet 2025 (chart datum to ODN values only) | two published numbers used as facts |  |
+| onspd | ONS Postcode Directory, August 2026 (ONS ArcGIS hosted table) | OGL v3.0 | Contains OS data © Crown copyright and database right 2026; contains Royal Mail data © Royal Mail copyright and database right 2026; source: Office for National Statistics licensed under the Open Government Licence v3.0 |
+| ons-boundaries | ONS ward names and boundaries | OGL v3.0 | Source: Office for National Statistics licensed under the Open Government Licence v3.0. Contains OS data © Crown copyright and database right 2026 |
+| fsa | FSA Food Hygiene Rating data, Tower Hamlets (FHRS530) | OGL v3.0 |  |
+| os-open-uprn | OS Open UPRN and Open Linked Identifiers | OGL v3.0 | Contains OS data © Crown copyright and database right 2026 |
+| lbsm | GLA London Building Stock Model 2 | OGL v3.0 |  |
+| hmlr-inspire | HM Land Registry INSPIRE Index Polygons | OGL v3.0 with conditions | This information is subject to Crown copyright and database rights 2026 and is reproduced with the permission of HM Land Registry. The polygons (including the associated geometry, namely x, y co-ordinates) are subject to Crown copyright and database rights 2026 Ordnance Survey 100026316. |
+| hmlr-price-paid | HM Land Registry Price Paid Data | OGL v3.0 | Contains HM Land Registry data © Crown copyright and database right 2026. This data is licensed under the Open Government Licence v3.0. |
+| companies-house | Companies House Basic Company Data | free reuse (OGL terms for Companies House public data) |  |
+| historic-england | Historic England open data hub (records, Archaeological Priority Areas) | OGL v3.0 |  |
+| ads-ariadne | ADS / ARIADNE catalogue records (only the OGL and CC-BY ones) | per record: OGL v3.0 or CC-BY (Portable Antiquities Scheme) | records under the ADS terms of use are not committed |
+| cwg-site | Canary Wharf Group directory pages (canarywharf.com), read from Internet Archive copies | none stated (all rights reserved by default) | see the review note on cwg-directory.json |
+| brand-sites | brand store-locator pages | none stated | only URLs and a yes/no check are kept, no page content |
+| web-quotes | short quotations from published pages (Wikipedia 169 of 360 in facts.json, also Crossrail Learning Legacy, Tideway, Canal & River Trust, trade press and others) | Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved | each quote is one sentence or less, kept with its URL to cite a number |
+| own | written or computed in this project (method, decisions, URLs, search templates) | repository licence |  |
+| owner-supplied | supplied by the repository owner | owner's |  |

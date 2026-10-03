@@ -1,6 +1,8 @@
 # cwplans: Canada Water → Surrey Quays corridor model
 
 Live page: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/
+
+Data licences and OpenStreetMap use for the whole project: `DATA-REGISTER.md` (generated from `data-register.json`; check with `node magpie/cwplans/tools/check-data-register.mjs`).
 First schematic (hand-placed boxes, kept for reference): https://danbri.github.io/glitchcan-minigam/magpie/cwplans/schematic.html
 
 A 3D view and a long section of the East London Line (London Overground) from Wapping, through the Thames Tunnel, Rotherhithe and Canada Water, to Surrey Quays and Silwood Junction. It is built from open data only. Ground, buildings and the levels of open track are measured. Tunnel levels are modelled, because no open source publishes them.

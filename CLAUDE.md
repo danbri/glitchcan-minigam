@@ -53,9 +53,14 @@ restrictions on personal org and address data while in the scoping, planning and
 - The licence limit stays: never fetch or commit proprietary, restricted-licence (e.g. the VOA
   rating list) or virally licensed (copyleft / share-alike) data to the repo. Check the licence
   of each source before it is committed.
-- Open question for the owner (October 2026): OpenStreetMap data is ODbL, a share-alike licence,
-  and `magpie/cwplans/` and `trees/` already commit OSM-derived files. Until the owner decides,
-  keep using OSM as before and do not add other share-alike sources.
+- OpenStreetMap (ODbL, share-alike) is allowed for now (owner, 2026-10-03: "ODbL is ok for now, and
+  will be thoroughly reviewed as part of the planning and prototyping activities later. Keep track of
+  our use of this data carefully."). No other share-alike source without the owner's agreement.
+- Every committed data file in `magpie/cwplans/` has an entry in `magpie/cwplans/data-register.json`
+  (sources, licence, how it uses OSM, the OSM extract and its date). Add the entry in the same commit
+  as the file, then run `node magpie/cwplans/tools/check-data-register.mjs --write`; it fails on an
+  unregistered file and on a page that shows OSM data without the "© OpenStreetMap contributors" link.
+  Readable view: https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md
 - The exception ends when the project leaves the prototyping phase; the owner says when.
   It does not apply to any other directory. The Bristol trees rule above is unchanged.
 

@@ -90,7 +90,7 @@ now answers 308 to it). POST, `Accept: application/sparql-results+json`.
 ### 3a. OSM
 
 `osm-scan.mjs` streams the Greater London extract (`data/raw/docklands/greater_london-latest.osm.pbf`,
-Geofabrik, 2026-10-02, ODbL) with `osm-pbf-parser` and keeps every node, way and relation in the box
+download.openstreetmap.fr extract, OSM data as of 2026-10-01T01:43:50Z, fetched 2026-10-02, ODbL) with `osm-pbf-parser` and keeps every node, way and relation in the box
 that has shop, amenity, office, tourism, leisure, craft, healthcare, brand, brand:wikidata or name, with
 all its tags (3,430 features; ways and relations at the mean of their nodes).
 
