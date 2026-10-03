@@ -537,11 +537,12 @@ function render() {
   PROJ = PIX.on ? ortho(cam.dist * .42 * w / h, cam.dist * .42, 10, 14000) : persp(cam.fov || .8, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000); VIEW = look(eye, T, [0, 1, 0]); MVP = mul(PROJ, VIEW);
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); gl.uniform1f(uDim, night ? .45 : 1);
-  gl.disable(gl.BLEND); gl.depthMask(true);
+  gl.disable(gl.BLEND); gl.depthMask(true); gl.colorMask(true, true, true, true); gl.disable(gl.POLYGON_OFFSET_FILL);   // a fresh state every frame
   const sOnly = SPL.mode === 'only' && SPL.n;
   if (sOnly) {   // invisible occluders: depth only, pushed back a little so splats lying on a wall or the ground pass the test
     gl.colorMask(false, false, false, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 8);
-    if (bm !== 'off' && !VIZ.on) drawFacades(L.bld, 1, P); drawMesh(L.terrain, 1);   // with music the towers move: only the ground occludes gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
+    if (bm !== 'off' && !VIZ.on) drawFacades(L.bld, 1, P);   // with music the towers move: only the ground occludes
+    drawMesh(L.terrain, 1); gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
   }
   drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn && !sOnly && (!PHOTO || PIX.on)) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }   // photo style: the water is in the ground image
   if ($('showUnder').checked) drawMesh(L.under, 1);
