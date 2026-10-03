@@ -1003,7 +1003,7 @@ function setSkyYear(k) {
   if (!SKY) return; skyIdx = k >= SKY.years.length ? -1 : k; $('skyYear').value = k;
   const sv = skyIdx < 0 ? null : SKY.surveys[skyIdx], standing = skyIdx < 0 ? null : Object.values(SKY.buildings).filter(v => v[skyIdx] > 0).length;
   $('skyYearO').value = skyIdx < 0 ? 'today' : String(SKY.years[skyIdx]);
-  if (sv) $('skyNote').textContent = `${sv.year}: EA LiDAR surface model (${sv.product.replace(/_/g, ' ')}, ${sv.res_m} m); ${standing} of ${Object.keys(SKY.buildings).length} buildings on the estate standing (over 3 m), ${sv.buildings_flown} with data; the others keep today's height in slate blue. Today's OSM outlines; demolished buildings do not appear.`;
+  if (sv) $('skyNote').textContent = `${sv.year}: EA LiDAR surface model (${sv.product.replace(/_/g, ' ')}, ${sv.res_m} m); ${standing} of ${Object.keys(SKY.buildings).length} buildings on the estate standing (over 3 m and a quarter of today's height), ${sv.buildings_flown} with data; the others keep today's height in slate blue. Today's OSM outlines; demolished buildings do not appear.`;
   buildBld(); if (AT) buildPick(); if (glowOn.length) buildGlow(); draw();
 }
 $('skyYear').oninput = () => setSkyYear(+$('skyYear').value);
