@@ -13,6 +13,9 @@ the drone dataset uses. Then, after training, checks where the gaussians went.
          --flip opencv: NEGATIVE CONTROL - writes OpenCV-convention matrices
                         (y down, +z forward) instead, to show what a wrong
                         convention does
+  points OUT N [grey|true]
+                     rewrite OUT/sparse_pc.ply with about N points (for timing
+                     runs at a given gaussian count; images untouched)
   check  PLY         reads a trained 3DGS .ply and reports, per box, how many
                      opaque gaussians lie inside it and their mean colour
 
@@ -131,10 +134,15 @@ def render(c2w):
     return (np.clip(img, 0, 1) * 255 + 0.5).astype(np.uint8)
 
 
-def sample_points(init):
+def sample_points(init, n_total=None):
     rng = np.random.default_rng(2)
     pts, cols = [], []
-    gx, gz = np.meshgrid(np.arange(-300, 301, 8.0), np.arange(-300, 301, 8.0))
+    gstep = 8.0
+    per_face = 300
+    if n_total:  # half on the ground, half over the 25 box faces
+        gstep = 600.0 / math.sqrt(n_total / 2)
+        per_face = max(1, int(n_total / 2 / 25))
+    gx, gz = np.meshgrid(np.arange(-300, 301, gstep), np.arange(-300, 301, gstep))
     g = np.stack([gx.ravel(), np.zeros(gx.size), gz.ravel()], -1)
     chk = (np.floor(g[:, 0] / 25) + np.floor(g[:, 2] / 25)) % 2
     pts.append(g)
@@ -145,10 +153,10 @@ def sample_points(init):
             for side in (0, 1):
                 if axis == 1 and side == 0:
                     continue  # bottom face is on the ground
-                p = rng.uniform(bmin, bmax, size=(300, 3))
+                p = rng.uniform(bmin, bmax, size=(per_face, 3))
                 p[:, axis] = bmax[axis] if side else bmin[axis]
                 pts.append(p)
-                cols.append(np.tile(rgb, (300, 1)))
+                cols.append(np.tile(rgb, (per_face, 1)))
     pts = np.concatenate(pts)
     cols = np.concatenate(cols)
     if init == "grey":
@@ -228,6 +236,11 @@ def check(path):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
+    if a and a[0] == "points":
+        pts, cols = sample_points(a[3] if len(a) > 3 else "true", int(float(a[2])))
+        write_ply(Path(a[1]) / "sparse_pc.ply", pts, cols)
+        print("wrote", len(pts), "points to", Path(a[1]) / "sparse_pc.ply")
+        sys.exit(0)
     if not a or a[0] not in ("gen", "check"):
         print(__doc__)
         sys.exit(2)

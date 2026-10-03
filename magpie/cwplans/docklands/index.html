@@ -152,6 +152,9 @@ body.capture #top,body.capture #gauge,body.capture #tabs,body.capture #sheet,bod
         <label><input type="checkbox" id="showHeritage"> Heritage records</label><label><input type="checkbox" id="showQuality"> Quality issues</label><label><input type="checkbox" id="showCrime"> Crime, latest month (live)</label>
       </div>
       <p class="small" id="dataNote">Tap a building at Canary Wharf for its record.</p>
+      <h3>Skyline by year (measured)</h3>
+      <div class="ctl"><button type="button" id="skyPlay" aria-label="Play the years">▶</button><input id="skyYear" type="range" min="0" max="0" step="1" value="0" aria-label="Survey year"><output id="skyYearO">today</output></div>
+      <p class="small" id="skyNote">Heights of the buildings on the estate and 300 m round it in each Environment Agency LiDAR survey (1999 to 2022). Today's OSM outlines are used, so buildings demolished before today do not appear.</p>
       <h3>Shape</h3>
       <div class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></div>
       <div class="ctl"><label for="vz">Height ×</label><input id="vz" type="range" min="1" max="5" step="0.5" value="1"><output id="vzO">1×</output></div>
@@ -360,7 +363,10 @@ buildTidal();
 { const M = new Mesh(); const T = A.terrain; const gh = (x, z) => { const i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
   for (const g of A.greens) { const f = dec(g.p); flat(M, g, gh(f[0], f[1]) + .4, C.green); } L.greens = M.upload(); }
 let buildingColour = (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld;   // replaced by the "Colour buildings by" control
-function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(); A.buildings.forEach((b, i) => prismF(M, b, b.b + (b.mh || 0), b.b + b.h, buildingColour(b, i), !!b.mh)); L.bld = M.upload(); }
+// skyline year: measured heights replace the model's for buildings in docklands/data/skyline.json (null: not flown, keep)
+let SKY = null, skyIdx = -1;
+const heightOf = (b, i) => { if (!SKY || skyIdx < 0) return b.h; const v = SKY.buildings[i]; if (!v || v[skyIdx] == null) return b.h; return v[skyIdx] / 10; };
+function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, buildingColour(b, i), !!b.mh); }); L.bld = M.upload(); }
 buildBld();
 { const M = new Mesh(), R = new Mesh();
   for (const l of A.lines) if (!l.tunnel) {
@@ -649,7 +655,7 @@ function prismId(M, o, y0, y1, id) {
     const k2 = k + 1 < starts[r + 1] ? k + 1 : starts[r], i = M.vr(f[2 * k], y0, f[2 * k + 1], packed), j = M.vr(f[2 * k2], y0, f[2 * k2 + 1], packed), kk = M.vr(f[2 * k2], y1, f[2 * k2 + 1], packed), l = M.vr(f[2 * k], y1, f[2 * k + 1], packed); M.tri(i, j, kk); M.tri(i, kk, l);
   }
 }
-function buildPick() { if (L.pick) L.pick.free(); const M = new Mesh(); A.buildings.forEach((b, i) => prismId(M, b, b.b + (b.mh || 0), b.b + b.h, regOf[i] + 1)); L.pick = M.upload(); }
+function buildPick() { if (L.pick) L.pick.free(); const M = new Mesh(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismId(M, b, b.b + (b.mh || 0), b.b + h, regOf[i] + 1); }); L.pick = M.upload(); }
 let fbo = null, fboTex = null, fboDepth = null, fboW = 0, fboH = 0;
 function pickAt(cx, cy) {
   if (!L.pick || !MVP) return -1;
@@ -817,7 +823,8 @@ function buildGlow() {
   A.buildings.forEach((b, i) => {
     const k = regOf[i]; if (k < 0) return; const cat = AT.buildings[k].cat; if (!cat) return;
     const hit = glowOn.filter(c => cat[c]); if (!hit.length) return; n++;
-    const col = GLOW[hit[0]], seed = ((k * 2654435761) >>> 0) / 4294967296, f = dec(b.p), y0 = b.b + (b.mh || 0), y1 = b.b + b.h, nv = (b.holes && b.holes.length ? b.holes[0] : f.length / 2);
+    const hh = heightOf(b, i); if (!(hh > 0)) return;
+    const col = GLOW[hit[0]], seed = ((k * 2654435761) >>> 0) / 4294967296, f = dec(b.p), y0 = b.b + (b.mh || 0), y1 = b.b + hh, nv = (b.holes && b.holes.length ? b.holes[0] : f.length / 2);
     let cx = 0, cz = 0; for (let j = 0; j < nv; j++) { cx += f[2 * j]; cz += f[2 * j + 1]; } cx /= nv; cz /= nv;
     // aura: the outer wall pushed out by 4 m, from the ground to 6 m above the roof
     const out = j => { const dx = f[2 * j] - cx, dz = f[2 * j + 1] - cz, r = Math.hypot(dx, dz) || 1; return [f[2 * j] + dx / r * 4, f[2 * j + 1] + dz / r * 4]; };
@@ -988,6 +995,20 @@ $('rGo').onclick = doRoute;
 ['rFrom', 'rTo'].forEach(id => $(id).addEventListener('focus', () => loadNet().catch(e => note(e.message)), { once: true }));
 $('showWalk').onchange = async () => { if ($('showWalk').checked) { try { await loadNet(); await loadLiftFaults(); } catch (e) { note(e.message); $('showWalk').checked = false; return; } const m = NET.D.meta; note(`Walking network (OSM): ${m.counts.vertices.toLocaleString('en-GB')} points, ${m.counts.by_kind.steps} stair, ${m.counts.by_kind.escalator} escalator and ${m.counts.by_kind.lift} lift links on levels ${m.counts.levels.join(', ')}; ${m.islands.count} unconnected parts (largest ${m.islands.largest.toLocaleString('en-GB')} points). Colours: pink indoor, orange stairs, yellow escalators, blue lifts, red lifts out of service now (TfL).`); } walkKey = ''; draw(); };
 
+
+// ---------- skyline year slider
+loadJSON('data/skyline.json').then(d => { SKY = d; const r = $('skyYear'); r.max = d.years.length; r.value = d.years.length; }).catch(() => { $('skyYear').disabled = true; $('skyPlay').disabled = true; $('skyNote').textContent += ' (skyline data not built yet)'; });
+function setSkyYear(k) {
+  if (!SKY) return; skyIdx = k >= SKY.years.length ? -1 : k; $('skyYear').value = k;
+  const sv = skyIdx < 0 ? null : SKY.surveys[skyIdx], standing = skyIdx < 0 ? null : Object.values(SKY.buildings).filter(v => v[skyIdx] > 0).length;
+  $('skyYearO').value = skyIdx < 0 ? 'today' : String(SKY.years[skyIdx]);
+  if (sv) $('skyNote').textContent = `${sv.year}: EA LiDAR surface model (${sv.product.replace(/_/g, ' ')}, ${sv.res_m} m); ${standing} of ${Object.keys(SKY.buildings).length} buildings on the estate standing (over 3 m), ${sv.buildings_flown} with data. Today's OSM outlines; demolished buildings do not appear.`;
+  buildBld(); if (AT) buildPick(); if (glowOn.length) buildGlow(); draw();
+}
+$('skyYear').oninput = () => setSkyYear(+$('skyYear').value);
+let skyTimer = 0;
+$('skyPlay').onclick = () => { if (skyTimer) { clearInterval(skyTimer); skyTimer = 0; $('skyPlay').textContent = '▶'; return; } if (!SKY) return; let k = 0; setSkyYear(0); $('skyPlay').textContent = '❚❚';
+  skyTimer = setInterval(() => { k++; setSkyYear(k); if (k >= SKY.years.length) { clearInterval(skyTimer); skyTimer = 0; $('skyPlay').textContent = '▶'; } }, 1400); };
 
 // ---------- touch-first controls: sheet with tabs, toast, views, depth gauge, search, press-and-hold routes
 const sheet = $('sheet'), body = $('sheetBody'), tabs = [...document.querySelectorAll('#tabs [data-pane]')];
