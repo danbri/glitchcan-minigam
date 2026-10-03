@@ -1,6 +1,96 @@
 {
   "about": "Provenance of every transform in magpie/cwplans, modelled on W3C PROV (prov:Activity used / generated). Checked and exported to pipeline.jsonld by tools/check-data-register.mjs. Edit by hand when a tool changes.",
-  "conventions": "Paths are relative to magpie/cwplans. \"file\" = tracked in git; \"local\" = not committed (gitignored raw data, caches, excluded outputs, or files a tool takes as arguments); \"source\" = a key of data-register.json sources. A source entry with \"access\": \"manual download\" means the file was downloaded by hand before the run and the tool reads only the local copy. Read from the code on 2026-10-03.",
+  "conventions": "Paths are relative to magpie/cwplans. \"file\" = tracked in git; \"local\" = not committed (gitignored raw data, caches, excluded outputs, or files a tool takes as arguments); \"source\" = a key of data-register.json sources. A source entry with \"access\": \"manual download\" means the file was downloaded by hand before the run and the tool reads only the local copy. Read from the code on 2026-10-03. \"area\" is a key of \"areas\" (the sections of METHODS.md); \"faults\" are F-numbers of the fault register in skills/docklands-data-curation/SKILL.md; \"judgement\" says where a hand decision enters and where it is recorded. \"manual_activities\" are methods that are not tools (hand curation, research catalogues, licence decisions); \"gap\" says what of a method is not committed as code.",
+  "areas": [
+    {
+      "id": "terrain",
+      "title": "Terrain and LiDAR"
+    },
+    {
+      "id": "buildings",
+      "title": "Buildings and heights (OSM extracts and the 3D model builds)"
+    },
+    {
+      "id": "towers",
+      "title": "Towers"
+    },
+    {
+      "id": "water",
+      "title": "Water and tides"
+    },
+    {
+      "id": "underground",
+      "title": "Underground and levels"
+    },
+    {
+      "id": "postcodes",
+      "title": "Postcodes"
+    },
+    {
+      "id": "registry",
+      "title": "Registry and occupants"
+    },
+    {
+      "id": "heritage",
+      "title": "Heritage and museum records"
+    },
+    {
+      "id": "brands",
+      "title": "Brands and branches"
+    },
+    {
+      "id": "cwg",
+      "title": "Canary Wharf Group directory"
+    },
+    {
+      "id": "registers",
+      "title": "Registers"
+    },
+    {
+      "id": "crawl",
+      "title": "Web crawl"
+    },
+    {
+      "id": "structured",
+      "title": "Structured data (Factoidal)"
+    },
+    {
+      "id": "atlas",
+      "title": "Atlas index"
+    },
+    {
+      "id": "trees",
+      "title": "Trees and greens"
+    },
+    {
+      "id": "imagery",
+      "title": "Imagery and page assets"
+    },
+    {
+      "id": "facades",
+      "title": "Facades"
+    },
+    {
+      "id": "splats",
+      "title": "Splats and drone"
+    },
+    {
+      "id": "skyline",
+      "title": "Skyline"
+    },
+    {
+      "id": "feeds",
+      "title": "Feeds and events"
+    },
+    {
+      "id": "quality",
+      "title": "Quality audit"
+    },
+    {
+      "id": "provenance",
+      "title": "Provenance export"
+    }
+  ],
   "activities": [
     {
       "id": "fetch-raw-grid",
@@ -21,11 +111,13 @@
       ],
       "method": "Downloads the OSTN15 grid that every WGS84 to British National Grid conversion in the project uses (tools/lib.mjs bngProjector).",
       "rules": [
-        "The file is written as fetched; no change."
+        "The file is written as fetched; no change.",
+        "Network: one GET with User-Agent glitchcan-cwplans/0.1; no retry; the file is overwritten on every run (no cache)."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "terrain"
     },
     {
       "id": "fetch-raw-osm",
@@ -55,12 +147,18 @@
       "method": "Fetches the OSM map call for the small corridor box, then the full geometry of water multipolygons whose member ways the map call leaves out (the Pool of London).",
       "rules": [
         "Box WGS84 west -0.0620, south 51.4880, east -0.0380, north 51.5070.",
-        "A relation is fetched in full when it is type=multipolygon, natural=water and has a member way that is not in the map call."
+        "A relation is fetched in full when it is type=multipolygon, natural=water and has a member way that is not in the map call.",
+        "Network: one map call, then one /full call per incomplete water relation, in sequence; User-Agent glitchcan-cwplans/0.1; no retry; files overwritten on every run.",
+        "Stored gzipped (level 9); the JSON content is as returned."
       ],
       "network": true,
       "deterministic": false,
       "after": [],
-      "note": "fetch-raw.mjs is also imported as a module by build-data.mjs (BBOX_BNG)."
+      "note": "fetch-raw.mjs is also imported as a module by build-data.mjs (BBOX_BNG).",
+      "area": "buildings",
+      "faults": [
+        "F10"
+      ]
     },
     {
       "id": "fetch-raw-lidar",
@@ -87,13 +185,16 @@
           "local": "data/raw/dsm.tif"
         }
       ],
-      "method": "Downloads one DTM and one DSM GeoTIFF over the corridor box.",
+      "method": "Downloads one DTM and one first-return DSM GeoTIFF (EA LiDAR Composite, 1 m) over the corridor box by WCS 2.0.1 GetCoverage.",
       "rules": [
-        "BNG box E 534600-536300, N 178300-180500."
+        "BNG box E 534600-536300, N 178300-180500.",
+        "Coverages: 13787b9a-26a4-4775-8523-806d13af58fc__Lidar_Composite_Elevation_DTM_1m and df4e3ec3-315e-48aa-aaaf-b5ae74d7b2bb__Lidar_Composite_Elevation_FZ_DSM_1m; heights in metres above Ordnance Datum Newlyn.",
+        "Network: two GETs in sequence, User-Agent glitchcan-cwplans/0.1; no retry; files overwritten on every run."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "terrain"
     },
     {
       "id": "fetch-raw-wikidata",
@@ -122,11 +223,13 @@
       ],
       "method": "Stores two Wikidata query results as returned: items near Canada Water and selected facts for named items.",
       "rules": [
-        "Results are written as the endpoint returns them."
+        "Results are written as the endpoint returns them.",
+        "Network: two POSTs to query.wikidata.org in sequence, User-Agent glitchcan-cwplans/0.1; no retry; no cache."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "buildings"
     },
     {
       "id": "fetch-docklands-osm",
@@ -147,12 +250,14 @@
       ],
       "method": "Downloads the Greater London OSM extract that every OSM clip and scan in the project reads.",
       "rules": [
-        "The file is written as fetched."
+        "The file is written as fetched.",
+        "Network: one GET (about 150 MB), User-Agent glitchcan-cwplans/0.1; no retry; overwritten on every run. The extract date is the osmosis_replication_timestamp in the PBF header (data-register.json osm_extracts)."
       ],
       "network": true,
       "deterministic": false,
       "after": [],
-      "note": "fetch-docklands.mjs is also imported as a module (DIR, BOX_WGS84, BOX_BNG, ORIGIN, lidarTiles, tileFile) by osm-clip-docklands, build-docklands, postcodes, registry-osm, build-registry, build-atlas, build-indoor, build-imagery and build-skyline."
+      "note": "fetch-docklands.mjs is also imported as a module (DIR, BOX_WGS84, BOX_BNG, ORIGIN, lidarTiles, tileFile) by osm-clip-docklands, build-docklands, postcodes, registry-osm, build-registry, build-atlas, build-indoor, build-imagery and build-skyline.",
+      "area": "buildings"
     },
     {
       "id": "fetch-docklands-lidar",
@@ -182,11 +287,14 @@
       "method": "Downloads the DTM and DSM of the Docklands box as 1 km tiles (48 tiles each).",
       "rules": [
         "A tile is fetched only when its file is missing or smaller than 1000 bytes.",
-        "Four downloads run at a time; each is tried up to 4 times with a growing pause."
+        "Four downloads run at a time; each is tried up to 4 times with a growing pause.",
+        "Tile edge 1000 m (TILE); a tile at the box edge is cut to the box. Heights in metres above Ordnance Datum Newlyn.",
+        "Pause before a retry: 2000 x 2^attempt ms (4, 8, 16 s); User-Agent glitchcan-cwplans/0.1."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "terrain"
     },
     {
       "id": "fetch-docklands-defences",
@@ -209,11 +317,13 @@
       "rules": [
         "Kept properties: asset_id, asset_sub_type, protection_type, design_sop, design_ucl, design_dcl, actual_ucl, actual_dcl, effective_cl, bank, local_authority, last_inspection_date.",
         "Owner and maintainer fields are dropped (some describe private individuals).",
-        "Paging stops when a page has no features or no next link."
+        "Paging stops when a page has no features or no next link.",
+        "A \"fetched\" date is written into the file; the pages are fetched in sequence with no pause and no retry; User-Agent glitchcan-cwplans/0.1."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "water"
     },
     {
       "id": "fetch-docklands-wikidata",
@@ -242,11 +352,13 @@
       ],
       "method": "Stores two Wikidata query results for the Docklands box, gzipped as returned.",
       "rules": [
-        "Results are written as the endpoint returns them."
+        "Results are written as the endpoint returns them.",
+        "Network: two POSTs to query.wikidata.org in sequence, User-Agent glitchcan-cwplans/0.1; no retry; no cache; stored gzipped (level 9)."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "buildings"
     },
     {
       "id": "fetch_wet-soundings",
@@ -278,12 +390,15 @@
       "rules": [
         "Box WGS84 -0.0950, 51.4740 to 0.0150, 51.5220.",
         "z_cd is the file value as a height above Admiralty Chart Datum; negative is below chart datum.",
-        "Lines that do not parse as lat, lon, z (headers) are skipped."
+        "Lines that do not parse as lat, lon, z (headers) are skipped.",
+        "Network: curl, User-Agent glitchcan-cwplans/0.1, 0.6 s pause before every request (at most 2 a second), 180 s timeout, no retry; the CSV is fetched again on every run.",
+        "Coordinates are rounded to 7 decimals (about 1 cm)."
       ],
       "network": true,
       "deterministic": false,
       "after": [],
-      "note": "Child process: curl. The two ukho_wrecks_obstructions_*.geojson files were made by hand (registry/sources/pla/README.md), not by this script, although data-register.json names fetch_wet.py as their producer."
+      "note": "Child process: curl. The two ukho_wrecks_obstructions_*.geojson files were made by hand (registry/sources/pla/README.md; manual activity ukho-wrecks-clip), not by this script.",
+      "area": "water"
     },
     {
       "id": "fetch_wet-layers",
@@ -320,12 +435,16 @@
       "rules": [
         "Only the listed outFields are kept per layer ('*' for some).",
         "Every layer except pla_hydrographic_product_areas is clipped to the box (ogr2ogr -clipsrc).",
-        "Arguments 'pla' or 'crt' run one provider only."
+        "Arguments 'pla' or 'crt' run one provider only.",
+        "Network: as fetch_wet-soundings (curl, 0.6 s pause, 180 s timeout); pages of 1000 features follow resultOffset while exceededTransferLimit is true.",
+        "ogr2ogr writes RFC 7946 GeoJSON with 7 decimals; an older output is removed first.",
+        "Licence: PLA layers state no licence and Canal & River Trust layers exclude commercial use, so neither is committed (registry/sources/pla/README.md, \"Not taken, and why\")."
       ],
       "network": true,
       "deterministic": false,
       "after": [],
-      "note": "Child processes: curl, ogr2ogr. The outputs are present in the working tree but not tracked by git (.git/info/exclude covers registry/sources/)."
+      "note": "Child processes: curl, ogr2ogr. The outputs are present in the working tree but not tracked by git (.git/info/exclude covers registry/sources/).",
+      "area": "water"
     },
     {
       "id": "fetch_records",
@@ -375,12 +494,16 @@
         "Records outside the box are left out; duplicates (same source, id, relation, place, position) are dropped.",
         "BNG points are converted with pyproj (Helmert, about 2 m; no OSTN15 grid).",
         "ADS owner names are kept only for organisations in a fixed list; no finder, landowner, donor or author names are kept.",
-        "A record whose title, type, place or summary mentions burial, grave, cemetery, memorial and similar words gets the flag 'sensitive'."
+        "A record whose title, type, place or summary mentions burial, grave, cemetery, memorial and similar words gets the flag 'sensitive'.",
+        "Network: curl, User-Agent glitchcan-cwplans/0.1, 0.6 s pause before every request, 300 s timeout; QLever queries wait 10 s, then 30, 50, 70 s before each of up to 4 tries.",
+        "Positions are rounded to 6 decimals; each record keeps the relation of its coordinate to the object (site, find spot, holding place, report about a site) and its precision.",
+        "Raw responses are saved to data/raw/registry/museums/ on every run; nothing is read back from them (no cache)."
       ],
       "network": true,
       "deterministic": false,
       "after": [],
-      "note": "Child processes: curl, ogr2ogr. The committed registry/sources/museums/records-open.json is a subset of records.json (CC0, OGL, CC-BY records without the sensitive flag, README 'Published subset'); no script in the repository writes it, although data-register.json names fetch_records.py as its producer."
+      "note": "Child processes: curl, ogr2ogr. The committed registry/sources/museums/records-open.json is a subset of records.json (CC0, OGL, CC-BY records without the sensitive flag, README \"Published subset\"), cut by hand (manual activity records-open-subset); no script in the repository writes it.",
+      "area": "heritage"
     },
     {
       "id": "fetch-cwg",
@@ -418,11 +541,17 @@
         "Captures of the Incapsula bot-challenge page are skipped and counted.",
         "Fields from the address lines (registry/sources/brands/tools/cwg-fields.mjs): mall = the first name of a fixed place list found in the lines, but never a name inside a longer one that is also found (\"Upper Bank Street\", not \"Bank Street\"); level = the first line that names a level, floor, mezzanine, podium or kiosk, or starts with \"Lower Mall\", \"Upper Mall\" or \"Unit\" (not \"Upper Bank Street\", not \"United Kingdom\"); postcode = the first full UK postcode in any district (Wood Wharf uses E22); street = the first line that starts with a house number or One/Two/Three; flags: template field, estate-wide, car park. Fixed 2026-10-03: the first parser read 4 levels and 1 mall wrongly and missed 5 malls and 3 E22 postcodes.",
         "Raw pages are cached and not fetched again.",
-        "Categories: every tag div between the category block and the title (the first parser found none on any page; 339 entries have one now)."
+        "Categories: every tag div between the category block and the title (the first parser found none on any page; 339 entries have one now).",
+        "Network: User-Agent glitchcan-cwplans/0.1, 120 s timeout, 1.2 s pause after every fetched page, up to 5 tries (CDX listings and copies with no CDX timestamp: 2) with 8 s x try between tries; HTTP 404 is no copy.",
+        "Owner rule 2026-10-03: crawls through the Internet Archive are fair use for scoping (CLAUDE.md, cwplans exception)."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "cwg",
+      "faults": [
+        "F14"
+      ]
     },
     {
       "id": "postcodes-fetch",
@@ -459,14 +588,19 @@
       "method": "Fetches every ONSPD row in district E14 and the ward names and Canary Wharf ward boundary, then tallies the OSM features that carry each E14 postcode.",
       "rules": [
         "Row batches are retried up to 4 times.",
-        "OSM: an addr:postcode ';' list counts the feature under each postcode (fault F2); kinds counted: shop, amenity:<value>, office, building, entrance, other; streets from addr:street."
+        "OSM: an addr:postcode ';' list counts the feature under each postcode (fault F2); kinds counted: shop, amenity:<value>, office, building, entrance, other; streets from addr:street.",
+        "Network: User-Agent glitchcan-cwplans/0.1; queries in sequence; a batch of 200 ids is tried up to 4 times with 4 s x try between tries; the ward queries are not retried. Files are overwritten on every run."
       ],
       "network": true,
       "deterministic": false,
       "after": [
         "fetch-docklands-osm"
       ],
-      "note": "The ward GeoJSON is stored inside wards.json; postcodes/canary-wharf-ward.geojson is written by the build mode, not by fetch (data-register.json says fetch)."
+      "note": "The ward GeoJSON is stored inside wards.json; postcodes/canary-wharf-ward.geojson is written by the build mode (postcodes-build).",
+      "area": "postcodes",
+      "faults": [
+        "F2"
+      ]
     },
     {
       "id": "registry-wikidata",
@@ -499,11 +633,17 @@
       "rules": [
         "People (Q5) are excluded as items and as property values, except architect (P84) and structural engineer (P631).",
         "Items whose P31 label matches memorial, grave, cemetery, tomb or plaque are dropped.",
-        "Duplicate property values are removed."
+        "Duplicate property values are removed.",
+        "Network: QLever queries in sequence with no pause and no retry (this tool does not use tools/lib.mjs qlever, so the 1.5 s pacing rule of 2026-10-03 is not applied here); User-Agent glitchcan-cwplans/0.1; no cache.",
+        "Distance km rounded to 3 decimals; each item keeps its QID (an IRI key for the knowledge graph)."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "registry",
+      "faults": [
+        "F8"
+      ]
     },
     {
       "id": "registry-fhrs",
@@ -534,11 +674,16 @@
       "method": "Saves a dated snapshot of the E14 premises in the FSA Tower Hamlets file and, when an earlier snapshot exists, lists the premises added and removed between the last two.",
       "rules": [
         "Kept: postcode starting E14 and at least one address line.",
-        "Premises without address lines (home businesses whose address the FSA withholds) are not kept."
+        "Premises without address lines (home businesses whose address the FSA withholds) are not kept.",
+        "Network: one GET of the whole file, User-Agent glitchcan-cwplans/0.1; no retry. Each run writes a new dated snapshot; the snapshot date is the run date."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "registry",
+      "faults": [
+        "F7"
+      ]
     },
     {
       "id": "osm-clip-docklands",
@@ -562,13 +707,15 @@
         "Relations kept: multipolygon or building relations with a kept member way; their member ways outside the box are pulled in whole.",
         "Points kept: stations and entrances, named places, shafts, entrances with a level, piers; and in the Canary Wharf focus box (-0.0300, 51.4980 to -0.0050, 51.5100) every node with shop, amenity, level, indoor or name.",
         "Only tags that match the TAG list are kept.",
-        "A way that touches the box is kept whole; its nodes outside the box come from a second pass."
+        "A way that touches the box is kept whole; its nodes outside the box come from a second pass.",
+        "Node coordinates rounded to 7 decimals (the OSM precision)."
       ],
       "network": false,
       "deterministic": false,
       "after": [
         "fetch-docklands-osm"
-      ]
+      ],
+      "area": "buildings"
     },
     {
       "id": "registry-osm",
@@ -589,14 +736,20 @@
       "rules": [
         "Box -0.0300, 51.4980 to -0.0050, 51.5100 plus a 0.0015 degree margin.",
         "Tags dropped: contact:mobile, mobile, operator:person, addr:flats, note, fixme, FIXME, source*, created_by. Business contact tags (phone, contact:phone, email, contact:email, website, contact:*) are kept from 2026-10-03 (owner: cwplans exception, organisation data allowed in the prototyping phase).",
-        "Relations kept: type multipolygon or building with building, building:part or name, and at least one kept member way."
+        "Relations kept: type multipolygon or building with building, building:part or name, and at least one kept member way.",
+        "Tags are kept as strings; \";\" lists are split later by tools/osm-values.mjs osmList (F2) in the tools that read them."
       ],
       "network": false,
       "deterministic": false,
       "after": [
         "fetch-docklands-osm"
       ],
-      "note": "Also imported as a module by build-registry.mjs (CW_BOX)."
+      "note": "Also imported as a module by build-registry.mjs (CW_BOX).",
+      "area": "registry",
+      "faults": [
+        "F2",
+        "F15"
+      ]
     },
     {
       "id": "osm-scan",
@@ -622,7 +775,8 @@
       "deterministic": false,
       "after": [
         "fetch-docklands-osm"
-      ]
+      ],
+      "area": "brands"
     },
     {
       "id": "london-brand-counts",
@@ -648,7 +802,8 @@
       "deterministic": false,
       "after": [
         "fetch-docklands-osm"
-      ]
+      ],
+      "area": "brands"
     },
     {
       "id": "postcodes-osm",
@@ -674,6 +829,10 @@
       "deterministic": true,
       "after": [
         "fetch-docklands-osm"
+      ],
+      "area": "postcodes",
+      "faults": [
+        "F2"
       ]
     },
     {
@@ -721,7 +880,9 @@
         "Tunnel portals: tunnel nodes shared with an open railway way, at the open track level (DSM on bridges, DTM otherwise).",
         "Open cut: a tunnel point where the DTM is more than 6 m below the ground 25-35 m around; each run of cut points takes its lowest bed.",
         "Published levels from data/sourced-levels.json are applied to the nearest tunnel point within 150 m (lib.mjs applyControls); superseded controls are skipped.",
-        "Places: OSM railway=station nodes, then Wikidata items of a fixed list of transport, water and landform classes that are not already a station."
+        "Places: OSM railway=station nodes, then Wikidata items of a fixed list of transport, water and landform classes that are not already a station.",
+        "Coordinates: WGS84 to BNG through OSTN15 (tools/lib.mjs bngProjector); local metres x = E - 535400, z = -(N - 179400); heights in metres above Ordnance Datum Newlyn.",
+        "Rounding: geometry in whole decimetres, delta-encoded (tools/lib.mjs enc); heights and levels to 0.1 m (r1); control levels to 0.01 m."
       ],
       "network": false,
       "deterministic": false,
@@ -730,7 +891,13 @@
         "fetch-raw-osm",
         "fetch-raw-lidar",
         "fetch-raw-wikidata"
-      ]
+      ],
+      "area": "buildings",
+      "faults": [
+        "F10",
+        "F13"
+      ],
+      "judgement": "The published levels in data/sourced-levels.json are chosen by hand (manual activity sourced-levels)."
     },
     {
       "id": "build-docklands",
@@ -799,7 +966,10 @@
         "Flood defence crest: actual_ucl, else actual_dcl, else design_ucl; lines without a crest are dropped.",
         "Published levels from data/sourced-levels.json are tunnel controls (nearest point within 150 m); structures with footprint_osm or water_name are drawn from their OSM way or water area.",
         "Wikidata places: classes matching the KEEP pattern; classes matching memorial, war memorial, grave or cemetery are left out.",
-        "Level tags are read by tools/osm-values.mjs osmLevels."
+        "Level tags are read by tools/osm-values.mjs osmLevels.",
+        "Coordinates: WGS84 to BNG through OSTN15; local metres x = E - 537550, z = -(N - 180300) (ORIGIN, One Canada Square to about 20 m); heights in metres above Ordnance Datum Newlyn.",
+        "Rounding: geometry in whole decimetres, delta-encoded (tools/lib.mjs enc); heights to 0.1 m; control levels to 0.01 m.",
+        "Fixed faults (F10): simplify() splits a closed ring at its farthest point before Douglas-Peucker; bridge points under a roof are interpolated."
       ],
       "network": false,
       "deterministic": false,
@@ -810,7 +980,13 @@
         "fetch-docklands-wikidata",
         "fetch-docklands-defences",
         "fetch_wet-soundings"
-      ]
+      ],
+      "area": "buildings",
+      "faults": [
+        "F10",
+        "F13"
+      ],
+      "judgement": "The published levels in data/sourced-levels.json are chosen by hand (manual activity sourced-levels); the KEEP class list for Wikidata places is written in the tool."
     },
     {
       "id": "postcodes-build",
@@ -853,6 +1029,10 @@
       "after": [
         "postcodes-fetch",
         "postcodes-osm"
+      ],
+      "area": "postcodes",
+      "faults": [
+        "F2"
       ]
     },
     {
@@ -894,14 +1074,15 @@
       "rules": [
         "Default tiers: cw-core, cw-ward, cw-box-other-ward.",
         "Per host one request about every second; each request is tried 3 times.",
-        "FSA results keep only premises whose postcode is the one asked and that have an address line (home businesses are skipped)."
+        "FSA results keep only premises whose postcode is the one asked and that have an address line (home businesses are skipped).",
+        "Network: one worker per host (GOV.UK, Wikipedia, FSA), in parallel across hosts; 1 s pause after every postcode; 3 tries with 3 s x try between; Wikidata by query.wikidata.org SPARQL, 200 postcodes a query. User-Agent glitchcan-cwplans/0.1. No cache: queries.json is rewritten."
       ],
       "network": true,
       "deterministic": false,
       "after": [
         "postcodes-build"
       ],
-      "note": "data-register.json lists only onspd and own as the sources of postcodes/queries.json."
+      "area": "postcodes"
     },
     {
       "id": "registry-uprn",
@@ -951,7 +1132,8 @@
       "after": [
         "postcodes-build"
       ],
-      "note": "Child process: unzip -p."
+      "note": "Child process: unzip -p.",
+      "area": "registry"
     },
     {
       "id": "registry-lbsm",
@@ -991,7 +1173,8 @@
       "after": [
         "postcodes-build",
         "registry-uprn"
-      ]
+      ],
+      "area": "registry"
     },
     {
       "id": "registry-inspire",
@@ -1027,7 +1210,8 @@
       "deterministic": false,
       "after": [
         "fetch-raw-grid"
-      ]
+      ],
+      "area": "registry"
     },
     {
       "id": "registry-companies",
@@ -1068,7 +1252,8 @@
       "after": [
         "postcodes-build"
       ],
-      "note": "Child process: unzip -p."
+      "note": "Child process: unzip -p.",
+      "area": "registry"
     },
     {
       "id": "registry-landregistry",
@@ -1097,13 +1282,15 @@
       "rules": [
         "Postcodes: cwPostcodes() (terminated-cw included).",
         "Rows repeated by the OPTIONAL joins are removed by transaction id.",
-        "Homes = distinct SAON + PAON + street of types other than 'other'."
+        "Homes = distinct SAON + PAON + street of types other than 'other'.",
+        "Network: User-Agent glitchcan-cwplans/0.1; 0.7 s pause after each query of 20 postcodes; a failed query is tried up to 4 times with 3, 6, 9 s between tries; no cache."
       ],
       "network": true,
       "deterministic": false,
       "after": [
         "postcodes-build"
-      ]
+      ],
+      "area": "registry"
     },
     {
       "id": "registry-voa",
@@ -1142,7 +1329,9 @@
       "after": [
         "postcodes-build"
       ],
-      "note": "Child process: unzip -p. Both outputs are uncommitted, as the licence requires (CLAUDE.md names the VOA list as restricted)."
+      "note": "Child process: unzip -p. Both outputs are uncommitted, as the licence requires (CLAUDE.md names the VOA list as restricted).",
+      "area": "registry",
+      "judgement": "Licence decision: the VOA rating list is restricted, so neither output is committed (owner to decide)."
     },
     {
       "id": "build-uk-brands",
@@ -1176,7 +1365,8 @@
       ],
       "network": false,
       "deterministic": true,
-      "after": []
+      "after": [],
+      "area": "brands"
     },
     {
       "id": "wikidata-brands",
@@ -1215,13 +1405,16 @@
       ],
       "method": "Adds Wikidata facts (label, website, parent organisation, number of located items) to the NSI brand QIDs, and lists the items within 1 km of One Canada Square with any brand, owner, parent or operator link to an NSI brand.",
       "rules": [
-        "nsi_brand_links: P1716, P127, P749 or P137 links whose target is an NSI UK brand QID."
+        "nsi_brand_links: P1716, P127, P749 or P137 links whose target is an NSI UK brand QID.",
+        "Cache: each raw QLever answer is stored under the first 16 hex digits of the SHA-1 of the query in data/raw/registry/qlever/ and read back when present; delete a file to ask again.",
+        "Network: 0.7 s pause after each new query; no retry; User-Agent glitchcan-cwplans/0.1. Distances in metres, rounded to whole metres."
       ],
       "network": true,
       "deterministic": false,
       "after": [
         "build-uk-brands"
-      ]
+      ],
+      "area": "brands"
     },
     {
       "id": "match-osm",
@@ -1247,19 +1440,24 @@
           "local": "data/raw/registry/osm-branches.json"
         }
       ],
-      "method": "Finds the branded OSM business features in the box.",
+      "method": "Reads the OSM business features of the Canary Wharf box (osm-scan) and keeps those that are branches of a brand: by the feature's brand:wikidata, by the NSI Matcher on its names under its own key=value at its position, or by a brand tag that NSI does not list; street furniture is counted apart.",
       "rules": [
         "A business feature is a branch when (1) its brand:wikidata is an NSI UK brand QID, or (2) the NSI Matcher matches its name, brand, name:en or official_name under its own key=value at its position, or (3) it has brand or brand:wikidata that NSI does not list.",
         "For a QID with several NSI items, the item whose key=value agrees with the feature is preferred.",
         "Disused features and opening_hours=closed are skipped.",
-        "Street furniture (post boxes, ATMs, bicycle rental, lockers, vending machines and similar) is counted apart, not as branches."
+        "Street furniture (post boxes, ATMs, bicycle rental, lockers, vending machines and similar) is counted apart, not as branches.",
+        "Name fields are tried in the order name, brand, name:en, official_name; the first NSI hit with match \"primary\" wins, else the first hit of any kind (alternate hits are accepted here, unlike the FSA match).",
+        "The NSI Matcher is asked at the feature's own position (lon, lat), not at a fixed point.",
+        "A conflict between the OSM brand:wikidata and the NSI QID is kept and flagged (qid_conflict); fhrs:id, addr:*, level, level:ref and website are carried for the later joins.",
+        "Named businesses that match no brand are listed apart (unmatched_named_business), not dropped silently."
       ],
       "network": false,
       "deterministic": false,
       "after": [
         "osm-scan",
         "build-uk-brands"
-      ]
+      ],
+      "area": "brands"
     },
     {
       "id": "match-fsa-fetch",
@@ -1304,7 +1502,9 @@
         "Premises: results[pc].fsa.items of postcodes/queries.json for postcodes in tiers cw-core, cw-ward, cw-box-other-ward.",
         "Name variants (full, cut, strip, prefix) are tried in order; a hit must be 'primary' or 'alternate'.",
         "Hits are ranked: primary before alternate, then key=value fitting the FSA business type, then scope uk.",
-        "A 'prefix' variant, an alternate hit or a type that does not fit needs a decision in fsa-decisions.json; undecided and rejected matches are listed apart."
+        "A 'prefix' variant, an alternate hit or a type that does not fit needs a decision in fsa-decisions.json; undecided and rejected matches are listed apart.",
+        "Cache: each premises detail is stored in data/raw/registry/fsa-detail/<fhrs_id>.json and not fetched again.",
+        "Network: FSA API with x-api-version 2 and User-Agent glitchcan-cwplans/0.1, 0.6 s pause after each new detail; no retry."
       ],
       "network": true,
       "deterministic": false,
@@ -1312,7 +1512,9 @@
         "postcodes-build",
         "postcodes-query",
         "build-uk-brands"
-      ]
+      ],
+      "area": "brands",
+      "judgement": "A prefix-variant, alternate or type-mismatch match is decided by hand in registry/sources/brands/tools/fsa-decisions.json (manual activity brand-decisions)."
     },
     {
       "id": "match-fsa",
@@ -1359,7 +1561,9 @@
         "postcodes-query",
         "build-uk-brands",
         "match-fsa-fetch"
-      ]
+      ],
+      "area": "brands",
+      "judgement": "Same decisions as match-fsa-fetch (registry/sources/brands/tools/fsa-decisions.json)."
     },
     {
       "id": "build-branches",
@@ -1430,7 +1634,15 @@
         "postcodes-build",
         "storelocator"
       ],
-      "note": "Runs twice (brands README): a first merge, then storelocator, then a final merge that attaches the store pages. The 'after' cycle with storelocator is real."
+      "note": "Runs twice (brands README): a first merge, then storelocator, then a final merge that attaches the store pages. The 'after' cycle with storelocator is real.",
+      "area": "brands",
+      "faults": [
+        "F2",
+        "F3",
+        "F7",
+        "F9"
+      ],
+      "judgement": "CWG matches that the rules leave undecided are decided by hand in registry/sources/brands/tools/cwg-decisions.json (manual activity brand-decisions)."
     },
     {
       "id": "storelocator",
@@ -1472,7 +1684,9 @@
         "Brand family: a brand and its Wikidata parent count as one; size = the largest Greater London OSM branch count of the family.",
         "Candidate URL: the manual entry for the branch, else OSM website=* when it is not canarywharf.com and not a bare home page.",
         "verified: HTTP 2xx, no bot-challenge page, and the page text or the URL path names Canary Wharf, the postcode or the mall; 401, 403, 429 or a challenge page = blocked.",
-        "A URL with a stored status is not fetched again."
+        "A URL with a stored status is not fetched again.",
+        "Cache: data/raw/registry/storelocator-cache.json holds each URL's result and is written after every fetch.",
+        "Network: 1.1 s minimum gap per host, 60 s timeout, User-Agent glitchcan-cwplans/0.1; blocked pages are recorded, not retried."
       ],
       "network": true,
       "deterministic": false,
@@ -1480,7 +1694,9 @@
         "build-branches",
         "london-brand-counts",
         "wikidata-brands"
-      ]
+      ],
+      "area": "brands",
+      "judgement": "Store-page URLs that OSM does not give were found by hand on the brand locators: registry/sources/brands/tools/storelocator-manual.json (manual activity storelocator-manual)."
     },
     {
       "id": "readme-tables",
@@ -1500,13 +1716,15 @@
       ],
       "method": "Prints the branch table, the top brands and the unmatched CWG entries as Markdown for the brands README.",
       "rules": [
-        "One row per branch: brand, category, name, where (mall, level, postcode or address), sources, confidence, links."
+        "One row per branch: brand, category, name, where (mall, level, postcode or address), sources, confidence, links.",
+        "The output is pasted into registry/sources/brands/README.md by hand; the script writes to standard output only."
       ],
       "network": false,
       "deterministic": true,
       "after": [
         "build-branches"
-      ]
+      ],
+      "area": "brands"
     },
     {
       "id": "fetch-registers",
@@ -1609,7 +1827,14 @@
         "registry-fhrs",
         "fetch-raw-grid"
       ],
-      "note": "Child process: unzip -p (charities). Not reached: the Tower Hamlets premises licence register (alcohol-entertainment.towerhamlets.gov.uk: TLS handshake failure and HTTP 503 on 2026-10-03); see registry/sources/registers/README.md."
+      "note": "Child process: unzip -p (charities). Not reached: the Tower Hamlets premises licence register (alcohol-entertainment.towerhamlets.gov.uk: TLS handshake failure and HTTP 503 on 2026-10-03); see registry/sources/registers/README.md.",
+      "area": "registers",
+      "faults": [
+        "F7",
+        "F17",
+        "F18"
+      ],
+      "judgement": "Which registers to take and their licence reading are recorded in registry/sources/registers/README.md (licence notes, rejected sources)."
     },
     {
       "id": "crawl-sites",
@@ -1671,7 +1896,9 @@
         "Failure classes: robots disallowed, robots unreachable, bot challenge (Cloudflare, Imperva, Akamai, DataDome, PerimeterX pages), 401/403 refused, 404/410 not found, 4xx other, 429, 5xx, timeout, dns, tls, connection, not HTML, too many redirects.",
         "Kept per page: schema.org name, telephone, address, geo, opening hours, price range, cuisine, menu, sameAs, reservations; events with name, dates, location, URL; page title and OpenGraph title/type (cut to 200 characters), OpenGraph description cut to 200 characters; html lang; feed and link URLs. No other page text.",
         "names_branch: true when the entry's postcode is in the page text or structured data, or an address phrase (street, mall, branch name) is on a page that is not the site's home page; 'home page lists the place' when only a phrase is on a home page; 'scripts only' when the match is only inside page scripts.",
-        "A URL with a stored result is not fetched again (--refresh fetches all; --retry-failed fetches transient failures again)."
+        "A URL with a stored result is not fetched again (--refresh fetches all; --retry-failed fetches transient failures again).",
+        "At most 8 redirects (MAX_REDIRECTS); the backoff waits Retry-After when given, else 4, 12, 36 s.",
+        "Owner rule 2026-10-03: website crawls, direct and through the Internet Archive or Common Crawl, are fair use for scoping (CLAUDE.md, cwplans exception)."
       ],
       "network": true,
       "deterministic": false,
@@ -1680,7 +1907,9 @@
         "storelocator",
         "build-branches",
         "build-registry"
-      ]
+      ],
+      "area": "crawl",
+      "judgement": "The skip list (FSA pages, OSM, Wikidata, Companies House, Land Registry, Wikipedia) is a licence and source-of-truth decision written in the tool."
     },
     {
       "id": "render-structured-data",
@@ -1742,13 +1971,19 @@
         "Order: store pages, then pages the plain crawl got no structured data from, then the rest; Internet Archive CWG copies read from cache with scripts off.",
         "A cookie banner is clicked only when the page shows no structured data and a known consent button is visible. No logins, no forms other than a store-finder search box with a UK postcode.",
         "Store finder: a result link is followed only when its text, URL or card names the branch postcode, a street or mall phrase of the branch, or (for a brand with one branch here) Canary Wharf.",
-        "Blocks over 200 kB are dropped and counted."
+        "Blocks over 200 kB are dropped and counted.",
+        "User-Agent: a desktop Chrome string plus \" glitchcan-cwplans/0.1 (+https://github.com/danbri/glitchcan-minigam)\"; robots.txt fetched with Node (15 s timeout), else through Chromium.",
+        "Each page: wait for load and network idle, at most 20 s (CAP_MS), then 1.5 s (LATE_MS) for late JSON-LD.",
+        "Store finders: one postcode search per brand and postcode; the postcode is the branch's own, else E14 4QT (owner rule 2026-10-03: \"we are permitted per industry convention to submit storefinder forms with UK postcodes\"). No other forms.",
+        "Resumable: a URL with a stored result in data/raw/rendered/ is not rendered again unless --retry-failed and its failure was transient."
       ],
       "network": true,
       "deterministic": false,
       "after": [
         "crawl-sites"
-      ]
+      ],
+      "area": "structured",
+      "judgement": "The skip list and the consent-button list are written in the tool; store-finder searches follow the owner rule of 2026-10-03."
     },
     {
       "id": "extract-structured-data",
@@ -1807,7 +2042,8 @@
       "deterministic": true,
       "after": [
         "render-structured-data"
-      ]
+      ],
+      "area": "structured"
     },
     {
       "id": "build-registry",
@@ -1938,6 +2174,22 @@
         "build-branches",
         "fetch-cwg",
         "fetch-registers"
+      ],
+      "area": "registry",
+      "faults": [
+        "F1",
+        "F2",
+        "F4",
+        "F6",
+        "F7",
+        "F8",
+        "F9",
+        "F15",
+        "F16",
+        "F17",
+        "F18",
+        "F19",
+        "F20"
       ]
     },
     {
@@ -1970,7 +2222,8 @@
       "after": [
         "build-registry",
         "extract-structured-data"
-      ]
+      ],
+      "area": "structured"
     },
     {
       "id": "build-categories",
@@ -2029,7 +2282,12 @@
         "build-registry",
         "registry-osm"
       ],
-      "note": "network is true only when the cache is missing or incomplete; tools/lib.mjs qlever paces the calls."
+      "note": "network is true only when the cache is missing or incomplete; tools/lib.mjs qlever paces the calls.",
+      "area": "registry",
+      "faults": [
+        "F8"
+      ],
+      "judgement": "The rule tables (which OSM, FSA, CWG, register and Wikidata classes give which category) are written in the tool; mixed CWG labels are left out by judgement."
     },
     {
       "id": "scan-model-pois",
@@ -2061,7 +2319,8 @@
       "after": [
         "fetch-docklands-osm",
         "build-registry"
-      ]
+      ],
+      "area": "registry"
     },
     {
       "id": "build-atlas",
@@ -2145,7 +2404,8 @@
         "Soundings: z_cd minus the chart datum offset interpolated by longitude between 3.20 m and 3.35 m (same rule as build-docklands).",
         "Defence crest: actual_ucl, else actual_dcl, else design_ucl; a line is kept when one of its points is in the box.",
         "Wikidata items without an English label are left out.",
-        "Levels: the sourced levels used by the 3D build, CWG structures (slabs, water, dock bed), the deepest and median sounding off the Isle of Dogs, and the 8 tallest named buildings (Wikidata, else OSM, else LiDAR height on the LiDAR ground, or 5 m OD when unknown, marked approx)."
+        "Levels: the sourced levels used by the 3D build, CWG structures (slabs, water, dock bed), the deepest and median sounding off the Isle of Dogs, and the 8 tallest named buildings (Wikidata, else OSM, else LiDAR height on the LiDAR ground, or 5 m OD when unknown, marked approx).",
+        "Rounding: outlines as microdegree deltas (1e-6 degree, about 0.1 m); positions to 6 decimals; heights and levels to 0.01 m; heritage groups by position rounded to 5 decimals."
       ],
       "network": false,
       "deterministic": false,
@@ -2161,6 +2421,10 @@
         "build-branches",
         "registry-osm",
         "fetch-raw-grid"
+      ],
+      "area": "atlas",
+      "faults": [
+        "F5"
       ]
     },
     {
@@ -2205,7 +2469,9 @@
         "Walkable areas get a hub joined to every vertex on their level inside them or within 3 m of their edge.",
         "A node that ordinary ways reach at two levels with no connector is joined as 'ramp' and counted as a level jump.",
         "TfL points join the nearest OSM vertex within 35 m only at street level (TfL level 0 = OSM level 0); TfL lifts (pathway_mode 5) and paths join TfL points; nearest-vertex level pairs are recorded per station.",
-        "Places attach to the nearest vertex on their own level within 40 m, else the nearest vertex on any level within 40 m (marked)."
+        "Places attach to the nearest vertex on their own level within 40 m, else the nearest vertex on any level within 40 m (marked).",
+        "Cache: the TfL GTFS ZIP is kept in data/raw/docklands/ and fetched only when absent (one GET, User-Agent glitchcan-cwplans/0.1).",
+        "Coordinates: OSTN15 to BNG, local metres as build-docklands; positions rounded to 0.1 m."
       ],
       "network": true,
       "deterministic": false,
@@ -2214,7 +2480,12 @@
         "build-docklands",
         "fetch-raw-grid"
       ],
-      "note": "network is true only when the GTFS ZIP is absent. Child process: unzip -p."
+      "note": "network is true only when the GTFS ZIP is absent. Child process: unzip -p.",
+      "area": "underground",
+      "faults": [
+        "F2",
+        "F12"
+      ]
     },
     {
       "id": "build-imagery",
@@ -2244,13 +2515,16 @@
       "method": "Colours each terrain vertex of the Docklands model from the least cloudy recent Sentinel-2 true-colour image.",
       "rules": [
         "Model metres to BNG to UTM with a Helmert transform (about 2 m, inside a 10 m pixel).",
-        "Each vertex takes the mean of the pixels within half a terrain cell of it."
+        "Each vertex takes the mean of the pixels within half a terrain cell of it.",
+        "Network: one STAC search, then HTTP range requests for the pixel window only; User-Agent glitchcan-cwplans/0.1; no retry; no cache. The scene id and date are written into imagery.js.",
+        "Colours are 8-bit means, rounded to whole values."
       ],
       "network": true,
       "deterministic": false,
       "after": [
         "build-docklands"
-      ]
+      ],
+      "area": "imagery"
     },
     {
       "id": "build-aerial-rgb2008",
@@ -2294,7 +2568,8 @@
       ],
       "network": false,
       "deterministic": true,
-      "after": []
+      "after": [],
+      "area": "imagery"
     },
     {
       "id": "build-aerial-night2012",
@@ -2337,7 +2612,8 @@
       ],
       "network": false,
       "deterministic": true,
-      "after": []
+      "after": [],
+      "area": "imagery"
     },
     {
       "id": "build-aerial-intensity2020",
@@ -2377,7 +2653,8 @@
       ],
       "network": false,
       "deterministic": true,
-      "after": []
+      "after": [],
+      "area": "imagery"
     },
     {
       "id": "fetch-dsm",
@@ -2399,11 +2676,13 @@
       "method": "Downloads the EA LiDAR surface model tiles over the Canary Wharf estate for every survey year; skips files already present.",
       "rules": [
         "2012 TQ3580 exists only at 0.5 m; the 1 m request returns a server error, not a ZIP",
-        "a ZIP already present is not fetched again"
+        "a ZIP already present is not fetched again",
+        "Network: curl in sequence, 1200 s timeout, curl's own User-Agent (the project User-Agent is not set here); a failed download prints FAIL and the loop goes on; no retry."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "terrain"
     },
     {
       "id": "build-skyline",
@@ -2417,11 +2696,8 @@
         {
           "source": "ea-dsm-history",
           "endpoint": "https://environment.data.gov.uk/tiles/collections/survey/<product>/<year>/<res>/<tile>",
-          "request": "DSM tiles TQ3575 and TQ3580 for 1999, 2003, 2007, 2012, 2015, 2018, 2020, 2022 (fetched by data/raw/dsm/fetch.sh, not by this tool)",
+          "request": "DSM tiles TQ3575 and TQ3580 for 1999, 2003, 2007, 2012, 2015, 2018, 2020, 2022 (fetched by tools/fetch-dsm.sh, not by this tool)",
           "access": "manual download"
-        },
-        {
-          "local": "data/raw/dsm/<product>-<year>-<res>-<tile>.zip"
         },
         {
           "file": "docklands/data/area.js"
@@ -2437,7 +2713,8 @@
         "height = 90th percentile of the DSM inside today's OSM outline (1 m sampling, at most 4000 points) minus the model ground",
         "not standing: under 3 m or under a quarter of today's height (a cleared site with hoardings)",
         "null: under 30% of the outline's points have data in that survey",
-        "a survey that flew under 20% of the buildings is left out (2015)"
+        "a survey that flew under 20% of the buildings is left out (2015)",
+        "Heights in metres; the ground is the model ground (area.js terrain), not each survey's DTM."
       ],
       "network": false,
       "deterministic": false,
@@ -2445,7 +2722,8 @@
         "build-docklands",
         "fetch-dsm"
       ],
-      "note": "Child processes: unzip, find."
+      "note": "Child processes: unzip, find.",
+      "area": "skyline"
     },
     {
       "id": "build-towers",
@@ -2479,7 +2757,10 @@
         "Roof levels: 1-D Gaussian mixture, k by BIC + 2 k ln n; levels closer than 3 m merge.",
         "Outlines: open and close, holes under 60 m2 filled, pieces under 16 m2 removed, marching squares, Douglas-Peucker 0.8 m, edges snapped to the dominant direction within 8 degrees.",
         "Towers not standing at the 2020 flight keep their OSM outline (status not_in_survey).",
-        "Hand corrections are listed in the tool (JUDGEMENT) and in each record with its reason."
+        "Hand corrections are listed in the tool (JUDGEMENT) and in each record with its reason.",
+        "The 2022 composite merges only the 2017-12/2018-01 and 2020-12-12 flights: it is not an independent check of 2020; the independent check is the 2018 flight, for towers finished by January 2018.",
+        "Composite cells with no return (a gap filled from near the ground) are no data.",
+        "Roof RMSE is reported on roof cells only."
       ],
       "network": false,
       "deterministic": true,
@@ -2488,7 +2769,9 @@
         "build-atlas",
         "fetch-dsm"
       ],
-      "note": "Python with numpy, scipy, scikit-learn, scikit-image, rasterio, shapely, Pillow in /opt/towers-venv. Writes contact sheets to data/raw/towers/ (not committed)."
+      "note": "Python with numpy, scipy, scikit-learn, scikit-image, rasterio, shapely, Pillow in /opt/towers-venv. Writes contact sheets to data/raw/towers/ (not committed).",
+      "area": "towers",
+      "judgement": "JUDGEMENT in tools/build-towers.py: the primary survey per tower (2018 for Novotel cwb-0701 and Dollar Bay cwb-0737), levels added by hand (Pan Peninsula cwb-0801: 6.5 and 21.5 m read off the height histogram), a ground level for the height check (8 Canada Square cwb-0417: 9.7 m OD); SKIP lists outlines that are not towers (cwb-0418, cwb-0523). Each reason is in the tool and in the tower record."
     },
     {
       "id": "facade-measure",
@@ -2517,7 +2800,9 @@
       "network": false,
       "deterministic": true,
       "after": [],
-      "note": "Also tools/measure.py for a patch cut by hand. The outputs were collected into meas.json by hand."
+      "note": "Also tools/measure.py for a patch cut by hand. The outputs were collected into meas.json by hand.",
+      "area": "facades",
+      "judgement": "The facade region in each photo is chosen by eye (registry/sources/facades/work/rois.json); the fundamental period is chosen by looking at the patch; the outputs are collected into meas.json by hand."
     },
     {
       "id": "facade-measure-patch",
@@ -2541,7 +2826,9 @@
       "network": false,
       "deterministic": true,
       "after": [],
-      "note": "Outputs collected into meas.json by hand."
+      "note": "Outputs collected into meas.json by hand.",
+      "area": "facades",
+      "judgement": "The patch is cut by hand; the outputs are collected into meas.json by hand."
     },
     {
       "id": "facade-metric",
@@ -2572,7 +2859,8 @@
       "deterministic": true,
       "after": [
         "facade-measure"
-      ]
+      ],
+      "area": "facades"
     },
     {
       "id": "facade-build",
@@ -2609,7 +2897,9 @@
       "deterministic": true,
       "after": [
         "facade-metric"
-      ]
+      ],
+      "area": "facades",
+      "judgement": "The floor count used to scale a patch is an assumed or judged value where no face width is visible."
     },
     {
       "id": "facade-write",
@@ -2640,7 +2930,9 @@
       "deterministic": true,
       "after": [
         "facade-build"
-      ]
+      ],
+      "area": "facades",
+      "judgement": "Judged facts (by looking at photos) and their sources are written in write_facades.py; each value is marked measured, judged or assumed in facades.json."
     },
     {
       "id": "build-facade-atlas",
@@ -2680,7 +2972,9 @@
       "after": [
         "facade-build",
         "facade-write"
-      ]
+      ],
+      "area": "facades",
+      "judgement": "One patch per tower chosen by eye from data/raw/facades/contact.jpg; Citigroup Centre left out (crane, blur)."
     },
     {
       "id": "build-splats",
@@ -2726,14 +3020,16 @@
         "Roof discs every 4 m inside the outline: aerial colour on buildings under 40 m, else the building colour.",
         "Walls: one disc per 3.6 m storey and 7.2 m (--cell) of wall, and one glass-band disc 3 cm in front per cell (buildings 4 m or taller).",
         "The set entry 'cw-synth' replaces any earlier one in index.json; other entries are kept.",
-        "every splat records its building (uint16 index into cw-synth.json groups; 65535 = ground) for animation"
+        "every splat records its building (uint16 index into cw-synth.json groups; 65535 = ground) for animation",
+        "Positions in model metres (x east, y up, z south); 32-byte .splat records, gzipped."
       ],
       "network": false,
       "deterministic": false,
       "after": [
         "build-docklands",
         "build-aerial-rgb2008"
-      ]
+      ],
+      "area": "splats"
     },
     {
       "id": "build-river",
@@ -2754,13 +3050,16 @@
       "rules": [
         "the Thames = tidal water polygons with no name (or named Thames)",
         "step cost = step length / (distance to bank + 1)^1.5",
-        "moving average over 9 cells, resampled every 20 m"
+        "moving average over 9 cells, resampled every 20 m",
+        "Start and end: the widest water cell (largest distance to the bank) in the westmost and eastmost grid columns that hold water.",
+        "Rounding: points and half-widths to 0.1 m; Eden Dock ring to 0.1 m."
       ],
       "network": false,
       "deterministic": true,
       "after": [
         "build-docklands"
-      ]
+      ],
+      "area": "water"
     },
     {
       "id": "fetch-trees",
@@ -2810,7 +3109,8 @@
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "trees"
     },
     {
       "id": "build-trees",
@@ -2851,7 +3151,8 @@
         "TPO: records with an end date are left out; the taxon is read only from Tower Hamlets names of the form \"Common (Scientific)\"; Southwark names (site descriptions, URLs) are dropped.",
         "OSM: species, else taxon, else genus (with the :en names); height under 60 m and diameter_crown under 40 m kept.",
         "TOW Lone Tree: centroid of the polygon, height = maxht, crown = diameter of a circle with the polygon area (tow_area_m). Group of Trees, Small Woodland and NFI OHC polygons become greens with meanht.",
-        "Greens are clipped to the box (Sutherland-Hodgman) and simplified (Douglas-Peucker 0.5 m; TOW 1.5 m, its outlines follow the 1 m LiDAR grid); OSM multipolygon inner rings and shapefile holes are kept as holes."
+        "Greens are clipped to the box (Sutherland-Hodgman) and simplified (Douglas-Peucker 0.5 m; TOW 1.5 m, its outlines follow the 1 m LiDAR grid); OSM multipolygon inner rings and shapefile holes are kept as holes.",
+        "Network for the source files: see fetch-trees."
       ],
       "network": false,
       "deterministic": true,
@@ -2859,7 +3160,9 @@
         "fetch-trees",
         "fetch-docklands-osm",
         "fetch-raw-grid"
-      ]
+      ],
+      "area": "trees",
+      "judgement": "The 35 m cut-off for \"lone trees\" that are cranes or structures is applied on the page, not in the file; the source precedence order is a judgement."
     },
     {
       "id": "drone-flight",
@@ -2896,7 +3199,9 @@
         "build-docklands",
         "build-atlas"
       ],
-      "note": "Also imported as a module by drone-capture.mjs."
+      "note": "Also imported as a module by drone-capture.mjs.",
+      "area": "splats",
+      "judgement": "The route (overview loop, spiral, dock passes, tower orbits, crossings) is designed by hand in plan(); only the clearance repair is automatic."
     },
     {
       "id": "drone-capture",
@@ -2984,7 +3289,8 @@
         "build-atlas",
         "build-aerial-rgb2008"
       ],
-      "note": "Child processes: Chromium through Playwright, ffmpeg."
+      "note": "Child processes: Chromium through Playwright, ffmpeg.",
+      "area": "splats"
     },
     {
       "id": "train-splat",
@@ -3034,7 +3340,8 @@
       "after": [
         "drone-capture"
       ],
-      "note": "Child processes: opensplat, node ply-to-splat.mjs, splat-transform (falls back to 'npx -y @playcanvas/splat-transform', which downloads from npm when it is not installed). The log carries the run date. data-register.json names this script as a producer of docklands/data/splats/index.json; the code does not write that file."
+      "note": "Child processes: opensplat, node ply-to-splat.mjs, splat-transform (falls back to 'npx -y @playcanvas/splat-transform', which downloads from npm when it is not installed). The log carries the run date.",
+      "area": "splats"
     },
     {
       "id": "ply-to-splat",
@@ -3062,7 +3369,8 @@
       "after": [
         "train-splat"
       ],
-      "note": "Called by train-splat.sh; also runs alone."
+      "note": "Called by train-splat.sh; also runs alone.",
+      "area": "splats"
     },
     {
       "id": "publish-trained-splat",
@@ -3110,7 +3418,8 @@
         "ply-to-splat",
         "build-splats"
       ],
-      "note": "Run for the set cw-trained with data/raw/drone/cw-photo-480/first-n3000-d2.splat; another run adds its own set files."
+      "note": "Run for the set cw-trained with data/raw/drone/cw-photo-480/first-n3000-d2.splat; another run adds its own set files.",
+      "area": "splats"
     },
     {
       "id": "audit-quality",
@@ -3194,7 +3503,25 @@
         "fetch-cwg",
         "build-docklands",
         "build-indoor"
-      ]
+      ],
+      "area": "quality",
+      "faults": [
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F7",
+        "F8",
+        "F9",
+        "F12",
+        "F13",
+        "F16",
+        "F17",
+        "F18",
+        "F19",
+        "F20"
+      ],
+      "judgement": "Each new check is read by hand against its examples before it is trusted (curation skill, \"Catalogue first\")."
     },
     {
       "id": "check-feeds",
@@ -3214,11 +3541,16 @@
       "generated": [],
       "method": "Re-checks every catalogued feed and prints its HTTP status and CORS answer, and where it differs from feeds.json.",
       "rules": [
-        "An api is fetched only when the source has no sample; CORS counts when Access-Control-Allow-Origin is * or the site origin."
+        "An api is fetched only when the source has no sample; CORS counts when Access-Control-Allow-Origin is * or the site origin.",
+        "Network: 6 requests at once across all hosts, no per-host gap, 30 s timeout, User-Agent glitchcan-cwplans/0.1, Origin https://danbri.github.io on api and sample requests; only the first chunk of each body is read. Nothing is written."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "feeds",
+      "faults": [
+        "F11"
+      ]
     },
     {
       "id": "check-events",
@@ -3238,11 +3570,16 @@
       "generated": [],
       "method": "Re-checks the event and real-time feeds and prints status, CORS, item count, newest item date and the first titles.",
       "rules": [
-        "Item counts come from generic parsers and can differ from the hand-tuned samples in events.json."
+        "Item counts come from generic parsers and can differ from the hand-tuned samples in events.json.",
+        "Network: 6 requests at once across all hosts, no per-host gap, 30 s timeout, User-Agent glitchcan-cwplans/0.1; a second request with the Origin header tests CORS. Nothing is written."
       ],
       "network": true,
       "deterministic": false,
-      "after": []
+      "after": [],
+      "area": "feeds",
+      "faults": [
+        "F11"
+      ]
     },
     {
       "id": "check-data-register",
@@ -3290,7 +3627,8 @@
       "network": false,
       "deterministic": true,
       "after": [],
-      "note": "Child process: git ls-files. Run last, after every rebuild."
+      "note": "Child process: git ls-files. Run last, after every rebuild.",
+      "area": "provenance"
     },
     {
       "id": "check-data-register-write",
@@ -3323,7 +3661,412 @@
       "after": [
         "check-data-register"
       ],
-      "note": "DATA-REGISTER.md carries the run date."
+      "note": "DATA-REGISTER.md carries the run date.",
+      "area": "provenance"
+    }
+  ],
+  "manual_activities": [
+    {
+      "id": "sourced-levels",
+      "area": "underground",
+      "what": "Published levels used as tunnel and structure controls",
+      "by": "hand (main session and research agents)",
+      "date": "2026-10-02/03",
+      "method": "Picks, from the cited facts in docklands/facts.json and from TfL freedom-of-information rail levels, the station, tunnel and structure levels that the 3D builds apply as controls, each with its datum, source URL and short quote.",
+      "rules": [
+        "A level states its datum: od (metres above Ordnance Datum Newlyn) or below_ground (metres below the LiDAR ground at the point).",
+        "The asset owner's level (TfL rail level; London Underground Datum = OD - 100 m) outranks a rounded secondary depth; the loser stays in the file with superseded_by and is not applied (F13).",
+        "Each control names the line pattern and kinds of tunnel chain it applies to; structures name footprint_osm or water_name to be drawn from OSM.",
+        "Only short quotes are kept; plans and drawings are for reference by eye (feeds/underground/README.md)."
+      ],
+      "used": [
+        {
+          "file": "docklands/facts.json"
+        },
+        {
+          "source": "tfl-foi"
+        },
+        {
+          "source": "web-quotes"
+        }
+      ],
+      "generated": [
+        {
+          "file": "data/sourced-levels.json"
+        }
+      ],
+      "decisions_recorded_in": [
+        "data/sourced-levels.json (source, quote, superseded_by per control)"
+      ],
+      "faults": [
+        "F13"
+      ]
+    },
+    {
+      "id": "docklands-facts",
+      "area": "underground",
+      "what": "Cited facts on the underground and multi-storey structure",
+      "by": "research agents, checked by hand",
+      "date": "2026-10-02",
+      "method": "Research agents collected 360 numeric facts (depths, tunnels, towers, docks, ground) with a source URL and a short quote each, and 19 recorded gaps; a script checked every quote against the cached copy of the page it cites (whitespace normalised); Wikidata values come from SPARQL with the statement as the quote. FACTS.md is the same facts as tables.",
+      "rules": [
+        "Each fact keeps value, unit, datum, source URL and quote.",
+        "Datums are named: OD, CD (3.35 m below OD at West India Docks), mATD (OD + 100 m).",
+        "Gaps are recorded, not filled by guesses."
+      ],
+      "gap": "The quote-check script and the FACTS.md generator were one-off scripts and are not committed: the method is recorded here, the code is not.",
+      "used": [
+        {
+          "source": "web-quotes"
+        },
+        {
+          "source": "wikidata"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/facts.json"
+        },
+        {
+          "file": "docklands/FACTS.md"
+        }
+      ],
+      "decisions_recorded_in": [
+        "docklands/facts.json",
+        "docklands/FACTS.md"
+      ]
+    },
+    {
+      "id": "underground-catalogue",
+      "area": "underground",
+      "what": "Source catalogue for the underground estate",
+      "by": "four research agents",
+      "date": "2026-10-03",
+      "method": "Four research agents searched for plans, levels and 3D models of the malls, stations and tunnels; each entry was fetched directly or as an Internet Archive copy and its licence read; sources not used are listed with the reason. The README tables are generated from the JSON files.",
+      "rules": [
+        "Nothing is copied into the model except cited level values (data/sourced-levels.json).",
+        "Copyright plans (Canary Wharf Group, TfL, Crossrail) are for reference by eye, not for copying.",
+        "Each exclusion records why (licence, no levels, duplicate, unreachable)."
+      ],
+      "gap": "The generator of feeds/underground/README.md is not committed.",
+      "used": [
+        {
+          "source": "web-quotes"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/underground/stations.json"
+        },
+        {
+          "file": "feeds/underground/planning.json"
+        },
+        {
+          "file": "feeds/underground/estate.json"
+        },
+        {
+          "file": "feeds/underground/tunnels.json"
+        },
+        {
+          "file": "feeds/underground/README.md"
+        }
+      ],
+      "decisions_recorded_in": [
+        "feeds/underground/*-excluded.json"
+      ]
+    },
+    {
+      "id": "feeds-catalogue",
+      "area": "feeds",
+      "what": "Catalogue of live feeds, APIs and event sources",
+      "by": "research agents, merged by hand",
+      "date": "2026-10-03",
+      "method": "Research agents surveyed data sources in seven areas (341 added on 2026-10-03, 135 left out with reasons) and event, calendar, news and openings sources (124); each URL was fetched from the container and its status, CORS, licence and a sample recorded; check-feeds.mjs and check-events.mjs re-check them.",
+      "rules": [
+        "Only official, published or openly licensed sources, and only cameras their owners publish for public viewing.",
+        "Left out with the reason: directories of unsecured private cameras, people-search and face-recognition sites, personal licence registers that list named individuals.",
+        "A source behind a bot challenge is \"not verified\", never \"verified\" (F11)."
+      ],
+      "gap": "The generators of feeds/README.md and feeds/EVENTS.md are not committed (\"generated and by hand\").",
+      "used": [
+        {
+          "source": "feed-providers"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/feeds.json"
+        },
+        {
+          "file": "feeds/events.json"
+        },
+        {
+          "file": "feeds/README.md"
+        },
+        {
+          "file": "feeds/EVENTS.md"
+        },
+        {
+          "file": "feeds/SURVEY-2026-10-03.md"
+        }
+      ],
+      "decisions_recorded_in": [
+        "feeds/feeds.json and feeds/events.json (status, licence, excluded section)",
+        "feeds/SURVEY-2026-10-03.md"
+      ],
+      "faults": [
+        "F11"
+      ]
+    },
+    {
+      "id": "brand-decisions",
+      "area": "brands",
+      "what": "Hand decisions on FSA and CWG brand matches",
+      "by": "hand",
+      "date": "2026-10-02/03",
+      "method": "Matches that the rules cannot decide (an NSI prefix variant, an alternate name, a business type that does not fit the brand) are judged by hand, one record at a time, and written to decision files that the tools read on every run.",
+      "rules": [
+        "A decision names the record, the brand item and accept or reject, with a reason.",
+        "Undecided and rejected matches are listed apart by the tools, never joined."
+      ],
+      "used": [
+        {
+          "file": "registry/sources/brands/brands-uk.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/tools/fsa-decisions.json"
+        },
+        {
+          "file": "registry/sources/brands/tools/cwg-decisions.json"
+        }
+      ],
+      "decisions_recorded_in": [
+        "registry/sources/brands/tools/fsa-decisions.json",
+        "registry/sources/brands/tools/cwg-decisions.json"
+      ]
+    },
+    {
+      "id": "storelocator-manual",
+      "area": "brands",
+      "what": "Store-page URLs found by hand",
+      "by": "hand",
+      "date": "2026-10-02/03",
+      "method": "For branches whose OSM website is missing or a bare home page, the branch page was found by hand on the brand's own locator and its URL recorded; storelocator.mjs then checks it like any other.",
+      "rules": [
+        "A URL on the brand's own domain; the UK site first.",
+        "Only the URL is recorded, not page content."
+      ],
+      "used": [
+        {
+          "source": "brand-sites"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/tools/storelocator-manual.json"
+        }
+      ],
+      "decisions_recorded_in": [
+        "registry/sources/brands/tools/storelocator-manual.json"
+      ]
+    },
+    {
+      "id": "records-open-subset",
+      "area": "heritage",
+      "what": "Open-licence subset of the museum and heritage records",
+      "by": "hand",
+      "date": "2026-10-02",
+      "method": "Cuts records-open.json from records.json (fetch_records.py): records under CC0 (Wikidata), OGL (Historic England, OGL-licensed ADS records) or CC BY (Portable Antiquities Scheme), without the \"sensitive\" flag (burial or memorial context).",
+      "rules": [
+        "Records flagged sensitive (44: burials, cemeteries, graves, memorials, skeletons) are left out (CLAUDE.md, Data ethics).",
+        "Records under other or unstated licences are left out."
+      ],
+      "gap": "The cut was made by hand; no script in the repository writes records-open.json.",
+      "used": [
+        {
+          "local": "registry/sources/museums/records.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/museums/records-open.json"
+        }
+      ],
+      "decisions_recorded_in": [
+        "registry/sources/museums/README.md, \"Published subset\""
+      ]
+    },
+    {
+      "id": "ukho-wrecks-clip",
+      "area": "water",
+      "what": "UKHO wrecks and obstructions clipped to the box",
+      "by": "hand",
+      "date": "2026-10-02",
+      "method": "Clips the UKHO INSPIRE wrecks and obstructions shapefile to the Docklands box with ogr2ogr (the command is in registry/sources/pla/README.md).",
+      "rules": [
+        "Box WGS84 -0.0950, 51.4740 to 0.0150, 51.5220.",
+        "Depths (valsou) are metres below chart datum; not for navigation."
+      ],
+      "used": [
+        {
+          "source": "ukho"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/pla/ukho_wrecks_obstructions_points.geojson"
+        },
+        {
+          "file": "registry/sources/pla/ukho_wrecks_obstructions_areas.geojson"
+        }
+      ],
+      "decisions_recorded_in": [
+        "registry/sources/pla/README.md"
+      ]
+    },
+    {
+      "id": "facade-photos",
+      "area": "facades",
+      "what": "Open photos, facade regions and footprint widths for the facade measures",
+      "by": "facade agent, then the main session",
+      "date": "2026-10-03",
+      "method": "Searched Wikimedia Commons and Flickr for photos of the Canary Wharf towers, downloaded only CC0, Public Domain Mark and CC BY images, recorded author, licence, page and the face shown; chose a facade region in each photo by eye; computed oriented bounding boxes of the OSM footprints for face widths.",
+      "rules": [
+        "CC BY-SA, NC, ND and all-rights-reserved images are not downloaded; seven CC BY-SA Commons photos were looked at for facts only.",
+        "The face shown is judged from landmarks when a photo has no geotag (32 of 45 Flickr photos).",
+        "Commons and Flickr rate-limit the container (429, retry after 600 s): wait, do not hammer."
+      ],
+      "used": [
+        {
+          "source": "osm"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/facades/photos.json"
+        },
+        {
+          "file": "registry/sources/facades/work/rois.json"
+        },
+        {
+          "file": "registry/sources/facades/work/footprints.json"
+        }
+      ],
+      "decisions_recorded_in": [
+        "registry/sources/facades/photos.json (face and how it was judged)",
+        "registry/sources/facades/work/rois.json"
+      ]
+    },
+    {
+      "id": "page-assets",
+      "area": "imagery",
+      "what": "Pixel-art palette and music list for the 3D page",
+      "by": "hand",
+      "date": "2026-10-03",
+      "method": "The pixel-art palette: 24 colours extracted from an owner-supplied reference picture by PIL median cut and k-means (a one-off run; the picture is not stored), plus 9 accent colours added by hand. The music list: tracks chosen by hand from Wikimedia Commons with title, artist, licence and page.",
+      "rules": [
+        "Pixel-art colours do not follow height alone (owner, 2026-10-03: it reads as a heat map); materials carry the variety.",
+        "Music: CC BY 3.0 tracks (Kevin MacLeod) served by Wikimedia Commons with Access-Control-Allow-Origin: *, so the page can analyse them; the credit is shown while a track plays."
+      ],
+      "gap": "The palette extraction was a one-off script and is not committed.",
+      "used": [
+        {
+          "source": "owner-supplied"
+        },
+        {
+          "source": "commons-music"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/pixel-palette.json"
+        },
+        {
+          "file": "docklands/data/music.json"
+        }
+      ],
+      "decisions_recorded_in": [
+        "docklands/data/pixel-palette.json",
+        "docklands/data/music.json"
+      ]
+    },
+    {
+      "id": "licence-decisions",
+      "area": "provenance",
+      "what": "Licence check of every source before commit",
+      "by": "hand (each session), owner decides open cases",
+      "date": "2026-10-02/03",
+      "method": "Before a source is fetched into a committed file, its licence is read on the provider's own page and recorded in data-register.json sources (name, licence, attribution, note). Restricted, proprietary and share-alike sources other than OSM are not committed; open questions wait for the owner.",
+      "rules": [
+        "Not committed: the VOA rating list (restricted licence), the PLA ArcGIS layers (no licence stated), the Canal & River Trust layers (no commercial use).",
+        "Not used: GLA canopy and green cover 2024 (all rights reserved), Curio Canopy (CC BY-SA), Wikipedia text (CC BY-SA), CC BY-SA Commons photos (looked at only).",
+        "Held for the owner: the Crossrail long section (licence not stated).",
+        "Needs an account, not fetched: HM Land Registry CCOD and OCOD, EPC data.",
+        "Re-check the Gambling Commission (no licence on the download page; data.gov.uk says OGL) before anything leaves prototyping."
+      ],
+      "used": [],
+      "generated": [
+        {
+          "file": "data-register.json"
+        }
+      ],
+      "decisions_recorded_in": [
+        "data-register.json (sources)",
+        "DATA-REGISTER.md",
+        "registry/sources/*/README.md (licence sections)",
+        "registry/sources/SOURCES-companies-property.md"
+      ]
+    },
+    {
+      "id": "provenance-upkeep",
+      "area": "provenance",
+      "what": "Keeping pipeline.json and the register in step with the tools",
+      "by": "hand (each session)",
+      "date": "2026-10-03",
+      "method": "Every new or changed tool updates its pipeline.json activity in the same commit (used, generated, method, rules, network, deterministic, after, area, faults, judgement); every new data file gets a data-register.json entry in the same commit; then check-data-register.mjs --write regenerates DATA-REGISTER.md, METHODS.md and pipeline.jsonld.",
+      "rules": [
+        "The check fails on an unlisted tool, an empty method or rules, an unknown area or fault id, an unregistered data file, and a page that shows OSM data without the attribution link.",
+        "Source identifiers are kept as they come (OSM type/id, QID, UPRN, TOID, FHRS id, company number, cwb- id): they become IRIs."
+      ],
+      "used": [],
+      "generated": [
+        {
+          "file": "pipeline.json"
+        }
+      ],
+      "decisions_recorded_in": [
+        "pipeline.json",
+        "skills/docklands-data-curation/ACTIVITY-LOG.md"
+      ]
+    },
+    {
+      "id": "quality-analysis",
+      "area": "quality",
+      "what": "Analysis of the error classes and the fault register",
+      "by": "hand",
+      "date": "2026-10-03",
+      "method": "Reads the audit output, names the error class of each wrong value, writes the analysis and the proposed compositing layers, and records faults in our own joins and tools in the fault register with the measured effect of each fix.",
+      "rules": [
+        "Catalogue first: name the class, add a check if none covers it; do not edit the record (owner, October 2026).",
+        "Change a tool only for a pipeline or join-rule fault; re-run the audit and compare the counts."
+      ],
+      "used": [
+        {
+          "file": "quality/issues.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "quality/README.md"
+        }
+      ],
+      "decisions_recorded_in": [
+        "quality/README.md",
+        "skills/docklands-data-curation/SKILL.md (Fault register)",
+        "skills/docklands-data-curation/ACTIVITY-LOG.md"
+      ]
     }
   ],
   "libraries": [
@@ -3358,6 +4101,10 @@
     {
       "tool": "tools/jsonld-clean.mjs",
       "provides": "cleanJsonLd(raw): repairs one real-world JSON-LD block and counts each repair by class (HTML comment and CDATA wrappers, JS comments, trailing and missing commas, raw control characters, invalid escapes, concatenated values, HTML entities, remote schema.org contexts inlined, other remote contexts dropped, @graph unwrapped, http://schema.org/ normalised)."
+    },
+    {
+      "tool": "tools/native/ecw2ppm.c",
+      "provides": "ECW decoder for build-aerial.py: decodes an ECW file to a PPM at every Nth pixel and prints its georeferencing as JSON. Built by hand against the ECW 3.3 SDK (curation skill, Imagery); the binary tools/native/ecw2ppm is gitignored."
     }
   ],
   "tests": [
