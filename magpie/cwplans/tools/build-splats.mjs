@@ -112,6 +112,10 @@ const meta = { built: new Date().toISOString().slice(0, 10), file: 'cw-synth.spl
   counts: { ground: nGround, roof: nRoof, wall: nWall, window: nWin }, box: { x0: BOX[0], x1: BOX[1], z0: BOX[2], z1: BOX[3] }, ground_step_m: GSTEP,
   method: 'synthesised from the model, not trained: ground discs coloured from the 2008 EA aerial photograph, roofs (aerial colour under 40 m), walls on a 3.6 m storey grid with two window discs per cell; colours carry the page shader\'s fixed light', sources: ['osm', 'ea-lidar', 'ea-survey-imagery'] };
 writeFileSync(join(CW, 'docklands/data/splats/cw-synth.json'), JSON.stringify(meta, null, 1));
+// the page's list of splat sets: keep the other entries, replace this one
+const IX = join(CW, 'docklands/data/splats/index.json'); let ix = { sets: [] }; try { ix = JSON.parse(readFileSync(IX, 'utf8')); } catch {}
+ix.sets = [{ name: 'cw-synth', title: 'Synthesised from the model (Canary Wharf)', count: N }, ...ix.sets.filter(x => x.name !== 'cw-synth')];
+writeFileSync(IX, JSON.stringify(ix, null, 1));
 
 // ---- standard 3DGS PLY (for splat-transform, SuperSplat, OpenSplat seeding)
 mkdirSync(join(CW, 'data/raw/splats'), { recursive: true });

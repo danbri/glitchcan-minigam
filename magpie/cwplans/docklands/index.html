@@ -804,8 +804,8 @@ async function setSplatMode(mode) {
 }
 document.querySelectorAll('input[name=splatMode]').forEach(r => r.onchange = () => r.checked && setSplatMode(r.value));
 $('splatSet').onchange = () => { SPL.set = null; if (SPL.mode !== 'off') setSplatMode(SPL.mode); };
-// trained sets are listed when their metadata file exists
-fetch('data/splats/cw-trained.json').then(r => r.ok ? r.json() : null).then(m => { if (m) $('splatSet').insertAdjacentHTML('beforeend', `<option value="cw-trained">Trained from drone frames (${esc(m.count?.toLocaleString('en-GB') || '')})</option>`); }).catch(() => {});
+// the splat sets on offer: data/splats/index.json (tools/build-splats.mjs and the training script add their set)
+loadJSON('data/splats/index.json').then(ix => { $('splatSet').innerHTML = ix.sets.map(x => `<option value="${esc(x.name)}">${esc(x.title)} (${x.count.toLocaleString('en-GB')})</option>`).join(''); }).catch(() => {});
 
 // glow outlines by occupant category (registry/categories.json via the atlas index: AT.buildings[k].cat)
 const GLOW = { finance: [1, .19, .19], shop: [.2, .84, 1], catering: [1, .63, .25], leisure: [.36, 1, .48], entertainment: [1, .31, .85] };
