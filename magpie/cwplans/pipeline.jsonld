@@ -2340,6 +2340,58 @@
    ]
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-towers",
+   "@type": "prov:Activity",
+   "rdfs:label": "build-towers",
+   "dct:description": "Fits tiered massing (stacked flat tiers, or a pyramid, cone or sloped top where that fits clearly better) to the towers of 100 m or more, from the 1 m EA LiDAR surface model, for the 3D page.",
+   "prov:used": [
+    {
+     "cwp:pathPattern": "data/raw/dsm/<product>-<year>-<res>-<tile>.zip"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/atlas/data/atlas.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/towers.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/build-towers.py"
+   },
+   "cwp:command": "/opt/towers-venv/bin/python magpie/cwplans/tools/build-towers.py",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Primary survey: the 2022 composite (flights of 2017-12 to 2018-01 and 2020-12-12); the 2018 flight where judgement says so (Novotel, Dollar Bay: under half their roof cells returned in 2020).",
+    "Dropouts (8 m under the 75th percentile of their 5 x 5 m) filled by a 3 x 3 m grey closing.",
+    "OSM outline shifted by whole metres (at most 4) onto the LiDAR building.",
+    "Roof levels: 1-D Gaussian mixture, k by BIC + 2 k ln n; levels closer than 3 m merge.",
+    "Outlines: open and close, holes under 60 m2 filled, pieces under 16 m2 removed, marching squares, Douglas-Peucker 0.8 m, edges snapped to the dominant direction within 8 degrees.",
+    "Towers not standing at the 2020 flight keep their OSM outline (status not_in_survey).",
+    "Hand corrections are listed in the tool (JUDGEMENT) and in each record with its reason."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-atlas"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-dsm"
+    }
+   ]
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats",
    "@type": "prov:Activity",
    "rdfs:label": "build-splats",
@@ -2429,6 +2481,119 @@
    "cwp:after": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands"
+    }
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-trees",
+   "@type": "prov:Activity",
+   "rdfs:label": "fetch-trees",
+   "dct:description": "Downloads the open tree inventories and green-space layers for the Docklands box into data/raw/trees/ (gitignored).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gla-public-realm-trees",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2r45m/e62a6a1f-390d-4193-ae32-3aabd9846f36/Borough_tree_list_2025Nov.csv",
+     "dct:description": "the whole London Public Realm Trees CSV, November 2025 release (208 MB)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-greenspace",
+     "dcat:accessURL": "https://api.os.uk/downloads/v1/products/OpenGreenspace/downloads?area=TQ&format=ESRI%C2%AE+Shapefile&redirect",
+     "dct:description": "the TQ tile of OS Open Greenspace as ESRI Shapefile (5 MB ZIP)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-data-tree",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json",
+     "dct:description": "dataset=tree, geometry = the model box (WGS84 polygon), geometry_relation=intersects, 500 a page until a short page"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/fr-tow",
+     "dcat:accessURL": "https://environment.data.gov.uk/spatialdata/national-trees-outside-woodland-map/ogc/features/v1/collections/FR_TOW_V1_London/items",
+     "dct:description": "f=json, bbox = the model box in WGS84, limit=10000, startIndex 0, 10000, 20000"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "urn:cwplans:local:data/raw/trees/gla-public-realm-trees-2025Nov.csv"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/trees/opgrsp_essh_tq.zip"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/trees/planning-data-tree.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/trees/tow-london-box.json.gz"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/build-trees.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-trees.mjs fetch [gla|osgs|tpo|tow ...]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "One request at a time, at least 2 s apart; retried with a doubling pause on 429 or 5xx.",
+    "The GLA CSV and the OS ZIP are written as fetched; the planning.data and TOW responses are concatenated pages (features with their properties and geometry)."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-trees",
+   "@type": "prov:Activity",
+   "rdfs:label": "build-trees",
+   "dct:description": "Joins the tree inventories, OSM trees and the Trees Outside Woodland lone-tree crowns into one list of trees in model metres, with OS Open Greenspace sites, OSM green areas and TOW canopy groups as green rings.",
+   "prov:used": [
+    {
+     "@id": "urn:cwplans:local:data/raw/trees/gla-public-realm-trees-2025Nov.csv"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/trees/opgrsp_essh_tq.zip"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/trees/planning-data-tree.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/trees/tow-london-box.json.gz"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/docklands/greater_london-latest.osm.pbf"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/trees.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/build-trees.mjs"
+   },
+   "cwp:command": "node --max-old-space-size=6000 magpie/cwplans/tools/build-trees.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Box: BNG E 532400-539900, N 176700-182300 (fetch-docklands.mjs BOX_BNG); WGS84 to BNG through OSTN15; x = E - 537550, z = -(N - 180300); every value rounded to 0.5 m.",
+    "Ethics (CLAUDE.md, Data ethics): a tree keeps only position, taxon (scientific and common name), height, crown spread, source and record id. Notes, sponsorship, memorial, dedication, inscription, address, owner and maintainer fields are never read into the payload; each source lists its dropped fields in sources[].dropped.",
+    "Tree precedence: GLA public realm inventory first; then TPO points (planning.data), OSM natural=tree nodes and TOW Lone Tree crowns, each added only if no tree already kept lies within 3 m (TOW: within the crown radius, at least 3 m).",
+    "GLA class values (\"05 to 10 m\") become the middle of the class; \"Not recorded\" is null. Species \"Unknown Tree Species\" and common name \"Plant\" give no species.",
+    "TPO: records with an end date are left out; the taxon is read only from Tower Hamlets names of the form \"Common (Scientific)\"; Southwark names (site descriptions, URLs) are dropped.",
+    "OSM: species, else taxon, else genus (with the :en names); height under 60 m and diameter_crown under 40 m kept.",
+    "TOW Lone Tree: centroid of the polygon, height = maxht, crown = diameter of a circle with the polygon area (tow_area_m). Group of Trees, Small Woodland and NFI OHC polygons become greens with meanht.",
+    "Greens are clipped to the box (Sutherland-Hodgman) and simplified (Douglas-Peucker 0.5 m; TOW 1.5 m, its outlines follow the 1 m LiDAR grid); OSM multipolygon inner rings and shapefile holes are kept as holes."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-trees"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-grid"
     }
    ]
   },
@@ -4385,6 +4550,63 @@
    "cwp:osmUse": "derived"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/towers.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "tiered massing of the Canary Wharf towers of 100 m or more (27 fitted from the LiDAR, 4 not yet built at the 2020 flight, 2 skipped with reasons): tier outlines and levels in model metres, roof fit checks against the 2018 and 2020 flights, OSM and Wikidata heights",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-lidar"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-dsm-history"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-towers"
+   },
+   "cwp:osmUse": "derived",
+   "cwp:review": "Planning documents listed under references are links only; nothing from them is copied. Not yet loaded by docklands/index.html; add it to pages[].loads when it is"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/trees.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "81,875 trees (position, height, crown spread, taxon, source and record id) and 15,708 green areas (OS Open Greenspace sites, OSM parks, gardens, pitches, grass and woods, Trees Outside Woodland canopy groups) in the model box, 0.5 m, model metres",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gla-public-realm-trees"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-data-tree"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/fr-tow"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-greenspace"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-trees"
+   },
+   "cwp:osmUse": "derived",
+   "cwp:review": "ethics (CLAUDE.md, Data ethics): only position, taxon, height, crown, source and record id are kept; the dropped fields of each source are listed in the file (sources[].dropped). Not yet loaded by docklands/index.html; add it to pages[].loads when it is"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.json",
    "@type": [
     "prov:Entity",
@@ -4965,6 +5187,49 @@
    ],
    "dct:title": "short quotations from published pages (Wikipedia 169 of 360 in facts.json, also Crossrail Learning Legacy, Tideway, Canal & River Trust, trade press and others)",
    "dct:license": "Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gla-public-realm-trees",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "GLA London Public Realm Trees, November 2025 release (Borough_tree_list_2025Nov.csv; inventories of the boroughs, TfL and the Royal Parks, collated by GiGL)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-public-realm-trees-2r45m",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (Greater London Authority, GiGL)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-data-tree",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk dataset 'tree' (trees with Tree Preservation Orders; in the box from Tower Hamlets and Southwark)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/tree"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/fr-tow",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Forest Research National Trees Outside Woodland map V1, London (canopy over 3 m and 5 m2 outside NFI woodland, from EA LiDAR 2020 and Sentinel-2)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://ckan.publishing.service.gov.uk/dataset/national-trees-outside-woodland-map",
+   "cwp:attribution": "© Forestry Commission copyright and/or database right 2025"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-greenspace",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "OS Open Greenspace, version 2026-04 (TQ tile, ESRI Shapefile)",
+   "dct:license": "OGL v3.0 (OS OpenData licence: http://os.uk/opendata/licence redirects to OGL v3)",
+   "dcat:landingPage": "https://api.os.uk/downloads/v1/products/OpenGreenspace",
+   "cwp:attribution": "Contains OS data © Crown copyright and database right 2026"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own",

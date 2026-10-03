@@ -46,8 +46,10 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `docklands/data/splats/cw-synth.groups.bin.gz` | 8 kB | derived | model building indices | osmfr-greater-london | docklands/index.html |
 | `docklands/data/river.json` | 11 kB | derived | the Thames and Eden Dock water polygons | osmfr-greater-london | docklands/index.html |
 | `docklands/data/skyline.json` | 85 kB | derived | model building indices (today's OSM outlines) as the keys of the heights | osmfr-greater-london | docklands/index.html |
+| `docklands/data/towers.json` | 47 kB | derived | building and building:part outlines as the starting footprint (shifted onto the LiDAR); a tier whose outline is within IoU 0.95 of an OSM outline uses that outline; OSM heights kept for comparison | osmfr-greater-london |  |
+| `docklands/data/trees.json` | 6.4 MB | derived | natural=tree nodes (position, species, genus, taxon, height, diameter_crown, node id) not within 3 m of an inventory tree; natural=tree_row lines; green area outlines (leisure park, garden, pitch, playground, nature_reserve; landuse grass, forest, meadow, recreation_ground; natural wood, scrub) with way or relation ids | osmfr-greater-london |  |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 25 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 27 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -80,6 +82,8 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 - `feeds/underground/planning.json`: short quotes from copyright documents (CWG, TfL, Crossrail); re-check before production
 - `feeds/underground/estate.json`: short quotes from copyright documents (CWG, TfL, Crossrail); re-check before production
 - `feeds/underground/tunnels.json`: short quotes from copyright documents (CWG, TfL, Crossrail); re-check before production
+- `docklands/data/towers.json`: Planning documents listed under references are links only; nothing from them is copied. Not yet loaded by docklands/index.html; add it to pages[].loads when it is
+- `docklands/data/trees.json`: ethics (CLAUDE.md, Data ethics): only position, taxon, height, crown, source and record id are kept; the dropped fields of each source are listed in the file (sources[].dropped). Not yet loaded by docklands/index.html; add it to pages[].loads when it is
 
 ## All registered files
 
@@ -158,8 +162,10 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `docklands/data/pixel-palette.json` | 2 kB | 33-colour palette of the pixel-art style: 24 colours extracted from an owner-supplied reference picture (colours only, the picture is not stored) and 9 accents added by hand | written or computed in this project (repository licence) |
 | `docklands/data/splats/cw-synth.json` | 123 kB | metadata of the synthesised splat set: box, counts, method | written or computed in this project (repository licence) |
 | `docklands/data/skyline.json` | 85 kB | measured height of each model building on the Canary Wharf estate and 300 m round it in every EA LiDAR surface model that flew it (1999 to 2022), with survey dates | Environment Agency LiDAR DSM survey tiles 1999 to 2022 (OGL v3.0); OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0) |
-| `pipeline.json` | 108 kB | provenance of every transform: one W3C PROV activity a tool (used, generated, rules) | written or computed in this project (repository licence) |
-| `pipeline.jsonld` | 210 kB | pipeline.json and this register as JSON-LD (PROV-O, DCAT, Dublin Core) for a knowledge graph | written or computed in this project (repository licence) |
+| `docklands/data/towers.json` | 47 kB | tiered massing of the Canary Wharf towers of 100 m or more (27 fitted from the LiDAR, 4 not yet built at the 2020 flight, 2 skipped with reasons): tier outlines and levels in model metres, roof fit checks against the 2018 and 2020 flights, OSM and Wikidata heights | Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Environment Agency LiDAR DSM survey tiles 1999 to 2022 (OGL v3.0); OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0) |
+| `docklands/data/trees.json` | 6.4 MB | 81,875 trees (position, height, crown spread, taxon, source and record id) and 15,708 green areas (OS Open Greenspace sites, OSM parks, gardens, pitches, grass and woods, Trees Outside Woodland canopy groups) in the model box, 0.5 m, model metres | GLA London Public Realm Trees, November 2025 release (OGL v3.0); planning.data.gov.uk dataset 'tree' (OGL v3.0); OpenStreetMap (ODbL 1.0); Forest Research National Trees Outside Woodland map V1, London (OGL v3.0); OS Open Greenspace, version 2026-04 (OGL v3.0 (OS OpenData licence: http://os.uk/opendata/licence redirects to OGL v3)) |
+| `pipeline.json` | 115 kB | provenance of every transform: one W3C PROV activity a tool (used, generated, rules) | written or computed in this project (repository licence) |
+| `pipeline.jsonld` | 227 kB | pipeline.json and this register as JSON-LD (PROV-O, DCAT, Dublin Core) for a knowledge graph | written or computed in this project (repository licence) |
 | `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
 | `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
@@ -172,7 +178,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 25 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 27 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 
@@ -214,5 +220,9 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | commons-music | Music by Kevin MacLeod (incompetech.com) on Wikimedia Commons: Militaire Electronic, EDM Detection Mode, Rollin at 5 (electronic) | CC BY 3.0 (attribution; not share-alike) | Music: Kevin MacLeod (incompetech.com), CC BY 3.0 |
 | tfl-open-data | Transport for London open data: step-free station topology (GTFS pathways, 2026-08-03) and the live lift disruption feed | TfL open data terms (Powered by TfL Open Data; OGL-based); the terms page was not readable from the container: re-check before production | Powered by TfL Open Data |
 | web-quotes | short quotations from published pages (Wikipedia 169 of 360 in facts.json, also Crossrail Learning Legacy, Tideway, Canal & River Trust, trade press and others) | Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved | each quote is one sentence or less, kept with its URL to cite a number |
+| gla-public-realm-trees | GLA London Public Realm Trees, November 2025 release (Borough_tree_list_2025Nov.csv; inventories of the boroughs, TfL and the Royal Parks, collated by GiGL) | OGL v3.0 | Contains public sector information licensed under the Open Government Licence v3.0 (Greater London Authority, GiGL) fetched 2026-10-03 by tools/build-trees.mjs fetch (direct download, 208 MB). The file has no notes, sponsorship or memorial fields; the maintainer, location type, family, age class, girth, climate-suitability fields are dropped. Public realm only: no privately managed land (the Canary Wharf estate) |
+| planning-data-tree | planning.data.gov.uk dataset 'tree' (trees with Tree Preservation Orders; in the box from Tower Hamlets and Southwark) | OGL v3.0 | fetched 2026-10-03 by tools/build-trees.mjs fetch (entity.json API, box polygon, 500 a page). address-text, notes, name (except a Tower Hamlets taxon), tree-preservation-order reference and dates are dropped |
+| fr-tow | Forest Research National Trees Outside Woodland map V1, London (canopy over 3 m and 5 m2 outside NFI woodland, from EA LiDAR 2020 and Sentinel-2) | OGL v3.0 | © Forestry Commission copyright and/or database right 2025 fetched 2026-10-03 by tools/build-trees.mjs fetch (EA OGC API Features, collection FR_TOW_V1_London, bbox of the model box, 10,000 a page) |
+| os-open-greenspace | OS Open Greenspace, version 2026-04 (TQ tile, ESRI Shapefile) | OGL v3.0 (OS OpenData licence: http://os.uk/opendata/licence redirects to OGL v3) | Contains OS data © Crown copyright and database right 2026 fetched 2026-10-03 by tools/build-trees.mjs fetch (OS Downloads API, no key). Site names (distName1-4) are dropped |
 | own | written or computed in this project (method, decisions, URLs, search templates) | repository licence |  |
 | owner-supplied | supplied by the repository owner | owner's |  |

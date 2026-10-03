@@ -7,13 +7,14 @@
 
 in:  data/raw/dsm/*.zip (2022 composite first-return DSM 1 m, 2020 and 2018 NLP DSM 1 m),
      docklands/data/area.js (model footprints, base levels), atlas/data/atlas.json (registry -> model link, heights),
-     registry/buildings.json (OSM building:part heights), tools/towers-judgement.json (the hand corrections)
+     registry/buildings.json (OSM building:part heights); the hand corrections are JUDGEMENT below, each with its reason
 out: docklands/data/towers.json; data/raw/towers/contact.png and one PNG per tower (not committed)
 
 Targets: atlas buildings with max(Wikidata height, OSM height, model height) >= 100 m.
-Method, limits and the reasons: skills/docklands-data-curation/SKILL.md, "Towers".
+Method and limits: the "method" list written into towers.json (METHOD below). The lessons belong in
+skills/docklands-data-curation/SKILL.md; a "Towers" section there is still to be written.
 """
-import argparse, io, json, math, re, sys, zipfile
+import argparse, json, math, zipfile
 from pathlib import Path
 
 import numpy as np
@@ -22,11 +23,11 @@ from rasterio.features import rasterize
 from rasterio.transform import Affine
 from rasterio.windows import from_bounds
 from scipy import ndimage
-from shapely.geometry import Polygon, MultiPolygon, mapping, shape
+from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
 from skimage import measure
 from sklearn.mixture import GaussianMixture
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 CW = Path(__file__).resolve().parent.parent
 DSM = CW / 'data/raw/dsm'
@@ -37,7 +38,9 @@ CLIP = 2.5                # m: tiers stay within the (registered) OSM outline pl
 SHIFT = 4                 # m: largest shift of an OSM outline onto the LiDAR building
 MIN_FEATURE = 16          # m2: plant, masts and crowns smaller than about 4 x 4 m are not kept as tiers
 TIER_GAP = 3.0            # m: two roof levels closer than this are one tier
+CLOSING = 3               # m: dropout fill (grey closing) window
 MIN_HOLE = 60             # m2: a smaller opening in a roof region is filled (plant wells, dropouts)
+CROWN = 12.0              # m: two or more roof levels this close to the top make a stepped top ("crown")
 MIN_TIER = 8.0            # m above the base: lower levels are ground, kerbs and misregistered pavement
 
 SURVEYS = {   # id -> zip files (product, year); the 2022 composite merges P_10768 (2017-12 to 2018-01) and P_12151 (2020-12-12)
@@ -393,18 +396,18 @@ def fit_building(b, A, surveys, judge):
     raw = {sid: S.crop(X0, X1, Z0, Z1) for sid, S in surveys.items()}
     raw['2022c'] = composite_voids(raw['2022c'], raw['2020'])
     M_fp0 = rasterize([fp], out_shape=shp, transform=tr).astype(bool)
-    # primary survey: the 2022 composite, unless the 2018 flight saw the finished building with clearly fewer
-    # dropouts (the 2020 flight speckled the glass towers along Marsh Wall: Maine Tower 49% of roof cells, 2018 few).
+    # primary survey: the 2022 composite, or by judgement the 2018 flight where it saw the finished building with far
+    # fewer dropouts (the 2020 flight speckled the glass towers by South Quay: Novotel 58% of roof cells, Dollar Bay 59%).
     # Dropouts fall on different cells in each flight, so a dropout cell of the primary takes the higher of the two.
     q = {k: np.nanpercentile(raw[k][M_fp0], [75, 90]) if np.isfinite(raw[k][M_fp0]).mean() > .8 else None for k in ('2022c', '2018')}
     same = q['2018'] is not None and abs(q['2022c'][1] - q['2018'][1]) < 3 and abs(q['2022c'][0] - q['2018'][0]) < 6
     dr = {k: float(dropouts(raw[k])[M_fp0].mean()) for k in ('2022c', '2018')}
-    primary = J.get('primary') or ('2018' if same and dr['2018'] < dr['2022c'] - .1 else '2022c')
+    primary = J.get('primary', '2022c')   # an automatic switch picked Sirocco's 2018 roof, 35 m off 2020: judgement only
     other = '2018' if primary == '2022c' else '2022c'
     surface = raw[primary]; fused = False
     if same and J.get('fuse', dr[primary] > .15):   # NaN cells stay NaN: they are filled from their own neighbours
         surface = np.where(dropouts(raw[primary]) & np.isfinite(raw[primary]), np.fmax(raw[primary], raw[other]), raw[primary]); fused = True
-    H, drop = pit_fill(surface - base, J.get('closing', 5))
+    H, drop = pit_fill(surface - base, J.get('closing', CLOSING))
     expected = max(b.get('wh') or 0, b.get('h') or 0, b.get('mh') or 0)
     rec = dict(id=b['id'], name=b.get('n'), mi=b['mi'], base=base, ground=J.get('ground_m_od'), X0=X0, Z0=Z0, shape=shp,
                fused=fused, primary=primary)
@@ -506,8 +509,10 @@ def fit_building(b, A, surveys, judge):
                        note=f'last tier: y = a + b x + c z clipped to {base + eave:.1f}-{base + hi:.1f} m OD, rising towards {az:.0f} deg from north; '
                             f'fit RMSE {rmse:.1f} m, steps {step_rmse:.1f} m')
         tiers.append(tt)
-    elif len(levels) >= 3 and levels[-1] - levels[-3] < .12 * levels[-1]:
-        top = dict(kind='crown', note=f'stepped crown: the top three levels within {levels[-1] - levels[-3]:.0f} m')
+    elif sum(l >= levels[-1] - CROWN for l in levels) >= 2:
+        n = sum(l >= levels[-1] - CROWN for l in levels)
+        top = dict(kind='crown', note=f'stepped top: {n} roof levels within {CROWN:.0f} m of the top, '
+                                      f'{base + min(l for l in levels if l >= levels[-1] - CROWN):.1f} to {base + levels[-1]:.1f} m OD')
     if J.get('top_kind'): top['kind'] = J['top_kind']
     if J.get('top_note'): top['note'] = J['top_note']
     rec.update(status='fitted', tiers=tiers, top=top, raw=raw, H=H, M_fp=M_fp, drop=drop)
@@ -554,6 +559,7 @@ def check(rec, b, reg):
     if rec.get('fused'): out['dropouts_filled_from'] = '2018' if pri == '2022c' else '2022c'
     out['dsm_max_m'] = round(float(np.nanmax(r) - base), 1) if np.isfinite(r).any() else None
     out['model_top_m'] = round(top_m, 1)
+    if rec.get('shift') is not None: out['shift_m'] = rec['shift']
     if rec.get('ground') is not None:
         out['ground_m_od'] = rec['ground']; out['model_top_above_ground_m'] = round(top_m + base - rec['ground'], 1)
     out['wikidata_height_m'] = b.get('wh')
@@ -609,8 +615,9 @@ JUDGEMENT = {
                      '(the hotel opened in 2017) has 39%, and its fit agrees with 2018 to 3.4 m RMSE against 7.9 m with 2020.'),
     'cwb-0737': dict(primary='2018', why='Dollar Bay: the 2020 flight speckles the faceted glass top (59% dropouts); the 2018 '
                      'flight (building finished 2017) gives a fit with 7.1 m RMSE against 15.3 m. Still the weakest fit here.'),
-    'cwb-0715': dict(closing=3, why='Hampton Tower: the default 5 m dropout fill bridged the 3 m slot between the two '
-                     'towers (open in the raw DSM) and built a 151 m link; a 3 m fill keeps them apart.'),
+    'cwb-0801': dict(add_levels=[6.5, 21.5], why='Pan Peninsula: the mixture put the podium and the six-storey link '
+                     '(DSM 6 to 22 m) in one cluster with the ground (median 7.8 m, under the 8 m floor), so the podium '
+                     'was missing; levels 6.5 and 21.5 m read off the height histogram were added by hand.'),
     'cwb-0417': dict(ground_m_od=9.7, why='8 Canada Square: the model base (1.6 m OD) is the DTM interpolated under the '
                      'building from the dock edge; Canada Square plaza is 9.7 m OD (DTM round One Canada Square), so '
                      'the height check uses 9.7. The tiers keep the model base as their foot.'),
@@ -622,7 +629,33 @@ SKIP = {
                 'the model gives two thin parts 123.7 m and 77.1 m because their outlines lie over the tower wall in '
                 'the LiDAR (90th percentile of the DSM). The DSM inside the outline is 11 m (median).',
 }
-REFERENCES = []
+REFERENCES = [   # massing and plan sources for the tallest ten, found 2026-10-03; listed for reference only, nothing copied
+    {'buildings': ['cwb-0577'], 'title': 'GLA planning report PDU/2187b & 2188b, 21 March 2013, City Pride (now Landmark '
+     'Pinnacle): 75-storey tower, 239 m AOD', 'url': 'https://www.london.gov.uk/sites/default/files/public://public://PAWS/media_id_117631///city_pride_and_island_point_westferry_road_report.pdf',
+     'licence': '(c) Greater London Authority; no open licence stated in the report', 'checked': 'model top 238.6 m OD against 239 m AOD stated'},
+    {'buildings': ['cwb-0451'], 'title': 'GLA planning report PDU/2110/02, 12 November 2008, Newfoundland (an earlier '
+     'scheme; the built tower is Tower Hamlets PA/13/01455 and PA/13/01456, 2013)', 'url': 'https://www.london.gov.uk/sites/default/files/public://public://PAWS/media_id_108478///newfoundland_report.pdf',
+     'licence': '(c) Greater London Authority; no open licence stated'},
+    {'buildings': ['cwb-0590', 'cwb-0715', 'cwb-0712'], 'title': 'Tower Hamlets PA/13/02966, Wood Wharf outline consent '
+     '(2014): parameter plans WWMP_PP_010 "Development plots & maximum heights", WWMP_PP_003 "Development zones", '
+     'Design & Access Statement vol. 4 "Indicative scheme"; plot reserved matters for One Park Drive (A1) follow',
+     'url': 'https://web.archive.org/web/20250219122927/https://development.towerhamlets.gov.uk/online-applications/applicationDetails.do?activeTab=documents&keyVal=DCAPR_108309',
+     'licence': 'applicant copyright, published for planning consultation; not open', 'access': 'the council portal '
+     'disallows all robots (robots.txt "Disallow: /"): not fetched; the document list was read from the Internet Archive copy of 2025-02-19'},
+    {'buildings': ['cwb-0590', 'cwb-0715', 'cwb-0712'], 'title': 'GLA case 2208e, Wood Wharf, Prestons Road (Stage 2 report)',
+     'url': 'https://www.london.gov.uk/what-we-do/planning/planning-applications-and-decisions/planning-application-search/wood-wharf-prestons-road-0',
+     'licence': '(c) Greater London Authority; not fetched'},
+    {'buildings': ['cwb-0645', 'cwb-0647'], 'title': 'Tower Hamlets Strategic Development Committee, Arrowhead Quay (Wardian), approved November 2014',
+     'url': 'https://democracy.towerhamlets.gov.uk/mgAi.aspx?ID=9744', 'licence': 'council report; not open',
+     'access': 'behind an Azure WAF JavaScript challenge: not bypassed, not fetched'},
+    {'buildings': ['cwb-0737'], 'title': 'GLA planning report PDU/2318a/02, 27 March 2012, 1-18 Dollar Bay Court',
+     'url': 'https://www.london.gov.uk/sites/default/files/public://public://PAWS/media_id_138176///1-18_dollar_bay_court_isle_of_dogs_report.pdf',
+     'licence': '(c) Greater London Authority; no open licence stated'},
+    {'buildings': ['cwb-0413', 'cwb-0417', 'cwb-0520', 'cwb-0813'], 'title': 'None found. One Canada Square (1991), 8 '
+     'Canada Square (2002) and Citigroup Centre (2001) were consented under the LDDC Enterprise Zone regime and have no '
+     'online planning file; Amory Tower (Tower Hamlets, Make Architects) has a committee report but no open drawings found.',
+     'url': None},
+]
 
 
 # ---------------------------------------------------------------- main
@@ -675,8 +708,49 @@ def main():
     print('wrote docklands/data/towers.json', len(out), 'buildings', len(txt) // 1024, 'KB')
 
 
-METHOD = []
-SOURCES = []
+METHOD = [
+    'Surface: EA LiDAR first-return DSM, 1 m. Primary survey: the 2022 composite (it merges the flights of 2017-12-07 to '
+    '2018-01-24 and 2020-12-12; nothing newer), or the 2018 flight where judgement says so (corrected_by_judgement). '
+    'Composite cells that 2020 left empty and the composite filled from near the ground (a gap whose rim is 8 m higher) '
+    'are no data. Dropouts (cells 8 m under the 75th percentile of their 5 x 5 m) are filled by a 3 x 3 m grey closing; '
+    'where the primary has a dropout and the other survey saw the same building, the higher value is used.',
+    'Footprint: the union of the model buildings (OSM outlines and building:parts) of the registry building, shifted by '
+    'whole metres (at most 4) onto the LiDAR building (checks.shift_m); tiers stay within it plus 2.5 m.',
+    'Levels: a 1-D Gaussian mixture over the roof heights inside the footprint (dropouts out), k by BIC + 2 k ln n; '
+    'levels closer than 3 m merge; levels under 8 m above the base are ground. A level whose region (cells above the '
+    'midpoint to the level below) matches the next region up (IoU > 0.92), or adds under 32 m2 of roof, is dropped.',
+    'Outlines: each region is opened and closed 3 x 3, holes under 60 m2 and pieces under 16 m2 (about 4 x 4 m: masts, '
+    'plant, cranes) removed, traced by marching squares, simplified by Douglas-Peucker (0.8 m) and its edges snapped to '
+    'the footprint\'s dominant direction (or at right angles) when within 8 degrees. A ring within IoU 0.95 of an OSM '
+    'outline is replaced by that outline (src "osm"); others are src "dsm".',
+    'Tiers are stacked prisms: ring from y0 to y1 (m OD). Larger openings in a roof region are kept as holes.',
+    'Non-flat tops: for each level from the top down, a pyramid (apex searched within 4 m), a cone and a plane are fitted '
+    'to the region above it; the largest region where the best fit rises 6 m or more and has under 60% of the RMSE of '
+    'the steps (and under 3 m) replaces the tiers above it: a wall tier to the eave, then a last tier whose top is the '
+    'pyramid (apex), cone (apex) or plane (y = a + b x + c z clipped to y0..y1). "crown": two or more roof levels within '
+    '12 m of the top.',
+    'Checks: the model rasterised at 1 m (cell centres) against each survey. rmse_m and p95_m (absolute error): roof '
+    'cells only (no wall within 1 m in the model or in the filled DSM; dropouts left out) against the primary survey; '
+    'rmse_raw_m: every cell of the footprint and model, walls and dropouts included; dropout_pct: share of roof cells '
+    'with no good return; outline_iou: model plan against the LiDAR building (cells above 8 m) near the footprint. '
+    'rmse_2020_m / rmse_2018_m / rmse_2022_m: the same roof RMSE against another survey, null when that survey shows the '
+    'building unfinished (surveys_before_completion). The 2022 composite is largely the 2020 flight, so rmse_2020_m is '
+    'not an independent check; rmse_2018_m is, for buildings finished by January 2018.',
+    'dsm_max_m: the highest DSM cell in the footprint above the base, masts included; a spire or mast thinner than '
+    '1 m is often missing at 1 m. model_top_m: the top of the last tier above the base. Heights above base_m_od, the '
+    'model building\'s base (LiDAR DTM); where that is wrong, ground_m_od gives the street level used instead.',
+    'status "not_in_survey": the building was not finished on 12 Dec 2020; its tiers are the OSM outlines at the model '
+    'height, unmeasured.',
+]
+SOURCES = [
+    {'id': 'lidar-dsm', 'text': 'Environment Agency LiDAR Composite First Return DSM 2022 (1 m) and National LiDAR '
+     'Programme DSM 2018 and 2020 (1 m). (c) Environment Agency copyright and/or database right. Open Government '
+     'Licence v3.0', 'url': 'https://environment.data.gov.uk/survey'},
+    {'id': 'osm', 'text': '(c) OpenStreetMap contributors, ODbL 1.0: footprints and building:part heights (via the '
+     '3D model, docklands/data/area.js, and the registry)', 'url': 'https://www.openstreetmap.org/copyright'},
+    {'id': 'wikidata', 'text': 'Wikidata heights (CC0), via atlas/data/atlas.json', 'url': 'https://www.wikidata.org/'},
+]
+
 
 if __name__ == '__main__':
     main()

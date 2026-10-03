@@ -45,9 +45,7 @@
 # magpie/cwplans/tools/splat-pose-test.py (boxes land where they were drawn; a
 # dataset written in the OpenCV convention fails that check).
 #
-# SPEED, measured on this container (4 cores Xeon 2.8 GHz, no GPU, October
-# 2026, OpenSplat 1.2.2 on libtorch 2.5.1 CPU): see the measurements block
-# printed by --help (kept in one place below, MEASURED).
+# SPEED: see the MEASURED block below (also printed by --help).
 #
 # INSTALL (once per container; nothing is committed):
 #   apt-get install -y libopencv-dev unzip cmake g++
@@ -61,9 +59,28 @@
 set -u
 
 MEASURED='
-MEASURED (synthetic 960x540 frames, this container, 4 cores, no GPU):
-  see magpie/cwplans/tools/train-splat.sh header and the agent report;
-  numbers are filled in below by hand after the benchmark runs.'
+MEASURED, October 2026, this container (4 cores, no GPU), OpenSplat 1.2.2 CPU,
+libtorch 2.5.1. Another agent ran Chromium at the same time (load 4-11), so
+wall times are pessimistic; cpu-s/step is the contention-free number and a free
+4-core run gets about 2.5 cores of it (wall ~ cpu-s / 2.5).
+  res        gaussians  wall s/step  cpu-s/step  peak RSS
+  480x270    13k        0.21         0.62        0.3 GB
+  480x270    183k       0.55-0.97    1.48        1.1 GB   (cw-photo-480, 480 frames)
+  480x270    300k       2.16         2.01        1.0 GB
+  480x270    1.0M       4.37         5.61        2.3 GB
+  960x540    13k        1.09         2.34        0.8 GB
+  960x540    300k       2.97         4.32        1.3 GB
+Step cost depends on resolution and gaussian count, not on the number of images.
+Densification (OpenSplat multi-view scoring) grew cw-photo-480 slowly: 182,830
+-> 183,082 at step 500 -> 184,539 at step 750 (refine-every 250).
+Estimates at -d 2 on cw-photo-480 (wall, free machine / shared machine):
+  2000 iters  ~20 min / ~35 min
+  7000 iters  ~1.5 h  / ~3 h   (more if densification grows the count)
+  30000 iters ~7-25 h / 15-40 h (depends on how far the count grows; cap --max-g)
+At -d 1 (960x540) multiply by about 2-3.
+DO NOT pass --val-render to opensplat: it leaks memory (about 40 MB per
+validation render at 480x270, 160 MB at 960x540). A 960x540 run with it was
+killed by the OOM killer at 12.7 GB after 718 steps. --val alone is safe.'
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OPENSPLAT="${OPENSPLAT:-/opt/opensplat/build/opensplat}"
