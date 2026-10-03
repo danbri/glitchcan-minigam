@@ -53,6 +53,8 @@ await page.evaluate(() => {
   const D = window.__docklands, cv = document.getElementById('c'), gl = cv.getContext('webgl');
   window.__dronePick = () => {
     const w = cv.width, h = cv.height, pr = gl.getParameter(gl.CURRENT_PROGRAM), U = n => gl.getUniformLocation(pr, n), aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c');
+    // the page has several programs (main, facades, splats); render() ends on the main one, which has 'mono' and no 'u'
+    if (!U('mono') || gl.getAttribLocation(pr, 'u') !== -1) throw new Error('the current WebGL program is not the main one; the page changed, see drone-capture.mjs __dronePick');
     let F = window.__droneFB;
     if (!F || F.w !== w || F.h !== h) { F = { w, h, fb: gl.createFramebuffer(), tex: gl.createTexture(), rb: gl.createRenderbuffer() };
       gl.bindTexture(gl.TEXTURE_2D, F.tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
@@ -61,7 +63,7 @@ await page.evaluate(() => {
     const draw = Mh => { if (!Mh || !Mh.count) return; gl.bindBuffer(gl.ARRAY_BUFFER, Mh.vb); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 16, 0); gl.vertexAttribPointer(aC, 4, gl.UNSIGNED_BYTE, true, 16, 12); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Mh.ib); gl.uniform1f(U('a'), 1); gl.drawElements(gl.TRIANGLES, Mh.count, gl.UNSIGNED_INT, 0); };
     gl.bindFramebuffer(gl.FRAMEBUFFER, F.fb); gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(true);
-    gl.uniform1f(U('cut'), 1e9); gl.uniform1f(U('dim'), 1); gl.uniform1f(U('useTex'), 0); gl.uniform1f(U('mono'), 1); draw(D.L.terrain); gl.uniform1f(U('mono'), 0); draw(D.L.pick);
+    gl.uniform1f(U('cut'), 1e9); gl.uniform1f(U('dim'), 1); if (U('glow')) gl.uniform1f(U('glow'), 0); gl.uniform1f(U('useTex'), 0); gl.uniform1f(U('mono'), 1); draw(D.L.terrain); gl.uniform1f(U('mono'), 0); draw(D.L.pick);
     const px = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px); gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h);
     return { w, h, px };
   };
@@ -124,6 +126,11 @@ const pcFile = path.join(OUT, 'sparse_pc.ply');
 if (!fs.existsSync(pcFile) || flag('redo')) {
   const ex = recs.reduce((b, r) => ({ x0: Math.min(b.x0, r.eye[0]), x1: Math.max(b.x1, r.eye[0]), z0: Math.min(b.z0, r.eye[2]), z1: Math.max(b.z1, r.eye[2]) }), { x0: 1e9, x1: -1e9, z0: 1e9, z1: -1e9 });
   const OB = { x0: Math.min(ex.x0, NEAR.x0) - 500, x1: Math.max(ex.x1, NEAR.x1) + 500, z0: Math.min(ex.z0, NEAR.z0) - 500, z1: Math.max(ex.z1, NEAR.z1) + 500 };
+  // capture mode switches the page to its photo style (photoColour per building, water left to the ground image); the
+  // colours below copy index.html (PHOTO_BLD, photoColour) and need updating if the page's palette changes
+  const photo = await page.evaluate(() => !document.getElementById('showWalls').checked && !document.getElementById('showUnder').checked);
+  const PHOTO_BLD = [[.74, .75, .76], [.62, .66, .70], [.80, .78, .74], [.55, .60, .66], [.70, .68, .64], [.66, .70, .72]];
+  const photoColour = i => { const h = ((i * 2654435761) >>> 0) / 4294967296, c = PHOTO_BLD[Math.floor(h * PHOTO_BLD.length)], v = .92 + .16 * (((i * 40503) >>> 0) % 100) / 100; return c.map(x => Math.min(1, x * v)); };
   const cols = await page.evaluate(() => { const g = n => { const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return [1, 3, 5].map(i => parseInt(v.slice(i, i + 2), 16) / 255); }; return { bld: g('--bld'), bldlv: g('--bldlv'), water: g('--water') }; });
   const Lt = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })();
   const shade = (c, n) => { const l = Math.hypot(...n) || 1, k = .5 + .5 * Math.max(0, (n[0] * Lt[0] + n[1] * Lt[1] + n[2] * Lt[2]) / l); return c.map(v => v * k); };
@@ -135,7 +142,7 @@ if (!fs.existsSync(pcFile) || flag('redo')) {
   for (const b of BL) { const w = near(b) ? 1 : .2; let per = 0; for (let k = 0, m = b.starts[1] - 1; k < b.starts[1]; m = k++) per += Math.hypot(b.f[2 * k] - b.f[2 * m], b.f[2 * k + 1] - b.f[2 * m + 1]); area += w * (Math.abs(ringArea(b)) + per * (b.y1 - b.y0)); }
   const sp = Math.sqrt(area / (NPTS * .55));
   for (const b of BL) {
-    const s = near(b) ? sp : sp / Math.sqrt(.2), col = b.s === 1 || b.s === 4 ? cols.bldlv : cols.bld, roof = shade(col.map(c => Math.min(1, c * 1.05)), [0, 1, 0]), sgn = Math.sign(ringArea(b)) || 1;
+    const s = near(b) ? sp : sp / Math.sqrt(.2), col = photo ? photoColour(b.i) : b.s === 1 || b.s === 4 ? cols.bldlv : cols.bld, roof = shade(col.map(c => Math.min(1, c * 1.05)), [0, 1, 0]), sgn = Math.sign(ringArea(b)) || 1;
     const ox = (Math.random() * s), oz = (Math.random() * s);
     for (let x = b.x0 + ox; x <= b.x1; x += s) for (let z = b.z0 + oz; z <= b.z1; z += s) if (inPoly(b, x, z)) push(x, b.y1, z, roof);
     for (let r = 0; r < b.starts.length - 1; r++) for (let k = b.starts[r], m = b.starts[r + 1] - 1; k < b.starts[r + 1]; m = k++) {
@@ -152,7 +159,7 @@ if (!fs.existsSync(pcFile) || flag('redo')) {
   for (let z = OB.z0; z <= OB.z1; z += gs) for (let x = OB.x0; x <= OB.x1; x += gs) {
     const inner = x >= NEAR.x0 - 200 && x <= NEAR.x1 + 200 && z >= NEAR.z0 - 200 && z <= NEAR.z1 + 200; if (!inner && Math.random() > .15) continue;
     const jx = x + (Math.random() - .5) * gs, jz = z + (Math.random() - .5) * gs; if (bldAt(jx, jz)) continue;
-    const w = waterAt(jx, jz); if (w) { push(jx, w.level + .1, jz, shade(cols.water, [0, 1, 0])); continue; }
+    const w = photo ? null : waterAt(jx, jz); if (w) { push(jx, w.level + .1, jz, shade(cols.water, [0, 1, 0])); continue; }
     cells.push([jx, M.groundAt(jx, jz), jz]);
   }
   let rgb = null;
@@ -169,7 +176,7 @@ if (!fs.existsSync(pcFile) || flag('redo')) {
   const pl = ['# 3D point list with one line of data per point:', '#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)', `# Number of points: ${n}, sampled from the model surfaces (no tracks)`];
   for (let i = 0; i < n; i++) pl.push(`${i + 1} ${X[3 * i].toFixed(3)} ${X[3 * i + 1].toFixed(3)} ${X[3 * i + 2].toFixed(3)} ${C[3 * i]} ${C[3 * i + 1]} ${C[3 * i + 2]} 0`);
   fs.writeFileSync(path.join(OUT, 'sparse/0/points3D.txt'), pl.join('\n') + '\n');
-  log(`point cloud: ${n} points (${nb} on buildings, ${n - nb} terrain and water; spacing ${sp.toFixed(2)} m on buildings near the estate, ${gs.toFixed(2)} m on the ground) in x ${OB.x0.toFixed(0)}..${OB.x1.toFixed(0)}, z ${OB.z0.toFixed(0)}..${OB.z1.toFixed(0)}`);
+  log(`point cloud (${photo ? 'photo style' : 'map colours'}): ${n} points (${nb} on buildings, ${n - nb} terrain and water; spacing ${sp.toFixed(2)} m on buildings near the estate, ${gs.toFixed(2)} m on the ground) in x ${OB.x0.toFixed(0)}..${OB.x1.toFixed(0)}, z ${OB.z0.toFixed(0)}..${OB.z1.toFixed(0)}`);
 }
 
 // ---------- coverage: registry buildings in the estate and in the 300 m ring, from the pick pass
