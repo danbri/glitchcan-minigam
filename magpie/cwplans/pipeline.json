@@ -2081,6 +2081,134 @@
       "note": "Python with numpy, scipy, scikit-learn, scikit-image, rasterio, shapely, Pillow in /opt/towers-venv. Writes contact sheets to data/raw/towers/ (not committed)."
     },
     {
+      "id": "facade-measure",
+      "tool": "registry/sources/facades/tools/facade.py",
+      "command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/facade.py <img> <out_prefix> x0 y0 x1 y1",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/facades/<cwb-id>/src-<id>.jpg"
+        },
+        {
+          "file": "registry/sources/facades/work/rois.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/facades/work/meas.json"
+        }
+      ],
+      "method": "Rectifies a hand-chosen facade region of an open photo and measures its bay and floor periods and its colours.",
+      "rules": [
+        "OpenCV LSD segments; RANSAC vertical and horizontal vanishing points; affine rectification by homography.",
+        "Periods by autocorrelation of gradient profiles, FFT cross-check; the fundamental chosen by looking at the patch.",
+        "Colours: k-means, k = 3, in Lab."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [],
+      "note": "Also tools/measure.py for a patch cut by hand. The outputs were collected into meas.json by hand."
+    },
+    {
+      "id": "facade-metric",
+      "tool": "registry/sources/facades/tools/metric.py",
+      "command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/metric.py",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/facades/<cwb-id>/src-<id>.jpg"
+        },
+        {
+          "file": "registry/sources/facades/work/rois.json"
+        },
+        {
+          "file": "registry/sources/facades/work/meas.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/facades/work/aspect.json"
+        }
+      ],
+      "method": "Metric aspect of each rectified patch from its vanishing points and a focal length.",
+      "rules": [
+        "Focal length from the two vanishing points when plausible, else a 26 mm-equivalent phone lens."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "facade-measure"
+      ]
+    },
+    {
+      "id": "facade-build",
+      "tool": "registry/sources/facades/tools/build.py",
+      "command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/build.py",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "registry/sources/facades/work/rois.json"
+        },
+        {
+          "file": "registry/sources/facades/work/aspect.json"
+        },
+        {
+          "file": "registry/sources/facades/work/meas.json"
+        },
+        {
+          "local": "data/raw/facades/<cwb-id>/src-<id>.jpg"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/facades/work/results.json"
+        },
+        {
+          "local": "data/raw/facades/<cwb-id>/rect-<key>.jpg"
+        }
+      ],
+      "method": "Writes the rectified patches at metric aspect and the bays, floors and colours in metres.",
+      "rules": [
+        "Floor height = height / floors (assumed) unless a face width gives a scale; bay = OSM face width / bay count when the whole face is visible."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "facade-metric"
+      ]
+    },
+    {
+      "id": "facade-write",
+      "tool": "registry/sources/facades/tools/write_facades.py",
+      "command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/write_facades.py",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "registry/sources/facades/work/results.json"
+        },
+        {
+          "file": "registry/sources/facades/work/footprints.json"
+        },
+        {
+          "file": "registry/sources/facades/photos.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/facades/facades.json"
+        }
+      ],
+      "method": "Joins the measurements, the footprint widths and the judged facts into one record per tower, each value marked measured, judged or assumed.",
+      "rules": [
+        "Judged facts and their sources are written in the script."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "facade-build"
+      ]
+    },
+    {
       "id": "build-splats",
       "tool": "tools/build-splats.mjs",
       "command": "node magpie/cwplans/tools/build-splats.mjs [--ground 4] [--cell 7.2] [--box x0,x1,z0,z1]",

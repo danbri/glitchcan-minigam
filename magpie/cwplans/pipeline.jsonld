@@ -2392,6 +2392,155 @@
    ]
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure",
+   "@type": "prov:Activity",
+   "rdfs:label": "facade-measure",
+   "dct:description": "Rectifies a hand-chosen facade region of an open photo and measures its bay and floor periods and its colours.",
+   "prov:used": [
+    {
+     "cwp:pathPattern": "data/raw/facades/<cwb-id>/src-<id>.jpg"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/rois.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/meas.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/tools/facade.py"
+   },
+   "cwp:command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/facade.py <img> <out_prefix> x0 y0 x1 y1",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "OpenCV LSD segments; RANSAC vertical and horizontal vanishing points; affine rectification by homography.",
+    "Periods by autocorrelation of gradient profiles, FFT cross-check; the fundamental chosen by looking at the patch.",
+    "Colours: k-means, k = 3, in Lab."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-metric",
+   "@type": "prov:Activity",
+   "rdfs:label": "facade-metric",
+   "dct:description": "Metric aspect of each rectified patch from its vanishing points and a focal length.",
+   "prov:used": [
+    {
+     "cwp:pathPattern": "data/raw/facades/<cwb-id>/src-<id>.jpg"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/rois.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/meas.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/aspect.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/tools/metric.py"
+   },
+   "cwp:command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/metric.py",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Focal length from the two vanishing points when plausible, else a 26 mm-equivalent phone lens."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure"
+    }
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-build",
+   "@type": "prov:Activity",
+   "rdfs:label": "facade-build",
+   "dct:description": "Writes the rectified patches at metric aspect and the bays, floors and colours in metres.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/rois.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/aspect.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/meas.json"
+    },
+    {
+     "cwp:pathPattern": "data/raw/facades/<cwb-id>/src-<id>.jpg"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/results.json"
+    },
+    {
+     "cwp:pathPattern": "data/raw/facades/<cwb-id>/rect-<key>.jpg"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/tools/build.py"
+   },
+   "cwp:command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/build.py",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Floor height = height / floors (assumed) unless a face width gives a scale; bay = OSM face width / bay count when the whole face is visible."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-metric"
+    }
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-write",
+   "@type": "prov:Activity",
+   "rdfs:label": "facade-write",
+   "dct:description": "Joins the measurements, the footprint widths and the judged facts into one record per tower, each value marked measured, judged or assumed.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/results.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/footprints.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/photos.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/facades.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/tools/write_facades.py"
+   },
+   "cwp:command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/write_facades.py",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Judged facts and their sources are written in the script."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-build"
+    }
+   ]
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats",
    "@type": "prov:Activity",
    "rdfs:label": "build-splats",
@@ -4667,6 +4816,140 @@
    "cwp:osmUse": "derived"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/photos.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "56 open photos (CC BY 2.0/4.0, one Public Domain Mark) of the Canary Wharf towers with author, licence, page, face shown and use (texture or reference only), 7 CC BY-SA photos looked at for facts only (not downloaded), 8 YouTube drone videos as references (not downloaded)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/youtube-refs"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/facades.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "facade facts for 31 towers: architect, completion, floors, height, cladding, glass/frame/spandrel colours, bay width, floor height, crown, setbacks, night lighting; each value marked measured, judged or assumed",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikipedia-search"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-write"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/rois.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "facade regions chosen by eye in each photo (the hand step of the method)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/meas.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "raw period and colour measurements of each facade region",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/aspect.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "metric aspect correction of each rectified patch",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-metric"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/results.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "bays, floors and colours of each patch in metres",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-build"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/footprints.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "oriented bounding boxes of the OSM footprints of the towers (face widths)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "cwp:osmUse": "derived"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/towers.json",
    "@type": [
     "prov:Entity",
@@ -5347,6 +5630,25 @@
    "dct:license": "OGL v3.0 (OS OpenData licence: http://os.uk/opendata/licence redirects to OGL v3)",
    "dcat:landingPage": "https://api.os.uk/downloads/v1/products/OpenGreenspace",
    "cwp:attribution": "Contains OS data © Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "open photos of the Canary Wharf towers on Flickr and Wikimedia Commons (mostly Matt Brown, \"Matt From London\")",
+   "dct:license": "per photo: CC BY 2.0, CC BY 4.0 or Public Domain Mark (attribution in registry/sources/facades/photos.json); CC BY-SA photos looked at only"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/youtube-refs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "YouTube drone videos of Canary Wharf (title, channel, URL only)",
+   "dct:license": "YouTube terms; nothing downloaded",
+   "dcat:landingPage": "https://www.youtube.com/"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own",
