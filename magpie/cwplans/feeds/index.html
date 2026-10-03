@@ -28,7 +28,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:var(--
 <body>
 <main>
 <h1>Data feeds and APIs: Canary Wharf, the Isle of Dogs, SE16 and the Docklands</h1>
-<p class="small">Every source below was fetched on the date shown. "Browser" means it needs no key and sends CORS headers, so a web page can call it: press "Try" to call the sample request from your browser now. Only official, published or openly licensed sources are listed; the excluded list at the end says what was left out and why. Machine-readable: <a href="feeds.json">feeds.json</a>. Re-check: <code>node magpie/cwplans/feeds/check-feeds.mjs</code>. Models that use these: <a href="../docklands/">Docklands 3D</a> · <a href="../">Canada Water corridor</a>.</p>
+<p class="small">Two catalogues: data feeds and APIs (<a href="feeds.json">feeds.json</a>, <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/README.md">README</a>) and event and real-time feeds: iCalendar, RSS/Atom, REST, what's-on pages and openings and closings signals (<a href="events.json">events.json</a>, <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/EVENTS.md">EVENTS.md</a>). Every source below was fetched on the date shown. "Browser" means it needs no key and sends CORS headers, so a web page can call it: press "Try" to call the sample request from your browser now. Only official, published or openly licensed sources are listed; the excluded list at the end says what was left out and why. Re-check: <code>node magpie/cwplans/feeds/check-feeds.mjs</code> and <code>check-events.mjs</code>. Postcode-keyed results: <a href="../postcodes/">Canary Wharf postcodes</a>. Models that use these: <a href="../docklands/">Docklands 3D</a> · <a href="../">Canada Water corridor</a>.</p>
 <div class="bar">
   <input type="search" id="q" placeholder="Search name, provider, notes, URL" aria-label="Search sources">
   <select id="cat" aria-label="Category"><option value="">All categories</option></select>
@@ -48,13 +48,18 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const link = u => u ? `<a href="${esc(u)}">${esc(u)}</a>` : '–';
 const browserCallable = s => s.verified?.status === 'verified' && s.cors === true && /^none/.test(s.auth || '') && !!s.sample;
 let F = null;
-fetch('feeds.json').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(d => { F = d; init(); })
+// events.json (event and real-time feeds) is shown alongside feeds.json, mapped to the same fields
+const fromEvent = s => ({ id: s.id, name: s.name, category: 'events: ' + s.category, provider: s.provider, url: s.url, api: null, sample: s.feed, format: `${s.format} (${s.machine_readable})`,
+  auth: s.auth, licence: s.licence, cors: s.cors, update: s.update, coverage: s.coverage, verified: s.verified, request_headers: s.request_headers,
+  sample_result: s.sample && s.sample.titles ? `${s.sample.items ?? '?'} items, newest ${s.sample.newest || '?'}${s.sample.titles.length ? ': ' + s.sample.titles.slice(0, 3).join('; ') : ''}` : null, notes: [s.subject, s.notes].filter(Boolean).join(' · ') });
+Promise.all([fetch('feeds.json').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }), fetch('events.json').then(r => r.ok ? r.json() : null).catch(() => null)])
+  .then(([d, ev]) => { F = d; if (ev) { F = { ...d, sources: [...d.sources, ...ev.sources.map(fromEvent)], excluded: [...d.excluded, ...ev.excluded] }; F.eventsGenerated = ev.generated; } init(); })
   .catch(e => { $('list').innerHTML = `<p class="small">Could not load feeds.json (${esc(e.message)}). Opened from a file? Use the published page: <a href="https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/">https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/</a></p>`; });
 function init() {
   const cats = [...new Set(F.sources.map(s => s.category))].sort();
   $('cat').innerHTML += cats.map(c => `<option>${esc(c)}</option>`).join('');
   $('excl').innerHTML = F.excluded.map(x => `<div class="card"><h3>${esc(x.name)}</h3><div class="small">${esc(x.reason)}</div></div>`).join('');
-  $('foot').textContent = `Catalogue generated ${F.generated}. ${F.sources.length} sources, ${F.sources.filter(browserCallable).length} browser-callable.`;
+  $('foot').textContent = `Data feeds checked ${F.generated}${F.eventsGenerated ? `, event feeds checked ${F.eventsGenerated}` : ''}. ${F.sources.length} sources, ${F.sources.filter(browserCallable).length} browser-callable.`;
   for (const id of ['q', 'cat', 'st']) $(id).oninput = render;
   render();
 }

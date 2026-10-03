@@ -2282,7 +2282,8 @@
         "http": 200,
         "content_type": "text/html",
         "page_http": 200,
-        "status": "verified"
+        "status": "not verified",
+        "reason": "2026-10-03: canarywharf.com returns HTTP 200 with an Imperva Incapsula bot-challenge page instead of the content (also its sitemap, feed and REST paths). The 2026-10-02 check counted the 200 as verified; corrected."
       },
       "sample_result": null,
       "notes": ""

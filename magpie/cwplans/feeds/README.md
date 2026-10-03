@@ -596,7 +596,7 @@ Caveats for some of these:
 ## Events
 
 - **Canary Wharf: what's on** (Canary Wharf Group). [page](https://canarywharf.com/whats-on/)
-  - Auth: none. Licence: site terms. Update: daily. CORS: n/a. Status: verified.
+  - Auth: none. Licence: site terms. Update: daily. CORS: n/a. Status: not verified. Corrected 2026-10-03: the site answers HTTP 200 with an Imperva Incapsula bot-challenge page, not the content; the first check counted the 200 as success.
   - Coverage: Canary Wharf estate.
 - **The O2 events** (AEG / The O2). [page](https://www.theo2.co.uk/events)
   - Auth: none. Licence: site terms. Update: daily. CORS: n/a. Status: verified.

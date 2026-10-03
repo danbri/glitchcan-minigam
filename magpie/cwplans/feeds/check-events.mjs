@@ -7,6 +7,12 @@
 //   node magpie/cwplans/feeds/check-events.mjs --json > out.json
 //   node magpie/cwplans/feeds/check-events.mjs --url https://example.org/feed.ics [--header 'x-api-version: 2']
 //
+// Item counts here come from small generic parsers, so for a few JSON/XML APIs (TfL date
+// ranges, ModernGov GetMeetings, Hansard) they can differ from the hand-tuned sample in
+// events.json; the HTTP status and CORS columns are the point of a re-check.
+// mgov.newham.gov.uk sends no TLS intermediate: set NODE_EXTRA_CA_CERTS to a bundle that adds
+// the Sectigo intermediate from its certificate's AIA URL, or expect a TLS error there.
+//
 // Node 22+, no dependencies. Behind the HTTPS proxy, run with NODE_USE_ENV_PROXY=1.
 // For each feed it prints: HTTP status, CORS (an Access-Control-Allow-Origin of * or
 // https://danbri.github.io on a request that carries that Origin), the number of items
@@ -150,26 +156,27 @@ export function parseHtml(text) {
   };
 }
 
-export async function probe(url, { headers = {}, kind } = {}) {
+export async function probe(url, { headers = {}, kind, body } = {}) {
   const t0 = Date.now();
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: '*/*', ...headers }, redirect: 'follow', signal: AbortSignal.timeout(30000) });
+    const init = body ? { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } } : {};
+    const r = await fetch(url, { ...init, headers: { 'User-Agent': UA, Accept: '*/*', ...init.headers, ...headers }, redirect: 'follow', signal: AbortSignal.timeout(30000) });
     const type = r.headers.get('content-type') || '';
     const text = await r.text();
     // CORS is a second request carrying the Origin header (some servers refuse a first
     // request that carries one, which is a separate fact from whether they allow CORS).
     let cors = null;
     try {
-      const c = await fetch(url, { headers: { 'User-Agent': UA, Accept: '*/*', Origin: ORIGIN, ...headers }, redirect: 'follow', signal: AbortSignal.timeout(30000) });
+      const c = await fetch(url, { ...init, headers: { 'User-Agent': UA, Accept: '*/*', Origin: ORIGIN, ...init.headers, ...headers }, redirect: 'follow', signal: AbortSignal.timeout(30000) });
       cors = c.headers.get('access-control-allow-origin');
       c.body?.cancel().catch(() => {});
     } catch { /* leave cors null */ }
     const out = { http: r.status, final_url: r.url !== url ? r.url : undefined, content_type: type, cors: cors === '*' || cors === ORIGIN, acao: cors, bytes: text.length, ms: Date.now() - t0 };
     const head = text.slice(0, 5000);
-    if (r.headers.get('cf-mitigated') || /Just a moment|challenge-platform|Attention Required/i.test(head)) out.blocked = 'Cloudflare challenge';
+    if (r.headers.get('sg-captcha') || /sgcaptcha/i.test(head)) out.blocked = 'SiteGround captcha';
+    else if (r.headers.get('cf-mitigated') || /Just a moment|challenge-platform|Attention Required/i.test(head)) out.blocked = 'Cloudflare challenge';
     else if (/_Incapsula_Resource/.test(head)) out.blocked = 'Imperva Incapsula challenge';
     else if (/Azure WAF/.test(head)) out.blocked = 'Azure WAF JavaScript challenge';
-    else if (/sgcaptcha|sg-captcha/i.test(head)) out.blocked = 'SiteGround captcha';
     try {
       const k = kind || (/BEGIN:VCALENDAR/.test(text.slice(0, 500)) ? 'ics'
         : /^\s*[[{]/.test(text) ? 'json'
@@ -206,7 +213,7 @@ async function main() {
       const s = srcs[next++];
       const u = s.feed || s.url;
       if (!u || /[{}]/.test(u)) continue;
-      const r = await probe(u, { headers: s.request_headers || {} });
+      const r = await probe(u, { headers: s.request_headers || {}, body: s.request_body });
       const row = { id: s.id, url: u, ...r, recorded_http: s.verified?.http ?? null, recorded_items: s.sample?.items ?? null };
       delete row.titles_full;
       results.push(row);
