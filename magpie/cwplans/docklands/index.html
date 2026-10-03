@@ -294,13 +294,18 @@ const ffs = 'precision mediump float;varying vec4 v;varying float wy;varying flo
   'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
   'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
   'if(pxm>0.)col=min(vec3(1.),col*1.3);' +   // pixel art: brighter walls, windows on the art-pixel grid
-  'if(uu>=0.&&win>.5&&pxm>0.&&pxm<1.5){float fl=wy/(pxm*4.),fy=fract(fl);float w=step(mod(floor(gl_FragCoord.x),3.),1.)*step(.26,fy);col=mix(col,col*(lum<.45?1.4:.84),w);}' +   // pixel art: regular windows on the art-pixel grid, low contrast so the outline pass leaves them alone
+  'if(uu>=0.&&win>.5&&pxm>0.&&pxm<1.5){float fl=wy/(pxm*4.),fy=fract(fl),fx=floor(gl_FragCoord.x),m=v.a<.99?floor((v.a*255.-200.)/8.+.5):3.;' +   // pixel art: a pattern per material on the art-pixel grid (no moire)
+  'if(m<.5){float w=step(mod(fx,4.),1.)*step(.3,fy)*step(fy,.8);col=mix(col,col*.55+vec3(.05,.07,.11),w);}' +   // brick: punched windows
+  'else if(m<1.5){float w=step(mod(fx,5.),1.)*step(.3,fy)*step(fy,.8);col=mix(col,vec3(.33,.40,.50),w*.85);}' +   // render: punched windows, darker glass
+  'else if(m<2.5||m>4.5){float mu=step(mod(fx,m>4.5?2.:3.),.5);col=col*(1.-.14*step(fy,.2))*(1.+.2*mu);}' +   // glass: mullions and spandrels
+  'else if(m<3.5){col=mix(col,vec3(.40,.48,.58),.8*step(.38,fy)*step(fy,.9));}' +   // ribbon windows
+  'else col*=1.-.14*step(mod(fx,3.),.5);}' +   // metal cladding seams
   'else if(uu>=0.&&win>.5&&pxm==0.){float bw=1.8,fh=3.6;vec2 g=vec2(uu/bw,wy/fh),cell=floor(g),f=fract(g);float w=step(.14,f.x)*step(f.x,.86)*step(.2,f.y)*step(f.y,.84)*clamp(1.4-dist/900.,.15,1.);' +
   'vec3 gl=pxm>0.?(lum<.45?vec3(.50,.58,.64):vec3(.30,.35,.45))+vec3(.18,.18,.18)*step(.92,h(vec2(cell.x,0.))):mix(vec3(.13,.18,.25),vec3(.42,.52,.62),clamp(wy/300.,0.,1.)+h(cell)*.12)*(.55+.7*lum);' +
   'if(night>.5){float lit=step(.58,h(cell+7.3));col=mix(col*.22,vec3(1.,.8,.48)*(.55+.45*h(cell+1.7)),w*lit);col=mix(col,gl*.25,w*(1.-lit));}else col=mix(col,gl,w*.8);}' +
   'else if(uu<0.&&uu>-41.&&roofTex>.5){col=min(vec3(1.),texture2D(tx,uv).rgb*(.6+.9*lum));}' +
   'else if(night>.5)col*=.3;' +
-  'gl_FragColor=vec4(col,v.a*a);}';
+  'gl_FragColor=vec4(col,(pxm>0.?1.:v.a)*a);}';
 const prF = gl.createProgram(); gl.attachShader(prF, sh(gl.VERTEX_SHADER, fvs)); gl.attachShader(prF, sh(gl.FRAGMENT_SHADER, ffs));
 gl.bindAttribLocation(prF, aP, 'p'); gl.bindAttribLocation(prF, aC, 'c'); gl.bindAttribLocation(prF, [0, 1, 2].find(i => i !== aP && i !== aC), 'u'); gl.linkProgram(prF);
 if (!gl.getProgramParameter(prF, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prF));
@@ -339,17 +344,18 @@ class MeshF {   // like Mesh with a fourth float per vertex (u); 20 bytes a vert
   free() { if (this.vb) { gl.deleteBuffer(this.vb); gl.deleteBuffer(this.ib); } }
 }
 // building prism for the facade program: u = metres along each ring on walls, -(1 + height) on the roof
-function prismF(M, o, y0, y1, col, bottom) {
+function prismF(M, o, y0, y1, col, bottom, mat) {
+  const al = mat == null ? 1 : (200 + mat * 8) / 255;   // pixel art: the material id rides in the alpha byte
   const f = dec(o.p), holes = o.holes || [], nv = f.length / 2, tris = earcut(f, holes.length ? holes : undefined, 2), top = shade(col.map(c => Math.min(1, c * 1.05)), 0, 1, 0), base = M.n, ru = -(1 + (y1 - y0));
-  for (let i = 0; i < nv; i++) M.v(f[2 * i], y1, f[2 * i + 1], ru, top);
+  for (let i = 0; i < nv; i++) M.v(f[2 * i], y1, f[2 * i + 1], ru, top, al);
   for (let k = 0; k < tris.length; k += 3) M.tri(base + tris[k], base + tris[k + 1], base + tris[k + 2]);
-  if (bottom) { const b2 = M.n, bs = shade(col, 0, 1, 0).map(c => c * .6); for (let i = 0; i < nv; i++) M.v(f[2 * i], y0, f[2 * i + 1], -1, bs); for (let k = 0; k < tris.length; k += 3) M.tri(b2 + tris[k], b2 + tris[k + 2], b2 + tris[k + 1]); }
+  if (bottom) { const b2 = M.n, bs = shade(col, 0, 1, 0).map(c => c * .6); for (let i = 0; i < nv; i++) M.v(f[2 * i], y0, f[2 * i + 1], -1, bs, al); for (let k = 0; k < tris.length; k += 3) M.tri(b2 + tris[k], b2 + tris[k + 2], b2 + tris[k + 1]); }
   const starts = [0, ...holes, nv];
   for (let r = 0; r < starts.length - 1; r++) { let along = 0;
     for (let k = starts[r]; k < starts[r + 1]; k++) {
       const k2 = k + 1 < starts[r + 1] ? k + 1 : starts[r], x0 = f[2 * k], z0 = f[2 * k + 1], x1 = f[2 * k2], z1 = f[2 * k2 + 1], len = Math.hypot(x1 - x0, z1 - z0);
       const s = shade(col, z1 - z0, 0, -(x1 - x0)).map(c => c * .9);
-      const i = M.v(x0, y0, z0, along, s), j = M.v(x1, y0, z1, along + len, s), kk = M.v(x1, y1, z1, along + len, s), l = M.v(x0, y1, z0, along, s); M.tri(i, j, kk); M.tri(i, kk, l); along += len;
+      const i = M.v(x0, y0, z0, along, s, al), j = M.v(x1, y0, z1, along + len, s, al), kk = M.v(x1, y1, z1, along + len, s, al), l = M.v(x0, y1, z0, along, s, al); M.tri(i, j, kk); M.tri(i, kk, l); along += len;
     } }
 }
 function norm3(a, b, c) { const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]; let n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]; if (n[1] < 0) n = n.map(x => -x); return n; }
@@ -405,6 +411,7 @@ buildTidal();
 function buildGreens() { if (L.greens) L.greens.free(); const M = new Mesh(); const T = A.terrain; const gh = (x, z) => { const i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
   for (const g of A.greens) { const f = dec(g.p); flat(M, g, gh(f[0], f[1]) + .4, C.green); } L.greens = M.upload(); }
 buildGreens();
+let buildingMat = null;   // pixel art: (b, i) -> material id 0 brick, 1 render, 2 glass, 3 ribbon windows, 4 metal, 5 measured facade
 let buildingColour = (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld;   // replaced by the "Colour buildings by" control
 // skyline year: measured heights replace the model's for buildings in docklands/data/skyline.json (null: not flown, keep)
 let SKY = null, skyIdx = -1;
@@ -412,21 +419,22 @@ const heightOf = (b, i) => { if (!SKY || skyIdx < 0) return b.h; const v = SKY.b
 const notFlown = i => SKY && skyIdx >= 0 && SKY.buildings[i] && SKY.buildings[i][skyIdx] == null;   // that survey did not cover it: today's height, slate colour
 // measured tower massing (data/towers.json, tools/build-towers.py): stacked tiers, and One Canada Square's pyramid, in
 // place of one prism per OSM outline for the towers of 100 m and over. Only for today's skyline (the year slider uses prisms).
-let TOWERS = null; const towerOf = new Map();   // model building index -> tower record
+let TOWERS = null, FAC = null;   // FAC: registry/sources/facades/facades.json buildings, by cwb id
+ const towerOf = new Map();   // model building index -> tower record
 const encRings = rings => { const p = [], holes = []; let px = 0, pz = 0, n = 0; rings.forEach((r, k) => { if (k) holes.push(n); for (const [x, z] of r) { const X = Math.round(x * 10), Z = Math.round(z * 10); p.push(X - px, Z - pz); px = X; pz = Z; n++; } }); return { p, holes }; };
-function towerF(M, t, col) {
+function towerF(M, t, col, mat) {
   t.tiers.forEach((tr, k) => {
     const last = k === t.tiers.length - 1, pyr = last && t.top && t.top.kind === 'pyramid' && t.top.apex;
-    if (!pyr) { prismF(M, encRings([tr.ring, ...(tr.holes || [])]), tr.y0, tr.y1, col, false); return; }
+    if (!pyr) { prismF(M, encRings([tr.ring, ...(tr.holes || [])]), tr.y0, tr.y1, col, false, mat); return; }
     // pyramid: each edge of the ring at y0 to the apex; roof u (no window grid)
     const [ax, ay, az] = t.top.apex, r = tr.ring, ru = -(1 + (ay - tr.y0));
     for (let i = 0; i < r.length; i++) { const [x0, z0] = r[i], [x1, z1] = r[(i + 1) % r.length], n = norm3([x0, tr.y0, z0], [x1, tr.y0, z1], [ax, ay, az]);
-      const c = shade(col.map(v => Math.min(1, v * 1.08)), n[0], n[1], n[2]); M.tri(M.v(x0, tr.y0, z0, ru, c), M.v(x1, tr.y0, z1, ru, c), M.v(ax, ay, az, ru, c)); }
+      const c = shade(col.map(v => Math.min(1, v * 1.08)), n[0], n[1], n[2]); const al = mat == null ? 1 : (200 + mat * 8) / 255; M.tri(M.v(x0, tr.y0, z0, ru, c, al), M.v(x1, tr.y0, z1, ru, c, al), M.v(ax, ay, az, ru, c, al)); }
   });
 }
 function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(), useT = TOWERS && skyIdx < 0;
-  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, notFlown(i) ? [.36, .42, .52] : buildingColour(b, i), !!b.mh); });
-  if (useT) for (const t of TOWERS) { const mi = t.model_buildings[0]; towerF(M, t, buildingColour(A.buildings[mi], mi)); }
+  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, notFlown(i) ? [.36, .42, .52] : buildingColour(b, i), !!b.mh, buildingMat && buildingMat(b, i)); });
+  if (useT) for (const t of TOWERS) { const mi = t.model_buildings[0]; towerF(M, t, buildingColour(A.buildings[mi], mi), buildingMat && buildingMat(A.buildings[mi], mi)); }
   L.bld = M.upload(); }
 buildBld();
 // photo style (drone frames for splat training): materials instead of the map colour codes, no diagram layers
@@ -1320,16 +1328,24 @@ async function setStyle(mode) {
     PIXSTYLE = { road: hexc('#746b70'), rail: hexc('#999698'), trunk: hexc('#584851'), leaf: hexc(a.tree_dark), leaf2: hexc('#607649'), leafHi: hexc(a.tree_light) };
     C.ground = hexc('#cec5bb'); C.green = hexc('#849953'); C.water = hexc(a.water);
     const BC = ['#f5c796', '#f3dbbe', '#bb927c', '#a27261', '#705858', '#584851', '#cec5bb'].map(hexc), GL = ['#788b9c', '#5d738a', '#50596e', '#999698'].map(hexc);
-    buildingColour = (b, i) => {   // districts, not confetti: the colour family comes from the 150 m block, a little variation per building
-      const x = b.p[0] / 10, z = b.p[1] / 10, cell = (Math.floor(x / 150) * 73856093) ^ (Math.floor(z / 150) * 19349663), hb = ((cell * 2654435761) >>> 0) / 4294967296, hi = ((i * 40503) >>> 0) % 100 / 100;
-      const L = b.h > 70 ? GL : BC, k = Math.floor(hb * L.length), pick = hi < .7 ? L[k] : L[(k + 1) % L.length]; return pick; };
+    // materials, not a height ramp: brick, render, glass, ribbon windows, metal; the measured facade colour where the photos give one
+    if (!FAC) FAC = await loadJSON('../registry/sources/facades/facades.json').then(f => f.buildings).catch(() => ({}));
+    const MATC = [['#a27261', '#bb927c', '#8c5e50', '#705858'], ['#f3dbbe', '#f5c796', '#e5b177', '#cec5bb'], ['#788b9c', '#5d738a', '#6f8fa6', '#50596e'], ['#cec5bb', '#b8b2ad', '#999698', '#e0d8cc'], ['#999698', '#c9c2b8', '#788b9c']].map(l => l.map(hexc));
+    const hsh = v => ((v * 2654435761) >>> 0) / 4294967296, dist = b => hsh((Math.floor(b.p[0] / 1500) * 73856093) ^ (Math.floor(b.p[1] / 1500) * 19349663));
+    const facOf = i => { const k = regOf[i]; return k >= 0 && AT ? FAC[AT.buildings[k].id] : null; };
+    buildingMat = (b, i) => { const f = facOf(i); if (f && f.glass_hex) return 5; const h = b.h, r = hsh(i + 7), d = dist(b);
+      if (h > 60) return r < .75 ? 2 : 3; if (h > 20) return r < .3 ? 2 : r < .65 ? 3 : r < .85 ? 1 : 0;
+      return d < .45 ? (r < .8 ? 0 : 1) : d < .8 ? (r < .75 ? 1 : 0) : (r < .6 ? 4 : 3); };
+    const FACC = [...MATC[2], ...MATC[3], ...MATC[4]];   // measured colours snap to the building colours of the palette, never to a tree green
+    buildingColour = (b, i) => { const m = buildingMat(b, i); if (m === 5) { const f = facOf(i), g = hexc(f.glass_hex), fr = f.frame_hex ? hexc(f.frame_hex) : g, c = g.map((v, k) => v * .75 + fr[k] * .25); return FACC.reduce((a, q) => (q[0] - c[0]) ** 2 + (q[1] - c[1]) ** 2 + (q[2] - c[2]) ** 2 < (a[0] - c[0]) ** 2 + (a[1] - c[1]) ** 2 + (a[2] - c[2]) ** 2 ? q : a); }
+      const L = MATC[m]; return L[Math.floor((dist(b) * .7 + hsh(i) * .3) * L.length) % L.length]; };
     for (const id of ['showLabels', 'showUnder', 'showWalls', 'showBed']) $(id).checked = false;
     await loadTrees().catch(e => toast('Trees did not load: ' + e.message)); buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); const nt = buildTrees();
     PIX.on = true; PIX.actors = makeActors(); Object.assign(cam, { pitch: .5236, yaw: Math.PI / 4, dist: Math.min(cam.dist, 520) }); unview();
     $('isoBtns').hidden = false; $('pixNote').hidden = false; $('gauge').hidden = true; $('digBtn').hidden = true;
     toast(`Pixel art: ${nt.toLocaleString('en-GB')} trees, ${PIX.actors.length} moving figures, boats and birds`); cancelAnimationFrame(PIX.loop); PIX.loop = requestAnimationFrame(pixTick);
   } else {
-    PIX.on = false; cancelAnimationFrame(PIX.loop); const S = PIX.saved; PIXSTYLE = null; Object.assign(C, S.C); buildingColour = S.bc;
+    PIX.on = false; cancelAnimationFrame(PIX.loop); const S = PIX.saved; PIXSTYLE = null; Object.assign(C, S.C); buildingColour = S.bc; buildingMat = null;
     $('showLabels').checked = S.labels; $('showUnder').checked = S.under; $('showWalls').checked = S.walls; $('showBed').checked = S.bed;
     buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); Object.assign(cam, S.cam);
     if (S.ground !== 'none') { document.querySelector(`input[name=ground][value=${S.ground}]`).checked = true; await setGround(S.ground); }
