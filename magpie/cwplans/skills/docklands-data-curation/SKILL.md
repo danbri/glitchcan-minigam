@@ -17,6 +17,10 @@ Pages: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/ (everyth
 Policy for this directory: the repo `CLAUDE.md`, Data ethics, "EXCEPTION — magpie/cwplans/" (personal,
 organisation and address data allowed during prototyping; no proprietary or restricted-licence data; OSM
 under ODbL allowed and tracked; website crawls allowed for scoping and recorded).
+Store finders (owner, 2026-10-03: "we are permitted per industry convention to submit storefinder forms with
+UK postcodes"): a crawl may type a UK postcode into a brand's store-finder or store-locator search and follow the
+result to the branch page. Nothing else: no other forms, no names, emails, accounts or bookings, no login; robots.txt
+and the per-host gap still apply; record how each page was reached (storefinder search, postcode, finder URL).
 
 **Activity log:** [ACTIVITY-LOG.md](ACTIVITY-LOG.md), dated, newest last. Add an entry for every session
 that changes data, tools, checks or policy: what changed, the commit, the measured effect (audit counts
