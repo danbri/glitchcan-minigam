@@ -400,11 +400,39 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
   ex(c, (REG.cwg_unplaced || []).filter(u => u.title).map(u => ({ entry: u.title, mall: u.mall, postcode: u.postcode, why: u.why })), 10);
 }
 {
-  const c = { id: 'SP-7', cls: 'position', dim: 'accuracy', title: 'Occupant placed by a key, not a position', sources: ['cwg'],
-    method: 'Occupants that only the CWG directory gives, placed by the building its street address names (high with the postcode, medium without), its mall\'s host outline (medium: a 2D outline for a mall that runs under several buildings, see SP-6), or the one building (or the one retail building) with its postcode (low).', rule: 'Keep the placement rule and confidence with each link; a low-confidence placement places the occupant in a postcode, not a building, until a second source confirms it.' };
+  const c = { id: 'SP-7', cls: 'position', dim: 'accuracy', title: 'Occupant placed by a key, not a position', sources: ['cwg', 'registers'],
+    method: 'Occupants that only the CWG directory or a register gives, placed by the building its street address names (high with the postcode, medium without), its mall\'s host outline (medium: a 2D outline for a mall that runs under several buildings, see SP-6), or the one building (or the one retail building) with its postcode (low).', rule: 'Keep the placement rule and confidence with each link; a low-confidence placement places the occupant in a postcode, not a building, until a second source confirms it.' };
   const add = check(c); let pop = 0; const by = {};
   for (const b of REG.buildings) for (const o of b.occupants) { if (!o.placed_confidence) continue; pop++; by[o.placed_confidence] = (by[o.placed_confidence] || 0) + 1; if (o.placed_confidence === 'low') add({ ent: 'b', id: b.id, sev: 'low', note: `${o.name}: ${o.placed}` }); }
   c.population = pop; c.breakdown = by;
+}
+
+{
+  const c = { id: 'CV-4', cls: 'coverage', dim: 'completeness', title: 'Register records in the registry box with no building', sources: ['gias', 'cqc', 'ods', 'charities', 'ofsted', 'gambling', 'active-places', 'fsa'],
+    method: 'Records of the regulatory and public registers (registry/sources/registers/) after the registry join (keys: UPRN, the register point, street address, name at the same postcode, the postcode alone where one building at the postcode centre has it), left out: records outside the registry box and addresses that are not places (SE-3).', rule: 'Place a register record by its strongest key and keep the key, its precision and a confidence on the link. A postcode alone places a record in a postcode, not a building, unless one building is at the postcode; fix the class (a postcode-to-building table from UPRNs), not the record.' };
+  const add = check(c), NOT_PLACE = /correspondence|registered-office|care-of|residential/;
+  const rows = (REG.registers_unplaced || []).filter(u => u.why !== 'outside the registry box' && !NOT_PLACE.test(u.why));
+  const j = REG.summary.joins.registers || {};
+  c.population = Object.values(j).reduce((n, x) => n + x.records, 0);
+  c.breakdown = {}; for (const u of rows) c.breakdown[u.why] = (c.breakdown[u.why] || 0) + 1;
+  c.stats = Object.fromEntries(Object.entries(j).map(([k, x]) => [k, { records: x.records, placed_by: x.placed_by, joined_existing: x.joined_existing, added: x.added, unplaced_by: x.unplaced_by }]));
+  for (const u of rows) add({ ent: 'register', id: u.id, sev: 'low', note: `${u.name} (${u.register}, ${u.postcode || 'no postcode'}): ${u.why}`, kind: u.why });
+  ex(c, rows.map(u => ({ register: u.register, name: u.name, postcode: u.postcode, why: u.why })), 10);
+}
+{
+  const c = { id: 'ID-5', cls: 'identity', dim: 'uniqueness', title: 'Register UPRN that does not identify the place', sources: ['gias', 'ods', 'active-places', 'os-open-uprn'],
+    method: 'Register records whose UPRN the join did not use: one UPRN given to records at two or more postcodes in one register (GIAS gives several schools one council UPRN), or a UPRN point over 150 m from the register\'s own point.', rule: 'A UPRN is a key only when it is unique to one place in the register and agrees with the register\'s own position; otherwise keep it as a value with its fault.' };
+  const add = check(c), rows = REG.registers_uprn_rejected || [];
+  c.population = (REG.registers_uprn_rejected || []).length; c.breakdown = {}; for (const u of rows) { const k = u.why.replace(/\d+ records at \d+/, 'N records at N'); c.breakdown[k] = (c.breakdown[k] || 0) + 1; }
+  for (const u of rows) add({ ent: 'register', id: u.id, sev: 'medium', note: `${u.name} (${u.register}) UPRN ${u.uprn}: ${u.why}` });
+  ex(c, rows, 10);
+}
+{
+  const c = { id: 'SE-3', cls: 'meaning', dim: 'relevance', title: 'Register address that is not where the organisation works', sources: ['gias', 'ods', 'charities', 'cqc'],
+    method: 'Register records whose address the join did not use as a place: GIAS correspondence addresses (overseas schools at 30 Skylines Village), the registered-office service at E14 5HU (5 Churchill Place, 10th floor), care-of and accountant addresses, and charity contact addresses in residential buildings.', rule: 'A contact or registered address is not an occupant (like SE-1). Mark the address role on the record; place only by an address that is a service location.' };
+  const add = check(c), rows = (REG.registers_unplaced || []).filter(u => /correspondence|registered-office|care-of|residential/.test(u.why));
+  c.population = rows.length; c.breakdown = {}; for (const u of rows) c.breakdown[u.why] = (c.breakdown[u.why] || 0) + 1;
+  for (const u of rows) add({ ent: 'register', id: u.id, sev: 'low', note: `${u.name} (${u.register}): ${u.why}` });
 }
 
 // ===== G. meaning

@@ -348,7 +348,7 @@ if (has('brands/cwg-directory.json')) {
 // of an occupant at the same postcode, and the postcode alone where it covers one building. A unit in a named mall is
 // placed in the mall's host outline (F4). Each link keeps the key, its precision and a confidence. Rules: pipeline.json
 // activity "build-registry"; error classes: skill docklands-data-curation (registers join).
-const regOut = { unplaced: [] };
+const regOut = { unplaced: [], uprn_rejected: [] };
 if (has('registers/gias.json')) {
   const uprnPt = new Map();
   if (has('uprn/uprn-canary-wharf.csv')) for (const line of readFileSync(join(SRC, 'uprn/uprn-canary-wharf.csv'), 'utf8').split('\n').slice(1)) { const [u, , , lat, lon] = line.split(','); if (u) uprnPt.set(u, [+lon, +lat]); }
@@ -373,6 +373,9 @@ if (has('registers/gias.json')) {
     ['fsa-pubs', 'fsa-pubs.json', r => ({ fhrs_id: +r.id.replace('fhrs:', '') }), () => true, () => null],
   ];
   // a care-of or accountant's address is where letters go, not where the organisation works (like SE-1)
+  // the company-secretarial service on the 10th floor of 5 Churchill Place (E14 5HU) holds registered offices for many
+  // organisations whose services are elsewhere (register README; like audit SE-1)
+  const HUB = /10th floor,? 5 churchill place|5 churchill place,? (canary wharf,? )?10th floor|corporation service company|tower bridge international services/i;
   const CARE_OF = /\bc\/o\b|\bcare of\b|accountant|accounts direct/i;
   // a street the address names ("71-75 SHELTON STREET"): when the postcode alone would place the record, the building must
   // be on that street (a virtual-office address with an E14 postcode is not in E14)
@@ -388,7 +391,8 @@ if (has('registers/gias.json')) {
     const uprnPcs = new Map(); for (const r of RS) if (r.uprn) uprnPcs.set(String(r.uprn), new Set([...(uprnPcs.get(String(r.uprn)) || []), r.postcode]));
     for (const r of RS) {
       s.records++;
-      const ex = exclude(r) || (CARE_OF.test(r.address || '') ? 'care-of or accountant address (not where it works)' : null); if (ex) { miss(r, ex); continue; }
+      const ex = exclude(r) || (HUB.test(r.address || '') || normPc(r.postcode) === 'E14 5HU' ? 'registered-office service at E14 5HU (5 Churchill Place)' : null)
+        || (CARE_OF.test(r.address || '') ? 'care-of or accountant address (not where it works)' : null); if (ex) { miss(r, ex); continue; }
       const pc = r.postcode ? normPc(r.postcode) : null, mallName = placeIn(r.address), mall = CWG_MALLS.has(mallName) ? mallName : null;
       const link = { register: reg, id: r.id, kind: r.kind, status: r.status, ...(r.url ? { url: r.url } : {}) };
       // FSA pubs are FSA premises the registry already holds when their FHRS id is an occupant
@@ -396,8 +400,9 @@ if (has('registers/gias.json')) {
       let home = null, above = null;
       // 1. UPRN
       const u = r.uprn ? String(r.uprn) : null, up = u && uprnPt.get(u);
-      if (up && uprnPcs.get(u).size > 1) s.uprn_rejected_shared = (s.uprn_rejected_shared || 0) + 1;
-      else if (up && r.position === 'source' && r.lat != null && Math.hypot((up[0] - r.lon) * mPerDeg[0], (up[1] - r.lat) * mPerDeg[1]) > 150) s.uprn_rejected_far_from_own_point = (s.uprn_rejected_far_from_own_point || 0) + 1;
+      const rejectU = why => { s['uprn_rejected: ' + why] = (s['uprn_rejected: ' + why] || 0) + 1; regOut.uprn_rejected.push({ register: reg, id: r.id, name: r.name, uprn: u, postcode: r.postcode || null, why }); };
+      if (up && uprnPcs.get(u).size > 1) rejectU(`one UPRN on ${RS.filter(x => String(x.uprn) === u).length} records at ${uprnPcs.get(u).size} postcodes`);
+      else if (up && r.position === 'source' && r.lat != null && Math.hypot((up[0] - r.lon) * mPerDeg[0], (up[1] - r.lat) * mPerDeg[1]) > 150) rejectU('UPRN point over 150 m from the register\'s own point');
       else if (up) { const h = buildingAt(up[0], up[1], 0); if (h) home = { id: h.b.id, key: 'UPRN', precision: 'OS Open UPRN point inside the outline', confidence: 'high' }; else s.uprn_point_in_no_outline = (s.uprn_point_in_no_outline || 0) + 1; }
       // 2. the register's own point (an FSA point within 3 m of its postcode centre is a postcode, F7)
       if (!home && r.position === 'source' && r.lat != null && inBox(r.lon, r.lat)) {
@@ -409,6 +414,8 @@ if (has('registers/gias.json')) {
       if (mall && MALL_HOST[mall] && (!home || home.id !== MALL_HOST[mall].id)) { above = home?.id || null; home = { id: MALL_HOST[mall].id, key: home ? `${home.key} + mall` : 'mall named in the address', precision: `mall ${mall}: ${MALL_HOST[mall].how}`, confidence: 'medium' }; }
       // 3. street address, then the name of an occupant at the same postcode or mall
       if (!home && pc) { const b = matchBuilding(pc, r.address || ''); if (b) home = { id: b.id, key: 'street address + postcode', precision: 'address text names the building, postcode agrees', confidence: 'high' }; }
+      // the street address alone: one registry building whose numbered address key the address text contains
+      if (!home) { const t = normAddr(r.address || ''), c = recs.filter(x => x.keys.some(k => /^\d/.test(k) && new RegExp(`(^| )${k}( |$)`).test(t))); if (c.length === 1) home = { id: c[0].id, key: 'street address', precision: 'address text names the building; its postcode is not on the building', confidence: 'medium' }; }
       const keys = regKeys(r.name);
       const named = cand.filter(c => [...keys].some(k => c.keys.has(k)) && ((pc && c.pcs.has(pc)) || (mall && c.mall === mall) || (home && c.r.id === home.id)));
       const namedB = [...new Set(named.map(c => c.r.id))];
@@ -422,7 +429,7 @@ if (has('registers/gias.json')) {
         if (inPc.length === 1) {
           const sm = (r.address || '').match(STREET), street = sm ? normAddr(sm[1]) : null;
           if (p?.lat && distTo(outlineOf.get(inPc[0].id), +p.lon, +p.lat) > 50 && !inside(outlineOf.get(inPc[0].id), +p.lon, +p.lat)) pcWhy = 'postcode on one registry building, but the postcode centre is over 50 m from it';
-          else if (street && !inPc[0].keys.some(k => k.includes(street)) && !normAddr(inPc[0].address || '').includes(street)) pcWhy = 'street in the address is not the street of the one building with the postcode';
+          else if (street && inPc[0].keys.some(k => /^\d/.test(k)) && !inPc[0].keys.some(k => k.includes(street))) pcWhy = 'street in the address is not the street of the one building with the postcode';
           else home = { id: inPc[0].id, key: 'postcode (one building)', precision: `the one registry building with postcode ${pc}, at the postcode centre`, confidence: 'low' };
         }
       }
@@ -435,7 +442,7 @@ if (has('registers/gias.json')) {
       if (reg === 'charities' && home.key !== 'UPRN' && !named.length && residential(b)) { miss(r, 'charity: contact address in a residential building'); continue; }
       s.placed_by[home.key] = (s.placed_by[home.key] || 0) + 1;
       const full = { ...link, key: home.key, precision: home.precision, confidence: home.confidence, ...(above ? { point_in: above } : {}) };
-      const same = named.filter(c => c.r.id === home.id);
+      const same = cand.filter(c => c.r.id === home.id && [...keys].some(k => c.keys.has(k)));
       if (same.length) { for (const c of same) { (c.o.registers ||= []).push(full); Object.assign(c.o, ...Object.entries(ids(r)).filter(([k]) => c.o[k] == null).map(([k, v]) => ({ [k]: v }))); } s.joined_existing++; continue; }
       const o = { name: r.name, role: reg === 'ods' && ODS_ORG.test(r.kind) ? 'head office (ODS)' : `register: ${reg}`, source: reg, ...ids(r), register_kind: r.kind, current: !!current(r),
         ...(r.address ? { address: r.address } : {}), ...(pc ? { postcode: pc } : {}), ...(mall ? { mall } : {}), registers: [full], placed: home.precision, placed_confidence: home.confidence };
@@ -476,5 +483,5 @@ const summary = {
   sources: { osm: osm.extracted, wikidata_qlever: wd.fetched, fsa: fhrs.fetched },
 };
 writeFileSync(idsFile, JSON.stringify(ids, null, 1));
-writeFileSync(join(OUT, 'buildings.json'), JSON.stringify({ summary, buildings: out, unplaced_by_postcode: byPostcode, cwg_unplaced: cwgOut.unplaced, cwg_ambiguous: cwgOut.ambiguous, registers_unplaced: regOut.unplaced }));
+writeFileSync(join(OUT, 'buildings.json'), JSON.stringify({ summary, buildings: out, unplaced_by_postcode: byPostcode, cwg_unplaced: cwgOut.unplaced, cwg_ambiguous: cwgOut.ambiguous, registers_unplaced: regOut.unplaced, registers_uprn_rejected: regOut.uprn_rejected }));
 console.log(JSON.stringify(summary, null, 1));

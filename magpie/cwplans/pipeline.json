@@ -1735,6 +1735,30 @@
         },
         {
           "file": "registry/sources/brands/cwg-directory.json"
+        },
+        {
+          "file": "registry/sources/registers/gias.json"
+        },
+        {
+          "file": "registry/sources/registers/cqc.json"
+        },
+        {
+          "file": "registry/sources/registers/ods.json"
+        },
+        {
+          "file": "registry/sources/registers/charities.json"
+        },
+        {
+          "file": "registry/sources/registers/ofsted-childcare.json"
+        },
+        {
+          "file": "registry/sources/registers/gambling.json"
+        },
+        {
+          "file": "registry/sources/registers/active-places.json"
+        },
+        {
+          "file": "registry/sources/registers/fsa-pubs.json"
         }
       ],
       "generated": [
@@ -1751,7 +1775,7 @@
           "file": "registry/homes-by-postcode.json"
         }
       ],
-      "method": "Builds the Canary Wharf building registry: one record per OSM building outline with a stable cwb- id, its parts, occupants (OSM, FSA, Wikidata, chain-store branches, the Canary Wharf Group directory), owners, postcodes, Wikidata facts, and company and property joins.",
+      "method": "Builds the Canary Wharf building registry: one record per OSM building outline with a stable cwb- id, its parts, occupants (OSM, FSA, Wikidata, chain-store branches, the Canary Wharf Group directory, the regulatory and public registers), owners, postcodes, Wikidata facts, and company and property joins.",
       "rules": [
         "A building is an OSM building outline (way or multipolygon) whose vertex mean is in the Canary Wharf box; building:part shapes are listed under the outline that contains their centre.",
         "Ids: reused from registry/ids.json by OSM element; new outlines get the next number in reading order (north to south in 100 m bands, then west to east); a retired id is never reused.",
@@ -1768,7 +1792,8 @@
         "Branches enrich the occupant with the same OSM or FSA id, else are placed by position (marked approximate when the position is a mall or postcode centre).",
         "Buildings keep the OSM addr:housename (housename): it names the complex for a mall outline (Canada Place on 16-19 Canada Square).",
         "CWG directory: an entry already linked by the branch join keeps that link. Else it joins existing occupants (OSM, FSA, Wikidata, branches, and CWG occupants added earlier in the same pass) when a name key is equal (registry/sources/brands/tools/cwg-fields.mjs nameKeys) and the place agrees, tried in this order: same mall (or same street or square), a shared postcode, or the building the entry itself would be placed in. Two different named malls never join (Canada Place and the One Canada Square mall count as one). An occupant with a CWG link takes a second entry only from another CWG section (cwg_also). Records of one source in two buildings: ambiguous, not joined.",
-        "CWG entries that join nothing become occupants (source cwg, role directory: <section>) placed by: the one building whose address key equals the street line (confidence high with the postcode, medium without); else the host outline of a named mall (the one outline whose OSM name, else addr:housename, is the mall name or starts with it; medium); else the one registry building with the entry postcode, or the one of them OSM tags as retail (low). Estate-wide entries, car parks and entries with no page, address or single building stay unplaced with a reason (cwg_unplaced, summary.joins.cwg)."
+        "CWG entries that join nothing become occupants (source cwg, role directory: <section>) placed by: the one building whose address key equals the street line (confidence high with the postcode, medium without); else the host outline of a named mall (the one outline whose OSM name, else addr:housename, is the mall name or starts with it; medium); else the one registry building with the entry postcode, or the one of them OSM tags as retail (low). Estate-wide entries, car parks and entries with no page, address or single building stay unplaced with a reason (cwg_unplaced, summary.joins.cwg).",
+        "Registers (registry/sources/registers/): records are excluded when the address is not a place: GIAS correspondence addresses (address_role), the registered-office service at E14 5HU / 10th floor 5 Churchill Place, care-of and accountant addresses. Keys in order: UPRN (OS Open UPRN point inside an outline; not used when one register gives the UPRN to records at two or more postcodes, or when the UPRN point is over 150 m from the register point), the register point (inside or within 12 m; an FSA point within 3 m of its postcode centre is a postcode, F7), a named mall in the address (the mall host outline, F4; the point outline kept as point_in), street address with the postcode, street address alone when one building matches a numbered address key, the name of an occupant at the same postcode or mall, the postcode alone when one registry building has it, the ONSPD centre is within 50 m of it and the address names no other street (never for a charity). A charity placed by address in a residential building (homes or a residential building tag) is left unplaced. A record whose name matches an occupant of the chosen building enriches it; else it is a new occupant (source = register, role register: <name> or head office (ODS) for ODS organisation records, current false for closed or inactive records). Each link (occupant.registers[]) keeps register, id, kind, status, key, precision, confidence; source ids are copied to the occupant (urn, ods_code, cqc_location_id, charity_number, company_number, ofsted_urn, gambling_premises_id, active_places_site_id, fhrs_id). Unplaced records and rejected UPRNs are listed (registers_unplaced, registers_uprn_rejected)."
       ],
       "network": false,
       "deterministic": false,
@@ -1784,7 +1809,8 @@
         "registry-companies",
         "registry-landregistry",
         "build-branches",
-        "fetch-cwg"
+        "fetch-cwg",
+        "fetch-registers"
       ]
     },
     {
@@ -1820,7 +1846,7 @@
           "local": "data/raw/registry/wikidata-occupant-classes.json"
         }
       ],
-      "method": "Gives each registry building its occupant categories (finance, shop, catering, leisure, entertainment; and bar, alcohol, education, health, sport, arts) from the classes the sources state, for the glow outlines and the atlas.",
+      "method": "Gives each registry building its occupant categories (finance, shop, catering, leisure, entertainment; and bar, alcohol, education, health, sport, arts, charity) from the classes the sources state, for the glow outlines and the atlas.",
       "rules": [
         "finance: OSM amenity bank, bureau_de_change or money_transfer, or office financial, insurance, financial_advisor or tax_advisor; or a Wikidata P31 or P452 label matching bank, finance, insurance, investment and similar; or the role 'service: bank' or 'branch: bank'.",
         "shop: an OSM shop tag, the role 'shop' or 'branch: shop', or an FSA type starting 'Retailers'.",
@@ -1834,6 +1860,7 @@
         "sport: OSM leisure sports_centre, fitness_centre, pitch, swimming_pool or sports_hall, or any sport tag; CWG category Sport (not Sport & Fitness, which lists sportswear shops); a Wikidata sports venue or gym class; the role branch: gym.",
         "arts: OSM amenity cinema, theatre, arts_centre, nightclub, music_venue, events_venue or concert_hall, or any theatre:genre tag; a Wikidata class movie theater, cinema, theatre, music venue, concert hall, arts centre or nightclub.",
         "CWG directory classes for the first five: section restaurant gives catering, section stay or category Hotels & Apartments gives leisure, category Banks & Foreign Exchange gives finance, and goods categories (Shoes & Footwear, Menswear, Jewellery & Watches and others listed in the tool) give shop. CWG labels that mix classes (Services, Health & Beauty, Cafes & Bars, Sport & Fitness) and the FSA type Hospitals/Childcare/Caring Premises are not used.",
+        "Registers (current links only): GIAS, Ofsted childcare and ODS School give education; CQC health services (doctors, dentists, diagnosis, urgent care, clinics, hospitals, community healthcare, nursing homes) and ODS service sites (pharmacies, surgeries, GP practices, dental practices, optical sites, NHS trust, independent provider, PCT and care trust sites) give health; Active Places gives sport; FSA pubs give bar; gambling premises (betting shops) give shop; the Charity Commission gives charity. ODS organisation records, ODS Education (NHS training bodies) and social care services give no category. An occupant with current false counts as former.",
         "Names are never used to guess a class; Companies House registered offices are not used.",
         "Wikidata occupant links: an end date (P582) or a dissolved organisation (P576) makes the entry 'former' and it is not counted; a start date and no end makes it 'current'; no qualifier makes it 'undated'."
       ],
@@ -2985,13 +3012,14 @@
           "file": "quality/CATALOGUE.md"
         }
       ],
-      "method": "Runs 36 data-quality checks over every Canary Wharf source (identity, spatial, attribute, validity, parsing, network, timeliness, coverage, semantics) and writes one record per issue with counts, rates and examples, and a generated Markdown catalogue.",
+      "method": "Runs 39 data-quality checks over every Canary Wharf source (identity, spatial, attribute, validity, parsing, network, timeliness, coverage, semantics) and writes one record per issue with counts, rates and examples, and a generated Markdown catalogue.",
       "rules": [
-        "Checks ID-1 to ID-4, SP-1 to SP-7, AT-1 to AT-5, VA-1 to VA-4, PL-1, PL-2, NET-1 to NET-5, TM-1 to TM-4, CV-1 to CV-3, SE-1, SE-2.",
+        "Checks ID-1 to ID-5, SP-1 to SP-7, AT-1 to AT-5, VA-1 to VA-4, PL-1, PL-2, NET-1 to NET-5, TM-1 to TM-4, CV-1 to CV-4, SE-1 to SE-3.",
         "The audit date is fixed in the code (2026-10-03): FSA ratings before 2023-10-03 are 'older than 3 years'; CWG copy ages are counted to that date.",
         "VA-2 issues are the level tokens tools/osm-values.mjs cannot read (osmLevelsUnread).",
         "Each issue has a severity (high, medium, low) and an entity (building, postcode, OSM element, FSA premises and others).",
-        "SP-2 leaves out occupants placed by a key (placed_confidence: SP-7). SP-6 counts an outline as the mall when its name, OSM name or addr:housename names it. CV-2 counts a CWG entry as seen by another source when a registry occupant from another source carries its URL after the registry join. CV-3: CWG entries the registry could not place, by reason."
+        "SP-2 leaves out occupants placed by a key (placed_confidence: SP-7). SP-6 counts an outline as the mall when its name, OSM name or addr:housename names it. CV-2 counts a CWG entry as seen by another source when a registry occupant from another source carries its URL after the registry join. CV-3: CWG entries the registry could not place, by reason.",
+        "CV-4: register records in the registry box with no building, by reason; ID-5: register UPRNs not used (shared across postcodes, or far from the register point); SE-3: register addresses that are not where the organisation works."
       ],
       "network": false,
       "deterministic": true,

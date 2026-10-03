@@ -268,6 +268,24 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 
 - Website crawl, tools/crawl-sites.mjs (new). 859 URLs on 393 hosts from buildings.json occupants, branches.json, storelocator.json and cwg-directory.json (FSA, OSM, Wikidata, Wikipedia, Companies House and Land Registry links skipped by rule). 737 pages read (369 CWG pages as Internet Archive copies reused from fetch-cwg.mjs, 368 direct); 122 not read (bot challenge 59, 404/410 18, 401/403 15, TLS 10, timeout 7, DNS 4, robots.txt 4, 429 2, connection 2, 5xx 1). Direct pages: JSON-LD 246, opening hours 61, schema.org telephone 77, names the branch 154 (235 are home pages). 61 new feed URLs (registry/sources/web/discovered-feeds.json), not yet verified. Out: registry/sources/web/site-facts.json, discovered-feeds.json, README.md. Open: merge register-entries.json into data-register.json and pipeline.json; verify the feeds; script-rendered store pages give no facts without a browser.
 
+## 2026-10-03: regulatory and public registers joined into the registry
+
+- `build-registry.mjs`: the registers in `registry/sources/registers/` (GIAS, CQC, ODS, charities, Ofsted childcare,
+  gambling, Active Places, FSA pubs) join occupants with a link per record (`occupant.registers[]`: register, id,
+  kind, status, key, precision, confidence) and the source ids on the occupant. Keys: UPRN, register point, named mall
+  (F4), street address with postcode, street address alone, name at the same postcode, postcode alone (guarded, F19).
+  Occupants 1,267 → 1,486.
+- Per register (placed / joined an existing occupant / added / unplaced in the box / outside the box or not a place):
+  GIAS 7 / 3 / 4 / 1 / 39 outside + 16 correspondence; Active Places 12 / 3 / 9 / 3 / 22; ODS 157 / 36 / 121 / 26 / 153
+  + 86 not places; CQC 40 / 27 / 13 / 9 / 35; Ofsted childcare 13 / 3 / 10 / 3 / 29; gambling 6 / 0 / 6 / 2 / 6;
+  charities 58 / 3 / 55 / 46 / 179 + 33 not places; FSA pubs 16 / 15 / 1 / 2 / 19.
+- New faults F17 (shared UPRN), F18 (addresses that are not places), F19 (postcode alone), F20 (provider and site
+  pairs). Categories: education 20/24 → 26/38, health 29/38 → 44/79, sport 19/29 → 22/35, bar 28/42 → 28/43, shop
+  81/256 → 83/262 (betting shops), new charity 26/58; others unchanged.
+- Audit 36 checks / 1,481 issues → 39 / 1,750: new CV-4 (92 in the box with no building), ID-5 (9), SE-3 (135);
+  SP-7 8 → 30 low-confidence key placements (population 325); ID-2 84 → 89 (F20); ID-3 22 → 25; SP-6 119 → 122. Tests
+  8 of 8. Register check exit 0.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
@@ -284,3 +302,5 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 12. CWG join leftovers: a mall container for Churchill Place (no outline names it); Wood Wharf outlines without
     addresses (13 street addresses match nothing); a postcode-to-building table; rename aliases (Museum of London
     Docklands); show bar, alcohol, education, health, sport, arts in the 3D glow menu.
+13. Registers: a postcode-to-building table from OS Open UPRN (29 records wait on "postcode covers several buildings");
+    merge ODS provider and site pairs (F20); CQC "HSCA Active Locations" columns for coordinates.

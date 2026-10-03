@@ -74,6 +74,11 @@ Faults found in this project's joins and tools. "Open" means catalogued and meas
 | F15 | 2026-10-03 | Business contact tags (phone, email, contact:*) dropped by `registry-osm.mjs`, and `build-registry.mjs` copied only website and opening_date to occupants | pipeline (coverage) | fixed: occupants keep opening_hours, cuisine, wheelchair, check_date, start_date, operator, url, website, phone, email, contact:* (cwplans exception) | buildings.json occupants |
 | F16 | 2026-10-03 | CWG directory joined only through the brand table: 226 of 374 entries had no registry occupant | coverage (join rule) | fixed in `build-registry.mjs`: name keys + place (mall, postcode or building), never across two malls; else a new occupant by street address, mall host outline or the one building of the postcode, with a confidence. 336 of 374 linked; 38 unplaced by class | CV-3: 38; SP-7: 8 low; CV-2: 205 → 162 |
 
+| F17 | 2026-10-03 | One UPRN on many register records: GIAS gives 8 schools at different postcodes UPRN 6064816 (a council office, inside the Poplar Public Mortuary outline); a first join put 9 schools in that building. One more UPRN point is 300 m from the school's own GIAS point | identity (source) | rule in use: a UPRN given to records at two or more postcodes in one register, or over 150 m from the register's own point, is not a key | ID-5: 9 |
+| F18 | 2026-10-03 | Register addresses that are not where the organisation works: 16 GIAS correspondence addresses (overseas schools, 30 Skylines Village), 84 records at the registered-office service at E14 5HU / 10th floor 5 Churchill Place (ODS and charities), 13 care-of and accountant addresses, 22 charity contact addresses in residential buildings | meaning (source) | rule in use: excluded before the join and counted | SE-3: 135 |
+| F19 | 2026-10-03 | "The one registry building with the postcode" is not "the postcode covers one building": registry postcodes come from occupants, so a pub carried E14 0EY and took the Newby Place health centre (8 ODS records); a virtual-office address (71-75 Shelton Street) carried E14 5RE | join rule | fixed: the postcode alone places a record only when the ONSPD centre is within 50 m of that building and the address names no other street | CV-4: 14 (centre over 50 m) + 2 (street) |
+| F20 | 2026-10-03 | One organisation as two register records in one building (ODS provider and its site, "360 CAMHS" and "360 CAMHS LONDON"; OSM "Sk:n" and CQC "Sk:n - London Canary Wharf"): name keys differ, so both stay | identity (join rule) | open | ID-2: 84 → 89 |
+
 Add new faults here with the next F number, and in the activity log.
 
 ## Imagery
@@ -196,6 +201,10 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
   except Canada Place and the One Canada Square mall, which CWG and the FSA name both ways (F16). Classes left over:
   street addresses with no registry building (Wood Wharf is newer than many outlines), car parks, estate-wide entries,
   pages with no address, renamed venues ("London Museum Docklands").
+- **A register address has a role.** Correspondence, registered-office, care-of and charity contact addresses are
+  not places (F18). A UPRN is a key only when it is unique to one place and agrees with the register's own point
+  (F17). The postcode alone needs one building at the postcode centre, not one building that carries the postcode
+  (F19). Keep the key, its precision and a confidence on every link.
 - **Levels are labels.** OSM `level` is a mapper's index; CWG names levels per mall; measure the offset
   per mall (F9). Convert to metres only through published slab levels (`data/sourced-levels.json`).
 - **A position has a precision and a meaning.** Postcode-centre points place a postcode, not a building

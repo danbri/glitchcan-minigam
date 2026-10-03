@@ -188,7 +188,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
       <h3>Glow: who is inside</h3>
       <div class="chips" id="glowChips">
         <label><input type="checkbox" data-glow="finance"> <i class="sw" style="background:#ff3030"></i>Banks and finance</label><label><input type="checkbox" data-glow="shop"> <i class="sw" style="background:#33d6ff"></i>Shops</label><label><input type="checkbox" data-glow="catering"> <i class="sw" style="background:#ffa040"></i>Food and drink</label><label><input type="checkbox" data-glow="leisure"> <i class="sw" style="background:#5dff7a"></i>Leisure</label><label><input type="checkbox" data-glow="entertainment"> <i class="sw" style="background:#ff4fd8"></i>Entertainment</label>
-      <label><input type="checkbox" data-glow="bar"> <i class="sw" style="background:#ffd400"></i>Pubs, bars, alcohol</label><label><input type="checkbox" data-glow="education"> <i class="sw" style="background:#fff36b"></i>Schools and colleges</label><label><input type="checkbox" data-glow="health"> <i class="sw" style="background:#f8f8ff"></i>Health</label><label><input type="checkbox" data-glow="sport"> <i class="sw" style="background:#4d7cff"></i>Sport</label><label><input type="checkbox" data-glow="arts"> <i class="sw" style="background:#b36bff"></i>Arts and music venues</label>
+      <label><input type="checkbox" data-glow="bar"> <i class="sw" style="background:#ffd400"></i>Pubs, bars, alcohol</label><label><input type="checkbox" data-glow="education"> <i class="sw" style="background:#fff36b"></i>Schools and colleges</label><label><input type="checkbox" data-glow="health"> <i class="sw" style="background:#f8f8ff"></i>Health</label><label><input type="checkbox" data-glow="sport"> <i class="sw" style="background:#4d7cff"></i>Sport</label><label><input type="checkbox" data-glow="arts"> <i class="sw" style="background:#b36bff"></i>Arts and music venues</label><label><input type="checkbox" data-glow="charity"> <i class="sw" style="background:#73ffd9"></i>Charities</label>
       </div>
       <p class="small" id="glowNote">Buildings glow when a source states that such an occupant is inside: OSM tags, Wikidata classes, the FSA business type or the Canary Wharf Group directory. Registered offices are not counted. Wikidata occupant links have no dates, so some are former tenants.</p>
       <h3>Data on the model</h3>
@@ -1015,7 +1015,7 @@ $('vizOrbit').onchange = () => { VIZ.orbit = $('vizOrbit').checked; };
 if (location.hash === '#music') setTimeout(() => { openPane('paneLayers'); $('music').scrollIntoView(); }, 300);
 
 // glow outlines by occupant category (registry/categories.json via the atlas index: AT.buildings[k].cat)
-const GLOW = { finance: [1, .19, .19], shop: [.2, .84, 1], catering: [1, .63, .25], leisure: [.36, 1, .48], entertainment: [1, .31, .85], bar: [1, .83, 0], education: [1, .95, .42], health: [.97, .97, 1], sport: [.3, .49, 1], arts: [.7, .42, 1] };
+const GLOW = { finance: [1, .19, .19], shop: [.2, .84, 1], catering: [1, .63, .25], leisure: [.36, 1, .48], entertainment: [1, .31, .85], bar: [1, .83, 0], education: [1, .95, .42], health: [.97, .97, 1], sport: [.3, .49, 1], arts: [.7, .42, 1], charity: [.45, 1, .85] };
 const GLOW_ALSO = { bar: ['alcohol'] };   // a chip that also lights a related category (pubs and bars: alcohol shops too)
 let glowOn = [], glowLoop = 0;
 function buildGlow() {
