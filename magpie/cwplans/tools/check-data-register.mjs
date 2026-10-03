@@ -1,7 +1,12 @@
 // Checks magpie/cwplans/data-register.json against the committed files, and writes DATA-REGISTER.md.
 //
 //   node magpie/cwplans/tools/check-data-register.mjs           # check only; exit 1 on a problem
-//   node magpie/cwplans/tools/check-data-register.mjs --write   # check, then write DATA-REGISTER.md
+//   node magpie/cwplans/tools/check-data-register.mjs --write   # check, then write DATA-REGISTER.md and pipeline.jsonld
+//
+// Provenance (pipeline.json, hand-kept): every tool is an activity that used files, local raw data or external
+// sources and generated files. Checked here: each tool exists and is listed (or listed as a library or test); each
+// committed input and output exists; each register entry made by a tool has an activity that generates it; every
+// "after" names an activity. --write exports pipeline.jsonld (W3C PROV-O, DCAT, Dublin Core) for a knowledge graph.
 //
 // Checks: every committed or staged data file in magpie/cwplans has an entry; every entry's file exists;
 // every source and OSM extract named is defined; every page that loads OSM-derived data shows the
@@ -20,7 +25,7 @@ const problems = [];
 const tracked = execFileSync('git', ['ls-files', '--cached', '--', '.'], { cwd: CW, encoding: 'utf8' })
   .split('\n').filter(Boolean);
 const isData = p => !/\.(mjs|py|c|html)$/.test(p) && !p.endsWith('.gitignore') && !p.includes('vendor/') && !p.startsWith('skills/')
-  && p !== 'data-register.json' && p !== 'DATA-REGISTER.md';
+  && !['data-register.json', 'DATA-REGISTER.md', 'pipeline.json', 'pipeline.jsonld'].includes(p);
 const byPath = new Map(reg.files.map(f => [f.path, f]));
 
 for (const p of tracked.filter(isData)) if (!byPath.has(p)) problems.push(`not in the register: ${p}`);
@@ -41,6 +46,25 @@ for (const pg of reg.pages) {
   const html = readFileSync(join(CW, pg.path), 'utf8');
   const osmLoads = pg.loads.filter(l => odblFiles.has(l));
   if (osmLoads.length && !OSM_NOTICE.test(html)) problems.push(`${pg.path} shows OSM data (${osmLoads.join(', ')}) but has no visible © OpenStreetMap contributors notice`);
+}
+
+// ---- provenance: pipeline.json
+const PIPE = join(CW, 'pipeline.json'), pipe = existsSync(PIPE) ? JSON.parse(readFileSync(PIPE, 'utf8')) : null;
+if (pipe) {
+  const acts = pipe.activities, ids = new Set(acts.map(a => a.id)), listed = new Set([...acts.map(a => a.tool), ...(pipe.libraries || []).map(l => l.tool), ...(pipe.tests || []).map(t => t.tool)]);
+  const scripts = tracked.filter(p => /^(tools\/[^/]+|registry\/sources\/[^/]+\/tools\/[^/]+)\.(mjs|py|sh)$/.test(p));
+  for (const t of scripts) if (!listed.has(t)) problems.push(`pipeline.json: tool not listed: ${t}`);
+  const made = new Set();
+  for (const a of acts) {
+    if (!existsSync(join(CW, a.tool))) problems.push(`pipeline.json ${a.id}: no tool ${a.tool}`);
+    for (const d of a.after || []) if (!ids.has(d)) problems.push(`pipeline.json ${a.id}: after names unknown activity ${d}`);
+    for (const u of [...(a.used || []), ...(a.generated || [])]) {
+      if (u.file && !existsSync(join(CW, u.file))) problems.push(`pipeline.json ${a.id}: no committed file ${u.file}`);
+      if (u.source && !reg.sources[u.source]) problems.push(`pipeline.json ${a.id}: unknown source ${u.source}`);
+    }
+    for (const g of a.generated || []) if (g.file) made.add(g.file);
+  }
+  for (const f of reg.files) if (/tools\/[\w-]+\.(mjs|py|sh)/.test(f.produced_by || '') && !made.has(f.path)) problems.push(`pipeline.json: no activity generates ${f.path} (register: produced by ${f.produced_by})`);
 }
 
 const size = p => { const n = statSync(join(CW, p)).size; return n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.ceil(n / 1e3)} kB`; };
@@ -99,6 +123,19 @@ if (process.argv.includes('--write')) {
   ].join('\n');
   writeFileSync(join(CW, 'DATA-REGISTER.md'), out);
   console.log('wrote DATA-REGISTER.md');
+  if (pipe) {   // JSON-LD for a knowledge graph: activities, the files they used and made, and the external sources
+    const BASE = 'https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/', REG = 'https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#';
+    const fileId = p => BASE + p, srcId = k => REG + 'source/' + k, actId = id => REG + 'activity/' + id, localId = p => 'urn:cwplans:local:' + p;
+    const ref = u => u.file ? { '@id': fileId(u.file) } : u.local ? { '@id': localId(u.local) } : { '@id': srcId(u.source), ...(u.endpoint ? { 'dcat:accessURL': u.endpoint } : {}), ...(u.request ? { 'dct:description': u.request } : {}) };
+    const graph = [];
+    for (const a of pipe.activities) graph.push({ '@id': actId(a.id), '@type': 'prov:Activity', 'rdfs:label': a.id, 'dct:description': a.method, 'prov:used': (a.used || []).map(ref), 'prov:generated': (a.generated || []).map(ref),
+      'cwp:tool': { '@id': fileId(a.tool) }, 'cwp:command': a.command, 'cwp:kind': a.kind, 'cwp:rule': a.rules || [], 'cwp:network': !!a.network, 'cwp:deterministic': a.deterministic !== false, 'cwp:after': (a.after || []).map(d => ({ '@id': actId(d) })) });
+    const by = new Map(); for (const a of pipe.activities) for (const g of a.generated || []) if (g.file) by.set(g.file, actId(a.id));
+    for (const f of reg.files) graph.push({ '@id': fileId(f.path), '@type': ['prov:Entity', 'dcat:Distribution'], 'dct:title': f.what, 'prov:wasDerivedFrom': f.sources.map(k => ({ '@id': srcId(k) })), ...(by.has(f.path) ? { 'prov:wasGeneratedBy': { '@id': by.get(f.path) } } : {}), 'cwp:osmUse': f.osm.use, ...(f.review ? { 'cwp:review': f.review } : {}) });
+    for (const [k, v] of Object.entries(reg.sources)) graph.push({ '@id': srcId(k), '@type': ['prov:Entity', 'dcat:Dataset'], 'dct:title': v.name, 'dct:license': v.licence, ...(v.url ? { 'dcat:landingPage': v.url } : {}), ...(v.attribution ? { 'cwp:attribution': v.attribution } : {}) });
+    writeFileSync(join(CW, 'pipeline.jsonld'), JSON.stringify({ '@context': { prov: 'http://www.w3.org/ns/prov#', dct: 'http://purl.org/dc/terms/', dcat: 'http://www.w3.org/ns/dcat#', rdfs: 'http://www.w3.org/2000/01/rdf-schema#', cwp: REG + 'vocab/' }, '@graph': graph }, null, 1));
+    console.log(`wrote pipeline.jsonld: ${pipe.activities.length} activities, ${reg.files.length} files, ${Object.keys(reg.sources).length} sources`);
+  }
 }
 
 if (problems.length) { console.error(problems.map(p => '  ' + p).join('\n')); process.exit(1); }

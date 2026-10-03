@@ -26,3 +26,20 @@ test('unitLabel adds "Unit" only to a bare designator', () => {
   assert.equal(unitLabel(''), null);
   assert.equal(unitLabel(null), null);
 });
+
+import { osmLevels, osmLevelsUnread } from '../osm-values.mjs';
+test('osmLevels reads lists, ranges, fractions and comma lists', () => {
+  assert.deepEqual(osmLevels('0'), [0]);
+  assert.deepEqual(osmLevels('0;1'), [0, 1]);
+  assert.deepEqual(osmLevels('-3;-2'), [-3, -2]);
+  assert.deepEqual(osmLevels('-1,0'), [-1, 0]);
+  assert.deepEqual(osmLevels('0,-1,-2,-3,-4'), [-4, -3, -2, -1, 0]);
+  assert.deepEqual(osmLevels('0-2'), [0, 1, 2]);
+  assert.deepEqual(osmLevels('-2--1'), [-2, -1]);
+  assert.deepEqual(osmLevels('0.5'), [0.5]);
+  assert.deepEqual(osmLevels('0;0.5'), [0, 0.5]);
+  assert.deepEqual(osmLevels('G'), []);
+  assert.deepEqual(osmLevels(undefined), []);
+  assert.deepEqual(osmLevelsUnread('0;G;roof'), ['G', 'roof']);
+  assert.deepEqual(osmLevelsUnread('0;1'), []);
+});

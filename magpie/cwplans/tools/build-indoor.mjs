@@ -18,6 +18,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { TOOLS, bngProjector, get } from './lib.mjs';
 import { ORIGIN } from './fetch-docklands.mjs';
+import { osmLevels } from './osm-values.mjs';
 
 const CW = join(TOOLS, '..');
 const parseOSM = createRequire(import.meta.url)('osm-pbf-parser');
@@ -35,12 +36,7 @@ await new Promise((res, rej) => createReadStream(join(CW, 'data/raw/docklands/gr
 const W = ways.filter(w => w.refs.length > 1 && w.refs.every(r => nodes.has(r)));
 
 // ---- levels
-const parseLevels = s => {
-  if (s == null || s === '') return null;
-  const out = [];
-  for (const part of String(s).split(/[;,]/)) { const m = /^\s*(-?\d+(?:\.\d+)?)\s*(?:-\s*(-?\d+(?:\.\d+)?))?\s*$/.exec(part); if (!m) continue; const a = +m[1]; if (m[2] !== undefined && +m[2] > a) { for (let v = a; v <= +m[2]; v++) out.push(v); } else out.push(a); }
-  return out.length ? [...new Set(out)].sort((a, b) => a - b) : null;
-};
+const parseLevels = s => { const l = osmLevels(s); return l.length ? l : null; };   // tools/osm-values.mjs
 const isConnector = w => w.tags.highway === 'steps' || !!w.tags.conveying || w.tags.highway === 'elevator';
 const wayLevels = w => parseLevels(w.tags.level) || parseLevels(w.tags['level:ref']) || ((w.tags.tunnel === 'yes' || w.tags.indoor === 'yes' || w.tags.location === 'underground') && +w.tags.layer < 0 ? [+w.tags.layer] : [0]);
 const faults = { unresolved_connector_ends: [], level_jumps: [], multi_level_non_connectors: 0, ways_without_level_assumed_0: 0, escalators_without_level: 0, lifts_without_levels: 0 };

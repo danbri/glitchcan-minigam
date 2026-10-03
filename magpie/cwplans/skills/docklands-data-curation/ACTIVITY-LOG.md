@@ -155,9 +155,21 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
   Euronext Liffe, Allianz Trade at One Canada Square; Banc of America Securities at 5 Canada Square), 24 undated.
   Finance glow 18 → 17 buildings. TM-4 34 → 30 issues (6 medium, 24 low). Audit 1,563 records.
 
+## 2026-10-03: provenance manifest; level parsing (VA-2)
+
+- Owner: selected sources will go through a data integration pipeline into a knowledge graph; record sources and
+  transforms with that in mind. Added `pipeline.json` (one PROV activity a tool: used, generated, rules, network,
+  deterministic, after; drafted by a subagent from the code), its checks in `tools/check-data-register.mjs`, and the
+  export `pipeline.jsonld` (PROV-O, DCAT, Dublin Core). Policy line "knowledge_graph" in `data-register.json`.
+- Level parsing: one parser for OSM levels in `tools/osm-values.mjs` (`osmLevels`: ";" and "," lists, ranges
+  expanded, fractions), with fixture tests; used by `build-indoor.mjs`, `build-docklands.mjs` (its own parser kept
+  only the ends of a range) and `build-registry.mjs` (occupants now carry `levels` next to the raw `level`).
+- VA-2 redefined as values our parser cannot read: 100 → 0 (86 ";" lists, 11 comma lists, 2 fractions, 1 range, all
+  read). No other count changed. Audit: 1,463 records (9 high, 758 medium, 696 low).
+
 ## Open, in the order proposed
 
-1. (Done: F2 and F3.) Parse OSM level lists and fractions in the level readers (VA-2: 100 values).
+1. (Done: F2, F3, VA-2.)
 2. F4: mall containers (CWG mall, OSM indoor areas) with levels; place mall occupants by mall.
 3. F7: precision class and relation type on every position; no building placement from postcode centres.
 4. Link records (method, distance, confidence) in the registry.

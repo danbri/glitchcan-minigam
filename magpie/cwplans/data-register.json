@@ -5,6 +5,7 @@
     "personal_org_address_data": "Restrictions suspended for this project during scoping, planning and prototyping (owner, October 2026; CLAUDE.md, Data ethics, exception).",
     "licence_limit": "Never fetch or commit proprietary, restricted-licence or virally licensed data.",
     "crawls": "Website crawls, direct and via the Internet Archive or Common Crawl, are fair use for scoping (owner, 2026-10-03). Each crawl-derived file names its method and date here. Re-check before anything leaves the prototyping phase.",
+    "knowledge_graph": "Owner, 2026-10-03: selected sources will later go through a data integration pipeline into a knowledge graph. So every source keeps a stable key here (with licence, URL and fetch date), every transform is an activity in pipeline.json (what it used, what it generated, its rules), and identifiers are kept as they come from the source (OSM ids, Wikidata QIDs, UPRNs, TOIDs, FHRS ids, company numbers, cwb- ids) so they can become IRIs. tools/check-data-register.mjs --write exports pipeline.jsonld (PROV-O, DCAT, Dublin Core).",
     "odbl": "OpenStreetMap data (ODbL 1.0, share-alike) is allowed for now (owner, 2026-10-03). Its use is to be reviewed in full during planning and prototyping. Every committed file that holds OSM data, or data derived from it, is listed here with osm.use other than 'none'."
   },
   "osm_use_values": {

@@ -142,6 +142,19 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 The fetch and 3D steps are in `magpie/cwplans/docklands/README.md` and `registry/README.md`. Raw extracts
 over a few MB stay local (gitignored); `data-register.json` says what is committed and why.
 
+## Provenance for the knowledge graph
+
+Owner, 2026-10-03: "In future we will create a corpus that brings select sources through a data integration pipeline
+into a Knowledge Graph environment. Bear that in mind as we record sources and transforms." So:
+- Every tool is an activity in `pipeline.json`: what it used (committed files, local raw files, external sources
+  with the endpoint and the request), what it generated, the rules that change data, network or not, deterministic
+  or not, and which activities must run before it. Add or change the entry in the same commit as the tool.
+- Keep source identifiers as they come (OSM type/id, Wikidata QID, UPRN, TOID, FHRS id, company number, cwb- id):
+  they become IRIs. Never replace a source id with a name.
+- Keep dates and qualifiers with values (fetch date, survey date, P580/P582): a graph without time repeats F8.
+- `node magpie/cwplans/tools/check-data-register.mjs --write` checks the manifest against the tools and the register
+  and writes `pipeline.jsonld` (W3C PROV-O, DCAT, Dublin Core).
+
 ## Data register
 
 Every committed data file has an entry in `data-register.json`: sources (keys into its `sources` table with

@@ -11,14 +11,14 @@ The audit does not correct anything. It measures the same 34 checks on every reb
 
 ## Summary (2026-10-03)
 
-1,567 issue records from 34 checks (the five routing-network checks NET-1 to NET-5 report counts only). Severity: 9 high, 752 medium, 806 low. The two pipeline faults (PL-1, PL-2) are fixed and read 0.
+1,463 issue records from 34 checks (the five routing-network checks NET-1 to NET-5 report counts only). Severity: 9 high, 758 medium, 696 low. The two pipeline faults (PL-1, PL-2) are fixed and read 0.
 
 | class | what goes wrong | checks | main numbers |
 |---|---|---|---|
 | identity | one thing has two records, or two things share one record | ID-1 to ID-4 | 3 Wikidata items on 2 outlines each (OSM tags the same item twice); 78 occupants recorded by two sources and not merged, 5 mapped twice in OSM; 20 buildings named after an occupant |
 | position | a point is placed in the wrong building, or its position means something else | SP-1 to SP-6 | 86 of 181 mall or below-ground occupants are placed by a 2D test in an outline that is not their mall (the malls run under several buildings); 412 of 764 FSA positions (54%) are postcode centres or shared points; 161 of 761 named OSM occupants are outside every outline; OSM and FSA put the same branch a median 34 m apart (90th percentile 107 m, maximum 258 m) |
 | attribute conflict | sources give different values for one attribute | AT-1 to AT-5 | 46 of 72 occupants have a CWG mall level that differs from the OSM level, in a pattern that depends on the mall; 9 buildings are newer than the LiDAR; 6 floor counts differ between OSM and Wikidata; the Jubilee line levels we took from Wikipedia and an interview are 4 m (Canada Water) and 6 m (North Greenwich) deeper than TfL's measured rail levels |
-| validity | a value is not in the form the tools expect | VA-1 to VA-4 | 100 of 881 OSM level values are lists or fractions ("0;1", "-3;-2", "0.5"); 20 features carry a terminated postcode |
+| validity | a value is not in the form the tools expect | VA-1 to VA-4 | 100 of 881 OSM level values are lists, ranges or fractions ("0;1", "0-2", "0.5"); since 2026-10-03 one parser reads all of them (VA-2: 0 unreadable); 20 features carry a terminated postcode |
 | pipeline | our own tools damage the data | PL-1, PL-2 | fixed 2026-10-03, now 0. Before: 57 OSM features with several postcodes in one tag lost them from their registry record (our tools read the list as one invalid postcode); 52 branch addresses read "Unit Unit". The fix brought back 96 postcode links and 3,432 company-to-building matches |
 | currency | a value was true once | TM-1 to TM-4 | 1,902 of 16,619 companies at Canary Wharf postcodes (11%) are not active; the CWG directory copies are a median 322 days old; of 34 Wikidata occupant links 4 are current, 6 have ended (the registry still lists them) and 24 have no date |
 | coverage | a source does not see everything | CV-1, CV-2 | only 28% of buildings have a name and 8% a Wikidata item; 205 of 374 CWG directory entries are in no other source; of the 271 branches, OSM sees 214 (79%), CWG 165 (61%) and the FSA 120 (44%, food only), and 57 are not in OSM |
@@ -67,7 +67,7 @@ The classes above suggest five layers. Each layer is rebuilt from the one below;
 
 ## Next steps, in order
 
-1. Done 2026-10-03: the two pipeline faults are fixed at the parser level (`tools/osm-values.mjs`, fixture tests); PL-1 and PL-2 read 0. Still to do in the same layer: parse level lists and fractions (VA-2).
+1. Done 2026-10-03: the two pipeline faults are fixed at the parser level (`tools/osm-values.mjs`, fixture tests); PL-1 and PL-2 read 0. Level lists, ranges and fractions are parsed by the same module (VA-2: 0 unreadable).
 2. Add a precision class and relation type to every position in the registry and the branch table; stop using postcode-centre FSA points for building placement.
 3. Store link records (method, distance, confidence) in the registry instead of bare results.
 4. Measure the per-mall level offset table from AT-3 and use it for the CWG levels.

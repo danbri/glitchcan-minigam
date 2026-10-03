@@ -12,7 +12,7 @@ import { join } from 'path';
 import { TOOLS, RAW, bngProjector, polyArea, pointIn, joinRings } from './lib.mjs';
 import { ORIGIN } from './fetch-docklands.mjs';
 import { CW_BOX } from './registry-osm.mjs';
-import { osmList } from './osm-values.mjs';
+import { osmList, osmLevels } from './osm-values.mjs';
 
 const OUT = join(TOOLS, '..', 'registry'), R = join(RAW, 'registry');
 mkdirSync(OUT, { recursive: true });
@@ -99,7 +99,7 @@ for (const f of osm.features) {
   const r = rec.get(h.b.id);
   // public art, information boards and the like are features of the building, not occupants
   if (/^tourism: (artwork|information|viewpoint|attraction)$/.test(role)) { r.features.push({ name: t.name, kind: role.replace('tourism: ', ''), osm: `${f.type}/${f.id}` }); continue; }
-  r.occupants.push({ name: t.name, role, source: 'osm', osm: `${f.type}/${f.id}`, placed: h.how, ...(t.level ? { level: t.level } : {}), ...(t.brand ? { brand: t.brand } : {}), ...(t['brand:wikidata'] ? { brand_wikidata: t['brand:wikidata'] } : {}), ...(t.website ? { website: t.website } : {}), ...(t.opening_date ? { opening_date: t.opening_date } : {}) });
+  r.occupants.push({ name: t.name, role, source: 'osm', osm: `${f.type}/${f.id}`, placed: h.how, ...(t.level ? { level: t.level, levels: osmLevels(t.level) } : {}), ...(t.brand ? { brand: t.brand } : {}), ...(t['brand:wikidata'] ? { brand_wikidata: t['brand:wikidata'] } : {}), ...(t.website ? { website: t.website } : {}), ...(t.opening_date ? { opening_date: t.opening_date } : {}) });
   for (const pc of osmList(t['addr:postcode'])) r.postcodes.add(normPc(pc));
 }
 

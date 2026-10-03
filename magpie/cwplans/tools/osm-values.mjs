@@ -13,3 +13,15 @@ export function unitLabel(u) {
   const s = String(u ?? '').replace(/\s+/g, ' ').trim(); if (!s) return null;
   return DESIGNATOR.test(s) ? `Unit ${s}` : s;
 }
+
+// level="0;1", "-1,0" (comma: a common mapping error with clear intent), "0-2" (a range: every whole level from 0 to 2),
+// "0.5" (a mezzanine). Returns the sorted distinct levels; tokens that are not numbers ("G", "roof") are left out and
+// listed by osmLevelsUnread, so the audit can count them (VA-2).
+const LEVEL_TOKEN = /^\s*(-?\d+(?:\.\d+)?)\s*(?:-\s*(-?\d+(?:\.\d+)?))?\s*$/;
+export function osmLevels(v) {
+  if (v == null || v === '') return [];
+  const out = [];
+  for (const part of String(v).split(/[;,]/)) { const m = LEVEL_TOKEN.exec(part); if (!m) continue; const a = +m[1]; if (m[2] !== undefined && +m[2] > a) { for (let x = a; x <= +m[2]; x++) out.push(x); if (!Number.isInteger(+m[2])) out.push(+m[2]); } else out.push(a); }
+  return [...new Set(out)].sort((a, b) => a - b);
+}
+export const osmLevelsUnread = v => v == null ? [] : String(v).split(/[;,]/).map(s => s.trim()).filter(s => s && !LEVEL_TOKEN.test(s));

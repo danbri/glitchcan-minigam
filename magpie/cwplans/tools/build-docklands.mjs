@@ -13,6 +13,7 @@ import { gunzipSync } from 'zlib';
 import { join } from 'path';
 import { TOOLS, bngProjector, mosaic, r1, pct, min, polyArea, clipRing, cellsIn, poly, enc, joinRings, simplify, applyControls } from './lib.mjs';
 import { DIR, BOX_BNG, ORIGIN, lidarTiles, tileFile } from './fetch-docklands.mjs';
+import { osmLevels } from './osm-values.mjs';
 
 const OUTDIR = join(TOOLS, '..', 'docklands', 'data');
 const { E0, N0 } = ORIGIN;
@@ -49,7 +50,7 @@ const xz = id => { let p = xzCache.get(id); if (!p) { const c = osm.nodes[id]; i
 const tunnelish = t => t.tunnel && t.tunnel !== 'no';
 const bridgeish = t => t.bridge && t.bridge !== 'no';
 const num = v => { const m = String(v ?? '').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : NaN; };
-const levelsOf = v => String(v ?? '').split(/[;,]/).map(s => s.trim()).flatMap(s => { const m = s.match(/^(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)$/); return m ? [+m[1], +m[2]] : [parseFloat(s)]; }).filter(isFinite);
+const levelsOf = osmLevels;   // tools/osm-values.mjs: lists, ranges (expanded) and fractions
 // rings of a way or a multipolygon (all outers; inner rings attached to the outer that contains them)
 function polysOf(el) {
   if (el.type === 'way' || el.refs) return el.refs[0] === el.refs.at(-1) ? [[el.refs]] : [];

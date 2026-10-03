@@ -14,6 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 
 import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { TOOLS } from './lib.mjs';
+import { osmLevelsUnread } from './osm-values.mjs';
 
 const CW = join(TOOLS, '..');
 const json = p => JSON.parse(p.endsWith('.gz') ? gunzipSync(readFileSync(join(CW, p))) : readFileSync(join(CW, p), 'utf8'));
@@ -241,11 +242,13 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
   c.population = pop; ex(c, rows);
 }
 {
-  const c = { id: 'VA-2', cls: 'validity', dim: 'validity', title: 'Level values that are not a single whole number', sources: ['osm'],
-    method: 'OSM level tags in the box such as "0;1", "-1.5", "G", "1-2".', rule: 'Parse levels into a range or list with the raw value kept; a ranged occupant spans floors, a fractional one is a mezzanine.' };
-  const add = check(c), vals = {}; let pop = 0;
-  for (const f of OSM.features) { const l = f.tags?.level; if (l == null) continue; pop++; if (levelNum(l) == null) { vals[l] = (vals[l] || 0) + 1; add({ ent: 'osm', id: `${f.type}/${f.id}`, sev: 'low', note: `level="${l}"${f.tags.name ? ' on ' + f.tags.name : ''}` }); } }
-  c.population = pop; c.values = vals;
+  const c = { id: 'VA-2', cls: 'validity', dim: 'validity', title: 'Level values our parser cannot read', sources: ['osm'],
+    method: 'OSM level tags in the box, read by tools/osm-values.mjs osmLevels (lists with ";" or ",", ranges such as "0-2", fractions such as "0.5"). Issues: tokens it cannot read ("G", "roof"). The breakdown counts the readable values that are not a single whole number.', rule: 'Parse levels into a list with the raw value kept; a ranged occupant spans floors, a fractional one is a mezzanine; an unreadable token needs a per-building table, not a guess.' };
+  const add = check(c), vals = {}, br = { 'list': 0, 'range': 0, 'fraction': 0, 'comma list (mapping error, read)': 0 }; let pop = 0;
+  for (const f of OSM.features) { const l = f.tags?.level; if (l == null) continue; pop++;
+    if (levelNum(l) == null) { if (/,/.test(l)) br['comma list (mapping error, read)']++; else if (/;/.test(l)) br.list++; else if (/\d-/.test(l)) br.range++; else if (/\./.test(l)) br.fraction++; }
+    const bad = osmLevelsUnread(l); if (bad.length) { vals[l] = (vals[l] || 0) + 1; add({ ent: 'osm', id: `${f.type}/${f.id}`, sev: 'low', note: `level="${l}": cannot read ${bad.join(', ')}${f.tags.name ? ' on ' + f.tags.name : ''}` }); } }
+  c.population = pop; c.values = vals; c.breakdown = br;
 }
 {
   const c = { id: 'VA-3', cls: 'validity', dim: 'validity', title: 'Postcodes that are malformed, never allocated or terminated', sources: ['osm', 'fsa', 'wikidata', 'onspd'],
