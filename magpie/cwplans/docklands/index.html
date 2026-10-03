@@ -31,6 +31,9 @@ button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
 #views button[aria-pressed=true]{background:#3d4a57}
 #hud{align-self:flex-start;background:#111c;padding:5px 9px;border-radius:8px;font-size:12px;max-width:100%;pointer-events:none;transition:opacity .6s}
 /* depth gauge: drag to cut away everything above a level */
+#digBtn{position:absolute;left:8px;top:150px;font-size:12px;padding:6px 10px;border-radius:16px;background:#15191de0}
+#digBtn[aria-pressed=true]{background:#3d4a57}
+#gauge[hidden]{display:none}
 #gauge{position:absolute;left:6px;top:200px;bottom:calc(var(--tabs) + var(--safe) + 70px);width:46px;touch-action:none;user-select:none}
 #gauge .track{position:absolute;left:20px;top:0;bottom:0;width:6px;border-radius:3px;background:linear-gradient(#5d7a8f,#5d7a8f 10%,#8a6a4a 48%,#4a3426)}
 #gauge .mk{position:absolute;left:28px;font-size:10px;color:var(--muted);transform:translateY(-50%);white-space:nowrap;text-shadow:0 0 3px #000}
@@ -83,7 +86,7 @@ select,input[list]{font:inherit;font-size:16px;background:#293038;color:var(--fg
 table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
 .tw{overflow-x:auto;max-width:100%}
 details{margin-top:10px}summary{cursor:pointer}
-body.capture #top,body.capture #gauge,body.capture #tabs,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine{display:none!important}
+body.capture #top,body.capture #gauge,body.capture #digBtn,body.capture #tabs,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine{display:none!important}
 </style>
 </head>
 <body>
@@ -99,7 +102,8 @@ body.capture #top,body.capture #gauge,body.capture #tabs,body.capture #sheet,bod
     </div>
     <div id="hud">Loading 1.9 MB of data…</div>
   </div>
-  <div id="gauge" role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
+  <button type="button" id="digBtn" aria-pressed="false" aria-controls="gauge">Below ground</button>
+  <div id="gauge" hidden role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
   <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span></div>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="press" role="menu"></div>
@@ -157,9 +161,9 @@ body.capture #top,body.capture #gauge,body.capture #tabs,body.capture #sheet,bod
       <p class="small" id="skyNote">Heights of the buildings on the estate and 300 m round it in each Environment Agency LiDAR survey (1999 to 2022). Today's OSM outlines are used, so buildings demolished before today do not appear.</p>
       <h3>Shape</h3>
       <div class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></div>
-      <div class="ctl"><label for="vz">Height ×</label><input id="vz" type="range" min="1" max="5" step="0.5" value="1"><output id="vzO">1×</output></div>
       <details><summary>Model settings (assumptions)</summary>
-        <div class="ctl"><label for="storey">Storey height for OSM levels and basements</label><input id="storey" type="range" min="2.5" max="6" step="0.1" value="4"><output id="storeyO">4 m</output></div>
+        <div class="ctl"><label for="vz">Vertical exaggeration (for the terrain; buildings are measured)</label><input id="vz" type="range" min="1" max="5" step="0.5" value="1"><output id="vzO">1×</output></div>
+        <div class="ctl"><label for="storey">Storey height for indoor levels and basements (LiDAR sees roofs, not floors)</label><input id="storey" type="range" min="2.5" max="6" step="0.1" value="4"><output id="storeyO">4 m</output></div>
         <div class="ctl"><label for="dmax">Tunnel dip below the line between measured points</label><input id="dmax" type="range" min="0" max="30" step="0.5" value="10"><output id="dmaxO">10 m</output></div>
         <div class="ctl"><label for="grad">Max gradient 1 in</label><input id="grad" type="range" min="20" max="100" step="5" value="40"><output id="gradO">40</output></div>
         <div class="ctl"><label for="ddeep">Depth of tunnels with no measured point</label><input id="ddeep" type="range" min="5" max="45" step="1" value="25"><output id="ddeepO">25 m</output></div>
@@ -369,12 +373,17 @@ const heightOf = (b, i) => { if (!SKY || skyIdx < 0) return b.h; const v = SKY.b
 const notFlown = i => SKY && skyIdx >= 0 && SKY.buildings[i] && SKY.buildings[i][skyIdx] == null;   // that survey did not cover it: today's height, slate colour
 function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, notFlown(i) ? [.36, .42, .52] : buildingColour(b, i), !!b.mh); }); L.bld = M.upload(); }
 buildBld();
-{ const M = new Mesh(), R = new Mesh();
+// photo style (drone frames for splat training): materials instead of the map colour codes, no diagram layers
+let PHOTO = false;
+const PHOTO_BLD = [[.74, .75, .76], [.62, .66, .70], [.80, .78, .74], [.55, .60, .66], [.70, .68, .64], [.66, .70, .72]];
+const photoColour = (b, i) => { const h = ((i * 2654435761) >>> 0) / 4294967296, c = PHOTO_BLD[Math.floor(h * PHOTO_BLD.length)], v = .92 + .16 * (((i * 40503) >>> 0) % 100) / 100; return c.map(x => Math.min(1, x * v)); };
+function buildLines() { if (L.railOpen) { L.railOpen.free(); L.roads.free(); } const M = new Mesh(), R = new Mesh();
   for (const l of A.lines) if (!l.tunnel) {
-    const q = dec(l.q, 3), col = lineColour(l), road = l.k === 'road', w = road ? [0, 10, 7, 4][l.c] : 3.5;
+    const q = dec(l.q, 3), road = l.k === 'road', col = PHOTO ? (road ? [.30, .31, .32] : [.60, .60, .58]) : lineColour(l), w = road ? [0, 10, 7, 4][l.c] : 3.5;
     for (let i = 3; i < q.length; i += 3) beam(road ? R : M, [q[i - 3], q[i - 1] + (road ? .3 : .8), q[i - 2]], [q[i], q[i + 2] + (road ? .3 : .8), q[i + 1]], w, road ? .4 : 1.4, col);
   }
   L.railOpen = M.upload(); L.roads = R.upload(); }
+buildLines();
 // floor plates inside buildings with a known floor count (Canary Wharf box): evenly spaced from base to roof
 // drawn as outline rings so the floors read through the ghosted walls
 { const M = new Mesh(), FC = [.98, .85, .45];
@@ -429,7 +438,7 @@ const VIEWS = {
 };
 const viewBtns = [...document.querySelectorAll('[data-view]')];
 function setView(k) {
-  const v = VIEWS[k]; Object.assign(cam, v); inp.cut.value = v.cut; $('bmode').value = v.b; outs(); if (typeof syncGauge === 'function') { syncGauge(); syncBmode(); }
+  const v = VIEWS[k]; Object.assign(cam, v); inp.cut.value = v.cut; $('bmode').value = v.b; outs(); if (typeof syncGauge === 'function') { syncGauge(); syncBmode(); $('gauge').hidden = v.cut >= 250; $('digBtn').setAttribute('aria-pressed', String(v.cut < 250)); }
   viewBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === k))); draw();
 }
 viewBtns.forEach(b => b.onclick = () => setView(b.dataset.view));
@@ -515,7 +524,7 @@ function render() {
     gl.colorMask(false, false, false, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 8);
     if (bm !== 'off') drawFacades(L.bld, 1, P); drawMesh(L.terrain, 1); gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
   }
-  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn && !sOnly) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }
+  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn && !sOnly && !PHOTO) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }   // photo style: the water is in the ground image
   if ($('showUnder').checked) drawMesh(L.under, 1);
   if ($('showRoads').checked) drawMesh(L.roads, 1);
   if ($('showFloors').checked) drawMesh(L.floors, 1);
@@ -1045,6 +1054,8 @@ function gaugeTo(e) { const r = gauge.getBoundingClientRect(), t = Math.max(0, M
 gauge.addEventListener('pointerdown', e => { gauge.setPointerCapture(e.pointerId); gaugeTo(e); });
 gauge.addEventListener('pointermove', e => { if (gauge.hasPointerCapture(e.pointerId)) gaugeTo(e); });
 gauge.addEventListener('keydown', e => { const d = { ArrowUp: 2, ArrowDown: -2, PageUp: 10, PageDown: -10 }[e.key]; if (d == null) return; e.preventDefault(); let v = +inp.cut.value; v = v >= 250 ? (d < 0 ? G_TOP : 250) : v + d; inp.cut.value = v > G_TOP ? 250 : Math.max(G_BOT, v); outs(); syncGauge(); draw(); });
+function showGauge(on) { $('gauge').hidden = !on; $('digBtn').setAttribute('aria-pressed', String(on)); if (!on && +inp.cut.value < 250) { inp.cut.value = 250; outs(); syncGauge(); draw(); } }
+$('digBtn').onclick = () => showGauge($('gauge').hidden);
 // camera flights
 function flyTo(x, z, dist, ms = 700) {
   const s0 = { tx: cam.tx, tz: cam.tz, dist: cam.dist }, t0 = performance.now(); unview();
@@ -1099,7 +1110,7 @@ function vertexAt(cx, cy) {
 // a place from the search list: fly there, cut the model just above it when it is below ground, offer route buttons
 function showPlace(p) {
   const st = par().storey, y = vY(p.v, st), g = groundAt(vX(p.v), vZ(p.v));
-  if (y < g - 3) { inp.cut.value = Math.round(y + st + 2); outs(); syncGauge(); }
+  if (y < g - 3) { inp.cut.value = Math.round(y + st + 2); outs(); syncGauge(); showGauge(true); }
   flyTo(vX(p.v), vZ(p.v), 320);
   info.innerHTML = `<b>${esc(p.name)}</b> <span class="small">${esc(p.kind)}, level ${p.lv}${p.osm ? ` · <a href="https://www.openstreetmap.org/${esc(p.osm)}">OSM</a>` : ''}</span>${p.same ? '' : `<div class="small warn">No mapped walkway on its level; routes use the nearest mapped point, ${p.d} m away.</div>`}${y < g - 3 ? `<div class="small">Below ground: the model is cut away above ${inp.cut.value} m OD to show it. Drag the gauge on the left to change.</div>` : ''}
     <div class="acts"><button type="button" data-end="rFrom">Route from here</button><button type="button" data-end="rTo">Route to here</button></div>`;
@@ -1130,7 +1141,12 @@ addEventListener('resize', () => { if (sheetH) setSheet(Math.min(sheetH, innerHe
 syncGauge();
 
 // capture mode (?capture or __docklands.captureMode(true)): no overlays, no labels; for drone frames and splat training
-function captureMode(on) { document.body.classList.toggle('capture', on); if (on) { $('showLabels').checked = false; closeSheet(); toast(''); } draw(); }
+function captureMode(on) {
+  document.body.classList.toggle('capture', on); if (on) { $('showLabels').checked = false; closeSheet(); toast(''); }
+  // photo style: real-looking materials, no map colour codes, no flood walls, riverbed, underground or windows grid moire
+  PHOTO = on; for (const id of ['showUnder', 'showWalls', 'showBed', 'showFloors']) $(id).checked = on ? false : id !== 'showFloors';
+  $('colourBy').value = 'source'; buildingColour = on ? photoColour : (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld; buildBld(); buildLines(); draw();
+}
 if (/[?&]capture\b/.test(location.search)) captureMode(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
