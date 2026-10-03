@@ -35,7 +35,7 @@ details{margin-top:10px}summary{cursor:pointer}
 <div id="wrap"><canvas id="c" role="img" aria-label="3D model of London Docklands from London Bridge to Cody Dock, with Canary Wharf above and below ground, from OpenStreetMap, Environment Agency LiDAR and Wikidata"></canvas><div id="labels"></div><div class="hud" id="hud">Loading 1.9 MB of data…</div></div>
 <div class="panel">
   <b>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</b>
-  <span class="small">· <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · map data <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA LiDAR and flood defences (OGL), UKHO (OGL), Wikidata (CC0) · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data licences</a></span>
+  <span class="small">· <a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · map data <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA LiDAR and flood defences (OGL), UKHO (OGL), Wikidata (CC0) · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data licences</a></span>
   <div class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). "Cut away above" removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height below. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</div>
   <div class="row">
     <button type="button" data-view="area" aria-pressed="false">Whole area</button>
@@ -431,6 +431,9 @@ $('liveTide').onchange = () => { const keep = tidalLevel; if (!$('liveTide').che
 $('liveCams').onchange = draw;
 window.__docklands = { cam, draw, setView, L, labels };
 outs(); setView('cw');
+// #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)
+const atM = /(?:^#|&)at=(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?/.exec(location.hash);
+if (atM) { Object.assign(cam, { tx: +atM[1], tz: +atM[2], ty: 0, dist: +(atM[3] || 600) }); unview(); draw(); }
 hud.textContent = 'Drag: rotate · right-drag / shift-drag / two fingers: pan · wheel / pinch: zoom · tap a label';
 })();
 </script>

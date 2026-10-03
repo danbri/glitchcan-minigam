@@ -104,6 +104,7 @@
     { "path": "registry/sources/pla/ukho_thames_hms_belfast_berth.geojson", "what": "HMS Belfast berth survey", "sources": ["ukho"], "osm": { "use": "none" }, "produced_by": "registry/sources/pla/fetch_wet.py" },
     { "path": "registry/sources/pla/ukho_wrecks_obstructions_areas.geojson", "what": "UKHO wrecks and obstructions, areas", "sources": ["ukho"], "osm": { "use": "none" }, "produced_by": "registry/sources/pla/fetch_wet.py" },
     { "path": "registry/sources/pla/ukho_wrecks_obstructions_points.geojson", "what": "UKHO wrecks and obstructions, points", "sources": ["ukho"], "osm": { "use": "none" }, "produced_by": "registry/sources/pla/fetch_wet.py" },
+    { "path": "atlas/data/atlas.json", "what": "the atlas index: building outlines and measures, postcodes with company and sales totals, heritage places, riverbed soundings in m OD, wrecks, flood defences, Wikidata items, published levels", "sources": ["osm", "ea-lidar", "wikidata", "onspd", "companies-house", "hmlr-price-paid", "historic-england", "ads-ariadne", "ukho", "pla-tide-booklet", "ea-defences", "lbsm", "web-quotes"], "osm": { "use": "derived", "extract": "osmfr-greater-london", "what": "building outlines (microdegrees), names, levels; OSM feature counts and streets per postcode; model heights matched to outlines" }, "produced_by": "tools/build-atlas.mjs", "shown_on": ["atlas/index.html"] },
     { "path": "feeds/feeds.json", "what": "200 checked data sources and APIs (catalogue)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research, checked by feeds/check-feeds.mjs" },
     { "path": "feeds/events.json", "what": "124 event, calendar, news and openings sources (catalogue)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research, checked by feeds/check-events.mjs" },
     { "path": "feeds/README.md", "what": "the feeds catalogue as text", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "generated and by hand" },
@@ -119,6 +120,7 @@
   ],
   "pages": [
     { "path": "index.html", "loads": ["data/cwplans-data.js"] },
+    { "path": "atlas/index.html", "loads": ["atlas/data/atlas.json", "registry/buildings.json", "postcodes/postcodes.json"] },
     { "path": "docklands/index.html", "loads": ["docklands/data/area.js", "docklands/data/under.js"] },
     { "path": "postcodes/index.html", "loads": ["postcodes/postcodes.json"] },
     { "path": "registry/index.html", "loads": ["registry/buildings.json"] },

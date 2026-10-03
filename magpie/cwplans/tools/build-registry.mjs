@@ -116,8 +116,12 @@ for (const e of fhrs.establishments) {
 const items = new Map(wd.items.map(i => [i.id, i]));
 const wkt = s => s.match(/-?[\d.]+/g).map(Number);
 const BUILDINGISH = /building|skyscraper|tower|shopping|station|hotel|structure|block|plaza|mall|museum|hall|centre|center/i;
+// an item that an OSM outline already names in its wikidata tag is not attached to a second outline by coordinate
+// (One Canada Square's coordinate falls in the Cabot Place mall outline below the tower)
+const taggedQ = new Set([...rec.values()].map(r => r.wikidata).filter(Boolean));
 for (const it of wd.items) {
   const [lon, lat] = wkt(it.coord); if (!inBox(lon, lat)) continue;
+  if (taggedQ.has(it.id)) continue;
   const h = buildingAt(lon, lat, 5); if (!h) continue;
   const r = rec.get(h.b.id), cls = (it.props['instance of'] || []).map(c => c.label).join(', ');
   if (!r.wikidata && BUILDINGISH.test(cls) && !wd.items.some(o => o !== it && o.id !== it.id && BUILDINGISH.test((o.props['instance of'] || []).map(c => c.label).join(' ')) && (() => { const [a, b] = wkt(o.coord); return inside(h.b, a, b); })())) r.wikidata = it.id;

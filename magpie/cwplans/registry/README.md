@@ -34,7 +34,7 @@ Rebuild:
 ## How things are joined
 
 - **Building name**: the Wikidata label where the building has a Wikidata item, else the OSM name. OSM often names a tower after its main occupant ("HSBC UK" for 8 Canada Square, "Barclays" for One Churchill Place). The OSM name is kept as `osm_name`.
-- **Wikidata item**: the OSM `wikidata` tag. Otherwise the one building-type Wikidata item (building, skyscraper, tower, station, hotel, shopping centre and similar) whose coordinate is inside the outline (93 buildings).
+- **Wikidata item**: the OSM `wikidata` tag. Otherwise the one building-type Wikidata item (building, skyscraper, tower, station, hotel, shopping centre and similar) whose coordinate is inside the outline. An item that an OSM outline already names in its `wikidata` tag is not attached to a second outline: One Canada Square's coordinate falls in the Cabot Place mall outline below the tower, and until 2026-10-03 both outlines carried its record.
 - **Occupants**, each with a role and a source:
   - OSM shops, offices, amenities, leisure, healthcare and transport features that have a name: placed in the outline that contains them, or in the nearest outline within 12 m (entrances on the wall). Level from OSM `level`, brand from `brand` and `brand:wikidata`. Public artworks and information boards are listed as features, not occupants.
   - FSA food premises (Tower Hamlets open-data file) with a position: placed the same way, with rating and rating date. Premises with no position, often new registrations, are listed by postcode under "Occupants listed by postcode only" (88). Home-based businesses, whose address the FSA withholds, are not kept.
@@ -43,9 +43,9 @@ Rebuild:
 - **Postcodes**: OSM `addr:postcode` on the building and its occupants, FSA postcodes of the premises placed in it, and Wikidata postal code. Each is checked against the postcode list (`../postcodes/`) for status and tier.
 - **Look-up links per postcode**: Companies House advanced search by registered-office postcode (company-level results) and the HM Land Registry price-paid search. These are links to the official services. Their results are not copied here.
 
-## Counts (2026-10-03)
+## Counts (2026-10-03, after the Wikidata join fix)
 
-1,129 buildings: 316 named, 93 with Wikidata, 249 with occupants (1,126 occupant records), 10 with an owner. Of the OSM occupants, 650 were placed in a building and 121 were not inside or near any outline. 444 FSA premises were placed by position.
+1,129 buildings: 315 named, 89 with Wikidata, 252 with occupants (1,161 occupant records), 10 with an owner. Of the OSM occupants, 650 were placed in a building and 121 were not inside or near any outline. 444 FSA premises were placed by position.
 
 ## Company and property joins (added 2026-10-03)
 
@@ -56,8 +56,8 @@ Sources and access are described in `sources/SOURCES-companies-property.md`. Rul
 | OS Open UPRN + Open Linked Identifiers (OGL) | UPRN points inside the building outline; their TOIDs and USRNs | 27,502 UPRNs placed; TOIDs and streets per building |
 | GLA London Building Stock Model 2 (OGL) | homes on the building's TOIDs: count, property type, construction age band, EPC band totals | 600 buildings; "fewer than 5" where small |
 | HM Land Registry INSPIRE Index Polygons | freehold index polygon(s) at the building's centre; INSPIRE id, which is not a title number | 1,306 links |
-| Companies House Basic Company Data | registered office postcode in the building's postcodes, and the address contains the building's name or number and street | 5,345 of the 16,619 companies at Canary Wharf postcodes |
-| HM Land Registry Price Paid (OGL) | sales whose number and street match the building: homes sold, sales, first and last date, median price, new builds | 274 buildings |
+| Companies House Basic Company Data | registered office postcode in the building's postcodes, and the address contains the building's name or number and street | 6,355 of the 16,619 companies at Canary Wharf postcodes |
+| HM Land Registry Price Paid (OGL) | sales whose number and street match the building: homes sold, sales, first and last date, median price, new builds | 275 buildings |
 
 - In a residential building (with homes, or tagged as apartments or houses), only the number of registered companies is shown: a registered office there is often someone's flat. One building has 486 companies registered at one flat.
 - A registered office is not proof that a company works in the building. Formation agents, accountants and insolvency firms hold many.
