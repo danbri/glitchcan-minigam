@@ -22,6 +22,16 @@ under ODbL allowed and tracked; website crawls allowed for scoping and recorded)
 that changes data, tools, checks or policy: what changed, the commit, the measured effect (audit counts
 before and after), and what is still open.
 
+## Ship at once
+
+Owner, 2026-10-03: "shipping immediately to live site is fine and urgent. Don't batch things up, as live site is my only
+way to see progress." Commit and push each working change to master as soon as it passes its check (syntax, a headless
+load with no page errors), then confirm the live file matches the commit
+(https://danbri.github.io/glitchcan-minigam/ + path). Do not hold finished work back to bundle it with other work.
+Lesson from the same day: a comment inserted in the middle of a line commented out `gl.colorMask(true)` and left the
+3D page black after "Splats only"; render() now resets that state every frame. After editing a long one-line
+statement, re-read the whole line.
+
 ## Catalogue first
 
 `tools/audit-quality.mjs` runs the same checks on every rebuild (34 in October 2026, eight classes:
