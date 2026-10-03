@@ -45,13 +45,34 @@ Rebuild:
 
 1,129 buildings: 316 named, 93 with Wikidata, 249 with occupants (1,126 occupant records), 10 with an owner. Of the OSM occupants, 650 were placed in a building and 121 were not inside or near any outline. 444 FSA premises were placed by position.
 
+## Company and property joins (added 2026-10-03)
+
+Sources and access are described in `sources/SOURCES-companies-property.md`. Rule for everything below: company-level and property-level data only. Figures about homes are shown only where at least 5 homes are counted, so no figure describes a single home.
+
+| join | how | result |
+|---|---|---|
+| OS Open UPRN + Open Linked Identifiers (OGL) | UPRN points inside the building outline; their TOIDs and USRNs | 27,502 UPRNs placed; TOIDs and streets per building |
+| GLA London Building Stock Model 2 (OGL) | homes on the building's TOIDs: count, property type, construction age band, EPC band totals | 600 buildings; "fewer than 5" where small |
+| HM Land Registry INSPIRE Index Polygons | freehold index polygon(s) at the building's centre; INSPIRE id, which is not a title number | 1,306 links |
+| Companies House Basic Company Data | registered office postcode in the building's postcodes, and the address contains the building's name or number and street | 5,345 of the 16,619 companies at Canary Wharf postcodes |
+| HM Land Registry Price Paid (OGL) | sales whose number and street match the building: homes sold, sales, first and last date, median price, new builds | 274 buildings |
+
+- In a residential building (with homes, or tagged as apartments or houses), only the number of registered companies is shown: a registered office there is often someone's flat. One building has 486 companies registered at one flat.
+- A registered office is not proof that a company works in the building. Formation agents, accountants and insolvency firms hold many.
+- `companies-by-postcode.json` lists the companies per postcode: number, name, status, category, incorporation date and SIC codes. It has no address lines; the Companies House page for each number has the public record.
+- `homes-by-postcode.json` gives price-paid totals per postcode, only where at least 5 homes have sold.
+
+**Not published:**
+- The per-sale price-paid records with flat numbers, and the agent's per-postcode summaries that do not apply the minimum of 5. They stay in `sources/` and are not committed.
+- The Companies House rows with address lines: not committed.
+- The VOA non-domestic rating list (business rates, 4,546 rated properties at Canary Wharf postcodes, rateable value £457.1m). It is under a restricted VOA licence, not OGL, so even the postcode totals are not committed until the owner decides.
+
+**Needs an account:** HM Land Registry CCOD and OCOD (UK and overseas companies that own property): a free account, licence agreement and API key. Without them, the API returns 403. EPC data: GOV.UK One Login.
+
 ## Not yet joined
 
 Background work on 2026-10-03 is collecting:
-- Companies House basic company data (registered offices by postcode, company-level only)
-- HM Land Registry price paid and INSPIRE title polygons
-- OS Open UPRN, with the UPRN–TOID and UPRN–USRN lookups
 - the UK chain brands (name-suggestion-index) with their Canary Wharf branches
 - Port of London Authority and museum records
 
-These will be joined to the building ids when they are checked. Canary Wharf Group's own pages (canarywharf.com) could not be read: the site returns a bot-challenge page to scripts.
+Canary Wharf Group's own pages (canarywharf.com) could not be read: the site returns a bot-challenge page to scripts.

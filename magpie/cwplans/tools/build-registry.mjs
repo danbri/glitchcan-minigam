@@ -136,6 +136,80 @@ for (const r of recByQ.values()) {
 }
 for (const h of wd.hq) { const r = recByQ.get(h.place); if (r) r.occupants.push({ name: h.label, role: 'headquarters (Wikidata P159)', source: 'wikidata', wikidata: h.org, ...(h.website ? { website: h.website } : {}) }); }
 
+// ---- joins with the company and property sources (registry/sources/, see SOURCES-companies-property.md)
+// Privacy: company-level and property-level only; figures about homes are given only where there are at least
+// K homes, so no figure describes a single home; company addresses are not copied (the Companies House link has them).
+const K = 5, SRC = join(OUT, 'sources'), has = f => existsSync(join(SRC, f));
+const readJ = f => JSON.parse(readFileSync(join(SRC, f), 'utf8'));
+const recs = [...rec.values()], outlineOf = new Map(outlines.map(b => [b.id, b]));
+const NUM = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5, SIX: 6, SEVEN: 7, EIGHT: 8, NINE: 9, TEN: 10, TWENTY: 20, 'TWENTY FIVE': 25, THIRTY: 30, FORTY: 40, FIFTY: 50 };
+const normAddr = s => String(s || '').toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ').replace(/\b(TWENTY FIVE|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|TWENTY|THIRTY|FORTY|FIFTY)\b/g, m => NUM[m]).replace(/\s+/g, ' ').trim();
+// keys a building answers to: "1 CANADA SQUARE", "ONE CANADA SQUARE" -> "1 CANADA SQUARE", the OSM and Wikidata names
+for (const r of recs) r.keys = [...new Set([r.address, r.name, r.osm_name, ...(r.facts['street address'] || [])].filter(Boolean).map(normAddr).filter(k => k.length > 5))];
+const matchBuilding = (pc, text) => { const t = normAddr(text); const c = recs.filter(r => r.postcodes.has(pc) && r.keys.some(k => t.includes(k))); return c.length === 1 ? c[0] : null; };
+const joins = {};
+if (has('uprn/uprn-canary-wharf.csv')) {
+  const toidOf = new Map(), usrnOf = new Map();
+  if (has('uprn/uprn-linked-ids-canary-wharf.csv')) for (const line of readFileSync(join(SRC, 'uprn/uprn-linked-ids-canary-wharf.csv'), 'utf8').split('\n').slice(1)) { const [u, link, id] = line.split(','); if (link === 'TopographicArea_TOID') toidOf.set(u, id); else if (link === 'Street_USRN') usrnOf.set(u, id); }
+  let placed = 0;
+  for (const line of readFileSync(join(SRC, 'uprn/uprn-canary-wharf.csv'), 'utf8').split('\n').slice(1)) {
+    const [u, , , lat, lon] = line.split(','); if (!u) continue;
+    const h = buildingAt(+lon, +lat, 0); if (!h) continue;
+    const r = rec.get(h.b.id); r.uprns = (r.uprns || 0) + 1; placed++;
+    if (toidOf.has(u)) (r.toidSet ||= new Set()).add(toidOf.get(u));
+    if (usrnOf.has(u)) (r.usrnSet ||= new Set()).add(usrnOf.get(u));
+  }
+  joins.uprn_in_buildings = placed;
+}
+if (has('uprn/lbsm2-homes-summary.json')) {
+  const l = readJ('uprn/lbsm2-homes-summary.json'); let n = 0;
+  for (const r of recs) if (r.toidSet) {
+    const parts = [...r.toidSet].map(t => l.per_toid[t]).filter(Boolean); if (!parts.length) continue;
+    const homes = parts.reduce((s, p) => s + p.homes, 0);
+    const sum = k => parts.reduce((o, p) => { for (const [a, v] of Object.entries(p[k] || {})) o[a] = (o[a] || 0) + v; return o; }, {});
+    r.homes = homes >= K ? { count: homes, source: 'GLA London Building Stock Model 2 (modelled where no EPC)', property_type: sum('property_type'), construction_age_band: sum('construction_age_band'), epc_rating: sum('epc_rating') } : { count: `fewer than ${K}`, source: 'GLA LBSM2' };
+    n++;
+  }
+  joins.lbsm_buildings = n;
+}
+if (has('landregistry/inspire-canary-wharf.geojson')) {
+  const g = readJ('landregistry/inspire-canary-wharf.geojson'); let n = 0;
+  for (const r of recs) for (const f of g.features) {
+    const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+    if (polys.some(pl => pointIn([r.lon, r.lat], pl[0]))) { (r.inspire ||= []).push(f.properties.inspire_id); n++; }
+  }
+  joins.inspire_links = n; joins.inspire_attribution = g.attribution;
+}
+const companiesOut = {}, homesOut = {};
+if (has('companies/companies-by-postcode.json')) {
+  const c = readJ('companies/companies-by-postcode.json'); let matched = 0, total = 0;
+  for (const [pc, list] of Object.entries(c.postcodes)) for (const co of list) {
+    total++;
+    const b = matchBuilding(pc, [co.address_line1, co.address_line2].join(' '));
+    const slimCo = { number: co.number, name: co.name, status: co.status, category: co.category, incorporated: co.incorporated, sic: (co.sic || []).map(x => String(x).slice(0, 5)), ...(b ? { building: b.id } : {}) };
+    (companiesOut[pc] ||= []).push(slimCo);
+    if (b) { matched++; (b.companies ||= []).push({ number: co.number, name: co.name, incorporated: co.incorporated, sic: slimCo.sic }); }
+  }
+  joins.companies = total; joins.companies_matched_to_building = matched;
+}
+if (has('landregistry/price-paid-by-postcode.json')) {
+  const pp = readJ('landregistry/price-paid-by-postcode.json'), byB = new Map();
+  const agg = txs => { const homes = new Set(txs.map(t => `${t.paon}|${t.saon}|${t.street}`)), prices = txs.map(t => t.price).sort((a, b) => a - b), years = {}; for (const t of txs) years[t.date.slice(0, 4)] = (years[t.date.slice(0, 4)] || 0) + 1;
+    return { homes_sold_since_1995: homes.size, sales: txs.length, first: txs.map(t => t.date).sort()[0], last: txs.map(t => t.date).sort().at(-1), median_price: prices[prices.length >> 1], new_build_sales: txs.filter(t => t.new_build).length, sales_by_year: years }; };
+  for (const [pc, txs] of Object.entries(pp.postcodes)) {
+    const a = agg(txs); if (a.homes_sold_since_1995 >= K) homesOut[pc] = a; else homesOut[pc] = { homes_sold_since_1995: `fewer than ${K}` };
+    for (const t of txs) { const b = matchBuilding(pc, `${t.paon} ${t.street}`) || matchBuilding(pc, t.paon); if (b) { if (!byB.has(b.id)) byB.set(b.id, []); byB.get(b.id).push(t); } }
+  }
+  for (const [id, txs] of byB) { const a = agg(txs); rec.get(id).sales = a.homes_sold_since_1995 >= K ? { ...a, source: 'HM Land Registry Price Paid (OGL)' } : { homes_sold_since_1995: `fewer than ${K}` }; }
+  joins.price_paid_buildings = byB.size;
+}
+// In a residential building a registered office is often a flat: give the number of companies, not their names.
+for (const r of recs) if (r.companies && (r.homes || /^(apartments|residential|house|terrace|detached|semidetached_house)$/.test(r.building))) r.companies = { count: r.companies.length, note: 'residential building: company names are not listed here (see the Companies House link)' };
+for (const r of recs) { if (r.toidSet) r.toids = [...r.toidSet].sort(); if (r.usrnSet) r.usrns = [...r.usrnSet].sort(); delete r.toidSet; delete r.usrnSet; delete r.keys; }
+if (Object.keys(companiesOut).length) writeFileSync(join(OUT, 'companies-by-postcode.json'), JSON.stringify({ source: 'Companies House Basic Company Data (company-level only; addresses not copied)', postcodes: companiesOut }));
+if (Object.keys(homesOut).length) writeFileSync(join(OUT, 'homes-by-postcode.json'), JSON.stringify({ source: `HM Land Registry Price Paid (OGL); totals per postcode, only where at least ${K} homes have sold`, postcodes: homesOut }));
+console.log('joins', JSON.stringify(joins));
+
 // ---- links per building and per postcode
 const ch = pc => `https://find-and-update.company-information.service.gov.uk/advanced-search/get-results?registeredOfficeAddress=${encodeURIComponent(pc).replace(/%20/g, '+')}`;
 const ppd = pc => `https://landregistry.data.gov.uk/app/ppd/search?postcode=${encodeURIComponent(pc).replace(/%20/g, '+')}`;
@@ -156,7 +230,8 @@ const summary = {
   generated: new Date().toISOString().slice(0, 10), box: CW_BOX, buildings: out.length, minted_this_run: minted,
   named: out.filter(r => r.name).length, with_wikidata: out.filter(r => r.wikidata).length, with_occupants: out.filter(r => r.occupants.length).length,
   occupants: out.reduce((n, r) => n + r.occupants.length, 0), osm_placed: osmPlaced, osm_not_in_a_building: osmLoose, fsa_placed: fsaPlaced, fsa_by_postcode_only: Object.values(byPostcode).flat().length,
-  with_owner: out.filter(r => r.owners.length).length, sources: { osm: osm.extracted, wikidata_qlever: wd.fetched, fsa: fhrs.fetched },
+  with_owner: out.filter(r => r.owners.length).length, joins: Object.fromEntries(Object.entries(joins).filter(([k]) => k !== 'inspire_attribution')), attribution_inspire: joins.inspire_attribution || null,
+  sources: { osm: osm.extracted, wikidata_qlever: wd.fetched, fsa: fhrs.fetched },
 };
 writeFileSync(idsFile, JSON.stringify(ids, null, 1));
 writeFileSync(join(OUT, 'buildings.json'), JSON.stringify({ summary, buildings: out, unplaced_by_postcode: byPostcode }));
