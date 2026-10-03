@@ -222,6 +222,47 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 - **Heights.** LiDAR for buildings older than the survey; nine buildings show under half their
   floor-count height and are newer (AT-1).
 
+## Structured data from rendered pages
+
+`tools/render-structured-data.mjs` renders every entity URL in headless Chromium and keeps the schema.org blocks
+(JSON-LD raw, microdata as JSON, RDFa as N-Triples) in `third_party/cwplans-structured-data/` (README there: method,
+date, rebuild). `tools/extract-structured-data.mjs` cleans the JSON-LD (`tools/jsonld-clean.mjs`, every repair counted
+by class), loads one named graph per page into Factoidal (`@factoidal/core`, npm), writes `all.nq`, runs SPARQL and
+writes `registry/sources/web/structured-facts.json`. Measured 2026-10-03:
+
+- **Chromium needs the proxy CA.** The NSS store in `/root/.pki/nssdb` was empty: every HTTPS page failed with
+  `ERR_CERT_AUTHORITY_INVALID`. Fix: `certutil -d sql:/root/.pki/nssdb -A -t "C,," -n ccr-agent-proxy -i
+  /root/.ccr/agent-proxy-ca.crt` (`apt-get install libnss3-tools`). Chromium takes the proxy from the environment.
+- **A browser finds little that the plain crawl missed.** Of 363 pages the plain crawl got no structured data from,
+  222 rendered and 78 had data; only 22 pages have JSON-LD that exists only after scripts (53 of 932 blocks), and
+  some of those are server blocks that scripts rewrote (Pret: Next.js replaces the server WebSite block). The
+  failures are the same sites: bot challenges (63), dead domains (33 dns), TLS (10), 404 (21).
+- **Store-finder searches are the real gain, and they lie easily.** 247 searches (201 brands): 29 branch pages
+  that name the branch, 96 runs reached a finder. First drafts matched the wrong branch: a card of 500 characters
+  held several stores; the branch name ("Pret A Manger", "Barclays") was used as a place phrase and matched every
+  page; Wikidata's first website was a foreign site (jomalone.ru, pret.com/en-US). Rules now: the link's own text
+  and URL count fully, its card only when it is 300 characters or less; brand names are not place phrases; with two
+  or more branches here, "Canary Wharf" alone picks none; the UK site first; and every result page is checked
+  again (`names_branch`), so a page that does not name the branch is reported as such.
+- **Attribution needs a place on the node.** A node is the branch when its postcode equals the entity's or its geo
+  is within 300 m (high), when it has no address on the branch's own page (medium: store_url, store-finder result,
+  URL path naming the place), or when it has another E14/E20 postcode (low: a sibling branch is possible). No
+  address on a general page: "chain" for chain branches, "organisation" for single sites. 224 nodes with an
+  address elsewhere were not attributed. Bank and head-office pages carry the head office address in Canary Wharf:
+  a postcode match there is the head office, not a branch.
+- **Real-world JSON-LD classes** (932 blocks): remote schema.org context 929 (inlined as `{"@vocab":
+  "https://schema.org/"}`; Factoidal has no document loader), `@graph` beside other keys 508 (unwrapped, or the
+  nodes land in a named graph inside the page graph), HTML entities in strings 411, top-level arrays 24,
+  `http://schema.org/` IRIs 12, no context 7, raw control characters 2, missing commas 2 (bigeasy.co.uk). After
+  cleaning, Factoidal loaded all 932.
+- **Opening hours come in many shapes:** `openingHours` text ("Mo-Fr 09:00-17:00", "Monday,Tuesday 09:00-17:00",
+  "Friday06:30-20:00", empty strings, ", , , ,"), specifications with "13:00 PM", "9:30am", "6pm", days with no
+  times, and special hours dated "26 Nov 2026". All 54 distinct OSM strings made parse in the `opening_hours`
+  library (a one-off check outside the repo). Empty or comma-only text is no hours.
+- **RDFa is almost all OpenGraph** (798 pages; schema.org RDFa on 1). Microdata on 72 pages, mostly old themes.
+- Time: main render 43 min for 1,016 URLs (369 Internet Archive copies read from cache in seconds), retries 4 min,
+  store finders 50 min for the first pass and 25 min for three corrected re-runs; extraction about 2 min (SPARQL over 65,566 quads: 62 s).
+
 ## Rebuild order
 
     node magpie/cwplans/tools/build-registry.mjs        # registry/buildings.json (needs data/raw/registry/*)

@@ -11,6 +11,7 @@
 // branch's own store page; a node with no address on a chain's general page is scope "chain".
 // Out: registry/sources/web/structured-facts.json. Method and lessons: skills/docklands-data-curation/SKILL.md,
 // "Structured data from rendered pages".
+import { gzipSync } from 'node:zlib';
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
 import { createHash } from 'crypto';
 import { join, dirname } from 'path';
@@ -96,6 +97,7 @@ for (const p of pages) {
 }
 const uniq = [...new Set(allQuads)];
 writeFileSync(join(TP, 'all.nq'), uniq.join('\n') + '\n');
+writeFileSync(join(TP, 'all.nq.gz'), gzipSync(Buffer.from(uniq.join('\n') + '\n'), { level: 9 }));   // committed copy; all.nq itself is gitignored (12 MB)
 console.log(`${pages.length} pages, ${uniq.length} quads, ${((Date.now() - T0) / 1000).toFixed(1)} s`);
 
 // ---------------------------------------------------------------- 3. SPARQL with Factoidal
@@ -143,7 +145,13 @@ const dayOf = d => DAYMAP[String(d).replace(/^.*[/#]/, '').toLowerCase().replace
 const hhmm = t => { const m = /^(\d{1,2})(?::|\.)?(\d{2})?(?::\d{2})?(?:\.\d+)?\s*(am|pm)?\s*(?:Z|[+-]\d{2}:?\d{2})?$/i.exec(String(t).trim()); if (!m) return null; let h = +m[1]; const mi = m[2] || '00'; if (m[3]) { if (/pm/i.test(m[3]) && h < 12) h += 12; if (/am/i.test(m[3]) && h === 12) h = 0; } return h > 24 || +mi > 59 ? null : String(h).padStart(2, '0') + ':' + mi; };
 const range = (o, c) => { const a = hhmm(o), b = hhmm(c); if (!a || !b) return null; if (a === '00:00' && b === '00:00') return 'off'; return a + '-' + (b === '23:59' || (b === '00:00' && a !== '00:00') ? '24:00' : b); };
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const osmDate = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ''); return m ? `${m[1]} ${MON[+m[2] - 1]} ${m[3]}` : null; };
+const osmDate = d => {         // ISO dates, "26 Nov 2026" and "26/11/2026" (UK order) seen in the data
+  d = String(d || '').trim(); let m;
+  if ((m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d))) return `${m[1]} ${MON[+m[2] - 1]} ${m[3]}`;
+  if ((m = /^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})$/.exec(d))) { const i = MON.findIndex(x => x.toLowerCase() === m[2].toLowerCase()); return i >= 0 ? `${m[3]} ${MON[i]} ${m[1].padStart(2, '0')}` : null; }
+  if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(d)) && +m[2] <= 12) return `${m[3]} ${MON[+m[2] - 1]} ${m[1].padStart(2, '0')}`;
+  return null;
+};
 function groupDays(byDay) {        // {Mo: '09:00-17:00', ...} -> "Mo-Fr 09:00-17:00; Sa 10:00-16:00"
   const out = []; let i = 0;
   while (i < 7) {
@@ -181,7 +189,7 @@ function osmFromText(list) {
   for (const raw of list) for (const part of raw.split(new RegExp(`\\s*[;\\n]\\s*|,\\s+(?=${DAYTOK}(?:\\s*[-,–]\\s*${DAYTOK})*\\s*:?\\s+\\d)`))) {
     const t = part.trim().replace(/^["'\s]+|["'\s,]+$/g, ''); if (!t) continue;
     if (/^(Mo-Su|Mon-Sun|Monday-Sunday)?\s*(00:00-24:00|00:00-23:59|24\/7)$/i.test(t)) { for (const d of DAYS) byDay[d] = '00:00-24:00'; continue; }
-    const m = new RegExp(`^(${DAYTOK}(?:\\s*[-,–]\\s*${DAYTOK})*)\\s*:?\\s+(.+)$`, 'i').exec(t);
+    const m = new RegExp(`^(${DAYTOK}(?:\\s*[-,–]\\s*${DAYTOK})*)\\s*:?\\s*(\\d.*|closed|off)$`, 'i').exec(t);
     if (!m) { problems.push(t.slice(0, 60)); continue; }
     const days = new Set();
     for (const seg of m[1].split(/\s*,\s*/)) {
@@ -234,7 +242,7 @@ function judge(n, place, storePage, chainKey) {
 
 const pageByUrl = new Map(pages.map(p => [p.url, p]));
 const entities = [], elsewhere = [];
-const hoursText = n => [...(n.props.openingHours || [])];
+const hoursText = n => [...(n.props.openingHours || [])].filter(t => !/^[\s,;]*$/.test(t));   // empty strings and bare comma lists are no hours
 for (const p of pages) {
   // the branch's own page: a store_url field, a store-finder result, or a deep page whose URL names the place
   let path = ''; try { path = decodeURIComponent(new URL(p.final_url || p.url).pathname).toLowerCase(); } catch {}
@@ -261,7 +269,7 @@ for (const p of pages) {
           osm, raw_text: hoursText(n).length ? hoursText(n) : undefined,
           specification: specs.filter(h => !h.special).map(h => Object.fromEntries(Object.entries({ days: [...h.days].map(d => d.replace(/^https?:\/\/schema\.org\//, '')), opens: h.opens, closes: h.closes, valid_from: h.from, valid_through: h.thru }).filter(([, v]) => v != null))),
           special: specs.filter(h => h.special).map(h => Object.fromEntries(Object.entries({ days: [...h.days].map(d => d.replace(/^https?:\/\/schema\.org\//, '')), opens: h.opens, closes: h.closes, valid_from: h.from, valid_through: h.thru }).filter(([, v]) => v != null))),
-          problems: [...(fromSpecs?.problems || []), ...(fromText?.problems || [])],
+          problems: [...new Set([...(fromSpecs?.problems || []), ...(fromText?.problems || [])])],
         }).filter(([, v]) => v != null && !(Array.isArray(v) && !v.length))) : undefined,
         phone: [...(n.props.telephone || [])][0], address: n.address[0], geo: n.geo || undefined,
         url_stated: [...(n.props.url || [])][0], same_as: n.props.sameAs ? [...n.props.sameAs].slice(0, 10) : undefined, price_range: [...(n.props.priceRange || [])][0],
@@ -279,7 +287,7 @@ const keysWith = (f) => new Set(entities.filter(f).map(e => e.key)).size;
 const index = JSON.parse(readFileSync(join(TP, 'index.json'), 'utf8'));
 const meta = {
   generated: new Date().toISOString(), tool: 'tools/extract-structured-data.mjs', engine: '@factoidal/core ' + JSON.parse(readFileSync(join(CW, '../../node_modules/@factoidal/core/package.json'), 'utf8')).version,
-  input: 'third_party/cwplans-structured-data/pages/*.jsonl (tools/render-structured-data.mjs)', dataset: 'third_party/cwplans-structured-data/all.nq (one named graph per page; graph IRI = page URL)',
+  input: 'third_party/cwplans-structured-data/pages/*.jsonl (tools/render-structured-data.mjs)', dataset: 'third_party/cwplans-structured-data/all.nq.gz (gzipped N-Quads; one named graph per page; graph IRI = page URL)',
   rule: 'A node is attributed to a Canary Wharf entity (scope "branch") only when its postcode equals the entity\'s or its geo is within 300 m of the building (confidence high), it has no address and the page is the branch\'s own page: a store_url field, a store-finder result or a URL that names the place (medium), or its postcode is another E14/E20 postcode with any geo within 1.5 km (low: may be a sibling branch). A node with no address on a general page is scope "chain" when the entity is a chain branch (chain-wide facts, not branch facts), else "organisation" (the organisation\'s own site, which may be its only place). Nodes with an address or position elsewhere are not attributed (counted as elsewhere).',
   render: index.counts,
   counts: {

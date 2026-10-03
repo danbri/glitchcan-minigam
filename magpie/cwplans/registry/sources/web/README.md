@@ -11,6 +11,8 @@ re-check before anything leaves the prototyping phase.
 | `site-facts.json` | `meta` (method, date, counts, URL references by source, skipped references, robots-disallowed URLs, failures by class) and `pages`: one record per URL with `url`, `final_url`, `status`, `fetched`, `for` (the entries it serves), `sources` (the fields that named it), `archived` (Internet Archive copies), `error`, `facts`, `feeds`, `events` |
 | `discovered-feeds.json` | RSS, Atom, JSON Feed and iCalendar URLs found in the pages and not yet in `feeds/events.json` or `feeds/feeds.json`. **Not fetched or verified**: check each with `feeds/check-events.mjs` before it joins `feeds/events.json` |
 | `register-entries.json` | data-register and pipeline entries for this crawl, for the main session to merge |
+| `structured-facts.json` | facts from the schema.org structured data of the rendered pages (`tools/extract-structured-data.mjs` over `third_party/cwplans-structured-data/`): per entity and page the types, name, opening hours (raw, specification, special, and OSM `opening_hours` syntax), telephone, address, geo, events, and the scope (branch with a confidence, chain, organisation) with how the node was matched |
+| `structured-register-entries.json` | data-register and pipeline entries for the headless render and the extraction, for the main session to merge |
 
 Tool: `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/crawl-sites.mjs` (`--list` counts URLs without
 fetching, `--no-fetch` extracts from the cache, `--retry-failed` fetches transient failures again,

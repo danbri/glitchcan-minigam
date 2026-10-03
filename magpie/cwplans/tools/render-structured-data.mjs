@@ -313,6 +313,7 @@ async function mainQueue() {
 // Only a store-finder search box, only the branch's postcode as input; no login, no other form; robots.txt for every
 // navigation; the per-host gap between page loads. Brands: branches.json / storelocator.json branches with no store page
 // that gave structured data. Brand site: Wikidata P856 (wikidata-brands.json, CC0), else the branch's website origin.
+const safeDecode = s => { try { return decodeURIComponent(s); } catch { return s; } };
 const pcNorm = s => (s || '').toUpperCase().replace(/\s+/g, '').replace(/^(.+)(\d[A-Z]{2})$/, '$1 $2');
 function storefinderJobs() {
   const WDB = readJSON('registry/sources/brands/wikidata-brands.json').brands;
@@ -321,14 +322,16 @@ function storefinderJobs() {
   const addB = (qid, name, key, postcode, place, website) => {
     if (!qid || hasPage(key)) return;
     const b = brands.get(qid) || brands.set(qid, { qid, name, sites: new Set(), byPc: new Map() }).get(qid);
-    for (const w of [...(WDB[qid]?.websites || []), website].filter(Boolean)) { try { const u = new URL(/^https?:/.test(w) ? w : 'https://' + w); if (!/canarywharf\.com|facebook|instagram|wikipedia/.test(u.host)) b.sites.add(u.origin + '/'); } catch {} }
+    for (const w of [website, ...(WDB[qid]?.websites || [])].filter(Boolean)) { try { const u = new URL(/^https?:/.test(w) ? w : 'https://' + w); if (!/canarywharf\.com|facebook|instagram|wikipedia/.test(u.host)) b.sites.add(u.origin + '/'); } catch {} }
     const pc = pcNorm(postcode) || 'E14 4QT';
     const e = b.byPc.get(pc) || b.byPc.set(pc, { postcode: pc, fallback: !postcode, keys: new Set(), places: new Set() }).get(pc);
     e.keys.add(key); for (const p of place) if (p) e.places.add(p);
   };
   for (const x of BR) addB(x.brand_wikidata, x.brand, `branch:${x.brand_wikidata || x.brand}@${branchRef(x)}`, x.postcode, [x.mall, x.address, x.address_cwg], x.website);
   for (const x of SL) if (!x.ok) addB(x.brand_wikidata, x.brand, `branch:${x.brand_wikidata}@${x.branch_ref}`, x.postcode, [x.mall, x.branch_name], null);
-  return [...brands.values()].filter(b => b.sites.size).flatMap(b => [...b.byPc.values()].map(p => ({ qid: b.qid, brand: b.name, site: [...b.sites][0], postcode: p.postcode, postcode_fallback: p.fallback, brand_postcodes: b.byPc.size, keys: [...p.keys].sort(), places: [...p.places] })));
+  // the UK site first: a .uk host or a /uk, /en-gb path, then .com, then other country sites (Wikidata lists many)
+  const siteRank = u => { const x = new URL(u); return /\.uk$/.test(x.hostname) || /^\/(uk|gb|en-gb|en_gb)(\/|$)/i.test(x.pathname) ? 0 : /\.(com|co|org|net|london|io)$/.test(x.hostname) ? 1 : 2; };
+  return [...brands.values()].filter(b => b.sites.size).flatMap(b => [...b.byPc.values()].map(p => ({ qid: b.qid, brand: b.name, site: [...b.sites].sort((x, y) => siteRank(x) - siteRank(y))[0], postcode: p.postcode, postcode_fallback: p.fallback, brand_postcodes: b.byPc.size, keys: [...p.keys].sort(), places: [...p.places] })));
 }
 const FINDER_LINK = /store[-_ ]?(finder|locator)|shop[-_ ]?finder|branch[-_ ]?(finder|locator)|find[-_ ]?(a|an|your|my|us|the|our|nearest|local)?[-_ ]?(store|shop|restaurant|branch|location|cinema|hotel|gym|club|studio|salon|pharmacy|practice|bank|outlet|kitchen|cafe|coffee)s?|our[-_ ](stores|shops|restaurants|locations|branches|cafes|clubs|studios)|(^|\/)(stores|shops|restaurants|locations|branches|cafes|clubs|studios|venues|find-us)(\/|$|\?)/i;
 const GUESS = ['/store-finder', '/store-locator', '/stores', '/locations', '/restaurants'];
@@ -340,18 +343,29 @@ async function linksOn(page) {
 }
 const sameSite = (a, b) => { try { const x = new URL(a).hostname.split('.').slice(-2).join('.'), y = new URL(b).hostname.split('.').slice(-2).join('.'); return x === y; } catch { return false; } };
 const PLACE_WORDS = /canary wharf|isle of dogs|south quay|crossrail place|jubilee place|cabot place|canada place|canada square|wood wharf|westferry|marsh wall|bank street|churchill place|limeharbour|millharbour|poplar|crossharbour|mudchute|heron quays|harbour exchange/i;
+const placeParts = job => job.places.flatMap(p => String(p).toLowerCase().split(',')).map(w => w.trim().replace(/^(unit|units|kiosk|shop)\s+\S+\s*/, ''))
+  .filter(w => w.length > 6 && !/^(canary wharf|london|e1\d|united kingdom|isle of dogs)$|^(mall |lower |upper |promenade |ground |plaza |retail )?(mall )?level\b|^(lower|upper) (ground|mall)/.test(w))
+  .filter(w => { const b = String(job.brand || '').toLowerCase(); return !b || (!w.includes(b) && !b.includes(w)); });   // a branch name such as "Pret A Manger" is not a place
+// the link's own text and URL count fully; the text around it (its card) only when the card is small (one store)
 function scoreResult(l, job, finderUrl) {
   if (!/^https?:/.test(l.href) || l.href.split('#')[0] === finderUrl.split('#')[0] || !sameSite(l.href, job.site) || /google\.[a-z.]+\/maps|maps\.apple|tel:|mailto:/.test(l.href)) return 0;
-  const hay = (l.text + ' ' + decodeURIComponent(l.href).replace(/[-_/]+/g, ' ') + ' ' + l.card).toLowerCase(), pc = job.postcode.toLowerCase();
+  const own = (l.text + ' ' + safeDecode(l.href).replace(/[-_/]+/g, ' ')).toLowerCase(), card = l.card.length <= 300 ? l.card.toLowerCase() : '';
+  const pc = job.postcode.toLowerCase(), pcs = [pc, pc.replace(' ', '')], one = job.brand_postcodes <= 1, parts = placeParts(job);
+  const has = (h, xs) => xs.some(x => h.includes(x));
   let s = 0;
-  if (hay.includes(pc) || hay.includes(pc.replace(' ', ''))) s += 5;
-  if (/canary[ -]?wharf/.test(hay)) s += job.brand_postcodes > 1 ? 1 : 3;     // with two or more branches here, "Canary Wharf" alone does not pick one
-  const parts = job.places.flatMap(p => String(p).toLowerCase().split(',')).map(w => w.trim().replace(/^(unit|units|kiosk|shop)\s+\S+\s*/, ''))
-    .filter(w => w.length > 6 && !/^(canary wharf|london|e1\d|united kingdom|isle of dogs)$|^(mall |lower |upper |promenade |ground |plaza |retail )?(mall )?level\b|^(lower|upper) (ground|mall)/.test(w));
-  if (parts.some(w => hay.includes(w))) s += 3;
-  if (s === 0 && PLACE_WORDS.test(hay)) s += 2;
+  if (has(own, pcs)) s += 5; else if (has(card, pcs)) s += 4;
+  if (/canary[ -]?wharf/.test(own)) s += one ? 3 : 1; else if (/canary[ -]?wharf/.test(card)) s += one ? 2 : 0;
+  if (has(own, parts)) s += 3; else if (has(card, parts)) s += 2;
   if (s && /(store|shop|location|restaurant|branch|stores|locations|venue|cafe|l)\//i.test(new URL(l.href).pathname + '/')) s += 1;
   return s;
+}
+// does the rendered branch page name the branch? postcode, a street or mall phrase, or Canary Wharf in title, URL or structured data
+function namesBranch(rec, job) {
+  const hay = [rec.title, rec.final_url && safeDecode(rec.final_url).replace(/[-_/]+/g, ' '), ...(rec.jsonld || []).map(b => b.text), JSON.stringify((rec.microdata || []).map(m => m.item))].join(' ').toLowerCase();
+  if (hay.includes(job.postcode.toLowerCase()) || hay.includes(job.postcode.toLowerCase().replace(' ', ''))) return 'postcode';
+  if (placeParts(job).some(w => hay.includes(w))) return 'street or mall';
+  if (/canary[ -]?wharf/.test(hay)) return 'Canary Wharf';
+  return null;
 }
 async function consent(page) {
   for (const sel of CONSENT) { const b = await page.$(sel).catch(() => null); if (b && await b.isVisible().catch(() => false)) { await b.click({ timeout: 3000 }).catch(() => {}); await sleep(800); return sel; } }
@@ -382,7 +396,7 @@ async function storefinderOne(job) {
     // 1. finder candidates (cached per brand): store-finder links on the home page, else a few common paths
     const cacheF = join(SFDIR, job.qid + '.finder.json');
     let finder = existsSync(cacheF) ? JSON.parse(readFileSync(cacheF, 'utf8')) : null;
-    if (!finder || !finder.cands) {
+    if (!finder || !finder.cands || finder.site !== job.site) {
       finder = { cands: [] };
       const r = await go(job.site);
       if (r && r.status() < 400) {
@@ -448,13 +462,14 @@ async function storefinderOne(job) {
     await hostSlot(rh);
     let rec; try { rec = await renderOne({ url: best.href, for: job.keys, sources: ['storefinder:' + out.via.method], priority: 0, host: rh }); } finally { hostDone(rh); }
     rec.via = out.via;
-    out.outcome = rec.error ? 'branch page failed: ' + rec.error : 'branch page rendered';
+    out.names_branch = rec.error ? null : namesBranch(rec, job);
+    out.outcome = rec.error ? 'branch page failed: ' + rec.error : out.names_branch ? 'branch page rendered, names the branch (' + out.names_branch + ')' : 'page rendered, does not name the branch';
     return { out, rec };
   } finally { await ctx.close().catch(() => {}); }
 }
 async function storefinderPhase() {
   const jobs = storefinderJobs().filter(j => !opt('brand') || j.qid === opt('brand'));
-  const todo = jobs.filter(j => args.has('--refresh') || !existsSync(join(SFDIR, `${j.qid}__${j.postcode.replace(' ', '')}.json`)));
+  const todo = jobs.filter(j => { const f = join(SFDIR, `${j.qid}__${j.postcode.replace(' ', '')}.json`); return args.has('--refresh') || !existsSync(f) || JSON.parse(readFileSync(f, 'utf8')).site !== j.site; });
   console.log(`store finder: ${jobs.length} brand+postcode searches (${new Set(jobs.map(j => j.qid)).size} brands), ${todo.length} to do`);
   mkdirSync(SFDIR, { recursive: true });
   // jobs of one brand run in sequence (they share a finder and a host); brands run PARALLEL at once

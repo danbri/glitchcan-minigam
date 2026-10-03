@@ -286,6 +286,29 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
   SP-7 8 → 30 low-confidence key placements (population 325); ID-2 84 → 89 (F20); ID-3 22 → 25; SP-6 119 → 122. Tests
   8 of 8. Register check exit 0.
 
+## 2026-10-03: structured data from rendered pages, store finders, Factoidal
+
+- New tools: `tools/render-structured-data.mjs` (headless Chromium render of every entity URL, robots.txt per
+  navigation, 3 pages at once, one per host, 2 s gap; store-finder searches with the branch postcode, owner rule of
+  2026-10-03), `tools/structured-dom.mjs` (in-page JSON-LD / microdata / RDFa extractor), `tools/jsonld-clean.mjs`
+  (repairs by class; tests `tools/test/jsonld-clean.test.mjs`, 7 of 7), `tools/extract-structured-data.mjs`
+  (Factoidal: JSON-LD to RDF, named graph per page, SPARQL). `@factoidal/core` ^0.7.1 added to the root
+  devDependencies. Not committed by this session; register and pipeline entries are in
+  `registry/sources/web/structured-register-entries.json` for the main session to merge.
+- URLs: 1,025 (559 hosts) from buildings.json occupants (website, cwg_website, store_url), branches.json,
+  storelocator.json, cwg-directory.json and 171 registered-charity websites; 369 are Internet Archive CWG copies read
+  from cache. Rendered 901 of 1,067 attempts (including 42 store-finder result pages); failures: bot challenge 63,
+  dns 33, 404/410 21, 401/403 11, tls 10, timeout 8, HTTP error 6, 5xx 4, connection 3, robots disallowed 2,
+  robots.txt 5xx 3, 429 2.
+- Pages with JSON-LD 695, microdata 72, RDFa 798 (schema.org RDFa 1); only after scripts: JSON-LD 22 pages,
+  microdata 4, RDFa 5. Store finders: 247 searches for 201 brands; 29 branch pages that name the branch.
+- `structured-facts.json`: 232 records for 210 entity keys; opening hours for 109 keys at branch scope (95 high
+  confidence), 5 chain, 7 organisation; telephone 126 branch; events on 2 keys (12 events). Every OSM opening_hours
+  string parses. No audit counts changed (the registry is not yet joined to these facts).
+- Open: join structured-facts.json into the registry and the atlas (hours, phone) with its confidence; a check
+  for hours that disagree with OSM `opening_hours`; all.nq is 12 MB (gzip it, or keep only schema.org quads, if the
+  repository size matters); store finders still fail for 100 brands with no finder link and 50 with no postcode box.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
