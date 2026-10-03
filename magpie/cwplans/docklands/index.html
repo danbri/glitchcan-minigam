@@ -31,6 +31,10 @@ button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
 #qres li button:hover,#qres li button:focus{background:#2a323a}
 #hud{align-self:flex-start;background:#111c;padding:5px 9px;border-radius:8px;font-size:12px;max-width:100%;pointer-events:none;transition:opacity .6s}
 #hud:empty{display:none}
+#mini{position:absolute;z-index:3;left:10px;bottom:calc(var(--safe) + 26px);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 20px);background:#15191de8;border:1px solid var(--line);border-radius:24px;padding:3px 3px 3px 14px;font-size:13px;box-shadow:0 2px 8px #0008}
+#mini[hidden]{display:none}
+#mini span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mini .ib{width:36px;height:36px}
 #isoBtns{position:absolute;right:10px;top:max(10px,env(safe-area-inset-top));display:flex;gap:6px}
 #isoBtns[hidden]{display:none}
 /* left drawer: views, route, layers, about */
@@ -102,7 +106,7 @@ select,input[list]{font:inherit;font-size:16px;background:#293038;color:var(--fg
 table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
 .tw{overflow-x:auto;max-width:100%}
 details{margin-top:10px}summary{cursor:pointer}
-body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer,body.capture #scrim,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine{display:none!important}
+body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer,body.capture #scrim,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine{display:none!important}
 </style>
 </head>
 <body>
@@ -112,6 +116,7 @@ body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer
     <ul id="qres" aria-label="Search results"></ul>
     <div id="hud">Loading 1.9 MB of data…</div>
   </div>
+  <div id="mini" hidden role="status"><span id="miniT"></span><button type="button" class="ib" id="miniBtn" aria-label="Stop the music">■</button></div>
   <div id="isoBtns" hidden><button type="button" class="ib" id="isoL" aria-label="Turn the view left">⟲</button><button type="button" class="ib" id="isoR" aria-label="Turn the view right">⟳</button></div>
   <div id="gauge" hidden role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><button type="button" class="ib" id="gaugeX" aria-label="Close the depth gauge"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
   <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span><span id="attribTrees"></span></div>
@@ -925,31 +930,49 @@ function vizBands() {
     VIZ.bands[k] = VIZ.bands[k] * .45 + .55 * Math.pow(Math.min(1, v / VIZ.peak[k]), 1.6);
   }
 }
-function vizTick() { if (!VIZ.on) return; vizBands(); if (VIZ.orbit && !cam.eye) cam.yaw += .0016; draw(); AUD.loop = requestAnimationFrame(vizTick); }
+function vizTick() { if (!VIZ.on) return; vizBands(); if (AUD.state === 'playing' && AUD.el && !AUD.mic && (AUD.tk = (AUD.tk || 0) + 1) % 30 === 0) { const t = AUD.el.currentTime | 0; $('miniT').textContent = `♫ ${AUD.title} · ${t / 60 | 0}:${String(t % 60).padStart(2, '0')}`; } if (VIZ.orbit && !cam.eye) cam.yaw += .0016; draw(); AUD.loop = requestAnimationFrame(vizTick); }
+// Phones allow sound only as the direct result of a tap: create and resume the audio context and call play() inside the
+// tap handler, before any await. iOS: audioSession 'playback' so the silent switch does not mute Web Audio.
+const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+function audioCtx() {
+  if (!AUD.ctx) { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    AUD.ctx = new (window.AudioContext || window.webkitAudioContext)(); AUD.an = AUD.ctx.createAnalyser(); AUD.an.fftSize = 2048; AUD.an.smoothingTimeConstant = .7; AUD.data = new Uint8Array(AUD.an.frequencyBinCount); AUD.an.connect(AUD.ctx.destination);
+    AUD.el = new Audio(); AUD.el.crossOrigin = 'anonymous'; AUD.el.loop = true; AUD.el.playsInline = true; AUD.ctx.createMediaElementSource(AUD.el).connect(AUD.an); }
+  if (AUD.ctx.state !== 'running') AUD.ctx.resume().catch(() => {});
+  return AUD.ctx;
+}
+// the bar on the map while music plays: title, time, stop (or play, when the browser held the sound back)
+function mini(state, title) {
+  const m = $('mini'); if (!state) { m.hidden = true; return; } m.hidden = false; if (title != null) AUD.title = title;
+  $('miniBtn').textContent = state === 'blocked' ? '▶' : '■'; $('miniBtn').setAttribute('aria-label', state === 'blocked' ? 'Play the sound' : 'Stop the music');
+  $('miniT').textContent = state === 'blocked' ? `♫ ${AUD.title}: tap ▶ for sound` : state === 'loading' ? `♫ ${AUD.title} · loading the towers…` : `♫ ${AUD.title}`; AUD.state = state;
+}
+function playEl(url, title, credit) {   // call inside a tap
+  audioCtx(); vizStopSources(); AUD.el.src = url; AUD.el.currentTime = 0;
+  const p = AUD.el.play(); mini('loading', title);
+  $('vizNote').innerHTML = credit || 'Your file plays only in this browser; nothing is uploaded.';
+  return p.then(() => true, e => { mini('blocked'); return false; });
+}
+function vizStopSources() { if (AUD.mic) { AUD.mic.getTracks().forEach(t => t.stop()); AUD.mic = null; } if (AUD.src) { AUD.src.disconnect(); AUD.src = null; } }
 async function vizStart() {
-  const v = $('vizTrack').value;
-  if (!AUD.ctx) { AUD.ctx = new (window.AudioContext || window.webkitAudioContext)(); AUD.an = AUD.ctx.createAnalyser(); AUD.an.fftSize = 2048; AUD.an.smoothingTimeConstant = .7; AUD.data = new Uint8Array(AUD.an.frequencyBinCount); }
-  await AUD.ctx.resume();
-  if (v === 'mic') { AUD.mic = await navigator.mediaDevices.getUserMedia({ audio: true }); AUD.src = AUD.ctx.createMediaStreamSource(AUD.mic); AUD.src.connect(AUD.an); $('vizNote').textContent = 'Listening to the microphone (nothing is recorded or sent).'; }
-  else await vizPlayUrl(AUD.list[+v].url, AUD.list[+v]);
+  const v = $('vizTrack').value; audioCtx();
+  if (v === 'mic') { vizStopSources(); if (AUD.el) AUD.el.pause(); mini('loading', 'Microphone'); AUD.mic = await navigator.mediaDevices.getUserMedia({ audio: true }); AUD.src = AUD.ctx.createMediaStreamSource(AUD.mic); AUD.src.connect(AUD.an); AUD.an.disconnect(); $('vizNote').textContent = 'Listening to the microphone (nothing is recorded or sent).'; }
+  else { const t = AUD.list[+v]; AUD.an.disconnect(); AUD.an.connect(AUD.ctx.destination); playEl(t.url, t.title, `“${esc(t.title)}” by ${esc(t.artist)}, ${esc(t.licence)}, <a href="${esc(t.page)}">${esc(t.source)}</a>.`); }
   await vizOn();
 }
-async function vizPlayUrl(url, t) {
-  if (!AUD.el) { AUD.el = new Audio(); AUD.el.crossOrigin = 'anonymous'; AUD.el.loop = true; const node = AUD.ctx.createMediaElementSource(AUD.el); node.connect(AUD.an); AUD.an.connect(AUD.ctx.destination); }
-  AUD.el.src = url; await AUD.el.play();
-  $('vizNote').innerHTML = t ? `“${esc(t.title)}” by ${esc(t.artist)}, ${esc(t.licence)}, <a href="${esc(t.page)}">${esc(t.source)}</a>.` : 'Your file plays only in this browser; nothing is uploaded.';
-}
-$('vizFile').onchange = () => { const f = $('vizFile').files[0]; $('vizFile').value = ''; if (!f) return; (VIZ.on ? Promise.resolve(vizStop()) : Promise.resolve()).then(() => vizStartFile(f)).catch(e => { toast('Your file did not play: ' + e.message); vizStop(); }); };
-async function vizStartFile(f) {
-  if (!AUD.ctx) { AUD.ctx = new (window.AudioContext || window.webkitAudioContext)(); AUD.an = AUD.ctx.createAnalyser(); AUD.an.fftSize = 2048; AUD.an.smoothingTimeConstant = .7; AUD.data = new Uint8Array(AUD.an.frequencyBinCount); }
-  await AUD.ctx.resume(); await vizPlayUrl(URL.createObjectURL(f), null); await vizOn();
-}
+async function vizStartFile(f) { AUD.an.disconnect(); AUD.an.connect(AUD.ctx.destination); playEl(URL.createObjectURL(f), f.name.replace(/\.[a-z0-9]+$/i, '')); await vizOn(); }
+// the file button: unlock sound in the tap that opens the picker; the choice arrives later, outside the tap
+document.querySelector('label.filebtn').addEventListener('click', () => { audioCtx(); if (AUD.el.paused && !AUD.el.src) { AUD.el.src = SILENT; AUD.el.play().then(() => AUD.el.pause(), () => {}); } });
+$('vizFile').onchange = () => { const f = $('vizFile').files[0]; $('vizFile').value = ''; if (!f) return; vizStartFile(f).catch(e => { toast('Your file did not play: ' + e.message); vizStop(); }); };
 async function vizOn() {
+  if (!wide()) openDrawer(false);
+  if (PIX.on) { document.querySelector('input[name=style][value=normal]').checked = true; await setStyle('normal'); toast('The towers dance as splats in the map style.'); }
   if (SPL.mode !== 'only') { document.querySelector('input[name=splatMode][value=only]').checked = true; await setSplatMode('only'); }
   if (!SPL.groups) { toast('This splat set has no building groups: the towers cannot follow the music.'); }
-  VIZ.on = true; $('vizGo').textContent = '■ Stop'; if (!cam.eye && cam.dist > 2500) setView('cw'); cancelAnimationFrame(AUD.loop); vizTick();
+  VIZ.on = true; $('vizGo').textContent = '■ Stop'; if (AUD.state === 'loading') mini('playing'); if (!cam.eye && cam.dist > 2500) setView('cw'); cancelAnimationFrame(AUD.loop); vizTick();
 }
-function vizStop() { VIZ.on = false; VIZ.bands.fill(0); if (AUD.el) AUD.el.pause(); if (AUD.mic) { AUD.mic.getTracks().forEach(t => t.stop()); AUD.mic = null; if (AUD.src) AUD.src.disconnect(); } $('vizGo').textContent = '▶ Play'; draw(); }
+function vizStop() { VIZ.on = false; VIZ.bands.fill(0); if (AUD.el) AUD.el.pause(); vizStopSources(); if (AUD.an && AUD.ctx) { AUD.an.disconnect(); AUD.an.connect(AUD.ctx.destination); } $('vizGo').textContent = '▶ Play'; mini(null); draw(); }
+$('miniBtn').onclick = () => { if (AUD.state === 'blocked') { audioCtx(); AUD.el.play().then(() => mini(VIZ.on ? 'playing' : 'loading'), () => mini('blocked')); } else vizStop(); };
 $('vizGo').onclick = () => VIZ.on ? vizStop() : vizStart().catch(e => { toast('Music did not start: ' + e.message); vizStop(); });
 for (const k of ['Stretch', 'Noise', 'Swirl']) $('viz' + k).oninput = () => { VIZ[k.toLowerCase()] = +$('viz' + k).value; draw(); };
 $('vizOrbit').onchange = () => { VIZ.orbit = $('vizOrbit').checked; };
@@ -1480,7 +1503,7 @@ function captureMode(on) {
 if (/[?&]capture\b/.test(location.search)) captureMode(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; },
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; },
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
