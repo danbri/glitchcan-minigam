@@ -43,9 +43,10 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `docklands/data/indoor.js` | 434 kB | derived | walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances | osmfr-greater-london | docklands/index.html |
 | `registry/categories.json` | 66 kB | derived | occupant names and the OSM tags that state their kind (amenity, office, shop, leisure, tourism) | osmfr-greater-london | docklands/index.html |
 | `docklands/data/splats/cw-synth.splat.gz` | 4.8 MB | derived | building outlines and heights as splat positions and sizes | osmfr-greater-london | docklands/index.html |
+| `docklands/data/splats/cw-synth.groups.bin.gz` | 8 kB | derived | model building indices | osmfr-greater-london | docklands/index.html |
 | `docklands/data/skyline.json` | 85 kB | derived | model building indices (today's OSM outlines) as the keys of the heights | osmfr-greater-london | docklands/index.html |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 23 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 24 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -150,7 +151,9 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/categories.json` | 66 kB | occupant categories per registry building (finance, shops, catering, leisure, entertainment) with the stated class behind each; drives the 3D glow layers | OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)); written or computed in this project (repository licence) |
 | `docklands/data/splats/cw-synth.splat.gz` | 4.8 MB | Gaussian splats synthesised from the 3D model for the Canary Wharf estate and 300 m round it (669,306 splats; ground coloured from the 2008 aerial photograph) | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Environment Agency survey downloads: vertical aerial photography 2008 (OGL v3.0) |
 | `docklands/data/splats/index.json` | 1 kB | list of the splat sets the 3D page offers | written or computed in this project (repository licence) |
-| `docklands/data/splats/cw-synth.json` | 1 kB | metadata of the synthesised splat set: box, counts, method | written or computed in this project (repository licence) |
+| `docklands/data/splats/cw-synth.groups.bin.gz` | 8 kB | the building of each synthesised splat (uint16 a splat), for animation | OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
+| `docklands/data/music.json` | 2 kB | tracks for the music visualiser: titles, artist, licence, Commons URLs and pages | Music by Kevin MacLeod (CC BY 3.0 (attribution; not share-alike)) |
+| `docklands/data/splats/cw-synth.json` | 123 kB | metadata of the synthesised splat set: box, counts, method | written or computed in this project (repository licence) |
 | `docklands/data/skyline.json` | 85 kB | measured height of each model building on the Canary Wharf estate and 300 m round it in every EA LiDAR surface model that flew it (1999 to 2022), with survey dates | Environment Agency LiDAR DSM survey tiles 1999 to 2022 (OGL v3.0); OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0) |
 | `pipeline.json` | 107 kB | provenance of every transform: one W3C PROV activity a tool (used, generated, rules) | written or computed in this project (repository licence) |
 | `pipeline.jsonld` | 208 kB | pipeline.json and this register as JSON-LD (PROV-O, DCAT, Dublin Core) for a knowledge graph | written or computed in this project (repository licence) |
@@ -166,7 +169,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 23 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 24 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 
@@ -205,6 +208,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | fsa-api | Food Standards Agency food hygiene rating API | OGL v3.0 |  |
 | ea-dsm-history | Environment Agency LiDAR DSM survey tiles 1999 to 2022 (survey download service) | OGL v3.0 |  |
 | feed-providers | the publishers of the feeds and APIs listed in feeds/feeds.json and feeds/events.json (each with its own terms, recorded per entry) | per entry in feeds.json |  |
+| commons-music | Music by Kevin MacLeod (incompetech.com) on Wikimedia Commons: Militaire Electronic, EDM Detection Mode, Rollin at 5 (electronic) | CC BY 3.0 (attribution; not share-alike) | Music: Kevin MacLeod (incompetech.com), CC BY 3.0 |
 | tfl-open-data | Transport for London open data: step-free station topology (GTFS pathways, 2026-08-03) and the live lift disruption feed | TfL open data terms (Powered by TfL Open Data; OGL-based); the terms page was not readable from the container: re-check before production | Powered by TfL Open Data |
 | web-quotes | short quotations from published pages (Wikipedia 169 of 360 in facts.json, also Crossrail Learning Legacy, Tideway, Canal & River Trust, trade press and others) | Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved | each quote is one sentence or less, kept with its URL to cite a number |
 | own | written or computed in this project (method, decisions, URLs, search templates) | repository licence |  |

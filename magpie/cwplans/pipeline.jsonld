@@ -2370,6 +2370,9 @@
     },
     {
      "@id": "urn:cwplans:local:data/raw/splats/cw-synth.ply"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-synth.groups.bin.gz"
     }
    ],
    "cwp:tool": {
@@ -2382,7 +2385,8 @@
     "Ground discs every 4 m (--ground) where no building covers the cell, coloured bilinearly from rgb2008.ppm.",
     "Roof discs every 4 m inside the outline: aerial colour on buildings under 40 m, else the building colour.",
     "Walls: one disc per 3.6 m storey and 7.2 m (--cell) of wall, and one glass-band disc 3 cm in front per cell (buildings 4 m or taller).",
-    "The set entry 'cw-synth' replaces any earlier one in index.json; other entries are kept."
+    "The set entry 'cw-synth' replaces any earlier one in index.json; other entries are kept.",
+    "every splat records its building (uint16 index into cw-synth.json groups; 65535 = ground) for animation"
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -4240,6 +4244,40 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-synth.groups.bin.gz",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the building of each synthesised splat (uint16 a splat), for animation",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/music.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "tracks for the music visualiser: titles, artist, licence, Commons URLs and pages",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-music"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-synth.json",
    "@type": [
     "prov:Entity",
@@ -4830,6 +4868,17 @@
    "dct:title": "the publishers of the feeds and APIs listed in feeds/feeds.json and feeds/events.json (each with its own terms, recorded per entry)",
    "dct:license": "per entry in feeds.json",
    "dcat:landingPage": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/README.md"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-music",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Music by Kevin MacLeod (incompetech.com) on Wikimedia Commons: Militaire Electronic, EDM Detection Mode, Rollin at 5 (electronic)",
+   "dct:license": "CC BY 3.0 (attribution; not share-alike)",
+   "dcat:landingPage": "https://commons.wikimedia.org/wiki/Category:Kevin_MacLeod",
+   "cwp:attribution": "Music: Kevin MacLeod (incompetech.com), CC BY 3.0"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-open-data",

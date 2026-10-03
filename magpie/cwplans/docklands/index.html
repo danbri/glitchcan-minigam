@@ -146,6 +146,14 @@ body.capture #top,body.capture #gauge,body.capture #digBtn,body.capture #tabs,bo
       </div>
       <div class="row"><label>Splat set <select id="splatSet"><option value="cw-synth">Synthesised from the model (Canary Wharf)</option></select></label></div>
       <p class="small" id="splatNote">Splats are drawn back to front and tested against the model's depth, so towers, glow outlines and routes stay in front of or behind them correctly. "Splats only" keeps the model in the depth buffer without drawing it.</p>
+      <h3 id="music">Music: the towers as a visualiser</h3>
+      <div class="row"><select id="vizTrack" aria-label="Track"><option value="">Loading the track list…</option></select><button type="button" id="vizGo">▶ Play</button></div>
+      <input type="file" id="vizFile" accept="audio/*" hidden>
+      <div class="ctl"><label for="vizStretch">Stretch</label><input id="vizStretch" type="range" min="0" max="2" step=".05" value=".8"></div>
+      <div class="ctl"><label for="vizNoise">Noise</label><input id="vizNoise" type="range" min="0" max="2" step=".05" value=".35"></div>
+      <div class="ctl"><label for="vizSwirl">Swirl</label><input id="vizSwirl" type="range" min="0" max="2" step=".05" value=".5"></div>
+      <div class="chips"><label><input type="checkbox" id="vizOrbit" checked> Orbit the camera</label></div>
+      <p class="small" id="vizNote">The synthesised splats are grouped by building; each building follows one of 24 frequency bands, west (bass) to east (treble). Play starts "Splats only" on the estate.</p>
       <h3>Glow: who is inside</h3>
       <div class="chips" id="glowChips">
         <label><input type="checkbox" data-glow="finance"> <i class="sw" style="background:#ff3030"></i>Banks and finance</label><label><input type="checkbox" data-glow="shop"> <i class="sw" style="background:#33d6ff"></i>Shops</label><label><input type="checkbox" data-glow="catering"> <i class="sw" style="background:#ffa040"></i>Food and drink</label><label><input type="checkbox" data-glow="leisure"> <i class="sw" style="background:#5dff7a"></i>Leisure</label><label><input type="checkbox" data-glow="entertainment"> <i class="sw" style="background:#ff4fd8"></i>Entertainment</label>
@@ -751,42 +759,63 @@ $('colourBy').onchange = async () => {
 // Instanced quads (ANGLE_instanced_arrays); a worker sorts back to front and returns the instance data in that order.
 const SPL = { mode: 'off', n: 0, buf: null, set: null, pending: false, lastKey: '', worker: null };
 const instExt = gl.getExtension('ANGLE_instanced_arrays');
-const svs = 'attribute vec2 corner;attribute vec3 ctr;attribute vec3 ca;attribute vec3 cb;attribute vec4 col;uniform mat4 view;uniform mat4 proj;uniform vec2 focal;uniform vec2 vp;uniform float vz;uniform float cut;varying vec4 vc;varying vec2 vq;' +
-  'void main(){vec4 cam=view*vec4(ctr.x,ctr.y*vz,ctr.z,1.);float d=-cam.z;if(ctr.y>cut||d<1.){gl_Position=vec4(0.,0.,2.,1.);return;}' +
+const VIZ_BANDS = 24;
+const VIZ = { on: false, bands: new Float32Array(VIZ_BANDS), peak: new Float32Array(VIZ_BANDS).fill(.3), stretch: .8, noise: .35, swirl: .5, orbit: true };
+const svs = 'attribute vec2 corner;attribute vec3 ctr;attribute vec3 ca;attribute vec3 cb;attribute vec4 col;attribute vec3 g0;attribute vec2 g1;uniform mat4 view;uniform mat4 proj;uniform vec2 focal;uniform vec2 vp;uniform float vz;uniform float cut;' +
+  'uniform float viz;uniform float bands[' + VIZ_BANDS + '];uniform float stretch;uniform float noise;uniform float swirl;uniform float time;varying vec4 vc;varying vec2 vq;' +
+  'float hs(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}' +
+  'void main(){vec3 P=ctr;float sy=1.;vec4 C=col;' +
+  // music: stretch each building up from its base with its band, turn it round its own axis, shake it, light it
+  'if(viz>.5&&g0.x>=0.){int bi=int(g0.x);float lv=0.;for(int k=0;k<' + VIZ_BANDS + ';k++){if(k==bi)lv=bands[k];}' +
+  'float rel=clamp((P.y-g0.y)/max(1.,g0.z-g0.y),0.,1.);sy=max(.15,1.+stretch*(1.7*lv-.35));P.y=g0.y+(P.y-g0.y)*sy;' +
+  'float an=swirl*(2.2*lv*rel+.25*sin(time*.7+g0.x));vec2 d=P.xz-g1;float cs=cos(an),sn=sin(an);P.xz=g1+vec2(cs*d.x-sn*d.y,sn*d.x+cs*d.y);' +
+  'vec3 h=vec3(hs(ctr+time),hs(ctr.zxy-time),hs(ctr.yzx+time*1.3))-.5;P+=h*noise*lv*lv*14.;' +
+  'C.rgb=min(vec3(1.),C.rgb*(1.+.5*lv)+vec3(.55,.18,.85)*lv*lv*rel);}' +
+  'vec4 cam=view*vec4(P.x,P.y*vz,P.z,1.);float d=-cam.z;if(ctr.y>cut||d<1.){gl_Position=vec4(0.,0.,2.,1.);return;}float vy=vz*sy;' +
   'vec4 clip=proj*cam;vec3 ndc=clip.xyz/clip.w;if(abs(ndc.x)>1.3||abs(ndc.y)>1.3){gl_Position=vec4(0.,0.,2.,1.);return;}' +
-  'mat3 V=mat3(ca.x,ca.y*vz,ca.z,ca.y*vz,cb.x*vz*vz,cb.y*vz,ca.z,cb.y*vz,cb.z);' +
+  'mat3 V=mat3(ca.x,ca.y*vy,ca.z,ca.y*vy,cb.x*vy*vy,cb.y*vy,ca.z,cb.y*vy,cb.z);' +
   'vec3 w0=vec3(view[0][0],view[1][0],view[2][0]),w1=vec3(view[0][1],view[1][1],view[2][1]),w2=vec3(view[0][2],view[1][2],view[2][2]);' +
   'vec3 r0=focal.x/d*w0+focal.x*cam.x/(d*d)*w2,r1=focal.y/d*w1+focal.y*cam.y/(d*d)*w2;' +
   'float a=dot(r0,V*r0)+.3,b=dot(r0,V*r1),c=dot(r1,V*r1)+.3,mid=.5*(a+c),rad=length(vec2(.5*(a-c),b)),l1=mid+rad,l2=max(mid-rad,.1);' +
   'vec2 dv=abs(b)<1e-6?(a>=c?vec2(1.,0.):vec2(0.,1.)):normalize(vec2(b,l1-a));vec2 mj=min(sqrt(2.*l1),1024.)*dv,mn=min(sqrt(2.*l2),1024.)*vec2(dv.y,-dv.x);' +
-  'vq=corner;vc=col;gl_Position=vec4(ndc.xy+(corner.x*mj+corner.y*mn)*2./vp,ndc.z,1.);}';
+  'vq=corner;vc=C;gl_Position=vec4(ndc.xy+(corner.x*mj+corner.y*mn)*2./vp,ndc.z,1.);}';
 const sfs = 'precision mediump float;varying vec4 vc;varying vec2 vq;void main(){float A=-dot(vq,vq);if(A<-4.)discard;float B=exp(A)*vc.a;gl_FragColor=vec4(vc.rgb*B,B);}';
 const prS = gl.createProgram(); gl.attachShader(prS, sh(gl.VERTEX_SHADER, svs)); gl.attachShader(prS, sh(gl.FRAGMENT_SHADER, sfs)); gl.bindAttribLocation(prS, 0, 'corner'); gl.linkProgram(prS);
-const SA = Object.fromEntries(['corner', 'ctr', 'ca', 'cb', 'col'].map(k => [k, gl.getAttribLocation(prS, k)])), SU = Object.fromEntries(['view', 'proj', 'focal', 'vp', 'vz', 'cut'].map(k => [k, gl.getUniformLocation(prS, k)]));
+const SA = Object.fromEntries(['corner', 'ctr', 'ca', 'cb', 'col', 'g0', 'g1'].map(k => [k, gl.getAttribLocation(prS, k)])), SU = Object.fromEntries(['view', 'proj', 'focal', 'vp', 'vz', 'cut', 'viz', 'bands', 'stretch', 'noise', 'swirl', 'time'].map(k => [k, gl.getUniformLocation(prS, k)]));
 const quadBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-2, -2, 2, -2, -2, 2, 2, 2]), gl.STATIC_DRAW);
 // sorting worker: holds the instance records (10 words each: centre, covariance upper triangle, rgba) and returns them far to near
-const SORT_SRC = `let inst=null,n=0;onmessage=e=>{const m=e.data;if(m.inst){inst=new Uint32Array(m.inst);n=m.n;return;}
+const REC = 15;   // words a splat: centre 3, covariance 6, rgba 1, band, base, top, axis x, axis z
+const SORT_SRC = `const W=${REC};let inst=null,n=0;onmessage=e=>{const m=e.data;if(m.inst){inst=new Uint32Array(m.inst);n=m.n;return;}
  const f=new Float32Array(inst.buffer),[ex,ey,ez]=m.eye,[dx,dy,dz]=m.dir,vz=m.vz,dep=new Float32Array(n);let lo=Infinity,hi=-Infinity;
- for(let i=0;i<n;i++){const o=10*i,d=(f[o]-ex)*dx+(f[o+1]*vz-ey)*dy+(f[o+2]-ez)*dz;dep[i]=d;if(d<lo)lo=d;if(d>hi)hi=d;}
+ for(let i=0;i<n;i++){const o=W*i,d=(f[o]-ex)*dx+(f[o+1]*vz-ey)*dy+(f[o+2]-ez)*dz;dep[i]=d;if(d<lo)lo=d;if(d>hi)hi=d;}
  const B=65536,k=(B-1)/Math.max(1e-6,hi-lo),cnt=new Uint32Array(B),key=new Uint16Array(n);for(let i=0;i<n;i++){const q=(hi-dep[i])*k|0;key[i]=q;cnt[q]++;}
- for(let i=1;i<B;i++)cnt[i]+=cnt[i-1];const out=new Uint32Array(n*10);
- for(let i=n-1;i>=0;i--){const j=--cnt[key[i]];out.set(inst.subarray(10*i,10*i+10),10*j);} postMessage({buf:out.buffer,key:m.key},[out.buffer]);};`;
+ for(let i=1;i<B;i++)cnt[i]+=cnt[i-1];const out=new Uint32Array(n*W);
+ for(let i=n-1;i>=0;i--){const j=--cnt[key[i]];out.set(inst.subarray(W*i,W*i+W),W*j);} postMessage({buf:out.buffer,key:m.key},[out.buffer]);};`;
 async function loadSplats(name) {
   if (!instExt) throw new Error('this browser lacks instanced drawing (ANGLE_instanced_arrays)');
   toast('Loading splats…');
   const meta = await loadJSON(`data/splats/${name}.json`), r = await fetch(`data/splats/${meta.file}`); if (!r.ok) throw new Error(meta.file + ': HTTP ' + r.status);
   let ab = await r.arrayBuffer(); const u8 = new Uint8Array(ab);
   if (u8[0] === 0x1f && u8[1] === 0x8b) { if (!globalThis.DecompressionStream) throw new Error('this browser cannot unpack gzip (DecompressionStream)'); ab = await new Response(new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); }
-  const n = ab.byteLength / 32, dv = new DataView(ab), inst = new ArrayBuffer(n * 40), f = new Float32Array(inst), b = new Uint8Array(inst), src = new Uint8Array(ab);
+  const n = ab.byteLength / 32, dv = new DataView(ab), inst = new ArrayBuffer(n * REC * 4), f = new Float32Array(inst), b = new Uint8Array(inst), src = new Uint8Array(ab);
   for (let i = 0; i < n; i++) {
     const o = 32 * i, x = dv.getFloat32(o, true), y = dv.getFloat32(o + 4, true), z = dv.getFloat32(o + 8, true), sx = dv.getFloat32(o + 12, true), sy = dv.getFloat32(o + 16, true), sz = dv.getFloat32(o + 20, true);
     let w = (src[o + 28] - 128) / 128, qx = (src[o + 29] - 128) / 128, qy = (src[o + 30] - 128) / 128, qz = (src[o + 31] - 128) / 128; const l = Math.hypot(w, qx, qy, qz) || 1; w /= l; qx /= l; qy /= l; qz /= l;
     const R = [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - w * qz), 2 * (qx * qz + w * qy), 2 * (qx * qy + w * qz), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - w * qx), 2 * (qx * qz - w * qy), 2 * (qy * qz + w * qx), 1 - 2 * (qx * qx + qy * qy)];
     const M = [R[0] * sx, R[1] * sy, R[2] * sz, R[3] * sx, R[4] * sy, R[5] * sz, R[6] * sx, R[7] * sy, R[8] * sz];   // R S
     const c = (i1, i2) => M[3 * i1] * M[3 * i2] + M[3 * i1 + 1] * M[3 * i2 + 1] + M[3 * i1 + 2] * M[3 * i2 + 2];   // (R S)(R S)^T
-    const q = 10 * i; f[q] = x; f[q + 1] = y; f[q + 2] = z; f[q + 3] = c(0, 0); f[q + 4] = c(0, 1); f[q + 5] = c(0, 2); f[q + 6] = c(1, 1); f[q + 7] = c(1, 2); f[q + 8] = c(2, 2);
-    b.set(src.subarray(o + 24, o + 28), 4 * q + 36);
+    const q = REC * i; f[q] = x; f[q + 1] = y; f[q + 2] = z; f[q + 3] = c(0, 0); f[q + 4] = c(0, 1); f[q + 5] = c(0, 2); f[q + 6] = c(1, 1); f[q + 7] = c(1, 2); f[q + 8] = c(2, 2);
+    b.set(src.subarray(o + 24, o + 28), 4 * q + 36); f[q + 10] = -1;
   }
+  // the building of each splat (cw-synth.groups.bin.gz): its band across the skyline (west to east), base, top and axis
+  if (meta.groups_file) try {
+    const gr = await fetch(`data/splats/${meta.groups_file}`); let gb = await gr.arrayBuffer(); const g8 = new Uint8Array(gb);
+    if (g8[0] === 0x1f && g8[1] === 0x8b) gb = await new Response(new Blob([gb]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+    const gid = new Uint16Array(gb), G = meta.groups, F = A.meta.focus, x0 = F.x0 - 150, x1 = F.x1 + 150;
+    for (let i = 0; i < n; i++) { const k = gid[i]; if (k === 65535 || !G[k]) continue; const g = G[k], q = REC * i;
+      f[q + 10] = Math.max(0, Math.min(VIZ_BANDS - 1, Math.floor((g[0] - x0) / (x1 - x0) * VIZ_BANDS))); f[q + 11] = g[2]; f[q + 12] = g[3]; f[q + 13] = g[0]; f[q + 14] = g[1]; }
+    SPL.groups = true;
+  } catch (e) { SPL.groups = false; }
   if (SPL.worker) SPL.worker.terminate();
   SPL.worker = new Worker(URL.createObjectURL(new Blob([SORT_SRC], { type: 'text/javascript' })));
   SPL.worker.onmessage = e => { gl.bindBuffer(gl.ARRAY_BUFFER, SPL.buf); gl.bufferData(gl.ARRAY_BUFFER, e.data.buf, gl.DYNAMIC_DRAW); SPL.pending = false; SPL.sorted = e.data.key; draw(); };
@@ -805,11 +834,13 @@ function drawSplats(P) {
   gl.useProgram(prS); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   gl.uniformMatrix4fv(SU.view, false, VIEW); gl.uniformMatrix4fv(SU.proj, false, PROJ); const fy = CAM.h / 2 / Math.tan(CAM.fovY / 2);
   gl.uniform2f(SU.focal, fy, fy); gl.uniform2f(SU.vp, CAM.w, CAM.h); gl.uniform1f(SU.vz, VZ); gl.uniform1f(SU.cut, P.cut < 250 ? P.cut : 1e9);
-  const used = [SA.corner, SA.ctr, SA.ca, SA.cb, SA.col]; used.forEach(i => gl.enableVertexAttribArray(i));
+  const V = VIZ.on && SPL.groups; gl.uniform1f(SU.viz, V ? 1 : 0); gl.uniform1fv(SU.bands, VIZ.bands); gl.uniform1f(SU.stretch, VIZ.stretch); gl.uniform1f(SU.noise, VIZ.noise); gl.uniform1f(SU.swirl, VIZ.swirl); gl.uniform1f(SU.time, performance.now() / 1000);
+  const used = [SA.corner, SA.ctr, SA.ca, SA.cb, SA.col, SA.g0, SA.g1].filter(i => i >= 0); used.forEach(i => gl.enableVertexAttribArray(i));
   gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.vertexAttribPointer(SA.corner, 2, gl.FLOAT, false, 0, 0); instExt.vertexAttribDivisorANGLE(SA.corner, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, SPL.buf);
-  gl.vertexAttribPointer(SA.ctr, 3, gl.FLOAT, false, 40, 0); gl.vertexAttribPointer(SA.ca, 3, gl.FLOAT, false, 40, 12); gl.vertexAttribPointer(SA.cb, 3, gl.FLOAT, false, 40, 24); gl.vertexAttribPointer(SA.col, 4, gl.UNSIGNED_BYTE, true, 40, 36);
-  for (const i of [SA.ctr, SA.ca, SA.cb, SA.col]) instExt.vertexAttribDivisorANGLE(i, 1);
+  const ST = REC * 4; gl.vertexAttribPointer(SA.ctr, 3, gl.FLOAT, false, ST, 0); gl.vertexAttribPointer(SA.ca, 3, gl.FLOAT, false, ST, 12); gl.vertexAttribPointer(SA.cb, 3, gl.FLOAT, false, ST, 24); gl.vertexAttribPointer(SA.col, 4, gl.UNSIGNED_BYTE, true, ST, 36);
+  if (SA.g0 >= 0) gl.vertexAttribPointer(SA.g0, 3, gl.FLOAT, false, ST, 40); if (SA.g1 >= 0) gl.vertexAttribPointer(SA.g1, 2, gl.FLOAT, false, ST, 52);
+  for (const i of used) if (i !== SA.corner) instExt.vertexAttribDivisorANGLE(i, 1);
   instExt.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, SPL.n);
   for (const i of used) { instExt.vertexAttribDivisorANGLE(i, 0); if (i !== aP && i !== aC) gl.disableVertexAttribArray(i); }
   gl.useProgram(pr); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
@@ -822,6 +853,50 @@ document.querySelectorAll('input[name=splatMode]').forEach(r => r.onchange = () 
 $('splatSet').onchange = () => { SPL.set = null; if (SPL.mode !== 'off') setSplatMode(SPL.mode); };
 // the splat sets on offer: data/splats/index.json (tools/build-splats.mjs and the training script add their set)
 loadJSON('data/splats/index.json').then(ix => { $('splatSet').innerHTML = ix.sets.map(x => `<option value="${esc(x.name)}">${esc(x.title)} (${x.count.toLocaleString('en-GB')})</option>`).join(''); }).catch(() => {});
+
+// ---------- music visualiser: Web Audio analyser -> 24 log-spaced bands -> the splat shader (stretch, swirl, noise)
+const AUD = { ctx: null, an: null, el: null, src: null, mic: null, data: null, loop: 0 };
+loadJSON('data/music.json').then(m => { AUD.list = m.tracks;
+  $('vizTrack').innerHTML = m.tracks.map((t, i) => `<option value="${i}">${esc(t.title)} (${esc(t.artist)})</option>`).join('') + '<option value="file">Your own file…</option><option value="mic">Microphone</option>'; }).catch(() => { $('vizTrack').innerHTML = '<option value="file">Your own file…</option><option value="mic">Microphone</option>'; });
+function vizBands() {
+  const an = AUD.an, d = AUD.data, sr = AUD.ctx.sampleRate, nb = d.length, hz = i => i * sr / 2 / nb; an.getByteFrequencyData(d);
+  for (let k = 0; k < VIZ_BANDS; k++) {
+    const f0 = 40 * Math.pow(14000 / 40, k / VIZ_BANDS), f1 = 40 * Math.pow(14000 / 40, (k + 1) / VIZ_BANDS); let s = 0, c = 0;
+    for (let i = Math.floor(f0 / hz(1)); i <= Math.ceil(f1 / hz(1)) && i < nb; i++) { s += d[i]; c++; }
+    const v = c ? s / c / 255 : 0; VIZ.peak[k] = Math.max(v, VIZ.peak[k] * .995, .12);   // slow automatic gain per band
+    VIZ.bands[k] = VIZ.bands[k] * .45 + .55 * Math.pow(Math.min(1, v / VIZ.peak[k]), 1.6);
+  }
+}
+function vizTick() { if (!VIZ.on) return; vizBands(); if (VIZ.orbit && !cam.eye) cam.yaw += .0016; draw(); AUD.loop = requestAnimationFrame(vizTick); }
+async function vizStart() {
+  const v = $('vizTrack').value;
+  if (v === 'file') { $('vizFile').click(); return; }
+  if (!AUD.ctx) { AUD.ctx = new (window.AudioContext || window.webkitAudioContext)(); AUD.an = AUD.ctx.createAnalyser(); AUD.an.fftSize = 2048; AUD.an.smoothingTimeConstant = .7; AUD.data = new Uint8Array(AUD.an.frequencyBinCount); }
+  await AUD.ctx.resume();
+  if (v === 'mic') { AUD.mic = await navigator.mediaDevices.getUserMedia({ audio: true }); AUD.src = AUD.ctx.createMediaStreamSource(AUD.mic); AUD.src.connect(AUD.an); $('vizNote').textContent = 'Listening to the microphone (nothing is recorded or sent).'; }
+  else await vizPlayUrl(AUD.list[+v].url, AUD.list[+v]);
+  await vizOn();
+}
+async function vizPlayUrl(url, t) {
+  if (!AUD.el) { AUD.el = new Audio(); AUD.el.crossOrigin = 'anonymous'; AUD.el.loop = true; const node = AUD.ctx.createMediaElementSource(AUD.el); node.connect(AUD.an); AUD.an.connect(AUD.ctx.destination); }
+  AUD.el.src = url; await AUD.el.play();
+  $('vizNote').innerHTML = t ? `“${esc(t.title)}” by ${esc(t.artist)}, ${esc(t.licence)}, <a href="${esc(t.page)}">${esc(t.source)}</a>.` : 'Your file plays only in this browser; nothing is uploaded.';
+}
+$('vizFile').onchange = async () => { const f = $('vizFile').files[0]; if (!f) return; if (!AUD.ctx) { $('vizTrack').value = AUD.list ? '0' : 'mic'; } await vizStartFile(f); };
+async function vizStartFile(f) {
+  if (!AUD.ctx) { AUD.ctx = new (window.AudioContext || window.webkitAudioContext)(); AUD.an = AUD.ctx.createAnalyser(); AUD.an.fftSize = 2048; AUD.an.smoothingTimeConstant = .7; AUD.data = new Uint8Array(AUD.an.frequencyBinCount); }
+  await AUD.ctx.resume(); await vizPlayUrl(URL.createObjectURL(f), null); await vizOn();
+}
+async function vizOn() {
+  if (SPL.mode !== 'only') { document.querySelector('input[name=splatMode][value=only]').checked = true; await setSplatMode('only'); }
+  if (!SPL.groups) { toast('This splat set has no building groups: the towers cannot follow the music.'); }
+  VIZ.on = true; $('vizGo').textContent = '■ Stop'; if (!cam.eye && cam.dist > 2500) setView('cw'); cancelAnimationFrame(AUD.loop); vizTick();
+}
+function vizStop() { VIZ.on = false; VIZ.bands.fill(0); if (AUD.el) AUD.el.pause(); if (AUD.mic) { AUD.mic.getTracks().forEach(t => t.stop()); AUD.mic = null; if (AUD.src) AUD.src.disconnect(); } $('vizGo').textContent = '▶ Play'; draw(); }
+$('vizGo').onclick = () => VIZ.on ? vizStop() : vizStart().catch(e => { toast('Music did not start: ' + e.message); vizStop(); });
+for (const k of ['Stretch', 'Noise', 'Swirl']) $('viz' + k).oninput = () => { VIZ[k.toLowerCase()] = +$('viz' + k).value; draw(); };
+$('vizOrbit').onchange = () => { VIZ.orbit = $('vizOrbit').checked; };
+if (location.hash === '#music') setTimeout(() => { openPane('paneLayers'); $('music').scrollIntoView(); }, 300);
 
 // glow outlines by occupant category (registry/categories.json via the atlas index: AT.buildings[k].cat)
 const GLOW = { finance: [1, .19, .19], shop: [.2, .84, 1], catering: [1, .63, .25], leisure: [.36, 1, .48], entertainment: [1, .31, .85] };
@@ -1150,7 +1225,7 @@ function captureMode(on) {
 if (/[?&]capture\b/.test(location.search)) captureMode(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; },
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; },
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };

@@ -2069,6 +2069,9 @@
         },
         {
           "local": "data/raw/splats/cw-synth.ply"
+        },
+        {
+          "file": "docklands/data/splats/cw-synth.groups.bin.gz"
         }
       ],
       "method": "Synthesises Gaussian splats straight from the model (no training): ground discs coloured from the 2008 aerial photograph, roof discs, and wall discs with a glass band, written as .splat and as a 3DGS PLY.",
@@ -2077,7 +2080,8 @@
         "Ground discs every 4 m (--ground) where no building covers the cell, coloured bilinearly from rgb2008.ppm.",
         "Roof discs every 4 m inside the outline: aerial colour on buildings under 40 m, else the building colour.",
         "Walls: one disc per 3.6 m storey and 7.2 m (--cell) of wall, and one glass-band disc 3 cm in front per cell (buildings 4 m or taller).",
-        "The set entry 'cw-synth' replaces any earlier one in index.json; other entries are kept."
+        "The set entry 'cw-synth' replaces any earlier one in index.json; other entries are kept.",
+        "every splat records its building (uint16 index into cw-synth.json groups; 65535 = ground) for animation"
       ],
       "network": false,
       "deterministic": false,
