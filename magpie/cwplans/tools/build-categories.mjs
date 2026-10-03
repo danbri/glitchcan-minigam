@@ -1,9 +1,11 @@
-// Occupant categories per registry building: finance, shops, catering, leisure, entertainment. Drives the "glow"
-// outlines in the 3D page and the counts in the atlas.
+// Occupant categories per registry building: finance, shops, catering, leisure, entertainment; and (October 2026) bar,
+// alcohol, education, health, sport, arts. Drives the "glow" outlines in the 3D page (the first five) and the counts
+// in the atlas.
 //
 //   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-categories.mjs     # two QLever queries the first time, then cached
 //
 // in:  registry/buildings.json, data/raw/registry/osm-cw.json.gz (OSM tags by id: the registry keeps only a role),
+//      registry/sources/brands/cwg-directory.json (section and category labels of the entries occupants are joined to),
 //      Wikidata via QLever: occupant classes and dated occupant links (cached in data/raw/registry/wikidata-occupant-classes.json)
 // out: registry/categories.json  { rules, buildings: { cwb-id: { finance: [{ name, source, why, link?, start?, end? }], ... } }, former: { ... } }
 // Rules: a category comes only from a class stated by a source (an OSM tag, a Wikidata class or industry, the FSA
@@ -60,23 +62,56 @@ const RULES = [
   ['leisure', (o, t) => /^(fitness_centre|sports_centre|swimming_pool|sauna|dance|sports_hall)$/.test(t.leisure || '') || /^leisure: (fitness_centre|sports_centre|swimming_pool|sauna|dance)$/.test(o.role) || /^(branch: hotel|tourism: hotel)$/.test(o.role) || /^Hotel/.test(o.type || ''), (o, t) => t.leisure ? `OSM leisure=${t.leisure}` : o.type ? `FSA ${o.type}` : `role ${o.role}`],
   ['entertainment', (o, t, w) => /^(cinema|theatre|nightclub|arts_centre|casino|events_venue|music_venue|planetarium)$/.test(t.amenity || '') || /^(amusement_arcade|bowling_alley|escape_game|miniature_golf|adult_gaming_centre)$/.test(t.leisure || '') || /^(museum|gallery)$/.test(t.tourism || '') || /^service: (cinema|theatre|nightclub|events_venue|arts_centre)$/.test(o.role) || /^Pub\/bar\/nightclub/.test(o.type || '') && /nightclub/i.test(t.amenity || '') || (w && w.p31.some(c => /movie theater|cinema|theatre|music venue|nightclub|museum|art gallery|bowling/i.test(c))), (o, t, w) => t.amenity ? `OSM amenity=${t.amenity}` : t.leisure ? `OSM leisure=${t.leisure}` : t.tourism ? `OSM tourism=${t.tourism}` : w ? `Wikidata ${w.p31[0]}` : `role ${o.role}`],
 ];
-const CATS = ['finance', 'shop', 'catering', 'leisure', 'entertainment'];
+// October 2026 additions (owner's list): pubs and bars, alcohol shops, education, healthcare, sport, cinemas and arts
+// venues. An occupant can be in several categories (a pub is catering and bar). Stated classes only: OSM tags, the FSA
+// business type, Wikidata P31, the CWG directory section and its own category labels (a CWG label that mixes two
+// classes, "Cafes & Bars", "Hospitals/Childcare" in the FSA, is not used).
+const has = (v, re) => !!v && String(v).split(';').some(x => re.test(x.trim()));
+const osmWhy = (t, keys) => { for (const [k, re] of keys) if (has(t[k], re)) return `OSM ${k}=${t[k]}`; return null; };
+const cwgWhy = (c, labels) => { const l = (c?.categories || []).find(x => labels.includes(x)); return l ? `CWG category ${l}` : null; };
+const wdWhy = (w, re) => { const c = (w?.p31 || []).find(x => re.test(x)); return c ? `Wikidata ${c}` : null; };
+const NEW = {
+  bar: [[['amenity', /^(pub|bar|nightclub|biergarten)$/]], /^Pub\/bar\/nightclub$/, ['Bars', 'Cocktails'], /\b(pub|bar|nightclub|biergarten)\b/i, null],
+  alcohol: [[['shop', /^(alcohol|wine|beverages)$/]], null, [], /\b(wine shop|liquor store|off-licence)\b/i, null],
+  education: [[['amenity', /^(school|college|university|kindergarten|childcare)$/]], /^School\/college\/university$/, ['Childcare'], /\b(school|university|college|academic institution|kindergarten|nursery)\b/i, /^branch: childcare$/],
+  health: [[['amenity', /^(doctors|dentist|pharmacy|clinic|hospital)$/], ['healthcare', /./]], null, ['Healthcare'], /\b(hospital|clinic|doctor's office|medical organization|dental|pharmacy)\b/i, null],
+  sport: [[['leisure', /^(sports_centre|fitness_centre|pitch|swimming_pool|sports_hall)$/], ['sport', /./]], null, ['Sport'], /\b(sports venue|sports centre|fitness centre|gym|stadium|swimming pool)\b/i, /^branch: gym$/],
+  arts: [[['amenity', /^(cinema|theatre|arts_centre|nightclub|music_venue|events_venue|concert_hall)$/], ['theatre:genre', /./]], null, [], /\b(movie theater|cinema|theatre|music venue|concert hall|arts centre|nightclub)\b/i, null],
+};
+for (const [cat, [osmKeys, fsaType, cwgLabels, wdRe, roleRe]] of Object.entries(NEW)) {
+  // CWG "Healthcare" also lists a vet; CWG "Sport & Fitness" lists sportswear shops (not used). An OSM tag that states
+  // another class outranks a CWG label.
+  const why = (o, t, w, c) => (cat === 'health' && t.amenity === 'veterinary') ? null : osmWhy(t, osmKeys) || (fsaType && fsaType.test(o.type || '') && o.source === 'fsa' ? `FSA ${o.type}` : null) || cwgWhy(c, cwgLabels) || wdWhy(w, wdRe) || (roleRe && roleRe.test(o.role) ? `role ${o.role}` : null);
+  RULES.push([cat, (o, t, w, c) => !!why(o, t, w, c), why]);
+}
+// the CWG directory's own classes for the first five: its section (restaurant: catering; stay: leisure, as hotels are)
+// and the category labels that name one class of goods
+const CWG_SHOP = ['Shoes & Footwear', 'Flowers & Plants', 'Cards & Stationery', 'Accessories', 'Confectionery', 'Menswear', 'Womenswear', 'Clothing', 'Lingerie', 'Home & Furniture', 'Electronics & Phones', 'Bags & Luggage', 'Jewellery & Watches', 'News & Books', 'Groceries'];
+RULES.push(['catering', (o, t, w, c) => c?.kind === 'restaurant', () => 'CWG section restaurant']);
+RULES.push(['leisure', (o, t, w, c) => c?.kind === 'stay' || (c?.categories || []).includes('Hotels & Apartments'), (o, t, w, c) => c.kind === 'stay' ? 'CWG section stay' : 'CWG category Hotels & Apartments']);
+RULES.push(['shop', (o, t, w, c) => !!cwgWhy(c, CWG_SHOP), (o, t, w, c) => cwgWhy(c, CWG_SHOP)]);
+RULES.push(['finance', (o, t, w, c) => !!cwgWhy(c, ['Banks & Foreign Exchange']), (o, t, w, c) => cwgWhy(c, ['Banks & Foreign Exchange'])]);
+const CATS = ['finance', 'shop', 'catering', 'leisure', 'entertainment', ...Object.keys(NEW)];
+const LABELS = { finance: 'Banks and finance', shop: 'Shops', catering: 'Food and drink', leisure: 'Leisure', entertainment: 'Entertainment', bar: 'Pubs, bars and nightclubs', alcohol: 'Alcohol shops', education: 'Schools, colleges, universities and nurseries', health: 'Healthcare', sport: 'Sport', arts: 'Cinemas, theatres, music and arts venues' };
+// CWG entries by URL: an occupant joined to the directory carries cwg_url (and cwg_also for a second section)
+const CWGD = new Map(JSON.parse(readFileSync(join(CW, 'registry/sources/brands/cwg-directory.json'), 'utf8')).directory.map(e => [e.cwg_url, e]));
+const cwgOf = o => { const es = [o.cwg_url, ...(o.cwg_also || [])].map(u => CWGD.get(u)).filter(Boolean); return es.length ? { kind: es[0].kind, kinds: es.map(e => e.kind), categories: es.flatMap(e => e.categories || []) } : null; };
 
 const out = {}, former = {}, totals = Object.fromEntries(CATS.map(c => [c, { buildings: 0, occupants: 0 }]));
 for (const b of REG.buildings) {
   const rec = {};
   for (const o of b.occupants) {
-    const t = (o.osm && tagsOf.get(o.osm)) || {}, w = o.wikidata ? wdc.items[o.wikidata] : null, done = new Set();
+    const t = (o.osm && tagsOf.get(o.osm)) || {}, w = o.wikidata ? wdc.items[o.wikidata] : null, c = cwgOf(o), done = new Set();
     const link = o.wikidata && b.wikidata && /P466|P159/.test(o.role) ? linkOf.get(`${b.wikidata}|${o.wikidata}`) : null;
     const when = /wikidata/i.test(o.source) || /Wikidata/.test(o.role) ? (link ? { link: link.status, ...(link.start ? { start: link.start } : {}), ...(link.end || link.dissolved ? { end: link.end || link.dissolved } : {}) } : { link: 'undated' }) : {};
-    for (const [cat, test, why] of RULES) if (!done.has(cat) && test(o, t, w)) { done.add(cat); if ((rec[cat] || []).some(x => x.name === (o.name || w?.label || ''))) continue; (rec[cat] ||= []).push({ name: o.name || w?.label || '', source: o.source, why: why(o, t, w), ...when }); }
+    for (const [cat, test, why] of RULES) if (!done.has(cat) && test(o, t, w, c)) { done.add(cat); if ((rec[cat] || []).some(x => x.name === (o.name || w?.label || ''))) continue; (rec[cat] ||= []).push({ name: o.name || w?.label || '', source: o.source, why: why(o, t, w, c), ...when }); }
   }
   for (const c of Object.keys(rec)) if (rec[c].every(x => x.link === 'former')) { (former[b.id] ||= {})[c] = rec[c]; delete rec[c]; } else if (rec[c].some(x => x.link === 'former')) { (former[b.id] ||= {})[c] = rec[c].filter(x => x.link === 'former'); rec[c] = rec[c].filter(x => x.link !== 'former'); }
   if (Object.keys(rec).length) { out[b.id] = rec; for (const c of Object.keys(rec)) { totals[c].buildings++; totals[c].occupants += rec[c].length; } }
 }
 writeFileSync(join(CW, 'registry/categories.json'), JSON.stringify({
   generated: new Date().toISOString().slice(0, 10),
-  rules: 'A category comes only from a class a source states: OSM tags (amenity, office, shop, leisure, tourism), Wikidata P31 instance of and P452 industry, the FSA business type, the branch role from the brand table (its category from the brand\'s NSI or OSM tag). Names are not used. Companies House registered offices are not used (SE-1). Wikidata occupant links: link former (an end date or a dissolved organisation; listed under former, not counted), current (a start date), undated (no qualifier).',
-  totals, buildings: out, former,
+  rules: 'A category comes only from a class a source states: OSM tags (amenity, office, shop, leisure, tourism, healthcare, sport, theatre:genre), Wikidata P31 instance of and P452 industry, the FSA business type, the branch role from the brand table (its category from the brand\'s NSI or OSM tag), the CWG directory section (restaurant, stay) and its category labels where a label names one class. Names are not used. Companies House registered offices are not used (SE-1). Wikidata occupant links: link former (an end date or a dissolved organisation; listed under former, not counted), current (a start date), undated (no qualifier).',
+  labels: LABELS, totals, buildings: out, former,
 }));
 console.log('categories.json:', JSON.stringify(totals));
