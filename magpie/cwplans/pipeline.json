@@ -2091,6 +2091,33 @@
       ]
     },
     {
+      "id": "build-river",
+      "tool": "tools/build-river.mjs",
+      "command": "node magpie/cwplans/tools/build-river.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "docklands/data/area.js"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/river.json"
+        }
+      ],
+      "method": "Rasterises the Thames water polygons on an 8 m grid and finds the centreline from the west to the east edge of the model by a least-cost path that keeps away from the banks; also copies the Eden Dock outline.",
+      "rules": [
+        "the Thames = tidal water polygons with no name (or named Thames)",
+        "step cost = step length / (distance to bank + 1)^1.5",
+        "moving average over 9 cells, resampled every 20 m"
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "build-docklands"
+      ]
+    },
+    {
       "id": "drone-flight",
       "tool": "tools/drone-flight.mjs",
       "command": "node magpie/cwplans/tools/drone-flight.mjs [--out path.json] [--svg plan.svg] [--coverage 480]",

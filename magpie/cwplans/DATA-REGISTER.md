@@ -44,9 +44,10 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `registry/categories.json` | 66 kB | derived | occupant names and the OSM tags that state their kind (amenity, office, shop, leisure, tourism) | osmfr-greater-london | docklands/index.html |
 | `docklands/data/splats/cw-synth.splat.gz` | 4.8 MB | derived | building outlines and heights as splat positions and sizes | osmfr-greater-london | docklands/index.html |
 | `docklands/data/splats/cw-synth.groups.bin.gz` | 8 kB | derived | model building indices | osmfr-greater-london | docklands/index.html |
+| `docklands/data/river.json` | 11 kB | derived | the Thames and Eden Dock water polygons | osmfr-greater-london | docklands/index.html |
 | `docklands/data/skyline.json` | 85 kB | derived | model building indices (today's OSM outlines) as the keys of the heights | osmfr-greater-london | docklands/index.html |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 24 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 25 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -153,10 +154,12 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `docklands/data/splats/index.json` | 1 kB | list of the splat sets the 3D page offers | written or computed in this project (repository licence) |
 | `docklands/data/splats/cw-synth.groups.bin.gz` | 8 kB | the building of each synthesised splat (uint16 a splat), for animation | OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
 | `docklands/data/music.json` | 2 kB | tracks for the music visualiser: titles, artist, licence, Commons URLs and pages | Music by Kevin MacLeod (CC BY 3.0 (attribution; not share-alike)) |
+| `docklands/data/river.json` | 11 kB | Thames centreline with distance to the bank (every 20 m) and the Eden Dock outline, for animated boats and swimmers in the pixel-art style | OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
+| `docklands/data/pixel-palette.json` | 2 kB | 33-colour palette of the pixel-art style: 24 colours extracted from an owner-supplied reference picture (colours only, the picture is not stored) and 9 accents added by hand | written or computed in this project (repository licence) |
 | `docklands/data/splats/cw-synth.json` | 123 kB | metadata of the synthesised splat set: box, counts, method | written or computed in this project (repository licence) |
 | `docklands/data/skyline.json` | 85 kB | measured height of each model building on the Canary Wharf estate and 300 m round it in every EA LiDAR surface model that flew it (1999 to 2022), with survey dates | Environment Agency LiDAR DSM survey tiles 1999 to 2022 (OGL v3.0); OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0) |
-| `pipeline.json` | 107 kB | provenance of every transform: one W3C PROV activity a tool (used, generated, rules) | written or computed in this project (repository licence) |
-| `pipeline.jsonld` | 208 kB | pipeline.json and this register as JSON-LD (PROV-O, DCAT, Dublin Core) for a knowledge graph | written or computed in this project (repository licence) |
+| `pipeline.json` | 108 kB | provenance of every transform: one W3C PROV activity a tool (used, generated, rules) | written or computed in this project (repository licence) |
+| `pipeline.jsonld` | 210 kB | pipeline.json and this register as JSON-LD (PROV-O, DCAT, Dublin Core) for a knowledge graph | written or computed in this project (repository licence) |
 | `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
 | `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
@@ -169,7 +172,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 24 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 25 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 

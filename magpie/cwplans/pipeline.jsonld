@@ -2400,6 +2400,39 @@
    ]
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-river",
+   "@type": "prov:Activity",
+   "rdfs:label": "build-river",
+   "dct:description": "Rasterises the Thames water polygons on an 8 m grid and finds the centreline from the west to the east edge of the model by a least-cost path that keeps away from the banks; also copies the Eden Dock outline.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/river.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/build-river.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/build-river.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "the Thames = tidal water polygons with no name (or named Thames)",
+    "step cost = step length / (distance to bank + 1)^1.5",
+    "moving average over 9 cells, resampled every 20 m"
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands"
+    }
+   ]
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/drone-flight",
    "@type": "prov:Activity",
    "rdfs:label": "drone-flight",
@@ -4273,6 +4306,40 @@
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-music"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/river.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Thames centreline with distance to the bank (every 20 m) and the Eden Dock outline, for animated boats and swimmers in the pixel-art style",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-river"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/pixel-palette.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "33-colour palette of the pixel-art style: 24 colours extracted from an owner-supplied reference picture (colours only, the picture is not stored) and 9 accents added by hand",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
    "cwp:osmUse": "none"
