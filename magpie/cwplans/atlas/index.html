@@ -125,6 +125,13 @@ svg .muted { fill: var(--muted); }
 .foot { margin: 32px 0 8px; font-size: .82em; color: var(--muted); }
 .more { margin: 8px 0; }
 .hidden { display: none !important; }
+.qcheck { margin: 10px 0; }
+.qcheck summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.qcheck summary .id { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.2em; }
+.qcheck summary .t { flex: 1; min-width: 200px; }
+.sev-high { color: var(--bad); } .sev-medium { color: var(--warn); } .sev-low { color: var(--muted); }
+.qrate { height: 6px; border-radius: 3px; background: var(--chip); margin-top: 4px; }
+.qrate i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
 </style>
 </head>
 <body>
@@ -140,7 +147,7 @@ svg .muted { fill: var(--muted); }
   <nav aria-label="Atlas sections">
     <a href="#overview">Overview</a><a href="#map">Map</a><a href="#buildings">Buildings</a><a href="#business">Businesses</a>
     <a href="#postcodes">Postcodes</a><a href="#under">Below ground</a><a href="#heritage">Heritage</a><a href="#river">River</a>
-    <a href="#sources">Live and sources</a><a href="#data">Data and licences</a>
+    <a href="#sources">Live and sources</a><a href="#quality">Data quality</a><a href="#data">Data and licences</a>
   </nav>
 </header>
 
@@ -264,6 +271,14 @@ svg .muted { fill: var(--muted); }
   <button class="btn more" type="button" id="smore">Show more</button>
 </section>
 
+<section class="view" id="v-quality">
+  <h1>Data quality</h1>
+  <p class="lede">The same checks run on every rebuild, in eight classes. They measure where sources disagree, where joins fail and where our own tools damage the data, so that the rules for combining sources are built on measured error classes. Nothing here is corrected automatically. Analysis and proposed compositing rules: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/quality/README.md">README</a> · all tables: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/quality/CATALOGUE.md">CATALOGUE</a>.</p>
+  <div class="cards" id="qCards"></div>
+  <div class="tools"><div class="chips" id="qCls"></div><div class="chips" id="qSev"></div></div>
+  <div id="qChecks"></div>
+</section>
+
 <section class="view" id="v-data">
   <h1>Data and licences</h1>
   <p class="lede">Every committed data file, its sources and licences, and how it uses OpenStreetMap. Generated from <code>data-register.json</code>; the readable version is <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">DATA-REGISTER.md</a>.</p>
@@ -312,7 +327,7 @@ const P = {
   facts: '../docklands/facts.json', feeds: '../feeds/feeds.json', events: '../feeds/events.json',
   records: '../registry/sources/museums/records-open.json', apa: '../registry/sources/museums/apa_greater_london.geojson',
   companies: '../registry/companies-by-postcode.json', homes: '../registry/homes-by-postcode.json', queries: '../postcodes/queries.json',
-  register: '../data-register.json', levels: '../data/sourced-levels.json',
+  register: '../data-register.json', levels: '../data/sourced-levels.json', quality: '../quality/issues.json',
 };
 let A = null, REG = null, regById = new Map();
 const B = new Map(); // atlas building index by id
@@ -341,7 +356,7 @@ themeBtn.onclick = () => {
 };
 
 // ---------- router: #view or #view/kind/id (kind: b building, pc postcode, h heritage place)
-const VIEWS = ['overview', 'map', 'buildings', 'business', 'postcodes', 'under', 'heritage', 'river', 'sources', 'data'];
+const VIEWS = ['overview', 'map', 'buildings', 'business', 'postcodes', 'under', 'heritage', 'river', 'sources', 'quality', 'data'];
 let current = null; const shown = new Set();
 function route() {
   let h = decodeURIComponent(location.hash.slice(1));
@@ -376,6 +391,7 @@ async function open(kind, id, push = true) {
     if (kind === 'pc') return await openPostcode(id.replace(/-/g, ' '));
     if (kind === 'h') return await openHeritage(+id);
     if (kind === 'brand') return await openBrand(id);
+    if (kind === 'q') { const el = document.getElementById('qc-' + id); if (el) { el.open = true; el.scrollIntoView({ block: 'start' }); } return; }
   } catch (e) { dossier('Error', `<p class="small">${esc(e.message)}</p>`); }
 }
 document.addEventListener('click', e => {
@@ -386,13 +402,22 @@ document.addEventListener('click', e => {
 const linkB = (id, text) => `<a href="#" data-open="b/${esc(id)}">${esc(text || B.get(id)?.n || id)}</a>`;
 const linkPc = pc => `<a href="#" data-open="pc/${esc(pc.replace(' ', '-'))}">${esc(pc)}</a>`;
 
+// ---------- data-quality issues, indexed by entity
+let QI = null;
+const getQ = async () => { if (!QI) { const q = await load(P.quality); QI = { q, by: new Map() }; for (const i of q.issues) { const k = `${i.ent}/${i.id}`; if (!QI.by.has(k)) QI.by.set(k, []); QI.by.get(k).push(i); } } return QI; };
+const qNotes = async (ent, id) => {
+  try { const { q, by } = await getQ(), list = by.get(`${ent}/${id}`) || []; if (!list.length) return '';
+    const title = Object.fromEntries(q.checks.map(c => [c.id, c.title]));
+    return `<h3>Data quality (${list.length})</h3>${list.map(i => `<div class="small"><a href="#quality/q/${esc(i.check)}">${esc(i.check)}</a> <span class="sev-${esc(i.sev)}">${esc(i.sev)}</span> ${esc(title[i.check] || '')}: ${esc(i.note)}</div>`).join('')}`;
+  } catch (e) { return ''; } };
+
 // ---------- building dossier
 const levelNum = l => { const n = parseFloat(String(l).replace(/[^\d.\-;]/g, '').split(';')[0]); return Number.isFinite(n) ? n : null; };
 async function openBuilding(id) {
   const ab = B.get(id); if (!ab) throw new Error(`no building ${id}`);
   dossier(esc(ab.n || id), '<p class="small">Loading the full record…</p>');
   hilite(id);
-  const b = (await getReg(), regById.get(id));
+  const [, qn] = await Promise.all([getReg(), qNotes('b', id)]); const b = regById.get(id);
   const roof = HT(ab);
   const kv = [['height', roof != null ? `${roof} m` : '—'], ['LiDAR / model', ab.mh != null ? `${ab.mh} m` : '—'], ['floors', ab.lv ?? '—'], ['below ground', ab.lu ?? '—'], ['footprint', b.area_m2 ? `${N(b.area_m2)} m²` : '—'],
     ['occupants', b.occupants.length], ['homes', b.homes ? (typeof b.homes.count === 'number' ? N(b.homes.count) : esc(b.homes.count)) : 0], ['companies', N(ab.co)], ['UPRNs', b.uprns ?? '—']];
@@ -440,6 +465,7 @@ async function openBuilding(id) {
     ${facts ? `<h3>Wikidata</h3><table>${facts}</table>` : ''}
     ${homes}${sales}${comp}
     ${pcs ? `<h3>Postcodes</h3><p>${pcs}</p>` : ''}
+    ${qn}
     <h3>Identifiers</h3><p class="small">${b.toids?.length ? `OS TOID ${b.toids.map(esc).join(', ')}<br>` : ''}${b.usrns?.length ? `USRN ${b.usrns.map(esc).join(', ')}<br>` : ''}${b.inspire?.length ? `HM Land Registry INSPIRE ${b.inspire.map(esc).join(', ')} (index polygons, not title numbers)<br>` : ''}${(L.companies_house_by_postcode || []).map(u => a(u, 'Companies House search')).join(' ')} ${(L.land_registry_price_paid_by_postcode || []).map(u => a(u, 'price paid search')).join(' ')}</p>`);
 }
 document.addEventListener('click', e => {
@@ -457,7 +483,7 @@ function sparkYears(byYear) {
 async function openPostcode(pc) {
   const p = A.postcodes.find(x => x.pc === pc);
   dossier(esc(pc), '<p class="small">Loading…</p>');
-  const [co, hm, qs] = await Promise.all([load(P.companies), load(P.homes), load(P.queries).catch(() => null)]);
+  const [co, hm, qs, qn] = await Promise.all([load(P.companies), load(P.homes), load(P.queries).catch(() => null), qNotes('pc', pc)]);
   const comps = co.postcodes[pc] || [], h = hm.postcodes[pc];
   const inB = [...B.values()].filter(b => b.pc.includes(pc));
   const qr = qs?.results?.[pc] || {}, found = ['govuk', 'wiki'].flatMap(k => (qr[k]?.items || []).map(it => ({ ...it, src: k === 'govuk' ? 'GOV.UK' : 'Wikipedia' })));
@@ -466,6 +492,7 @@ async function openPostcode(pc) {
     ${p ? `<div class="kv"><div><b>${esc(p.s)}</b><span>status</span></div><div><b>${esc(ym(p.in))}</b><span>introduced</span></div>${p.out ? `<div><b>${esc(ym(p.out))}</b><span>terminated</span></div>` : ''}<div><b>${esc(p.t)}</b><span>tier</span></div><div><b>${N(comps.length)}</b><span>companies</span></div><div><b>${N(p.of)}</b><span>OSM features</span></div></div>
     <p class="small">Ward: ${esc(p.w || '—')}${p.lu ? ' · large-user postcode (one organisation)' : ''}${p.st.length ? ` · streets in OSM: ${p.st.map(esc).join(', ')}` : ''}</p>
     <div class="links"><a href="#" data-flyto="${p.lat},${p.lon}">show on map</a>${a('https://find-and-update.company-information.service.gov.uk/advanced-search/get-results?registeredOfficeAddress=' + encodeURIComponent(pc), 'Companies House search')}${a('https://landregistry.data.gov.uk/app/ppd/search?postcode=' + encodeURIComponent(pc), 'price paid search')}${a('https://www.openstreetmap.org/?mlat=' + p.lat + '&mlon=' + p.lon + '#map=18/' + p.lat + '/' + p.lon, 'OSM')}</div>` : '<p class="small">Not an allocated postcode, or no position in the ONSPD.</p>'}
+    ${qn}
     ${inB.length ? `<h3>Buildings with this postcode</h3><p>${inB.map(b => linkB(b.id)).join(' · ')}</p>` : ''}
     ${h ? `<h3>Home sales (HM Land Registry)</h3><p>${N(h.homes_sold_since_1995)} homes sold since 1995 in ${N(h.sales)} sales; median ${money(h.median_price)}; last ${esc(h.last)}.</p>${sparkYears(h.sales_by_year)}` : ''}
     ${comps.length ? `<h3>Registered companies (${comps.length})</h3><div class="tools"><input type="search" placeholder="Filter companies" aria-label="Filter companies" oninput="this.parentNode.nextElementSibling.querySelectorAll('div').forEach(d=>d.style.display=d.textContent.toLowerCase().includes(this.value.toLowerCase())?'':'none')"></div><div class="small">${comps.map(c => `<div>${a('https://find-and-update.company-information.service.gov.uk/company/' + c.number, c.name)} <span class="tag">${esc(c.status)}</span> <span class="tag">${esc(c.incorporated)}</span>${c.sic?.length ? ` <span class="tag">SIC ${c.sic.map(esc).join(' ')}</span>` : ''}</div>`).join('')}</div>` : ''}
@@ -585,7 +612,7 @@ INIT.overview = () => {
   const cards = [
     ['../docklands/', 'Docklands 3D', N(c.model_buildings), 'buildings in the 3D model from London Bridge to Cody Dock, with tunnels, basements, indoor levels, flood walls and the riverbed'],
     ['#buildings', 'Buildings', N(c.registry_buildings), `buildings at Canary Wharf with internal ids; ${N(c.occupants)} occupants; ${N(c.with_owner)} with a named owner`],
-    ['#map', 'Map', '11', 'layers: buildings, branches, postcodes, heritage, priority areas, Wikidata, riverbed, wrecks, flood walls, stations, traffic cameras'],
+    ['#map', 'Map', '12', 'layers: buildings, branches, postcodes, heritage, priority areas, Wikidata, riverbed, wrecks, flood walls, stations, data-quality issues, traffic cameras'],
     ['#business', 'Businesses', N(c.branches), `chain-store branches of ${N(c.brands)} brands; ${N(c.companies)} registered companies at Canary Wharf postcodes`],
     ['#buildings/homes', 'Homes', N(c.homes), `homes in ${N(c.homes_buildings)} residential buildings (GLA London Building Stock Model), with sales from HM Land Registry`],
     ['#postcodes', 'Postcodes', N(c.postcodes_candidates), `E14 candidates: ${N(c.postcodes_live)} live, ${N(c.postcodes_terminated)} terminated, ${N(c.postcodes_never)} never allocated`],
@@ -594,9 +621,11 @@ INIT.overview = () => {
     ['#river', 'River', N(c.soundings), `riverbed soundings, ${N(c.wrecks)} wrecks and obstructions, ${N(c.defences)} flood-wall segments with crest levels`],
     ['#sources', 'Live and sources', N(c.feeds + c.events), `${N(c.feeds)} data feeds and APIs and ${N(c.events)} event, news and openings sources, each checked`],
     ['#map', 'Wikidata', N(c.wikidata), 'Wikidata items with coordinates in the Docklands box'],
+    ['#quality', 'Data quality', '<span id="ovQ">…</span>', 'issue records from the checks run on every rebuild: identity, position, attribute conflicts, validity, our own pipeline, currency, coverage, meaning'],
     ['#data', 'Data and licences', N(c.register_files), 'committed data files, each with its sources, licence and use of OpenStreetMap'],
   ];
   $('ovCards').innerHTML = cards.map(([h, k, big, p]) => `<a class="card" href="${h}"${h.startsWith('..') ? ' target="_blank" rel="noopener"' : ''}><div class="k">${k}</div><div class="big">${big}</div><p>${p}</p></a>`).join('');
+  getQ().then(({ q }) => { $('ovQ').textContent = N(q.summary.issues); }).catch(() => { $('ovQ').textContent = '—'; });
   $('ovFoot').innerHTML = `Atlas data built ${esc(A.built)}. ` + A.attribution.map(s => a(s.url, s.text)).join(' · ');
 };
 
@@ -781,6 +810,39 @@ INIT.sources = async () => {
   $('smore').onclick = () => { lim += 120; draw(); }; draw();
 };
 
+INIT.quality = async () => {
+  const { q } = await getQ(), CLS = [...new Set(q.checks.map(c => c.cls))];
+  const byCls = {}; for (const c of q.checks) { byCls[c.cls] ||= { checks: 0, issues: 0 }; byCls[c.cls].checks++; byCls[c.cls].issues += c.issues || 0; }
+  $('qCards').innerHTML = [['All issues', q.summary.issues, `${q.summary.checks} checks · ${q.summary.buildings_with_issues} buildings · ${q.summary.postcodes_with_issues} postcodes`]]
+    .concat(Object.entries(byCls).map(([k, v]) => [k, v.issues, `${v.checks} check${v.checks > 1 ? 's' : ''}`]))
+    .map(([k, n, p]) => `<div class="card"><div class="k">${esc(k)}</div><div class="big">${N(n)}</div><p>${esc(p)}</p></div>`).join('');
+  let cls = 'all', sev = 'all';
+  $('qCls').innerHTML = ['all', ...CLS].map(k => `<button class="chip" type="button" data-c="${esc(k)}" aria-pressed="${k === 'all'}">${esc(k)}</button>`).join('');
+  $('qSev').innerHTML = ['all', 'high', 'medium', 'low'].map(k => `<button class="chip" type="button" data-s="${k}" aria-pressed="${k === 'all'}">${k === 'all' ? 'any severity' : k}</button>`).join('');
+  const entLink = i => i.ent === 'b' ? linkB(i.id) : i.ent === 'pc' ? linkPc(i.id) : i.ent === 'brand' ? `<a href="#" data-open="brand/${esc(i.id)}">${esc(i.id)}</a>` : i.ent === 'osm' ? a('https://www.openstreetmap.org/' + i.id, i.id) : i.ent === 'fsa' ? a('https://ratings.food.gov.uk/business/' + i.id, 'FSA ' + i.id) : esc(i.ent + ' ' + i.id);
+  const tbl = (obj, h1, h2) => `<table><thead><tr><th style="position:static">${h1}</th><th class="r" style="position:static">${h2}</th></tr></thead><tbody>${Object.entries(obj).map(([k, v]) => `<tr style="cursor:default"><td>${esc(k)}</td><td class="r num">${typeof v === 'object' ? esc(JSON.stringify(v)) : N(v)}</td></tr>`).join('')}</tbody></table>`;
+  const detail = c => {
+    const list = q.issues.filter(i => i.check === c.id && (sev === 'all' || i.sev === sev));
+    return `<p class="small"><b>Method.</b> ${esc(c.method)}</p><p class="small"><b>Compositing rule.</b> ${esc(c.rule)}</p>
+      ${c.breakdown ? tbl(c.breakdown, 'case', 'count') : ''}${c.stats ? tbl(c.stats, 'measure', 'value') : ''}
+      ${c.offsets_by_mall ? tbl(Object.fromEntries(Object.entries(c.offsets_by_mall).map(([m, o]) => [m, Object.entries(o).map(([k, n]) => `${k > 0 ? '+' + k : k}: ${n}`).join(', ')])), 'mall: CWG level minus OSM level', 'count') : ''}
+      ${c.crosswalk ? tbl(Object.fromEntries(c.crosswalk.slice(0, 20).map(r => [r.pair, r.n])), 'OSM tag | FSA type', 'count') : ''}
+      ${c.values ? `<p class="small">Values: ${Object.entries(c.values).map(([k, n]) => `<code>${esc(k)}</code> ${n}`).join(', ')}</p>` : ''}
+      ${c.count_only ? `<p class="small">Counted only: ${esc(c.count_only)}.</p>` : list.length ? `<div class="small">${list.slice(0, 300).map(i => `<div><span class="sev-${esc(i.sev)}">${esc(i.sev)}</span> ${entLink(i)}: ${esc(i.note)}</div>`).join('')}${list.length > 300 ? `<div>… ${N(list.length - 300)} more in issues.json</div>` : ''}</div>` : '<p class="small">No issues at this severity.</p>'}`;
+  };
+  const draw = () => {
+    $('qChecks').innerHTML = q.checks.filter(c => cls === 'all' || c.cls === cls).map(c => {
+      const r = c.population ? Math.min(1, (c.issues || 0) / c.population) : null;
+      return `<details class="panel qcheck" id="qc-${esc(c.id)}"><summary><span class="id">${esc(c.id)}</span><span class="t">${esc(c.title)} <span class="tag">${esc(c.cls)}</span></span><span class="num">${N(c.issues || 0)}${c.population != null ? ` of ${N(c.population)}` : ''}</span></summary>${r != null ? `<div class="qrate" title="${(r * 100).toFixed(1)}%"><i style="width:${Math.max(1, r * 100)}%"></i></div>` : ''}<div data-d></div></details>`;
+    }).join('');
+    $('qChecks').querySelectorAll('details').forEach(d => d.addEventListener('toggle', () => { if (d.open && !d.dataset.done) { d.dataset.done = 1; d.querySelector('[data-d]').innerHTML = detail(q.checks.find(c => 'qc-' + c.id === d.id)); } }));
+  };
+  $('qCls').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; cls = b.dataset.c; $('qCls').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b))); draw(); };
+  $('qSev').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; sev = b.dataset.s; $('qSev').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b))); draw(); };
+  draw();
+  const m = /quality\/q\/([A-Z]{2}-\d+)/.exec(location.hash); if (m) open('q', m[1], false);
+};
+
 INIT.data = async () => {
   $('attrib').innerHTML = A.attribution.map(s => `<li>${a(s.url, s.text)}</li>`).join('');
   const R = await load(P.register);
@@ -832,6 +894,10 @@ INIT.map = () => {
     ['wrecks', 'Wrecks and obstructions', false, () => { const g = L.layerGroup(); for (const w of A.wrecks) g.addLayer(pt([w.lat, w.lon], '#111', 5, { color: '#fff', weight: 1 }).on('click', e => pop(`<b>${esc(w.catobs || w.catwrk || 'obstruction')}</b><div class="small">${esc(w.watlev || '')}${w.objnam ? ' · ' + esc(w.objnam) : ''}</div>`, e.latlng))); return g; }, () => ''],
     ['defences', 'Flood defences (EA)', false, () => { const g = L.layerGroup(); for (const d of A.defences) g.addLayer(L.polyline(decLL(d.g), { renderer: canvas, color: lerpHex(['#b42318', '#f59e0b', '#15803d'], (d.c - 5) / 1.5), weight: 4 }).on('click', e => pop(`<b>${esc(d.t)}</b>, crest ${d.c} m OD<div class="small">design ${d.d ?? '—'} m OD · standard of protection 1 in ${d.sop ?? '—'} · ${esc(d.la || '')} · inspected ${esc(d.insp || '—')} · EA asset ${esc(d.id)}</div>${lastTide != null ? `<div class="small">${(d.c - lastTide).toFixed(2)} m above the tide at Tower Pier now</div>` : ''}`, e.latlng))); return g; }, () => `<div class="ramp" style="background:${rampCss(['#b42318', '#f59e0b', '#15803d'])}"></div><div class="small">crest 5.0 to 6.5 m OD</div>`],
     ['levels', 'Published station levels', true, () => { const g = L.layerGroup(); for (const l of A.levels.filter(x => x.lat)) g.addLayer(pt([l.lat, l.lon], '#f97316', 7, { color: '#fff', weight: 2 }).on('click', e => pop(`<b>${esc(l.place)}</b><div>${esc(l.what)}: <b>${l.od} m OD</b>${l.ground != null ? ` (ground ${l.ground} m OD)` : ''}</div><p class="quote small">“${esc(l.quote || '')}”</p><div class="small">${a(l.src, 'source')}</div>`, e.latlng))); return g; }, () => ''],
+    ['quality', 'Data-quality issues', false, async () => { const { q } = await getQ(); const g = L.layerGroup(), C = { high: '#b42318', medium: '#f59e0b', low: '#94a3b8' }, pcp = new Map(A.postcodes.map(p => [p.pc, p]));
+      for (const i of q.issues) { let ll = i.lat != null ? [i.lat, i.lon] : null; if (!ll && i.ent === 'b' && B.get(i.id)) ll = [B.get(i.id).lat, B.get(i.id).lon]; if (!ll && i.ent === 'pc' && pcp.get(i.id)) ll = [pcp.get(i.id).lat, pcp.get(i.id).lon]; if (!ll) continue;
+        g.addLayer(pt(ll, C[i.sev], i.sev === 'high' ? 7 : 4).on('click', e => pop(`<b>${esc(i.check)}</b> <span class="sev-${esc(i.sev)}">${esc(i.sev)}</span><div class="small">${esc(i.note)}</div><div class="links small"><a href="#quality/q/${esc(i.check)}">the check</a>${i.ent === 'b' ? `<a href="#" data-open="b/${esc(i.id)}">building</a>` : ''}${i.ent === 'pc' ? `<a href="#" data-open="pc/${esc(i.id.replace(' ', '-'))}">postcode</a>` : ''}</div>`, e.latlng))); }
+      return g; }, () => '<div class="small"><span style="color:#b42318">●</span> high <span style="color:#f59e0b">●</span> medium <span style="color:#94a3b8">●</span> low</div>'],
     ['cams', 'Traffic cameras (TfL, live)', false, async () => { const d = await getJSON('https://api.tfl.gov.uk/Place?type=JamCam&lat=51.497&lon=-0.04&radius=4500'); const g = L.layerGroup(); for (const c of d.places || d) { const prop = k => (c.additionalProperties.find(p => p.key === k) || {}).value; g.addLayer(pt([c.lat, c.lon], '#16a34a', 6).on('click', e => pop(`<b>${esc(c.commonName)}</b><br><img src="${esc(prop('imageUrl'))}?t=${Date.now()}" alt="TfL traffic camera still" style="width:280px;border-radius:6px"><div class="small">${a(prop('videoUrl'), 'short clip')} · TfL JamCam</div>`, e.latlng))); } return g; }, () => '<div class="small">loads from TfL when switched on</div>'],
   ];
   $('layerList').innerHTML = DEF.map(([k, label, on, , leg]) => `<label><input type="checkbox" data-layer="${k}"${on ? ' checked' : ''}> ${label}</label><div class="legend" data-leg="${k}">${on ? leg() : ''}</div>`).join('')

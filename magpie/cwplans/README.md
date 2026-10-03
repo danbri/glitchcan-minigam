@@ -4,6 +4,8 @@ Live page: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/
 
 Atlas (everything joined: map, buildings, businesses, postcodes, levels below ground, heritage, river, live feeds, sources): https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/ . Its index `atlas/data/atlas.json` is built by `node magpie/cwplans/tools/build-atlas.mjs` from the committed registry, postcode, heritage, river and 3D-model files; the page loads the detail files on demand. Leaflet 1.9.4 (BSD-2-Clause) is vendored in `atlas/vendor/leaflet/`.
 
+Data quality: `node magpie/cwplans/tools/audit-quality.mjs` runs 27 checks after each rebuild and writes `quality/issues.json` and `quality/CATALOGUE.md`; the analysis and the proposed compositing layers are in `quality/README.md`. Browse: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#quality
+
 Data licences and OpenStreetMap use for the whole project: `DATA-REGISTER.md` (generated from `data-register.json`; check with `node magpie/cwplans/tools/check-data-register.mjs`).
 First schematic (hand-placed boxes, kept for reference): https://danbri.github.io/glitchcan-minigam/magpie/cwplans/schematic.html
 
