@@ -11,7 +11,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSy
 import { join } from 'path';
 import { gunzipSync } from 'zlib';
 import { spawnSync } from 'child_process';
-import { RAW, UA } from './lib.mjs';
+import proj4 from 'proj4';
+import { RAW, UA, bngProjector } from './lib.mjs';
 import { ROOT, CW_BOX, normPc, inBox } from './registry-lib.mjs';
 
 const RAWDIR = join(RAW, 'registers');
@@ -115,8 +116,12 @@ const SOURCES = {
     }
     const text = new TextDecoder('windows-1252').decode(readFileSync(got.file));
     const all = objects(parseCsv(text), 0);
+    await bngProjector(); const toWgs = proj4('EPSG:4326', 'BNG');
     const recs = [];
     for (const e of all) {
+      if (!/^E14/i.test(e.Postcode || '') && !(+e.Easting > 536000 && +e.Easting < 539000 && +e.Northing > 179000 && +e.Northing < 181500)) continue;
+      const [lon, lat] = +e.Easting ? toWgs.inverse([+e.Easting, +e.Northing]) : [null, null];
+      const corr = /Overseas/i.test(e['LA (name)'] || '') || /^C\/O\b/i.test(e.Street || '');
       const r = place({
         id: `urn:${e.URN}`, urn: e.URN, name: clean(e.EstablishmentName), kind: clean(e['TypeOfEstablishment (name)']), group: clean(e['EstablishmentTypeGroup (name)']),
         phase: clean(e['PhaseOfEducation (name)']), address: joinAddr(e.Street, e.Locality, e.Address3, e.Town), postcode: e.Postcode,
@@ -124,18 +129,19 @@ const SOURCES = {
         ages: e.StatutoryLowAge ? `${e.StatutoryLowAge}-${e.StatutoryHighAge}` : null, pupils: num(e.NumberOfPupils), capacity: num(e.SchoolCapacity),
         trust: clean(e['Trusts (name)']), la: clean(e['LA (name)']), ukprn: clean(e.UKPRN), uprn: clean(e.UPRN),
         e: num(e.Easting), n: num(e.Northing), last_changed: dmy(e.LastChangedDate),
+        address_role: corr ? 'correspondence address: the establishment is not here (overseas school administered from this address, or a c/o address)' : null,
         url: `https://get-information-schools.service.gov.uk/Establishments/Establishment/Details/${e.URN}`,
-      });
+      }, lat, lon);
       if (keep(r)) recs.push(r);
     }
     write('gias', {
       source: 'DfE Get Information About Schools (GIAS), all establishments download', source_url: url, landing: 'https://get-information-schools.service.gov.uk/Downloads',
       fetched: got.fetched, licence: 'Open Government Licence v3.0', licence_url: 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/',
       licence_checked: 'footer of https://get-information-schools.service.gov.uk/Downloads, 2026-10-03: "Open Government Licence v3.0"', attribution: 'Contains public sector information licensed under the Open Government Licence v3.0 (DfE).',
-      method: 'Daily CSV (windows-1252) of every establishment, open and closed, filtered to E14 postcodes. Easting/Northing are BNG; lat/lon are the ONSPD postcode centre (GIAS gives no WGS84).',
-      counts: { in_file: all.length },
+      method: 'Daily CSV (windows-1252) of every establishment, open and closed; kept: E14 postcode, or Easting/Northing in the box. lat/lon converted from GIAS Easting/Northing (BNG) with OSTN15 (tools/lib.mjs bngProjector).',
+      counts: { in_file: all.length, correspondence_addresses: recs.filter(r => r.address_role).length },
       fields_dropped: ['head teacher title, first name, last name and preferred job title', 'telephone', 'website', 'SEN, gender, religious character, admissions and other policy fields', 'Ofsted rating fields (Ofsted is the source for those)', 'census and FSM counts except NumberOfPupils'],
-      note: 'Positions: GIAS Easting/Northing are kept as e, n; lat/lon are the postcode centre because GIAS has no WGS84 field. in_box uses the postcode centre.',
+      note: 'GIAS Easting/Northing kept as e, n. "Fieldwork Overseas Establishments" (schools abroad; counts.correspondence_addresses) and other c/o rows give a correspondence address at 30 Skylines Village, E14 9TS: address_role marks them; they are not schools in E14 (same class as registered offices, SE-1).',
     }, recs);
   },
 
@@ -151,7 +157,7 @@ const SOURCES = {
     const all = objects(rows, hi), recs = [];
     for (const e of all) {
       const r = place({
-        id: e['CQC Location ID (for office use only)'], name: clean(e.Name), also_known_as: clean(e['Also known as']), kind: clean(e['Service types']),
+        id: e['CQC Location ID (for office use only)'], name: clean(e.Name), also_known_as: clean(e['Also known as']), kind: [...new Set((e['Service types'] || '').split('|').map(x => x.trim()).filter(Boolean))].join('; ') || null,
         services: clean(e['Specialisms/services']), address: clean(e.Address), postcode: e.Postcode, status: 'registered',
         latest_check: dmy(e['Date of latest check']), provider: clean(e['Provider name']), provider_id: clean(e['CQC Provider ID (for office use only)']),
         la: clean(e['Local authority']), url: clean(e['Location URL']),
@@ -343,7 +349,7 @@ const SOURCES = {
       id: `ap:${s.siteid}`, site_id: s.siteid, name: clean(s.sitename), alias: clean(s.sitealias),
       kind: [...new Set((fBy.get(s.siteid) || []).map(f => f.facilitytype))].sort().join('; ') || 'sports site',
       address: joinAddr([s.buildingnumber, s.subbuildingname, s.buildingname].filter(Boolean).join(' '), s.dependentthoroughfare, s.thoroughfarename, s.dependentlocality, s.posttown), postcode: s.postcode,
-      uprn: clean(s.uprn), toid: clean(s.toid), e: num(s.easting), n: num(s.northing),
+      uprn: s.uprn && s.uprn !== '0' ? String(s.uprn) : null, toid: clean(s.toid), e: num(s.easting), n: num(s.northing),
       status: s.recenddate ? 'closed' : 'open', closed: epoch(s.recenddate), first_recorded: epoch(s.recentrydate), last_checked: epoch(s.reclastchkddate),
       owner_type: clean(s.ownertypestr), management: clean(s.managementtypestr),
       facilities: (fBy.get(s.siteid) || []).map(f => ({ id: f.facilityid, type: f.facilitytype, subtype: f.facilitysubtype, status: f.facstatus, access: f.accessibilitygroupstr, access_type: f.accessibilitytypestr, year_built: f.yearbuilt || null, year_refurbished: f.yearrefurbished || null })),
