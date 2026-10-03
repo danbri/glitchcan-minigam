@@ -56,6 +56,11 @@ restrictions on personal org and address data while in the scoping, planning and
 - OpenStreetMap (ODbL, share-alike) is allowed for now (owner, 2026-10-03: "ODbL is ok for now, and
   will be thoroughly reviewed as part of the planning and prototyping activities later. Keep track of
   our use of this data carefully."). No other share-alike source without the owner's agreement.
+- Website crawls are allowed for scoping (owner, 2026-10-03: "Website crawls - direct and via IA or
+  CommonCrawl etc are fair use for our scoping purposes."). This covers pages fetched directly, from the
+  Internet Archive or from Common Crawl, and data extracted from them (e.g. the Canary Wharf Group
+  directory, short quotes in `docklands/facts.json`). Record each crawl in the data register with its
+  method and date. Re-check these before anything leaves the prototyping phase.
 - Every committed data file in `magpie/cwplans/` has an entry in `magpie/cwplans/data-register.json`
   (sources, licence, how it uses OSM, the OSM extract and its date). Add the entry in the same commit
   as the file, then run `node magpie/cwplans/tools/check-data-register.mjs --write`; it fails on an

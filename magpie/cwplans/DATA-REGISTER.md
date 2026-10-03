@@ -6,6 +6,7 @@ Generated from `data-register.json` by `tools/check-data-register.mjs --write` o
 
 - personal org address data: Restrictions suspended for this project during scoping, planning and prototyping (owner, October 2026; CLAUDE.md, Data ethics, exception).
 - licence limit: Never fetch or commit proprietary, restricted-licence or virally licensed data.
+- crawls: Website crawls, direct and via the Internet Archive or Common Crawl, are fair use for scoping (owner, 2026-10-03). Each crawl-derived file names its method and date here. Re-check before anything leaves the prototyping phase.
 - odbl: OpenStreetMap data (ODbL 1.0, share-alike) is allowed for now (owner, 2026-10-03). Its use is to be reviewed in full during planning and prototyping. Every committed file that holds OSM data, or data derived from it, is listed here with osm.use other than 'none'.
 
 ## OpenStreetMap (ODbL) use
@@ -59,11 +60,11 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 ## Marked for review
 
 - `data/sourced-levels.json`: quotes include Wikipedia text (CC BY-SA)
-- `docklands/facts.json`: 169 quotes are Wikipedia text (CC BY-SA 4.0, share-alike); the rest are short quotes from all-rights-reserved pages. Decide in the review whether to keep the quote text or only the value and URL.
+- `docklands/facts.json`: 169 quotes are Wikipedia text (CC BY-SA 4.0, share-alike), the rest short quotes from all-rights-reserved pages: before anything leaves the prototyping phase, decide whether to keep the quote text or only the value and URL
 - `docklands/FACTS.md`: as docklands/facts.json
 - `registry/buildings.json`: occupants include CWG page links and mall names from cwg-directory.json
 - `registry/sources/brands/branches.json`: includes CWG directory fields (see cwg-directory.json)
-- `registry/sources/brands/cwg-directory.json`: Copied from canarywharf.com (through Internet Archive copies). The site states no open licence, so under the licence limit this is probably proprietary data. Committed on 2026-10-03, before this register. Owner decision needed: keep, reduce to URLs only, or remove.
+- `registry/sources/brands/cwg-directory.json`: no open licence on canarywharf.com: re-check before anything leaves the prototyping phase
 
 ## All registered files
 
