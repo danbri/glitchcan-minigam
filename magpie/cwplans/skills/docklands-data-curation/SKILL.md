@@ -38,8 +38,8 @@ statement, re-read the whole line.
 
 ## Catalogue first
 
-`tools/audit-quality.mjs` runs the same checks on every rebuild (34 in October 2026, eight classes:
-identity, position, attribute conflict, validity, pipeline, currency, coverage, meaning). Output:
+`tools/audit-quality.mjs` runs the same checks on every rebuild (39 on 2026-10-03, nine classes:
+identity, position, attribute conflict, validity, pipeline, routing network, currency, coverage, meaning). Output:
 `quality/issues.json`, `quality/CATALOGUE.md`; the analysis and the proposed compositing layers are in
 `quality/README.md`. When you find a wrong value:
 
@@ -273,6 +273,21 @@ writes `registry/sources/web/structured-facts.json`. Measured 2026-10-03:
 
 The fetch and 3D steps are in `magpie/cwplans/docklands/README.md` and `registry/README.md`. Raw extracts
 over a few MB stay local (gitignored); `data-register.json` says what is committed and why.
+
+## Methods
+
+Owner, 2026-10-03: "record ALL our data methods in skills or other concrete committed artifacts". The method catalogue
+is [METHODS.md](../../METHODS.md) (https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/METHODS.md):
+the owner rules, every tool by subject area in rebuild order, the hand-judgement steps and the fault register summary.
+It is generated: edit `pipeline.json` (tool activities, and `manual_activities` for hand steps) and `methods-intro.md`
+(the hand-written policy section), never METHODS.md.
+- **Every new or changed tool updates its `pipeline.json` activity in the same commit**: method, rules (source and
+  endpoint, query, join keys and thresholds, precedence, what is dropped and why, units and rounding, cache,
+  politeness), `area`, `faults` (F-numbers below) and `judgement` (where a hand decision enters and where it is
+  recorded). A hand step with no committed script gets a `manual_activities` entry with a `gap`.
+- `node magpie/cwplans/tools/check-data-register.mjs --write` regenerates METHODS.md, DATA-REGISTER.md and
+  pipeline.jsonld. The check fails on an unlisted tool, an empty method or rules, an unknown area and a fault id that
+  is not in the fault register.
 
 ## Provenance for the knowledge graph
 

@@ -309,6 +309,37 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
   for hours that disagree with OSM `opening_hours`; all.nq is 12 MB (gzip it, or keep only schema.org quads, if the
   repository size matters); store finders still fail for 100 brands with no finder link and 50 with no postcode box.
 
+## 2026-10-03: methods audit and METHODS.md
+
+Owner instruction, 2026-10-03: "record ALL our data methods in skills or other concrete committed artifacts".
+
+- Audit of every tool against its `pipeline.json` activity (75 activities, read from the code). Gaps found, by class:
+  politeness not stated or incomplete (27 activities: User-Agent, pauses, retries, timeouts, concurrency); cache or
+  re-fetch behaviour not stated (19); units, coordinates or rounding not stated (15); no known-fault (F-number)
+  links on any activity; hand
+  judgement not marked (20 tools); hand steps with no activity (13: sourced levels, facts.json, the underground and
+  feeds catalogues, FSA/CWG decisions, store-locator URLs, records-open subset, UKHO wrecks clip, facade photos and
+  regions, palette and music, licence decisions, provenance upkeep, quality analysis); out of date (7: build-skyline
+  named `data/raw/dsm/fetch.sh` and listed one input twice; four notes about register errors already fixed; the
+  register gave `postcodes.mjs fetch` as producer of `postcodes/canary-wharf-ward.geojson` (the build mode writes
+  it); the skill said 34 audit checks in eight classes (39 in nine); the `match-osm.mjs` header said the NSI match is at
+  One Canada Square (it is at the feature's position)); vague method (2: match-osm, fetch-raw-lidar); one script not
+  listed (`tools/native/ecw2ppm.c`).
+- `pipeline.json`: new `areas` (22 subject areas), `area` on every activity, `faults` (F-numbers) on 19 activities,
+  `judgement` on 20, rules added from the code, `manual_activities` (13 hand steps; `gap` names 4 one-off scripts
+  that are not committed), `tools/native/ecw2ppm.c` as a library.
+- `tools/check-data-register.mjs`: fails on an empty method or rules, an unknown area, a fault id not in the fault
+  register; lists `tools/native`, `tools/test`, `registry/sources/*/*` and `feeds/*` scripts; `--write` also writes
+  `METHODS.md` (from `methods-intro.md`, `pipeline.json`, the fault table in SKILL.md and `quality/issues.json`) and
+  exports hand steps, areas, faults and judgement to `pipeline.jsonld`.
+- New: `methods-intro.md` (hand-written policy and owner rules, crawl and hand-curation rules), `METHODS.md`
+  (generated), both registered. SKILL.md: "Methods" section; audit count corrected.
+- Check: `check-data-register.mjs --write` exit 0; `node --test tools/test/*.test.mjs` 15 of 15. Not committed by
+  this session.
+- Found, not fixed (code): `registry-wikidata.mjs` calls QLever with no pause and no retry (it does not use
+  `tools/lib.mjs` `qlever()`); `fetch-dsm.sh` does not send the project User-Agent; `check-feeds.mjs` and
+  `check-events.mjs` run 6 requests at once with no per-host gap.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
@@ -327,3 +358,6 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
     Docklands); show bar, alcohol, education, health, sport, arts in the 3D glow menu.
 13. Registers: a postcode-to-building table from OS Open UPRN (29 records wait on "postcode covers several buildings");
     merge ODS provider and site pairs (F20); CQC "HSCA Active Locations" columns for coordinates.
+14. Methods: commit the one-off scripts named in `pipeline.json` `manual_activities` `gap` (facts.json quote check and
+    FACTS.md, feeds/underground README, feeds README and EVENTS.md, pixel palette) when next run; pace
+    `registry-wikidata.mjs` through `tools/lib.mjs` `qlever()`.

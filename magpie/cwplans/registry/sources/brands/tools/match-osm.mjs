@@ -5,7 +5,7 @@
 // out: data/raw/registry/osm-branches.json
 // Rules (see README "Match rules"): a business feature (shop/amenity/office/tourism/leisure/healthcare/craft)
 // is a branch when (1) its brand:wikidata is an NSI UK brand QID, or (2) the NSI Matcher matches its
-// name/brand under its own key=value at One Canada Square, or (3) it has brand=* / brand:wikidata=* that NSI
+// name/brand under its own key=value at the feature's position, or (3) it has brand=* / brand:wikidata=* that NSI
 // does not list (kept, nsi_id null). Street furniture is set aside, not counted as a branch.
 import { writeFileSync } from 'fs';
 import { join } from 'path';

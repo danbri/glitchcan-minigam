@@ -30,11 +30,14 @@
    "cwp:command": "node magpie/cwplans/tools/fetch-raw.mjs grid",
    "cwp:kind": "fetch",
    "cwp:rule": [
-    "The file is written as fetched; no change."
+    "The file is written as fetched; no change.",
+    "Network: one GET with User-Agent glitchcan-cwplans/0.1; no retry; the file is overwritten on every run (no cache)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "terrain",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-osm",
@@ -68,17 +71,23 @@
    "cwp:kind": "fetch",
    "cwp:rule": [
     "Box WGS84 west -0.0620, south 51.4880, east -0.0380, north 51.5070.",
-    "A relation is fetched in full when it is type=multipolygon, natural=water and has a member way that is not in the map call."
+    "A relation is fetched in full when it is type=multipolygon, natural=water and has a member way that is not in the map call.",
+    "Network: one map call, then one /full call per incomplete water relation, in sequence; User-Agent glitchcan-cwplans/0.1; no retry; files overwritten on every run.",
+    "Stored gzipped (level 9); the JSON content is as returned."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "buildings",
+   "cwp:fault": [
+    "F10"
+   ]
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-lidar",
    "@type": "prov:Activity",
    "rdfs:label": "fetch-raw-lidar",
-   "dct:description": "Downloads one DTM and one DSM GeoTIFF over the corridor box.",
+   "dct:description": "Downloads one DTM and one first-return DSM GeoTIFF (EA LiDAR Composite, 1 m) over the corridor box by WCS 2.0.1 GetCoverage.",
    "prov:used": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-lidar",
@@ -105,11 +114,15 @@
    "cwp:command": "node magpie/cwplans/tools/fetch-raw.mjs lidar",
    "cwp:kind": "fetch",
    "cwp:rule": [
-    "BNG box E 534600-536300, N 178300-180500."
+    "BNG box E 534600-536300, N 178300-180500.",
+    "Coverages: 13787b9a-26a4-4775-8523-806d13af58fc__Lidar_Composite_Elevation_DTM_1m and df4e3ec3-315e-48aa-aaaf-b5ae74d7b2bb__Lidar_Composite_Elevation_FZ_DSM_1m; heights in metres above Ordnance Datum Newlyn.",
+    "Network: two GETs in sequence, User-Agent glitchcan-cwplans/0.1; no retry; files overwritten on every run."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "terrain",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-wikidata",
@@ -142,11 +155,14 @@
    "cwp:command": "node magpie/cwplans/tools/fetch-raw.mjs wikidata",
    "cwp:kind": "fetch",
    "cwp:rule": [
-    "Results are written as the endpoint returns them."
+    "Results are written as the endpoint returns them.",
+    "Network: two POSTs to query.wikidata.org in sequence, User-Agent glitchcan-cwplans/0.1; no retry; no cache."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "buildings",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm",
@@ -171,11 +187,14 @@
    "cwp:command": "node magpie/cwplans/tools/fetch-docklands.mjs osm",
    "cwp:kind": "fetch",
    "cwp:rule": [
-    "The file is written as fetched."
+    "The file is written as fetched.",
+    "Network: one GET (about 150 MB), User-Agent glitchcan-cwplans/0.1; no retry; overwritten on every run. The extract date is the osmosis_replication_timestamp in the PBF header (data-register.json osm_extracts)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "buildings",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-lidar",
@@ -209,11 +228,15 @@
    "cwp:kind": "fetch",
    "cwp:rule": [
     "A tile is fetched only when its file is missing or smaller than 1000 bytes.",
-    "Four downloads run at a time; each is tried up to 4 times with a growing pause."
+    "Four downloads run at a time; each is tried up to 4 times with a growing pause.",
+    "Tile edge 1000 m (TILE); a tile at the box edge is cut to the box. Heights in metres above Ordnance Datum Newlyn.",
+    "Pause before a retry: 2000 x 2^attempt ms (4, 8, 16 s); User-Agent glitchcan-cwplans/0.1."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "terrain",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-defences",
@@ -240,11 +263,14 @@
    "cwp:rule": [
     "Kept properties: asset_id, asset_sub_type, protection_type, design_sop, design_ucl, design_dcl, actual_ucl, actual_dcl, effective_cl, bank, local_authority, last_inspection_date.",
     "Owner and maintainer fields are dropped (some describe private individuals).",
-    "Paging stops when a page has no features or no next link."
+    "Paging stops when a page has no features or no next link.",
+    "A \"fetched\" date is written into the file; the pages are fetched in sequence with no pause and no retry; User-Agent glitchcan-cwplans/0.1."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "water",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-wikidata",
@@ -277,11 +303,14 @@
    "cwp:command": "node magpie/cwplans/tools/fetch-docklands.mjs wikidata",
    "cwp:kind": "fetch",
    "cwp:rule": [
-    "Results are written as the endpoint returns them."
+    "Results are written as the endpoint returns them.",
+    "Network: two POSTs to query.wikidata.org in sequence, User-Agent glitchcan-cwplans/0.1; no retry; no cache; stored gzipped (level 9)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "buildings",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch_wet-soundings",
@@ -317,11 +346,15 @@
    "cwp:rule": [
     "Box WGS84 -0.0950, 51.4740 to 0.0150, 51.5220.",
     "z_cd is the file value as a height above Admiralty Chart Datum; negative is below chart datum.",
-    "Lines that do not parse as lat, lon, z (headers) are skipped."
+    "Lines that do not parse as lat, lon, z (headers) are skipped.",
+    "Network: curl, User-Agent glitchcan-cwplans/0.1, 0.6 s pause before every request (at most 2 a second), 180 s timeout, no retry; the CSV is fetched again on every run.",
+    "Coordinates are rounded to 7 decimals (about 1 cm)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "water",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch_wet-layers",
@@ -362,11 +395,16 @@
    "cwp:rule": [
     "Only the listed outFields are kept per layer ('*' for some).",
     "Every layer except pla_hydrographic_product_areas is clipped to the box (ogr2ogr -clipsrc).",
-    "Arguments 'pla' or 'crt' run one provider only."
+    "Arguments 'pla' or 'crt' run one provider only.",
+    "Network: as fetch_wet-soundings (curl, 0.6 s pause, 180 s timeout); pages of 1000 features follow resultOffset while exceededTransferLimit is true.",
+    "ogr2ogr writes RFC 7946 GeoJSON with 7 decimals; an older output is removed first.",
+    "Licence: PLA layers state no licence and Canal & River Trust layers exclude commercial use, so neither is committed (registry/sources/pla/README.md, \"Not taken, and why\")."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "water",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch_records",
@@ -420,11 +458,16 @@
     "Records outside the box are left out; duplicates (same source, id, relation, place, position) are dropped.",
     "BNG points are converted with pyproj (Helmert, about 2 m; no OSTN15 grid).",
     "ADS owner names are kept only for organisations in a fixed list; no finder, landowner, donor or author names are kept.",
-    "A record whose title, type, place or summary mentions burial, grave, cemetery, memorial and similar words gets the flag 'sensitive'."
+    "A record whose title, type, place or summary mentions burial, grave, cemetery, memorial and similar words gets the flag 'sensitive'.",
+    "Network: curl, User-Agent glitchcan-cwplans/0.1, 0.6 s pause before every request, 300 s timeout; QLever queries wait 10 s, then 30, 50, 70 s before each of up to 4 tries.",
+    "Positions are rounded to 6 decimals; each record keeps the relation of its coordinate to the object (site, find spot, holding place, report about a site) and its precision.",
+    "Raw responses are saved to data/raw/registry/museums/ on every run; nothing is read back from them (no cache)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "heritage",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-cwg",
@@ -466,11 +509,17 @@
     "Captures of the Incapsula bot-challenge page are skipped and counted.",
     "Fields from the address lines (registry/sources/brands/tools/cwg-fields.mjs): mall = the first name of a fixed place list found in the lines, but never a name inside a longer one that is also found (\"Upper Bank Street\", not \"Bank Street\"); level = the first line that names a level, floor, mezzanine, podium or kiosk, or starts with \"Lower Mall\", \"Upper Mall\" or \"Unit\" (not \"Upper Bank Street\", not \"United Kingdom\"); postcode = the first full UK postcode in any district (Wood Wharf uses E22); street = the first line that starts with a house number or One/Two/Three; flags: template field, estate-wide, car park. Fixed 2026-10-03: the first parser read 4 levels and 1 mall wrongly and missed 5 malls and 3 E22 postcodes.",
     "Raw pages are cached and not fetched again.",
-    "Categories: every tag div between the category block and the title (the first parser found none on any page; 339 entries have one now)."
+    "Categories: every tag div between the category block and the title (the first parser found none on any page; 339 entries have one now).",
+    "Network: User-Agent glitchcan-cwplans/0.1, 120 s timeout, 1.2 s pause after every fetched page, up to 5 tries (CDX listings and copies with no CDX timestamp: 2) with 8 s x try between tries; HTTP 404 is no copy.",
+    "Owner rule 2026-10-03: crawls through the Internet Archive are fair use for scoping (CLAUDE.md, cwplans exception)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "cwg",
+   "cwp:fault": [
+    "F14"
+   ]
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-fetch",
@@ -510,7 +559,8 @@
    "cwp:kind": "fetch",
    "cwp:rule": [
     "Row batches are retried up to 4 times.",
-    "OSM: an addr:postcode ';' list counts the feature under each postcode (fault F2); kinds counted: shop, amenity:<value>, office, building, entrance, other; streets from addr:street."
+    "OSM: an addr:postcode ';' list counts the feature under each postcode (fault F2); kinds counted: shop, amenity:<value>, office, building, entrance, other; streets from addr:street.",
+    "Network: User-Agent glitchcan-cwplans/0.1; queries in sequence; a batch of 200 ids is tried up to 4 times with 4 s x try between tries; the ward queries are not retried. Files are overwritten on every run."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -518,6 +568,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm"
     }
+   ],
+   "cwp:area": "postcodes",
+   "cwp:fault": [
+    "F2"
    ]
   },
   {
@@ -555,11 +609,17 @@
    "cwp:rule": [
     "People (Q5) are excluded as items and as property values, except architect (P84) and structural engineer (P631).",
     "Items whose P31 label matches memorial, grave, cemetery, tomb or plaque are dropped.",
-    "Duplicate property values are removed."
+    "Duplicate property values are removed.",
+    "Network: QLever queries in sequence with no pause and no retry (this tool does not use tools/lib.mjs qlever, so the 1.5 s pacing rule of 2026-10-03 is not applied here); User-Agent glitchcan-cwplans/0.1; no cache.",
+    "Distance km rounded to 3 decimals; each item keeps its QID (an IRI key for the knowledge graph)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "registry",
+   "cwp:fault": [
+    "F8"
+   ]
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-fhrs",
@@ -591,11 +651,16 @@
    "cwp:kind": "fetch",
    "cwp:rule": [
     "Kept: postcode starting E14 and at least one address line.",
-    "Premises without address lines (home businesses whose address the FSA withholds) are not kept."
+    "Premises without address lines (home businesses whose address the FSA withholds) are not kept.",
+    "Network: one GET of the whole file, User-Agent glitchcan-cwplans/0.1; no retry. Each run writes a new dated snapshot; the snapshot date is the run date."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "registry",
+   "cwp:fault": [
+    "F7"
+   ]
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/osm-clip-docklands",
@@ -623,7 +688,8 @@
     "Relations kept: multipolygon or building relations with a kept member way; their member ways outside the box are pulled in whole.",
     "Points kept: stations and entrances, named places, shafts, entrances with a level, piers; and in the Canary Wharf focus box (-0.0300, 51.4980 to -0.0050, 51.5100) every node with shop, amenity, level, indoor or name.",
     "Only tags that match the TAG list are kept.",
-    "A way that touches the box is kept whole; its nodes outside the box come from a second pass."
+    "A way that touches the box is kept whole; its nodes outside the box come from a second pass.",
+    "Node coordinates rounded to 7 decimals (the OSM precision)."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -631,7 +697,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm"
     }
-   ]
+   ],
+   "cwp:area": "buildings",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-osm",
@@ -656,7 +724,8 @@
    "cwp:rule": [
     "Box -0.0300, 51.4980 to -0.0050, 51.5100 plus a 0.0015 degree margin.",
     "Tags dropped: contact:mobile, mobile, operator:person, addr:flats, note, fixme, FIXME, source*, created_by. Business contact tags (phone, contact:phone, email, contact:email, website, contact:*) are kept from 2026-10-03 (owner: cwplans exception, organisation data allowed in the prototyping phase).",
-    "Relations kept: type multipolygon or building with building, building:part or name, and at least one kept member way."
+    "Relations kept: type multipolygon or building with building, building:part or name, and at least one kept member way.",
+    "Tags are kept as strings; \";\" lists are split later by tools/osm-values.mjs osmList (F2) in the tools that read them."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -664,6 +733,11 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm"
     }
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": [
+    "F2",
+    "F15"
    ]
   },
   {
@@ -696,7 +770,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/london-brand-counts",
@@ -728,7 +804,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-osm",
@@ -759,6 +837,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm"
     }
+   ],
+   "cwp:area": "postcodes",
+   "cwp:fault": [
+    "F2"
    ]
   },
   {
@@ -810,7 +892,9 @@
     "Tunnel portals: tunnel nodes shared with an open railway way, at the open track level (DSM on bridges, DTM otherwise).",
     "Open cut: a tunnel point where the DTM is more than 6 m below the ground 25-35 m around; each run of cut points takes its lowest bed.",
     "Published levels from data/sourced-levels.json are applied to the nearest tunnel point within 150 m (lib.mjs applyControls); superseded controls are skipped.",
-    "Places: OSM railway=station nodes, then Wikidata items of a fixed list of transport, water and landform classes that are not already a station."
+    "Places: OSM railway=station nodes, then Wikidata items of a fixed list of transport, water and landform classes that are not already a station.",
+    "Coordinates: WGS84 to BNG through OSTN15 (tools/lib.mjs bngProjector); local metres x = E - 535400, z = -(N - 179400); heights in metres above Ordnance Datum Newlyn.",
+    "Rounding: geometry in whole decimetres, delta-encoded (tools/lib.mjs enc); heights and levels to 0.1 m (r1); control levels to 0.01 m."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -827,7 +911,13 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-wikidata"
     }
-   ]
+   ],
+   "cwp:area": "buildings",
+   "cwp:fault": [
+    "F10",
+    "F13"
+   ],
+   "cwp:judgement": "The published levels in data/sourced-levels.json are chosen by hand (manual activity sourced-levels)."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands",
@@ -900,7 +990,10 @@
     "Flood defence crest: actual_ucl, else actual_dcl, else design_ucl; lines without a crest are dropped.",
     "Published levels from data/sourced-levels.json are tunnel controls (nearest point within 150 m); structures with footprint_osm or water_name are drawn from their OSM way or water area.",
     "Wikidata places: classes matching the KEEP pattern; classes matching memorial, war memorial, grave or cemetery are left out.",
-    "Level tags are read by tools/osm-values.mjs osmLevels."
+    "Level tags are read by tools/osm-values.mjs osmLevels.",
+    "Coordinates: WGS84 to BNG through OSTN15; local metres x = E - 537550, z = -(N - 180300) (ORIGIN, One Canada Square to about 20 m); heights in metres above Ordnance Datum Newlyn.",
+    "Rounding: geometry in whole decimetres, delta-encoded (tools/lib.mjs enc); heights to 0.1 m; control levels to 0.01 m.",
+    "Fixed faults (F10): simplify() splits a closed ring at its farthest point before Douglas-Peucker; bridge points under a roof are interpolated."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -923,7 +1016,13 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch_wet-soundings"
     }
-   ]
+   ],
+   "cwp:area": "buildings",
+   "cwp:fault": [
+    "F10",
+    "F13"
+   ],
+   "cwp:judgement": "The published levels in data/sourced-levels.json are chosen by hand (manual activity sourced-levels); the KEEP class list for Wikidata places is written in the tool."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-build",
@@ -974,6 +1073,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-osm"
     }
+   ],
+   "cwp:area": "postcodes",
+   "cwp:fault": [
+    "F2"
    ]
   },
   {
@@ -1019,7 +1122,8 @@
    "cwp:rule": [
     "Default tiers: cw-core, cw-ward, cw-box-other-ward.",
     "Per host one request about every second; each request is tried 3 times.",
-    "FSA results keep only premises whose postcode is the one asked and that have an address line (home businesses are skipped)."
+    "FSA results keep only premises whose postcode is the one asked and that have an address line (home businesses are skipped).",
+    "Network: one worker per host (GOV.UK, Wikipedia, FSA), in parallel across hosts; 1 s pause after every postcode; 3 tries with 3 s x try between; Wikidata by query.wikidata.org SPARQL, 200 postcodes a query. User-Agent glitchcan-cwplans/0.1. No cache: queries.json is rewritten."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -1027,7 +1131,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-build"
     }
-   ]
+   ],
+   "cwp:area": "postcodes",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-uprn",
@@ -1080,7 +1186,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-build"
     }
-   ]
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-lbsm",
@@ -1127,7 +1235,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-uprn"
     }
-   ]
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-inspire",
@@ -1168,7 +1278,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-grid"
     }
-   ]
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-companies",
@@ -1212,7 +1324,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-build"
     }
-   ]
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-landregistry",
@@ -1245,7 +1359,8 @@
    "cwp:rule": [
     "Postcodes: cwPostcodes() (terminated-cw included).",
     "Rows repeated by the OPTIONAL joins are removed by transaction id.",
-    "Homes = distinct SAON + PAON + street of types other than 'other'."
+    "Homes = distinct SAON + PAON + street of types other than 'other'.",
+    "Network: User-Agent glitchcan-cwplans/0.1; 0.7 s pause after each query of 20 postcodes; a failed query is tried up to 4 times with 3, 6, 9 s between tries; no cache."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -1253,7 +1368,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-build"
     }
-   ]
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-voa",
@@ -1296,7 +1413,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-build"
     }
-   ]
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": [],
+   "cwp:judgement": "Licence decision: the VOA rating list is restricted, so neither output is committed (owner to decide)."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-uk-brands",
@@ -1333,7 +1453,9 @@
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "brands",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/wikidata-brands",
@@ -1375,7 +1497,9 @@
    "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/registry/sources/brands/tools/wikidata-brands.mjs",
    "cwp:kind": "fetch",
    "cwp:rule": [
-    "nsi_brand_links: P1716, P127, P749 or P137 links whose target is an NSI UK brand QID."
+    "nsi_brand_links: P1716, P127, P749 or P137 links whose target is an NSI UK brand QID.",
+    "Cache: each raw QLever answer is stored under the first 16 hex digits of the SHA-1 of the query in data/raw/registry/qlever/ and read back when present; delete a file to ask again.",
+    "Network: 0.7 s pause after each new query; no retry; User-Agent glitchcan-cwplans/0.1. Distances in metres, rounded to whole metres."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -1383,13 +1507,15 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-uk-brands"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/match-osm",
    "@type": "prov:Activity",
    "rdfs:label": "match-osm",
-   "dct:description": "Finds the branded OSM business features in the box.",
+   "dct:description": "Reads the OSM business features of the Canary Wharf box (osm-scan) and keeps those that are branches of a brand: by the feature's brand:wikidata, by the NSI Matcher on its names under its own key=value at its position, or by a brand tag that NSI does not list; street furniture is counted apart.",
    "prov:used": [
     {
      "@id": "urn:cwplans:local:data/raw/registry/osm-box-features.json"
@@ -1418,7 +1544,11 @@
     "A business feature is a branch when (1) its brand:wikidata is an NSI UK brand QID, or (2) the NSI Matcher matches its name, brand, name:en or official_name under its own key=value at its position, or (3) it has brand or brand:wikidata that NSI does not list.",
     "For a QID with several NSI items, the item whose key=value agrees with the feature is preferred.",
     "Disused features and opening_hours=closed are skipped.",
-    "Street furniture (post boxes, ATMs, bicycle rental, lockers, vending machines and similar) is counted apart, not as branches."
+    "Street furniture (post boxes, ATMs, bicycle rental, lockers, vending machines and similar) is counted apart, not as branches.",
+    "Name fields are tried in the order name, brand, name:en, official_name; the first NSI hit with match \"primary\" wins, else the first hit of any kind (alternate hits are accepted here, unlike the FSA match).",
+    "The NSI Matcher is asked at the feature's own position (lon, lat), not at a fixed point.",
+    "A conflict between the OSM brand:wikidata and the NSI QID is kept and flagged (qid_conflict); fhrs:id, addr:*, level, level:ref and website are carried for the later joins.",
+    "Named businesses that match no brand are listed apart (unmatched_named_business), not dropped silently."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -1429,7 +1559,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-uk-brands"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/match-fsa-fetch",
@@ -1478,7 +1610,9 @@
     "Premises: results[pc].fsa.items of postcodes/queries.json for postcodes in tiers cw-core, cw-ward, cw-box-other-ward.",
     "Name variants (full, cut, strip, prefix) are tried in order; a hit must be 'primary' or 'alternate'.",
     "Hits are ranked: primary before alternate, then key=value fitting the FSA business type, then scope uk.",
-    "A 'prefix' variant, an alternate hit or a type that does not fit needs a decision in fsa-decisions.json; undecided and rejected matches are listed apart."
+    "A 'prefix' variant, an alternate hit or a type that does not fit needs a decision in fsa-decisions.json; undecided and rejected matches are listed apart.",
+    "Cache: each premises detail is stored in data/raw/registry/fsa-detail/<fhrs_id>.json and not fetched again.",
+    "Network: FSA API with x-api-version 2 and User-Agent glitchcan-cwplans/0.1, 0.6 s pause after each new detail; no retry."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -1492,7 +1626,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-uk-brands"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": [],
+   "cwp:judgement": "A prefix-variant, alternate or type-mismatch match is decided by hand in registry/sources/brands/tools/fsa-decisions.json (manual activity brand-decisions)."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/match-fsa",
@@ -1550,7 +1687,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/match-fsa-fetch"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": [],
+   "cwp:judgement": "Same decisions as match-fsa-fetch (registry/sources/brands/tools/fsa-decisions.json)."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-branches",
@@ -1637,7 +1777,15 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/storelocator"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": [
+    "F2",
+    "F3",
+    "F7",
+    "F9"
+   ],
+   "cwp:judgement": "CWG matches that the rules leave undecided are decided by hand in registry/sources/brands/tools/cwg-decisions.json (manual activity brand-decisions)."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/storelocator",
@@ -1683,7 +1831,9 @@
     "Brand family: a brand and its Wikidata parent count as one; size = the largest Greater London OSM branch count of the family.",
     "Candidate URL: the manual entry for the branch, else OSM website=* when it is not canarywharf.com and not a bare home page.",
     "verified: HTTP 2xx, no bot-challenge page, and the page text or the URL path names Canary Wharf, the postcode or the mall; 401, 403, 429 or a challenge page = blocked.",
-    "A URL with a stored status is not fetched again."
+    "A URL with a stored status is not fetched again.",
+    "Cache: data/raw/registry/storelocator-cache.json holds each URL's result and is written after every fetch.",
+    "Network: 1.1 s minimum gap per host, 60 s timeout, User-Agent glitchcan-cwplans/0.1; blocked pages are recorded, not retried."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -1697,7 +1847,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/wikidata-brands"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": [],
+   "cwp:judgement": "Store-page URLs that OSM does not give were found by hand on the brand locators: registry/sources/brands/tools/storelocator-manual.json (manual activity storelocator-manual)."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/readme-tables",
@@ -1720,7 +1873,8 @@
    "cwp:command": "node magpie/cwplans/registry/sources/brands/tools/readme-tables.mjs > /tmp/tables.md",
    "cwp:kind": "export",
    "cwp:rule": [
-    "One row per branch: brand, category, name, where (mall, level, postcode or address), sources, confidence, links."
+    "One row per branch: brand, category, name, where (mall, level, postcode or address), sources, confidence, links.",
+    "The output is pasted into registry/sources/brands/README.md by hand; the script writes to standard output only."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
@@ -1728,7 +1882,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-branches"
     }
-   ]
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers",
@@ -1836,7 +1992,14 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-grid"
     }
-   ]
+   ],
+   "cwp:area": "registers",
+   "cwp:fault": [
+    "F7",
+    "F17",
+    "F18"
+   ],
+   "cwp:judgement": "Which registers to take and their licence reading are recorded in registry/sources/registers/README.md (licence notes, rejected sources)."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/crawl-sites",
@@ -1902,7 +2065,9 @@
     "Failure classes: robots disallowed, robots unreachable, bot challenge (Cloudflare, Imperva, Akamai, DataDome, PerimeterX pages), 401/403 refused, 404/410 not found, 4xx other, 429, 5xx, timeout, dns, tls, connection, not HTML, too many redirects.",
     "Kept per page: schema.org name, telephone, address, geo, opening hours, price range, cuisine, menu, sameAs, reservations; events with name, dates, location, URL; page title and OpenGraph title/type (cut to 200 characters), OpenGraph description cut to 200 characters; html lang; feed and link URLs. No other page text.",
     "names_branch: true when the entry's postcode is in the page text or structured data, or an address phrase (street, mall, branch name) is on a page that is not the site's home page; 'home page lists the place' when only a phrase is on a home page; 'scripts only' when the match is only inside page scripts.",
-    "A URL with a stored result is not fetched again (--refresh fetches all; --retry-failed fetches transient failures again)."
+    "A URL with a stored result is not fetched again (--refresh fetches all; --retry-failed fetches transient failures again).",
+    "At most 8 redirects (MAX_REDIRECTS); the backoff waits Retry-After when given, else 4, 12, 36 s.",
+    "Owner rule 2026-10-03: website crawls, direct and through the Internet Archive or Common Crawl, are fair use for scoping (CLAUDE.md, cwplans exception)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -1919,7 +2084,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry"
     }
-   ]
+   ],
+   "cwp:area": "crawl",
+   "cwp:fault": [],
+   "cwp:judgement": "The skip list (FSA pages, OSM, Wikidata, Companies House, Land Registry, Wikipedia) is a licence and source-of-truth decision written in the tool."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/render-structured-data",
@@ -1985,7 +2153,11 @@
     "Order: store pages, then pages the plain crawl got no structured data from, then the rest; Internet Archive CWG copies read from cache with scripts off.",
     "A cookie banner is clicked only when the page shows no structured data and a known consent button is visible. No logins, no forms other than a store-finder search box with a UK postcode.",
     "Store finder: a result link is followed only when its text, URL or card names the branch postcode, a street or mall phrase of the branch, or (for a brand with one branch here) Canary Wharf.",
-    "Blocks over 200 kB are dropped and counted."
+    "Blocks over 200 kB are dropped and counted.",
+    "User-Agent: a desktop Chrome string plus \" glitchcan-cwplans/0.1 (+https://github.com/danbri/glitchcan-minigam)\"; robots.txt fetched with Node (15 s timeout), else through Chromium.",
+    "Each page: wait for load and network idle, at most 20 s (CAP_MS), then 1.5 s (LATE_MS) for late JSON-LD.",
+    "Store finders: one postcode search per brand and postcode; the postcode is the branch's own, else E14 4QT (owner rule 2026-10-03: \"we are permitted per industry convention to submit storefinder forms with UK postcodes\"). No other forms.",
+    "Resumable: a URL with a stored result in data/raw/rendered/ is not rendered again unless --retry-failed and its failure was transient."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -1993,7 +2165,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/crawl-sites"
     }
-   ]
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": [],
+   "cwp:judgement": "The skip list and the consent-button list are written in the tool; store-finder searches follow the owner rule of 2026-10-03."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/extract-structured-data",
@@ -2058,7 +2233,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/render-structured-data"
     }
-   ]
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry",
@@ -2213,6 +2390,22 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
     }
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": [
+    "F1",
+    "F2",
+    "F4",
+    "F6",
+    "F7",
+    "F8",
+    "F9",
+    "F15",
+    "F16",
+    "F17",
+    "F18",
+    "F19",
+    "F20"
    ]
   },
   {
@@ -2253,7 +2446,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/extract-structured-data"
     }
-   ]
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-categories",
@@ -2318,7 +2513,12 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-osm"
     }
-   ]
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": [
+    "F8"
+   ],
+   "cwp:judgement": "The rule tables (which OSM, FSA, CWG, register and Wikidata classes give which category) are written in the tool; mixed CWG labels are left out by judgement."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/scan-model-pois",
@@ -2358,7 +2558,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry"
     }
-   ]
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-atlas",
@@ -2446,7 +2648,8 @@
     "Soundings: z_cd minus the chart datum offset interpolated by longitude between 3.20 m and 3.35 m (same rule as build-docklands).",
     "Defence crest: actual_ucl, else actual_dcl, else design_ucl; a line is kept when one of its points is in the box.",
     "Wikidata items without an English label are left out.",
-    "Levels: the sourced levels used by the 3D build, CWG structures (slabs, water, dock bed), the deepest and median sounding off the Isle of Dogs, and the 8 tallest named buildings (Wikidata, else OSM, else LiDAR height on the LiDAR ground, or 5 m OD when unknown, marked approx)."
+    "Levels: the sourced levels used by the 3D build, CWG structures (slabs, water, dock bed), the deepest and median sounding off the Isle of Dogs, and the 8 tallest named buildings (Wikidata, else OSM, else LiDAR height on the LiDAR ground, or 5 m OD when unknown, marked approx).",
+    "Rounding: outlines as microdegree deltas (1e-6 degree, about 0.1 m); positions to 6 decimals; heights and levels to 0.01 m; heritage groups by position rounded to 5 decimals."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -2484,6 +2687,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-grid"
     }
+   ],
+   "cwp:area": "atlas",
+   "cwp:fault": [
+    "F5"
    ]
   },
   {
@@ -2531,7 +2738,9 @@
     "Walkable areas get a hub joined to every vertex on their level inside them or within 3 m of their edge.",
     "A node that ordinary ways reach at two levels with no connector is joined as 'ramp' and counted as a level jump.",
     "TfL points join the nearest OSM vertex within 35 m only at street level (TfL level 0 = OSM level 0); TfL lifts (pathway_mode 5) and paths join TfL points; nearest-vertex level pairs are recorded per station.",
-    "Places attach to the nearest vertex on their own level within 40 m, else the nearest vertex on any level within 40 m (marked)."
+    "Places attach to the nearest vertex on their own level within 40 m, else the nearest vertex on any level within 40 m (marked).",
+    "Cache: the TfL GTFS ZIP is kept in data/raw/docklands/ and fetched only when absent (one GET, User-Agent glitchcan-cwplans/0.1).",
+    "Coordinates: OSTN15 to BNG, local metres as build-docklands; positions rounded to 0.1 m."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -2545,6 +2754,11 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-grid"
     }
+   ],
+   "cwp:area": "underground",
+   "cwp:fault": [
+    "F2",
+    "F12"
    ]
   },
   {
@@ -2579,7 +2793,9 @@
    "cwp:kind": "derive",
    "cwp:rule": [
     "Model metres to BNG to UTM with a Helmert transform (about 2 m, inside a 10 m pixel).",
-    "Each vertex takes the mean of the pixels within half a terrain cell of it."
+    "Each vertex takes the mean of the pixels within half a terrain cell of it.",
+    "Network: one STAC search, then HTTP range requests for the pixel window only; User-Agent glitchcan-cwplans/0.1; no retry; no cache. The scene id and date are written into imagery.js.",
+    "Colours are 8-bit means, rounded to whole values."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -2587,7 +2803,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands"
     }
-   ]
+   ],
+   "cwp:area": "imagery",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-aerial-rgb2008",
@@ -2632,7 +2850,9 @@
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "imagery",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-aerial-night2012",
@@ -2676,7 +2896,9 @@
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "imagery",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-aerial-intensity2020",
@@ -2718,7 +2940,9 @@
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "imagery",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-dsm",
@@ -2744,11 +2968,14 @@
    "cwp:kind": "fetch",
    "cwp:rule": [
     "2012 TQ3580 exists only at 0.5 m; the 1 m request returns a server error, not a ZIP",
-    "a ZIP already present is not fetched again"
+    "a ZIP already present is not fetched again",
+    "Network: curl in sequence, 1200 s timeout, curl's own User-Agent (the project User-Agent is not set here); a failed download prints FAIL and the loop goes on; no retry."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "terrain",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-skyline",
@@ -2762,10 +2989,7 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-dsm-history",
      "dcat:accessURL": "https://environment.data.gov.uk/tiles/collections/survey/<product>/<year>/<res>/<tile>",
-     "dct:description": "DSM tiles TQ3575 and TQ3580 for 1999, 2003, 2007, 2012, 2015, 2018, 2020, 2022 (fetched by data/raw/dsm/fetch.sh, not by this tool)"
-    },
-    {
-     "cwp:pathPattern": "data/raw/dsm/<product>-<year>-<res>-<tile>.zip"
+     "dct:description": "DSM tiles TQ3575 and TQ3580 for 1999, 2003, 2007, 2012, 2015, 2018, 2020, 2022 (fetched by tools/fetch-dsm.sh, not by this tool)"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
@@ -2785,7 +3009,8 @@
     "height = 90th percentile of the DSM inside today's OSM outline (1 m sampling, at most 4000 points) minus the model ground",
     "not standing: under 3 m or under a quarter of today's height (a cleared site with hoardings)",
     "null: under 30% of the outline's points have data in that survey",
-    "a survey that flew under 20% of the buildings is left out (2015)"
+    "a survey that flew under 20% of the buildings is left out (2015)",
+    "Heights in metres; the ground is the model ground (area.js terrain), not each survey's DTM."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -2796,7 +3021,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-dsm"
     }
-   ]
+   ],
+   "cwp:area": "skyline",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-towers",
@@ -2834,7 +3061,10 @@
     "Roof levels: 1-D Gaussian mixture, k by BIC + 2 k ln n; levels closer than 3 m merge.",
     "Outlines: open and close, holes under 60 m2 filled, pieces under 16 m2 removed, marching squares, Douglas-Peucker 0.8 m, edges snapped to the dominant direction within 8 degrees.",
     "Towers not standing at the 2020 flight keep their OSM outline (status not_in_survey).",
-    "Hand corrections are listed in the tool (JUDGEMENT) and in each record with its reason."
+    "Hand corrections are listed in the tool (JUDGEMENT) and in each record with its reason.",
+    "The 2022 composite merges only the 2017-12/2018-01 and 2020-12-12 flights: it is not an independent check of 2020; the independent check is the 2018 flight, for towers finished by January 2018.",
+    "Composite cells with no return (a gap filled from near the ground) are no data.",
+    "Roof RMSE is reported on roof cells only."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
@@ -2848,7 +3078,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-dsm"
     }
-   ]
+   ],
+   "cwp:area": "towers",
+   "cwp:fault": [],
+   "cwp:judgement": "JUDGEMENT in tools/build-towers.py: the primary survey per tower (2018 for Novotel cwb-0701 and Dollar Bay cwb-0737), levels added by hand (Pan Peninsula cwb-0801: 6.5 and 21.5 m read off the height histogram), a ground level for the height check (8 Canada Square cwb-0417: 9.7 m OD); SKIP lists outlines that are not towers (cwb-0418, cwb-0523). Each reason is in the tool and in the tower record."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure",
@@ -2880,7 +3113,10 @@
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "facades",
+   "cwp:fault": [],
+   "cwp:judgement": "The facade region in each photo is chosen by eye (registry/sources/facades/work/rois.json); the fundamental period is chosen by looking at the patch; the outputs are collected into meas.json by hand."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure-patch",
@@ -2907,7 +3143,10 @@
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "facades",
+   "cwp:fault": [],
+   "cwp:judgement": "The patch is cut by hand; the outputs are collected into meas.json by hand."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-metric",
@@ -2944,7 +3183,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure"
     }
-   ]
+   ],
+   "cwp:area": "facades",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-build",
@@ -2987,7 +3228,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-metric"
     }
-   ]
+   ],
+   "cwp:area": "facades",
+   "cwp:fault": [],
+   "cwp:judgement": "The floor count used to scale a patch is an assumed or judged value where no face width is visible."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-write",
@@ -3024,7 +3268,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-build"
     }
-   ]
+   ],
+   "cwp:area": "facades",
+   "cwp:fault": [],
+   "cwp:judgement": "Judged facts (by looking at photos) and their sources are written in write_facades.py; each value is marked measured, judged or assumed in facades.json."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-facade-atlas",
@@ -3072,7 +3319,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-write"
     }
-   ]
+   ],
+   "cwp:area": "facades",
+   "cwp:fault": [],
+   "cwp:judgement": "One patch per tower chosen by eye from data/raw/facades/contact.jpg; Citigroup Centre left out (crane, blur)."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats",
@@ -3121,7 +3371,8 @@
     "Roof discs every 4 m inside the outline: aerial colour on buildings under 40 m, else the building colour.",
     "Walls: one disc per 3.6 m storey and 7.2 m (--cell) of wall, and one glass-band disc 3 cm in front per cell (buildings 4 m or taller).",
     "The set entry 'cw-synth' replaces any earlier one in index.json; other entries are kept.",
-    "every splat records its building (uint16 index into cw-synth.json groups; 65535 = ground) for animation"
+    "every splat records its building (uint16 index into cw-synth.json groups; 65535 = ground) for animation",
+    "Positions in model metres (x east, y up, z south); 32-byte .splat records, gzipped."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -3132,7 +3383,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-aerial-rgb2008"
     }
-   ]
+   ],
+   "cwp:area": "splats",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-river",
@@ -3157,7 +3410,9 @@
    "cwp:rule": [
     "the Thames = tidal water polygons with no name (or named Thames)",
     "step cost = step length / (distance to bank + 1)^1.5",
-    "moving average over 9 cells, resampled every 20 m"
+    "moving average over 9 cells, resampled every 20 m",
+    "Start and end: the widest water cell (largest distance to the bank) in the westmost and eastmost grid columns that hold water.",
+    "Rounding: points and half-widths to 0.1 m; Eden Dock ring to 0.1 m."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
@@ -3165,7 +3420,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands"
     }
-   ]
+   ],
+   "cwp:area": "water",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-trees",
@@ -3219,7 +3476,9 @@
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "trees",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-trees",
@@ -3264,7 +3523,8 @@
     "TPO: records with an end date are left out; the taxon is read only from Tower Hamlets names of the form \"Common (Scientific)\"; Southwark names (site descriptions, URLs) are dropped.",
     "OSM: species, else taxon, else genus (with the :en names); height under 60 m and diameter_crown under 40 m kept.",
     "TOW Lone Tree: centroid of the polygon, height = maxht, crown = diameter of a circle with the polygon area (tow_area_m). Group of Trees, Small Woodland and NFI OHC polygons become greens with meanht.",
-    "Greens are clipped to the box (Sutherland-Hodgman) and simplified (Douglas-Peucker 0.5 m; TOW 1.5 m, its outlines follow the 1 m LiDAR grid); OSM multipolygon inner rings and shapefile holes are kept as holes."
+    "Greens are clipped to the box (Sutherland-Hodgman) and simplified (Douglas-Peucker 0.5 m; TOW 1.5 m, its outlines follow the 1 m LiDAR grid); OSM multipolygon inner rings and shapefile holes are kept as holes.",
+    "Network for the source files: see fetch-trees."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
@@ -3278,7 +3538,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-grid"
     }
-   ]
+   ],
+   "cwp:area": "trees",
+   "cwp:fault": [],
+   "cwp:judgement": "The 35 m cut-off for \"lone trees\" that are cranes or structures is applied on the page, not in the file; the source precedence order is a judgement."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/drone-flight",
@@ -3319,7 +3582,10 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-atlas"
     }
-   ]
+   ],
+   "cwp:area": "splats",
+   "cwp:fault": [],
+   "cwp:judgement": "The route (overview loop, spiral, dock passes, tower orbits, crossings) is designed by hand in plan(); only the clearance repair is automatic."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/drone-capture",
@@ -3415,7 +3681,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-aerial-rgb2008"
     }
-   ]
+   ],
+   "cwp:area": "splats",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/train-splat",
@@ -3468,7 +3736,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/drone-capture"
     }
-   ]
+   ],
+   "cwp:area": "splats",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/ply-to-splat",
@@ -3500,7 +3770,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/train-splat"
     }
-   ]
+   ],
+   "cwp:area": "splats",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/publish-trained-splat",
@@ -3557,7 +3829,9 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats"
     }
-   ]
+   ],
+   "cwp:area": "splats",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/audit-quality",
@@ -3665,7 +3939,25 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-indoor"
     }
-   ]
+   ],
+   "cwp:area": "quality",
+   "cwp:fault": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F7",
+    "F8",
+    "F9",
+    "F12",
+    "F13",
+    "F16",
+    "F17",
+    "F18",
+    "F19",
+    "F20"
+   ],
+   "cwp:judgement": "Each new check is read by hand against its examples before it is trusted (curation skill, \"Catalogue first\")."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-feeds",
@@ -3689,11 +3981,16 @@
    "cwp:command": "node magpie/cwplans/feeds/check-feeds.mjs [source ids] [--json] [--live]",
    "cwp:kind": "check",
    "cwp:rule": [
-    "An api is fetched only when the source has no sample; CORS counts when Access-Control-Allow-Origin is * or the site origin."
+    "An api is fetched only when the source has no sample; CORS counts when Access-Control-Allow-Origin is * or the site origin.",
+    "Network: 6 requests at once across all hosts, no per-host gap, 30 s timeout, User-Agent glitchcan-cwplans/0.1, Origin https://danbri.github.io on api and sample requests; only the first chunk of each body is read. Nothing is written."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "feeds",
+   "cwp:fault": [
+    "F11"
+   ]
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-events",
@@ -3717,11 +4014,16 @@
    "cwp:command": "node magpie/cwplans/feeds/check-events.mjs [source ids] [--json] [--live] [--url URL]",
    "cwp:kind": "check",
    "cwp:rule": [
-    "Item counts come from generic parsers and can differ from the hand-tuned samples in events.json."
+    "Item counts come from generic parsers and can differ from the hand-tuned samples in events.json.",
+    "Network: 6 requests at once across all hosts, no per-host gap, 30 s timeout, User-Agent glitchcan-cwplans/0.1; a second request with the Origin header tests CORS. Nothing is written."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "feeds",
+   "cwp:fault": [
+    "F11"
+   ]
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-data-register",
@@ -3755,6 +4057,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/index.html"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md"
     }
    ],
    "prov:generated": [],
@@ -3767,24 +4072,36 @@
     "Every tracked data file (not .mjs, .py, .c, .html, .gitignore, vendor/, skills/, the register and pipeline files) has a register entry; every entry's file exists.",
     "Every source and OSM extract named is defined; osm.use agrees with the sources.",
     "A page that loads a file holding OSM data (use raw, derived or counts) shows '© OpenStreetMap contributors' linked to https://www.openstreetmap.org/copyright.",
-    "pipeline.json: every tracked tools/*.{mjs,py,sh} and registry/sources/*/tools/*.{mjs,py,sh} is an activity, library or test; every tool, committed input and output exists; every source key is defined; every 'after' names an activity; every register file produced by a tools/ script is generated by an activity.",
-    "The repository paths in data-register.json osm_elsewhere_in_repo exist."
+    "pipeline.json: every tracked tools/*, tools/native/*, tools/test/*, registry/sources/*/tools/*, registry/sources/*/* and feeds/* script (.mjs, .py, .sh, .c) is an activity, library or test; every tool, committed input and output exists; every source key is defined; every 'after' names an activity; every register file produced by a tools/ script is generated by an activity.",
+    "The repository paths in data-register.json osm_elsewhere_in_repo exist.",
+    "Every activity and every hand step (manual_activities) has a non-empty method and non-empty rules, an area that pipeline.json areas defines, and fault ids that the fault register in skills/docklands-data-curation/SKILL.md has; hand steps name only committed files and known sources."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
-   "cwp:after": []
+   "cwp:after": [],
+   "cwp:area": "provenance",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-data-register-write",
    "@type": "prov:Activity",
    "rdfs:label": "check-data-register-write",
-   "dct:description": "Runs the same checks, then writes the readable register and exports the provenance as JSON-LD for a knowledge graph.",
+   "dct:description": "Runs the same checks, then writes the readable register, the method catalogue (METHODS.md) and the provenance as JSON-LD for a knowledge graph.",
    "prov:used": [
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data-register.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/methods-intro.md"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/quality/issues.json"
     }
    ],
    "prov:generated": [
@@ -3793,6 +4110,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.jsonld"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/METHODS.md"
     }
    ],
    "cwp:tool": {
@@ -3802,7 +4122,9 @@
    "cwp:kind": "export",
    "cwp:rule": [
     "Activities become prov:Activity with prov:used and prov:generated; register files become prov:Entity and dcat:Distribution with prov:wasDerivedFrom their sources and prov:wasGeneratedBy the activity that generates them; sources become dcat:Dataset.",
-    "Committed files are identified by their GitHub URL, local files by urn:cwplans:local:<path>."
+    "Committed files are identified by their GitHub URL, local files by urn:cwplans:local:<path>.",
+    "METHODS.md: methods-intro.md verbatim, then every activity by area (pipeline.json areas) in rebuild order (topological over after, ties in file order, a cycle in file order), the hand steps, the hand-judgement table, the fault register table read from the curation skill with the activities that cite each fault, the audit checks from quality/issues.json, the rebuild order, libraries and tests.",
+    "Hand steps (manual_activities) become prov:Activity with cwp:kind hand; area, faults and judgement are exported as cwp:area, cwp:fault and cwp:judgement."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -3810,6 +4132,447 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-data-register"
     }
+   ],
+   "cwp:area": "provenance",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
+   "@type": "prov:Activity",
+   "rdfs:label": "Published levels used as tunnel and structure controls",
+   "dct:description": "Picks, from the cited facts in docklands/facts.json and from TfL freedom-of-information rail levels, the station, tunnel and structure levels that the 3D builds apply as controls, each with its datum, source URL and short quote.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/facts.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-foi"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-quotes"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data/sourced-levels.json"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "A level states its datum: od (metres above Ordnance Datum Newlyn) or below_ground (metres below the LiDAR ground at the point).",
+    "The asset owner's level (TfL rail level; London Underground Datum = OD - 100 m) outranks a rounded secondary depth; the loser stays in the file with superseded_by and is not applied (F13).",
+    "Each control names the line pattern and kinds of tunnel chain it applies to; structures name footprint_osm or water_name to be drawn from OSM.",
+    "Only short quotes are kept; plans and drawings are for reference by eye (feeds/underground/README.md)."
+   ],
+   "cwp:area": "underground",
+   "cwp:fault": [
+    "F13"
+   ],
+   "cwp:by": "hand (main session and research agents)",
+   "cwp:date": "2026-10-02/03",
+   "cwp:decisionsRecordedIn": [
+    "data/sourced-levels.json (source, quote, superseded_by per control)"
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/docklands-facts",
+   "@type": "prov:Activity",
+   "rdfs:label": "Cited facts on the underground and multi-storey structure",
+   "dct:description": "Research agents collected 360 numeric facts (depths, tunnels, towers, docks, ground) with a source URL and a short quote each, and 19 recorded gaps; a script checked every quote against the cached copy of the page it cites (whitespace normalised); Wikidata values come from SPARQL with the statement as the quote. FACTS.md is the same facts as tables.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-quotes"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/facts.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/FACTS.md"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Each fact keeps value, unit, datum, source URL and quote.",
+    "Datums are named: OD, CD (3.35 m below OD at West India Docks), mATD (OD + 100 m).",
+    "Gaps are recorded, not filled by guesses."
+   ],
+   "cwp:area": "underground",
+   "cwp:fault": [],
+   "cwp:by": "research agents, checked by hand",
+   "cwp:date": "2026-10-02",
+   "cwp:decisionsRecordedIn": [
+    "docklands/facts.json",
+    "docklands/FACTS.md"
+   ],
+   "cwp:gap": "The quote-check script and the FACTS.md generator were one-off scripts and are not committed: the method is recorded here, the code is not."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/underground-catalogue",
+   "@type": "prov:Activity",
+   "rdfs:label": "Source catalogue for the underground estate",
+   "dct:description": "Four research agents searched for plans, levels and 3D models of the malls, stations and tunnels; each entry was fetched directly or as an Internet Archive copy and its licence read; sources not used are listed with the reason. The README tables are generated from the JSON files.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-quotes"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/stations.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/planning.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/estate.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/tunnels.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/README.md"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Nothing is copied into the model except cited level values (data/sourced-levels.json).",
+    "Copyright plans (Canary Wharf Group, TfL, Crossrail) are for reference by eye, not for copying.",
+    "Each exclusion records why (licence, no levels, duplicate, unreachable)."
+   ],
+   "cwp:area": "underground",
+   "cwp:fault": [],
+   "cwp:by": "four research agents",
+   "cwp:date": "2026-10-03",
+   "cwp:decisionsRecordedIn": [
+    "feeds/underground/*-excluded.json"
+   ],
+   "cwp:gap": "The generator of feeds/underground/README.md is not committed."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/feeds-catalogue",
+   "@type": "prov:Activity",
+   "rdfs:label": "Catalogue of live feeds, APIs and event sources",
+   "dct:description": "Research agents surveyed data sources in seven areas (341 added on 2026-10-03, 135 left out with reasons) and event, calendar, news and openings sources (124); each URL was fetched from the container and its status, CORS, licence and a sample recorded; check-feeds.mjs and check-events.mjs re-check them.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/feed-providers"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/feeds.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/events.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/README.md"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/EVENTS.md"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/SURVEY-2026-10-03.md"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Only official, published or openly licensed sources, and only cameras their owners publish for public viewing.",
+    "Left out with the reason: directories of unsecured private cameras, people-search and face-recognition sites, personal licence registers that list named individuals.",
+    "A source behind a bot challenge is \"not verified\", never \"verified\" (F11)."
+   ],
+   "cwp:area": "feeds",
+   "cwp:fault": [
+    "F11"
+   ],
+   "cwp:by": "research agents, merged by hand",
+   "cwp:date": "2026-10-03",
+   "cwp:decisionsRecordedIn": [
+    "feeds/feeds.json and feeds/events.json (status, licence, excluded section)",
+    "feeds/SURVEY-2026-10-03.md"
+   ],
+   "cwp:gap": "The generators of feeds/README.md and feeds/EVENTS.md are not committed (\"generated and by hand\")."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/brand-decisions",
+   "@type": "prov:Activity",
+   "rdfs:label": "Hand decisions on FSA and CWG brand matches",
+   "dct:description": "Matches that the rules cannot decide (an NSI prefix variant, an alternate name, a business type that does not fit the brand) are judged by hand, one record at a time, and written to decision files that the tools read on every run.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/brands-uk.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/tools/fsa-decisions.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/tools/cwg-decisions.json"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "A decision names the record, the brand item and accept or reject, with a reason.",
+    "Undecided and rejected matches are listed apart by the tools, never joined."
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": [],
+   "cwp:by": "hand",
+   "cwp:date": "2026-10-02/03",
+   "cwp:decisionsRecordedIn": [
+    "registry/sources/brands/tools/fsa-decisions.json",
+    "registry/sources/brands/tools/cwg-decisions.json"
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/storelocator-manual",
+   "@type": "prov:Activity",
+   "rdfs:label": "Store-page URLs found by hand",
+   "dct:description": "For branches whose OSM website is missing or a bare home page, the branch page was found by hand on the brand's own locator and its URL recorded; storelocator.mjs then checks it like any other.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/brand-sites"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/tools/storelocator-manual.json"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "A URL on the brand's own domain; the UK site first.",
+    "Only the URL is recorded, not page content."
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": [],
+   "cwp:by": "hand",
+   "cwp:date": "2026-10-02/03",
+   "cwp:decisionsRecordedIn": [
+    "registry/sources/brands/tools/storelocator-manual.json"
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/records-open-subset",
+   "@type": "prov:Activity",
+   "rdfs:label": "Open-licence subset of the museum and heritage records",
+   "dct:description": "Cuts records-open.json from records.json (fetch_records.py): records under CC0 (Wikidata), OGL (Historic England, OGL-licensed ADS records) or CC BY (Portable Antiquities Scheme), without the \"sensitive\" flag (burial or memorial context).",
+   "prov:used": [
+    {
+     "@id": "urn:cwplans:local:registry/sources/museums/records.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/museums/records-open.json"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Records flagged sensitive (44: burials, cemeteries, graves, memorials, skeletons) are left out (CLAUDE.md, Data ethics).",
+    "Records under other or unstated licences are left out."
+   ],
+   "cwp:area": "heritage",
+   "cwp:fault": [],
+   "cwp:by": "hand",
+   "cwp:date": "2026-10-02",
+   "cwp:decisionsRecordedIn": [
+    "registry/sources/museums/README.md, \"Published subset\""
+   ],
+   "cwp:gap": "The cut was made by hand; no script in the repository writes records-open.json."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/ukho-wrecks-clip",
+   "@type": "prov:Activity",
+   "rdfs:label": "UKHO wrecks and obstructions clipped to the box",
+   "dct:description": "Clips the UKHO INSPIRE wrecks and obstructions shapefile to the Docklands box with ogr2ogr (the command is in registry/sources/pla/README.md).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ukho"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/pla/ukho_wrecks_obstructions_points.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/pla/ukho_wrecks_obstructions_areas.geojson"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Box WGS84 -0.0950, 51.4740 to 0.0150, 51.5220.",
+    "Depths (valsou) are metres below chart datum; not for navigation."
+   ],
+   "cwp:area": "water",
+   "cwp:fault": [],
+   "cwp:by": "hand",
+   "cwp:date": "2026-10-02",
+   "cwp:decisionsRecordedIn": [
+    "registry/sources/pla/README.md"
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-photos",
+   "@type": "prov:Activity",
+   "rdfs:label": "Open photos, facade regions and footprint widths for the facade measures",
+   "dct:description": "Searched Wikimedia Commons and Flickr for photos of the Canary Wharf towers, downloaded only CC0, Public Domain Mark and CC BY images, recorded author, licence, page and the face shown; chose a facade region in each photo by eye; computed oriented bounding boxes of the OSM footprints for face widths.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/photos.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/rois.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/footprints.json"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "CC BY-SA, NC, ND and all-rights-reserved images are not downloaded; seven CC BY-SA Commons photos were looked at for facts only.",
+    "The face shown is judged from landmarks when a photo has no geotag (32 of 45 Flickr photos).",
+    "Commons and Flickr rate-limit the container (429, retry after 600 s): wait, do not hammer."
+   ],
+   "cwp:area": "facades",
+   "cwp:fault": [],
+   "cwp:by": "facade agent, then the main session",
+   "cwp:date": "2026-10-03",
+   "cwp:decisionsRecordedIn": [
+    "registry/sources/facades/photos.json (face and how it was judged)",
+    "registry/sources/facades/work/rois.json"
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/page-assets",
+   "@type": "prov:Activity",
+   "rdfs:label": "Pixel-art palette and music list for the 3D page",
+   "dct:description": "The pixel-art palette: 24 colours extracted from an owner-supplied reference picture by PIL median cut and k-means (a one-off run; the picture is not stored), plus 9 accent colours added by hand. The music list: tracks chosen by hand from Wikimedia Commons with title, artist, licence and page.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-music"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/pixel-palette.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/music.json"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Pixel-art colours do not follow height alone (owner, 2026-10-03: it reads as a heat map); materials carry the variety.",
+    "Music: CC BY 3.0 tracks (Kevin MacLeod) served by Wikimedia Commons with Access-Control-Allow-Origin: *, so the page can analyse them; the credit is shown while a track plays."
+   ],
+   "cwp:area": "imagery",
+   "cwp:fault": [],
+   "cwp:by": "hand",
+   "cwp:date": "2026-10-03",
+   "cwp:decisionsRecordedIn": [
+    "docklands/data/pixel-palette.json",
+    "docklands/data/music.json"
+   ],
+   "cwp:gap": "The palette extraction was a one-off script and is not committed."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/licence-decisions",
+   "@type": "prov:Activity",
+   "rdfs:label": "Licence check of every source before commit",
+   "dct:description": "Before a source is fetched into a committed file, its licence is read on the provider's own page and recorded in data-register.json sources (name, licence, attribution, note). Restricted, proprietary and share-alike sources other than OSM are not committed; open questions wait for the owner.",
+   "prov:used": [],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data-register.json"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Not committed: the VOA rating list (restricted licence), the PLA ArcGIS layers (no licence stated), the Canal & River Trust layers (no commercial use).",
+    "Not used: GLA canopy and green cover 2024 (all rights reserved), Curio Canopy (CC BY-SA), Wikipedia text (CC BY-SA), CC BY-SA Commons photos (looked at only).",
+    "Held for the owner: the Crossrail long section (licence not stated).",
+    "Needs an account, not fetched: HM Land Registry CCOD and OCOD, EPC data.",
+    "Re-check the Gambling Commission (no licence on the download page; data.gov.uk says OGL) before anything leaves prototyping."
+   ],
+   "cwp:area": "provenance",
+   "cwp:fault": [],
+   "cwp:by": "hand (each session), owner decides open cases",
+   "cwp:date": "2026-10-02/03",
+   "cwp:decisionsRecordedIn": [
+    "data-register.json (sources)",
+    "DATA-REGISTER.md",
+    "registry/sources/*/README.md (licence sections)",
+    "registry/sources/SOURCES-companies-property.md"
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/provenance-upkeep",
+   "@type": "prov:Activity",
+   "rdfs:label": "Keeping pipeline.json and the register in step with the tools",
+   "dct:description": "Every new or changed tool updates its pipeline.json activity in the same commit (used, generated, method, rules, network, deterministic, after, area, faults, judgement); every new data file gets a data-register.json entry in the same commit; then check-data-register.mjs --write regenerates DATA-REGISTER.md, METHODS.md and pipeline.jsonld.",
+   "prov:used": [],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.json"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "The check fails on an unlisted tool, an empty method or rules, an unknown area or fault id, an unregistered data file, and a page that shows OSM data without the attribution link.",
+    "Source identifiers are kept as they come (OSM type/id, QID, UPRN, TOID, FHRS id, company number, cwb- id): they become IRIs."
+   ],
+   "cwp:area": "provenance",
+   "cwp:fault": [],
+   "cwp:by": "hand (each session)",
+   "cwp:date": "2026-10-03",
+   "cwp:decisionsRecordedIn": [
+    "pipeline.json",
+    "skills/docklands-data-curation/ACTIVITY-LOG.md"
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/quality-analysis",
+   "@type": "prov:Activity",
+   "rdfs:label": "Analysis of the error classes and the fault register",
+   "dct:description": "Reads the audit output, names the error class of each wrong value, writes the analysis and the proposed compositing layers, and records faults in our own joins and tools in the fault register with the measured effect of each fix.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/quality/issues.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/quality/README.md"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Catalogue first: name the class, add a check if none covers it; do not edit the record (owner, October 2026).",
+    "Change a tool only for a pipeline or join-rule fault; re-run the audit and compare the counts."
+   ],
+   "cwp:area": "quality",
+   "cwp:fault": [],
+   "cwp:by": "hand",
+   "cwp:date": "2026-10-03",
+   "cwp:decisionsRecordedIn": [
+    "quality/README.md",
+    "skills/docklands-data-curation/SKILL.md (Fault register)",
+    "skills/docklands-data-curation/ACTIVITY-LOG.md"
    ]
   },
   {
@@ -3927,6 +4690,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels"
+   },
    "cwp:osmUse": "ids",
    "cwp:review": "quotes include Wikipedia text (CC BY-SA); TfL FOI rail levels have no stated licence"
   },
@@ -4054,6 +4820,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/docklands-facts"
+   },
    "cwp:osmUse": "none",
    "cwp:review": "169 quotes are Wikipedia text (CC BY-SA 4.0, share-alike), the rest short quotes from all-rights-reserved pages: before anything leaves the prototyping phase, decide whether to keep the quote text or only the value and URL"
   },
@@ -4072,6 +4841,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/docklands-facts"
+   },
    "cwp:osmUse": "none",
    "cwp:review": "as docklands/facts.json"
   },
@@ -4581,6 +5353,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/brand-decisions"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -4598,6 +5373,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/fsa"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/brand-decisions"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -4615,6 +5393,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/brand-sites"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/storelocator-manual"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -4661,6 +5442,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ads-ariadne"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/records-open-subset"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -4743,6 +5527,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ukho"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/ukho-wrecks-clip"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -4757,6 +5544,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ukho"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/ukho-wrecks-clip"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -4915,6 +5705,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/quality-analysis"
+   },
    "cwp:osmUse": "notes"
   },
   {
@@ -5043,6 +5836,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/underground-catalogue"
+   },
    "cwp:osmUse": "none",
    "cwp:review": "short quotes from copyright documents (CWG, TfL, Crossrail); re-check before production"
   },
@@ -5075,6 +5871,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/underground-catalogue"
+   },
    "cwp:osmUse": "none",
    "cwp:review": "short quotes from copyright documents (CWG, TfL, Crossrail); re-check before production"
   },
@@ -5107,6 +5906,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/underground-catalogue"
+   },
    "cwp:osmUse": "none",
    "cwp:review": "short quotes from copyright documents (CWG, TfL, Crossrail); re-check before production"
   },
@@ -5139,6 +5941,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/underground-catalogue"
+   },
    "cwp:osmUse": "none",
    "cwp:review": "short quotes from copyright documents (CWG, TfL, Crossrail); re-check before production"
   },
@@ -5298,6 +6103,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-music"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/page-assets"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -5332,6 +6140,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/page-assets"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -5469,6 +6280,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-photos"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -5512,6 +6326,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-photos"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -5583,6 +6400,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-photos"
+   },
    "cwp:osmUse": "derived"
   },
   {
@@ -6125,6 +6945,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/provenance-upkeep"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -6143,6 +6966,37 @@
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-data-register-write"
    },
    "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/METHODS.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "method catalogue of the whole project: owner rules, every tool activity by subject area in rebuild order, hand-judgement steps, fault register summary",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-data-register-write"
+   },
+   "cwp:osmUse": "notes"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/methods-intro.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "hand-written front section of METHODS.md: the policy and owner rules that govern the methods, crawl and hand-curation rules",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "notes"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/imagery.js",
@@ -6173,6 +7027,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/feeds-catalogue"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -6187,6 +7044,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/feeds-catalogue"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -6201,6 +7061,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/feeds-catalogue"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -6218,6 +7081,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-quotes"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/underground-catalogue"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -6232,6 +7098,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/feeds-catalogue"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -6246,6 +7115,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/feeds-catalogue"
+   },
    "cwp:osmUse": "none"
   },
   {
