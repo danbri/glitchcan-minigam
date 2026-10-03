@@ -111,7 +111,7 @@ body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer
   </div>
   <div id="isoBtns" hidden><button type="button" class="ib" id="isoL" aria-label="Turn the view left">⟲</button><button type="button" class="ib" id="isoR" aria-label="Turn the view right">⟳</button></div>
   <div id="gauge" hidden role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><button type="button" class="ib" id="gaugeX" aria-label="Close the depth gauge"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
-  <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span></div>
+  <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span><span id="attribTrees"></span></div>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="press" role="menu"></div>
   <section id="sheet" aria-label="Record"><div id="grip" aria-hidden="true"></div><button type="button" id="sheetX" aria-label="Close the record">×</button><div id="sheetBody">
@@ -161,7 +161,7 @@ body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer
       <div id="rampKey" class="small"></div>
       <h3>Show</h3>
       <div class="chips">
-        <label><input type="checkbox" id="showWindows" checked> Windows</label><label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground</label><label><input type="checkbox" id="showFloors"> Floors</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label>
+        <label><input type="checkbox" id="showWindows" checked> Windows</label><label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground</label><label><input type="checkbox" id="showFloors"> Floors</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label><label><input type="checkbox" id="showTrees"> Trees</label>
       </div>
       <h3>Gaussian splats</h3>
       <div class="chips" role="radiogroup" aria-label="Gaussian splats">
@@ -579,6 +579,7 @@ function render() {
   if ($('showRoads').checked) drawMesh(L.roads, 1);
   if ($('showFloors').checked) drawMesh(L.floors, 1);
   if ($('showWalls').checked) drawMesh(L.walls, 1);
+  if ($('showTrees').checked && !PIX.on && L.treesN && !sOnly) drawMesh(L.treesN, 1);
   drawMesh(L.pins, 1); drawMesh(L.walk, 1);
   if (bm === 'solid' && !sOnly) drawFacades(L.bld, 1, P);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
@@ -1171,6 +1172,16 @@ function polyline(pts) { const cum = [0]; for (let i = 1; i < pts.length; i++) c
 function along(pl, s) { s = Math.max(0, Math.min(pl.len - .01, s)); let lo = 0, hi = pl.cum.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (pl.cum[m] <= s) lo = m; else hi = m; }
   const a = pl.pts[lo], b = pl.pts[hi], t = (s - pl.cum[lo]) / Math.max(.01, pl.cum[hi] - pl.cum[lo]), dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1;
   return { x: a[0] + dx * t, z: a[1] + dz * t, y: (a[2] ?? 0) + ((b[2] ?? 0) - (a[2] ?? 0)) * t, hx: dx / l, hz: dz / l, w: (a[3] ?? 0) + ((b[3] ?? 0) - (a[3] ?? 0)) * t }; }
+// open tree data (data/trees.json, tools/build-trees.mjs): loaded only when trees are shown
+let TREES = null;
+const loadTrees = () => TREES ? Promise.resolve(TREES) : loadJSON('data/trees.json').then(t => { TREES = t; $('attribTrees').textContent = ' · trees: GLA, Forest Research, OS, planning.data (OGL)'; return t; });
+function buildTreesN() {   // normal style: a trunk and a box crown per tree within 900 m of the estate
+  if (L.treesN) L.treesN.free(); const F = A.meta.focus, B = [F.x0 - 900, F.x1 + 900, F.z0 - 900, F.z1 + 900], M = new Mesh(), TR = [.36, .30, .24], G1 = [.28, .46, .25], G2 = [.36, .52, .28]; let n = 0;
+  TREES.trees.forEach(([x, z, h0, c0], k) => { if (x < B[0] || x > B[1] || z < B[2] || z > B[3] || h0 > 35) return; const h = h0 || 9, c = Math.max(3, Math.min(16, c0 || h * .55)), g = groundAt(x, z);
+    obox(M, x, g, z, .8, .8, h * .4, 1, 0, TR); obox(M, x, g + h * .35, z, c, c, h * .65, 1, 0, k % 3 ? G1 : G2); n++; });
+  L.treesN = M.upload(); return n; }
+$('showTrees').onchange = () => { if (!$('showTrees').checked) { draw(); return; } toast('Loading the trees…');
+  loadTrees().then(() => { const n = L.treesN ? null : buildTreesN(); if (n != null) toast(`${n.toLocaleString('en-GB')} trees within 900 m of the estate (GLA, Forest Research, OS and OSM open data)`); draw(); }).catch(e => { toast('Trees did not load: ' + e.message); $('showTrees').checked = false; }); };
 let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
 function buildTrees() {
   if (L.trees) L.trees.free(); const F = A.meta.focus, B = [F.x0 - 900, F.x1 + 900, F.z0 - 900, F.z1 + 900], inB = (x, z) => x > B[0] && x < B[1] && z > B[2] && z < B[3];
@@ -1183,6 +1194,11 @@ function buildTrees() {
   A.buildings.forEach(mark); A.water.forEach(mark);
   const free = (x, z) => { const i = Math.floor((x - B[0]) / G), j = Math.floor((z - B[2]) / G); return i >= 0 && j >= 0 && i < gw && j < gh && !blocked[j * gw + i]; };
   const M = new Mesh(), PAL = PIXSTYLE; let n = 0; seed = 11;
+  if (TREES) {   // the real trees (data/trees.json): position, height and crown where the source gives them
+    for (const [x, z, h0, c0] of TREES.trees) { if (!inB(x, z) || !free(x, z) || h0 > 35) continue;   // over 35 m: probably a crane or a structure the LiDAR took for a tree
+      const h = h0 || 9, c = Math.max(3, Math.min(16, c0 || h * .55)), g = groundAt(x, z);
+      obox(M, x, g, z, 1.2, 1.2, h * .45, 1, 0, PAL.trunk); obox(M, x, g + h * .35, z, c, c, h * .5, 1, 0, rnd() < .5 ? PAL.leaf : PAL.leaf2); obox(M, x + c * .12, g + h * .8, z - c * .12, c * .55, c * .55, h * .2, 1, 0, PAL.leafHi); n++; }
+    L.trees = M.upload(); return n; }
   const tree = (x, z) => { const g = groundAt(x, z), k = .8 + rnd() * .6; obox(M, x, g, z, 1.2, 1.2, 4 * k, 1, 0, PAL.trunk);
     obox(M, x, g + 3 * k, z, 7 * k, 7 * k, 5 * k, 1, 0, rnd() < .5 ? PAL.leaf : PAL.leaf2); obox(M, x + 1, g + 7.5 * k, z - 1, 4 * k, 4 * k, 2.5 * k, 1, 0, PAL.leafHi); n++; };
   for (const l of A.lines) if (!l.tunnel && (l.k === 'foot' || (l.k === 'road' && l.c >= 2))) {
@@ -1273,7 +1289,7 @@ async function setStyle(mode) {
       const x = b.p[0] / 10, z = b.p[1] / 10, cell = (Math.floor(x / 150) * 73856093) ^ (Math.floor(z / 150) * 19349663), hb = ((cell * 2654435761) >>> 0) / 4294967296, hi = ((i * 40503) >>> 0) % 100 / 100;
       const L = b.h > 70 ? GL : BC, k = Math.floor(hb * L.length), pick = hi < .7 ? L[k] : L[(k + 1) % L.length]; return pick; };
     for (const id of ['showLabels', 'showUnder', 'showWalls', 'showBed']) $(id).checked = false;
-    buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); const nt = buildTrees();
+    await loadTrees().catch(e => toast('Trees did not load: ' + e.message)); buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); const nt = buildTrees();
     PIX.on = true; PIX.actors = makeActors(); Object.assign(cam, { pitch: .5236, yaw: Math.PI / 4, dist: Math.min(cam.dist, 520) }); unview();
     $('isoBtns').hidden = false; $('pixNote').hidden = false; $('gauge').hidden = true; $('digBtn').hidden = true;
     toast(`Pixel art: ${nt.toLocaleString('en-GB')} trees, ${PIX.actors.length} moving figures, boats and birds`); cancelAnimationFrame(PIX.loop); PIX.loop = requestAnimationFrame(pixTick);

@@ -5048,7 +5048,7 @@
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-trees"
    },
    "cwp:osmUse": "derived",
-   "cwp:review": "ethics (CLAUDE.md, Data ethics): only position, taxon, height, crown, source and record id are kept; the dropped fields of each source are listed in the file (sources[].dropped). Not yet loaded by docklands/index.html; add it to pages[].loads when it is"
+   "cwp:review": "ethics (CLAUDE.md, Data ethics): only position, taxon, height, crown, source and record id are kept; the dropped fields of each source are listed in the file (sources[].dropped)."
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.json",
