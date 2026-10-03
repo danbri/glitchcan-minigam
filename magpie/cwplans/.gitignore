@@ -21,3 +21,6 @@ data/raw/crawl/
 
 # regulatory register downloads (tools/fetch-registers.mjs)
 data/raw/registers/
+
+# headless render cache (tools/render-structured-data.mjs)
+data/raw/rendered/
