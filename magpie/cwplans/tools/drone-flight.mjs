@@ -20,7 +20,12 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const CW = path.resolve(HERE, '..');
 export const D2R = Math.PI / 180, R2D = 180 / Math.PI;
 // The Canary Wharf Group estate (Westferry Circus to Wood Wharf, North Dock to South Dock) and the neighbourhood around it.
-export const ESTATE = { x0: -650, x1: 770, z0: -270, z1: 370 };
+// Outline (x, z) of the estate as flown here: the North Dock and Crossrail Place, Westferry Circus and Canary Riverside, Cabot
+// Square, Newfoundland, Heron Quays and Bank Street (to the South Dock quay), Churchill Place, Wood Wharf (to the South Dock
+// and Blackwall Basin). Landmark Pinnacle and Marsh Wall are outside it, in the neighbourhood ring.
+export const ESTATE_POLY = [[-640, -260], [500, -260], [500, -20], [770, -20], [770, 355], [370, 355], [300, 292], [-370, 292], [-370, 140], [-640, 120]];
+export function inEstate(x, z) { let c = false; const P = ESTATE_POLY; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > z) !== (P[j][1] > z) && x < (P[j][0] - P[i][0]) * (z - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; }
+export const ESTATE = { x0: -640, x1: 770, z0: -260, z1: 355 };
 export const MARGIN = 300;
 export const NEAR = { x0: ESTATE.x0 - MARGIN, x1: ESTATE.x1 + MARGIN, z0: ESTATE.z0 - MARGIN, z1: ESTATE.z1 + MARGIN };
 export const LIMITS = { CLEAR: 30, MIN_AGL: 15, ALT_MIN: 40, ALT_MAX: 350, PITCH_MIN: 10, PITCH_MAX: 70, YAW_RATE: 15, ACC_LONG: 0.6, ACC_LAT: 1.5, TURN_RATE: 10 };
@@ -286,7 +291,7 @@ export function project(Tm, K, p) {
 }
 
 // ---------- coverage estimate on the CPU: 2 m height field, frustum, facing walls, ray march for occlusion
-export function areaBuildings(AT, box = ESTATE) { return AT.buildings.filter(b => b.mi.length && b.x >= box.x0 && b.x <= box.x1 && b.z >= box.z0 && b.z <= box.z1); }
+export function areaBuildings(AT) { return AT.buildings.filter(b => b.mi.length && inEstate(b.x, b.z)); }
 export function coverageCPU(M, AT, frames, K, opts = {}) {
   const box = opts.box || { x0: NEAR.x0 - 400, x1: NEAR.x1 + 400, z0: NEAR.z0 - 400, z1: NEAR.z1 + 400 }, cs = 2, nx = Math.ceil((box.x1 - box.x0) / cs), nz = Math.ceil((box.z1 - box.z0) / cs), hf = new Float32Array(nx * nz);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) hf[j * nx + i] = M.groundAt(box.x0 + (i + .5) * cs, box.z0 + (j + .5) * cs);
@@ -330,12 +335,12 @@ function svgPlan(M, P) {
   let o = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="100%" height="100%" fill="#111"/>`;
   for (const w of M.A.water) { const f = dec(w.p); const pts = []; for (let k = 0; k < f.length; k += 2) pts.push(X(f[k]) + ',' + Z(f[k + 1])); o += `<polygon points="${pts.join(' ')}" fill="#1d3b55"/>`; }
   for (const bb of M.bld) { if (bb.x1 < b.x0 || bb.x0 > b.x1 || bb.z1 < b.z0 || bb.z0 > b.z1) continue; const pts = []; for (let k = 0; k < bb.starts[1]; k++) pts.push(X(bb.f[2 * k]) + ',' + Z(bb.f[2 * k + 1])); const g = Math.min(255, 70 + bb.y1 * .8) | 0; o += `<polygon points="${pts.join(' ')}" fill="rgb(${g},${g},${g})"/>`; }
-  o += `<rect x="${X(ESTATE.x0)}" y="${Z(ESTATE.z0)}" width="${(ESTATE.x1 - ESTATE.x0) * s}" height="${(ESTATE.z1 - ESTATE.z0) * s}" fill="none" stroke="#ffd26f" stroke-dasharray="6 4"/>`;
+  o += `<polygon points="${ESTATE_POLY.map(([x, z]) => X(x) + ',' + Z(z)).join(' ')}" fill="none" stroke="#ffd26f" stroke-dasharray="6 4"/>`;
   o += `<rect x="${X(NEAR.x0)}" y="${Z(NEAR.z0)}" width="${(NEAR.x1 - NEAR.x0) * s}" height="${(NEAR.z1 - NEAR.z0) * s}" fill="none" stroke="#888" stroke-dasharray="3 5"/>`;
   const F = P.frames; for (let i = 15; i < F.length; i += 15) { const a = F[i - 15].e, c = F[i].e, agl = c[1], hue = Math.round(240 - 240 * Math.min(1, agl / 350)); o += `<line x1="${X(a[0])}" y1="${Z(a[2])}" x2="${X(c[0])}" y2="${Z(c[2])}" stroke="hsl(${hue},90%,55%)" stroke-width="2"/>`; }
   for (let i = 0; i < F.length; i += 30 * 20) { const f = F[i]; o += `<line x1="${X(f.e[0])}" y1="${Z(f.e[2])}" x2="${X(f.e[0] + (f.target[0] - f.e[0]) * .25)}" y2="${Z(f.e[2] + (f.target[2] - f.e[2]) * .25)}" stroke="#fff" stroke-width="1" opacity=".7"/>`; }
   P.waypoints.forEach((w, i) => { o += `<circle cx="${X(w.e[0])}" cy="${Z(w.e[2])}" r="3" fill="none" stroke="#fff"/><text x="${+X(w.e[0]) + 4}" y="${+Z(w.e[2]) - 4}" fill="#ccc" font-size="9" font-family="sans-serif">${i}</text>`; });
-  o += `<text x="8" y="16" fill="#eee" font-size="13" font-family="sans-serif">Drone path (colour = height OD, blue low, red high); white ticks = view direction every 20 s; yellow box = CWG estate, grey = +${MARGIN} m. North up.</text></svg>`;
+  o += `<text x="8" y="16" fill="#eee" font-size="13" font-family="sans-serif">Drone path (colour = height OD, blue low, red high); white ticks = view direction every 20 s; yellow = CWG estate, grey box = estate box + ${MARGIN} m. North up.</text></svg>`;
   return o;
 }
 

@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
-import { CW, D2R, R2D, ESTATE, NEAR, loadModel, loadRegistry, buildPath, pickFrames, intrinsics, c2w, project, inPoly, dec } from './drone-flight.mjs';
+import { CW, D2R, R2D, ESTATE, ESTATE_POLY, inEstate, NEAR, loadModel, loadRegistry, buildPath, pickFrames, intrinsics, c2w, project, inPoly, dec } from './drone-flight.mjs';
 
 const argv = process.argv.slice(2), opt = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : d; }, flag = k => argv.includes('--' + k);
 const RUN = opt('run', 'run-' + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')), OUT = path.join(CW, 'data/raw/drone', RUN);
@@ -175,12 +175,12 @@ if (!fs.existsSync(pcFile) || flag('redo')) {
 // ---------- coverage: registry buildings in the estate and in the 300 m ring, from the pick pass
 const sector = (b, e) => Math.floor((((Math.atan2(e[0] - b.x, -(e[2] - b.z)) * R2D) + 360 + 22.5) % 360) / 45);
 const inside = (b, x) => b.x >= x.x0 && b.x <= x.x1 && b.z >= x.z0 && b.z <= x.z1;
-const cov = AT.buildings.map((b, k) => ({ k, id: b.id, n: b.n, x: b.x, z: b.z, zone: inside(b, ESTATE) ? 'estate' : inside(b, NEAR) ? 'ring' : null, frames: 0, sectors: new Set(), maxPx: 0 })).filter(c => c.zone && AT.buildings[c.k].mi.length);
+const cov = AT.buildings.map((b, k) => ({ k, id: b.id, n: b.n, x: b.x, z: b.z, zone: inEstate(b.x, b.z) ? 'estate' : inside(b, NEAR) ? 'ring' : null, frames: 0, sectors: new Set(), maxPx: 0 })).filter(c => c.zone && AT.buildings[c.k].mi.length);
 const byK = new Map(cov.map(c => [c.k, c]));
 for (const r of recs) for (const v of r.vis) { const c = byK.get(v[0]); if (!c || v[1] < MIN_PX) continue; c.frames++; c.sectors.add(sector(c, r.eye)); c.maxPx = Math.max(c.maxPx, v[1]); }
 const summary = zone => { const L = cov.filter(c => c.zone === zone), hist = {}; for (const c of L) hist[c.sectors.size] = (hist[c.sectors.size] || 0) + 1; const fr = L.map(c => c.frames).sort((a, b) => a - b);
   return { buildings: L.length, directions_histogram: hist, under_3_directions: L.filter(c => c.sectors.size < 3).length, never_seen: L.filter(c => !c.frames).length, frames_median: fr[fr.length >> 1] || 0, frames_min: fr[0] || 0 }; };
-const coverage = { min_pixels: MIN_PX, direction_sectors: 8, estate_box: ESTATE, ring_box: NEAR, estate: summary('estate'), ring: summary('ring'),
+const coverage = { min_pixels: MIN_PX, direction_sectors: 8, estate_outline: ESTATE_POLY, ring_box: NEAR, estate: summary('estate'), ring: summary('ring'),
   weak: cov.filter(c => c.sectors.size < 3).map(c => ({ id: c.id, name: c.n, zone: c.zone, x: c.x, z: c.z, frames: c.frames, directions: c.sectors.size, max_px: c.maxPx })),
   buildings: cov.map(c => ({ id: c.id, zone: c.zone, frames: c.frames, directions: [...c.sectors].sort(), max_px: c.maxPx })) };
 fs.writeFileSync(path.join(OUT, 'coverage.json'), JSON.stringify(coverage, null, 1));
