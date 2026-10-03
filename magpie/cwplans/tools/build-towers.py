@@ -542,8 +542,11 @@ def picture(rec, chk, scale_to=170):
     d = ImageDraw.Draw(im)
     cols = [(255, 80, 80), (80, 255, 255), (255, 80, 255), (255, 255, 80), (120, 255, 120), (255, 160, 60), (160, 160, 255)]
     for k, t in enumerate(sorted(rec['tiers'], key=lambda t: t['y1'])):
-        pts = [((x - rec['X0']) * sc + a.width + 6, (z - rec['Z0']) * sc + 26) for x, z in t['ring']]
-        d.line(pts + [pts[0]], fill=cols[k % len(cols)], width=1)
+        for ring in [t['poly'].exterior] + list(t['poly'].interiors):
+            pts = [((x - rec['X0']) * sc + a.width + 6, (z - rec['Z0']) * sc + 26) for x, z in ring.coords]
+            d.line(pts, fill=cols[k % len(cols)], width=1)
+            pts = [((x - rec['X0']) * sc, (z - rec['Z0']) * sc + 26) for x, z in ring.coords]
+            d.line(pts, fill=cols[k % len(cols)], width=1)
     rm = chk.get('rmse_m')
     d.text((2, 1), f"{rec['id']} {(rec['name'] or '')[:22]}", fill=(255, 255, 255))
     d.text((2, 13), f"{rec['top']['kind']} {len(rec['tiers'])}t top {chk['model_top_m']} m  rmse {rm if rm is not None else '-'}", fill=(200, 200, 200))
@@ -576,9 +579,11 @@ def main():
         chk = check(rec, b, reg[b['id']])
         im = picture(rec, chk); im.save(OUT_IMG / f"{b['id']}.png"); pics.append(im)
         tiers = []
-        for t in sorted(rec['tiers'], key=lambda t: (t['y0'], -Polygon(t['ring']).area)):
-            ring = t['ring'][:-1] if t['ring'][0] == t['ring'][-1] else t['ring']
-            tiers.append(dict(ring=[[r1(x), r1(z)] for x, z in ring], y0=r1(t['y0']), y1=r1(t['y1']), src=t['src']))
+        for t in sorted(rec['tiers'], key=lambda t: (t['y0'], -t['poly'].area)):
+            ring = lambda r: [[r1(x), r1(z)] for x, z in list(r.coords)[:-1]]
+            e_t = dict(ring=ring(t['poly'].exterior), y0=r1(t['y0']), y1=r1(t['y1']), src=t['src'])
+            if t['poly'].interiors: e_t['holes'] = [ring(h) for h in t['poly'].interiors]
+            tiers.append(e_t)
         e = dict(name=rec['name'] or reg[b['id']].get('name'), model_buildings=b['mi'], base_m_od=r1(rec['base']),
                  status=rec['status'], tiers=tiers, top=rec['top'], checks=chk)
         if b['id'] in JUDGEMENT and JUDGEMENT[b['id']].get('why'): e['corrected_by_judgement'] = JUDGEMENT[b['id']]['why']
