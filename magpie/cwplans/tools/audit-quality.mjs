@@ -274,6 +274,24 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
   c.population = pop; c.breakdown = { 'OSM addr:unit values starting with "Unit"': pre, 'branch addresses with "Unit Unit"': c.issues };
 }
 
+// ===== N. walking network (docklands/data/indoor.js, tools/build-indoor.mjs, from OSM)
+{
+  globalThis.window = globalThis; new Function(readFileSync(join(CW, 'docklands/data/indoor.js'), 'utf8'))();
+  const I = globalThis.DOCKLANDS_INDOOR, m = I.meta, F = m.faults;
+  const c1 = { id: 'NET-1', cls: 'routing network', dim: 'completeness', title: 'Parts of the walking network not joined to the rest', sources: ['osm'],
+    method: 'Connected parts of the OSM walking network in the Canary Wharf area after joining stairs, escalators, lifts and walkable areas; points and named places outside the largest part.', rule: 'Route only within one connected part; report places that cannot be reached; feed the gaps to mappers or close them from estate plans.' };
+  check(c1); c1.population = m.counts.vertices; c1.issues = m.islands.count - 1; c1.stats = { parts: m.islands.count, largest: m.islands.largest, next_largest: m.islands.next, places_not_in_largest: m.islands.places_not_in_largest, below_ground_points: m.islands.below_ground_vertices, below_ground_in_largest: m.islands.below_ground_in_largest }; c1.count_only = 'parts (one issue per unjoined part)';
+  const c2 = { id: 'NET-2', cls: 'routing network', dim: 'consistency', title: 'Two levels joined at one point with no stairs, lift or ramp', sources: ['osm'],
+    method: 'OSM nodes shared by ways tagged with different levels where no stair, escalator or lift way meets. Often a podium mapped as level 1 meeting a street at level 0, or an unmapped ramp or escalator.', rule: 'Keep the join for routing but label it "level change not mapped"; settle each case from estate plans: a ramp, a missing connector, or a level-scheme difference (the estate podium against street level).' };
+  check(c2); c2.population = m.counts.vertices; c2.issues = F.level_jumps; c2.examples = F.examples.level_jumps.map(x => ({ node: x })); c2.count_only = 'shared points';
+  const c3 = { id: 'NET-3', cls: 'routing network', dim: 'completeness', title: 'Escalators and lifts without their levels', sources: ['osm'],
+    method: 'Escalator ways with no level tag (drawn on level 0, so they change no level), lifts with fewer than two levels, and stairs or escalators whose ends could not be oriented.', rule: 'A connector must state the levels it joins (level=-1;0) and its direction; add the missing tags from station and mall plans.' };
+  check(c3); c3.population = m.counts.by_kind.escalator + m.counts.lifts; c3.issues = F.escalators_without_level + F.lifts_without_levels + F.unresolved_connector_ends; c3.breakdown = { 'escalators without level': F.escalators_without_level, 'lifts without two levels': F.lifts_without_levels, 'stairs or escalators with unresolved ends': F.unresolved_connector_ends }; c3.count_only = 'connectors';
+  const c4 = { id: 'NET-4', cls: 'routing network', dim: 'completeness', title: 'Places with no mapped corridor on their own level', sources: ['osm'],
+    method: 'Named shops, food and drink, services and platforms attached to the network on a different level from their own, because no path on their level lies within 40 m.', rule: 'Map the mall corridors per level (indoor=corridor with level), or attach the place to its mall level from the estate plan; mark such routes as approximate.' };
+  check(c4); c4.population = m.counts.places; c4.issues = m.islands.places_on_another_level; c4.count_only = 'places';
+}
+
 // ===== E. currency
 {
   const c = { id: 'TM-1', cls: 'currency', dim: 'timeliness', title: 'Food hygiene rating older than three years, or pending', sources: ['fsa'],

@@ -109,6 +109,7 @@
     { "path": "quality/issues.json", "what": "data-quality audit: 27 checks with counts, breakdowns, examples and one record per issue", "sources": ["osm", "fsa", "wikidata", "onspd", "companies-house", "cwg-site", "nsi", "ea-lidar", "historic-england", "own"], "osm": { "use": "derived", "extract": "osmfr-greater-london", "what": "OSM ids, names, tag values (level, addr:postcode, addr:unit) and positions of features with issues" }, "produced_by": "tools/audit-quality.mjs", "shown_on": ["atlas/index.html"] },
     { "path": "quality/CATALOGUE.md", "what": "the audit as tables (generated)", "sources": ["own", "osm", "fsa", "cwg-site"], "osm": { "use": "notes", "what": "examples quote OSM ids, names and tag values" }, "produced_by": "tools/audit-quality.mjs" },
     { "path": "quality/README.md", "what": "analysis of the error classes and the proposed compositing layers", "sources": ["own"], "osm": { "use": "notes", "what": "counts from the audit" }, "produced_by": "hand-written" },
+    { "path": "docklands/data/indoor.js", "what": "walking network in 3D: footways, corridors, stairs, escalators, lifts, platforms and walkable areas by level, with 789 named places, for routing", "sources": ["osm", "ea-lidar"], "osm": { "use": "derived", "extract": "osmfr-greater-london", "what": "walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances" }, "produced_by": "tools/build-indoor.mjs", "shown_on": ["docklands/index.html"] },
     { "path": "docklands/data/imagery.js", "what": "satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m)", "sources": ["copernicus-sentinel"], "osm": { "use": "none" }, "produced_by": "tools/build-imagery.mjs", "shown_on": ["docklands/index.html"] },
     { "path": "feeds/SURVEY-2026-10-03.md", "what": "the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research agents, merged by hand" },
     { "path": "feeds/feeds.json", "what": "541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research, checked by feeds/check-feeds.mjs" },
@@ -127,7 +128,7 @@
   "pages": [
     { "path": "index.html", "loads": ["data/cwplans-data.js"] },
     { "path": "atlas/index.html", "loads": ["atlas/data/atlas.json", "registry/buildings.json", "postcodes/postcodes.json", "quality/issues.json"] },
-    { "path": "docklands/index.html", "loads": ["docklands/data/area.js", "docklands/data/under.js", "atlas/data/atlas.json", "registry/buildings.json", "quality/issues.json", "docklands/data/imagery.js"] },
+    { "path": "docklands/index.html", "loads": ["docklands/data/area.js", "docklands/data/under.js", "atlas/data/atlas.json", "registry/buildings.json", "quality/issues.json", "docklands/data/imagery.js", "docklands/data/indoor.js"] },
     { "path": "postcodes/index.html", "loads": ["postcodes/postcodes.json"] },
     { "path": "registry/index.html", "loads": ["registry/buildings.json"] },
     { "path": "schematic.html", "loads": [] },

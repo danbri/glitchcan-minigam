@@ -24,7 +24,7 @@ before and after), and what is still open.
 
 ## Catalogue first
 
-`tools/audit-quality.mjs` runs the same checks on every rebuild (28 in October 2026, eight classes:
+`tools/audit-quality.mjs` runs the same checks on every rebuild (32 in October 2026, eight classes:
 identity, position, attribute conflict, validity, pipeline, currency, coverage, meaning). Output:
 `quality/issues.json`, `quality/CATALOGUE.md`; the analysis and the proposed compositing layers are in
 `quality/README.md`. When you find a wrong value:
@@ -56,6 +56,8 @@ Faults found in this project's joins and tools. "Open" means catalogued and meas
 | F9 | 2026-10-03 | OSM level and CWG mall level use different schemes; the offset depends on the mall | attribute conflict (source schemes) | open: needs a per-mall offset table | AT-3: 46 of 72 differ; Cabot Place −1 for 19 of 26, Jubilee Place 0 for 11 of 13 |
 | F10 | 2026-10-02/03 | Earlier faults, fixed when found: `simplify()` collapsed closed rings; incomplete Thames multipolygons dropped (needed relation members); DLR drawn on station roofs (DSM) until bridge points over 20 m were interpolated; scripts ran side effects when imported (main guards added) | pipeline | fixed | ACTIVITY-LOG.md, 2026-10-02 |
 | F11 | 2026-10-02/03 | Wrong claims in our own text, fixed: an FSA search URL and a flood-check link that returned 404; a guessed Wikidata id; a feed marked verified behind a bot challenge; wrong bearings in a README; "Geofabrik" named as the OSM source (it was openstreetmap.fr) | documentation | fixed | ACTIVITY-LOG.md |
+
+| F12 | 2026-10-03 | The OSM walking network below ground is thin and inconsistent: platforms and concourses drawn as areas that paths do not share nodes with; escalators without levels; levels joined with no connector | routing network (source) | open; areas joined by hubs in `build-indoor.mjs`, the rest measured | NET-1 to NET-4: 42 parts, 192 level joins, 30 connectors without levels, 46 places off their level |
 
 Add new faults here with the next F number, and in the activity log.
 

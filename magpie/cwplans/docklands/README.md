@@ -82,6 +82,14 @@ Geofabrik and Overpass were unreachable from the build container, so the OSM dat
 - Pins: heritage records (`registry/sources/museums/`), data-quality issues by severity (`quality/issues.json`), and crime for the latest month from police.uk (live, on request; police.uk locations are anonymised points, Open Government Licence).
 - Satellite colours: the terrain coloured from the least cloudy recent Sentinel-2 true-colour image (13 August 2026, 0.01% cloud, 10 m), sampled once per terrain vertex. Rebuild with `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-imagery.mjs 2026-06-01` (reads only the model window of the COG by HTTP range requests). Copernicus licence; not share-alike.
 
+## Walking network and routes (added 2026-10-03)
+
+- `data/indoor.js` (built by `node magpie/cwplans/tools/build-indoor.mjs`, about 1 minute): the OSM walking network of the Canary Wharf area with each point on its level: 10,647 points, 13,044 links (277 stair, 46 escalator and 47 lift links), levels -4 to +2, and 789 named places (shops, food and drink, entertainment, services, platforms, entrances).
+- How it is built: one network point per (OSM node, level); stairs and escalators are oriented by the levels their ends touch (or `incline`); lifts join their listed levels; walkable areas (platforms, concourses, indoor corridors and rooms) get a hub joined to every path end inside them or within 3 m of their edge; nodes that ways reach at two levels with no connector are joined and counted as faults.
+- In the page: "Walking network" draws it (pink indoor, orange stairs, yellow escalators, blue lifts); "Route from … to …" finds the quickest route (walking 1.3 m/s, stairs 0.5 m/s, escalators 0.75 m/s, lifts 25 s + 4 s a level), with a step-free option that uses lifts and ramps only, and lists the steps. A typed name with several branches resolves to the one nearest the start.
+- Example: Jubilee line westbound platform (level -3) to Rituals (Jubilee Place, level -2): 192 m by escalator; step-free 284 m by lift.
+- Limits, measured by the audit (NET-1 to NET-4): 42 unjoined parts; 192 points where OSM joins two levels with no connector; 18 escalators and 11 lifts without their levels; 46 places with no corridor on their own level. Heights are ground + level × storey height. Estate and station plans are being collected to close these gaps.
+
 ## Known gaps
 
 From `FACTS.md`, not found in any source fetched:

@@ -88,6 +88,13 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 - 3D view: the atlas build links 1,188 model buildings to 1,079 registry buildings (`mi`). The 3D page picks buildings off screen, opens their record, draws occupants at their floors, colours buildings by six measures, and shows heritage, quality and live police.uk pins. Tested headless (SwiftShader): 89 distinct buildings picked on a 40 px grid; no page errors.
 - Satellite: `tools/build-imagery.mjs` colours the terrain from Sentinel-2 L2A (13 August 2026, 0.01% cloud). Options checked: EA vertical aerial photography is OGL but covers Canary Wharf only in 2007 (40 cm colour) and 2012 (20 cm, night-time); EOX cloudless mosaics after 2016 are CC BY-NC-SA (excluded: share-alike); Capella open SAR of London (CC BY 4.0, 0.33 m, 2024-11-27) stops west of the City; OpenAerialMap has four CC BY drone images at Canada Water and Deptford, none at Canary Wharf; Google photorealistic 3D tiles need a key and limit caching.
 
+## 2026-10-03: underground walking network and routes
+
+- Owner direction: the underground estate (multilevel malls, lifts, stations) must be represented in 3D with shopping, entertainment and routing.
+- `tools/build-indoor.mjs` builds the OSM walking network by level (`docklands/data/indoor.js`); the 3D page draws it and finds routes, step-free optionally. First build: the Jubilee platforms were cut off, because OSM platforms are areas that paths do not share nodes with; area hubs fixed it (below-ground points in the main network 152 of 201 → 206 of 207).
+- New audit checks NET-1 to NET-4 (fault F12); audit now 32 checks.
+- Three research agents collecting estate maps (Internet Archive), station layouts (TfL API, Crossrail papers) and planning drawings: results to be catalogued.
+
 ## Open, in the order proposed
 
 1. Fix F2 and F3 in the parsers, with fixture tests; expect PL-1 and PL-2 to fall to 0.

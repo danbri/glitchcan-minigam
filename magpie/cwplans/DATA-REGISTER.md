@@ -36,11 +36,12 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `registry/sources/brands/storelocator.json` | 33 kB | counts | Greater London branch counts per brand, and website=* tags used to find URLs | osmfr-greater-london |  |
 | `registry/sources/brands/README.md` | 72 kB | notes | branch table with OSM ids, names and levels |  |  |
 | `atlas/data/atlas.json` | 2.1 MB | derived | building outlines (microdegrees), names, levels; OSM feature counts and streets per postcode; model heights matched to outlines | osmfr-greater-london | atlas/index.html |
-| `quality/issues.json` | 250 kB | derived | OSM ids, names, tag values (level, addr:postcode, addr:unit) and positions of features with issues | osmfr-greater-london | atlas/index.html |
-| `quality/CATALOGUE.md` | 28 kB | notes | examples quote OSM ids, names and tag values |  |  |
+| `quality/issues.json` | 253 kB | derived | OSM ids, names, tag values (level, addr:postcode, addr:unit) and positions of features with issues | osmfr-greater-london | atlas/index.html |
+| `quality/CATALOGUE.md` | 31 kB | notes | examples quote OSM ids, names and tag values |  |  |
 | `quality/README.md` | 11 kB | notes | counts from the audit |  |  |
+| `docklands/data/indoor.js` | 422 kB | derived | walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances | osmfr-greater-london | docklands/index.html |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 13 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 15 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -121,9 +122,10 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/ukho_wrecks_obstructions_areas.geojson` | 2 kB | UKHO wrecks and obstructions, areas | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
 | `registry/sources/pla/ukho_wrecks_obstructions_points.geojson` | 13 kB | UKHO wrecks and obstructions, points | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
 | `atlas/data/atlas.json` | 2.1 MB | the atlas index: building outlines and measures, postcodes with company and sales totals, heritage places, riverbed soundings in m OD, wrecks, flood defences, Wikidata items, published levels | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); HM Land Registry Price Paid Data (OGL v3.0); Historic England open data hub (OGL v3.0); ADS / ARIADNE catalogue records (per record: OGL v3.0 or CC-BY (Portable Antiquities Scheme)); UKHO INSPIRE bathymetry and wrecks (OGL v3.0); PLA Tide Booklet 2025 (two published numbers used as facts); Environment Agency Spatial Flood Defences (OGL v3.0); GLA London Building Stock Model 2 (OGL v3.0); short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved) |
-| `quality/issues.json` | 250 kB | data-quality audit: 27 checks with counts, breakdowns, examples and one record per issue | OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); Canary Wharf Group directory pages (none stated (all rights reserved by default)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Historic England open data hub (OGL v3.0); written or computed in this project (repository licence) |
-| `quality/CATALOGUE.md` | 28 kB | the audit as tables (generated) | written or computed in this project (repository licence); OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
+| `quality/issues.json` | 253 kB | data-quality audit: 27 checks with counts, breakdowns, examples and one record per issue | OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); Canary Wharf Group directory pages (none stated (all rights reserved by default)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Historic England open data hub (OGL v3.0); written or computed in this project (repository licence) |
+| `quality/CATALOGUE.md` | 31 kB | the audit as tables (generated) | written or computed in this project (repository licence); OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
 | `quality/README.md` | 11 kB | analysis of the error classes and the proposed compositing layers | written or computed in this project (repository licence) |
+| `docklands/data/indoor.js` | 422 kB | walking network in 3D: footways, corridors, stairs, escalators, lifts, platforms and walkable areas by level, with 789 named places, for routing | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0) |
 | `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
 | `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
@@ -135,7 +137,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 13 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 15 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 
