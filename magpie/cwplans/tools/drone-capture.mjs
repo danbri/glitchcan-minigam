@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
-import { CW, D2R, R2D, ESTATE, ESTATE_POLY, inEstate, NEAR, loadModel, loadRegistry, buildPath, pickFrames, intrinsics, c2w, project, inPoly, dec } from './drone-flight.mjs';
+import { CW, D2R, R2D, ESTATE, ESTATE_POLY, inEstate, NEAR, loadModel, loadRegistry, buildPath, pathJSON, svgPlan, pickFrames, intrinsics, c2w, project, inPoly, dec } from './drone-flight.mjs';
 
 const argv = process.argv.slice(2), opt = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : d; }, flag = k => argv.includes('--' + k);
 const RUN = opt('run', 'run-' + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')), OUT = path.join(CW, 'data/raw/drone', RUN);
@@ -31,7 +31,7 @@ const M = loadModel(), AT = loadRegistry();
 // ---------- path and frame choice
 let P;
 if (opt('path')) { const j = JSON.parse(fs.readFileSync(opt('path'), 'utf8')); P = { fps: j.fps, stats: j.stats, frames: j.frames.map(f => ({ t: f.t, e: f.eye, target: f.target, tag: f.part })) }; }
-else { P = buildPath(); }
+else { P = buildPath(); if (!fs.existsSync(path.join(OUT, 'path.json')) || flag('redo')) { fs.writeFileSync(path.join(OUT, 'path.json'), JSON.stringify(pathJSON(P))); fs.writeFileSync(path.join(OUT, 'plan.svg'), svgPlan(M, P)); } }
 const idx = pickFrames(P, NFR, EVERY);
 const cfg = { size: [W, H], fovY: FOV, ground: GROUND, frames: idx.length, every: EVERY || (idx[1] - idx[0]) || 1, pathFrames: P.frames.length, pathLength_m: P.stats.length_m, fps: P.fps };
 const cfgFile = path.join(OUT, 'run.json');
@@ -177,7 +177,13 @@ const sector = (b, e) => Math.floor((((Math.atan2(e[0] - b.x, -(e[2] - b.z)) * R
 const inside = (b, x) => b.x >= x.x0 && b.x <= x.x1 && b.z >= x.z0 && b.z <= x.z1;
 const cov = AT.buildings.map((b, k) => ({ k, id: b.id, n: b.n, x: b.x, z: b.z, zone: inEstate(b.x, b.z) ? 'estate' : inside(b, NEAR) ? 'ring' : null, frames: 0, sectors: new Set(), maxPx: 0 })).filter(c => c.zone && AT.buildings[c.k].mi.length);
 const byK = new Map(cov.map(c => [c.k, c]));
-for (const r of recs) for (const v of r.vis) { const c = byK.get(v[0]); if (!c || v[1] < MIN_PX) continue; c.frames++; c.sectors.add(sector(c, r.eye)); c.maxPx = Math.max(c.maxPx, v[1]); }
+// The page gives each model building one pick id, its last registry record (regOf); 28 model buildings belong to two records
+// (8 Canada Square's seven parts answer as cwb-0418), so a pick id credits every record that shares its model buildings.
+const owners = new Map(), last = new Map(), alias = new Map();
+AT.buildings.forEach((b, k) => b.mi.forEach(i => { if (!owners.has(i)) owners.set(i, []); owners.get(i).push(k); last.set(i, k); }));
+for (const [i, k] of last) { if (!alias.has(k)) alias.set(k, new Set([k])); for (const o of owners.get(i)) alias.get(k).add(o); }
+for (const r of recs) { const got = new Map(); for (const v of r.vis) if (v[1] >= MIN_PX) for (const k of alias.get(v[0]) || [v[0]]) got.set(k, Math.max(got.get(k) || 0, v[1]));
+  for (const [k, px] of got) { const c = byK.get(k); if (!c) continue; c.frames++; c.sectors.add(sector(c, r.eye)); c.maxPx = Math.max(c.maxPx, px); } }
 const summary = zone => { const L = cov.filter(c => c.zone === zone), hist = {}; for (const c of L) hist[c.sectors.size] = (hist[c.sectors.size] || 0) + 1; const fr = L.map(c => c.frames).sort((a, b) => a - b);
   return { buildings: L.length, directions_histogram: hist, under_3_directions: L.filter(c => c.sectors.size < 3).length, never_seen: L.filter(c => !c.frames).length, frames_median: fr[fr.length >> 1] || 0, frames_min: fr[0] || 0 }; };
 const coverage = { min_pixels: MIN_PX, direction_sectors: 8, estate_outline: ESTATE_POLY, ring_box: NEAR, estate: summary('estate'), ring: summary('ring'),

@@ -147,17 +147,22 @@ export function plan(M) {
   wp(500, 420, 230, 12, at(600, 40, 330), 'crossing-high');
   // 8. orbit round Wood Wharf, anticlockwise from the south-east, 1.375 turns at about 200 m; leaves at the north heading west
   { const c = [590, 300], r = 230; for (let k = 0; k <= 11; k++) { const a = Math.PI / 4 - k / 8 * 2 * Math.PI, x = c[0] + r * Math.cos(a), z = c[1] + r * Math.sin(a); wp(x, z, 200 + 25 * Math.sin(2 * a), 9, at(c[0] - 20 + 30 * Math.cos(a), 60, c[1]), 'orbit-woodwharf'); } }
+  // 8b. a loop over Churchill Place (r 110 m, about 215 m) looking down into the plaza between One Churchill Place and
+  //     25 Churchill Place, whose low buildings the wider passes cannot see past the towers; anticlockwise from the east
+  { const c = [365, 45]; for (let k = 0; k <= 8; k++) { const a = -k / 8 * 2 * Math.PI, x = c[0] + 110 * Math.cos(a), z = c[1] + 110 * Math.sin(a); wp(x, z, 210 + 10 * Math.sin(a), 8, at(c[0], 10, c[1]), 'loop-churchill-place'); } }
   // 9. 2.5 turns round the Canada Square towers, anticlockwise from the east: high (r 330 about (70,40), 280 m), then wider
-  //    and lower (r 430 about (120,40), down to 170 m); leaves at the west heading south
-  { for (let k = 0; k <= 25; k++) { const s = k / 25, a = -s * 5 * Math.PI, m = Math.min(1, Math.max(0, (s - .4) * 3)), c = [70 + 50 * m, 40], r = 330 + 100 * m, h = 280 + 15 * Math.sin(3 * a) * (1 - m) - 110 * m;
+  //    and lower (r 430 about (120,40), down to 170 m); joins from the Churchill Place loop, leaves at the west heading south
+  { for (let k = 1; k <= 25; k++) { const s = k / 25, a = -s * 5 * Math.PI, m = Math.min(1, Math.max(0, (s - .4) * 3)), c = [70 + 50 * m, 40], r = 330 + 100 * m, h = 280 + 15 * Math.sin(3 * a) * (1 - m) - 110 * m;
     const x = c[0] + r * Math.cos(a), z = c[1] + r * 0.85 * Math.sin(a); wp(x, z, h, 10, at(c[0] + 40 * Math.sin(a), 110 - 40 * m, c[1] + 30 * Math.cos(a)), 'orbit-canada-square'); } }
   // 10. down over Heron Quays and the west end of the South Dock to Millwall
   wp(-260, 260, 120, 10, at(-120, 30, 420), 'crossing-low');
   wp(-150, 450, 100, 10, at(40, 20, 560), 'crossing-low');
   wp(50, 620, 110, 11, at(250, 20, 650), 'crossing-low');
   // 11. neighbourhood ring, anticlockwise (Millwall, Cubitt Town, Blackwall, Poplar, Limehouse, the river), 90-140 m, looking in
-  { const pts = [[150, 720], [550, 690], [950, 470], [1080, 120], [1000, -300], [650, -560], [200, -600], [-300, -580], [-780, -430], [-1000, -80], [-950, 320], [-700, 640], [-300, 730]];
-    pts.forEach(([x, z], k) => { const f = .55, h = 95 + 45 * Math.abs(Math.sin(k * 1.3)); wp(x, z, h, 13, at(C[0] + (x - C[0]) * f, 20, C[1] + (z - C[1]) * f), 'ring'); }); }
+  { const pts = [[150, 720], [550, 690], [950, 470], [1080, 120], [1000, -300], [650, -560], [200, -600], [-300, -580], [-780, -430], [-990, -120], [-800, -20], [-730, 120], [-910, 330], [-700, 640], [-300, 730]];
+    pts.forEach(([x, z], k) => { const f = .55, h = 95 + 45 * Math.abs(Math.sin(k * 1.3));
+      if (x === -800 || x === -730) wp(x, z, 70, 9, at(-560, 5, x === -800 ? -40 : 0), 'ring');   // a dip in over the river front at Westferry Circus and Canary Riverside
+      else wp(x, z, h, 13, at(C[0] + (x - C[0]) * f, 20, C[1] + (z - C[1]) * f), 'ring'); }); }
   // 12. low south-north crossing over Heron Quays, the Eden (Middle) Dock, Cabot Square and the North Dock
   wp(-170, 520, 120, 10, at(-200, 20, 300), 'crossing-low');
   wp(-205, 260, 110, 10, at(-230, 20, 60), 'crossing-low');
@@ -330,7 +335,7 @@ export function pickFrames(path, n, every) {
   const out = []; for (let i = 0; i < N && out.length < n; i += k) out.push(i); return out;
 }
 
-function svgPlan(M, P) {
+export function svgPlan(M, P) {
   const b = { x0: NEAR.x0 - 250, x1: NEAR.x1 + 250, z0: NEAR.z0 - 250, z1: NEAR.z1 + 250 }, s = 0.5, W = (b.x1 - b.x0) * s, H = (b.z1 - b.z0) * s, X = x => ((x - b.x0) * s).toFixed(1), Z = z => ((z - b.z0) * s).toFixed(1);
   let o = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="100%" height="100%" fill="#111"/>`;
   for (const w of M.A.water) { const f = dec(w.p); const pts = []; for (let k = 0; k < f.length; k += 2) pts.push(X(f[k]) + ',' + Z(f[k + 1])); o += `<polygon points="${pts.join(' ')}" fill="#1d3b55"/>`; }
@@ -344,6 +349,13 @@ function svgPlan(M, P) {
   return o;
 }
 
+export function pathJSON(P) {
+  const { repairs, ...st } = P.stats;
+  return { generator: 'magpie/cwplans/tools/drone-flight.mjs', fps: P.fps, coordinates: 'model metres: x = E - 537550 (east), y = m above OD (up), z = -(N - 180300) (south)', stats: st, repairs,
+    waypoints: P.waypoints.map(w => ({ eye: w.e.map(v => +v.toFixed(2)), target: w.look.p, speed: w.v, part: w.tag })),
+    frames: P.frames.map(f => ({ t: +f.t.toFixed(3), eye: f.e.map(v => +v.toFixed(3)), target: f.target.map(v => +v.toFixed(3)), yaw: +f.yaw.toFixed(3), pitch: +f.pitch.toFixed(3), part: f.tag })) };
+}
+
 // ---------- CLI
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const argv = process.argv.slice(2), opt = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : null; };
@@ -351,7 +363,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   console.log(P.stats.repairs.join('\n'));
   const { repairs, ...st } = P.stats; console.log(JSON.stringify(st, null, 1));
   const segs = {}; for (const f of P.frames) segs[f.tag] = (segs[f.tag] || 0) + 1; console.log('seconds per part:', Object.entries(segs).map(([k, v]) => `${k} ${Math.round(v / P.fps)}`).join(', '));
-  if (opt('out')) { const out = { generator: 'magpie/cwplans/tools/drone-flight.mjs', fps: P.fps, coordinates: 'model metres: x = E - 537550 (east), y = m above OD (up), z = -(N - 180300) (south)', stats: st, waypoints: P.waypoints.map(w => ({ eye: w.e.map(v => +v.toFixed(2)), target: w.look.p, speed: w.v, part: w.tag })), frames: P.frames.map(f => ({ t: +f.t.toFixed(3), eye: f.e.map(v => +v.toFixed(3)), target: f.target.map(v => +v.toFixed(3)), yaw: +f.yaw.toFixed(3), pitch: +f.pitch.toFixed(3), part: f.tag })) };
+  if (opt('out')) { const out = pathJSON(P);
     fs.mkdirSync(path.dirname(path.resolve(opt('out'))), { recursive: true }); fs.writeFileSync(opt('out'), JSON.stringify(out)); console.log('wrote', opt('out')); }
   if (opt('svg')) { fs.writeFileSync(opt('svg'), svgPlan(M, P)); console.log('wrote', opt('svg')); }
   if (opt('coverage')) {
