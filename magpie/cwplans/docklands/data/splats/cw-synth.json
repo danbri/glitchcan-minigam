@@ -1,0 +1,25 @@
+{
+ "built": "2026-10-03",
+ "file": "cw-synth.splat.gz",
+ "format": "antimatter15 .splat, 32 bytes a splat, gzip; model metres and axes (x east, y up, z south)",
+ "count": 669306,
+ "counts": {
+  "ground": 224487,
+  "roof": 58113,
+  "wall": 193852,
+  "window": 192854
+ },
+ "box": {
+  "x0": -1044.085050912574,
+  "x1": 1327.0602040729718,
+  "z0": -847.1914101483999,
+  "z1": 1040.1752066158806
+ },
+ "ground_step_m": 4,
+ "method": "synthesised from the model, not trained: ground discs coloured from the 2008 EA aerial photograph, roofs (aerial colour under 40 m), walls on a 3.6 m storey grid with two window discs per cell; colours carry the page shader's fixed light",
+ "sources": [
+  "osm",
+  "ea-lidar",
+  "ea-survey-imagery"
+ ]
+}

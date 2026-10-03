@@ -9,7 +9,7 @@
 #      (tiles TQ3075, TQ3080, TQ3575, TQ3580; see docklands/README.md). The aerial photographs are ECW files; they are
 #      decoded by tools/native/ecw2ppm (built against the ECW 3.3 SDK). How to build it and why it is native: the
 #      docklands-data-curation skill, "Imagery".
-# out: docklands/data/tex/<name>.jpg and docklands/data/tex/textures.json (box in local metres, source, date, licence)
+# out: docklands/data/tex/<name>.jpg and docklands/data/tex/textures.json; data/raw/imagery/<name>.ppm (raw copy, local) (box in local metres, source, date, licence)
 # Needs Pillow (no numpy).
 import glob, json, os, subprocess, sys, tempfile, zipfile
 from PIL import Image, ImageMath
@@ -102,6 +102,7 @@ def main():
     p = PRODUCTS[name]
     img, files = (build_ecw if p['kind'] == 'ecw' else build_tif)(name, p)
     path = os.path.join(OUT, name + '.jpg'); img.save(path, quality=80, optimize=True, progressive=True)
+    img.convert('RGB').save(os.path.join(RAW, name + '.ppm'))   # uncompressed copy for tools/build-splats.mjs (not committed)
     idx['textures'][name] = {'file': name + '.jpg', 'what': p['what'], 'attribution': p['attribution'], 'licence': OGL,
                              'source': 'https://environment.data.gov.uk/survey', 'files': len(files),
                              'bytes': os.path.getsize(path)}

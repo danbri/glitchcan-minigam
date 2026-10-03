@@ -41,8 +41,9 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `quality/README.md` | 12 kB | notes | counts from the audit |  |  |
 | `docklands/data/indoor.js` | 434 kB | derived | walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances | osmfr-greater-london | docklands/index.html |
 | `registry/categories.json` | 66 kB | derived | occupant names and the OSM tags that state their kind (amenity, office, shop, leisure, tourism) | osmfr-greater-london | docklands/index.html |
+| `docklands/data/splats/cw-synth.splat.gz` | 4.8 MB | derived | building outlines and heights as splat positions and sizes | osmfr-greater-london | docklands/index.html |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 19 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 21 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -145,6 +146,8 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `feeds/underground/tunnels.json` | 53 kB | catalogue of sources for the underground estate: tunnel alignments, station depths and 3D models (URLs, dates, licence, levels found with short quotes) | short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved); written or computed in this project (repository licence) |
 | `feeds/underground/tunnels-excluded.json` | 5 kB | sources looked at for tunnel alignments, station depths and 3D models and not used, with the reason | written or computed in this project (repository licence) |
 | `registry/categories.json` | 66 kB | occupant categories per registry building (finance, shops, catering, leisure, entertainment) with the stated class behind each; drives the 3D glow layers | OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)); written or computed in this project (repository licence) |
+| `docklands/data/splats/cw-synth.splat.gz` | 4.8 MB | Gaussian splats synthesised from the 3D model for the Canary Wharf estate and 300 m round it (669,306 splats; ground coloured from the 2008 aerial photograph) | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Environment Agency survey downloads: vertical aerial photography 2008 (OGL v3.0) |
+| `docklands/data/splats/cw-synth.json` | 1 kB | metadata of the synthesised splat set: box, counts, method | written or computed in this project (repository licence) |
 | `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
 | `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
@@ -157,7 +160,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 19 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 21 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 

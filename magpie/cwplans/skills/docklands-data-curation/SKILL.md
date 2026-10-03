@@ -88,6 +88,25 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 - WebGL: draw the texture through the terrain's own x, z (uv from the box in `textures.json`); resample to
   2048 × 2048 on a canvas so the GPU can mipmap it.
 
+## Splats and drone frames
+
+- Two ways to get Gaussian splats of the estate: **synthesis** (`tools/build-splats.mjs`: discs sampled straight from
+  the model surfaces, colours from the aerial photo and the facade rule; seconds, exact geometry) and **training**
+  (drone frames from the page, `tools/drone-capture.mjs`, then a 3DGS trainer on CPU). Training on renders of our own
+  model can only learn what the renders show: it gives a standard splat scene, not new information.
+- Format: standard 32-byte `.splat` in model metres and axes (x east, y up, z south), gzipped for the page. A
+  rotation built from three axis vectors must have determinant +1: a frame (t, up, n) with n = t × up flipped is a
+  reflection and gives a wrong quaternion. Pick the normal sign for the frame, and the outward side separately.
+- Counts: the first synthesis (3 m ground, a disc per window) made 1.6 million splats, 49 MB; 4 m ground and one glass
+  band per 7.2 m wall cell made 669,306 (20 MB, 4.5 MB gzipped). SwiftShader needs about 30 s a frame for that: test
+  splat views with `renderNow()` and `canvas.toDataURL`, not `page.screenshot` (it re-renders and times out).
+- Depth compositing: "Splats only" draws the model into the depth buffer with the colour mask off and a polygon
+  offset (splats lie on the walls and the ground), then the splats with the depth test and no depth write, then the
+  glow. Without the offset, wall splats flicker against their own wall.
+- Categories for the glow come only from stated classes (`tools/build-categories.mjs`). Wikidata answers "too many
+  requests" in plain text under load: retry with a pause; the classes are cached in
+  `data/raw/registry/wikidata-occupant-classes.json`.
+
 ## Measured lessons (the reasons behind the rules)
 
 - **OSM tags can hold lists.** Split on ";" for every tag on ingest (F2).

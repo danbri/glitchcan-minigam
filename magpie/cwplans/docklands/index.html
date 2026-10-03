@@ -136,6 +136,12 @@ body.capture #top,body.capture #gauge,body.capture #tabs,body.capture #sheet,bod
       <div class="chips">
         <label><input type="checkbox" id="showWindows" checked> Windows</label><label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground</label><label><input type="checkbox" id="showFloors"> Floors</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label>
       </div>
+      <h3>Gaussian splats</h3>
+      <div class="chips" role="radiogroup" aria-label="Gaussian splats">
+        <label><input type="radio" name="splatMode" value="off" checked> Off</label><label><input type="radio" name="splatMode" value="mix"> Splats with the model</label><label><input type="radio" name="splatMode" value="only"> Splats only</label>
+      </div>
+      <div class="row"><label>Splat set <select id="splatSet"><option value="cw-synth">Synthesised from the model (Canary Wharf)</option></select></label></div>
+      <p class="small" id="splatNote">Splats are drawn back to front and tested against the model's depth, so towers, glow outlines and routes stay in front of or behind them correctly. "Splats only" keeps the model in the depth buffer without drawing it.</p>
       <h3>Glow: who is inside</h3>
       <div class="chips" id="glowChips">
         <label><input type="checkbox" data-glow="finance"> <i class="sw" style="background:#ff3030"></i>Banks and finance</label><label><input type="checkbox" data-glow="shop"> <i class="sw" style="background:#33d6ff"></i>Shops</label><label><input type="checkbox" data-glow="catering"> <i class="sw" style="background:#ffa040"></i>Food and drink</label><label><input type="checkbox" data-glow="leisure"> <i class="sw" style="background:#5dff7a"></i>Leisure</label><label><input type="checkbox" data-glow="entertainment"> <i class="sw" style="background:#ff4fd8"></i>Entertainment</label>
@@ -425,7 +431,7 @@ function mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++)
 function persp(f, a, n, fa) { const t = 1 / Math.tan(f / 2), o = new Float32Array(16); o[0] = t / a; o[5] = t; o[10] = (fa + n) / (n - fa); o[11] = -1; o[14] = 2 * fa * n / (n - fa); return o; }
 const sub = (a, b) => a.map((v, i) => v - b[i]), dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0), cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], nrm = a => { const l = Math.hypot(...a); return a.map(v => v / l); };
 function look(e, t, u) { const z = nrm(sub(e, t)), x = nrm(cross3(u, z)), y = cross3(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x, e), -dot(y, e), -dot(z, e), 1]); }
-let MVP = null, CAM = null, VZ = 1, satOn = false, ground = 'none', groundTex = null;
+let MVP = null, PROJ = null, VIEW = null, CAM = null, VZ = 1, satOn = false, ground = 'none', groundTex = null;
 
 // ---------- labels: stations, place names, named towers and docks; greedy overlap culling
 const labelBox = $('labels'), info = $('info');
@@ -493,25 +499,31 @@ function render() {
   // free camera (drone flights, setEye): eye and target in model metres, vertical field of view in radians
   if (cam.eye) { eye = [cam.eye[0], cam.eye[1] * VZ, cam.eye[2]]; T = [cam.target[0], cam.target[1] * VZ, cam.target[2]]; }
   CAM = { eye, target: T, fovY: cam.fov || .8, aspect: w / h, w, h };
-  MVP = mul(persp(cam.fov || .8, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000), look(eye, T, [0, 1, 0]));
+  PROJ = persp(cam.fov || .8, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000); VIEW = look(eye, T, [0, 1, 0]); MVP = mul(PROJ, VIEW);
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); gl.uniform1f(uDim, night ? .45 : 1);
   gl.disable(gl.BLEND); gl.depthMask(true);
-  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }
+  const sOnly = SPL.mode === 'only' && SPL.n;
+  if (sOnly) {   // invisible occluders: depth only, pushed back a little so splats lying on a wall or the ground pass the test
+    gl.colorMask(false, false, false, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 8);
+    if (bm !== 'off') drawFacades(L.bld, 1, P); drawMesh(L.terrain, 1); gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
+  }
+  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn && !sOnly) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }
   if ($('showUnder').checked) drawMesh(L.under, 1);
   if ($('showRoads').checked) drawMesh(L.roads, 1);
   if ($('showFloors').checked) drawMesh(L.floors, 1);
   if ($('showWalls').checked) drawMesh(L.walls, 1);
   drawMesh(L.pins, 1); drawMesh(L.walk, 1);
-  if (bm === 'solid') drawFacades(L.bld, 1, P);
+  if (bm === 'solid' && !sOnly) drawFacades(L.bld, 1, P);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-  if (bm === 'ghost') drawFacades(L.bld, .22, P);
+  if (bm === 'ghost' && !sOnly) drawFacades(L.bld, .22, P);
   // the cut removes structures; ground, greens and water stay as faint context so you can see where you are
   gl.uniform1f(uCut, 1e9);
   if (cutOn) { drawMesh(L.water, .35); drawMesh(L.tidal, .35); drawMesh(L.dockVol, .3); }
-  if (!satOn) drawMesh(L.greens, cutOn ? .2 : .55);
+  if (!satOn && !sOnly) drawMesh(L.greens, cutOn ? .2 : .55);
   if (groundTex) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); gl.uniform1f(uTex, 1); }
-  drawMesh(L.terrain, cutOn ? .14 : satOn ? .97 : .5); gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.depthMask(true);
+  if (!sOnly) drawMesh(L.terrain, cutOn ? .14 : satOn ? .97 : .5); gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.depthMask(true);
+  drawSplats(P);
   drawGlow();
   if (L.hi || L.route) { gl.disable(gl.DEPTH_TEST); drawMesh(L.hi, .9); drawMesh(L.route, .95); gl.enable(gl.DEPTH_TEST); }
   placeLabels();
@@ -718,6 +730,82 @@ $('colourBy').onchange = async () => {
     $('rampKey').innerHTML = `<span class="ramp" style="background:linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c)"></span>${label} (square-root scale) · light grey: none · dark grey: no registry record (outside the Canary Wharf box)`; }
   buildBld(); draw();
 };
+
+// ---------- Gaussian splats (docklands/data/splats/*.splat.gz: standard 32-byte .splat records in model metres and axes)
+// Instanced quads (ANGLE_instanced_arrays); a worker sorts back to front and returns the instance data in that order.
+const SPL = { mode: 'off', n: 0, buf: null, set: null, pending: false, lastKey: '', worker: null };
+const instExt = gl.getExtension('ANGLE_instanced_arrays');
+const svs = 'attribute vec2 corner;attribute vec3 ctr;attribute vec3 ca;attribute vec3 cb;attribute vec4 col;uniform mat4 view;uniform mat4 proj;uniform vec2 focal;uniform vec2 vp;uniform float vz;uniform float cut;varying vec4 vc;varying vec2 vq;' +
+  'void main(){vec4 cam=view*vec4(ctr.x,ctr.y*vz,ctr.z,1.);float d=-cam.z;if(ctr.y>cut||d<1.){gl_Position=vec4(0.,0.,2.,1.);return;}' +
+  'vec4 clip=proj*cam;vec3 ndc=clip.xyz/clip.w;if(abs(ndc.x)>1.3||abs(ndc.y)>1.3){gl_Position=vec4(0.,0.,2.,1.);return;}' +
+  'mat3 V=mat3(ca.x,ca.y*vz,ca.z,ca.y*vz,cb.x*vz*vz,cb.y*vz,ca.z,cb.y*vz,cb.z);' +
+  'vec3 w0=vec3(view[0][0],view[1][0],view[2][0]),w1=vec3(view[0][1],view[1][1],view[2][1]),w2=vec3(view[0][2],view[1][2],view[2][2]);' +
+  'vec3 r0=focal.x/d*w0+focal.x*cam.x/(d*d)*w2,r1=focal.y/d*w1+focal.y*cam.y/(d*d)*w2;' +
+  'float a=dot(r0,V*r0)+.3,b=dot(r0,V*r1),c=dot(r1,V*r1)+.3,mid=.5*(a+c),rad=length(vec2(.5*(a-c),b)),l1=mid+rad,l2=max(mid-rad,.1);' +
+  'vec2 dv=abs(b)<1e-6?(a>=c?vec2(1.,0.):vec2(0.,1.)):normalize(vec2(b,l1-a));vec2 mj=min(sqrt(2.*l1),1024.)*dv,mn=min(sqrt(2.*l2),1024.)*vec2(dv.y,-dv.x);' +
+  'vq=corner;vc=col;gl_Position=vec4(ndc.xy+(corner.x*mj+corner.y*mn)*2./vp,ndc.z,1.);}';
+const sfs = 'precision mediump float;varying vec4 vc;varying vec2 vq;void main(){float A=-dot(vq,vq);if(A<-4.)discard;float B=exp(A)*vc.a;gl_FragColor=vec4(vc.rgb*B,B);}';
+const prS = gl.createProgram(); gl.attachShader(prS, sh(gl.VERTEX_SHADER, svs)); gl.attachShader(prS, sh(gl.FRAGMENT_SHADER, sfs)); gl.bindAttribLocation(prS, 0, 'corner'); gl.linkProgram(prS);
+const SA = Object.fromEntries(['corner', 'ctr', 'ca', 'cb', 'col'].map(k => [k, gl.getAttribLocation(prS, k)])), SU = Object.fromEntries(['view', 'proj', 'focal', 'vp', 'vz', 'cut'].map(k => [k, gl.getUniformLocation(prS, k)]));
+const quadBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-2, -2, 2, -2, -2, 2, 2, 2]), gl.STATIC_DRAW);
+// sorting worker: holds the instance records (10 words each: centre, covariance upper triangle, rgba) and returns them far to near
+const SORT_SRC = `let inst=null,n=0;onmessage=e=>{const m=e.data;if(m.inst){inst=new Uint32Array(m.inst);n=m.n;return;}
+ const f=new Float32Array(inst.buffer),[ex,ey,ez]=m.eye,[dx,dy,dz]=m.dir,vz=m.vz,dep=new Float32Array(n);let lo=Infinity,hi=-Infinity;
+ for(let i=0;i<n;i++){const o=10*i,d=(f[o]-ex)*dx+(f[o+1]*vz-ey)*dy+(f[o+2]-ez)*dz;dep[i]=d;if(d<lo)lo=d;if(d>hi)hi=d;}
+ const B=65536,k=(B-1)/Math.max(1e-6,hi-lo),cnt=new Uint32Array(B),key=new Uint16Array(n);for(let i=0;i<n;i++){const q=(hi-dep[i])*k|0;key[i]=q;cnt[q]++;}
+ for(let i=1;i<B;i++)cnt[i]+=cnt[i-1];const out=new Uint32Array(n*10);
+ for(let i=n-1;i>=0;i--){const j=--cnt[key[i]];out.set(inst.subarray(10*i,10*i+10),10*j);} postMessage({buf:out.buffer,key:m.key},[out.buffer]);};`;
+async function loadSplats(name) {
+  if (!instExt) throw new Error('this browser lacks instanced drawing (ANGLE_instanced_arrays)');
+  toast('Loading splats…');
+  const meta = await loadJSON(`data/splats/${name}.json`), r = await fetch(`data/splats/${meta.file}`); if (!r.ok) throw new Error(meta.file + ': HTTP ' + r.status);
+  let ab = await r.arrayBuffer(); const u8 = new Uint8Array(ab);
+  if (u8[0] === 0x1f && u8[1] === 0x8b) { if (!globalThis.DecompressionStream) throw new Error('this browser cannot unpack gzip (DecompressionStream)'); ab = await new Response(new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); }
+  const n = ab.byteLength / 32, dv = new DataView(ab), inst = new ArrayBuffer(n * 40), f = new Float32Array(inst), b = new Uint8Array(inst), src = new Uint8Array(ab);
+  for (let i = 0; i < n; i++) {
+    const o = 32 * i, x = dv.getFloat32(o, true), y = dv.getFloat32(o + 4, true), z = dv.getFloat32(o + 8, true), sx = dv.getFloat32(o + 12, true), sy = dv.getFloat32(o + 16, true), sz = dv.getFloat32(o + 20, true);
+    let w = (src[o + 28] - 128) / 128, qx = (src[o + 29] - 128) / 128, qy = (src[o + 30] - 128) / 128, qz = (src[o + 31] - 128) / 128; const l = Math.hypot(w, qx, qy, qz) || 1; w /= l; qx /= l; qy /= l; qz /= l;
+    const R = [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - w * qz), 2 * (qx * qz + w * qy), 2 * (qx * qy + w * qz), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - w * qx), 2 * (qx * qz - w * qy), 2 * (qy * qz + w * qx), 1 - 2 * (qx * qx + qy * qy)];
+    const M = [R[0] * sx, R[1] * sy, R[2] * sz, R[3] * sx, R[4] * sy, R[5] * sz, R[6] * sx, R[7] * sy, R[8] * sz];   // R S
+    const c = (i1, i2) => M[3 * i1] * M[3 * i2] + M[3 * i1 + 1] * M[3 * i2 + 1] + M[3 * i1 + 2] * M[3 * i2 + 2];   // (R S)(R S)^T
+    const q = 10 * i; f[q] = x; f[q + 1] = y; f[q + 2] = z; f[q + 3] = c(0, 0); f[q + 4] = c(0, 1); f[q + 5] = c(0, 2); f[q + 6] = c(1, 1); f[q + 7] = c(1, 2); f[q + 8] = c(2, 2);
+    b.set(src.subarray(o + 24, o + 28), 4 * q + 36);
+  }
+  if (SPL.worker) SPL.worker.terminate();
+  SPL.worker = new Worker(URL.createObjectURL(new Blob([SORT_SRC], { type: 'text/javascript' })));
+  SPL.worker.onmessage = e => { gl.bindBuffer(gl.ARRAY_BUFFER, SPL.buf); gl.bufferData(gl.ARRAY_BUFFER, e.data.buf, gl.DYNAMIC_DRAW); SPL.pending = false; SPL.sorted = e.data.key; draw(); };
+  SPL.worker.postMessage({ inst: inst.slice(0), n });
+  if (!SPL.buf) SPL.buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, SPL.buf); gl.bufferData(gl.ARRAY_BUFFER, inst, gl.DYNAMIC_DRAW);
+  SPL.n = n; SPL.set = name; SPL.meta = meta; SPL.lastKey = ''; SPL.pending = false;
+  $('splatNote').textContent = `${n.toLocaleString('en-GB')} splats. ${meta.method}.`; toast(`${n.toLocaleString('en-GB')} splats loaded`); draw();
+}
+function sortSplats() {   // ask for a new order when the view has moved enough; one sort at a time
+  if (!SPL.worker || SPL.pending) return; const e = CAM.eye, t = CAM.target, d = [t[0] - e[0], t[1] - e[1], t[2] - e[2]], l = Math.hypot(...d), dir = d.map(v => v / l);
+  const key = [...e.map(v => Math.round(v / 4)), ...dir.map(v => Math.round(v * 40)), VZ].join(','); if (key === SPL.lastKey) return;
+  SPL.lastKey = key; SPL.pending = true; SPL.worker.postMessage({ eye: e, dir, vz: VZ, key });
+}
+function drawSplats(P) {
+  if (SPL.mode === 'off' || !SPL.n) return; sortSplats();
+  gl.useProgram(prS); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+  gl.uniformMatrix4fv(SU.view, false, VIEW); gl.uniformMatrix4fv(SU.proj, false, PROJ); const fy = CAM.h / 2 / Math.tan(CAM.fovY / 2);
+  gl.uniform2f(SU.focal, fy, fy); gl.uniform2f(SU.vp, CAM.w, CAM.h); gl.uniform1f(SU.vz, VZ); gl.uniform1f(SU.cut, P.cut < 250 ? P.cut : 1e9);
+  const used = [SA.corner, SA.ctr, SA.ca, SA.cb, SA.col]; used.forEach(i => gl.enableVertexAttribArray(i));
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.vertexAttribPointer(SA.corner, 2, gl.FLOAT, false, 0, 0); instExt.vertexAttribDivisorANGLE(SA.corner, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, SPL.buf);
+  gl.vertexAttribPointer(SA.ctr, 3, gl.FLOAT, false, 40, 0); gl.vertexAttribPointer(SA.ca, 3, gl.FLOAT, false, 40, 12); gl.vertexAttribPointer(SA.cb, 3, gl.FLOAT, false, 40, 24); gl.vertexAttribPointer(SA.col, 4, gl.UNSIGNED_BYTE, true, 40, 36);
+  for (const i of [SA.ctr, SA.ca, SA.cb, SA.col]) instExt.vertexAttribDivisorANGLE(i, 1);
+  instExt.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, SPL.n);
+  for (const i of used) { instExt.vertexAttribDivisorANGLE(i, 0); if (i !== aP && i !== aC) gl.disableVertexAttribArray(i); }
+  gl.useProgram(pr); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
+}
+async function setSplatMode(mode) {
+  try { if (mode !== 'off' && SPL.set !== $('splatSet').value) await loadSplats($('splatSet').value); SPL.mode = mode; draw(); }
+  catch (e) { toast('Splats did not load: ' + e.message); document.querySelector('input[name=splatMode][value=off]').checked = true; SPL.mode = 'off'; }
+}
+document.querySelectorAll('input[name=splatMode]').forEach(r => r.onchange = () => r.checked && setSplatMode(r.value));
+$('splatSet').onchange = () => { SPL.set = null; if (SPL.mode !== 'off') setSplatMode(SPL.mode); };
+// trained sets are listed when their metadata file exists
+fetch('data/splats/cw-trained.json').then(r => r.ok ? r.json() : null).then(m => { if (m) $('splatSet').insertAdjacentHTML('beforeend', `<option value="cw-trained">Trained from drone frames (${esc(m.count?.toLocaleString('en-GB') || '')})</option>`); }).catch(() => {});
 
 // glow outlines by occupant category (registry/categories.json via the atlas index: AT.buildings[k].cat)
 const GLOW = { finance: [1, .19, .19], shop: [.2, .84, 1], catering: [1, .63, .25], leisure: [.36, 1, .48], entertainment: [1, .31, .85] };
@@ -1024,7 +1112,7 @@ function captureMode(on) { document.body.classList.toggle('capture', on); if (on
 if (/[?&]capture\b/.test(location.search)) captureMode(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, captureMode, renderNow, get CAM() { return CAM; },
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; },
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };

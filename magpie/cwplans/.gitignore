@@ -8,3 +8,4 @@ data/raw/registry/*
 !data/raw/registry/fhrs/
 data/raw/imagery/
 tools/native/ecw2ppm
+data/raw/splats/
