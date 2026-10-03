@@ -147,6 +147,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
 | `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
 | `feeds/events.json` | 163 kB | 124 event, calendar, news and openings sources (catalogue) | written or computed in this project (repository licence) |
+| `feeds/underground/README.md` | 36 kB | the underground-estate source catalogues as tables (117 sources), with short quotes from copyright documents | written or computed in this project (repository licence); short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved) |
 | `feeds/README.md` | 113 kB | the feeds catalogue as text | written or computed in this project (repository licence) |
 | `feeds/EVENTS.md` | 50 kB | the events catalogue as text | written or computed in this project (repository licence) |
 | `registry/sources/SOURCES-companies-property.md` | 17 kB | access and licence notes for company and property data | written or computed in this project (repository licence) |

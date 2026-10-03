@@ -130,6 +130,7 @@
     { "path": "feeds/SURVEY-2026-10-03.md", "what": "the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research agents, merged by hand" },
     { "path": "feeds/feeds.json", "what": "541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research, checked by feeds/check-feeds.mjs" },
     { "path": "feeds/events.json", "what": "124 event, calendar, news and openings sources (catalogue)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research, checked by feeds/check-events.mjs" },
+    { "path": "feeds/underground/README.md", "what": "the underground-estate source catalogues as tables (117 sources), with short quotes from copyright documents", "sources": ["own", "web-quotes"], "osm": { "use": "none" }, "produced_by": "generated from feeds/underground/*.json" },
     { "path": "feeds/README.md", "what": "the feeds catalogue as text", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "generated and by hand" },
     { "path": "feeds/EVENTS.md", "what": "the events catalogue as text", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "generated and by hand" },
     { "path": "registry/sources/SOURCES-companies-property.md", "what": "access and licence notes for company and property data", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "hand-written" },
