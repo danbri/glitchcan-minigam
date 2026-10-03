@@ -203,6 +203,26 @@ if (has('landregistry/price-paid-by-postcode.json')) {
   for (const [id, txs] of byB) { const a = agg(txs); rec.get(id).sales = a.homes_sold_since_1995 >= K ? { ...a, source: 'HM Land Registry Price Paid (OGL)' } : { homes_sold_since_1995: `fewer than ${K}` }; }
   joins.price_paid_buildings = byB.size;
 }
+// Chain-store branches (sources/brands/branches.json: NSI brands found in OSM, FSA and the archived CWG directory).
+// A branch with an OSM or FSA id enriches that occupant; others are placed by position, marked when the position is
+// only a mall or postcode centre.
+if (has('brands/branches.json')) {
+  const br = readJ('brands/branches.json').branches; let enriched = 0, added = 0, loose = 0;
+  const index = new Map();
+  for (const r of recs) for (const o of r.occupants) { if (o.osm) index.set('osm:' + o.osm, o); if (o.fhrs_id) index.set('fhrs:' + o.fhrs_id, o); }
+  const extra = x => ({ brand: x.brand, brand_wikidata: x.brand_wikidata || null, nsi_id: x.nsi_id, ...(x.mall ? { mall: x.mall } : {}), ...(x.level_cwg ? { level_cwg: x.level_cwg } : {}),
+    ...(x.cwg_url ? { cwg_url: x.cwg_url, cwg_archived: x.cwg_archived || null } : {}), ...(x.store_url ? { store_url: x.store_url } : {}), brand_confidence: x.confidence });
+  for (const x of br) {
+    const hit = (x.osm_id && index.get('osm:' + x.osm_id)) || (x.fhrs_id && index.get('fhrs:' + x.fhrs_id));
+    if (hit) { Object.assign(hit, extra(x)); enriched++; continue; }
+    const h = x.lat != null ? buildingAt(x.lon, x.lat) : null;
+    if (!h) { loose++; continue; }
+    rec.get(h.b.id).occupants.push({ name: x.name, role: 'branch: ' + x.category, source: x.sources.join('+'), ...extra(x), placed: /centroid|centre/.test(x.position || '') ? `approximate (${x.position})` : h.how });
+    added++;
+  }
+  joins.brand_branches = br.length; joins.brand_enriched_occupants = enriched; joins.brand_added_occupants = added; joins.brand_not_placed = loose;
+}
+
 // In a residential building a registered office is often a flat: give the number of companies, not their names.
 for (const r of recs) if (r.companies && (r.homes || /^(apartments|residential|house|terrace|detached|semidetached_house)$/.test(r.building))) r.companies = { count: r.companies.length, note: 'residential building: company names are not listed here (see the Companies House link)' };
 for (const r of recs) { if (r.toidSet) r.toids = [...r.toidSet].sort(); if (r.usrnSet) r.usrns = [...r.usrnSet].sort(); delete r.toidSet; delete r.usrnSet; delete r.keys; }

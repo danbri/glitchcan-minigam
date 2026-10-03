@@ -69,10 +69,12 @@ Sources and access are described in `sources/SOURCES-companies-property.md`. Rul
 
 **Needs an account:** HM Land Registry CCOD and OCOD (UK and overseas companies that own property): a free account, licence agreement and API key. Without them, the API returns 403. EPC data: GOV.UK One Login.
 
+## Chain-store branches (added 2026-10-03)
+
+`sources/brands/` (method and the full branch table in its README): the UK brands of the OSM name-suggestion-index (BSD-3-Clause), found at Canary Wharf in OSM, the FSA data and the Canary Wharf Group directory. canarywharf.com blocks scripts, so the CWG directory comes from Internet Archive copies (sitemap of March 2026, entry pages mostly from November 2025) and can be months out of date. 271 branches of 211 brands. In the registry, 211 existing occupants gained their brand, mall, CWG page and store page; 35 branches were added as occupants (marked "approximate" when the position is only a mall or postcode centre); 25 could not be placed in a building.
+
 ## Not yet joined
 
-Background work on 2026-10-03 is collecting:
-- the UK chain brands (name-suggestion-index) with their Canary Wharf branches
-- Port of London Authority and museum records
+Background work on 2026-10-03 is collecting Port of London Authority and museum records.
 
 Canary Wharf Group's own pages (canarywharf.com) could not be read: the site returns a bot-challenge page to scripts.
