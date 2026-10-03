@@ -530,7 +530,7 @@ function render() {
   const sOnly = SPL.mode === 'only' && SPL.n;
   if (sOnly) {   // invisible occluders: depth only, pushed back a little so splats lying on a wall or the ground pass the test
     gl.colorMask(false, false, false, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 8);
-    if (bm !== 'off') drawFacades(L.bld, 1, P); drawMesh(L.terrain, 1); gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
+    if (bm !== 'off' && !VIZ.on) drawFacades(L.bld, 1, P); drawMesh(L.terrain, 1);   // with music the towers move: only the ground occludes gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
   }
   drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn && !sOnly && !PHOTO) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }   // photo style: the water is in the ground image
   if ($('showUnder').checked) drawMesh(L.under, 1);
@@ -770,7 +770,7 @@ const svs = 'attribute vec2 corner;attribute vec3 ctr;attribute vec3 ca;attribut
   'float rel=clamp((P.y-g0.y)/max(1.,g0.z-g0.y),0.,1.);sy=max(.15,1.+stretch*(1.7*lv-.35));P.y=g0.y+(P.y-g0.y)*sy;' +
   'float an=swirl*(2.2*lv*rel+.25*sin(time*.7+g0.x));vec2 d=P.xz-g1;float cs=cos(an),sn=sin(an);P.xz=g1+vec2(cs*d.x-sn*d.y,sn*d.x+cs*d.y);' +
   'vec3 h=vec3(hs(ctr+time),hs(ctr.zxy-time),hs(ctr.yzx+time*1.3))-.5;P+=h*noise*lv*lv*14.;' +
-  'C.rgb=min(vec3(1.),C.rgb*(1.+.5*lv)+vec3(.55,.18,.85)*lv*lv*rel);}' +
+  'float e=rel*lv;vec3 sp=e<.5?mix(vec3(.1,.95,.25),vec3(1.,.92,.1),e*2.):mix(vec3(1.,.92,.1),vec3(1.,.15,.1),e*2.-1.);C.rgb=min(vec3(1.),mix(C.rgb,sp,.25+.6*lv*lv));}' +   // Winamp spectrum: green base, yellow, red peak
   'vec4 cam=view*vec4(P.x,P.y*vz,P.z,1.);float d=-cam.z;if(ctr.y>cut||d<1.){gl_Position=vec4(0.,0.,2.,1.);return;}float vy=vz*sy;' +
   'vec4 clip=proj*cam;vec3 ndc=clip.xyz/clip.w;if(abs(ndc.x)>1.3||abs(ndc.y)>1.3){gl_Position=vec4(0.,0.,2.,1.);return;}' +
   'mat3 V=mat3(ca.x,ca.y*vy,ca.z,ca.y*vy,cb.x*vy*vy,cb.y*vy,ca.z,cb.y*vy,cb.z);' +

@@ -54,7 +54,10 @@ function add(p, s, c, q, a = 1) { P.push(...p); S.push(...s); C.push(...c, a); Q
 // ---- buildings in the box: footprint mask for the ground, roofs, walls
 const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })();
 const shadeK = (nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1; return .5 + .5 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / l); };
-const BLD = [.725, .745, .769], BLDLV = [.878, .698, .353];
+// building materials: the page's photo style (neutral stone, concrete and glass tones, varied by building), not the map's
+// height-source colour code
+const PHOTO_BLD = [[.74, .75, .76], [.62, .66, .70], [.80, .78, .74], [.55, .60, .66], [.70, .68, .64], [.66, .70, .72]];
+const photoColour = i => { const h = ((i * 2654435761) >>> 0) / 4294967296, c = PHOTO_BLD[Math.floor(h * PHOTO_BLD.length)], v = .92 + .16 * (((i * 40503) >>> 0) % 100) / 100; return c.map(x => Math.min(1, x * v)); };
 const blds = [];
 for (const b of A.buildings) {
   const f = dec(b.p), nv = b.holes && b.holes.length ? b.holes[0] : f.length / 2; let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
@@ -75,7 +78,7 @@ for (let gz = 0; gz < gh; gz++) for (let gx = 0; gx < gw; gx++) {
 }
 for (const B of blds) {
   curGroup = groups.length; groups.push([Math.round((B.x0 + B.x1) / 2), Math.round((B.z0 + B.z1) / 2), Math.round(B.y0 * 10) / 10, Math.round(B.y1 * 10) / 10, B.i]);
-  const h = B.y1 - B.y0, col = B.b.s === 1 || B.b.s === 4 ? BLDLV : BLD, k = shadeK(0, 1, 0);
+  const h = B.y1 - B.y0, col = photoColour(B.i), k = shadeK(0, 1, 0);
   // roof: a grid of discs inside the outline (4 m), the aerial colour on buildings under 40 m
   const rs = 4; let any = false;
   for (let z = B.z0 + rs / 2; z < B.z1; z += rs) for (let x = B.x0 + rs / 2; x < B.x1; x += rs) if (pointIn([x, z], B.ring)) {
