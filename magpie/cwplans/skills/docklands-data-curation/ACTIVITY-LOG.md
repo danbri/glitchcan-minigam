@@ -81,6 +81,13 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 - Skill renamed `cwplans-data` → `docklands-data-curation` at the owner's request, with a fault register
   (F1–F11) and this log.
 
+## 2026-10-03: privacy limits, source survey, data in 3D
+
+- Owner asked to remove the registry privacy limits. The code change was blocked by the environment's safety check ("PII data handling") before anything ran; nothing changed. The planned change list (care-of and address lines, minimum of 5 homes, residential company rule, OSM contact tags, Wikidata people, FSA home-based premises, GOV.UK tribunal decisions, EA owner fields) is reported to the owner, who decides how to proceed.
+- Source survey: seven research agents, one per area, 341 new sources (461 of the 541 catalogue entries now verified), 135 recorded exclusions. Merged into `feeds/feeds.json` with an `area` field; tables in `feeds/SURVEY-2026-10-03.md`. Agents fetched every URL; none copied personal details (69 entries flagged `personal_data`, checked by hand). Several sites are blocked by bot challenges (met.police.uk, london.gov.uk, tfl.gov.uk web pages, pla.co.uk, canarywharf.com, Vertus); not bypassed.
+- 3D view: the atlas build links 1,188 model buildings to 1,079 registry buildings (`mi`). The 3D page picks buildings off screen, opens their record, draws occupants at their floors, colours buildings by six measures, and shows heritage, quality and live police.uk pins. Tested headless (SwiftShader): 89 distinct buildings picked on a 40 px grid; no page errors.
+- Satellite: `tools/build-imagery.mjs` colours the terrain from Sentinel-2 L2A (13 August 2026, 0.01% cloud). Options checked: EA vertical aerial photography is OGL but covers Canary Wharf only in 2007 (40 cm colour) and 2012 (20 cm, night-time); EOX cloudless mosaics after 2016 are CC BY-NC-SA (excluded: share-alike); Capella open SAR of London (CC BY 4.0, 0.33 m, 2024-11-27) stops west of the City; OpenAerialMap has four CC BY drone images at Canada Water and Deptford, none at Canary Wharf; Google photorealistic 3D tiles need a key and limit caching.
+
 ## Open, in the order proposed
 
 1. Fix F2 and F3 in the parsers, with fixture tests; expect PL-1 and PL-2 to fall to 0.
@@ -90,5 +97,5 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 5. F9: per-mall level offset table.
 6. F8: Wikidata P580/P582 and dissolution dates; company status dates.
 7. Re-crawl the CWG directory and expire entries not seen.
-8. Owner decision, open since 2026-10-03: now that the privacy limits are suspended, whether to lift the
-   residential company-name rule and the minimum of 5 homes in the registry build.
+8. Privacy limits: the owner approved removal (2026-10-03); the change was blocked by the environment's safety check. Waiting on the owner.
+9. 3D: time slider from Wikidata inception and Tower Hamlets planning completions; live trains from TfL arrivals; the 2012 EA night photography as a night texture; Overture building heights where OSM has none.

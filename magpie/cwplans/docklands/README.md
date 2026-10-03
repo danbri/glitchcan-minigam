@@ -73,6 +73,15 @@ Geofabrik and Overpass were unreachable from the build container, so the OSM dat
 
 - Thames riverbed: UKHO INSPIRE bathymetry (Open Government Licence; not for navigation). It comes from the PLA multibeam survey of 2013–2017, as 6,028 soundings in the box, with point spacing measured at about 25 m (19 m at the HMS Belfast berth). The soundings are heights above Admiralty Chart Datum. They are converted to ODN with the PLA Tide Booklet 2025 values: chart datum is 3.20 m below ODN at London Bridge and 3.35 m at North Woolwich, interpolated by longitude. That interpolation is an approximation. Each sounding is drawn as one square, with no surface between soundings. Seen with the cut-away, or through the river. Files: `../registry/sources/pla/`.
 
+## Registry data in the 3D view (added 2026-10-03)
+
+- Tap a building at Canary Wharf: its registry record opens (heights from each source, floors, owner, homes, companies, postcodes, occupants by level, data-quality issues, link to the atlas), the building is outlined, and up to 40 occupants with a level are drawn as labels at ground + level × storey height. A level is a floor index, not a measured height.
+- Picking: every building is drawn off screen in a colour that encodes its registry number; the pixel under the tap gives the building. The cut-away applies, so you can tap into the ground.
+- The link from 3D buildings to registry ids is built by `tools/build-atlas.mjs` (`mi` in `atlas/data/atlas.json`): 1,188 model buildings belong to 1,079 registry buildings. Buildings outside the Canary Wharf box have no registry record (dark grey in the colour modes).
+- "Colour buildings by": height, occupants, homes, registered companies, floors below ground, data-quality issues (square-root colour scale).
+- Pins: heritage records (`registry/sources/museums/`), data-quality issues by severity (`quality/issues.json`), and crime for the latest month from police.uk (live, on request; police.uk locations are anonymised points, Open Government Licence).
+- Satellite colours: the terrain coloured from the least cloudy recent Sentinel-2 true-colour image (13 August 2026, 0.01% cloud, 10 m), sampled once per terrain vertex. Rebuild with `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-imagery.mjs 2026-06-01` (reads only the model window of the COG by HTTP range requests). Copernicus licence; not share-alike.
+
 ## Known gaps
 
 From `FACTS.md`, not found in any source fetched:

@@ -53,6 +53,7 @@
     "ads-ariadne": { "name": "ADS / ARIADNE catalogue records (only the OGL and CC-BY ones)", "licence": "per record: OGL v3.0 or CC-BY (Portable Antiquities Scheme)", "note": "records under the ADS terms of use are not committed" },
     "cwg-site": { "name": "Canary Wharf Group directory pages (canarywharf.com), read from Internet Archive copies", "licence": "none stated (all rights reserved by default)", "note": "see the review note on cwg-directory.json" },
     "brand-sites": { "name": "brand store-locator pages", "licence": "none stated", "note": "only URLs and a yes/no check are kept, no page content" },
+    "copernicus-sentinel": { "name": "Copernicus Sentinel-2 L2A (via Earth Search / Element 84)", "licence": "Copernicus Sentinel data: free, full and open (attribution)", "attribution": "Contains modified Copernicus Sentinel data" },
     "web-quotes": { "name": "short quotations from published pages (Wikipedia 169 of 360 in facts.json, also Crossrail Learning Legacy, Tideway, Canal & River Trust, trade press and others)", "licence": "Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved", "note": "each quote is one sentence or less, kept with its URL to cite a number" },
     "own": { "name": "written or computed in this project (method, decisions, URLs, search templates)", "licence": "repository licence" },
     "owner-supplied": { "name": "supplied by the repository owner", "licence": "owner's" }
@@ -108,7 +109,9 @@
     { "path": "quality/issues.json", "what": "data-quality audit: 27 checks with counts, breakdowns, examples and one record per issue", "sources": ["osm", "fsa", "wikidata", "onspd", "companies-house", "cwg-site", "nsi", "ea-lidar", "historic-england", "own"], "osm": { "use": "derived", "extract": "osmfr-greater-london", "what": "OSM ids, names, tag values (level, addr:postcode, addr:unit) and positions of features with issues" }, "produced_by": "tools/audit-quality.mjs", "shown_on": ["atlas/index.html"] },
     { "path": "quality/CATALOGUE.md", "what": "the audit as tables (generated)", "sources": ["own", "osm", "fsa", "cwg-site"], "osm": { "use": "notes", "what": "examples quote OSM ids, names and tag values" }, "produced_by": "tools/audit-quality.mjs" },
     { "path": "quality/README.md", "what": "analysis of the error classes and the proposed compositing layers", "sources": ["own"], "osm": { "use": "notes", "what": "counts from the audit" }, "produced_by": "hand-written" },
-    { "path": "feeds/feeds.json", "what": "200 checked data sources and APIs (catalogue)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research, checked by feeds/check-feeds.mjs" },
+    { "path": "docklands/data/imagery.js", "what": "satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m)", "sources": ["copernicus-sentinel"], "osm": { "use": "none" }, "produced_by": "tools/build-imagery.mjs", "shown_on": ["docklands/index.html"] },
+    { "path": "feeds/SURVEY-2026-10-03.md", "what": "the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research agents, merged by hand" },
+    { "path": "feeds/feeds.json", "what": "541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research, checked by feeds/check-feeds.mjs" },
     { "path": "feeds/events.json", "what": "124 event, calendar, news and openings sources (catalogue)", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "research, checked by feeds/check-events.mjs" },
     { "path": "feeds/README.md", "what": "the feeds catalogue as text", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "generated and by hand" },
     { "path": "feeds/EVENTS.md", "what": "the events catalogue as text", "sources": ["own"], "osm": { "use": "none" }, "produced_by": "generated and by hand" },
@@ -124,7 +127,7 @@
   "pages": [
     { "path": "index.html", "loads": ["data/cwplans-data.js"] },
     { "path": "atlas/index.html", "loads": ["atlas/data/atlas.json", "registry/buildings.json", "postcodes/postcodes.json", "quality/issues.json"] },
-    { "path": "docklands/index.html", "loads": ["docklands/data/area.js", "docklands/data/under.js"] },
+    { "path": "docklands/index.html", "loads": ["docklands/data/area.js", "docklands/data/under.js", "atlas/data/atlas.json", "registry/buildings.json", "quality/issues.json", "docklands/data/imagery.js"] },
     { "path": "postcodes/index.html", "loads": ["postcodes/postcodes.json"] },
     { "path": "registry/index.html", "loads": ["registry/buildings.json"] },
     { "path": "schematic.html", "loads": [] },

@@ -40,7 +40,7 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `quality/CATALOGUE.md` | 28 kB | notes | examples quote OSM ids, names and tag values |  |  |
 | `quality/README.md` | 11 kB | notes | counts from the audit |  |  |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 11 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 13 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -124,7 +124,9 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `quality/issues.json` | 250 kB | data-quality audit: 27 checks with counts, breakdowns, examples and one record per issue | OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); Canary Wharf Group directory pages (none stated (all rights reserved by default)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Historic England open data hub (OGL v3.0); written or computed in this project (repository licence) |
 | `quality/CATALOGUE.md` | 28 kB | the audit as tables (generated) | written or computed in this project (repository licence); OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
 | `quality/README.md` | 11 kB | analysis of the error classes and the proposed compositing layers | written or computed in this project (repository licence) |
-| `feeds/feeds.json` | 180 kB | 200 checked data sources and APIs (catalogue) | written or computed in this project (repository licence) |
+| `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
+| `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
+| `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
 | `feeds/events.json` | 163 kB | 124 event, calendar, news and openings sources (catalogue) | written or computed in this project (repository licence) |
 | `feeds/README.md` | 113 kB | the feeds catalogue as text | written or computed in this project (repository licence) |
 | `feeds/EVENTS.md` | 50 kB | the events catalogue as text | written or computed in this project (repository licence) |
@@ -133,7 +135,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 11 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 13 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 
@@ -160,6 +162,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | ads-ariadne | ADS / ARIADNE catalogue records (only the OGL and CC-BY ones) | per record: OGL v3.0 or CC-BY (Portable Antiquities Scheme) | records under the ADS terms of use are not committed |
 | cwg-site | Canary Wharf Group directory pages (canarywharf.com), read from Internet Archive copies | none stated (all rights reserved by default) | see the review note on cwg-directory.json |
 | brand-sites | brand store-locator pages | none stated | only URLs and a yes/no check are kept, no page content |
+| copernicus-sentinel | Copernicus Sentinel-2 L2A (via Earth Search / Element 84) | Copernicus Sentinel data: free, full and open (attribution) | Contains modified Copernicus Sentinel data |
 | web-quotes | short quotations from published pages (Wikipedia 169 of 360 in facts.json, also Crossrail Learning Legacy, Tideway, Canal & River Trust, trade press and others) | Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved | each quote is one sentence or less, kept with its URL to cite a number |
 | own | written or computed in this project (method, decisions, URLs, search templates) | repository licence |  |
 | owner-supplied | supplied by the repository owner | owner's |  |

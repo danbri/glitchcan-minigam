@@ -66,7 +66,7 @@ a.card:hover { border-color: var(--accent); }
 .chip { background: var(--chip); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: .85em; cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 12px; }
-.tools input[type=search], .tools select { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
+.tools input[type=search], .tools select { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); max-width: 100%; }
 .btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 table { border-collapse: collapse; width: 100%; font-size: .9em; }
@@ -263,6 +263,7 @@ svg .muted { fill: var(--muted); }
   <div class="tools">
     <div class="chips" id="srcKind"></div>
     <input type="search" id="sq" placeholder="Filter sources" aria-label="Filter sources">
+    <select id="sarea" aria-label="Survey area"></select>
     <select id="scat" aria-label="Category"></select>
     <label class="small"><input type="checkbox" id="scors"> works in the browser (CORS)</label>
     <span class="small" id="scount"></span>
@@ -794,19 +795,21 @@ INIT.sources = async () => {
   $('srcKind').innerHTML = [['all', all.length], ['feed', fd.sources.length], ['event', ev.sources.length]].map(([k, n]) => `<button class="chip" type="button" data-k="${k}" aria-pressed="${k === 'all'}">${k === 'all' ? 'all' : k === 'feed' ? 'data feeds and APIs' : 'events and news'} (${n})</button>`).join('');
   const cats = [...new Set(all.map(x => x.category))].sort();
   $('scat').innerHTML = '<option value="">all categories</option>' + cats.map(c => `<option>${esc(c)}</option>`).join('');
+  const areas = [...new Set(all.map(x => x.area).filter(Boolean))].sort();
+  $('sarea').innerHTML = '<option value="">all areas</option>' + areas.map(c => `<option>${esc(c)}</option>`).join('');
   const st = x => x.verified?.status || (x.verified?.http ? (x.verified.http < 400 ? 'verified' : 'HTTP ' + x.verified.http) : '');
   const draw = () => {
-    const v = $('sq').value.toLowerCase(), c = $('scat').value, cors = $('scors').checked;
-    const rows = all.filter(x => (kind === 'all' || x.kind === kind) && (!c || x.category === c) && (!cors || x.cors) && (!v || JSON.stringify(x).toLowerCase().includes(v)));
+    const v = $('sq').value.toLowerCase(), c = $('scat').value, ar = $('sarea').value, cors = $('scors').checked;
+    const rows = all.filter(x => (kind === 'all' || x.kind === kind) && (!c || x.category === c) && (!ar || x.area === ar) && (!cors || x.cors) && (!v || JSON.stringify(x).toLowerCase().includes(v)));
     $('scount').textContent = `${N(rows.length)} sources`;
     $('srcCards').innerHTML = rows.slice(0, lim).map(x => `<div class="card"><div class="k">${esc(x.name)}</div><div class="small">${esc(x.provider || '')} · ${esc(x.category)}${x.subject ? ' · ' + esc(x.subject) : ''}</div>
       <div class="links small">${a(x.url, 'page')}${a(x.api || x.feed, x.feed ? 'feed' : 'API')}${a(x.sample, 'sample')}</div>
       <div class="chips" style="margin-top:6px">${[x.format, x.auth && x.auth !== 'none' ? 'auth: ' + x.auth : 'no key', x.licence, x.cors ? 'CORS' : null, x.update, st(x)].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
-      ${x.coverage ? `<p>${esc(x.coverage)}</p>` : ''}${x.sample?.titles ? `<p class="small">${x.sample.titles.slice(0, 3).map(esc).join(' · ')}</p>` : ''}</div>`).join('');
+      ${x.canary_wharf_relevance ? `<p>${esc(x.canary_wharf_relevance)}</p>` : x.coverage ? `<p>${esc(x.coverage)}</p>` : ''}${x.personal_data ? '<p class="small">Holds personal data: catalogued only.</p>' : ''}${x.sample?.titles ? `<p class="small">${x.sample.titles.slice(0, 3).map(esc).join(' · ')}</p>` : ''}</div>`).join('');
     $('smore').classList.toggle('hidden', rows.length <= lim);
   };
   $('srcKind').onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; kind = b.dataset.k; $('srcKind').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b))); lim = 60; draw(); };
-  $('sq').oninput = $('scat').onchange = $('scors').onchange = () => { lim = 60; draw(); };
+  $('sq').oninput = $('scat').onchange = $('sarea').onchange = $('scors').onchange = () => { lim = 60; draw(); };
   $('smore').onclick = () => { lim += 120; draw(); }; draw();
 };
 

@@ -15,7 +15,7 @@ canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .hud{position:absolute;left:10px;top:10px;background:#111c;padding:6px 9px;border-radius:8px;font-size:12px;pointer-events:none;max-width:calc(100% - 40px)}
 #labels{position:absolute;inset:0;pointer-events:none}
 .lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:1px 5px;border-radius:5px;background:#0d1013d9;border:1px solid #39424b;color:var(--fg);pointer-events:auto;cursor:pointer}
-.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border-color:#ffd26f}.lb.src{border-color:#ffd26f;color:#ffe7a8}
+.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border-color:#ffd26f}.lb.src{border-color:#ffd26f;color:#ffe7a8}.lb.occ{border-color:#ff5fa2;color:#ffd1e6;font-size:10px}.lb.her{border-color:#b48cff;color:#e2d4ff}
 .panel{padding:12px 16px;background:var(--panel);border-top:1px solid var(--line)}
 .row{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;margin-top:8px}
 button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px}
@@ -26,7 +26,9 @@ select{font:inherit;background:#293038;color:var(--fg);border:1px solid #59616a;
 .small{color:var(--muted);font-size:13px}.warn{color:var(--warn)}
 .legend{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:13px}
 .sw{width:12px;height:12px;display:inline-block;margin-right:5px;vertical-align:-1px;border-radius:2px}
-#info{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;display:none}
+#info{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;display:none;max-height:60vh;overflow:auto}
+.ramp{display:inline-block;width:120px;height:9px;border-radius:4px;vertical-align:middle;margin:0 6px}
+.tag{display:inline-block;padding:0 5px;border-radius:4px;background:#232a31;color:var(--muted);font-size:12px;margin-left:3px}
 table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
 details{margin-top:10px}summary{cursor:pointer}
 </style>
@@ -46,6 +48,14 @@ details{margin-top:10px}summary{cursor:pointer}
   <div class="row">
     <label>Buildings <select id="bmode"><option value="solid">solid</option><option value="ghost">ghost</option><option value="off">off</option></select></label>
     <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label><label><input type="checkbox" id="showFloors"> Floors (Canary Wharf)</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label>
+  </div>
+  <div class="row">
+    <label>Colour buildings by <select id="colourBy"><option value="source">height source</option><option value="height">height</option><option value="occupants">occupants</option><option value="homes">homes</option><option value="companies">registered companies</option><option value="below">floors below ground</option><option value="quality">data-quality issues</option></select></label>
+    <span id="rampKey" class="small"></span>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="showHeritage"> Heritage records</label><label><input type="checkbox" id="showQuality"> Quality issues</label><label><input type="checkbox" id="showCrime"> Crime, latest month (police.uk, live)</label><label><input type="checkbox" id="showSat"> Satellite colours (Sentinel-2)</label>
+    <span class="small" id="dataNote">Tap a building at Canary Wharf for its record.</span>
   </div>
   <div class="row">
     <span class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></span>
@@ -125,10 +135,10 @@ function tunnelY(l, p, P) {
 const cv = $('c'), gl = cv.getContext('webgl', { antialias: true, alpha: false });
 if (!gl || !gl.getExtension('OES_element_index_uint')) { hud.textContent = 'WebGL (with 32-bit indices) is not available: see the text tables below'; textTables(); return; }
 const vs = 'attribute vec3 p;attribute vec4 c;uniform mat4 m;uniform float vz;varying vec4 v;varying float wy;void main(){v=c;wy=p.y;gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
-const fs = 'precision mediump float;varying vec4 v;varying float wy;uniform float a;uniform float cut;void main(){if(wy>cut)discard;gl_FragColor=vec4(v.rgb,v.a*a);}';
+const fs = 'precision mediump float;varying vec4 v;varying float wy;uniform float a;uniform float cut;uniform float mono;void main(){if(wy>cut)discard;gl_FragColor=mono>.5?vec4(0.,0.,0.,1.):vec4(v.rgb,v.a*a);}';
 const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
-const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz');
+const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono');
 gl.enableVertexAttribArray(aP); gl.enableVertexAttribArray(aC);
 const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })();
 const shade = (col, nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1, k = .5 + .5 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / l); return [col[0] * k, col[1] * k, col[2] * k]; };
@@ -137,6 +147,7 @@ const shade = (col, nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1, k = 
 class Mesh {
   constructor() { this.f = []; this.idx = []; this.n = 0; }
   v(x, y, z, c, a = 1) { this.f.push(x, y, z, ((c[0] * 255) | 0) | (((c[1] * 255) | 0) << 8) | (((c[2] * 255) | 0) << 16) | (((a * 255) | 0) << 24)); return this.n++; }
+  vr(x, y, z, packed) { this.f.push(x, y, z, packed); return this.n++; }   // packed RGBA as one uint32 (picking ids)
   tri(a, b, c) { this.idx.push(a, b, c); }
   quad(p0, p1, p2, p3, col) { const n = norm3(p0, p1, p2), s = shade(col, ...n); const i = this.v(...p0, s), j = this.v(...p1, s), k = this.v(...p2, s), l = this.v(...p3, s); this.tri(i, j, k); this.tri(i, k, l); }
   upload() {
@@ -174,15 +185,20 @@ const cube = (M, x, y, z, s, col) => { const h = s / 2; prism(M, { p: [Math.roun
 
 // ---------- static layers
 const L = {};
-(function terrain() {
+// terrain grid; colours from the ground colour, or per vertex from imagery (rgb: Uint8Array, 3 bytes per vertex)
+function buildTerrain(rgb) {
+  if (L.terrain) L.terrain.free();
   const T = A.terrain, h = (i, j) => T.dm[j * T.nx + i] / 10, M = new Mesh();
   for (let j = 0; j < T.nz; j++) for (let i = 0; i < T.nx; i++) {
-    const nx = h(Math.max(0, i - 1), j) - h(Math.min(T.nx - 1, i + 1), j), nz = h(i, Math.max(0, j - 1)) - h(i, Math.min(T.nz - 1, j + 1));
-    M.v(T.x0 + i * T.cell, h(i, j), T.z0 + j * T.cell, shade(C.ground, nx, 2 * T.cell, nz));
+    const nx = h(Math.max(0, i - 1), j) - h(Math.min(T.nx - 1, i + 1), j), nz = h(i, Math.max(0, j - 1)) - h(i, Math.min(T.nz - 1, j + 1)), k = 3 * (j * T.nx + i);
+    const col = rgb ? [rgb[k] / 255, rgb[k + 1] / 255, rgb[k + 2] / 255] : C.ground;
+    M.v(T.x0 + i * T.cell, h(i, j), T.z0 + j * T.cell, rgb ? shade(col, nx, 2 * T.cell, nz).map(c => Math.min(1, c * 1.2)) : shade(col, nx, 2 * T.cell, nz));
   }
   for (let j = 0; j < T.nz - 1; j++) for (let i = 0; i < T.nx - 1; i++) { const a = j * T.nx + i; M.tri(a, a + 1, a + T.nx); M.tri(a + 1, a + T.nx + 1, a + T.nx); }
   L.terrain = M.upload();
-})();
+}
+buildTerrain(null);
+const groundAt = (x, z) => { const T = A.terrain, i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
 { const M = new Mesh(); for (const w of A.water) if (!w.tidal) flat(M, w, w.level + .1, C.water); L.water = M.upload(); }
 // tidal water (the Thames, creeks): at its LiDAR level, or at a live gauge level when the visitor asks
 // docks with a published bed level: the water as a volume from bed to surface
@@ -192,7 +208,9 @@ function buildTidal() { if (L.tidal) L.tidal.free(); const M = new Mesh(); for (
 buildTidal();
 { const M = new Mesh(); const T = A.terrain; const gh = (x, z) => { const i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
   for (const g of A.greens) { const f = dec(g.p); flat(M, g, gh(f[0], f[1]) + .4, C.green); } L.greens = M.upload(); }
-{ const M = new Mesh(); for (const b of A.buildings) prism(M, b, b.b + (b.mh || 0), b.b + b.h, b.s === 1 || b.s === 4 ? C.bldlv : C.bld, !!b.mh); L.bld = M.upload(); }
+let buildingColour = (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld;   // replaced by the "Colour buildings by" control
+function buildBld() { if (L.bld) L.bld.free(); const M = new Mesh(); A.buildings.forEach((b, i) => prism(M, b, b.b + (b.mh || 0), b.b + b.h, buildingColour(b, i), !!b.mh)); L.bld = M.upload(); }
+buildBld();
 { const M = new Mesh(), R = new Mesh();
   for (const l of A.lines) if (!l.tunnel) {
     const q = dec(l.q, 3), col = lineColour(l), road = l.k === 'road', w = road ? [0, 10, 7, 4][l.c] : 3.5;
@@ -262,7 +280,7 @@ function mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++)
 function persp(f, a, n, fa) { const t = 1 / Math.tan(f / 2), o = new Float32Array(16); o[0] = t / a; o[5] = t; o[10] = (fa + n) / (n - fa); o[11] = -1; o[14] = 2 * fa * n / (n - fa); return o; }
 const sub = (a, b) => a.map((v, i) => v - b[i]), dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0), cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], nrm = a => { const l = Math.hypot(...a); return a.map(v => v / l); };
 function look(e, t, u) { const z = nrm(sub(e, t)), x = nrm(cross3(u, z)), y = cross3(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x, e), -dot(y, e), -dot(z, e), 1]); }
-let MVP = null, VZ = 1;
+let MVP = null, VZ = 1, satOn = false;
 
 // ---------- labels: stations, place names, named towers and docks; greedy overlap culling
 const labelBox = $('labels'), info = $('info');
@@ -318,20 +336,22 @@ function render() {
   const ce = Math.cos(cam.pitch), T = [cam.tx, cam.ty * VZ, cam.tz], eye = [T[0] + cam.dist * Math.sin(cam.yaw) * ce, T[1] + cam.dist * Math.sin(cam.pitch), T[2] + cam.dist * Math.cos(cam.yaw) * ce];
   MVP = mul(persp(.8, w / h, Math.max(2, cam.dist / 400), cam.dist * 6 + 6000), look(eye, T, [0, 1, 0]));
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
-  gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY);
+  gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0);
   gl.disable(gl.BLEND); gl.depthMask(true);
   drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }
   if ($('showUnder').checked) drawMesh(L.under, 1);
   if ($('showRoads').checked) drawMesh(L.roads, 1);
   if ($('showFloors').checked) drawMesh(L.floors, 1);
   if ($('showWalls').checked) drawMesh(L.walls, 1);
+  drawMesh(L.pins, 1);
   if (bm === 'solid') drawMesh(L.bld, 1);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (bm === 'ghost') drawMesh(L.bld, .22);
   // the cut removes structures; ground, greens and water stay as faint context so you can see where you are
   gl.uniform1f(uCut, 1e9);
   if (cutOn) { drawMesh(L.water, .35); drawMesh(L.tidal, .35); drawMesh(L.dockVol, .3); }
-  drawMesh(L.greens, cutOn ? .2 : .55); drawMesh(L.terrain, cutOn ? .14 : .5); gl.depthMask(true);
+  drawMesh(L.greens, cutOn ? .2 : .55); drawMesh(L.terrain, cutOn ? .14 : satOn ? .95 : .5); gl.depthMask(true);
+  if (L.hi) { gl.disable(gl.DEPTH_TEST); drawMesh(L.hi, .9); gl.enable(gl.DEPTH_TEST); }
   placeLabels();
 }
 
@@ -429,7 +449,144 @@ async function loadLive() {
 $('liveGo').onclick = () => { for (const l of camLabels.splice(0)) { l.el.remove(); labels.splice(labels.indexOf(l), 1); } loadLive(); };
 $('liveTide').onchange = () => { const keep = tidalLevel; if (!$('liveTide').checked) tidalLevel = null; buildTidal(); tidalLevel = keep; draw(); };
 $('liveCams').onchange = draw;
-window.__docklands = { cam, draw, setView, L, labels };
+// ---------- registry data in 3D: the atlas index links each 3D building to its registry record (cwb- id)
+// ../atlas/data/atlas.json (index, loaded at start), ../registry/buildings.json and ../quality/issues.json (on demand)
+let AT = null, REG = null, QI = null, selected = -1;
+const regOf = new Int32Array(A.buildings.length).fill(-1);
+const loadJSON = u => fetch(u).then(r => { if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.json(); });
+const getReg = () => REG || (REG = loadJSON('../registry/buildings.json').then(d => new Map(d.buildings.map(b => [b.id, b]))));
+const getQI = () => QI || (QI = loadJSON('../quality/issues.json').then(q => { const by = new Map(); for (const i of q.issues) { const k = `${i.ent}/${i.id}`; if (!by.has(k)) by.set(k, []); by.get(k).push(i); } return { q, by }; }));
+const note = t => { $('dataNote').textContent = t; };
+const HT = b => b.wh || b.h || b.mh || 0;
+const rampCol = t => { const S = [[44, 123, 182], [171, 217, 233], [255, 255, 191], [253, 174, 97], [215, 25, 28]]; t = Math.max(0, Math.min(1, t)) * 4; const i = Math.min(3, Math.floor(t)), f = t - i; return [0, 1, 2].map(c => (S[i][c] + (S[i + 1][c] - S[i][c]) * f) / 255); };
+loadJSON('../atlas/data/atlas.json').then(d => {
+  AT = d; d.buildings.forEach((b, k) => (b.mi || []).forEach(i => { regOf[i] = k; }));
+  buildPick(); note(`Tap a building at Canary Wharf for its record (${d.buildings.length.toLocaleString('en-GB')} buildings with registry ids).`);
+}).catch(e => note('The atlas index did not load: ' + e.message));
+
+// picking: every building drawn in a colour that encodes its registry ordinal + 1, rendered off screen
+function prismId(M, o, y0, y1, id) {
+  const f = dec(o.p), holes = o.holes || [], nv = f.length / 2, tris = earcut(f, holes.length ? holes : undefined, 2), packed = ((id & 0xffffff) | 0xff000000) >>> 0, base = M.n;
+  for (let i = 0; i < nv; i++) M.vr(f[2 * i], y1, f[2 * i + 1], packed);
+  for (let k = 0; k < tris.length; k += 3) M.tri(base + tris[k], base + tris[k + 1], base + tris[k + 2]);
+  const starts = [0, ...holes, nv];
+  for (let r = 0; r < starts.length - 1; r++) for (let k = starts[r]; k < starts[r + 1]; k++) {
+    const k2 = k + 1 < starts[r + 1] ? k + 1 : starts[r], i = M.vr(f[2 * k], y0, f[2 * k + 1], packed), j = M.vr(f[2 * k2], y0, f[2 * k2 + 1], packed), kk = M.vr(f[2 * k2], y1, f[2 * k2 + 1], packed), l = M.vr(f[2 * k], y1, f[2 * k + 1], packed); M.tri(i, j, kk); M.tri(i, kk, l);
+  }
+}
+function buildPick() { if (L.pick) L.pick.free(); const M = new Mesh(); A.buildings.forEach((b, i) => prismId(M, b, b.b + (b.mh || 0), b.b + b.h, regOf[i] + 1)); L.pick = M.upload(); }
+let fbo = null, fboTex = null, fboDepth = null, fboW = 0, fboH = 0;
+function pickAt(cx, cy) {
+  if (!L.pick || !MVP) return -1;
+  const w = cv.width, h = cv.height;
+  if (!fbo || fboW !== w || fboH !== h) {
+    if (fbo) { gl.deleteFramebuffer(fbo); gl.deleteTexture(fboTex); gl.deleteRenderbuffer(fboDepth); }
+    fbo = gl.createFramebuffer(); fboTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, fboTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    fboDepth = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, fboDepth); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fboTex, 0); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, fboDepth);
+    fboW = w; fboH = h;
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(true);
+  const P = par(); gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, P.cut < 250 ? P.cut : 1e9);
+  gl.uniform1f(uMono, 1); drawMesh(L.terrain, 1); gl.uniform1f(uMono, 0);
+  if ($('bmode').value !== 'off') drawMesh(L.pick, 1);
+  const px = new Uint8Array(4), s = w / cv.clientWidth;
+  gl.readPixels(Math.round(cx * s), Math.round(h - cy * s), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); draw();
+  return (px[0] | (px[1] << 8) | (px[2] << 16)) - 1;
+}
+let tap = null;
+cv.addEventListener('pointerdown', e => { tap = { x: e.clientX, y: e.clientY, t: performance.now(), n: ptrs.size }; });
+cv.addEventListener('pointerup', e => {
+  if (!tap || tap.n !== 1 || Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 6 || performance.now() - tap.t > 700) return;
+  const r = cv.getBoundingClientRect(), k = pickAt(e.clientX - r.left, e.clientY - r.top);
+  if (k >= 0 && AT && AT.buildings[k]) selectBuilding(k);
+});
+
+// selection: outline, record, occupants as labels at their floor heights
+const levelOf = o => { for (const v of [o.level, o.level_cwg]) { const m = /(-?\d+)/.exec(String(v ?? '').split(';')[0]); if (m) return +m[1]; if (/street|ground/i.test(String(v || ''))) return 0; } return null; };
+function outline(M, o, y0, y1, col) {
+  const f = dec(o.p), starts = [0, ...(o.holes || []), f.length / 2];
+  for (let r = 0; r < starts.length - 1; r++) for (let i = starts[r]; i < starts[r + 1]; i++) { const j = i + 1 < starts[r + 1] ? i + 1 : starts[r]; for (const y of [y0, y1]) beam(M, [f[2 * i], y, f[2 * i + 1]], [f[2 * j], y, f[2 * j + 1]], 1.2, 1.2, col); if (i % 3 === 0) beam(M, [f[2 * i], y0, f[2 * i + 1]], [f[2 * i] + .01, y1, f[2 * i + 1]], 1, 1, col); }
+}
+let occLabels = [];
+function clearSelection() { if (L.hi) { L.hi.free(); L.hi = null; } for (const l of occLabels) { l.el.remove(); labels.splice(labels.indexOf(l), 1); } occLabels = []; selected = -1; }
+async function selectBuilding(k) {
+  clearSelection(); selected = k; const ab = AT.buildings[k], M = new Mesh();
+  for (const i of ab.mi) { const b = A.buildings[i]; outline(M, b, b.b + (b.mh || 0), b.b + b.h + .5, [1, .25, .65]); }
+  L.hi = M.upload(); draw();
+  info.innerHTML = `<b>${esc(ab.n || ab.id)}</b> <span class="small">${esc(ab.id)} · loading the record…</span>`; info.style.display = 'block';
+  const [reg, qi] = await Promise.all([getReg(), getQI().catch(() => null)]);
+  if (selected !== k) return;
+  const b = reg.get(ab.id), base = Math.min(...ab.mi.map(i => A.buildings[i].b)), storey = par().storey;
+  const occ = b.occupants.map(o => ({ o, lv: levelOf(o) }));
+  const byLv = new Map(); for (const x of occ) { const key = x.lv ?? 'no level'; if (!byLv.has(key)) byLv.set(key, []); byLv.get(key).push(x.o); }
+  const levels = [...byLv.keys()].sort((p, q) => (typeof q === 'number' ? q : -99) - (typeof p === 'number' ? p : -99));
+  // labels: occupants with a level, spread round the building centre at ground + level × storey height
+  const withLv = occ.filter(x => x.lv != null).slice(0, 40);
+  withLv.forEach((x, j) => { const a = j * 2.39996, r = 4 + 3 * Math.sqrt(j); const l = { name: x.o.name, x: ab.x + r * Math.cos(a), z: ab.z + r * Math.sin(a), y: base + x.lv * storey + storey * .5, pri: 4, cls: 'occ' };
+    const el = document.createElement('button'); el.type = 'button'; el.className = 'lb occ'; el.textContent = `${x.lv > 0 ? '+' : ''}${x.lv} ${x.o.name}`; el.onclick = () => selectBuilding(k); labelBox.appendChild(el); l.el = el; labels.unshift(l); occLabels.push(l); });
+  const issues = qi ? qi.by.get(`b/${ab.id}`) || [] : [];
+  const comp = Array.isArray(b.companies) ? `${b.companies.length} registered: ${b.companies.slice(0, 8).map(c => esc(c.name)).join(', ')}${b.companies.length > 8 ? ' …' : ''}` : b.companies ? `${esc(b.companies.count)} registered` : 'none matched';
+  info.innerHTML = `<b>${esc(b.name || ab.id)}</b> <span class="small">${esc(ab.id)}${b.osm_name && b.osm_name !== b.name ? ` · OSM “${esc(b.osm_name)}”` : ''}${b.description ? ' · ' + esc(b.description) : ''}</span>
+    <div class="small">Height: ${ab.wh ? `Wikidata ${ab.wh} m · ` : ''}${ab.h ? `OSM ${ab.h} m · ` : ''}${ab.mh ? `3D model ${ab.mh} m (${esc(ab.ms)})` : ''} · floors ${ab.lv ?? '—'} · below ground ${ab.lu ?? '—'} · ground ${base} m OD</div>
+    ${b.owners.length ? `<div class="small">Owner: ${b.owners.map(o => esc(o.name)).join(', ')}</div>` : ''}
+    <div class="small">Homes: ${b.homes ? esc(b.homes.count) : 0} · companies: ${comp} · postcodes: ${b.postcodes.map(esc).join(', ') || '—'}</div>
+    ${occ.length ? `<table>${levels.map(lv => `<tr><td>${typeof lv === 'number' ? (lv === 0 ? 'ground' : (lv > 0 ? '+' : '') + lv) : 'no level'}</td><td>${byLv.get(lv).map(o => esc(o.name)).join(' · ')}</td></tr>`).join('')}</table><div class="small">${withLv.length} occupants drawn at their floor (OSM level or CWG mall level × ${storey} m storey height; a level is a floor index, not a measured height).</div>` : '<div class="small">No occupants recorded.</div>'}
+    ${issues.length ? `<div class="small" style="margin-top:6px"><b>Data quality (${issues.length})</b><br>${issues.slice(0, 12).map(i => `${esc(i.check)} <span class="tag">${esc(i.sev)}</span> ${esc(i.note)}`).join('<br>')}</div>` : ''}
+    <div class="small" style="margin-top:6px"><a href="../atlas/#map/b/${esc(ab.id)}">full record in the atlas</a>${b.osm[0] ? ` · <a href="https://www.openstreetmap.org/${esc(b.osm[0])}">OSM</a>` : ''}${b.wikidata ? ` · <a href="https://www.wikidata.org/wiki/${esc(b.wikidata)}">Wikidata</a>` : ''} · <a href="#" id="unselect">clear</a></div>`;
+  $('unselect').onclick = e => { e.preventDefault(); clearSelection(); info.style.display = 'none'; draw(); };
+  draw();
+}
+
+// colour modes
+const MODES = { height: [b => HT(b), 200, 'height 0–200 m'], occupants: [b => b.o, 30, 'occupants 0–30'], homes: [b => Math.max(0, b.hm), 300, 'homes 0–300'], companies: [b => b.co, 200, 'registered companies 0–200'], below: [b => b.lu || 0, 5, 'floors below ground 0–5'], quality: [b => qCount.get(b.id) || 0, 6, 'quality issues 0–6'] };
+const qCount = new Map();
+$('colourBy').onchange = async () => {
+  const mode = $('colourBy').value;
+  if (mode !== 'source' && !AT) { note('The atlas index is still loading.'); $('colourBy').value = 'source'; return; }
+  if (mode === 'quality' && !qCount.size) { const { q } = await getQI(); for (const i of q.issues) if (i.ent === 'b') qCount.set(i.id, (qCount.get(i.id) || 0) + 1); }
+  if (mode === 'source') { buildingColour = (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld; $('rampKey').innerHTML = ''; }
+  else { const [f, max, label] = MODES[mode]; buildingColour = (b, i) => { const k = regOf[i]; if (k < 0) return [.30, .32, .35]; const v = f(AT.buildings[k]); return v ? rampCol(Math.sqrt(v / max)) : [.55, .57, .60]; };
+    $('rampKey').innerHTML = `<span class="ramp" style="background:linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c)"></span>${label} (square-root scale) · light grey: none · dark grey: no registry record (outside the Canary Wharf box)`; }
+  buildBld(); draw();
+};
+
+// pins: heritage places, quality issues, live crime
+let crime = null;
+async function buildPins() {
+  if (L.pins) { L.pins.free(); L.pins = null; }
+  for (const l of labels.filter(l => l.pin)) { l.el.remove(); labels.splice(labels.indexOf(l), 1); }
+  const M = new Mesh(), stick = (x, z, y0, hgt, w, col) => beam(M, [x, y0, z], [x + .01, y0 + hgt, z], w, w, col), addLabel = (name, x, y, z, cls, onclick) => { const l = { name, x, y, z, pri: 2, cls, pin: true }; const el = document.createElement('button'); el.type = 'button'; el.className = 'lb ' + cls; el.textContent = name; el.onclick = onclick; labelBox.appendChild(el); l.el = el; labels.push(l); };
+  if ($('showHeritage').checked && AT) for (const g of AT.heritage) { const [x, z] = geo(g.lon, g.lat), y = groundAt(x, z), hgt = 6 + 4 * Math.sqrt(g.n); stick(x, z, y, hgt, 3, [.71, .55, 1]);
+    if (g.n >= 30) addLabel(`${g.label || 'records'}: ${g.n.toLocaleString('en-GB')}`, x, y + hgt, z, 'her', () => { info.innerHTML = `<b>${esc(g.label || 'Heritage records')}</b><div class="small">${g.n} records · ${Object.entries(g.src).map(([s, n]) => `${esc(s)} ${n}`).join(', ')}<br>${g.types.map(t => `${esc(t[0])} ${t[1]}`).join(', ')}</div><div class="small"><a href="../atlas/#heritage">heritage in the atlas</a></div>`; info.style.display = 'block'; }); }
+  if ($('showQuality').checked && AT) { const { q } = await getQI(); const by = new Map(); for (const i of q.issues) if (i.ent === 'b') { const s = by.get(i.id) || { n: 0, high: 0, med: 0 }; s.n++; if (i.sev === 'high') s.high++; else if (i.sev === 'medium') s.med++; by.set(i.id, s); }
+    const ix = new Map(AT.buildings.map(b => [b.id, b]));
+    for (const [id, s] of by) { const b = ix.get(id); if (!b || !b.mi.length) continue; const top = Math.max(...b.mi.map(i => A.buildings[i].b + A.buildings[i].h)); stick(b.x, b.z, top, 4 + 3 * s.n, 2.5, s.high ? [.95, .2, .2] : s.med ? [1, .7, .2] : [.6, .65, .7]); } }
+  if ($('showCrime').checked) {
+    if (!crime) { note('Loading crime records from police.uk…'); try {
+      const poly = '51.498,-0.030:51.510,-0.030:51.510,-0.005:51.498,-0.005';   // the Canary Wharf box
+      const [upd, list] = await Promise.all([getJSON('https://data.police.uk/api/crime-last-updated'), getJSON(`https://data.police.uk/api/crimes-street/all-crime?poly=${poly}`)]);
+      crime = { month: list[0]?.month || upd.date, list }; } catch (e) { note('police.uk did not answer: ' + e.message); $('showCrime').checked = false; } }
+    if (crime) { const at = new Map(), cats = {}; for (const c of crime.list) { cats[c.category] = (cats[c.category] || 0) + 1; const k = c.location.latitude + ',' + c.location.longitude; at.set(k, (at.get(k) || 0) + 1); }
+      for (const [k, n] of at) { const [la, lo] = k.split(',').map(Number), [x, z] = geo(lo, la); stick(x, z, groundAt(x, z), 3 + 2.5 * n, 2.2, [.95, .35, .25]); }
+      note(`Crime ${crime.month}: ${crime.list.length} records at ${at.size} anonymised points in the Canary Wharf box (police.uk, Open Government Licence). ` + Object.entries(cats).sort((p, q) => q[1] - p[1]).slice(0, 6).map(([c, n]) => `${c.replace(/-/g, ' ')} ${n}`).join(', ')); }
+  }
+  L.pins = M.n ? M.upload() : null; labels.sort((a, b) => b.pri - a.pri); draw();
+}
+['showHeritage', 'showQuality', 'showCrime'].forEach(id => $(id).onchange = () => { if (!AT && id !== 'showCrime') { note('The atlas index is still loading.'); $(id).checked = false; return; } buildPins(); });
+
+// satellite colours on the terrain (docklands/data/imagery.js, built by tools/build-imagery.mjs)
+$('showSat').onchange = () => {
+  const on = $('showSat').checked;
+  const apply = () => { const I = globalThis.DOCKLANDS_IMAGERY; if (!I) { note('Imagery did not load.'); $('showSat').checked = false; return; } satOn = on; buildTerrain(on ? Uint8Array.from(atob(I.rgb), c => c.charCodeAt(0)) : null); note(on ? I.attribution : ''); draw(); };
+  if (!on || globalThis.DOCKLANDS_IMAGERY) return apply();
+  note('Loading imagery…'); const sc = document.createElement('script'); sc.src = 'data/imagery.js'; sc.onload = apply; sc.onerror = () => { note('Imagery file did not load.'); $('showSat').checked = false; }; document.head.appendChild(sc);
+};
+
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; } };
 outs(); setView('cw');
 // #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)
 const atM = /(?:^#|&)at=(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?/.exec(location.hash);

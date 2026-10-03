@@ -2,6 +2,8 @@
 
 A catalogue of public data sources, feeds and APIs for an open-data 3D model of London Docklands. Generated 2026-10-02. Machine-readable version: [feeds.json](https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/feeds.json). Re-check script: `node magpie/cwplans/feeds/check-feeds.mjs`.
 
+**Survey of 2026-10-03:** 341 more sources in seven areas (courts and registers; national government and regulators; London and local government; police and safety; river and water; property and rentals; web data, dataset search and MCP servers), merged into feeds.json with an `area` field. Tables and the sources left out: [SURVEY-2026-10-03.md](SURVEY-2026-10-03.md).
+
 Area: Canary Wharf and the Isle of Dogs (E14) first; SE16 (Rotherhithe, Surrey Quays, Canada Water, east Bermondsey), Limehouse, Wapping, Greenwich and North Greenwich (SE10), Deptford, Cody Dock and Bow Creek / Leamouth (E16), and the Thames from London Bridge to Canary Wharf. Reference point for samples: 51.505, -0.02 (Canary Wharf).
 
 200 sources: 181 verified, 4 verified but needing a free key, 15 not verified. "Verified" means the page and the sample request were fetched on 2026-10-02 and returned HTTP 2xx (sample results below are from that check). "CORS" means the sample response carried `Access-Control-Allow-Origin` of `*` or `https://danbri.github.io`, so a page on GitHub Pages can call it directly. No API keys are stored here.

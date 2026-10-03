@@ -41,10 +41,10 @@ globalThis.window = globalThis;
 new Function(rd('docklands/data/area.js'))();
 const A = globalThis.DOCKLANDS_AREA, SRCN = A.meta.buildingHeightSources;
 const toBNG = await bngProjector(), local = (lon, lat) => { const [e, n] = toBNG(lon, lat); return [e - ORIGIN.E0, -(n - ORIGIN.N0)]; };
-const model = A.buildings.map(m => {
+const model = A.buildings.map((m, i) => {
   const n = m.holes ? m.holes[0] : m.p.length / 2; let x = 0, z = 0, sx = 0, sz = 0;
   for (let i = 0; i < n; i++) { x += m.p[2 * i]; z += m.p[2 * i + 1]; sx += x / 10; sz += z / 10; }
-  return { x: sx / n, z: sz / n, h: m.h, mh: m.mh || 0, s: SRCN[m.s] };
+  return { i, x: sx / n, z: sz / n, h: m.h, mh: m.mh || 0, s: SRCN[m.s] };
 });
 
 const reg = json('registry/buildings.json');
@@ -54,12 +54,13 @@ const buildings = reg.buildings.map(b => {
   const lr = rs.map(r => r.map(([lon, lat]) => local(lon, lat)));
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (const r of lr) for (const [x, z] of r) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
   const inMe = model.filter(m => m.x >= x0 && m.x <= x1 && m.z >= z0 && m.z <= z1 && lr.some(r => pointIn([m.x, m.z], r)));
-  const top = inMe.sort((p, q) => q.h - p.h)[0];
+  const top = [...inMe].sort((p, q) => q.h - p.h)[0];
   const wdh = num(b.facts?.height?.[0]), wdf = num(b.facts?.['floors above ground']?.[0]), wdb = num(b.facts?.['floors below ground']?.[0]);
   const roles = {}; for (const o of b.occupants) { const k = o.source === 'fsa' ? 'food' : o.role.split(':')[0].split(' (')[0]; roles[k] = (roles[k] || 0) + 1; }
   return {
     id: b.id, n: b.name, lat: r6(b.lat), lon: r6(b.lon), x: b.x, z: b.z,
-    h: b.height ?? null, wh: wdh, mh: top ? top.h : null, ms: top ? top.s : null, lv: b.levels ?? wdf ?? null, lu: b.levels_underground ?? wdb ?? null,
+    h: b.height ?? null, wh: wdh, mh: top ? top.h : null, ms: top ? top.s : null, mi: inMe.map(m => m.i),   // indices into docklands/data/area.js buildings
+    lv: b.levels ?? wdf ?? null, lu: b.levels_underground ?? wdb ?? null,
     t: b.building, a: b.area_m2, o: b.occupants.length, roles,
     hm: typeof b.homes?.count === 'number' ? b.homes.count : b.homes ? -1 : 0,   // -1: "fewer than 5"
     co: Array.isArray(b.companies) ? b.companies.length : b.companies?.count ?? 0, own: b.owners.map(o => o.name),
