@@ -38,7 +38,7 @@ SHIFT = 4                 # m: largest shift of an OSM outline onto the LiDAR bu
 MIN_FEATURE = 16          # m2: plant, masts and crowns smaller than about 4 x 4 m are not kept as tiers
 TIER_GAP = 3.0            # m: two roof levels closer than this are one tier
 MIN_HOLE = 60             # m2: a smaller opening in a roof region is filled (plant wells, dropouts)
-MIN_TIER = 5.0            # m above the base: lower levels are ground, kerbs and misregistered pavement
+MIN_TIER = 8.0            # m above the base: lower levels are ground, kerbs and misregistered pavement
 
 SURVEYS = {   # id -> zip files (product, year); the 2022 composite merges P_10768 (2017-12 to 2018-01) and P_12151 (2020-12-12)
     '2022c': ['lidar_composite_first_return_dsm-2022-1-TQ3575.zip', 'lidar_composite_first_return_dsm-2022-1-TQ3580.zip'],
@@ -213,15 +213,17 @@ def clean_mask(m):
 
 
 # ---------------------------------------------------------------- roof levels
-def roof_levels(v, kmax=7, seed=0):
-    """1-D Gaussian mixture over roof heights, k chosen by BIC; then merge levels closer than TIER_GAP and drop
-    levels with fewer than MIN_FEATURE cells. Returns sorted [(level, cells)] (level = median of its cells)."""
+def roof_levels(v, kmax=7, seed=0, pen=2.0):
+    """1-D Gaussian mixture over the roof heights inside the footprint, k chosen by BIC plus 2 k ln(n) (a new tier
+    must earn its keep); then levels closer than TIER_GAP merge and levels with fewer than MIN_FEATURE cells go.
+    Wall cells and spurious levels are removed later, by the region test in fit_building. Returns sorted levels
+    (median height of each level's cells)."""
     v = v[np.isfinite(v)]; v = v[v > 3]
     if v.size < MIN_FEATURE: return []
     X = v.reshape(-1, 1); best = None
     for k in range(1, min(kmax, max(1, v.size // MIN_FEATURE)) + 1):
         g = GaussianMixture(k, random_state=seed, reg_covar=0.25).fit(X)
-        bic = g.bic(X) + k * math.log(v.size)           # extra penalty: a new tier must earn its keep
+        bic = g.bic(X) + pen * k * math.log(v.size)
         if best is None or bic < best[0]: best = (bic, g)
     lab = best[1].predict(X)
     groups = sorted([v[lab == k] for k in np.unique(lab)], key=np.median)
@@ -229,8 +231,7 @@ def roof_levels(v, kmax=7, seed=0):
     for g in groups:
         if merged and np.median(g) - np.median(merged[-1]) < TIER_GAP: merged[-1] = np.concatenate([merged[-1], g])
         else: merged.append(g)
-    big = [g for g in merged if g.size >= MIN_FEATURE]
-    return [(float(np.median(g)), int(g.size)) for g in big]
+    return [float(np.median(g)) for g in merged if g.size >= MIN_FEATURE]
 
 
 # ---------------------------------------------------------------- pictures
@@ -391,20 +392,22 @@ def fit_building(b, A, surveys, judge):
     shp = (Z1 - Z0, X1 - X0); tr = Affine(1, 0, X0, 0, 1, Z0)
     raw = {sid: S.crop(X0, X1, Z0, Z1) for sid, S in surveys.items()}
     raw['2022c'] = composite_voids(raw['2022c'], raw['2020'])
-    surface = raw['2022c']
     M_fp0 = rasterize([fp], out_shape=shp, transform=tr).astype(bool)
-    # many dropouts and a 2018 flight of the finished building: dropouts fall on different cells in each flight, so
-    # the higher of the two surveys in a 2022 dropout cell recovers the roof
-    fused = False
-    d22 = float(dropouts(raw['2022c'])[M_fp0].mean())
-    if J.get('fuse_2018', d22 > .15) and np.isfinite(raw['2018'][M_fp0]).mean() > .8:
-        q22, q18 = (np.nanpercentile(raw[k][M_fp0], [50, 90]) for k in ('2022c', '2018'))
-        if np.all(np.abs(q22 - q18) < 3):   # the same building in both flights
-            surface = np.where(dropouts(raw['2022c']), np.fmax(raw['2022c'], raw['2018']), raw['2022c']); fused = True
+    # primary survey: the 2022 composite, unless the 2018 flight saw the finished building with clearly fewer
+    # dropouts (the 2020 flight speckled the glass towers along Marsh Wall: Maine Tower 49% of roof cells, 2018 few).
+    # Dropouts fall on different cells in each flight, so a dropout cell of the primary takes the higher of the two.
+    q = {k: np.nanpercentile(raw[k][M_fp0], [75, 90]) if np.isfinite(raw[k][M_fp0]).mean() > .8 else None for k in ('2022c', '2018')}
+    same = q['2018'] is not None and abs(q['2022c'][1] - q['2018'][1]) < 3 and abs(q['2022c'][0] - q['2018'][0]) < 6
+    dr = {k: float(dropouts(raw[k])[M_fp0].mean()) for k in ('2022c', '2018')}
+    primary = J.get('primary') or ('2018' if same and dr['2018'] < dr['2022c'] - .1 else '2022c')
+    other = '2018' if primary == '2022c' else '2022c'
+    surface = raw[primary]; fused = False
+    if same and J.get('fuse', dr[primary] > .15):   # NaN cells stay NaN: they are filled from their own neighbours
+        surface = np.where(dropouts(raw[primary]) & np.isfinite(raw[primary]), np.fmax(raw[primary], raw[other]), raw[primary]); fused = True
     H, drop = pit_fill(surface - base, J.get('closing', 5))
     expected = max(b.get('wh') or 0, b.get('h') or 0, b.get('mh') or 0)
     rec = dict(id=b['id'], name=b.get('n'), mi=b['mi'], base=base, ground=J.get('ground_m_od'), X0=X0, Z0=Z0, shape=shp,
-               fused=fused, dropout_2022=d22)
+               fused=fused, primary=primary)
     p90 = np.percentile(H[M_fp0], 90)
     if p90 < .5 * expected:
         # the survey (Dec 2020 at the latest) predates the building: extrude the OSM outline(s) at the model height
@@ -425,7 +428,8 @@ def fit_building(b, A, surveys, judge):
     dom = J.get('dom_deg'); dom = math.radians(dom) if dom is not None else dominant_angle(fp)
     rec.update(dom=dom, dropout=float(drop[M_fp].mean()))
 
-    levels = [l[0] for l in roof_levels(H[core & ~drop]) if l[0] >= J.get('min_tier', MIN_TIER)]
+    levels = [l for l in roof_levels(H[core & ~drop], pen=J.get('penalty', 2.0)) if l >= J.get('min_tier', MIN_TIER)]
+    levels = sorted(levels + list(J.get('add_levels', [])))
     if J.get('levels'): levels = list(J['levels'])
 
     def regions_for(levels):
@@ -526,24 +530,28 @@ def check(rec, b, reg):
     out_iou = float((bld & np.isfinite(surf)).sum() / max(1, (bld | np.isfinite(surf)).sum()))
     top_m = max(t['y1'] for t in rec['tiers']) - base
     out = {}
-    p90_22 = np.nanpercentile(rec['raw']['2022c'][M_fp], 90) - base
-    for sid, key in (('2022c', 'rmse_m'), ('2020', 'rmse_2020_m'), ('2018', 'rmse_2018_m')):
+    pri = rec.get('primary') or '2022c'
+    filled_q = lambda r: np.percentile(pit_fill(r - base, 5)[0][M_fp], [60, 90])
+    q_p = filled_q(rec['raw'][pri])
+    out['survey'] = pri
+    keys = [(pri, 'rmse_m')] + [(k, n) for k, n in (('2022c', 'rmse_2022_m'), ('2020', 'rmse_2020_m'), ('2018', 'rmse_2018_m')) if k != pri]
+    for sid, key in keys:
         r = rec['raw'][sid]
         if not np.isfinite(r[M_fp]).any(): out[key] = None; continue
-        if sid != '2022c' and np.nanpercentile(r[M_fp], 90) - base < .85 * p90_22:
+        if sid != pri and np.any(filled_q(r) < .85 * q_p):
             out[key] = None; out.setdefault('surveys_before_completion', []).append(sid); continue   # not finished then
         drop = dropouts(r)
         sel = roof & np.isfinite(r) & ~drop
         e = model[sel] - r[sel]
         out[key] = round(float(np.sqrt(np.mean(e * e))), 1)
-        if sid == '2022c':
+        if sid == pri:
             out['p95_m'] = round(float(np.percentile(np.abs(e), 95)), 1)
             sel = region & np.isfinite(r); e = model[sel] - r[sel]
             out['rmse_raw_m'] = round(float(np.sqrt(np.mean(e * e))), 1)
             out['dropout_pct'] = round(100 * float((drop | np.isnan(r))[roof].mean()))
             out['outline_iou'] = round(out_iou, 2)
     r = rec['raw']['2022c'][M_fp]
-    if rec.get('fused'): out['fused_with_2018'] = True
+    if rec.get('fused'): out['dropouts_filled_from'] = '2018' if pri == '2022c' else '2022c'
     out['dsm_max_m'] = round(float(np.nanmax(r) - base), 1) if np.isfinite(r).any() else None
     out['model_top_m'] = round(top_m, 1)
     if rec.get('ground') is not None:
@@ -569,7 +577,8 @@ def check(rec, b, reg):
         out['osm_parts_agree'] = all(abs(r_[1] - r_[2]) <= 5 for r_ in rows)
     else: out['osm_parts_agree'] = None
     if rec['status'] == 'not_in_survey':
-        for k in ('rmse_m', 'p95_m', 'rmse_raw_m', 'dropout_pct', 'outline_iou', 'rmse_2020_m', 'rmse_2018_m'): out[k] = None
+        for k in ('rmse_m', 'p95_m', 'rmse_raw_m', 'dropout_pct', 'outline_iou', 'rmse_2020_m', 'rmse_2018_m', 'rmse_2022_m', 'survey'): out.pop(k, None)
+        out['surveys_before_completion'] = ['2022c', '2020', '2018']
     return out
 
 
@@ -596,6 +605,10 @@ def picture(rec, chk, scale_to=170):
 
 # ---------------------------------------------------------------- judgement (hand corrections, each with its reason)
 JUDGEMENT = {
+    'cwb-0701': dict(primary='2018', why='Novotel: the 2020 flight has no return on 58% of the roof cells; the 2018 flight '
+                     '(the hotel opened in 2017) has 39%, and its fit agrees with 2018 to 3.4 m RMSE against 7.9 m with 2020.'),
+    'cwb-0737': dict(primary='2018', why='Dollar Bay: the 2020 flight speckles the faceted glass top (59% dropouts); the 2018 '
+                     'flight (building finished 2017) gives a fit with 7.1 m RMSE against 15.3 m. Still the weakest fit here.'),
     'cwb-0715': dict(closing=3, why='Hampton Tower: the default 5 m dropout fill bridged the 3 m slot between the two '
                      'towers (open in the raw DSM) and built a 151 m link; a 3 m fill keeps them apart.'),
     'cwb-0417': dict(ground_m_od=9.7, why='8 Canada Square: the model base (1.6 m OD) is the DTM interpolated under the '
@@ -643,7 +656,7 @@ def main():
         out[b['id']] = e
         print(f"{b['id']} {str(e['name'])[:28]:28s} {rec['status']:13s} tiers {len(tiers)} top {rec['top']['kind']:7s} "
               f"model {chk['model_top_m']:6} dsm {chk['dsm_max_m']} wd {chk['wikidata_height_m']} osm {chk['osm_height_m']} "
-              f"rmse {chk.get('rmse_m')} p95 {chk.get('p95_m')} raw {chk.get('rmse_raw_m')} drop {chk.get('dropout_pct')} r20 {chk.get('rmse_2020_m')} r18 {chk.get('rmse_2018_m')} parts {chk.get('osm_parts')}", flush=True)
+              f"{chk.get('survey')} rmse {chk.get('rmse_m')} p95 {chk.get('p95_m')} raw {chk.get('rmse_raw_m')} drop {chk.get('dropout_pct')} r20 {chk.get('rmse_2020_m')} r18 {chk.get('rmse_2018_m')} r22 {chk.get('rmse_2022_m')} parts {chk.get('osm_parts')}", flush=True)
     if pics:
         cw = max(p.width for p in pics); ch = max(p.height for p in pics); n = 4
         sheet = Image.new('RGB', (n * cw, ((len(pics) + n - 1) // n) * ch), (0, 0, 0))
