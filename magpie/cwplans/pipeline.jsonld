@@ -2568,6 +2568,54 @@
    ]
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-facade-atlas",
+   "@type": "prov:Activity",
+   "rdfs:label": "build-facade-atlas",
+   "dct:description": "Cuts one tile per tower from its rectified open photo, holding whole floors and whole bays so it repeats along the walls, and packs the tiles into an 8 x 4 atlas of 256 px tiles.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/results.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/facades.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/photos.json"
+    },
+    {
+     "cwp:pathPattern": "data/raw/facades/<cwb-id>/rect-<key>.jpg"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.jpg"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/build-facade-atlas.py"
+   },
+   "cwp:command": "python3 magpie/cwplans/tools/build-facade-atlas.py",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "One patch per tower, chosen by eye from data/raw/facades/contact.jpg; Citigroup Centre left out (crane, blur).",
+    "Tile = whole floors (about 40% of the patch, at most 25 m) by whole bays; size in metres from the measured floor height or bay width.",
+    "Attribution per tile from photos.json."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-build"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-write"
+    }
+   ]
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats",
    "@type": "prov:Activity",
    "rdfs:label": "build-splats",
@@ -4992,6 +5040,44 @@
     }
    ],
    "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "facade texture atlas: 16 tiles of 256 px, each cut from an open photo of one tower (whole floors and bays) for its walls on the 3D page",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-facade-atlas"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "derived from CC BY 2.0 / 4.0 photos: the attribution (author, licence, building) is in docklands/data/tex/facades.json and shown in About"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "slot, tile size in metres, source photo, author and licence of each facade tile; the attribution line",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-facade-atlas"
+   },
+   "cwp:osmUse": "none"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/towers.json",

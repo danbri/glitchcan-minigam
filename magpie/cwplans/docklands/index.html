@@ -119,7 +119,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
   <div id="mini" hidden role="status"><span id="miniT"></span><button type="button" class="ib" id="miniBtn" aria-label="Stop the music">■</button></div>
   <div id="isoBtns" hidden><button type="button" class="ib" id="isoL" aria-label="Turn the view left">⟲</button><button type="button" class="ib" id="isoR" aria-label="Turn the view right">⟳</button></div>
   <div id="gauge" hidden role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><button type="button" class="ib" id="gaugeX" aria-label="Close the depth gauge"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
-  <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span><span id="attribTrees"></span></div>
+  <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span><span id="attribTrees"></span><span id="attribFac"></span></div>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="press" role="menu"></div>
   <section id="sheet" aria-label="Record"><div id="grip" aria-hidden="true"></div><button type="button" id="sheetX" aria-label="Close the record">×</button><div id="sheetBody">
@@ -169,7 +169,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
       <div id="rampKey" class="small"></div>
       <h3>Show</h3>
       <div class="chips">
-        <label><input type="checkbox" id="showWindows" checked> Windows</label><label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground</label><label><input type="checkbox" id="showFloors"> Floors</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label><label><input type="checkbox" id="showTrees"> Trees</label>
+        <label><input type="checkbox" id="showWindows" checked> Windows</label><label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground</label><label><input type="checkbox" id="showFloors"> Floors</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label><label><input type="checkbox" id="showTrees"> Trees</label><label><input type="checkbox" id="showPhotos" checked> Photo facades</label>
       </div>
       <h3>Gaussian splats</h3>
       <div class="chips" role="radiogroup" aria-label="Gaussian splats">
@@ -227,6 +227,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
         <div id="liveOut" class="small" aria-live="polite"></div>
       </details>
       <details><summary>Canary Wharf below ground (text)</summary><div id="ugText" class="small tw"></div></details>
+      <p class="small" id="facCredit"></p>
       <p class="small" id="attrib"></p>
     </div>
     </div>
@@ -290,11 +291,19 @@ gl.enableVertexAttribArray(aP); gl.enableVertexAttribArray(aC);
 // facade program (buildings only): 20-byte vertices [x y z u] + rgba. Walls get a window grid from the storey height
 // (3.6 m) and u, the distance along the wall; at night some windows are lit. Roofs of low buildings take the ground image.
 const fvs = 'attribute vec3 p;attribute float u;attribute vec4 c;uniform mat4 m;uniform float vz;uniform vec4 box;uniform vec3 eye;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;void main(){v=c;wy=p.y;uu=u;uv=(p.xz-box.xy)/box.zw;dist=distance(vec3(p.x,p.y*vz,p.z),eye);gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
-const ffs = 'precision mediump float;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform float night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;' +
+// photo facade tiles: mip level from the derivatives of the unwrapped tile coordinate (fract() would make it jump at
+// every seam). Tiles are 256 px and aligned, so each mip level of the atlas averages within one tile.
+const FLOD = !!(gl.getExtension('EXT_shader_texture_lod') && gl.getExtension('OES_standard_derivatives'));
+const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension GL_OES_standard_derivatives : enable\n#define TEXL(s,u,l) texture2DLodEXT(s,u,l)\n#define LODOF(t) clamp(log2(max(max(length(dFdx(t)),length(dFdy(t))),1e-4)),0.,8.)\n'
+  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n') + 'precision mediump float;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform float night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec2 fslot[16];uniform float ftex;' +
   'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
   'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
   'if(pxm>0.)col=min(vec3(1.),col*1.3);' +   // pixel art: brighter walls, windows on the art-pixel grid
-  'if(uu>=0.&&win>.5&&pxm>0.&&pxm<1.5){float fl=wy/(pxm*4.),fy=fract(fl),fx=floor(gl_FragCoord.x),m=v.a<.99?floor((v.a*255.-200.)/8.+.5):3.;' +   // pixel art: a pattern per material on the art-pixel grid (no moire)
+  'float ab=v.a*255.;' +
+  'if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tower's tile, repeated by its size in metres
+  'vec2 tc=vec2(uu/S.x,wy/S.y),q=fract(tc),st=vec2(mod(sl,8.),floor(sl/8.));float lod=LODOF(tc*256.),e=.5*exp2(floor(lod)+1.);' +
+  'col=TEXL(ftx,vec2(st.x*256.+e+q.x*(256.-2.*e),st.y*256.+e+(1.-q.y)*(256.-2.*e))/vec2(2048.,1024.),lod).rgb*(.45+.75*lum);if(night>.5)col*=.35;}' +
+  'else if(uu>=0.&&win>.5&&pxm>0.&&pxm<1.5){float fl=wy/(pxm*4.),fy=fract(fl),fx=floor(gl_FragCoord.x),m=v.a<.99?floor((v.a*255.-200.)/8.+.5):3.;' +   // pixel art: a pattern per material on the art-pixel grid (no moire)
   'if(m<.5){float w=step(mod(fx,4.),1.)*step(.3,fy)*step(fy,.8);col=mix(col,col*.55+vec3(.05,.07,.11),w);}' +   // brick: punched windows
   'else if(m<1.5){float w=step(mod(fx,5.),1.)*step(.3,fy)*step(fy,.8);col=mix(col,vec3(.33,.40,.50),w*.85);}' +   // render: punched windows, darker glass
   'else if(m<2.5||m>4.5){float mu=step(mod(fx,m>4.5?2.:3.),.5);col=col*(1.-.14*step(fy,.2))*(1.+.2*mu);}' +   // glass: mullions and spandrels
@@ -305,12 +314,12 @@ const ffs = 'precision mediump float;varying vec4 v;varying float wy;varying flo
   'if(night>.5){float lit=step(.58,h(cell+7.3));col=mix(col*.22,vec3(1.,.8,.48)*(.55+.45*h(cell+1.7)),w*lit);col=mix(col,gl*.25,w*(1.-lit));}else col=mix(col,gl,w*.8);}' +
   'else if(uu<0.&&uu>-41.&&roofTex>.5){col=min(vec3(1.),texture2D(tx,uv).rgb*(.6+.9*lum));}' +
   'else if(night>.5)col*=.3;' +
-  'gl_FragColor=vec4(col,(pxm>0.?1.:v.a)*a);}';
+  'gl_FragColor=vec4(col,a);}';   // vertex alpha carries the material or facade slot, not opacity
 const prF = gl.createProgram(); gl.attachShader(prF, sh(gl.VERTEX_SHADER, fvs)); gl.attachShader(prF, sh(gl.FRAGMENT_SHADER, ffs));
 gl.bindAttribLocation(prF, aP, 'p'); gl.bindAttribLocation(prF, aC, 'c'); gl.bindAttribLocation(prF, [0, 1, 2].find(i => i !== aP && i !== aC), 'u'); gl.linkProgram(prF);
 if (!gl.getProgramParameter(prF, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prF));
 const FU = n => gl.getUniformLocation(prF, n), fa = { p: gl.getAttribLocation(prF, 'p'), u: gl.getAttribLocation(prF, 'u'), c: gl.getAttribLocation(prF, 'c') };
-const fu = { pxm: FU('pxm'), eye: FU('eye'), m: FU('m'), vz: FU('vz'), box: FU('box'), a: FU('a'), cut: FU('cut'), night: FU('night'), roofTex: FU('roofTex'), win: FU('win'), tx: FU('tx') };
+const fu = { pxm: FU('pxm'), eye: FU('eye'), m: FU('m'), vz: FU('vz'), box: FU('box'), a: FU('a'), cut: FU('cut'), night: FU('night'), roofTex: FU('roofTex'), win: FU('win'), tx: FU('tx'), ftx: FU('ftx'), fslot: FU('fslot'), ftex: FU('ftex') };
 const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })();
 const shade = (col, nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1, k = .5 + .5 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / l); return [col[0] * k, col[1] * k, col[2] * k]; };
 
@@ -343,9 +352,11 @@ class MeshF {   // like Mesh with a fourth float per vertex (u); 20 bytes a vert
   }
   free() { if (this.vb) { gl.deleteBuffer(this.vb); gl.deleteBuffer(this.ib); } }
 }
+// the alpha byte of a building vertex: 255 plain; 100 + slot = photo facade tile (mat = -1 - slot); 200 + 8 * material (pixel art)
+const alOf = mat => mat == null ? 1 : mat < 0 ? (100 + (-1 - mat)) / 255 : (200 + mat * 8) / 255;
 // building prism for the facade program: u = metres along each ring on walls, -(1 + height) on the roof
 function prismF(M, o, y0, y1, col, bottom, mat) {
-  const al = mat == null ? 1 : (200 + mat * 8) / 255;   // pixel art: the material id rides in the alpha byte
+  const al = alOf(mat);
   const f = dec(o.p), holes = o.holes || [], nv = f.length / 2, tris = earcut(f, holes.length ? holes : undefined, 2), top = shade(col.map(c => Math.min(1, c * 1.05)), 0, 1, 0), base = M.n, ru = -(1 + (y1 - y0));
   for (let i = 0; i < nv; i++) M.v(f[2 * i], y1, f[2 * i + 1], ru, top, al);
   for (let k = 0; k < tris.length; k += 3) M.tri(base + tris[k], base + tris[k + 1], base + tris[k + 2]);
@@ -419,7 +430,9 @@ const heightOf = (b, i) => { if (!SKY || skyIdx < 0) return b.h; const v = SKY.b
 const notFlown = i => SKY && skyIdx >= 0 && SKY.buildings[i] && SKY.buildings[i][skyIdx] == null;   // that survey did not cover it: today's height, slate colour
 // measured tower massing (data/towers.json, tools/build-towers.py): stacked tiers, and One Canada Square's pyramid, in
 // place of one prism per OSM outline for the towers of 100 m and over. Only for today's skyline (the year slider uses prisms).
-let TOWERS = null, FAC = null;   // FAC: registry/sources/facades/facades.json buildings, by cwb id
+let TOWERS = null, FAC = null, FT = null, FTX = null;   // FT: data/tex/facades.json (photo facade tiles, tools/build-facade-atlas.py), FTX: its texture
+// the photo tile of model building i, when photo facades are on and the colours mean "what it looks like"
+const facSlot = i => { if (!FTX || !$('showPhotos').checked || PHOTO || (!PIX.on && $('colourBy').value !== 'source') || skyIdx >= 0) return null; const k = regOf[i]; if (k < 0 || !AT) return null; const f = FT.buildings[AT.buildings[k].id]; return f ? f.slot : null; };   // FAC: registry/sources/facades/facades.json buildings, by cwb id
  const towerOf = new Map();   // model building index -> tower record
 const encRings = rings => { const p = [], holes = []; let px = 0, pz = 0, n = 0; rings.forEach((r, k) => { if (k) holes.push(n); for (const [x, z] of r) { const X = Math.round(x * 10), Z = Math.round(z * 10); p.push(X - px, Z - pz); px = X; pz = Z; n++; } }); return { p, holes }; };
 function towerF(M, t, col, mat) {
@@ -429,12 +442,13 @@ function towerF(M, t, col, mat) {
     // pyramid: each edge of the ring at y0 to the apex; roof u (no window grid)
     const [ax, ay, az] = t.top.apex, r = tr.ring, ru = -(1 + (ay - tr.y0));
     for (let i = 0; i < r.length; i++) { const [x0, z0] = r[i], [x1, z1] = r[(i + 1) % r.length], n = norm3([x0, tr.y0, z0], [x1, tr.y0, z1], [ax, ay, az]);
-      const c = shade(col.map(v => Math.min(1, v * 1.08)), n[0], n[1], n[2]); const al = mat == null ? 1 : (200 + mat * 8) / 255; M.tri(M.v(x0, tr.y0, z0, ru, c, al), M.v(x1, tr.y0, z1, ru, c, al), M.v(ax, ay, az, ru, c, al)); }
+      const c = shade(col.map(v => Math.min(1, v * 1.08)), n[0], n[1], n[2]); const al = alOf(mat); M.tri(M.v(x0, tr.y0, z0, ru, c, al), M.v(x1, tr.y0, z1, ru, c, al), M.v(ax, ay, az, ru, c, al)); }
   });
 }
 function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(), useT = TOWERS && skyIdx < 0;
-  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, notFlown(i) ? [.36, .42, .52] : buildingColour(b, i), !!b.mh, buildingMat && buildingMat(b, i)); });
-  if (useT) for (const t of TOWERS) { const mi = t.model_buildings[0]; towerF(M, t, buildingColour(A.buildings[mi], mi), buildingMat && buildingMat(A.buildings[mi], mi)); }
+  const look = (b, i) => { const sl = facSlot(i); return sl != null ? [[.9, .9, .9], -1 - sl] : [buildingColour(b, i), buildingMat && buildingMat(b, i)]; };
+  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (!(h > 0)) return; const [c, m] = notFlown(i) ? [[.36, .42, .52], null] : look(b, i); prismF(M, b, b.b + (b.mh || 0), b.b + h, c, !!b.mh, m); });
+  if (useT) for (const t of TOWERS) { const mi = t.model_buildings[0], [c, m] = look(A.buildings[mi], mi); towerF(M, t, c, m); }
   L.bld = M.upload(); }
 buildBld();
 // photo style (drone frames for splat training): materials instead of the map colour codes, no diagram layers
@@ -561,6 +575,7 @@ function drawFacades(M, alpha, P) {
   gl.uniform1f(fu.pxm, PIX.on ? cam.dist * .84 / PIX.fh : 0); gl.uniform1f(fu.night, ground === 'night2012' ? 1 : 0); gl.uniform1f(fu.win, $('showWindows').checked && $('colourBy').value === 'source' ? 1 : 0);
   const rt = !!groundTex && ground !== 'night2012' && ground !== 'intensity2020'; gl.uniform1f(fu.roofTex, rt ? 1 : 0);
   if (TEXIDX) { const B = TEXIDX.box; gl.uniform4f(fu.box, B.x0, B.z0, B.x1 - B.x0, B.z1 - B.z0); } gl.uniform1i(fu.tx, 0); if (rt) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); }
+  gl.uniform1f(fu.ftex, FTX ? 1 : 0); if (FTX) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FTX); gl.uniform1i(fu.ftx, 1); gl.uniform2fv(fu.fslot, FT.slots); gl.activeTexture(gl.TEXTURE0); }
   gl.enableVertexAttribArray(fa.u);
   gl.bindBuffer(gl.ARRAY_BUFFER, M.vb); gl.vertexAttribPointer(fa.p, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(fa.u, 1, gl.FLOAT, false, 20, 12); gl.vertexAttribPointer(fa.c, 4, gl.UNSIGNED_BYTE, true, 20, 16);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, M.ib); gl.drawElements(gl.TRIANGLES, M.count, gl.UNSIGNED_INT, 0);
@@ -642,7 +657,7 @@ cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end)
   labelBox.addEventListener('click', e => { if (lbMoved) { e.stopPropagation(); e.preventDefault(); } lbMoved = false; lbDown = null; }, true); }
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .001)); unview(); draw(); }, { passive: false });
 ['bmode', 'showLabels', 'showRoads', 'showUnder'].forEach(id => $(id).onchange = draw);
-$('showWalls').onchange = draw; $('showBed').onchange = draw; $('showWindows').onchange = draw;
+$('showPhotos').onchange = () => { buildBld(); draw(); }; $('showWalls').onchange = draw; $('showBed').onchange = draw; $('showWindows').onchange = draw;
 $('showFloors').onchange = () => { if ($('showFloors').checked && $('bmode').value === 'solid') { $('bmode').value = 'ghost'; syncBmode(); } draw(); };
 const FMT = { cut: v => +v >= 250 ? 'off' : v + ' m OD', vz: v => v + '×', storey: v => v + ' m', dmax: v => v + ' m', grad: v => v, ddeep: v => v + ' m' };
 function outs() { for (const k of ids) $(k + 'O').value = FMT[k](inp[k].value); }
@@ -1524,6 +1539,13 @@ window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, re
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
 outs(); setView('cw');
+loadJSON('data/tex/facades.json').then(T => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok([T, im]); im.onerror = () => no(new Error('facades.jpg')); im.src = 'data/tex/facades.jpg'; })).then(([T, im]) => {
+  FT = T; FT.slots = new Float32Array(32); for (const f of Object.values(T.buildings)) { FT.slots[2 * f.slot] = f.w_m; FT.slots[2 * f.slot + 1] = f.h_m; }
+  const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
+  for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+  gl.generateMipmap(gl.TEXTURE_2D); gl.activeTexture(gl.TEXTURE0); FTX = t; $('facCredit').textContent = 'Facade photos (tiles cut from them): ' + T.attribution + '.'; $('attribFac').textContent = ' · facade photos CC BY (About)';
+  const go = () => { if (!AT) return setTimeout(go, 400); buildBld(); draw(); }; go();
+}).catch(e => console.warn('facade textures', e));
 loadJSON('data/towers.json').then(T => { TOWERS = Object.values(T.buildings).filter(t => t.tiers && t.tiers.length && t.status === 'fitted'); for (const t of TOWERS) for (const mi of t.model_buildings) towerOf.set(mi, t); buildBld(); draw(); }).catch(e => console.warn('towers.json', e));
 // #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)
 const atM = /(?:^#|&)at=(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?/.exec(location.hash);

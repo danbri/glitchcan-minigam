@@ -2233,6 +2233,46 @@
       ]
     },
     {
+      "id": "build-facade-atlas",
+      "tool": "tools/build-facade-atlas.py",
+      "command": "python3 magpie/cwplans/tools/build-facade-atlas.py",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "registry/sources/facades/work/results.json"
+        },
+        {
+          "file": "registry/sources/facades/facades.json"
+        },
+        {
+          "file": "registry/sources/facades/photos.json"
+        },
+        {
+          "local": "data/raw/facades/<cwb-id>/rect-<key>.jpg"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/tex/facades.jpg"
+        },
+        {
+          "file": "docklands/data/tex/facades.json"
+        }
+      ],
+      "method": "Cuts one tile per tower from its rectified open photo, holding whole floors and whole bays so it repeats along the walls, and packs the tiles into an 8 x 4 atlas of 256 px tiles.",
+      "rules": [
+        "One patch per tower, chosen by eye from data/raw/facades/contact.jpg; Citigroup Centre left out (crane, blur).",
+        "Tile = whole floors (about 40% of the patch, at most 25 m) by whole bays; size in metres from the measured floor height or bay width.",
+        "Attribution per tile from photos.json."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "facade-build",
+        "facade-write"
+      ]
+    },
+    {
       "id": "build-splats",
       "tool": "tools/build-splats.mjs",
       "command": "node magpie/cwplans/tools/build-splats.mjs [--ground 4] [--cell 7.2] [--box x0,x1,z0,z1]",
