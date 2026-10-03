@@ -121,6 +121,46 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
   the ids) and all occupant and headquarters links of the 86 building items with their qualifiers. 2.9 s, no
   retries. Cached in `data/raw/registry/wikidata-occupant-classes.json`; delete it to refresh.
 
+- **Training (measured 2026-10-03).** OpenSplat 1.2.2 on libtorch CPU (`tools/train-splat.sh`). Poses go in as the
+  nerfstudio camera-to-world matrices with no change; a wrong convention fails loudly ("No cameras see any sparse
+  points"). Do not pass `--center`: without it the output stays in model metres. 480 frames at 480 x 270, 3,000 steps:
+  33 min on a shared 4-core machine, 1.1 GB. With 2,000 steps or fewer, set `--refine-every 250` or nothing densifies.
+  `--val-render` leaks about 40 MB a render: the OOM killer stopped one run. Do not edit `train-splat.sh` while a run
+  is going: bash reads the file as it goes, and the first run's conversion step died with a syntax error that the
+  finished file does not have.
+- Trained output has floaters out to 2 km (OpenSplat trains on a black background; sky becomes splats at random
+  depths). `tools/publish-trained-splat.mjs` keeps the flown box plus 150 m, -30 to 260 m OD and axes up to 25 m
+  (21,222 of 188,295 removed) and gives each splat its building, so the music visualiser works on it too.
+
+## Towers
+
+- `tools/build-towers.py` fits tiers to the 1 m DSM for the towers of 100 m and over; `docklands/data/towers.json`
+  replaces their prisms on the page (today only; the year slider keeps prisms).
+- The "2022" composite DSM merges only the 2017-12/2018-01 and 2020-12-12 flights: it is not an independent check of
+  2020. The independent check is the 2018 flight, for towers finished by January 2018.
+- Glass towers lose returns in the 2020 flight (58% of the roof cells for Novotel and Dollar Bay): use 2018 there.
+  Where 2020 has a gap, the composite fills it from near the ground (a 10 m hole at One Canada Square's apex):
+  treat such cells as no data.
+- OSM outlines lean in the aerial photos they were traced from: shift each footprint by whole metres (at most 4) onto
+  the LiDAR building before fitting.
+- Report roof RMSE on roof cells only. With walls in, a 1 m misfit at a 200 m wall is a 200 m error (raw RMSE 11 to
+  58 m means nothing).
+- Wikidata's 104.8 m for 33 Canada Square is probably the height of the next wing of Citigroup Centre; the DSM gives
+  78.5 m. Catalogue such differences; do not patch.
+
+## Trees and facades
+
+- `docklands/data/trees.json` (`tools/build-trees.mjs`): GLA public realm trees first, then TPO points, OSM, Forest
+  Research Trees Outside Woodland, each only where no kept tree is within 3 m. Only position, taxon, height, crown,
+  source and record id are kept (the Bristol rule applies here too). GLA canopy and green cover 2024 are all rights
+  reserved, Curio Canopy is CC BY-SA: not used. 20 TOW "lone trees" are over 35 m (cranes or structures): the page
+  leaves out trees over 35 m; they are not corrected in the file.
+- The page loads trees.json only when trees are shown (pixel art or the Trees switch) and draws the 18,516 within
+  900 m of the estate; the whole file as boxes would be about 30 MB of vertices on a phone.
+- `registry/sources/facades/`: measured bays and colours from CC BY and PD photos. Check against a known count where
+  one exists (One Canada Square: 19.9 bays measured, 19.8 known). Most recent Commons photos of the new towers are
+  CC BY-SA: look only. Commons and Flickr rate-limit the container (429, retry after 600 s).
+
 ## Measured lessons (the reasons behind the rules)
 
 - **OSM tags can hold lists.** Split on ";" for every tag on ingest (F2).

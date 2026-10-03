@@ -183,6 +183,20 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
   ArcGIS, VOA, GOV.UK search, Wikipedia search, FSA API, EA DSM history, feed providers); register entries that
   disagreed with the code corrected (postcodes/queries.json sources, hand-made museum and UKHO files).
 
+## 2026-10-03: pixel art, declutter, towers, trees, facades, trained splats
+
+- Pixel-art style: zoomed out, one art pixel per CSS pixel and no windows or outlines (no speckle); district colours;
+  water 1.2 m above its level. A variable used before its declaration stopped the page from loading; the headless
+  load test found it before the push.
+- Declutter (owner: "The city is the star not our endless word buttons"): a menu button opens a left drawer with the
+  views, Layers, Route and About (help text there); the record is a card at the bottom; labels are plain text.
+- Towers: 27 towers fitted from the LiDAR (roof RMSE 0.8 to 3.7 m) drawn as tiers; One Canada Square's pyramid.
+- Trees: 81,875 trees and 15,708 green areas from open sources; real trees in pixel art and under Show > Trees.
+- Facades: facts for 31 towers, 56 open photos with attribution; not yet used by the shader.
+- Splats: first trained set (OpenSplat, CPU, 3,000 steps), 167,073 splats after the crop, in the splat set menu.
+- Register: a check failure was committed once because the check output went through `tail`, which hid its exit
+  status; fixed in the next commit. Run the check on its own and read its exit code.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
