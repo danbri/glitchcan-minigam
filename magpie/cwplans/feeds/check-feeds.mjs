@@ -15,6 +15,13 @@
 import { readFileSync } from 'node:fs';
 
 const UA = 'glitchcan-cwplans/0.1 (https://github.com/danbri/glitchcan-minigam)';
+// politeness: at most one request at a time to a host, and 1 s between requests to the same host
+const hostQueue = new Map();
+function politely(u, fn) {
+  let h; try { h = new URL(u).host; } catch { return fn(); }
+  const run = async () => { try { return await fn(); } finally { await new Promise(res => setTimeout(res, 1000)); } };
+  const p = (hostQueue.get(h) || Promise.resolve()).then(run, run); hostQueue.set(h, p.catch(() => {})); return p;
+}
 const ORIGIN = 'https://danbri.github.io';
 const here = new URL('.', import.meta.url);
 const feeds = JSON.parse(readFileSync(new URL('feeds.json', here), 'utf8'));
@@ -56,7 +63,7 @@ let next = 0;
 async function worker() {
   while (next < jobs.length) {
     const job = jobs[next++];
-    const r = await probe(job);
+    const r = await politely(job.u, () => probe(job));
     const was = job.s.verified?.[job.kind === 'url' ? 'page_http' : `${job.kind}_http`];
     const row = { id: job.s.id, kind: job.kind, url: job.u, ...r, recorded: was ?? null };
     results.push(row);

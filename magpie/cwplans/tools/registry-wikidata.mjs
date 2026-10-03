@@ -5,9 +5,9 @@
 // People (Q5) and memorials are excluded (repo data-ethics rule), as items and as owner/occupant values.
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import { RAW, UA } from './lib.mjs';
+import { RAW, qlever } from './lib.mjs';
 
-const QLEVER = 'https://qlever.dev/api/wikidata';
+import { QLEVER } from './lib.mjs';
 const CENTRE = 'POINT(-0.0175 51.5040)', RADIUS_KM = 1.1;   // covers the Canary Wharf box (registry-osm.mjs CW_BOX)
 const PREFIX = `PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
@@ -16,11 +16,9 @@ PREFIX schema: <http://schema.org/>
 PREFIX geof: <http://www.opengis.net/def/function/geosparql/>
 PREFIX geo: <http://www.opengis.net/ont/geosparql#>`;
 const lab = v => `OPTIONAL { ${v} rdfs:label ${v}Label . FILTER(LANG(${v}Label) = "en") }`;
-async function q(sparql) {
-  const r = await fetch(QLEVER, { method: 'POST', headers: { 'User-Agent': UA, Accept: 'application/sparql-results+json', 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ query: PREFIX + '\n' + sparql }) });
-  if (!r.ok) throw new Error(`${r.status} ${(await r.text()).slice(0, 300)}`);
-  return (await r.json()).results.bindings;
-}
+// one query at a time, at least 1.5 s apart, retried with backoff on 429 and 5xx (lib.mjs qlever; owner, 2026-10-03:
+// "maybe the rate limiting should come from us?"). Repeating a PREFIX that lib.mjs also declares is allowed in SPARQL.
+const q = sparql => qlever(PREFIX + '\n' + sparql);
 const near = `?item wdt:P625 ?coord . BIND(geof:distance(?coord, "${CENTRE}"^^geo:wktLiteral) AS ?km) FILTER(?km < ${RADIUS_KM})`;
 const notPerson = `FILTER NOT EXISTS { ?item wdt:P31 wd:Q5 }`;
 

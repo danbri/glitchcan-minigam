@@ -123,7 +123,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 - Rules:
   - 2012 TQ3580 exists only at 0.5 m; the 1 m request returns a server error, not a ZIP
   - a ZIP already present is not fetched again
-  - Network: curl in sequence, 1200 s timeout, curl's own User-Agent (the project User-Agent is not set here); a failed download prints FAIL and the loop goes on; no retry.
+  - Network: curl in sequence, 1200 s timeout, User-Agent glitchcan-cwplans/0.1; a failed download prints FAIL and the loop goes on; no retry.
 - Inputs:
   - **ea-dsm-history** (Environment Agency LiDAR DSM survey tiles 1999 to 2022, OGL v3.0): https://environment.data.gov.uk/tiles/collections/survey/<product>/<year>/<res>/<tile>; GET a ZIP per product, year and tile: lidar_tiles_dsm 1999 (2 m), 2003 (1 m), 2007 (0.5 m), 2012 (1 m and 0.5 m), 2015 (1 m); national_lidar_programme_dsm 2018 and 2020 (1 m); lidar_composite_first_return_dsm 2022 (1 m); tiles TQ3575 and TQ3580
 - Outputs:
@@ -572,7 +572,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - People (Q5) are excluded as items and as property values, except architect (P84) and structural engineer (P631).
   - Items whose P31 label matches memorial, grave, cemetery, tomb or plaque are dropped.
   - Duplicate property values are removed.
-  - Network: QLever queries in sequence with no pause and no retry (this tool does not use tools/lib.mjs qlever, so the 1.5 s pacing rule of 2026-10-03 is not applied here); User-Agent glitchcan-cwplans/0.1; no cache.
+  - Network: QLever through tools/lib.mjs qlever(): one query at a time, at least 1.5 s apart, up to 5 tries with backoff on 429 and 5xx (owner rule, 2026-10-03); User-Agent glitchcan-cwplans/0.1; no cache.
   - Distance km rounded to 3 decimals; each item keeps its QID (an IRI key for the knowledge graph).
 - Inputs:
   - **wikidata** (Wikidata, CC0 1.0): https://qlever.dev/api/wikidata; SPARQL: items with P625 within 1.1 km of POINT(-0.0175 51.5040) that are not Q5, with English label and description
@@ -1723,7 +1723,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 - Method: Re-checks every catalogued feed and prints its HTTP status and CORS answer, and where it differs from feeds.json.
 - Rules:
   - An api is fetched only when the source has no sample; CORS counts when Access-Control-Allow-Origin is * or the site origin.
-  - Network: 6 requests at once across all hosts, no per-host gap, 30 s timeout, User-Agent glitchcan-cwplans/0.1, Origin https://danbri.github.io on api and sample requests; only the first chunk of each body is read. Nothing is written.
+  - Network: 6 workers, but at most one request at a time to a host and 1 s between requests to the same host, 30 s timeout, User-Agent glitchcan-cwplans/0.1, Origin https://danbri.github.io on api and sample requests; only the first chunk of each body is read. Nothing is written.
 - Inputs:
   - [feeds/feeds.json](feeds/feeds.json)
   - **feed-providers** (the publishers of the feeds and APIs listed in feeds/feeds.json and feeds/events.json, per entry in feeds.json): every url, api and sample URL in feeds/feeds.json; HTTP GET with Origin https://danbri.github.io; status, content type, CORS
@@ -1737,7 +1737,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 - Method: Re-checks the event and real-time feeds and prints status, CORS, item count, newest item date and the first titles.
 - Rules:
   - Item counts come from generic parsers and can differ from the hand-tuned samples in events.json.
-  - Network: 6 requests at once across all hosts, no per-host gap, 30 s timeout, User-Agent glitchcan-cwplans/0.1; a second request with the Origin header tests CORS. Nothing is written.
+  - Network: 6 workers, but at most one request at a time to a host and 1 s between requests to the same host, 30 s timeout, User-Agent glitchcan-cwplans/0.1; a second request with the Origin header tests CORS. Nothing is written.
 - Inputs:
   - [feeds/events.json](feeds/events.json)
   - **feed-providers** (the publishers of the feeds and APIs listed in feeds/feeds.json and feeds/events.json, per entry in feeds.json): every event and real-time feed URL in feeds/events.json; HTTP GET, with and without the Origin header; items and newest date by small generic parsers (ICS, RSS, Atom, JSON, schema.org Event JSON-LD)

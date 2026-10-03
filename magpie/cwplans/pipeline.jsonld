@@ -610,7 +610,7 @@
     "People (Q5) are excluded as items and as property values, except architect (P84) and structural engineer (P631).",
     "Items whose P31 label matches memorial, grave, cemetery, tomb or plaque are dropped.",
     "Duplicate property values are removed.",
-    "Network: QLever queries in sequence with no pause and no retry (this tool does not use tools/lib.mjs qlever, so the 1.5 s pacing rule of 2026-10-03 is not applied here); User-Agent glitchcan-cwplans/0.1; no cache.",
+    "Network: QLever through tools/lib.mjs qlever(): one query at a time, at least 1.5 s apart, up to 5 tries with backoff on 429 and 5xx (owner rule, 2026-10-03); User-Agent glitchcan-cwplans/0.1; no cache.",
     "Distance km rounded to 3 decimals; each item keeps its QID (an IRI key for the knowledge graph)."
    ],
    "cwp:network": true,
@@ -2969,7 +2969,7 @@
    "cwp:rule": [
     "2012 TQ3580 exists only at 0.5 m; the 1 m request returns a server error, not a ZIP",
     "a ZIP already present is not fetched again",
-    "Network: curl in sequence, 1200 s timeout, curl's own User-Agent (the project User-Agent is not set here); a failed download prints FAIL and the loop goes on; no retry."
+    "Network: curl in sequence, 1200 s timeout, User-Agent glitchcan-cwplans/0.1; a failed download prints FAIL and the loop goes on; no retry."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -3982,7 +3982,7 @@
    "cwp:kind": "check",
    "cwp:rule": [
     "An api is fetched only when the source has no sample; CORS counts when Access-Control-Allow-Origin is * or the site origin.",
-    "Network: 6 requests at once across all hosts, no per-host gap, 30 s timeout, User-Agent glitchcan-cwplans/0.1, Origin https://danbri.github.io on api and sample requests; only the first chunk of each body is read. Nothing is written."
+    "Network: 6 workers, but at most one request at a time to a host and 1 s between requests to the same host, 30 s timeout, User-Agent glitchcan-cwplans/0.1, Origin https://danbri.github.io on api and sample requests; only the first chunk of each body is read. Nothing is written."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -4015,7 +4015,7 @@
    "cwp:kind": "check",
    "cwp:rule": [
     "Item counts come from generic parsers and can differ from the hand-tuned samples in events.json.",
-    "Network: 6 requests at once across all hosts, no per-host gap, 30 s timeout, User-Agent glitchcan-cwplans/0.1; a second request with the Origin header tests CORS. Nothing is written."
+    "Network: 6 workers, but at most one request at a time to a host and 1 s between requests to the same host, 30 s timeout, User-Agent glitchcan-cwplans/0.1; a second request with the Origin header tests CORS. Nothing is written."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,

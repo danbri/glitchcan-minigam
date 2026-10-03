@@ -339,6 +339,9 @@ Owner instruction, 2026-10-03: "record ALL our data methods in skills or other c
 - Found, not fixed (code): `registry-wikidata.mjs` calls QLever with no pause and no retry (it does not use
   `tools/lib.mjs` `qlever()`); `fetch-dsm.sh` does not send the project User-Agent; `check-feeds.mjs` and
   `check-events.mjs` run 6 requests at once with no per-host gap.
+  Fixed the same day (main session): `registry-wikidata.mjs` now uses `lib.mjs` `qlever()` (output unchanged: 288
+  items, 3 memorials dropped, 17 headquarters); `fetch-dsm.sh` sends the project User-Agent; the two feed checkers
+  send at most one request at a time to a host, 1 s apart.
 
 ## Open, in the order proposed
 

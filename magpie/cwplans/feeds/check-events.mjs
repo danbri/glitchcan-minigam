@@ -23,6 +23,13 @@
 import { readFileSync } from 'node:fs';
 
 const UA = 'glitchcan-cwplans/0.1 (https://github.com/danbri/glitchcan-minigam)';
+// politeness: at most one request at a time to a host, and 1 s between requests to the same host
+const hostQueue = new Map();
+function politely(u, fn) {
+  let h; try { h = new URL(u).host; } catch { return fn(); }
+  const run = async () => { try { return await fn(); } finally { await new Promise(res => setTimeout(res, 1000)); } };
+  const p = (hostQueue.get(h) || Promise.resolve()).then(run, run); hostQueue.set(h, p.catch(() => {})); return p;
+}
 const ORIGIN = 'https://danbri.github.io';
 
 const decode = s => (s || '')
@@ -213,7 +220,7 @@ async function main() {
       const s = srcs[next++];
       const u = s.feed || s.url;
       if (!u || /[{}]/.test(u)) continue;
-      const r = await probe(u, { headers: s.request_headers || {}, body: s.request_body });
+      const r = await politely(u, () => probe(u, { headers: s.request_headers || {}, body: s.request_body }));
       const row = { id: s.id, url: u, ...r, recorded_http: s.verified?.http ?? null, recorded_items: s.sample?.items ?? null };
       delete row.titles_full;
       results.push(row);
