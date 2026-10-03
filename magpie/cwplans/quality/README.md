@@ -7,16 +7,16 @@ Re-run after any rebuild:
 
     node magpie/cwplans/tools/audit-quality.mjs
 
-The audit does not correct anything. It measures the same 27 checks on every rebuild, so that the rules for combining sources (the compositing layers) are designed from the error classes that actually occur, and so that a rule change shows up as a change in the counts.
+The audit does not correct anything. It measures the same 28 checks on every rebuild, so that the rules for combining sources (the compositing layers) are designed from the error classes that actually occur, and so that a rule change shows up as a change in the counts.
 
 ## Summary (2026-10-03)
 
-1,564 issue records from 27 checks. 154 of the 1,129 buildings and 44 postcodes have at least one issue. Severity: 8 high, 732 medium, 824 low.
+1,684 issue records from 28 checks. 159 of the 1,129 buildings and 44 postcodes have at least one issue. Severity: 8 high, 818 medium, 858 low.
 
 | class | what goes wrong | checks | main numbers |
 |---|---|---|---|
 | identity | one thing has two records, or two things share one record | ID-1 to ID-4 | 3 Wikidata items on 2 outlines each (OSM tags the same item twice); 78 occupants recorded by two sources and not merged, 5 mapped twice in OSM; 20 buildings named after an occupant |
-| position | a point is placed in the wrong building, or its position means something else | SP-1 to SP-5 | 412 of 764 FSA positions (54%) are postcode centres or shared points; 161 of 761 named OSM occupants are outside every outline; OSM and FSA put the same branch a median 34 m apart (90th percentile 107 m, maximum 258 m) |
+| position | a point is placed in the wrong building, or its position means something else | SP-1 to SP-6 | 86 of 181 mall or below-ground occupants are placed by a 2D test in an outline that is not their mall (the malls run under several buildings); 412 of 764 FSA positions (54%) are postcode centres or shared points; 161 of 761 named OSM occupants are outside every outline; OSM and FSA put the same branch a median 34 m apart (90th percentile 107 m, maximum 258 m) |
 | attribute conflict | sources give different values for one attribute | AT-1 to AT-4 | 46 of 72 occupants have a CWG mall level that differs from the OSM level, in a pattern that depends on the mall; 9 buildings are newer than the LiDAR; 6 floor counts differ between OSM and Wikidata |
 | validity | a value is not in the form the tools expect | VA-1 to VA-4 | 100 of 881 OSM level values are lists or fractions ("0;1", "-3;-2", "0.5"); 20 features carry a terminated postcode |
 | pipeline | our own tools damage the data | PL-1, PL-2 | 79 OSM features carry several postcodes in one tag and our tools read the list as one invalid postcode: 247 postcode links lost; 52 branch addresses read "Unit Unit" because a tool adds "Unit " to a value that has it |
@@ -32,6 +32,8 @@ The audit does not correct anything. It measures the same 27 checks on every reb
 
 **Positions have a precision and a meaning.** "Has coordinates" is not enough. An FSA point at the postcode centre places a business in a postcode, not in a building (SP-3). A Wikidata museum object is at its museum (SE-2). A Portable Antiquities find is at the centre of a 1 km box. Each position needs a precision class and a relation type before it can go on a map or into a containment test.
 
+**The estate is three-dimensional; the joins are not.** The Canary Wharf malls (Cabot Place, Canada Place, Jubilee Place, Crossrail Place) and the passages between them run below and through several building footprints. A point-in-outline test puts a mall shop in whatever building is above it: Boots at Canada Place landed in The Ivy (by proximity, 2 m), Nicolas in the One Canada Square mall landed in Crossrail Place (SP-6, 86 cases). Occupants of a mall need the mall as their container, with level, and the building above only as context.
+
 **Levels are labels, not heights.** The OSM `level` tag is a floor index chosen by mappers. The CWG directory uses the estate's own names ("Mall Level -1", "Street Level 0"). AT-3 shows the offset between them depends on the mall: in Cabot Place, Canada Place, Crossrail Place and One Canada Square the CWG level is mostly the OSM level minus 1 (19 of 26 in Cabot Place); in Jubilee Place and Churchill Place they mostly agree. This is a scheme difference, not mapper error, and it can be measured and stored as a per-mall table. Heights in m OD come only from published slab levels (the Crossrail Place figures).
 
 **Several "errors" are ours.** PL-1 and PL-2 are faults in this project's tools, found by the audit: OSM's ";" lists are not split, and a label is added to a free-text field. They affect every rebuild until the parsers are fixed and tested on fixtures. The audit checks for both, so the counts will drop to zero when the tools are fixed.
@@ -44,7 +46,7 @@ The classes above suggest five layers. Each layer is rebuilt from the one below;
 
 1. **Source records.** As fetched, never changed: source, record id, fetch date, licence, raw fields. (Today: `data/raw/` and `registry/sources/`.)
 2. **Normalised observations.** One parser per source that splits lists (PL-1), parses levels into ranges (VA-2), splits addresses into fields (PL-2, VA-1), validates postcodes against the current ONSPD and keeps terminated ones as history (VA-3), adds a precision class and relation type to every position (SP-3, SE-2), maps categories through one crosswalk (AT-4), and states the datum of every height or level.
-3. **Links.** Entity ids (`cwb-` for buildings; an occupant id still to be designed) and a link record for every join: the two records, method, distance, confidence, date. One item to one outline (ID-1). Same-name occupants in one building are merged only through a second key (ID-2).
+3. **Links.** Entity ids (`cwb-` for buildings; mall or complex ids for the malls; an occupant id still to be designed) and a link record for every join: the two records, method, distance, confidence, date. One item to one outline (ID-1). Same-name occupants in one building are merged only through a second key (ID-2).
 4. **Composite attributes.** For each attribute, a precedence rule and a tolerance. All values are kept; the rule picks the one to show, and a conflict beyond the tolerance becomes a flag:
 
    | attribute | first choice | then | flag when |
@@ -53,7 +55,8 @@ The classes above suggest five layers. Each layer is rebuilt from the one below;
    | height | LiDAR (buildings older than the survey) | OSM tag or Wikidata for newer buildings | differ by more than 10 m and 10% (AT-1) |
    | floors above ground | OSM `building:levels` | Wikidata | differ by 2 or more, or storey height outside 2.5–6 m (AT-2) |
    | floors below ground | OSM `building:levels:underground` | Wikidata | no source: unknown, not zero |
-   | occupant position | OSM point inside the outline | FSA point only if not a postcode centre; CWG mall | OSM and FSA more than 50 m apart (SP-4) |
+   | occupant container | CWG mall or OSM indoor area with level | OSM point inside the outline (street-level shops only) | the mall and the footprint building differ (SP-6) |
+   | occupant position | OSM point | FSA point only if not a postcode centre | OSM and FSA more than 50 m apart (SP-4) |
    | occupant level | OSM level (index) | CWG level through the per-mall offset table | the two disagree after the offset |
    | occupant category | project vocabulary through the crosswalk | source category kept | crosswalk pair crosses families (AT-4) |
    | "is here now" | seen in a source dated within 12 months | older sightings marked as history | only in a source older than 12 months (TM-2) |

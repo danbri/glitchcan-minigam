@@ -146,6 +146,21 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
   c.population = pop; ex(c, rows.sort((a, b) => b.metres - a.metres));
 }
 
+{
+  const c = { id: 'SP-6', cls: 'position', dim: 'accuracy', title: 'Mall or below-ground occupant placed by a 2D footprint', sources: ['osm', 'fsa', 'cwg'],
+    method: 'Occupants in a mall (CWG) or below ground (OSM level under 0, or a CWG "Mall Level -1"/"Lower Mall" level) that the registry placed in an outline which is not that mall and has no recorded floor below ground. The Canary Wharf malls run under several building footprints, so a point-in-outline test assigns their shops to whichever building is above.', rule: 'Place mall and below-ground occupants in the mall (a 3D volume or a named complex) by its own key (CWG mall, OSM indoor and level), not by the 2D outline above them; keep the footprint building only as "above".' };
+  const add = check(c), rows = [], kinds = { 'mall names another complex': 0, 'below ground, building has no basement record': 0 }; let pop = 0;
+  for (const b of REG.buildings) for (const o of b.occupants) {
+    const below = (levelNum(o.level) ?? 0) < 0 || (cwgLevel(o.level_cwg) ?? 0) < 0 || /lower mall/i.test(o.level_cwg || '');
+    if (!o.mall && !below) continue; pop++;
+    const names = [b.name, b.osm_name].filter(Boolean).map(norm), m = o.mall && norm(o.mall);
+    const where = `${o.mall || 'below ground'}${o.level_cwg ? ', ' + o.level_cwg : o.level != null ? ', level ' + o.level : ''}`;
+    if (m && !names.some(x => x.includes(m) || m.includes(x))) { kinds['mall names another complex']++; rows.push({ building: b.id, building_name: b.name, occupant: o.name, mall: o.mall, level: o.level ?? o.level_cwg, placed: o.placed }); add({ ent: 'b', id: b.id, sev: 'medium', note: `${o.name} (${where}) placed in ${b.name || b.id} (${o.placed})` }); }
+    else if (!m && below && !(b.levels_underground > 0)) { kinds['below ground, building has no basement record']++; add({ ent: 'b', id: b.id, sev: 'low', note: `${o.name} (${where}) in ${b.name || b.id}, which has no recorded floor below ground` }); }
+  }
+  c.population = pop; c.breakdown = kinds; ex(c, rows, 10);
+}
+
 // ===== C. attribute conflicts
 {
   const c = { id: 'AT-1', cls: 'attribute conflict', dim: 'accuracy', title: 'Building heights disagree between sources', sources: ['osm', 'wikidata', 'lidar'],
