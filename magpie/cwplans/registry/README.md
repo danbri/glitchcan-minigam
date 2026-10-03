@@ -73,8 +73,9 @@ Sources and access are described in `sources/SOURCES-companies-property.md`. Rul
 
 `sources/brands/` (method and the full branch table in its README): the UK brands of the OSM name-suggestion-index (BSD-3-Clause), found at Canary Wharf in OSM, the FSA data and the Canary Wharf Group directory. canarywharf.com blocks scripts, so the CWG directory comes from Internet Archive copies (sitemap of March 2026, entry pages mostly from November 2025) and can be months out of date. 271 branches of 211 brands. In the registry, 211 existing occupants gained their brand, mall, CWG page and store page; 35 branches were added as occupants (marked "approximate" when the position is only a mall or postcode centre); 25 could not be placed in a building.
 
-## Not yet joined
+## Wet areas and museum records (added 2026-10-03)
 
-Background work on 2026-10-03 is collecting Port of London Authority and museum records.
+- `sources/pla/`: UKHO INSPIRE bathymetry of the Thames (PLA multibeam survey 2013–2017; 25 m grid west of −0.0133°, 50 m east of it; heights above Admiralty Chart Datum; the PLA Tide Booklet 2025 gives chart datum as 3.20 m below ODN at London Bridge and 3.35 m at North Woolwich), the HMS Belfast berth survey, and UKHO wrecks and obstructions. Open Government Licence; not for navigation. The PLA's own layers (navigation channels, mean high water mark, wharves and piers, foreshore zones, tidal flow model) carry no licence statement and the Canal & River Trust layers forbid commercial use: both are kept locally, not published.
+- `sources/museums/`: 6,629 open records with positions (Wikidata CC0, Historic England OGL, OGL and CC-BY records from the ADS/ARIADNE catalogue), and the Greater London Archaeological Priority Areas (OGL). Most Wikidata records are objects kept in a museum in the box (the coordinate is where the object is kept, not where it was found). Records flagged as burials or memorials are not published.
 
 Canary Wharf Group's own pages (canarywharf.com) could not be read: the site returns a bot-challenge page to scripts.
