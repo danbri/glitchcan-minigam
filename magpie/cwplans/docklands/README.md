@@ -92,7 +92,9 @@ The screen shows only the city, two round buttons at the top left and the attrib
 - Tap a building or a label: its record opens in a card at the bottom. Drag the card's handle to resize it, tap the handle to step through the sizes, or close it with its cross. Records have "Route from here" and "Route to here".
 - Press and hold anywhere on the model: a menu offers "Route from here" and "Route to here" at the nearest mapped walkway or platform on screen (among the points not cut away). When both ends are set, the route is found at once.
 - Map labels are plain text with a dark halo, not boxes.
-- In the pixel-art style, two round arrow buttons at the top right turn the view.
+- Two fingers: twist to turn the view (both styles). In pixel art, one finger moves, two fingers pinch to zoom and move up or down to tilt; with a mouse, right or Shift drag turns and tilts. The round arrow buttons at the top right turn by a quarter.
+- A finger that lands on a label still joins the drag, pinch or twist; a tap on a label opens its record.
+- Music: "Play your own file…" is a button (a label for the file input, so phones open their file picker); the file plays only in the browser.
 - On a wide screen the record card docks at the bottom right and the drawer does not dim the map.
 
 ## Ground images (added 2026-10-03)

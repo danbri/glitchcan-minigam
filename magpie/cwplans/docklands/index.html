@@ -14,7 +14,7 @@ a{color:var(--link)}
 #wrap{position:fixed;inset:0}
 canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:2px 3px;border:0;background:none;color:var(--fg);pointer-events:auto;cursor:pointer;text-shadow:0 0 2px #000,0 0 3px #000,0 1px 4px #000c}
+.lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:2px 3px;border:0;background:none;color:var(--fg);pointer-events:auto;cursor:pointer;touch-action:none;text-shadow:0 0 2px #000,0 0 3px #000,0 1px 4px #000c}
 .lb.st{font-size:12px;font-weight:600;color:#ffd9bf}.lb.pl{font-style:italic;color:#d7dce0}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border:1px solid #ffd26f;border-radius:5px;background:#0d1013d9}.lb.src{border-color:#ffd26f;color:#ffe7a8}.lb.occ{border-color:#ff5fa2;color:#ffd1e6;font-size:10px}.lb.her{border-color:#b48cff;color:#e2d4ff}.lb.end{border-color:var(--acc);color:#c9ffd6;font-weight:600}
 button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px;cursor:pointer}
 button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
@@ -95,6 +95,9 @@ select,input[list]{font:inherit;font-size:16px;background:#293038;color:var(--fg
 .sw{width:12px;height:12px;display:inline-block;margin-right:5px;vertical-align:-1px;border-radius:2px}
 .ramp{display:inline-block;width:120px;height:9px;border-radius:4px;vertical-align:middle;margin:0 6px}
 .tag{display:inline-block;padding:0 5px;border-radius:4px;background:#232a31;color:var(--muted);font-size:12px;margin-left:3px}
+.filebtn{display:inline-block;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px;cursor:pointer}
+#vizFile{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+#vizFile:focus-visible+.filebtn,.filebtn:has(+#vizFile:focus-visible){outline:2px solid var(--link)}
 .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.acts button{font-size:13px;padding:7px 11px}
 table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
 .tw{overflow-x:auto;max-width:100%}
@@ -142,7 +145,7 @@ body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer
       <div class="chips" role="radiogroup" aria-label="Style">
         <label><input type="radio" name="style" value="normal" checked> Map</label><label><input type="radio" name="style" value="pixel"> Isometric pixel art</label>
       </div>
-      <p class="small" id="pixNote" hidden>Pixel art: an isometric view in a 33-colour palette with stylised trees, people, cyclists, buses, cabs, now and then a police car, ambulance or fire engine, gulls, river traffic (Thames Clipper catamarans, tourist boats, tugs towing waste barges, aggregate barges, speedboats) and swimmers in Eden Dock. Drag to move, pinch or wheel to zoom, the arrows at the top turn the view. The animals and traffic are illustrative, not live data.</p>
+      <p class="small" id="pixNote" hidden>Pixel art: an isometric view in a 33-colour palette with stylised trees, people, cyclists, buses, cabs, now and then a police car, ambulance or fire engine, gulls, river traffic (Thames Clipper catamarans, tourist boats, tugs towing waste barges, aggregate barges, speedboats) and swimmers in Eden Dock. Drag to move, pinch or wheel to zoom, twist two fingers to turn, move two fingers up or down to tilt (mouse: right or Shift drag). The arrows at the top right turn by a quarter. The animals and traffic are illustrative, not live data.</p>
       <h3>Ground image</h3>
       <div class="chips" role="radiogroup" aria-label="Ground image">
         <label><input type="radio" name="ground" value="none" checked> Plain</label>
@@ -171,7 +174,7 @@ body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer
       <p class="small" id="splatNote">Splats are drawn back to front and tested against the model's depth, so towers, glow outlines and routes stay in front of or behind them correctly. "Splats only" keeps the model in the depth buffer without drawing it.</p>
       <h3 id="music">Music: the towers as a visualiser</h3>
       <div class="row"><select id="vizTrack" aria-label="Track"><option value="">Loading the track list…</option></select><button type="button" id="vizGo">▶ Play</button></div>
-      <input type="file" id="vizFile" accept="audio/*" hidden>
+      <div class="row"><label class="filebtn" for="vizFile">♫ Play your own file…</label><input type="file" id="vizFile" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac"></div>
       <div class="ctl"><label for="vizStretch">Stretch</label><input id="vizStretch" type="range" min="0" max="2" step=".05" value=".8"></div>
       <div class="ctl"><label for="vizNoise">Noise</label><input id="vizNoise" type="range" min="0" max="2" step=".05" value=".35"></div>
       <div class="ctl"><label for="vizSwirl">Swirl</label><input id="vizSwirl" type="range" min="0" max="2" step=".05" value=".5"></div>
@@ -211,7 +214,7 @@ body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer
       <h2>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</h2>
       <p class="small"><a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · map data <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA LiDAR, aerial photography and flood defences (OGL), UKHO (OGL), Wikidata (CC0), Copernicus Sentinel-2 · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data licences</a></p>
       <p class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). The depth gauge ("Below ground" in the menu) removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height setting. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</p>
-      <h3>How to use it</h3><p class="small">One finger: rotate. Two fingers: move and zoom. Tap a building or label: its record. Press and hold: route from or to that point. The menu (top left) has the views, the layers, the route finder and this page. "Below ground" in the menu shows the depth gauge on the left: drag it down to cut away everything above that level.</p><p class="small">Isometric pixel art (Layers, Style): drag to move, pinch or wheel to zoom, the arrows at the top right turn the view.</p>
+      <h3>How to use it</h3><p class="small">One finger: rotate. Two fingers: move, zoom, and twist to turn. Tap a building or label: its record. Press and hold: route from or to that point. The menu (top left) has the views, the layers, the route finder and this page. "Below ground" in the menu shows the depth gauge on the left: drag it down to cut away everything above that level.</p><p class="small">Isometric pixel art (Layers, Style): drag to move, pinch or wheel to zoom, twist two fingers to turn, move two fingers up or down to tilt. With a mouse: right or Shift drag turns and tilts. The arrows at the top right turn the view by a quarter.</p>
       <details id="liveBox"><summary>Live data</summary>
         <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of checked sources is at <a href="../feeds/">feeds</a>.</p>
         <div class="row"><button type="button" id="liveGo">Load live data</button></div>
@@ -598,22 +601,32 @@ function render() {
   placeLabels();
 }
 
-// ---------- input: drag rotates, right/shift/two-finger drag pans, wheel/pinch zooms
+// ---------- input: drag rotates, right/shift/two-finger drag pans, wheel/pinch zooms, two-finger twist turns.
+// Pixel art: drag pans, right/shift drag turns and tilts, two-finger twist turns, two fingers up or down tilt.
 const ptrs = new Map(); let pinch = null;
-const mid = () => { const v = [...ptrs.values()]; return [(v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2, Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1])]; };
+const mid = () => { const v = [...ptrs.values()]; return [(v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2, Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]), Math.atan2(v[1][1] - v[0][1], v[1][0] - v[0][0])]; };
 function pan(dx, dy) { const k = cam.dist * .0012, c = Math.cos(cam.yaw), s = Math.sin(cam.yaw); cam.tx -= (c * dx + s * dy) * k; cam.tz -= (-s * dx + c * dy) * k; }
 const zoom = f => { cam.dist = Math.max(80, Math.min(16000, cam.dist * f)); };
 cv.addEventListener('contextmenu', e => e.preventDefault());
 cv.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY, e.button === 2 || e.shiftKey]); cv.setPointerCapture(e.pointerId); if (ptrs.size === 2) pinch = mid(); });
-cv.addEventListener('pointermove', e => {
+function gMove(e) {
   const last = ptrs.get(e.pointerId); if (!last) return; const cur = [e.clientX, e.clientY, last[2]]; ptrs.set(e.pointerId, cur);
-  if (ptrs.size === 2 && pinch) { const m = mid(); zoom(pinch[2] / Math.max(1, m[2])); pan(m[0] - pinch[0], m[1] - pinch[1]); pinch = m; unview(); draw(); return; }
+  if (ptrs.size === 2 && pinch) { const m = mid(); zoom(pinch[2] / Math.max(1, m[2])); let da = m[3] - pinch[3]; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; cam.yaw += da;   // twist: the scene turns with the fingers
+    if (PIX.on) cam.pitch = Math.max(.2, Math.min(1.5695, cam.pitch + (m[1] - pinch[1]) * .003)); else pan(m[0] - pinch[0], m[1] - pinch[1]);
+    pinch = m; unview(); draw(); return; }
   if (ptrs.size !== 1) return; const dx = cur[0] - last[0], dy = cur[1] - last[1];
-  if (cur[2] || PIX.on) pan(dx, dy); else { cam.yaw -= dx * .006; cam.pitch = Math.max(-.6, Math.min(1.5695, cam.pitch + dy * .006)); }
+  if (cur[2] !== PIX.on) pan(dx, dy); else { cam.yaw -= dx * .006; cam.pitch = Math.max(PIX.on ? .2 : -.6, Math.min(1.5695, cam.pitch + dy * .006)); }
   unview(); draw();
-});
+}
+cv.addEventListener('pointermove', gMove);
 const end = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
 cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+// a finger that lands on a label is still part of a drag, pinch or twist; a tap on a label still opens its record
+{ let lbDown = null, lbMoved = false;
+  labelBox.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY, e.button === 2 || e.shiftKey]); if (ptrs.size === 2) pinch = mid(); lbDown = [e.clientX, e.clientY]; lbMoved = ptrs.size > 1; });
+  labelBox.addEventListener('pointermove', e => { if (lbDown && Math.hypot(e.clientX - lbDown[0], e.clientY - lbDown[1]) > 8) lbMoved = true; gMove(e); });
+  labelBox.addEventListener('pointerup', end); labelBox.addEventListener('pointercancel', end);
+  labelBox.addEventListener('click', e => { if (lbMoved) { e.stopPropagation(); e.preventDefault(); } lbMoved = false; lbDown = null; }, true); }
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .001)); unview(); draw(); }, { passive: false });
 ['bmode', 'showLabels', 'showRoads', 'showUnder'].forEach(id => $(id).onchange = draw);
 $('showWalls').onchange = draw; $('showBed').onchange = draw; $('showWindows').onchange = draw;
@@ -902,7 +915,7 @@ loadJSON('data/splats/index.json').then(ix => { $('splatSet').innerHTML = ix.set
 // ---------- music visualiser: Web Audio analyser -> 24 log-spaced bands -> the splat shader (stretch, swirl, noise)
 const AUD = { ctx: null, an: null, el: null, src: null, mic: null, data: null, loop: 0 };
 loadJSON('data/music.json').then(m => { AUD.list = m.tracks;
-  $('vizTrack').innerHTML = m.tracks.map((t, i) => `<option value="${i}">${esc(t.title)} (${esc(t.artist)})</option>`).join('') + '<option value="file">Your own file…</option><option value="mic">Microphone</option>'; }).catch(() => { $('vizTrack').innerHTML = '<option value="file">Your own file…</option><option value="mic">Microphone</option>'; });
+  $('vizTrack').innerHTML = m.tracks.map((t, i) => `<option value="${i}">${esc(t.title)} (${esc(t.artist)})</option>`).join('') + '<option value="mic">Microphone</option>'; }).catch(() => { $('vizTrack').innerHTML = '<option value="file">Your own file…</option><option value="mic">Microphone</option>'; });
 function vizBands() {
   const an = AUD.an, d = AUD.data, sr = AUD.ctx.sampleRate, nb = d.length, hz = i => i * sr / 2 / nb; an.getByteFrequencyData(d);
   for (let k = 0; k < VIZ_BANDS; k++) {
@@ -915,7 +928,6 @@ function vizBands() {
 function vizTick() { if (!VIZ.on) return; vizBands(); if (VIZ.orbit && !cam.eye) cam.yaw += .0016; draw(); AUD.loop = requestAnimationFrame(vizTick); }
 async function vizStart() {
   const v = $('vizTrack').value;
-  if (v === 'file') { $('vizFile').click(); return; }
   if (!AUD.ctx) { AUD.ctx = new (window.AudioContext || window.webkitAudioContext)(); AUD.an = AUD.ctx.createAnalyser(); AUD.an.fftSize = 2048; AUD.an.smoothingTimeConstant = .7; AUD.data = new Uint8Array(AUD.an.frequencyBinCount); }
   await AUD.ctx.resume();
   if (v === 'mic') { AUD.mic = await navigator.mediaDevices.getUserMedia({ audio: true }); AUD.src = AUD.ctx.createMediaStreamSource(AUD.mic); AUD.src.connect(AUD.an); $('vizNote').textContent = 'Listening to the microphone (nothing is recorded or sent).'; }
@@ -927,7 +939,7 @@ async function vizPlayUrl(url, t) {
   AUD.el.src = url; await AUD.el.play();
   $('vizNote').innerHTML = t ? `“${esc(t.title)}” by ${esc(t.artist)}, ${esc(t.licence)}, <a href="${esc(t.page)}">${esc(t.source)}</a>.` : 'Your file plays only in this browser; nothing is uploaded.';
 }
-$('vizFile').onchange = async () => { const f = $('vizFile').files[0]; if (!f) return; if (!AUD.ctx) { $('vizTrack').value = AUD.list ? '0' : 'mic'; } await vizStartFile(f); };
+$('vizFile').onchange = () => { const f = $('vizFile').files[0]; $('vizFile').value = ''; if (!f) return; (VIZ.on ? Promise.resolve(vizStop()) : Promise.resolve()).then(() => vizStartFile(f)).catch(e => { toast('Your file did not play: ' + e.message); vizStop(); }); };
 async function vizStartFile(f) {
   if (!AUD.ctx) { AUD.ctx = new (window.AudioContext || window.webkitAudioContext)(); AUD.an = AUD.ctx.createAnalyser(); AUD.an.fftSize = 2048; AUD.an.smoothingTimeConstant = .7; AUD.data = new Uint8Array(AUD.an.frequencyBinCount); }
   await AUD.ctx.resume(); await vizPlayUrl(URL.createObjectURL(f), null); await vizOn();
