@@ -372,21 +372,33 @@ if (has('registers/gias.json')) {
     ['charities', 'charities.json', r => ({ charity_number: r.charity_number, ...(r.company_number ? { company_number: r.company_number } : {}) }), r => r.status === 'registered', () => null],
     ['fsa-pubs', 'fsa-pubs.json', r => ({ fhrs_id: +r.id.replace('fhrs:', '') }), () => true, () => null],
   ];
+  // a care-of or accountant's address is where letters go, not where the organisation works (like SE-1)
+  const CARE_OF = /\bc\/o\b|\bcare of\b|accountant|accounts direct/i;
+  // a street the address names ("71-75 SHELTON STREET"): when the postcode alone would place the record, the building must
+  // be on that street (a virtual-office address with an E14 postcode is not in E14)
+  const STREET = /\b\d+[a-z]?(?:\s*-\s*\d+[a-z]?)?,?\s+((?:[a-z']+\s+){0,3}(?:street|road|place|square|walk|lane|avenue|way|crescent|colonnade|circus|drive|grove|passage|terrace|quay|court|wall|row|gardens))\b/i;
   const st = {};
   for (const [reg, file, ids, current, exclude] of REGS) {
     if (!has('registers/' + file)) continue;
     const s = st[reg] = { records: 0, placed_by: {}, joined_existing: 0, added: 0, unplaced_by: {} };
     const miss = (r, why) => { s.unplaced_by[why] = (s.unplaced_by[why] || 0) + 1; regOut.unplaced.push({ register: reg, id: r.id, name: r.name, postcode: r.postcode || null, in_box: !!r.in_box, why }); };
-    for (const r of readJ('registers/' + file).records) {
+    const RS = readJ('registers/' + file).records;
+    // a UPRN that one register gives to records at two or more postcodes names an office that handles them (GIAS gives
+    // the council's UPRN to several schools), not each place
+    const uprnPcs = new Map(); for (const r of RS) if (r.uprn) uprnPcs.set(String(r.uprn), new Set([...(uprnPcs.get(String(r.uprn)) || []), r.postcode]));
+    for (const r of RS) {
       s.records++;
-      const ex = exclude(r); if (ex) { miss(r, ex); continue; }
+      const ex = exclude(r) || (CARE_OF.test(r.address || '') ? 'care-of or accountant address (not where it works)' : null); if (ex) { miss(r, ex); continue; }
       const pc = r.postcode ? normPc(r.postcode) : null, mallName = placeIn(r.address), mall = CWG_MALLS.has(mallName) ? mallName : null;
       const link = { register: reg, id: r.id, kind: r.kind, status: r.status, ...(r.url ? { url: r.url } : {}) };
       // FSA pubs are FSA premises the registry already holds when their FHRS id is an occupant
       if (reg === 'fsa-pubs' && byFhrs.has(r.id.replace('fhrs:', ''))) { const c = byFhrs.get(r.id.replace('fhrs:', '')); (c.o.registers ||= []).push({ ...link, key: 'FHRS id', precision: 'same FSA premises', confidence: 'high' }); s.joined_existing++; s.placed_by['FHRS id'] = (s.placed_by['FHRS id'] || 0) + 1; continue; }
       let home = null, above = null;
       // 1. UPRN
-      if (r.uprn && uprnPt.has(String(r.uprn))) { const [lon, lat] = uprnPt.get(String(r.uprn)), h = buildingAt(lon, lat, 0); if (h) home = { id: h.b.id, key: 'UPRN', precision: 'OS Open UPRN point inside the outline', confidence: 'high' }; }
+      const u = r.uprn ? String(r.uprn) : null, up = u && uprnPt.get(u);
+      if (up && uprnPcs.get(u).size > 1) s.uprn_rejected_shared = (s.uprn_rejected_shared || 0) + 1;
+      else if (up && r.position === 'source' && r.lat != null && Math.hypot((up[0] - r.lon) * mPerDeg[0], (up[1] - r.lat) * mPerDeg[1]) > 150) s.uprn_rejected_far_from_own_point = (s.uprn_rejected_far_from_own_point || 0) + 1;
+      else if (up) { const h = buildingAt(up[0], up[1], 0); if (h) home = { id: h.b.id, key: 'UPRN', precision: 'OS Open UPRN point inside the outline', confidence: 'high' }; else s.uprn_point_in_no_outline = (s.uprn_point_in_no_outline || 0) + 1; }
       // 2. the register's own point (an FSA point within 3 m of its postcode centre is a postcode, F7)
       if (!home && r.position === 'source' && r.lat != null && inBox(r.lon, r.lat)) {
         const p = pcs.get(pc), atPc = p?.lat && Math.hypot((+p.lon - r.lon) * mPerDeg[0], (+p.lat - r.lat) * mPerDeg[1]) <= 3;
@@ -402,10 +414,21 @@ if (has('registers/gias.json')) {
       const namedB = [...new Set(named.map(c => c.r.id))];
       if (!home && namedB.length === 1) home = { id: namedB[0], key: 'name + postcode', precision: 'an occupant of this building has the same name and postcode', confidence: 'medium' };
       // 4. the postcode alone, where it covers one building (never for a charity: its address is a contact address)
-      if (!home && pc && reg !== 'charities') { const inPc = recs.filter(x => x.postcodes.has(pc)); if (inPc.length === 1) home = { id: inPc[0].id, key: 'postcode (one building)', precision: `the one registry building with postcode ${pc}`, confidence: 'low' }; }
+      // the one registry building with the postcode must also lie at the postcode (ONSPD centre within 50 m), and be on
+      // the street the address names
+      let pcWhy = null;
+      if (!home && pc && reg !== 'charities') {
+        const inPc = recs.filter(x => x.postcodes.has(pc)), p = pcs.get(pc);
+        if (inPc.length === 1) {
+          const sm = (r.address || '').match(STREET), street = sm ? normAddr(sm[1]) : null;
+          if (p?.lat && distTo(outlineOf.get(inPc[0].id), +p.lon, +p.lat) > 50 && !inside(outlineOf.get(inPc[0].id), +p.lon, +p.lat)) pcWhy = 'postcode on one registry building, but the postcode centre is over 50 m from it';
+          else if (street && !inPc[0].keys.some(k => k.includes(street)) && !normAddr(inPc[0].address || '').includes(street)) pcWhy = 'street in the address is not the street of the one building with the postcode';
+          else home = { id: inPc[0].id, key: 'postcode (one building)', precision: `the one registry building with postcode ${pc}, at the postcode centre`, confidence: 'low' };
+        }
+      }
       if (!home) {
         const inPc = pc ? recs.filter(x => x.postcodes.has(pc)).length : 0;
-        miss(r, !r.in_box && !inPc ? 'outside the registry box' : reg === 'charities' ? 'charity: no UPRN, street address or same-name occupant' : !pc ? 'no postcode' : namedB.length > 1 ? 'same name in two or more buildings' : inPc ? 'postcode covers several buildings, no other key' : 'postcode on no registry building');
+        miss(r, !r.in_box && !inPc ? 'outside the registry box' : pcWhy || (reg === 'charities' ? 'charity: no UPRN, street address or same-name occupant' : !pc ? 'no postcode' : namedB.length > 1 ? 'same name in two or more buildings' : inPc ? 'postcode covers several buildings, no other key' : 'postcode on no registry building'));
         continue;
       }
       const b = rec.get(home.id);
