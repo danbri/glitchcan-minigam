@@ -89,6 +89,19 @@ for (const p of all.filter(b => b.part)) { const h = buildingAt(p.c[0], p.c[1], 
 
 // ---- occupants from OSM: tagged nodes and non-building ways (shops in malls are often areas)
 const ROLE = t => t.shop ? 'shop' : /^(restaurant|cafe|bar|pub|fast_food|food_court|ice_cream|biergarten)$/.test(t.amenity || '') ? 'food and drink' : t.office ? 'office' : t.amenity ? 'service: ' + t.amenity : t.leisure ? 'leisure: ' + t.leisure : t.tourism ? 'tourism: ' + t.tourism : t.healthcare ? 'healthcare' : t.craft ? 'craft' : /station|subway_entrance|train_station_entrance/.test(t.railway || t.public_transport || '') ? 'transport' : null;
+// details an occupant's OSM tags state, copied as they are (OSM values, ODbL): hours, contact, cuisine, access, dates
+const DETAIL = ['opening_hours', 'cuisine', 'wheelchair', 'check_date', 'start_date', 'opening_date', 'operator', 'url'];
+function osmDetail(t) {
+  const o = {};
+  for (const k of DETAIL) if (t[k]) o[k] = t[k];
+  const first = (...ks) => ks.map(k => t[k]).find(Boolean);
+  const website = first('website', 'contact:website'), phone = first('phone', 'contact:phone'), email = first('email', 'contact:email');
+  if (website) o.website = website; if (phone) o.phone = phone; if (email) o.email = email;
+  // other contact links (contact:instagram, contact:facebook ...), keyed without the prefix
+  const links = Object.fromEntries(Object.entries(t).filter(([k]) => /^contact:/.test(k) && !/^contact:(website|phone|email|mobile)$/.test(k)).map(([k, v]) => [k.slice(8), v]));
+  if (Object.keys(links).length) o.contact = links;
+  return o;
+}
 let osmPlaced = 0, osmLoose = 0;
 for (const f of osm.features) {
   const t = f.tags; if (t.building || t['building:part'] || !t.name) continue;
@@ -99,7 +112,7 @@ for (const f of osm.features) {
   const r = rec.get(h.b.id);
   // public art, information boards and the like are features of the building, not occupants
   if (/^tourism: (artwork|information|viewpoint|attraction)$/.test(role)) { r.features.push({ name: t.name, kind: role.replace('tourism: ', ''), osm: `${f.type}/${f.id}` }); continue; }
-  r.occupants.push({ name: t.name, role, source: 'osm', osm: `${f.type}/${f.id}`, placed: h.how, ...(t.level ? { level: t.level, levels: osmLevels(t.level) } : {}), ...(t.brand ? { brand: t.brand } : {}), ...(t['brand:wikidata'] ? { brand_wikidata: t['brand:wikidata'] } : {}), ...(t.website ? { website: t.website } : {}), ...(t.opening_date ? { opening_date: t.opening_date } : {}) });
+  r.occupants.push({ name: t.name, role, source: 'osm', osm: `${f.type}/${f.id}`, placed: h.how, ...(t.level ? { level: t.level, levels: osmLevels(t.level) } : {}), ...(t.brand ? { brand: t.brand } : {}), ...(t['brand:wikidata'] ? { brand_wikidata: t['brand:wikidata'] } : {}), ...osmDetail(t) });
   for (const pc of osmList(t['addr:postcode'])) r.postcodes.add(normPc(pc));
 }
 
