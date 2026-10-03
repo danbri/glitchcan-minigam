@@ -13,6 +13,7 @@ import { TOOLS, RAW, bngProjector, polyArea, pointIn, joinRings } from './lib.mj
 import { ORIGIN } from './fetch-docklands.mjs';
 import { CW_BOX } from './registry-osm.mjs';
 import { osmList, osmLevels } from './osm-values.mjs';
+import { CWG_PLACES, cwgFields, nameKeys } from '../registry/sources/brands/tools/cwg-fields.mjs';
 
 const OUT = join(TOOLS, '..', 'registry'), R = join(RAW, 'registry');
 mkdirSync(OUT, { recursive: true });
@@ -239,6 +240,91 @@ if (has('brands/branches.json')) {
     added++;
   }
   joins.brand_branches = br.length; joins.brand_enriched_occupants = enriched; joins.brand_added_occupants = added; joins.brand_not_placed = loose;
+}
+
+// Canary Wharf Group directory (sources/brands/cwg-directory.json, archived copies). Entries a branch already joined keep
+// that link. Every other entry joins existing occupants (OSM, FSA, Wikidata, branches) by name AND place; an entry that
+// joins nothing becomes a new occupant, placed by its mall or street address. Rules and error classes: pipeline.json
+// activity "build-registry"; skill docklands-data-curation (CWG join).
+const cwgOut = { unplaced: [], ambiguous: [] };
+if (has('brands/cwg-directory.json')) {
+  const D = readJ('brands/cwg-directory.json').directory, st = { entries: D.length, linked_by_branch: 0, joined: 0, joined_by: {}, added: 0, added_by: {}, unplaced: 0, unplaced_by: {}, ambiguous: 0 };
+  const tagsOf = new Map(osm.features.map(f => [`${f.type}/${f.id}`, f.tags || {}]));
+  const PLACES = CWG_PLACES.map(p => p.toLowerCase());
+  const placeIn = text => { const low = String(text || '').toLowerCase(), hits = PLACES.filter(p => low.includes(p)); return CWG_PLACES[PLACES.indexOf(hits.filter(p => !hits.some(o => o !== p && o.includes(p)))[0])] || null; };
+  // malls: indoor shopping levels CWG names as a place with "Mall Level", "Lower Mall", "Upper Level" or "Mezzanine" lines
+  const MALL = new Set(D.filter(e => e.mall && /mall|upper level|mezzanine/i.test(e.level || '')).map(e => e.mall));
+  // mall host outline: the outline whose OSM name or addr:housename is the mall's name or starts with it ("Cabot Place
+  // Shopping Centre", "Cabot Place East"); an OSM name outranks a house name; two or more left: no host.
+  const bare = s => String(s || '').toLowerCase().replace(/^the /, '');
+  const hostOf = {};
+  for (const m of MALL) {
+    const k = bare(m), starts = v => v && !/entrance|car park/i.test(v) && (bare(v) === k || bare(v).startsWith(k + ' '));
+    const byName = outlines.filter(b => starts(b.f.tags.name)), byHouse = outlines.filter(b => starts(b.f.tags['addr:housename']));
+    const c = byName.length ? byName : byHouse;
+    if (c.length === 1) hostOf[m] = { id: c[0].id, how: `${byName.length ? 'OSM name' : 'OSM addr:housename'} "${byName.length ? c[0].f.tags.name : c[0].f.tags['addr:housename']}" (${key(c[0])})` };
+  }
+  st.mall_hosts = Object.fromEntries(Object.entries(hostOf).map(([m, h]) => [m, h.id]));
+  // what each existing occupant says about its place: mall (branch table, OSM address tags, FSA address), postcodes, building
+  const cand = [];
+  for (const r of recs) for (const o of r.occupants) {
+    const t = o.osm ? tagsOf.get(o.osm) || {} : {};
+    const mall = o.mall || placeIn([t['addr:place'], t['addr:housename'], t['addr:street']].filter(Boolean).join(' | ')) || (o.source === 'fsa' ? placeIn(o.address) : null);
+    const pcs = new Set([...osmList(t['addr:postcode']).map(normPc), o.postcode ? normPc(o.postcode) : null].filter(Boolean));
+    cand.push({ o, r, mall, pcs, keys: new Set([...nameKeys(o.name)]) });
+  }
+  const linked = new Set(cand.map(c => c.o.cwg_url).filter(Boolean));
+  const malls = (a, b) => a && b && MALL.has(a) && MALL.has(b) && a !== b;   // two different named malls: never the same place
+  const cwgInfo = (e, f) => ({ cwg_url: e.cwg_url, cwg_archived: e.archived || null, cwg_kind: e.kind, ...(e.categories?.length ? { cwg_categories: e.categories } : {}),
+    ...(e.mall ? { mall: e.mall } : {}), ...(e.level ? { level_cwg: e.level } : {}), ...(e.website ? { cwg_website: e.website } : {}), ...(f.flags?.length ? { cwg_flags: f.flags } : {}) });
+  const unplaced = (e, why) => { st.unplaced++; st.unplaced_by[why] = (st.unplaced_by[why] || 0) + 1; cwgOut.unplaced.push({ slug: e.slug, title: e.title || null, kind: e.kind, mall: e.mall || null, postcode: e.postcode || null, why }); };
+  for (const e of D) {
+    if (linked.has(e.cwg_url)) { st.linked_by_branch++; continue; }
+    if (!e.title) { unplaced(e, 'no archived page (no name, no address)'); continue; }
+    const f = cwgFields(e.address_lines), pc = e.postcode ? normPc(e.postcode) : null, keys = nameKeys(e.title);
+    // where the entry is: the building whose address its street line names; else its mall's host outline
+    let home = null;
+    const street = f.street ? normAddr(f.street) : null;
+    const byStreet = street ? recs.filter(r => r.keys.includes(street)) : [];
+    const streetHit = byStreet.length > 1 && pc ? byStreet.filter(r => r.postcodes.has(pc)) : byStreet;
+    if (streetHit.length === 1) home = { id: streetHit[0].id, how: `CWG street address "${f.street}"${pc && streetHit[0].postcodes.has(pc) ? ' and postcode' : ''}`, confidence: pc && streetHit[0].postcodes.has(pc) ? 'high' : 'medium' };
+    else if (hostOf[e.mall]) home = { id: hostOf[e.mall].id, how: `CWG mall ${e.mall}: ${hostOf[e.mall].how}`, confidence: 'medium' };
+    // 1. join: same name key, and the same place: the same mall, a shared postcode, or the entry's own building; never two different malls
+    const hits = cand.filter(c => keys.some(k => c.keys.has(k)) && !malls(c.mall, e.mall) && !c.o.cwg_url);
+    const tiers = [['name + mall', c => c.mall && c.mall === e.mall], ['name + postcode', c => pc && c.pcs.has(pc)], ['name + building', c => home && c.r.id === home.id]];
+    let joinedTo = null;
+    for (const [how, test] of tiers) {
+      const t = hits.filter(test); if (!t.length) continue;
+      const bySrc = {}; for (const c of t) (bySrc[c.o.source] ||= []).push(c);
+      if (Object.values(bySrc).some(l => l.length > 1)) { st.ambiguous++; cwgOut.ambiguous.push({ slug: e.slug, title: e.title, how, candidates: t.map(c => ({ building: c.r.id, name: c.o.name, source: c.o.source, ...(c.o.osm ? { osm: c.o.osm } : {}), ...(c.o.fhrs_id ? { fhrs_id: c.o.fhrs_id } : {}) })) }); joinedTo = 'ambiguous'; break; }
+      joinedTo = { how, list: t }; break;
+    }
+    if (joinedTo === 'ambiguous') { unplaced(e, 'name matches two or more occupants of one source at that place'); continue; }
+    if (joinedTo) {
+      for (const c of joinedTo.list) { const info = cwgInfo(e, f); for (const k of Object.keys(info)) if (c.o[k] == null) c.o[k] = info[k]; c.o.cwg_join = joinedTo.how; }
+      st.joined++; st.joined_by[joinedTo.how] = (st.joined_by[joinedTo.how] || 0) + 1;
+      if (new Set(joinedTo.list.map(c => c.r.id)).size > 1) st.joined_records_in_different_buildings = (st.joined_records_in_different_buildings || 0) + 1;
+      continue;
+    }
+    // 2. a new occupant. Without a mall host or a street address: the one building with the postcode, else the one
+    // building in the postcode that OSM states is retail. Estate-wide entries and car parks have no building.
+    if (f.flags.includes('estate-wide')) { unplaced(e, 'estate-wide (no single place)'); continue; }
+    if (f.flags.includes('car park')) { unplaced(e, 'in a car park (no outline of its own)'); continue; }
+    if (!home && pc) {
+      const inPc = recs.filter(r => r.postcodes.has(pc)), retail = inPc.filter(r => { const t = outlineOf.get(r.id).f.tags; return t.building === 'retail' || t.landuse === 'retail' || t.shop === 'mall'; });
+      if (inPc.length === 1) home = { id: inPc[0].id, how: `the one registry building with postcode ${pc}`, confidence: 'low' };
+      else if (retail.length === 1) home = { id: retail[0].id, how: `the one building with postcode ${pc} that OSM tags as retail`, confidence: 'low' };
+    }
+    if (!home) {
+      const inPc = pc ? recs.filter(r => r.postcodes.has(pc)).length : 0;
+      unplaced(e, !pc ? (e.mall ? 'no postcode, and its place has no building outline' : 'no postcode and no place') : !/^E14 /.test(pc) ? `postcode outside E14 (${pc.split(' ')[0]}) and no address match` : inPc ? 'postcode names several buildings, no mall host or address match' : 'postcode on no registry building, no address match');
+      continue;
+    }
+    const o = { name: e.title, role: `directory: ${e.kind}`, source: 'cwg', ...cwgInfo(e, f), address: e.address_lines.join(', '), ...(pc ? { postcode: pc } : {}), placed: home.how, placed_confidence: home.confidence };
+    rec.get(home.id).occupants.push(o); cand.push({ o, r: rec.get(home.id), mall: e.mall, pcs: new Set(pc ? [pc] : []), keys: new Set(keys) });
+    st.added++; const hk = home.how.split(':')[0].replace(/ ".*| [A-Z]\d.*$/, ''); st.added_by[hk] = (st.added_by[hk] || 0) + 1;
+  }
+  joins.cwg = st;
 }
 
 // In a residential building a registered office is often a flat: give the number of companies, not their names.
