@@ -247,11 +247,13 @@ if (has('brands/branches.json')) {
 // joins nothing becomes a new occupant, placed by its mall or street address. Rules and error classes: pipeline.json
 // activity "build-registry"; skill docklands-data-curation (CWG join).
 const cwgOut = { unplaced: [], ambiguous: [] };
+// the CWG place (mall, street, square) a free-text address names; never a name inside a longer one that also appears
+const PLACES = CWG_PLACES.map(p => p.toLowerCase());
+const placeIn = text => { const low = String(text || '').toLowerCase(), hits = PLACES.filter(p => low.includes(p)); return CWG_PLACES[PLACES.indexOf(hits.filter(p => !hits.some(o => o !== p && o.includes(p)))[0])] || null; };
+let MALL_HOST = {};   // mall name -> { id, how }: set by the CWG join, used again by the registers join
 if (has('brands/cwg-directory.json')) {
   const D = readJ('brands/cwg-directory.json').directory, st = { entries: D.length, linked_by_branch: 0, joined: 0, joined_by: {}, added: 0, added_by: {}, added_confidence: {}, unplaced: 0, unplaced_by: {}, ambiguous: 0 };
   const tagsOf = new Map(osm.features.map(f => [`${f.type}/${f.id}`, f.tags || {}]));
-  const PLACES = CWG_PLACES.map(p => p.toLowerCase());
-  const placeIn = text => { const low = String(text || '').toLowerCase(), hits = PLACES.filter(p => low.includes(p)); return CWG_PLACES[PLACES.indexOf(hits.filter(p => !hits.some(o => o !== p && o.includes(p)))[0])] || null; };
   const MALL = CWG_MALLS;
   // mall host outline: the outline whose OSM name or addr:housename is the mall's name or starts with it ("Cabot Place
   // Shopping Centre", "Cabot Place East"); an OSM name outranks a house name; two or more left: no host.
@@ -264,6 +266,7 @@ if (has('brands/cwg-directory.json')) {
     if (c.length === 1) hostOf[m] = { id: c[0].id, how: `${byName.length ? 'OSM name' : 'OSM addr:housename'} "${byName.length ? c[0].f.tags.name : c[0].f.tags['addr:housename']}" (${key(c[0])})` };
   }
   st.mall_hosts = Object.fromEntries(Object.entries(hostOf).map(([m, h]) => [m, h.id]));
+  MALL_HOST = hostOf;
   // what each existing occupant says about its place: mall (branch table, OSM address tags, FSA address), postcodes, building
   const cand = [];
   for (const r of recs) for (const o of r.occupants) {
@@ -339,6 +342,86 @@ if (has('brands/cwg-directory.json')) {
   joins.cwg = st;
 }
 
+// Regulatory and public registers (sources/registers/, tools/fetch-registers.mjs): schools (GIAS), care (CQC), NHS
+// organisations (ODS), charities, Ofsted childcare, gambling premises, Sport England Active Places, FSA pubs and bars.
+// Keys in order: UPRN (OS Open UPRN point inside an outline), the register's own point, the street address or the name
+// of an occupant at the same postcode, and the postcode alone where it covers one building. A unit in a named mall is
+// placed in the mall's host outline (F4). Each link keeps the key, its precision and a confidence. Rules: pipeline.json
+// activity "build-registry"; error classes: skill docklands-data-curation (registers join).
+const regOut = { unplaced: [] };
+if (has('registers/gias.json')) {
+  const uprnPt = new Map();
+  if (has('uprn/uprn-canary-wharf.csv')) for (const line of readFileSync(join(SRC, 'uprn/uprn-canary-wharf.csv'), 'utf8').split('\n').slice(1)) { const [u, , , lat, lon] = line.split(','); if (u) uprnPt.set(u, [+lon, +lat]); }
+  const regKeys = n => new Set([n, String(n || '').replace(/\(.*?\)/g, ' '), String(n || '').replace(/\b(limited|ltd|plc|llp)\b\.?/gi, ' ')].flatMap(nameKeys));
+  const tagsOf = new Map(osm.features.map(f => [`${f.type}/${f.id}`, f.tags || {}]));
+  const cand = [];
+  const index = (o, r) => { const t = o.osm ? tagsOf.get(o.osm) || {} : {}; cand.push({ o, r, keys: regKeys(o.name), pcs: new Set([...osmList(t['addr:postcode']).map(normPc), o.postcode ? normPc(o.postcode) : null].filter(Boolean)), mall: o.mall || placeIn(o.address) }); };
+  for (const r of recs) for (const o of r.occupants) index(o, r);
+  const byFhrs = new Map(cand.filter(c => c.o.fhrs_id).map(c => [String(c.o.fhrs_id), c]));
+  const residential = r => !!r.homes || /^(apartments|residential|house|terrace|detached|semidetached_house|dormitory)$/.test(r.building);
+  // ODS organisation records (a provider, a headquarters, an agency) are where the organisation is registered, not a
+  // service: kept as "head office" occupants, never given a service category
+  const ODS_ORG = /^(Social Care Provider|Independent Sector Healthcare Provider|Non-Nhs Organisation|Pharmacy Headquarter|Optical Headquarters|Clinical Commissioning Group|Local Authority|Executive Agency|Special Health Authority \(Spha\)|Primary Care Network|Application Service Provider|Gp Abeyance And Dispersal)/;
+  const REGS = [
+    ['gias', 'gias.json', r => ({ urn: r.urn }), r => r.status !== 'Closed', r => r.address_role ? 'correspondence address (the establishment is not here)' : null],
+    ['active-places', 'active-places.json', r => ({ active_places_site_id: r.site_id }), r => r.status !== 'closed', () => null],
+    ['ods', 'ods.json', r => ({ ods_code: r.ods_code }), r => r.status === 'Active', r => r.postcode === 'E14 5HU' ? 'registered-office service at E14 5HU (5 Churchill Place)' : null],
+    ['cqc', 'cqc.json', r => ({ cqc_location_id: r.id }), () => true, () => null],
+    ['ofsted-childcare', 'ofsted-childcare.json', r => ({ ofsted_urn: r.urn }), r => r.status === 'Active', () => null],
+    ['gambling', 'gambling.json', r => ({ gambling_premises_id: r.id, gambling_operator_account: r.operator_account }), () => true, () => null],
+    ['charities', 'charities.json', r => ({ charity_number: r.charity_number, ...(r.company_number ? { company_number: r.company_number } : {}) }), r => r.status === 'registered', () => null],
+    ['fsa-pubs', 'fsa-pubs.json', r => ({ fhrs_id: +r.id.replace('fhrs:', '') }), () => true, () => null],
+  ];
+  const st = {};
+  for (const [reg, file, ids, current, exclude] of REGS) {
+    if (!has('registers/' + file)) continue;
+    const s = st[reg] = { records: 0, placed_by: {}, joined_existing: 0, added: 0, unplaced_by: {} };
+    const miss = (r, why) => { s.unplaced_by[why] = (s.unplaced_by[why] || 0) + 1; regOut.unplaced.push({ register: reg, id: r.id, name: r.name, postcode: r.postcode || null, in_box: !!r.in_box, why }); };
+    for (const r of readJ('registers/' + file).records) {
+      s.records++;
+      const ex = exclude(r); if (ex) { miss(r, ex); continue; }
+      const pc = r.postcode ? normPc(r.postcode) : null, mallName = placeIn(r.address), mall = CWG_MALLS.has(mallName) ? mallName : null;
+      const link = { register: reg, id: r.id, kind: r.kind, status: r.status, ...(r.url ? { url: r.url } : {}) };
+      // FSA pubs are FSA premises the registry already holds when their FHRS id is an occupant
+      if (reg === 'fsa-pubs' && byFhrs.has(r.id.replace('fhrs:', ''))) { const c = byFhrs.get(r.id.replace('fhrs:', '')); (c.o.registers ||= []).push({ ...link, key: 'FHRS id', precision: 'same FSA premises', confidence: 'high' }); s.joined_existing++; s.placed_by['FHRS id'] = (s.placed_by['FHRS id'] || 0) + 1; continue; }
+      let home = null, above = null;
+      // 1. UPRN
+      if (r.uprn && uprnPt.has(String(r.uprn))) { const [lon, lat] = uprnPt.get(String(r.uprn)), h = buildingAt(lon, lat, 0); if (h) home = { id: h.b.id, key: 'UPRN', precision: 'OS Open UPRN point inside the outline', confidence: 'high' }; }
+      // 2. the register's own point (an FSA point within 3 m of its postcode centre is a postcode, F7)
+      if (!home && r.position === 'source' && r.lat != null && inBox(r.lon, r.lat)) {
+        const p = pcs.get(pc), atPc = p?.lat && Math.hypot((+p.lon - r.lon) * mPerDeg[0], (+p.lat - r.lat) * mPerDeg[1]) <= 3;
+        const h = atPc ? null : buildingAt(r.lon, r.lat);
+        if (h) home = { id: h.b.id, key: 'register point', precision: `register point, ${h.how}`, confidence: h.how === 'inside' ? 'medium' : 'low' };
+      }
+      // F4: a unit in a named mall belongs to the mall, whatever outline its point lies in
+      if (mall && MALL_HOST[mall] && (!home || home.id !== MALL_HOST[mall].id)) { above = home?.id || null; home = { id: MALL_HOST[mall].id, key: home ? `${home.key} + mall` : 'mall named in the address', precision: `mall ${mall}: ${MALL_HOST[mall].how}`, confidence: 'medium' }; }
+      // 3. street address, then the name of an occupant at the same postcode or mall
+      if (!home && pc) { const b = matchBuilding(pc, r.address || ''); if (b) home = { id: b.id, key: 'street address + postcode', precision: 'address text names the building, postcode agrees', confidence: 'high' }; }
+      const keys = regKeys(r.name);
+      const named = cand.filter(c => [...keys].some(k => c.keys.has(k)) && ((pc && c.pcs.has(pc)) || (mall && c.mall === mall) || (home && c.r.id === home.id)));
+      const namedB = [...new Set(named.map(c => c.r.id))];
+      if (!home && namedB.length === 1) home = { id: namedB[0], key: 'name + postcode', precision: 'an occupant of this building has the same name and postcode', confidence: 'medium' };
+      // 4. the postcode alone, where it covers one building (never for a charity: its address is a contact address)
+      if (!home && pc && reg !== 'charities') { const inPc = recs.filter(x => x.postcodes.has(pc)); if (inPc.length === 1) home = { id: inPc[0].id, key: 'postcode (one building)', precision: `the one registry building with postcode ${pc}`, confidence: 'low' }; }
+      if (!home) {
+        const inPc = pc ? recs.filter(x => x.postcodes.has(pc)).length : 0;
+        miss(r, !r.in_box && !inPc ? 'outside the registry box' : reg === 'charities' ? 'charity: no UPRN, street address or same-name occupant' : !pc ? 'no postcode' : namedB.length > 1 ? 'same name in two or more buildings' : inPc ? 'postcode covers several buildings, no other key' : 'postcode on no registry building');
+        continue;
+      }
+      const b = rec.get(home.id);
+      if (reg === 'charities' && home.key !== 'UPRN' && !named.length && residential(b)) { miss(r, 'charity: contact address in a residential building'); continue; }
+      s.placed_by[home.key] = (s.placed_by[home.key] || 0) + 1;
+      const full = { ...link, key: home.key, precision: home.precision, confidence: home.confidence, ...(above ? { point_in: above } : {}) };
+      const same = named.filter(c => c.r.id === home.id);
+      if (same.length) { for (const c of same) { (c.o.registers ||= []).push(full); Object.assign(c.o, ...Object.entries(ids(r)).filter(([k]) => c.o[k] == null).map(([k, v]) => ({ [k]: v }))); } s.joined_existing++; continue; }
+      const o = { name: r.name, role: reg === 'ods' && ODS_ORG.test(r.kind) ? 'head office (ODS)' : `register: ${reg}`, source: reg, ...ids(r), register_kind: r.kind, current: !!current(r),
+        ...(r.address ? { address: r.address } : {}), ...(pc ? { postcode: pc } : {}), ...(mall ? { mall } : {}), registers: [full], placed: home.precision, placed_confidence: home.confidence };
+      b.occupants.push(o); index(o, b); s.added++;
+    }
+  }
+  joins.registers = st;
+}
+
 // In a residential building a registered office is often a flat: give the number of companies, not their names.
 for (const r of recs) if (r.companies && (r.homes || /^(apartments|residential|house|terrace|detached|semidetached_house)$/.test(r.building))) r.companies = { count: r.companies.length, note: 'residential building: company names are not listed here (see the Companies House link)' };
 for (const r of recs) { if (r.toidSet) r.toids = [...r.toidSet].sort(); if (r.usrnSet) r.usrns = [...r.usrnSet].sort(); delete r.toidSet; delete r.usrnSet; delete r.keys; }
@@ -370,5 +453,5 @@ const summary = {
   sources: { osm: osm.extracted, wikidata_qlever: wd.fetched, fsa: fhrs.fetched },
 };
 writeFileSync(idsFile, JSON.stringify(ids, null, 1));
-writeFileSync(join(OUT, 'buildings.json'), JSON.stringify({ summary, buildings: out, unplaced_by_postcode: byPostcode, cwg_unplaced: cwgOut.unplaced, cwg_ambiguous: cwgOut.ambiguous }));
+writeFileSync(join(OUT, 'buildings.json'), JSON.stringify({ summary, buildings: out, unplaced_by_postcode: byPostcode, cwg_unplaced: cwgOut.unplaced, cwg_ambiguous: cwgOut.ambiguous, registers_unplaced: regOut.unplaced }));
 console.log(JSON.stringify(summary, null, 1));

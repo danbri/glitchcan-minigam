@@ -1612,6 +1612,77 @@
       "note": "Child process: unzip -p (charities). Not reached: the Tower Hamlets premises licence register (alcohol-entertainment.towerhamlets.gov.uk: TLS handshake failure and HTTP 503 on 2026-10-03); see registry/sources/registers/README.md."
     },
     {
+      "id": "crawl-sites",
+      "tool": "tools/crawl-sites.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/crawl-sites.mjs",
+      "kind": "fetch",
+      "used": [
+        {
+          "file": "registry/buildings.json"
+        },
+        {
+          "file": "registry/sources/brands/branches.json"
+        },
+        {
+          "file": "registry/sources/brands/storelocator.json"
+        },
+        {
+          "file": "registry/sources/brands/cwg-directory.json"
+        },
+        {
+          "file": "feeds/events.json"
+        },
+        {
+          "file": "feeds/feeds.json"
+        },
+        {
+          "local": "data/raw/registry/cwg/pages/"
+        },
+        {
+          "local": "data/raw/crawl/"
+        },
+        {
+          "source": "brand-sites",
+          "endpoint": "occupants[].website and .store_url in buildings.json; branches[].website, .cwg_website, .store_url; storelocator checked[].store_url; cwg-directory directory[].website",
+          "request": "robots.txt once per host, then one GET per URL with redirects followed by hand (robots.txt checked on each new host), User-Agent glitchcan-cwplans/0.1, one request at a time per host at least 1.5 s apart, at most 4 hosts at once, 20 s timeout, up to 4 tries with backoff on 429, 5xx, timeouts and resets"
+        },
+        {
+          "source": "cwg-site",
+          "endpoint": "https://web.archive.org/web/<timestamp>id_/https://canarywharf.com/<kind>/<slug>/",
+          "request": "the archived copy named in cwg-directory.json; the copy fetch-cwg.mjs saved in data/raw/registry/cwg/pages/ is reused, so no request is made when it exists"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/web/site-facts.json"
+        },
+        {
+          "file": "registry/sources/web/discovered-feeds.json"
+        },
+        {
+          "local": "data/raw/crawl/<host>/<hash>.html.gz, <hash>.json, robots.json"
+        }
+      ],
+      "method": "Fetches the web pages the registry and the brand sources already link to and extracts structured facts: schema.org JSON-LD and microdata (businesses, organisations, events), OpenGraph, page language, HTTP status and final URL, feeds, booking/menu/events links, and whether the page names the entry's Canary Wharf postcode or address.",
+      "rules": [
+        "Skipped: FSA ratings pages (data from the FSA API), OSM, Wikidata, Companies House and Land Registry links (data from their APIs or bulk files), Wikipedia (CC BY-SA, share-alike), canarywharf.com pages with no archived copy (the live site answers scripts with an Imperva challenge).",
+        "A canarywharf.com URL is replaced by its Internet Archive copy from cwg-directory.json.",
+        "robots.txt per RFC 9309: the group for 'glitchcan-cwplans', else '*'; longest match wins, Allow wins a tie; a 4xx robots.txt allows all; a 5xx or unreachable robots.txt disallows all.",
+        "Failure classes: robots disallowed, robots unreachable, bot challenge (Cloudflare, Imperva, Akamai, DataDome, PerimeterX pages), 401/403 refused, 404/410 not found, 4xx other, 429, 5xx, timeout, dns, tls, connection, not HTML, too many redirects.",
+        "Kept per page: schema.org name, telephone, address, geo, opening hours, price range, cuisine, menu, sameAs, reservations; events with name, dates, location, URL; page title and OpenGraph title/type (cut to 200 characters), OpenGraph description cut to 200 characters; html lang; feed and link URLs. No other page text.",
+        "names_branch: true when the entry's postcode is in the page text or structured data, or an address phrase (street, mall, branch name) is on a page that is not the site's home page; 'home page lists the place' when only a phrase is on a home page; 'scripts only' when the match is only inside page scripts.",
+        "A URL with a stored result is not fetched again (--refresh fetches all; --retry-failed fetches transient failures again)."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "fetch-cwg",
+        "storelocator",
+        "build-branches",
+        "build-registry"
+      ]
+    },
+    {
       "id": "build-registry",
       "tool": "tools/build-registry.mjs",
       "command": "node magpie/cwplans/tools/build-registry.mjs",

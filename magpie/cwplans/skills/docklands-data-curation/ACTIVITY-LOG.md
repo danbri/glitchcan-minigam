@@ -264,6 +264,10 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
   non-commercial internal use); FCA register and NHS service search (keys, terms unread); OfS register (refused
   this client).
 
+## 2026-10-03: website crawl
+
+- Website crawl, tools/crawl-sites.mjs (new). 859 URLs on 393 hosts from buildings.json occupants, branches.json, storelocator.json and cwg-directory.json (FSA, OSM, Wikidata, Wikipedia, Companies House and Land Registry links skipped by rule). 737 pages read (369 CWG pages as Internet Archive copies reused from fetch-cwg.mjs, 368 direct); 122 not read (bot challenge 59, 404/410 18, 401/403 15, TLS 10, timeout 7, DNS 4, robots.txt 4, 429 2, connection 2, 5xx 1). Direct pages: JSON-LD 246, opening hours 61, schema.org telephone 77, names the branch 154 (235 are home pages). 61 new feed URLs (registry/sources/web/discovered-feeds.json), not yet verified. Out: registry/sources/web/site-facts.json, discovered-feeds.json, README.md. Open: merge register-entries.json into data-register.json and pipeline.json; verify the feeds; script-rendered store pages give no facts without a browser.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
