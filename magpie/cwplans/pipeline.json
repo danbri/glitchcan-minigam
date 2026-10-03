@@ -1509,6 +1509,109 @@
       ]
     },
     {
+      "id": "fetch-registers",
+      "tool": "tools/fetch-registers.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-registers.mjs [gias|cqc|ods|charities|ofsted-childcare|gambling|active-places|fsa-pubs ...] [--refresh]",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "dfe-gias",
+          "endpoint": "https://ea-edubase-api-prod.azurewebsites.net/edubase/downloads/public/edubasealldata<YYYYMMDD>.csv",
+          "request": "the newest daily all-establishments CSV (today, else up to 9 days back)"
+        },
+        {
+          "source": "cqc-directory",
+          "endpoint": "https://www.cqc.org.uk/about-us/transparency/using-cqc-data",
+          "request": "the page, to find the current *_CQC_directory.csv link; then that CSV (about 19 MB)"
+        },
+        {
+          "source": "nhs-ods",
+          "endpoint": "https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations",
+          "request": "?PostCode=E14&Limit=1000 (one list), then /organisations/<OrgId> for each (422 on 2026-10-03), and /ORD/2-0-0/roles"
+        },
+        {
+          "source": "charity-commission",
+          "endpoint": "https://ccewuksprdoneregsadata1.blob.core.windows.net/data/txt/publicextract.charity.zip",
+          "request": "the daily full extract (about 44 MB, tab-separated)"
+        },
+        {
+          "source": "ofsted-childcare-mi",
+          "endpoint": "https://www.gov.uk/api/content/government/statistical-data-sets/childcare-providers-and-inspections-management-information",
+          "request": "the attachment list; then the newest 'childcare provider(s) data as at' CSV (about 19 MB)"
+        },
+        {
+          "source": "gambling-commission-premises",
+          "endpoint": "https://www.gamblingcommission.gov.uk/downloads/premises-licence-register.csv",
+          "request": "the whole register CSV (about 1.3 MB)"
+        },
+        {
+          "source": "sport-england-active-places",
+          "endpoint": "https://services-eu1.arcgis.com/s9MgJChYyPlPX2Nk/arcgis/rest/services/GIS_Active_Places_Power_Sites/FeatureServer/0/query",
+          "request": "where=postcode LIKE 'E14%'; and an envelope query on the registry box; then GIS_Active_Places_Power_Facility/FeatureServer/1/query where siteid IN (batches of 100)"
+        },
+        {
+          "file": "data/raw/registry/fhrs/FHRS530-2026-10-03.json.gz",
+          "note": "the newest FHRS530 snapshot (fsa-pubs; no network)"
+        },
+        {
+          "file": "postcodes/postcodes.json",
+          "note": "ONSPD centres and box membership of E14 postcodes"
+        },
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif",
+          "note": "OSTN15 grid, to convert GIAS Easting/Northing to WGS84"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/registers/gias.json"
+        },
+        {
+          "file": "registry/sources/registers/cqc.json"
+        },
+        {
+          "file": "registry/sources/registers/ods.json"
+        },
+        {
+          "file": "registry/sources/registers/charities.json"
+        },
+        {
+          "file": "registry/sources/registers/ofsted-childcare.json"
+        },
+        {
+          "file": "registry/sources/registers/gambling.json"
+        },
+        {
+          "file": "registry/sources/registers/active-places.json"
+        },
+        {
+          "file": "registry/sources/registers/fsa-pubs.json"
+        },
+        {
+          "local": "data/raw/registers/",
+          "note": "raw downloads: edubasealldata<date>.csv, cqc-directory.csv, ods-e14-list.json, ods-e14-details.json, publicextract.charity.zip, ofsted-childcare-<date>.csv, gambling-premises.csv, active-places-e14.json (gitignored; reused unless --refresh)"
+        }
+      ],
+      "method": "Downloads each register (bulk file or query), keeps the records with an E14 postcode or a source coordinate in the registry box, and writes one {meta, records} file per source with the source URL, fetch date, licence, method, counts and the fields dropped.",
+      "rules": [
+        "Kept: postcode district E14, or a source coordinate inside CW_BOX [-0.03, 51.498, -0.005, 51.51].",
+        "Position: the source coordinate when there is one (Active Places lat/long; GIAS Easting/Northing through OSTN15; FSA geocode); else the ONSPD centre of the postcode, marked position = 'postcode centre (ONSPD)'. in_box follows the same position.",
+        "Dropped everywhere: telephone numbers, email addresses, named contact people (Active Places site contacts, GIAS head teachers, CQC registered managers are not in the file used), and Ofsted 'registered person' names unless they look like an organisation.",
+        "Ofsted rows REDACTED by Ofsted (childminders and home childcarers) are not kept.",
+        "GIAS rows administered from an E14 correspondence address (Fieldwork Overseas Establishments; c/o street lines) get address_role; they are not schools in E14.",
+        "Gambling register rows have no premises id: id = gc:<operator account>:<postcode>:<n>.",
+        "Network: one request at a time per host, at least 1 s apart; retries on 429 and 5xx with a doubling pause (Retry-After honoured); User-Agent glitchcan-cwplans/0.1."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "postcodes-build",
+        "registry-fhrs",
+        "fetch-raw-grid"
+      ],
+      "note": "Child process: unzip -p (charities). Not reached: the Tower Hamlets premises licence register (alcohol-entertainment.towerhamlets.gov.uk: TLS handshake failure and HTTP 503 on 2026-10-03); see registry/sources/registers/README.md."
+    },
+    {
       "id": "build-registry",
       "tool": "tools/build-registry.mjs",
       "command": "node magpie/cwplans/tools/build-registry.mjs",

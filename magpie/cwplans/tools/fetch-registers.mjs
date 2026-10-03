@@ -209,7 +209,7 @@ const SOURCES = {
     }).filter(keep);
     write('ods', {
       source: 'NHS Organisation Data Service, ORD API 2-0-0 (organisations with a postcode starting E14)', source_url: listUrl, landing: 'https://digital.nhs.uk/services/organisation-data-service',
-      fetched: today, licence: 'Open Government Licence v3.0', licence_url: 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/',
+      fetched: statSync(listFile).mtime.toISOString().slice(0, 10), licence: 'Open Government Licence v3.0', licence_url: 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/',
       licence_checked: 'feeds/feeds.json entry nhs-ods-ord (OGL v3, 2026-10-03); the digital.nhs.uk page is behind a Cloudflare challenge for this client, so the statement was not re-read today',
       attribution: 'Contains NHS Organisation Data Service data, licensed under the Open Government Licence v3.0.',
       method: 'One list query (PostCode=E14, Limit=1000, active and inactive), then one detail request per organisation for address, UPRN, operational dates and roles. GP practices are "Prescribing Cost Centre" with the non-primary role RO76 (GP PRACTICE). No coordinates: positions are ONSPD postcode centres.',

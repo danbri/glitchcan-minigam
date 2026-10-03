@@ -1731,6 +1731,114 @@
    ]
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers",
+   "@type": "prov:Activity",
+   "rdfs:label": "fetch-registers",
+   "dct:description": "Downloads each register (bulk file or query), keeps the records with an E14 postcode or a source coordinate in the registry box, and writes one {meta, records} file per source with the source URL, fetch date, licence, method, counts and the fields dropped.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dfe-gias",
+     "dcat:accessURL": "https://ea-edubase-api-prod.azurewebsites.net/edubase/downloads/public/edubasealldata<YYYYMMDD>.csv",
+     "dct:description": "the newest daily all-establishments CSV (today, else up to 9 days back)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cqc-directory",
+     "dcat:accessURL": "https://www.cqc.org.uk/about-us/transparency/using-cqc-data",
+     "dct:description": "the page, to find the current *_CQC_directory.csv link; then that CSV (about 19 MB)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nhs-ods",
+     "dcat:accessURL": "https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations",
+     "dct:description": "?PostCode=E14&Limit=1000 (one list), then /organisations/<OrgId> for each (422 on 2026-10-03), and /ORD/2-0-0/roles"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/charity-commission",
+     "dcat:accessURL": "https://ccewuksprdoneregsadata1.blob.core.windows.net/data/txt/publicextract.charity.zip",
+     "dct:description": "the daily full extract (about 44 MB, tab-separated)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ofsted-childcare-mi",
+     "dcat:accessURL": "https://www.gov.uk/api/content/government/statistical-data-sets/childcare-providers-and-inspections-management-information",
+     "dct:description": "the attachment list; then the newest 'childcare provider(s) data as at' CSV (about 19 MB)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gambling-commission-premises",
+     "dcat:accessURL": "https://www.gamblingcommission.gov.uk/downloads/premises-licence-register.csv",
+     "dct:description": "the whole register CSV (about 1.3 MB)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/sport-england-active-places",
+     "dcat:accessURL": "https://services-eu1.arcgis.com/s9MgJChYyPlPX2Nk/arcgis/rest/services/GIS_Active_Places_Power_Sites/FeatureServer/0/query",
+     "dct:description": "where=postcode LIKE 'E14%'; and an envelope query on the registry box; then GIS_Active_Places_Power_Facility/FeatureServer/1/query where siteid IN (batches of 100)"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data/raw/registry/fhrs/FHRS530-2026-10-03.json.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/postcodes/postcodes.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/gias.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/cqc.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/ods.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/charities.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/ofsted-childcare.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/gambling.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/active-places.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/fsa-pubs.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/registers/"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/fetch-registers.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-registers.mjs [gias|cqc|ods|charities|ofsted-childcare|gambling|active-places|fsa-pubs ...] [--refresh]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Kept: postcode district E14, or a source coordinate inside CW_BOX [-0.03, 51.498, -0.005, 51.51].",
+    "Position: the source coordinate when there is one (Active Places lat/long; GIAS Easting/Northing through OSTN15; FSA geocode); else the ONSPD centre of the postcode, marked position = 'postcode centre (ONSPD)'. in_box follows the same position.",
+    "Dropped everywhere: telephone numbers, email addresses, named contact people (Active Places site contacts, GIAS head teachers, CQC registered managers are not in the file used), and Ofsted 'registered person' names unless they look like an organisation.",
+    "Ofsted rows REDACTED by Ofsted (childminders and home childcarers) are not kept.",
+    "GIAS rows administered from an E14 correspondence address (Fieldwork Overseas Establishments; c/o street lines) get address_role; they are not schools in E14.",
+    "Gambling register rows have no premises id: id = gc:<operator account>:<postcode>:<n>.",
+    "Network: one request at a time per host, at least 1 s apart; retries on 429 and 5xx with a doubling pause (Retry-After honoured); User-Agent glitchcan-cwplans/0.1."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/postcodes-build"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-fhrs"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-grid"
+    }
+   ]
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry",
    "@type": "prov:Activity",
    "rdfs:label": "build-registry",
@@ -5161,6 +5269,219 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/gias.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "schools and colleges with an E14 postcode, open and closed (URN, type, phase, status, open/close dates, pupils, UKPRN, UPRN, BNG easting/northing)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dfe-gias"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/cqc.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "CQC-registered care locations with an E14 postcode (GPs, dentists, homecare, clinics): location and provider ids, service types, date of latest check",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cqc-directory"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/ods.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "NHS ODS organisations with an E14 postcode, active and inactive (GP practices, pharmacies, dental and optical sites, trust sites, social care providers, schools): ODS code, roles, operational dates, UPRN",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nhs-ods"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/charities.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "registered charities whose contact postcode is in E14: charity and organisation numbers, type, registration date, income, company number",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/charity-commission"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "contact address only; for small charities it can be a trustee's home (allowed under the cwplans exception; do not present it as the charity's premises)"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/ofsted-childcare.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Ofsted-registered childcare on non-domestic premises (nurseries, pre-schools, out-of-school clubs) with an E14 postcode: URN, type, places, registration and latest inspection dates",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ofsted-childcare-mi"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/gambling.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "licensed gambling premises (betting shops) with an E14 postcode: operator, operator account, activity, address",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gambling-commission-premises"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/active-places.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Sport England Active Places sites with an E14 postcode or a coordinate in the registry box, with their facilities: site id, facility types, UPRN, TOID, position, open/closed dates",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/sport-england-active-places"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/fsa-pubs.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "FSA food premises of business type Pub/bar/nightclub in E14 (stand-in for the council's premises licence register)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/fsa"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-registers"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the registers: sources, licences, counts, fields dropped, gaps and rejected sources, join keys",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dfe-gias"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cqc-directory"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nhs-ods"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/charity-commission"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ofsted-childcare-mi"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gambling-commission-premises"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/sport-england-active-places"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/fsa"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/register-entries.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "proposed data-register and pipeline entries for the registers (merge aid)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/towers.json",
    "@type": [
     "prov:Entity",
@@ -5860,6 +6181,83 @@
    "dct:title": "YouTube drone videos of Canary Wharf (title, channel, URL only)",
    "dct:license": "YouTube terms; nothing downloaded",
    "dcat:landingPage": "https://www.youtube.com/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dfe-gias",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "DfE Get Information About Schools (GIAS), all establishments daily download",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://get-information-schools.service.gov.uk/Downloads",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (Department for Education)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cqc-directory",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Care Quality Commission care directory (registered locations, CSV)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://www.cqc.org.uk/about-us/transparency/using-cqc-data",
+   "cwp:attribution": "Contains CQC information, licensed under the Open Government Licence v3.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nhs-ods",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "NHS Organisation Data Service, ORD API 2-0-0 (directory.spineservices.nhs.uk)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://digital.nhs.uk/services/organisation-data-service",
+   "cwp:attribution": "Contains NHS Organisation Data Service data, licensed under the Open Government Licence v3.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/charity-commission",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Charity Commission for England and Wales, register of charities full extract (publicextract.charity)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://register-of-charities.charitycommission.gov.uk/en/register/full-register-download",
+   "cwp:attribution": "Contains Charity Commission data, licensed under the Open Government Licence v3.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ofsted-childcare-mi",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Ofsted management information: childcare providers and inspections, provider-level CSV (GOV.UK)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://www.gov.uk/government/statistical-data-sets/childcare-providers-and-inspections-management-information",
+   "cwp:attribution": "Contains Ofsted data, licensed under the Open Government Licence v3.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gambling-commission-premises",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Gambling Commission register of gambling premises (CSV download)",
+   "dct:license": "OGL (stated on the Commission's data.gov.uk record 8dc9bef0-ad46-497b-9a74-30a6ce9d2f98; the download page states none); re-check with the Commission before production",
+   "dcat:landingPage": "https://www.gamblingcommission.gov.uk/public-register/premises/download",
+   "cwp:attribution": "Contains Gambling Commission data, licensed under the Open Government Licence"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/sport-england-active-places",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Sport England Active Places (ArcGIS feature services: sites and facilities)",
+   "dct:license": "CC BY 4.0 (personal data excluded from the licence)",
+   "dcat:landingPage": "https://www.activeplacespower.com/opendata",
+   "cwp:attribution": "Contains Data © Sport England"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own",

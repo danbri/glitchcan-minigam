@@ -246,6 +246,24 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
   updated, scan-model-pois added, cwg-fields.mjs as a library, its test. The register check still fails on two tools
   of the parallel sessions (tools/crawl-sites.mjs, tools/fetch-registers.mjs: not in pipeline.json).
 
+## 2026-10-03: regulatory and public registers
+
+- New tool `tools/fetch-registers.mjs` (polite per-host queue, >= 1 s, backoff on 429/5xx). Output
+  `registry/sources/registers/<source>.json` ({meta, records}) and README.md; raw in `data/raw/registers/`
+  (gitignored). Entries for data-register.json and pipeline.json are in `registry/sources/registers/register-entries.json`
+  for the main session to merge (not merged by this agent). Not committed by this agent.
+- Kept per source (in the box / E14): GIAS 23 / 63 (OGL); CQC directory 47 / 84 (OGL); NHS ODS 258 / 422 (OGL);
+  Charity Commission 131 / 316 (OGL); Ofsted childcare on non-domestic premises 16 / 45 (OGL); Gambling Commission
+  premises 8 / 14 (OGL per data.gov.uk record only); Sport England Active Places 13 / 37 sites, 103 facilities
+  (CC BY 4.0); FSA Pub/bar/nightclub 17 / 37 (OGL, from the FHRS snapshot).
+- Catalogued, not patched: 16 GIAS "Fieldwork Overseas Establishments" (schools abroad) use 30 Skylines Village,
+  E14 9TS as a correspondence address (`address_role`); 82 ODS records in the box sit at E14 5HU, the
+  registered-office service at 5 Churchill Place (class of SE-1); charity contact addresses are not premises.
+- Not reached: Tower Hamlets premises licence register (alcohol-entertainment.towerhamlets.gov.uk: TLS handshake
+  failure, HTTP 503; only the start page in the Internet Archive). Rejected: PRA lists (Bank of England terms:
+  non-commercial internal use); FCA register and NHS service search (keys, terms unread); OfS register (refused
+  this client).
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
