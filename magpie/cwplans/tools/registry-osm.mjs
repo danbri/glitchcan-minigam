@@ -3,7 +3,7 @@
 //   node --max-old-space-size=6000 magpie/cwplans/tools/registry-osm.mjs
 // in:  data/raw/docklands/greater_london-latest.osm.pbf (fetch-docklands.mjs osm)
 // out: data/raw/registry/osm-cw.json.gz  {nodes: {id: [lon, lat]}, features: [{type, id, tags, refs|members|lon,lat}]}
-// Tags kept: everything except the few that can identify private people (see DROP).
+// Tags kept: everything except mappers' notes and the few that reach a person, not a business (see DROP).
 import { createReadStream, writeFileSync, mkdirSync } from 'fs';
 import { Writable } from 'stream';
 import { createRequire } from 'module';
@@ -17,8 +17,10 @@ const parseOSM = createRequire(import.meta.url)('osm-pbf-parser');
 export const CW_BOX = [-0.0300, 51.4980, -0.0050, 51.5100];   // same box as the model's Canary Wharf focus and postcodes.mjs
 const M = 0.0015, [W, S, E, N] = CW_BOX;
 const inBox = (lon, lat) => lon >= W - M && lon <= E + M && lat >= S - M && lat <= N + M;
-// OSM contact tags on businesses are public, but a few tags can name people: never keep them.
-const DROP = /^(contact:(email|phone|mobile)|email|phone|mobile|fax|operator:person|addr:flats|note|fixme|FIXME|source.*|created_by)$/;
+// Business contact tags (phone, email, website, contact:*) are kept: the registry shows how to reach an occupant
+// (owner, 2026-10-03: the cwplans exception allows organisation data in the prototyping phase). Still dropped: tags
+// that name or reach a person rather than a business (mobile numbers, operator:person), and mappers' notes.
+const DROP = /^(contact:mobile|mobile|operator:person|addr:flats|note|fixme|FIXME|source.*|created_by)$/;
 const slim = t => { const o = {}; for (const k in t || {}) if (!DROP.test(k)) o[k] = t[k]; return o; };
 // run only as a script: build-registry.mjs imports CW_BOX
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -9,6 +9,7 @@
 import { writeFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { OUT, RAW, UA, sleep } from './lib.mjs';
+import { cwgFields } from './cwg-fields.mjs';
 
 const DIR = join(RAW, 'cwg'), PAGES = join(DIR, 'pages');
 mkdirSync(PAGES, { recursive: true });
@@ -45,14 +46,15 @@ const dec = s => s.replace(/&#(\d+);/g, (_, n) => [8217, 39].includes(+n) ? "'" 
 const isChallenge = h => h.length < 5000 && /Incapsula|Request unsuccessful/.test(h);
 function parse(html) {
   const title = (html.match(/<h1[^>]*class="[^"]*__title[^"]*"[^>]*>([\s\S]*?)<\/h1>/) || html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/) || [])[1];
-  const cats = [...(html.match(/__categories">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/)?.[1] || '').matchAll(/class="tag ?">\s*([\s\S]*?)<\/div>/g)].map(m => dec(m[1]));
+  // the category block runs to the title; each category is a tag div (the first version stopped the block at the
+  // first three closing divs, which are the tag's own, and found no category on any page)
+  const cats = [...(html.match(/__categories">([\s\S]*?)<h1/)?.[1] || '').matchAll(/class="tag ?">([^<]*)</g)].map(m => dec(m[1])).filter(Boolean);
   // 2025-26 layout: <div class="entry-address">; 2020-25 layout: <div class="location"><h6>Location</h6><p>
   const addr = (html.match(/<div class="entry-address">([\s\S]*?)<\/div>/) || html.match(/<div class="location">\s*<h6>[^<]*<\/h6>\s*<p>([\s\S]*?)<\/p>/) || [])[1];
   const lines = addr ? addr.split(/<br\s*\/?>/).map(dec).filter(Boolean) : [];
   const web = (html.match(/icon--globe-world-earth"><\/i>\s*<a\s+href="([^"]+)"/) || [])[1] || null;
   return { title: title ? dec(title) : null, categories: cats, address_lines: lines, website: web };
 }
-const MALLS = ['Jubilee Place', 'The Park Pavilion', 'West Wintergarden', 'East Wintergarden', 'Frobisher Passage', 'Fisherman’s Walk', 'Canada Place', 'Cabot Place', 'Churchill Place', 'Crossrail Place', 'Wood Wharf', 'One Canada Square', 'Canada Square', 'Cabot Square', 'Westferry Circus', 'Columbus Courtyard', 'Mackenzie Walk', 'Water Street', 'Harbord Square', 'Park Drive', 'Bank Street', 'Heron Quays', 'Montgomery Square', 'Chancellor Passage', 'Reuters Plaza', 'West India Quay', 'Hertsmere Road', 'Canary Riverside', 'Union Square', 'Charter Street', 'Crossrail Place Roof Garden', 'Newfoundland', 'Wren Landing', 'Middle Dock', 'South Colonnade', 'North Colonnade', 'Upper Bank Street', 'Churchill Place Mall', 'Canary Wharf Pier'];
 const out = [];
 let n = 0;
 for (const e of entries) {
@@ -70,10 +72,11 @@ for (const e of entries) {
     const html = await get(c.ts ? `${WB}/web/${c.ts}id_/${c.src}` : `${WB}/web/20260304id_/${c.src}`, file, c.ts ? 5 : 2);
     if (!html || isChallenge(html)) { if (html) rec.challenge_captures = (rec.challenge_captures || 0) + 1; continue; }
     Object.assign(rec, parse(html), { archived: c.ts ? `${WB}/web/${c.ts}/${c.src}` : `${WB}/web/20260304/${c.src} (closest capture)`, archived_on: c.ts ? c.ts.slice(0, 8) : null });
-    const joined = rec.address_lines.join(' | ');
-    rec.mall = MALLS.find(m => joined.toLowerCase().includes(m.toLowerCase())) || null;
-    rec.level = rec.address_lines.find(l => /level|floor|ground|lower|upper|mezzanine|podium|roof|unit|kiosk/i.test(l)) || null;
-    rec.postcode = (joined.match(/\b(E14|E16)\s?\d[A-Z]{2}\b/i) || [])[0]?.toUpperCase() || null;
+    // mall (the longest place named), level line, postcode (any district: Wood Wharf uses E22), street line, flags:
+    // cwg-fields.mjs. The first parser took "United Kingdom" and "55 Upper Bank Street" as levels, the first place in
+    // list order as the mall, and only E14 or E16 postcodes.
+    const f = cwgFields(rec.address_lines);
+    Object.assign(rec, { mall: f.mall, level: f.level, postcode: f.postcode, ...(f.street ? { street: f.street } : {}), ...(f.flags.length ? { flags: f.flags } : {}) });
     break;
   }
   out.push(rec);

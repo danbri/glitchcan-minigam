@@ -1,7 +1,7 @@
 {
  "source": "Canary Wharf Group directory, https://canarywharf.com/ (sitemaps archived 2026-03-04; entry pages as archived by the Internet Archive)",
  "note": "canarywharf.com blocks scripted requests (Imperva/Incapsula challenge, 2026-10-03); every field here comes from web.archive.org copies",
- "generated": "2026-10-03T05:41:42.610Z",
+ "generated": "2026-10-03T15:49:51.032Z",
  "entries": 374,
  "by_kind": {
   "shop": 174,
@@ -18,7 +18,9 @@
    "sitemap_lastmod": "2021-12-30T16:24:08+00:00",
    "archived": "https://web.archive.org/web/20251117212748/https://canarywharf.com/shop/workpath/",
    "title": "Workpath",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "55 Upper Bank Street",
     "Canary Wharf",
@@ -27,9 +29,10 @@
    ],
    "website": "https://www.towerhamlets.gov.uk/lgnl/jobs_and_careers/employment_and_training_initia/Workpath/WorkPath.aspx",
    "archived_on": "20251117",
-   "mall": "Bank Street",
-   "level": "55 Upper Bank Street",
-   "postcode": "E14 5GR"
+   "mall": "Upper Bank Street",
+   "level": null,
+   "postcode": "E14 5GR",
+   "street": "55 Upper Bank Street"
   },
   {
    "kind": "shop",
@@ -38,7 +41,9 @@
    "sitemap_lastmod": "2022-09-05T09:41:43+00:00",
    "archived": "https://web.archive.org/web/20251107090525/https://canarywharf.com/shop/crockett-jones/",
    "title": "Crockett & Jones",
-   "categories": [],
+   "categories": [
+    "Shoes & Footwear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -59,7 +64,9 @@
    "sitemap_lastmod": "2022-09-05T09:56:48+00:00",
    "archived": "https://web.archive.org/web/20251117212824/https://canarywharf.com/shop/flowers-plants-co/",
    "title": "Flowers & Plants Co.",
-   "categories": [],
+   "categories": [
+    "Flowers & Plants"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -80,7 +87,9 @@
    "sitemap_lastmod": "2022-09-06T05:51:13+00:00",
    "archived": "https://web.archive.org/web/20251117215332/https://canarywharf.com/shop/santander/",
    "title": "Santander",
-   "categories": [],
+   "categories": [
+    "Banks & Foreign Exchange"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -92,7 +101,8 @@
    "archived_on": "20251117",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 4QS"
+   "postcode": "E14 4QS",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -101,7 +111,9 @@
    "sitemap_lastmod": "2022-09-06T05:59:50+00:00",
    "archived": "https://web.archive.org/web/20251107093352/https://canarywharf.com/shop/snappy-snaps/",
    "title": "Snappy Snaps",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -113,7 +125,8 @@
    "archived_on": "20251107",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -122,7 +135,9 @@
    "sitemap_lastmod": "2022-09-06T06:22:00+00:00",
    "archived": "https://web.archive.org/web/20260212002649/https://canarywharf.com/shop/tom-davies-bespoke-opticians/",
    "title": "Tom Davies Bespoke Opticians",
-   "categories": [],
+   "categories": [
+    "Opticians & Pharmacies"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -143,7 +158,9 @@
    "sitemap_lastmod": "2022-09-06T06:43:13+00:00",
    "archived": "https://web.archive.org/web/20251117223800/https://canarywharf.com/shop/trailfinders/",
    "title": "Trailfinders",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Cabot Place",
@@ -164,7 +181,9 @@
    "sitemap_lastmod": "2022-11-24T16:39:34+00:00",
    "archived": "https://web.archive.org/web/20251117220642/https://canarywharf.com/shop/blink-brow-bar/",
    "title": "Blink Brow Bar",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -185,7 +204,9 @@
    "sitemap_lastmod": "2023-01-11T09:38:29+00:00",
    "archived": "https://web.archive.org/web/20251030094718/https://canarywharf.com/shop/tesco-express/",
    "title": "Tesco Express",
-   "categories": [],
+   "categories": [
+    "Groceries"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Cabot Place",
@@ -206,7 +227,9 @@
    "sitemap_lastmod": "2023-04-17T10:29:15+00:00",
    "archived": "https://web.archive.org/web/20251107011626/https://canarywharf.com/shop/nicholson-griffin/",
    "title": "Nicholson & Griffin",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mezzanine",
     "Jubilee Place",
@@ -227,7 +250,9 @@
    "sitemap_lastmod": "2023-04-17T10:32:26+00:00",
    "archived": "https://web.archive.org/web/20251117223946/https://canarywharf.com/shop/london-marriott-executive-apartments-canary-wharf/",
    "title": "Marriott Executive Apartments London, Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Hotels & Apartments"
+   ],
    "address_lines": [
     "22 Hertsmere Road",
     "Canary Wharf",
@@ -238,7 +263,8 @@
    "archived_on": "20251117",
    "mall": "Hertsmere Road",
    "level": null,
-   "postcode": "E14 4ED"
+   "postcode": "E14 4ED",
+   "street": "22 Hertsmere Road"
   },
   {
    "kind": "shop",
@@ -247,7 +273,9 @@
    "sitemap_lastmod": "2023-06-27T07:31:21+00:00",
    "archived": "https://web.archive.org/web/20251117221235/https://canarywharf.com/shop/ryman-stationery/",
    "title": "Ryman Stationery",
-   "categories": [],
+   "categories": [
+    "Cards & Stationery"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Cabot Place",
@@ -268,7 +296,9 @@
    "sitemap_lastmod": "2023-08-10T09:23:42+00:00",
    "archived": "https://web.archive.org/web/20251117221127/https://canarywharf.com/shop/ismash/",
    "title": "iSmash",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -289,7 +319,9 @@
    "sitemap_lastmod": "2023-08-25T11:58:20+00:00",
    "archived": "https://web.archive.org/web/20251107083526/https://canarywharf.com/shop/photo-me-booth-canada-place-1/",
    "title": "Photo-Me Booth",
-   "categories": [],
+   "categories": [
+    "Photo Booth"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -310,7 +342,9 @@
    "sitemap_lastmod": "2023-09-22T05:19:07+00:00",
    "archived": "https://web.archive.org/web/20251114112821/https://canarywharf.com/shop/bupa-health-and-dental-centre-crossrail-place/",
    "title": "Bupa Health and Dental Centre",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Street Level 0",
     "Crossrail Place",
@@ -331,7 +365,9 @@
    "sitemap_lastmod": "2023-10-23T07:39:09+00:00",
    "archived": "https://web.archive.org/web/20251107011647/https://canarywharf.com/shop/pure-sports-medicine/",
    "title": "Pure Sports Medicine",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Upper Level 2",
     "Cabot Place",
@@ -352,7 +388,9 @@
    "sitemap_lastmod": "2023-11-06T09:59:21+00:00",
    "archived": "https://web.archive.org/web/20251115141523/https://canarywharf.com/shop/lakrids-by-bulow/",
    "title": "Lakrids By Bülow",
-   "categories": [],
+   "categories": [
+    "Confectionery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -373,7 +411,9 @@
    "sitemap_lastmod": "2024-01-23T05:49:17+00:00",
    "archived": "https://web.archive.org/web/20251107100251/https://canarywharf.com/shop/boggi-milano/",
    "title": "Boggi Milano",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -394,7 +434,9 @@
    "sitemap_lastmod": "2024-01-23T06:31:14+00:00",
    "archived": "https://web.archive.org/web/20251105025324/https://canarywharf.com/shop/the-white-company-jubilee-place/",
    "title": "The White Company",
-   "categories": [],
+   "categories": [
+    "Home & Furniture"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -415,7 +457,9 @@
    "sitemap_lastmod": "2024-01-23T06:34:59+00:00",
    "archived": "https://web.archive.org/web/20251114121343/https://canarywharf.com/shop/marks-spencer-simply-food/",
    "title": "M&S Simply Food",
-   "categories": [],
+   "categories": [
+    "Confectionery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -436,7 +480,9 @@
    "sitemap_lastmod": "2024-02-01T17:25:19+00:00",
    "archived": "https://web.archive.org/web/20251114122905/https://canarywharf.com/shop/aesop/",
    "title": "Aesop",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level 0",
     "Cabot Place",
@@ -457,7 +503,9 @@
    "sitemap_lastmod": "2024-02-01T17:34:03+00:00",
    "archived": "https://web.archive.org/web/20251117221309/https://canarywharf.com/shop/ee/",
    "title": "EE",
-   "categories": [],
+   "categories": [
+    "Electronics & Phones"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -469,7 +517,8 @@
    "archived_on": "20251117",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -478,7 +527,9 @@
    "sitemap_lastmod": "2024-02-01T17:40:41+00:00",
    "archived": "https://web.archive.org/web/20251101123825/https://canarywharf.com/shop/zara/",
    "title": "Zara",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -499,7 +550,9 @@
    "sitemap_lastmod": "2024-02-02T09:59:31+00:00",
    "archived": "https://web.archive.org/web/20251117222101/https://canarywharf.com/shop/bloobloom/",
    "title": "bloobloom",
-   "categories": [],
+   "categories": [
+    "Opticians & Pharmacies"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -520,7 +573,9 @@
    "sitemap_lastmod": "2024-05-20T07:27:00+00:00",
    "archived": "https://web.archive.org/web/20251107095040/https://canarywharf.com/shop/amazon-hub-lockers/",
    "title": "Amazon Hub Lockers",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Canada, Cabot Car Parks & Jubilee Place",
     "Canary Wharf",
@@ -531,7 +586,10 @@
    "archived_on": "20251107",
    "mall": "Jubilee Place",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "flags": [
+    "car park"
+   ]
   },
   {
    "kind": "shop",
@@ -540,7 +598,9 @@
    "sitemap_lastmod": "2024-05-20T07:28:20+00:00",
    "archived": "https://web.archive.org/web/20251114124128/https://canarywharf.com/shop/barclays-bank/",
    "title": "Barclays Bank",
-   "categories": [],
+   "categories": [
+    "Banks & Foreign Exchange"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Churchill Place",
@@ -561,7 +621,9 @@
    "sitemap_lastmod": "2024-05-20T07:29:20+00:00",
    "archived": "https://web.archive.org/web/20251117222135/https://canarywharf.com/shop/barker-shoes/",
    "title": "Barker Shoes",
-   "categories": [],
+   "categories": [
+    "Shoes & Footwear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -582,7 +644,9 @@
    "sitemap_lastmod": "2024-05-20T07:33:07+00:00",
    "archived": "https://web.archive.org/web/20251117223127/https://canarywharf.com/shop/charbonnel-et-walker/",
    "title": "Charbonnel et Walker",
-   "categories": [],
+   "categories": [
+    "Confectionery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -603,7 +667,9 @@
    "sitemap_lastmod": "2024-05-20T07:35:04+00:00",
    "archived": "https://web.archive.org/web/20251101212134/https://canarywharf.com/shop/coach/",
    "title": "Coach",
-   "categories": [],
+   "categories": [
+    "Bags & Luggage"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -624,7 +690,9 @@
    "sitemap_lastmod": "2024-05-20T07:35:29+00:00",
    "archived": "https://web.archive.org/web/20251115145308/https://canarywharf.com/shop/coral/",
    "title": "Coral",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -636,7 +704,8 @@
    "archived_on": "20251115",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -645,7 +714,9 @@
    "sitemap_lastmod": "2024-05-20T07:35:53+00:00",
    "archived": "https://web.archive.org/web/20251114115944/https://canarywharf.com/shop/currys/",
    "title": "Currys",
-   "categories": [],
+   "categories": [
+    "Electronics & Phones"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -666,7 +737,9 @@
    "sitemap_lastmod": "2024-05-20T07:36:48+00:00",
    "archived": "https://web.archive.org/web/20251101191926/https://canarywharf.com/shop/english-tailoring/",
    "title": "English Tailoring",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level 0",
     "14 South Colonnade",
@@ -678,7 +751,8 @@
    "archived_on": "20251101",
    "mall": "South Colonnade",
    "level": "Mall Level 0",
-   "postcode": "E14 4PZ"
+   "postcode": "E14 4PZ",
+   "street": "14 South Colonnade"
   },
   {
    "kind": "shop",
@@ -687,7 +761,9 @@
    "sitemap_lastmod": "2024-05-20T07:37:23+00:00",
    "archived": "https://web.archive.org/web/20251117211523/https://canarywharf.com/shop/flying-tiger-copenhagen/",
    "title": "Flying Tiger Copenhagen",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -708,7 +784,9 @@
    "sitemap_lastmod": "2024-05-20T07:37:56+00:00",
    "archived": "https://web.archive.org/web/20251117223447/https://canarywharf.com/shop/goboat/",
    "title": "GoBoat",
-   "categories": [],
+   "categories": [
+    "Sport & Fitness"
+   ],
    "address_lines": [
     "22 Churchill Place",
     "Canary Wharf",
@@ -719,7 +797,8 @@
    "archived_on": "20251117",
    "mall": "Churchill Place",
    "level": null,
-   "postcode": "E14 5RE"
+   "postcode": "E14 5RE",
+   "street": "22 Churchill Place"
   },
   {
    "kind": "shop",
@@ -739,7 +818,8 @@
    "archived_on": "20250119",
    "mall": "Canada Square",
    "level": null,
-   "postcode": "E14 5NN"
+   "postcode": "E14 5NN",
+   "street": "20 Canada Square"
   },
   {
    "kind": "shop",
@@ -748,7 +828,9 @@
    "sitemap_lastmod": "2024-05-20T07:40:59+00:00",
    "archived": "https://web.archive.org/web/20251117215532/https://canarywharf.com/shop/inpost/",
    "title": "InPost",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Canada, Cabot & Jubilee Car Parks",
     "Canary Wharf",
@@ -759,7 +841,10 @@
    "archived_on": "20251117",
    "mall": null,
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "flags": [
+    "car park"
+   ]
   },
   {
    "kind": "shop",
@@ -768,7 +853,9 @@
    "sitemap_lastmod": "2024-05-20T07:59:45+00:00",
    "archived": "https://web.archive.org/web/20251117214109/https://canarywharf.com/shop/malin-goetz/",
    "title": "Malin+Goetz",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -789,7 +876,9 @@
    "sitemap_lastmod": "2024-05-20T08:01:20+00:00",
    "archived": "https://web.archive.org/web/20251103181902/https://canarywharf.com/shop/morrisons-daily/",
    "title": "Morrisons Daily",
-   "categories": [],
+   "categories": [
+    "Groceries"
+   ],
    "address_lines": [
     "75 Harbord Square",
     "Wood Wharf",
@@ -800,7 +889,8 @@
    "archived_on": "20251103",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "75 Harbord Square"
   },
   {
    "kind": "shop",
@@ -809,7 +899,9 @@
    "sitemap_lastmod": "2024-05-20T08:02:11+00:00",
    "archived": "https://web.archive.org/web/20251107011842/https://canarywharf.com/shop/mouth-dental/",
    "title": "Mouth Dental",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Churchill Place",
@@ -830,7 +922,9 @@
    "sitemap_lastmod": "2024-05-20T08:03:03+00:00",
    "archived": "https://web.archive.org/web/20251107012157/https://canarywharf.com/shop/natwest/",
    "title": "NatWest",
-   "categories": [],
+   "categories": [
+    "Banks & Foreign Exchange"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -851,7 +945,9 @@
    "sitemap_lastmod": "2024-05-20T08:03:36+00:00",
    "archived": "https://web.archive.org/web/20260214084552/https://canarywharf.com/shop/nipnip/",
    "title": "NipNip",
-   "categories": [],
+   "categories": [
+    "Sport & Fitness"
+   ],
    "address_lines": [
     "6 Westferry Circus",
     "Canary Wharf",
@@ -862,7 +958,8 @@
    "archived_on": "20260214",
    "mall": "Westferry Circus",
    "level": null,
-   "postcode": "E14 4HD"
+   "postcode": "E14 4HD",
+   "street": "6 Westferry Circus"
   },
   {
    "kind": "shop",
@@ -871,7 +968,9 @@
    "sitemap_lastmod": "2024-05-20T08:04:53+00:00",
    "archived": "https://web.archive.org/web/20251115154448/https://canarywharf.com/shop/pandora/",
    "title": "Pandora",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -892,7 +991,9 @@
    "sitemap_lastmod": "2024-05-20T08:05:38+00:00",
    "archived": "https://web.archive.org/web/20251107003214/https://canarywharf.com/shop/penhaligons/",
    "title": "Penhaligon's",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -913,7 +1014,9 @@
    "sitemap_lastmod": "2024-05-20T08:07:39+00:00",
    "archived": "https://web.archive.org/web/20251115154838/https://canarywharf.com/shop/ross-watch-repairs/",
    "title": "Ross Watch Repairs",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -934,7 +1037,9 @@
    "sitemap_lastmod": "2024-05-20T08:08:52+00:00",
    "archived": "https://web.archive.org/web/20251117212522/https://canarywharf.com/shop/samsung/",
    "title": "Samsung",
-   "categories": [],
+   "categories": [
+    "Electronics & Phones"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -955,7 +1060,9 @@
    "sitemap_lastmod": "2024-05-20T08:10:27+00:00",
    "archived": "https://web.archive.org/web/20251115144827/https://canarywharf.com/shop/space-nk/",
    "title": "Space NK",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -976,7 +1083,9 @@
    "sitemap_lastmod": "2024-05-20T08:14:13+00:00",
    "archived": "https://web.archive.org/web/20251101103011/https://canarywharf.com/shop/tian-tian-market/",
    "title": "Tian Tian Market",
-   "categories": [],
+   "categories": [
+    "Groceries"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -997,7 +1106,9 @@
    "sitemap_lastmod": "2024-05-20T08:15:06+00:00",
    "archived": "https://web.archive.org/web/20251115143136/https://canarywharf.com/shop/ufodrive-car-rental/",
    "title": "UFODRIVE Car Rental",
-   "categories": [],
+   "categories": [
+    "Car Hire"
+   ],
    "address_lines": [
     "Canada Square Car Park",
     "Canary Wharf",
@@ -1008,7 +1119,10 @@
    "archived_on": "20251115",
    "mall": "Canada Square",
    "level": null,
-   "postcode": "E14 5EW"
+   "postcode": "E14 5EW",
+   "flags": [
+    "car park"
+   ]
   },
   {
    "kind": "shop",
@@ -1017,7 +1131,9 @@
    "sitemap_lastmod": "2024-05-20T08:16:06+00:00",
    "archived": "https://web.archive.org/web/20251117222208/https://canarywharf.com/shop/vision-express/",
    "title": "Vision Express",
-   "categories": [],
+   "categories": [
+    "Opticians & Pharmacies"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1038,7 +1154,9 @@
    "sitemap_lastmod": "2024-05-20T08:16:34+00:00",
    "archived": "https://web.archive.org/web/20251117224014/https://canarywharf.com/shop/vow-studio/",
    "title": "The Vow Studio",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "11 Park Drive",
     "Wood Wharf",
@@ -1049,7 +1167,8 @@
    "archived_on": "20251117",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9GG"
+   "postcode": "E14 9GG",
+   "street": "11 Park Drive"
   },
   {
    "kind": "shop",
@@ -1058,7 +1177,9 @@
    "sitemap_lastmod": "2024-05-20T08:19:51+00:00",
    "archived": "https://web.archive.org/web/20251115153727/https://canarywharf.com/shop/waterstones-cabot-place/",
    "title": "Waterstones",
-   "categories": [],
+   "categories": [
+    "News & Books"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Cabot Place",
@@ -1079,7 +1200,9 @@
    "sitemap_lastmod": "2024-05-20T09:51:10+00:00",
    "archived": "https://web.archive.org/web/20251107101438/https://canarywharf.com/shop/adam-grooming-atelier-jubilee-place/",
    "title": "Adam Atelier – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -1100,7 +1223,9 @@
    "sitemap_lastmod": "2024-05-20T09:51:47+00:00",
    "archived": "https://web.archive.org/web/20251117222609/https://canarywharf.com/shop/boots-the-chemist-canada-place/",
    "title": "Boots The Chemist – Canada Place",
-   "categories": [],
+   "categories": [
+    "Groceries"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1121,7 +1246,9 @@
    "sitemap_lastmod": "2024-05-20T09:52:05+00:00",
    "archived": "https://web.archive.org/web/20251114113033/https://canarywharf.com/shop/boots-the-chemist-jubilee-place/",
    "title": "Boots – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Groceries"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -1142,7 +1269,9 @@
    "sitemap_lastmod": "2024-05-20T09:52:33+00:00",
    "archived": "https://web.archive.org/web/20251117214428/https://canarywharf.com/shop/cards-galore-cabot-place/",
    "title": "Cards Galore – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Cards & Stationery"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -1163,7 +1292,9 @@
    "sitemap_lastmod": "2024-05-20T10:29:03+00:00",
    "archived": "https://web.archive.org/web/20251107083422/https://canarywharf.com/shop/david-clulow-opticians-cabot-place/",
    "title": "David Clulow – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Opticians & Pharmacies"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -1184,7 +1315,9 @@
    "sitemap_lastmod": "2024-05-20T10:29:24+00:00",
    "archived": "https://web.archive.org/web/20251117213010/https://canarywharf.com/shop/david-clulow-opticians-jubilee-place/",
    "title": "David Clulow – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Opticians & Pharmacies"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -1205,7 +1338,9 @@
    "sitemap_lastmod": "2024-05-20T10:31:08+00:00",
    "archived": "https://web.archive.org/web/20251107011731/https://canarywharf.com/shop/hsbc-jubilee-place/",
    "title": "HSBC – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Banks & Foreign Exchange"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -1226,7 +1361,9 @@
    "sitemap_lastmod": "2024-05-20T10:31:53+00:00",
    "archived": "https://web.archive.org/web/20251031034731/https://canarywharf.com/shop/humble-grape/",
    "title": "Humble Grape – Wine Bar",
-   "categories": [],
+   "categories": [
+    "Groceries"
+   ],
    "address_lines": [
     "18-20 Mackenzie Walk",
     "Canary Wharf",
@@ -1237,7 +1374,8 @@
    "archived_on": "20251031",
    "mall": "Mackenzie Walk",
    "level": null,
-   "postcode": "E14 4PH"
+   "postcode": "E14 4PH",
+   "street": "18-20 Mackenzie Walk"
   },
   {
    "kind": "shop",
@@ -1246,7 +1384,9 @@
    "sitemap_lastmod": "2024-05-20T10:33:27+00:00",
    "archived": "https://web.archive.org/web/20251117221520/https://canarywharf.com/shop/james-shoe-shine-chair-cabot-place/",
    "title": "Shoe Shine – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Dry Cleaning & Shoe Repair"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -1267,7 +1407,9 @@
    "sitemap_lastmod": "2024-05-20T10:33:43+00:00",
    "archived": "https://web.archive.org/web/20251117215816/https://canarywharf.com/shop/james-shoe-shine-chair-canada-place/",
    "title": "Shoe Shine – Canada Place",
-   "categories": [],
+   "categories": [
+    "Dry Cleaning & Shoe Repair"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1288,7 +1430,9 @@
    "sitemap_lastmod": "2024-05-20T10:35:59+00:00",
    "archived": "https://web.archive.org/web/20251115145434/https://canarywharf.com/shop/news-on-the-wharf-jubilee-place/",
    "title": "News on the Wharf – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "News & Books"
+   ],
    "address_lines": [
     "Mezzanine",
     "Jubilee Place",
@@ -1309,7 +1453,9 @@
    "sitemap_lastmod": "2024-05-20T10:36:58+00:00",
    "archived": "https://web.archive.org/web/20251117221621/https://canarywharf.com/shop/news-on-the-wharf-one-canada-square/",
    "title": "News on the Wharf – One Canada Square",
-   "categories": [],
+   "categories": [
+    "News & Books"
+   ],
    "address_lines": [
     "Mall level -1",
     "One Canada Square",
@@ -1321,7 +1467,8 @@
    "archived_on": "20251117",
    "mall": "One Canada Square",
    "level": "Mall level -1",
-   "postcode": "E14 4QT"
+   "postcode": "E14 4QT",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -1330,7 +1477,9 @@
    "sitemap_lastmod": "2024-05-20T10:37:43+00:00",
    "archived": "https://web.archive.org/web/20251117222903/https://canarywharf.com/shop/photo-me-booth-canada-place-2/",
    "title": "Photo-Me Booth – Canada Place",
-   "categories": [],
+   "categories": [
+    "Photo Booth"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1351,7 +1500,9 @@
    "sitemap_lastmod": "2024-05-20T10:41:51+00:00",
    "archived": "https://web.archive.org/web/20251107001204/https://canarywharf.com/shop/teds-grooming-room-cabot-place/",
    "title": "Ted's – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -1372,7 +1523,9 @@
    "sitemap_lastmod": "2024-05-20T10:42:12+00:00",
    "archived": "https://web.archive.org/web/20251107012129/https://canarywharf.com/shop/teds-grooming-room-churchill-place/",
    "title": "Ted's Grooming Room – Churchill Place",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Churchill Place",
@@ -1393,7 +1546,9 @@
    "sitemap_lastmod": "2024-05-20T10:42:51+00:00",
    "archived": "https://web.archive.org/web/20251117220528/https://canarywharf.com/shop/the-post-office-chancellor-passage/",
    "title": "Post Office – Chancellor Passage",
-   "categories": [],
+   "categories": [
+    "Cards & Stationery"
+   ],
    "address_lines": [
     "5 Chancellor Passage",
     "Canary Wharf",
@@ -1404,7 +1559,8 @@
    "archived_on": "20251117",
    "mall": "Chancellor Passage",
    "level": null,
-   "postcode": "E14 4PA"
+   "postcode": "E14 4PA",
+   "street": "5 Chancellor Passage"
   },
   {
    "kind": "shop",
@@ -1413,7 +1569,9 @@
    "sitemap_lastmod": "2024-05-20T10:43:10+00:00",
    "archived": "https://web.archive.org/web/20251115142514/https://canarywharf.com/shop/the-post-office-churchill-place/",
    "title": "Post Office – Churchill Place",
-   "categories": [],
+   "categories": [
+    "Cards & Stationery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Churchill Place",
@@ -1434,7 +1592,9 @@
    "sitemap_lastmod": "2024-05-20T10:45:08+00:00",
    "archived": "https://web.archive.org/web/20251117222639/https://canarywharf.com/shop/wharfside-car-valet-cabot-place/",
    "title": "Wharfside Car Valet – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Car Park",
     "Cabot Place",
@@ -1446,7 +1606,10 @@
    "archived_on": "20251117",
    "mall": "Cabot Place",
    "level": null,
-   "postcode": "E14 4AP"
+   "postcode": "E14 4AP",
+   "flags": [
+    "car park"
+   ]
   },
   {
    "kind": "shop",
@@ -1455,7 +1618,9 @@
    "sitemap_lastmod": "2024-05-20T10:45:32+00:00",
    "archived": "https://web.archive.org/web/20251115155905/https://canarywharf.com/shop/wharfside-car-valet-canada-place/",
    "title": "Wharfside Car Valet – Canada Place",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Car Park",
     "Canada Place",
@@ -1467,7 +1632,10 @@
    "archived_on": "20251115",
    "mall": "Canada Place",
    "level": null,
-   "postcode": "E14 4AH"
+   "postcode": "E14 4AH",
+   "flags": [
+    "car park"
+   ]
   },
   {
    "kind": "shop",
@@ -1476,7 +1644,9 @@
    "sitemap_lastmod": "2024-05-21T12:50:35+00:00",
    "archived": "https://web.archive.org/web/20251117225012/https://canarywharf.com/shop/james-shoe-care-canada-place/",
    "title": "James Shoe Care – Canada Place",
-   "categories": [],
+   "categories": [
+    "Dry Cleaning & Shoe Repair"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1497,7 +1667,9 @@
    "sitemap_lastmod": "2024-05-21T12:55:35+00:00",
    "archived": "https://web.archive.org/web/20251117224039/https://canarywharf.com/shop/city-of-london-dry-cleaners-canada-place/",
    "title": "City of London Dry Cleaners",
-   "categories": [],
+   "categories": [
+    "Dry Cleaning & Shoe Repair"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1518,7 +1690,9 @@
    "sitemap_lastmod": "2024-06-14T06:51:40+00:00",
    "archived": "https://web.archive.org/web/20251029075517/https://canarywharf.com/shop/circle-collective/",
    "title": "Circle Collective",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -1539,7 +1713,9 @@
    "sitemap_lastmod": "2024-08-05T08:18:55+00:00",
    "archived": "https://web.archive.org/web/20251117215934/https://canarywharf.com/shop/rolex-at-watches-of-switzerland/",
    "title": "Rolex at Watches of Switzerland",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1560,7 +1736,9 @@
    "sitemap_lastmod": "2024-08-05T08:20:41+00:00",
    "archived": "https://web.archive.org/web/20251117214921/https://canarywharf.com/shop/watches-of-switzerland/",
    "title": "Watches of Switzerland",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1581,7 +1759,9 @@
    "sitemap_lastmod": "2024-09-05T07:31:09+00:00",
    "archived": "https://web.archive.org/web/20251117225526/https://canarywharf.com/shop/hobbs/",
    "title": "HOBBS",
-   "categories": [],
+   "categories": [
+    "Clothing"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1601,7 +1781,9 @@
    "sitemap_lastmod": "2024-09-05T12:25:14+00:00",
    "archived": "https://web.archive.org/web/20251030193013/https://canarywharf.com/shop/boss/",
    "title": "BOSS",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -1622,7 +1804,9 @@
    "sitemap_lastmod": "2024-09-20T11:36:10+00:00",
    "archived": "https://web.archive.org/web/20251107000006/https://canarywharf.com/shop/kiko-milano/",
    "title": "KIKO MILANO",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -1643,7 +1827,9 @@
    "sitemap_lastmod": "2024-09-23T09:10:12+00:00",
    "archived": "https://web.archive.org/web/20251117220013/https://canarywharf.com/shop/jo-malone-london/",
    "title": "Jo Malone London",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -1664,7 +1850,9 @@
    "sitemap_lastmod": "2024-09-26T09:52:54+00:00",
    "archived": "https://web.archive.org/web/20251102200737/https://canarywharf.com/shop/hackett/",
    "title": "Hackett",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -1685,7 +1873,9 @@
    "sitemap_lastmod": "2024-10-03T06:08:20+00:00",
    "archived": "https://web.archive.org/web/20251115150229/https://canarywharf.com/shop/rituals/",
    "title": "Rituals…",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -1706,7 +1896,9 @@
    "sitemap_lastmod": "2024-10-11T06:38:03+00:00",
    "archived": "https://web.archive.org/web/20251028092102/https://canarywharf.com/shop/charles-tyrwhitt/",
    "title": "Charles Tyrwhitt",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1727,7 +1919,9 @@
    "sitemap_lastmod": "2024-10-18T09:20:13+00:00",
    "archived": "https://web.archive.org/web/20251117223609/https://canarywharf.com/shop/rockar-land-rover/",
    "title": "Rockar Land Rover",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -1748,7 +1942,9 @@
    "sitemap_lastmod": "2024-10-30T11:44:17+00:00",
    "archived": "https://web.archive.org/web/20251115144624/https://canarywharf.com/shop/holland-barrett-jubilee-place/",
    "title": "Holland & Barrett – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -1769,7 +1965,9 @@
    "sitemap_lastmod": "2024-10-30T11:47:49+00:00",
    "archived": "https://web.archive.org/web/20251117215437/https://canarywharf.com/shop/holland-barrett-canada-place/",
    "title": "Holland & Barrett – Canada Place",
-   "categories": [],
+   "categories": [
+    "Groceries"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -1781,7 +1979,8 @@
    "archived_on": "20251117",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AH"
+   "postcode": "E14 5AH",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -1790,7 +1989,9 @@
    "sitemap_lastmod": "2024-11-05T12:39:25+00:00",
    "archived": "https://web.archive.org/web/20251115154750/https://canarywharf.com/shop/qube/",
    "title": "Qube East",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "9 Park Drive",
     "Wood Wharf",
@@ -1801,7 +2002,8 @@
    "archived_on": "20251115",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QA"
+   "postcode": "E14 9QA",
+   "street": "9 Park Drive"
   },
   {
    "kind": "shop",
@@ -1810,7 +2012,9 @@
    "sitemap_lastmod": "2024-11-06T10:20:00+00:00",
    "archived": "https://web.archive.org/web/20251104221356/https://canarywharf.com/shop/jd-sports/",
    "title": "JD Sports",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1831,7 +2035,9 @@
    "sitemap_lastmod": "2024-11-07T06:58:59+00:00",
    "archived": "https://web.archive.org/web/20251115143405/https://canarywharf.com/shop/hotel-chocolat/",
    "title": "Hotel Chocolat",
-   "categories": [],
+   "categories": [
+    "Confectionery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1852,7 +2058,9 @@
    "sitemap_lastmod": "2024-12-06T06:42:06+00:00",
    "archived": "https://web.archive.org/web/20251101235704/https://canarywharf.com/shop/next/",
    "title": "Next",
-   "categories": [],
+   "categories": [
+    "Clothing"
+   ],
    "address_lines": [
     "Level - 2",
     "Jubilee Place",
@@ -1873,7 +2081,9 @@
    "sitemap_lastmod": "2024-12-12T06:45:15+00:00",
    "archived": "https://web.archive.org/web/20251106235045/https://canarywharf.com/shop/nicolas-wine-spirits-specialist/",
    "title": "Nicolas Wine & Spirits Specialist",
-   "categories": [],
+   "categories": [
+    "Groceries"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -1885,7 +2095,8 @@
    "archived_on": "20251106",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -1894,7 +2105,9 @@
    "sitemap_lastmod": "2024-12-13T06:01:09+00:00",
    "archived": "https://web.archive.org/web/20251103095621/https://canarywharf.com/shop/lululemon/",
    "title": "lululemon",
-   "categories": [],
+   "categories": [
+    "Sport & Fitness"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -1914,7 +2127,9 @@
    "sitemap_lastmod": "2025-01-07T05:56:37+00:00",
    "archived": "https://web.archive.org/web/20251106235641/https://canarywharf.com/shop/toni-guy/",
    "title": "Toni&Guy",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -1935,7 +2150,9 @@
    "sitemap_lastmod": "2025-01-08T06:19:50+00:00",
    "archived": "https://web.archive.org/web/20251107011339/https://canarywharf.com/shop/mulberry-wood-wharf-primary/",
    "title": "Mulberry Wood Wharf Primary",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "20 Brannan Street",
     "Canary Wharf",
@@ -1944,9 +2161,10 @@
    ],
    "website": "https://www.mulberrywoodwharf.org/",
    "archived_on": "20251107",
-   "mall": null,
+   "mall": "Brannan Street",
    "level": null,
-   "postcode": "E14 9ZR"
+   "postcode": "E14 9ZR",
+   "street": "20 Brannan Street"
   },
   {
    "kind": "shop",
@@ -1955,7 +2173,9 @@
    "sitemap_lastmod": "2025-01-24T06:40:59+00:00",
    "archived": "https://web.archive.org/web/20251115155041/https://canarywharf.com/shop/waitrose-partners/",
    "title": "Waitrose & Partners – Supermarket",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "16-19 Canada Square",
     "Canary Wharf",
@@ -1966,7 +2186,8 @@
    "archived_on": "20251115",
    "mall": "Canada Square",
    "level": null,
-   "postcode": "E14 5EQ"
+   "postcode": "E14 5EQ",
+   "street": "16-19 Canada Square"
   },
   {
    "kind": "shop",
@@ -1975,7 +2196,9 @@
    "sitemap_lastmod": "2025-02-26T11:08:38+00:00",
    "archived": "https://web.archive.org/web/20251107094913/https://canarywharf.com/shop/monica-vinader/",
    "title": "Monica Vinader",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -1996,7 +2219,9 @@
    "sitemap_lastmod": "2025-03-04T06:04:07+00:00",
    "archived": "https://web.archive.org/web/20251114111044/https://canarywharf.com/shop/arc/",
    "title": "Arc",
-   "categories": [],
+   "categories": [
+    "Healthcare"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Crossrail Place",
@@ -2017,7 +2242,9 @@
    "sitemap_lastmod": "2025-03-04T06:30:52+00:00",
    "archived": "https://web.archive.org/web/20251115144244/https://canarywharf.com/shop/byd/",
    "title": "BYD",
-   "categories": [],
+   "categories": [
+    "Electronics & Phones"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -2038,7 +2265,9 @@
    "sitemap_lastmod": "2025-03-04T06:36:16+00:00",
    "archived": "https://web.archive.org/web/20251030150102/https://canarywharf.com/shop/castore/",
    "title": "Castore",
-   "categories": [],
+   "categories": [
+    "Sport & Fitness"
+   ],
    "address_lines": [
     "Level -1",
     "Jubilee Place",
@@ -2070,7 +2299,8 @@
    "archived_on": "20250214",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -2079,7 +2309,9 @@
    "sitemap_lastmod": "2025-03-04T07:08:49+00:00",
    "archived": "https://web.archive.org/web/20251106233233/https://canarywharf.com/shop/hca-healthcare-uk/",
    "title": "HCA Healthcare UK",
-   "categories": [],
+   "categories": [
+    "Healthcare"
+   ],
    "address_lines": [
     "40 Bank Street",
     "Canary Wharf",
@@ -2090,7 +2322,8 @@
    "archived_on": "20251106",
    "mall": "Bank Street",
    "level": null,
-   "postcode": "E14 5AB"
+   "postcode": "E14 5AB",
+   "street": "40 Bank Street"
   },
   {
    "kind": "shop",
@@ -2099,7 +2332,9 @@
    "sitemap_lastmod": "2025-03-04T07:19:42+00:00",
    "archived": "https://web.archive.org/web/20251115143855/https://canarywharf.com/shop/moleskine/",
    "title": "Moleskine",
-   "categories": [],
+   "categories": [
+    "Cards & Stationery"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -2120,7 +2355,9 @@
    "sitemap_lastmod": "2025-03-04T07:24:52+00:00",
    "archived": "https://web.archive.org/web/20251117224730/https://canarywharf.com/shop/sixt/",
    "title": "SIXT",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "Level -3",
     "Canada Square Car Park",
@@ -2132,7 +2369,10 @@
    "archived_on": "20251117",
    "mall": "Canada Square",
    "level": "Level -3",
-   "postcode": "E14 5EW"
+   "postcode": "E14 5EW",
+   "flags": [
+    "car park"
+   ]
   },
   {
    "kind": "shop",
@@ -2141,7 +2381,9 @@
    "sitemap_lastmod": "2025-03-04T08:10:46+00:00",
    "archived": "https://web.archive.org/web/20251117215052/https://canarywharf.com/shop/wood-wharf-vets/",
    "title": "Wood Wharf Vets",
-   "categories": [],
+   "categories": [
+    "Healthcare"
+   ],
    "address_lines": [
     "55 Harbord Square",
     "London",
@@ -2151,8 +2393,9 @@
    "website": null,
    "archived_on": "20251117",
    "mall": "Harbord Square",
-   "level": "United Kingdom",
-   "postcode": "E14 9QH"
+   "level": null,
+   "postcode": "E14 9QH",
+   "street": "55 Harbord Square"
   },
   {
    "kind": "shop",
@@ -2161,7 +2404,9 @@
    "sitemap_lastmod": "2025-03-18T10:17:57+00:00",
    "archived": "https://web.archive.org/web/20251107012120/https://canarywharf.com/shop/freedom-clinics/",
    "title": "Freedom Clinics",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2182,7 +2427,9 @@
    "sitemap_lastmod": "2025-03-18T10:22:04+00:00",
    "archived": "https://web.archive.org/web/20251115151559/https://canarywharf.com/shop/ace-fx-canada-place/",
    "title": "Ace-FX",
-   "categories": [],
+   "categories": [
+    "Banks & Foreign Exchange"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2203,7 +2450,9 @@
    "sitemap_lastmod": "2025-04-03T14:46:27+00:00",
    "archived": "https://web.archive.org/web/20251029192707/https://canarywharf.com/shop/john-lewis-partners/",
    "title": "John Lewis & Partners",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "16-19 Canada Square",
     "Canary Wharf",
@@ -2214,7 +2463,8 @@
    "archived_on": "20251029",
    "mall": "Canada Square",
    "level": null,
-   "postcode": "E14 5EQ"
+   "postcode": "E14 5EQ",
+   "street": "16-19 Canada Square"
   },
   {
    "kind": "shop",
@@ -2223,7 +2473,9 @@
    "sitemap_lastmod": "2025-04-14T10:53:24+00:00",
    "archived": "https://web.archive.org/web/20251031160307/https://canarywharf.com/shop/l-k-bennett/",
    "title": "LK Bennett",
-   "categories": [],
+   "categories": [
+    "Womenswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -2244,7 +2496,9 @@
    "sitemap_lastmod": "2025-04-17T09:55:43+00:00",
    "archived": "https://web.archive.org/web/20251117215705/https://canarywharf.com/shop/flowers-and-plants/",
    "title": "Flowers & Plants",
-   "categories": [],
+   "categories": [
+    "Flowers & Plants"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -2265,7 +2519,9 @@
    "sitemap_lastmod": "2025-04-17T09:56:00+00:00",
    "archived": "https://web.archive.org/web/20251117225304/https://canarywharf.com/shop/knight-frank/",
    "title": "Knight Frank",
-   "categories": [],
+   "categories": [
+    "Estate Agent"
+   ],
    "address_lines": [
     "30 Churchill Place",
     "Canary Wharf",
@@ -2276,7 +2532,8 @@
    "archived_on": "20251117",
    "mall": "Churchill Place",
    "level": null,
-   "postcode": "E14 5RE"
+   "postcode": "E14 5RE",
+   "street": "30 Churchill Place"
   },
   {
    "kind": "shop",
@@ -2285,7 +2542,9 @@
    "sitemap_lastmod": "2025-04-17T09:57:13+00:00",
    "archived": "https://web.archive.org/web/20251114112416/https://canarywharf.com/shop/8-harbord-square/",
    "title": "8 Harbord Square",
-   "categories": [],
+   "categories": [
+    "Flowers & Plants"
+   ],
    "address_lines": [
     "8 Harbord Square",
     "Canary Wharf",
@@ -2295,7 +2554,8 @@
    "archived_on": "20251114",
    "mall": "Harbord Square",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "8 Harbord Square"
   },
   {
    "kind": "shop",
@@ -2304,7 +2564,9 @@
    "sitemap_lastmod": "2025-04-17T10:05:16+00:00",
    "archived": "https://web.archive.org/web/20251117222932/https://canarywharf.com/shop/swarovski/",
    "title": "Swarovski",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Mall Level - 1",
     "Jubilee Place",
@@ -2325,7 +2587,9 @@
    "sitemap_lastmod": "2025-04-17T10:08:38+00:00",
    "archived": "https://web.archive.org/web/20251107011929/https://canarywharf.com/shop/robert-dyas/",
    "title": "Robert Dyas",
-   "categories": [],
+   "categories": [
+    "Home & Furniture"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2346,7 +2610,9 @@
    "sitemap_lastmod": "2025-04-17T10:09:10+00:00",
    "archived": "https://web.archive.org/web/20251117215121/https://canarywharf.com/shop/cos/",
    "title": "COS",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -2367,7 +2633,9 @@
    "sitemap_lastmod": "2025-04-17T10:09:42+00:00",
    "archived": "https://web.archive.org/web/20251106233105/https://canarywharf.com/shop/kiehls-since-1851/",
    "title": "Kiehl’s, since 1851",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -2388,7 +2656,9 @@
    "sitemap_lastmod": "2025-04-17T10:11:08+00:00",
    "archived": "https://web.archive.org/web/20251117214501/https://canarywharf.com/shop/scribbler/",
    "title": "Scribbler",
-   "categories": [],
+   "categories": [
+    "Cards & Stationery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -2400,7 +2670,8 @@
    "archived_on": "20251117",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "shop",
@@ -2409,7 +2680,9 @@
    "sitemap_lastmod": "2025-05-09T09:29:24+00:00",
    "archived": "https://web.archive.org/web/20251107000830/https://canarywharf.com/shop/russell-bromley/",
    "title": "Russell & Bromley",
-   "categories": [],
+   "categories": [
+    "Shoes & Footwear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2429,7 +2702,9 @@
    "sitemap_lastmod": "2025-05-09T13:23:09+00:00",
    "archived": "https://web.archive.org/web/20251107011939/https://canarywharf.com/shop/bupa-dental-centre-columbus-courtyard/",
    "title": "Bupa Dental Centre",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level 0",
     "14 Columbus Courtyard",
@@ -2441,7 +2716,8 @@
    "archived_on": "20251107",
    "mall": "Columbus Courtyard",
    "level": "Mall Level 0",
-   "postcode": "E14 4DA"
+   "postcode": "E14 4DA",
+   "street": "14 Columbus Courtyard"
   },
   {
    "kind": "shop",
@@ -2450,7 +2726,9 @@
    "sitemap_lastmod": "2025-05-19T16:13:02+00:00",
    "archived": "https://web.archive.org/web/20251117212306/https://canarywharf.com/shop/reiss-jubilee-place/",
    "title": "Reiss",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -2471,7 +2749,9 @@
    "sitemap_lastmod": "2025-06-05T15:49:40+00:00",
    "archived": "https://web.archive.org/web/20251117224934/https://canarywharf.com/shop/pop-mart/",
    "title": "Pop Mart",
-   "categories": [],
+   "categories": [
+    "Cards & Stationery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Square",
@@ -2492,7 +2772,9 @@
    "sitemap_lastmod": "2025-06-06T08:55:29+00:00",
    "archived": "https://web.archive.org/web/20251114115041/https://canarywharf.com/shop/awe-london/",
    "title": "Awe London",
-   "categories": [],
+   "categories": [
+    "Spa"
+   ],
    "address_lines": [
     "8 Harbord Square",
     "Wood Wharf",
@@ -2502,7 +2784,8 @@
    "archived_on": "20251114",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QH"
+   "postcode": "E14 9QH",
+   "street": "8 Harbord Square"
   },
   {
    "kind": "shop",
@@ -2511,7 +2794,9 @@
    "sitemap_lastmod": "2025-06-11T13:47:27+00:00",
    "archived": "https://web.archive.org/web/20251106232033/https://canarywharf.com/shop/loccitane/",
    "title": "L'Occitane",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -2532,7 +2817,9 @@
    "sitemap_lastmod": "2025-07-24T08:30:23+00:00",
    "archived": "https://web.archive.org/web/20251117223543/https://canarywharf.com/shop/pawsome-pet-and-grooming/",
    "title": "Pawsome & Pet Grooming Spa",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "8 Harbord Square",
     "Wood Wharf",
@@ -2542,7 +2829,8 @@
    "archived_on": "20251117",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QH"
+   "postcode": "E14 9QH",
+   "street": "8 Harbord Square"
   },
   {
    "kind": "shop",
@@ -2551,7 +2839,9 @@
    "sitemap_lastmod": "2025-07-24T08:30:40+00:00",
    "archived": "https://web.archive.org/web/20251115142730/https://canarywharf.com/shop/the-pelligon/",
    "title": "The Pelligon",
-   "categories": [],
+   "categories": [
+    "Estate Agent"
+   ],
    "address_lines": [
     "43 Bank Street",
     "London",
@@ -2561,7 +2851,8 @@
    "archived_on": "20251115",
    "mall": "Bank Street",
    "level": null,
-   "postcode": "E14 5NX"
+   "postcode": "E14 5NX",
+   "street": "43 Bank Street"
   },
   {
    "kind": "shop",
@@ -2570,7 +2861,9 @@
    "sitemap_lastmod": "2025-07-24T08:30:41+00:00",
    "archived": "https://web.archive.org/web/20251107083237/https://canarywharf.com/shop/broadwick-studio/",
    "title": "Broadwick Studio",
-   "categories": [],
+   "categories": [
+    "Event Space"
+   ],
    "address_lines": [
     "30 Water Street",
     "London",
@@ -2580,7 +2873,8 @@
    "archived_on": "20251107",
    "mall": "Water Street",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "30 Water Street"
   },
   {
    "kind": "shop",
@@ -2589,7 +2883,9 @@
    "sitemap_lastmod": "2025-07-24T08:30:52+00:00",
    "archived": "https://web.archive.org/web/20251117223058/https://canarywharf.com/shop/idea-store/",
    "title": "Idea Store",
-   "categories": [],
+   "categories": [
+    "Library"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Churchill Place",
@@ -2610,7 +2906,9 @@
    "sitemap_lastmod": "2025-07-29T16:17:21+00:00",
    "archived": "https://web.archive.org/web/20251107011821/https://canarywharf.com/shop/hsbc-canada-place/",
    "title": "HSBC – Canada Place",
-   "categories": [],
+   "categories": [
+    "Banks & Foreign Exchange"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2631,7 +2929,9 @@
    "sitemap_lastmod": "2025-08-12T15:30:20+00:00",
    "archived": "https://web.archive.org/web/20251101024825/https://canarywharf.com/shop/hawes-curtis/",
    "title": "Hawes & Curtis",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2652,7 +2952,9 @@
    "sitemap_lastmod": "2025-08-29T12:18:50+00:00",
    "archived": "https://web.archive.org/web/20251107093601/https://canarywharf.com/shop/the-fragrance-shop/",
    "title": "The Fragrance Shop",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2671,7 +2973,9 @@
    "sitemap_lastmod": "2025-10-06T14:34:18+00:00",
    "archived": "https://web.archive.org/web/20251115152332/https://canarywharf.com/shop/wayne-salon/",
    "title": "Wayne Salon",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "8 Harbord Square",
     "Wood Wharf",
@@ -2681,7 +2985,8 @@
    "archived_on": "20251115",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QH"
+   "postcode": "E14 9QH",
+   "street": "8 Harbord Square"
   },
   {
    "kind": "shop",
@@ -2690,7 +2995,9 @@
    "sitemap_lastmod": "2025-10-06T14:36:11+00:00",
    "archived": "https://web.archive.org/web/20251117221957/https://canarywharf.com/shop/weather-and-palette/",
    "title": "Weather and Palette",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Level -2",
     "Jubilee Place",
@@ -2711,7 +3018,9 @@
    "sitemap_lastmod": "2025-10-06T14:38:37+00:00",
    "archived": "https://web.archive.org/web/20251106235129/https://canarywharf.com/shop/therapie-clinic-jubilee-place/",
    "title": "Therapie – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -2732,7 +3041,9 @@
    "sitemap_lastmod": "2025-10-06T14:49:59+00:00",
    "archived": "https://web.archive.org/web/20251115151104/https://canarywharf.com/shop/intimissimi/",
    "title": "Intimissimi",
-   "categories": [],
+   "categories": [
+    "Lingerie"
+   ],
    "address_lines": [
     "Mall Level, -1",
     "Canada Place",
@@ -2751,7 +3062,9 @@
    "sitemap_lastmod": "2025-10-06T15:43:00+00:00",
    "archived": "https://web.archive.org/web/20251115155207/https://canarywharf.com/shop/sostrene-grene/",
    "title": "Søstrene Grene",
-   "categories": [],
+   "categories": [
+    "Home & Furniture"
+   ],
    "address_lines": [
     "Level -2",
     "Jubilee Place",
@@ -2771,7 +3084,9 @@
    "sitemap_lastmod": "2025-10-06T15:50:46+00:00",
    "archived": "https://web.archive.org/web/20251115145236/https://canarywharf.com/shop/le-chalet-cryo/",
    "title": "Le Chalet Cryo",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2792,7 +3107,9 @@
    "sitemap_lastmod": "2025-10-06T15:51:36+00:00",
    "archived": "https://web.archive.org/web/20251106235857/https://canarywharf.com/shop/emed-healthcare/",
    "title": "eMed Healthcare",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Cabot Place",
@@ -2813,7 +3130,9 @@
    "sitemap_lastmod": "2025-10-06T15:52:43+00:00",
    "archived": "https://web.archive.org/web/20251117222737/https://canarywharf.com/shop/get-a-drip/",
    "title": "Get A Drip",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Cabot Place",
@@ -2834,7 +3153,9 @@
    "sitemap_lastmod": "2025-10-06T15:53:52+00:00",
    "archived": "https://web.archive.org/web/20251117223029/https://canarywharf.com/shop/therapie-clinic-cabot-place/",
    "title": "Therapie – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -2855,7 +3176,9 @@
    "sitemap_lastmod": "2025-10-06T15:53:54+00:00",
    "archived": "https://web.archive.org/web/20251117214949/https://canarywharf.com/shop/laderach/",
    "title": "Laderach",
-   "categories": [],
+   "categories": [
+    "Confectionery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2876,7 +3199,9 @@
    "sitemap_lastmod": "2025-10-06T15:56:42+00:00",
    "archived": "https://web.archive.org/web/20251114120418/https://canarywharf.com/shop/accessorize-canarywharf/",
    "title": "Accessorize",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2896,7 +3221,9 @@
    "sitemap_lastmod": "2025-10-06T15:57:25+00:00",
    "archived": "https://web.archive.org/web/20251107011310/https://canarywharf.com/shop/randox-health/",
    "title": "Randox Health",
-   "categories": [],
+   "categories": [
+    "Healthcare"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -2917,7 +3244,9 @@
    "sitemap_lastmod": "2025-10-06T15:58:37+00:00",
    "archived": "https://web.archive.org/web/20251107012657/https://canarywharf.com/shop/wood-wharf-health-centre/",
    "title": "Wood Wharf Health Centre",
-   "categories": [],
+   "categories": [
+    "Healthcare"
+   ],
    "address_lines": [
     "75 Harbord Square",
     "Wood Wharf",
@@ -2928,7 +3257,8 @@
    "archived_on": "20251107",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QH"
+   "postcode": "E14 9QH",
+   "street": "75 Harbord Square"
   },
   {
    "kind": "shop",
@@ -2937,7 +3267,9 @@
    "sitemap_lastmod": "2025-10-06T16:00:09+00:00",
    "archived": "https://web.archive.org/web/20251107011331/https://canarywharf.com/shop/jon-hala/",
    "title": "Jon Hala",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -2958,7 +3290,9 @@
    "sitemap_lastmod": "2025-10-06T16:05:05+00:00",
    "archived": "https://web.archive.org/web/20251117225806/https://canarywharf.com/shop/office-shoes/",
    "title": "Office",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2978,7 +3312,9 @@
    "sitemap_lastmod": "2025-10-06T16:10:14+00:00",
    "archived": "https://web.archive.org/web/20251115150907/https://canarywharf.com/shop/townhouse-canada-place/",
    "title": "Townhouse Nail Salon",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -2999,7 +3335,9 @@
    "sitemap_lastmod": "2025-10-06T16:12:30+00:00",
    "archived": "https://web.archive.org/web/20251107000652/https://canarywharf.com/shop/townhouse/",
    "title": "Townhouse Nail Salon",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -3020,7 +3358,9 @@
    "sitemap_lastmod": "2025-10-06T16:14:23+00:00",
    "archived": "https://web.archive.org/web/20251117222834/https://canarywharf.com/shop/the-flower-club/",
    "title": "The Flower Club",
-   "categories": [],
+   "categories": [
+    "Flowers & Plants"
+   ],
    "address_lines": [
     "8 Harbord Square",
     "Canary Wharf",
@@ -3030,7 +3370,8 @@
    "archived_on": "20251117",
    "mall": "Harbord Square",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "8 Harbord Square"
   },
   {
    "kind": "shop",
@@ -3039,7 +3380,9 @@
    "sitemap_lastmod": "2025-10-17T15:22:28+00:00",
    "archived": "https://web.archive.org/web/20251115155912/https://canarywharf.com/shop/bright-horizons-columbus-courtyard-day-nursery-preschool/",
    "title": "Bright Horizons Columbus Courtyard Day Nursery and Preschool",
-   "categories": [],
+   "categories": [
+    "Childcare"
+   ],
    "address_lines": [
     "Mall Level 0",
     "13 Columbus Courtyard",
@@ -3051,7 +3394,8 @@
    "archived_on": "20251115",
    "mall": "Columbus Courtyard",
    "level": "Mall Level 0",
-   "postcode": "E14 4DA"
+   "postcode": "E14 4DA",
+   "street": "13 Columbus Courtyard"
   },
   {
    "kind": "shop",
@@ -3060,7 +3404,9 @@
    "sitemap_lastmod": "2025-10-17T15:22:50+00:00",
    "archived": "https://web.archive.org/web/20251114122203/https://canarywharf.com/shop/bright-horizons-canada-square-day-nursery-preschool/",
    "title": "Bright Horizons Canada Square Day Nursery and Preschool",
-   "categories": [],
+   "categories": [
+    "Childcare"
+   ],
    "address_lines": [
     "Mall level -1",
     "20 Canada Square",
@@ -3072,7 +3418,8 @@
    "archived_on": "20251114",
    "mall": "Canada Square",
    "level": "Mall level -1",
-   "postcode": "E14 4DA"
+   "postcode": "E14 4DA",
+   "street": "20 Canada Square"
   },
   {
    "kind": "shop",
@@ -3081,7 +3428,9 @@
    "sitemap_lastmod": "2025-10-17T15:22:55+00:00",
    "archived": "https://web.archive.org/web/20251114123409/https://canarywharf.com/shop/bright-horizons-bank-street-day-nursery-preschool/",
    "title": "Bright Horizons Bank Street Day Nursery and Preschool",
-   "categories": [],
+   "categories": [
+    "Childcare"
+   ],
    "address_lines": [
     "Mall Level 0",
     "50 Bank Street",
@@ -3093,7 +3442,8 @@
    "archived_on": "20251114",
    "mall": "Bank Street",
    "level": "Mall Level 0",
-   "postcode": "E14 5NS"
+   "postcode": "E14 5NS",
+   "street": "50 Bank Street"
   },
   {
    "kind": "shop",
@@ -3102,7 +3452,9 @@
    "sitemap_lastmod": "2025-10-17T15:49:59+00:00",
    "archived": "https://web.archive.org/web/20251107012515/https://canarywharf.com/shop/wood-wharf-kindergarten/",
    "title": "Wood Wharf Kindergarten",
-   "categories": [],
+   "categories": [
+    "Childcare"
+   ],
    "address_lines": [
     "8 Park Drive",
     "Wood Wharf",
@@ -3113,7 +3465,8 @@
    "archived_on": "20251107",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "8 Park Drive"
   },
   {
    "kind": "shop",
@@ -3122,7 +3475,9 @@
    "sitemap_lastmod": "2025-11-04T13:31:36+00:00",
    "archived": "https://web.archive.org/web/20251117221341/https://canarywharf.com/shop/polo-ralph-lauren/",
    "title": "Polo Ralph Lauren",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -3143,7 +3498,9 @@
    "sitemap_lastmod": "2025-11-06T14:30:58+00:00",
    "archived": "https://web.archive.org/web/20251214174513/https://canarywharf.com/shop/omnifix/",
    "title": "OmniFix",
-   "categories": [],
+   "categories": [
+    "Dry Cleaning & Shoe Repair"
+   ],
    "address_lines": [
     "8 Harbord Square",
     "Wood Wharf",
@@ -3153,7 +3510,8 @@
    "archived_on": "20251214",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QH"
+   "postcode": "E14 9QH",
+   "street": "8 Harbord Square"
   },
   {
    "kind": "shop",
@@ -3162,7 +3520,9 @@
    "sitemap_lastmod": "2025-11-10T15:03:32+00:00",
    "archived": "https://web.archive.org/web/20251117223828/https://canarywharf.com/shop/diptyque/",
    "title": "Diptyque",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -3202,7 +3562,9 @@
    "sitemap_lastmod": "2025-11-12T14:44:58+00:00",
    "archived": "https://web.archive.org/web/20251214172841/https://canarywharf.com/shop/postmark/",
    "title": "Postmark",
-   "categories": [],
+   "categories": [
+    "Cards & Stationery"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -3222,7 +3584,9 @@
    "sitemap_lastmod": "2025-11-13T13:37:36+00:00",
    "archived": "https://web.archive.org/web/20251214170113/https://canarywharf.com/shop/tm-lewin/",
    "title": "TM Lewin",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall Level 0",
     "Cabot Place",
@@ -3242,7 +3606,9 @@
    "sitemap_lastmod": "2025-11-25T11:42:04+00:00",
    "archived": "https://web.archive.org/web/20251214175645/https://canarywharf.com/shop/tashola/",
    "title": "Tashola",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Level -1",
     "Jubilee Place",
@@ -3262,7 +3628,9 @@
    "sitemap_lastmod": "2025-12-15T16:19:53+00:00",
    "archived": "https://web.archive.org/web/20251029115044/https://canarywharf.com/shop/newbie/",
    "title": "Newbie",
-   "categories": [],
+   "categories": [
+    "Clothing"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -3283,7 +3651,9 @@
    "sitemap_lastmod": "2026-01-05T10:51:55+00:00",
    "archived": "https://web.archive.org/web/20251114115610/https://canarywharf.com/shop/adam-grooming-atelier-cabot-place/",
    "title": "Adam Atelier – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Hairdressing & Beauty"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Cabot Place",
@@ -3304,7 +3674,9 @@
    "sitemap_lastmod": "2026-01-05T10:56:35+00:00",
    "archived": "https://web.archive.org/web/20251117222028/https://canarywharf.com/shop/browns-tanning/",
    "title": "Browns Tanning",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mezzanine",
     "Jubilee Place",
@@ -3325,7 +3697,9 @@
    "sitemap_lastmod": "2026-01-05T14:07:20+00:00",
    "archived": "https://web.archive.org/web/20251117222312/https://canarywharf.com/shop/malmin-dental/",
    "title": "Malmin Dental",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "2 South Colonnade",
     "Canary Wharf",
@@ -3336,7 +3710,8 @@
    "archived_on": "20251117",
    "mall": "South Colonnade",
    "level": null,
-   "postcode": "E14 4PZ"
+   "postcode": "E14 4PZ",
+   "street": "2 South Colonnade"
   },
   {
    "kind": "shop",
@@ -3345,7 +3720,9 @@
    "sitemap_lastmod": "2026-01-08T10:18:23+00:00",
    "archived": "https://web.archive.org/web/20251107012228/https://canarywharf.com/shop/dune-london/",
    "title": "Dune London",
-   "categories": [],
+   "categories": [
+    "Shoes & Footwear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -3366,7 +3743,9 @@
    "sitemap_lastmod": "2026-01-09T13:18:55+00:00",
    "archived": "https://web.archive.org/web/20251214174207/https://canarywharf.com/shop/wax-london/",
    "title": "Wax London",
-   "categories": [],
+   "categories": [
+    "Accessories"
+   ],
    "address_lines": [
     "field_692d85e5bb6ad",
     "Cabot Place",
@@ -3377,7 +3756,10 @@
    "archived_on": "20251214",
    "mall": "Cabot Place",
    "level": null,
-   "postcode": "E14 4QS"
+   "postcode": "E14 4QS",
+   "flags": [
+    "template field in address"
+   ]
   },
   {
    "kind": "shop",
@@ -3386,7 +3768,9 @@
    "sitemap_lastmod": "2026-01-19T10:34:15+00:00",
    "archived": "https://web.archive.org/web/20251115153957/https://canarywharf.com/shop/lloyds-bank/",
    "title": "Lloyds Bank",
-   "categories": [],
+   "categories": [
+    "Banks & Foreign Exchange"
+   ],
    "address_lines": [
     "The Park Pavilion",
     "Canary Wharf",
@@ -3406,7 +3790,9 @@
    "sitemap_lastmod": "2026-01-19T10:46:46+00:00",
    "archived": "https://web.archive.org/web/20251117221551/https://canarywharf.com/shop/the-color-co/",
    "title": "The Color Co.",
-   "categories": [],
+   "categories": [
+    "Services"
+   ],
    "address_lines": [
     "6 South Colonnade",
     "Canary Wharf",
@@ -3417,7 +3803,8 @@
    "archived_on": "20251117",
    "mall": "South Colonnade",
    "level": null,
-   "postcode": "E14 4PZ"
+   "postcode": "E14 4PZ",
+   "street": "6 South Colonnade"
   },
   {
    "kind": "shop",
@@ -3426,7 +3813,9 @@
    "sitemap_lastmod": "2026-01-22T11:05:51+00:00",
    "archived": "https://web.archive.org/web/20251117212559/https://canarywharf.com/shop/david-m-robinson/",
    "title": "David M Robinson",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -3447,7 +3836,9 @@
    "sitemap_lastmod": "2026-01-22T11:15:44+00:00",
    "archived": "https://web.archive.org/web/20251117213924/https://canarywharf.com/shop/rolex-at-dmr/",
    "title": "Rolex at DMR",
-   "categories": [],
+   "categories": [
+    "Jewellery & Watches"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -3468,7 +3859,9 @@
    "sitemap_lastmod": "2026-01-23T15:11:47+00:00",
    "archived": "https://web.archive.org/web/20251214165314/https://canarywharf.com/shop/pureseoul/",
    "title": "PureSeoul",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -3489,7 +3882,9 @@
    "sitemap_lastmod": "2026-01-26T13:57:21+00:00",
    "archived": "https://web.archive.org/web/20251107012011/https://canarywharf.com/shop/smilepod-jubilee-place/",
    "title": "Smilepod – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mezzanine",
     "Jubilee Place",
@@ -3510,7 +3905,9 @@
    "sitemap_lastmod": "2026-01-26T17:03:39+00:00",
    "archived": "https://web.archive.org/web/20251107012125/https://canarywharf.com/shop/smilepod-canada-place/",
    "title": "Smilepod – Canada Place",
-   "categories": [],
+   "categories": [
+    "Health & Beauty"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -3531,7 +3928,9 @@
    "sitemap_lastmod": "2026-01-26T17:05:20+00:00",
    "archived": "https://web.archive.org/web/20251028140433/https://canarywharf.com/shop/moss/",
    "title": "Moss",
-   "categories": [],
+   "categories": [
+    "Menswear"
+   ],
    "address_lines": [
     "Mall level -1",
     "Canada Place",
@@ -3552,7 +3951,9 @@
    "sitemap_lastmod": "2026-02-02T13:55:03+00:00",
    "archived": "https://web.archive.org/web/20251114115152/https://canarywharf.com/shop/asics/",
    "title": "ASICS",
-   "categories": [],
+   "categories": [
+    "Sport & Fitness"
+   ],
    "address_lines": [
     "Jubilee Place",
     "Canary Wharf",
@@ -3580,7 +3981,9 @@
    "sitemap_lastmod": "2026-02-27T14:48:44+00:00",
    "archived": "https://web.archive.org/web/20251117223226/https://canarywharf.com/shop/mango/",
    "title": "Mango",
-   "categories": [],
+   "categories": [
+    "Womenswear"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -3601,7 +4004,9 @@
    "sitemap_lastmod": "2022-09-05T11:02:53+00:00",
    "archived": "https://web.archive.org/web/20251107100315/https://canarywharf.com/restaurant/manhattan-grill/",
    "title": "Manhattan Grill",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "London Marriott Hotel, Canary Wharf",
     "22 Hertsmere Road",
@@ -3613,7 +4018,8 @@
    "archived_on": "20251107",
    "mall": "Hertsmere Road",
    "level": null,
-   "postcode": "E14 4ED"
+   "postcode": "E14 4ED",
+   "street": "22 Hertsmere Road"
   },
   {
    "kind": "restaurant",
@@ -3643,7 +4049,9 @@
    "sitemap_lastmod": "2023-08-25T12:54:20+00:00",
    "archived": "https://web.archive.org/web/20251117215856/https://canarywharf.com/restaurant/assenheims-56/",
    "title": "Assenheims 56",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "7 Westferry Circus",
     "Canary Wharf",
@@ -3654,7 +4062,8 @@
    "archived_on": "20251117",
    "mall": "Westferry Circus",
    "level": null,
-   "postcode": "E14 4HD"
+   "postcode": "E14 4HD",
+   "street": "7 Westferry Circus"
   },
   {
    "kind": "restaurant",
@@ -3663,7 +4072,9 @@
    "sitemap_lastmod": "2023-08-25T12:59:50+00:00",
    "archived": "https://web.archive.org/web/20251117224424/https://canarywharf.com/restaurant/greggs/",
    "title": "Greggs",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -3696,7 +4107,8 @@
    "archived_on": "20250308",
    "mall": "Chancellor Passage",
    "level": null,
-   "postcode": "E14 5EA"
+   "postcode": "E14 5EA",
+   "street": "6 Chancellor Passage"
   },
   {
    "kind": "restaurant",
@@ -3705,7 +4117,9 @@
    "sitemap_lastmod": "2023-08-25T14:13:40+00:00",
    "archived": "https://web.archive.org/web/20251115144928/https://canarywharf.com/restaurant/grateful-kitchen/",
    "title": "Grateful Kitchen",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "5 Chancellor Passage",
     "Canary Wharf",
@@ -3716,7 +4130,8 @@
    "archived_on": "20251115",
    "mall": "Chancellor Passage",
    "level": null,
-   "postcode": "E14 4PA"
+   "postcode": "E14 4PA",
+   "street": "5 Chancellor Passage"
   },
   {
    "kind": "restaurant",
@@ -3725,7 +4140,9 @@
    "sitemap_lastmod": "2023-08-25T14:15:03+00:00",
    "archived": "https://web.archive.org/web/20251117225503/https://canarywharf.com/restaurant/royal-china/",
    "title": "Royal China",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "30 Westferry Circus",
     "Canary Wharf",
@@ -3736,7 +4153,8 @@
    "archived_on": "20251117",
    "mall": "Westferry Circus",
    "level": null,
-   "postcode": "E14 8RR"
+   "postcode": "E14 8RR",
+   "street": "30 Westferry Circus"
   },
   {
    "kind": "restaurant",
@@ -3745,7 +4163,9 @@
    "sitemap_lastmod": "2023-08-29T08:41:17+00:00",
    "archived": "https://web.archive.org/web/20251024210433/https://canarywharf.com/restaurant/german-doner-kebab/",
    "title": "German Doner Kebab",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Upper Level 2",
     "Cabot Place",
@@ -3766,7 +4186,9 @@
    "sitemap_lastmod": "2023-08-29T13:49:47+00:00",
    "archived": "https://web.archive.org/web/20251117225240/https://canarywharf.com/restaurant/yumtea/",
    "title": "Yumtea",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -3787,7 +4209,9 @@
    "sitemap_lastmod": "2023-08-30T14:20:46+00:00",
    "archived": "https://web.archive.org/web/20251117211328/https://canarywharf.com/restaurant/yole-ice-cream/",
    "title": "Yolé Ice Cream",
-   "categories": [],
+   "categories": [
+    "Ice cream"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -3808,7 +4232,9 @@
    "sitemap_lastmod": "2023-09-05T07:44:00+00:00",
    "archived": "https://web.archive.org/web/20251115151222/https://canarywharf.com/restaurant/pilpel/",
    "title": "Pilpel",
-   "categories": [],
+   "categories": [
+    "Greek"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -3829,7 +4255,9 @@
    "sitemap_lastmod": "2023-09-05T07:57:36+00:00",
    "archived": "https://web.archive.org/web/20251117214002/https://canarywharf.com/restaurant/costa-coffee-cabot-place/",
    "title": "Costa Coffee",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -3850,7 +4278,9 @@
    "sitemap_lastmod": "2023-11-06T09:27:34+00:00",
    "archived": "https://web.archive.org/web/20251027082000/https://canarywharf.com/restaurant/biang-at-wharf-kitchen/",
    "title": "Biang at Wharf Kitchen",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -3871,7 +4301,9 @@
    "sitemap_lastmod": "2023-11-06T09:36:07+00:00",
    "archived": "https://web.archive.org/web/20251117222510/https://canarywharf.com/restaurant/the-vow-cafe/",
    "title": "The Vow Cafe",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "11 Park Drive",
     "Wood Wharf",
@@ -3882,7 +4314,8 @@
    "archived_on": "20251117",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9GG"
+   "postcode": "E14 9GG",
+   "street": "11 Park Drive"
   },
   {
    "kind": "restaurant",
@@ -3891,7 +4324,9 @@
    "sitemap_lastmod": "2023-11-06T10:58:19+00:00",
    "archived": "https://web.archive.org/web/20251028103213/https://canarywharf.com/restaurant/breadtruffle/",
    "title": "bread&truffle",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -3912,7 +4347,9 @@
    "sitemap_lastmod": "2023-11-06T10:59:42+00:00",
    "archived": "https://web.archive.org/web/20251117230046/https://canarywharf.com/restaurant/mr-pretzels/",
    "title": "Mr Pretzels",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -3933,7 +4370,9 @@
    "sitemap_lastmod": "2023-12-05T10:23:03+00:00",
    "archived": "https://web.archive.org/web/20251117212859/https://canarywharf.com/restaurant/wagamama/",
    "title": "Wagamama",
-   "categories": [],
+   "categories": [
+    "Japanese"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -3954,7 +4393,9 @@
    "sitemap_lastmod": "2024-02-01T11:09:17+00:00",
    "archived": "https://web.archive.org/web/20251107083122/https://canarywharf.com/restaurant/urban-greens/",
    "title": "Urban Greens",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "40 Bank Street",
     "Canary Wharf",
@@ -3965,7 +4406,8 @@
    "archived_on": "20251107",
    "mall": "Bank Street",
    "level": null,
-   "postcode": "E14 5NR"
+   "postcode": "E14 5NR",
+   "street": "40 Bank Street"
   },
   {
    "kind": "restaurant",
@@ -3974,7 +4416,9 @@
    "sitemap_lastmod": "2024-02-01T11:17:13+00:00",
    "archived": "https://web.archive.org/web/20251107100402/https://canarywharf.com/restaurant/rocket/",
    "title": "Rocket",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Street Level 0",
     "Churchill Place",
@@ -3995,7 +4439,9 @@
    "sitemap_lastmod": "2024-02-01T11:27:20+00:00",
    "archived": "https://web.archive.org/web/20251107091524/https://canarywharf.com/restaurant/grill/",
    "title": "Grill",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Reuters Plaza",
     "Canary Wharf",
@@ -4015,7 +4461,9 @@
    "sitemap_lastmod": "2024-02-01T17:04:41+00:00",
    "archived": "https://web.archive.org/web/20251115155246/https://canarywharf.com/restaurant/pho/",
    "title": "Pho",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -4036,7 +4484,9 @@
    "sitemap_lastmod": "2024-02-01T17:08:47+00:00",
    "archived": "https://web.archive.org/web/20251117222539/https://canarywharf.com/restaurant/yolk/",
    "title": "Yolk",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -4057,7 +4507,9 @@
    "sitemap_lastmod": "2024-02-02T07:19:38+00:00",
    "archived": "https://web.archive.org/web/20251117211157/https://canarywharf.com/restaurant/itsu-jubilee-place/",
    "title": "Itsu",
-   "categories": [],
+   "categories": [
+    "Sushi"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -4078,7 +4530,9 @@
    "sitemap_lastmod": "2024-02-02T07:29:05+00:00",
    "archived": "https://web.archive.org/web/20251117221721/https://canarywharf.com/restaurant/krispy-kreme/",
    "title": "Krispy Kreme",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -4099,7 +4553,9 @@
    "sitemap_lastmod": "2024-02-02T07:30:41+00:00",
    "archived": "https://web.archive.org/web/20251117225021/https://canarywharf.com/restaurant/notes-coffee-roasters-bar/",
    "title": "Notes Coffee Roasters & Bar",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -4120,7 +4576,9 @@
    "sitemap_lastmod": "2024-02-02T07:43:32+00:00",
    "archived": "https://web.archive.org/web/20251117215357/https://canarywharf.com/restaurant/island-poke/",
    "title": "Island Poké",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -4141,7 +4599,9 @@
    "sitemap_lastmod": "2024-02-02T07:52:51+00:00",
    "archived": "https://web.archive.org/web/20251117224403/https://canarywharf.com/restaurant/poke-house-wharf-kitchen/",
    "title": "Poke House at Wharf Kitchen",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -4162,7 +4622,9 @@
    "sitemap_lastmod": "2024-02-02T07:56:12+00:00",
    "archived": "https://web.archive.org/web/20251117212442/https://canarywharf.com/restaurant/rudies-jerk-shack/",
    "title": "Rudie's Jerk Shack",
-   "categories": [],
+   "categories": [
+    "Caribbean"
+   ],
    "address_lines": [
     "Reuters Plaza",
     "Canary Wharf",
@@ -4182,7 +4644,9 @@
    "sitemap_lastmod": "2024-02-02T10:02:28+00:00",
    "archived": "https://web.archive.org/web/20251117214639/https://canarywharf.com/restaurant/joe-the-juice/",
    "title": "Joe & The Juice",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Churchill Place",
@@ -4203,7 +4667,9 @@
    "sitemap_lastmod": "2024-04-19T15:13:52+00:00",
    "archived": "https://web.archive.org/web/20251117230036/https://canarywharf.com/restaurant/wahacas-mexican-street-kitchen/",
    "title": "Wahaca's Mexican Street Kitchen",
-   "categories": [],
+   "categories": [
+    "Mexican"
+   ],
    "address_lines": [
     "Canada Square Park",
     "Canary Wharf",
@@ -4223,7 +4689,9 @@
    "sitemap_lastmod": "2024-04-19T15:44:44+00:00",
    "archived": "https://web.archive.org/web/20251115154904/https://canarywharf.com/restaurant/the-henry-addington/",
    "title": "The Henry Addington At Mackenzie Walk",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "22-28 Mackenzie Walk",
     "Canary Wharf",
@@ -4234,7 +4702,8 @@
    "archived_on": "20251115",
    "mall": "Mackenzie Walk",
    "level": null,
-   "postcode": "E14 4PH"
+   "postcode": "E14 4PH",
+   "street": "22-28 Mackenzie Walk"
   },
   {
    "kind": "restaurant",
@@ -4243,7 +4712,9 @@
    "sitemap_lastmod": "2024-04-19T15:48:33+00:00",
    "archived": "https://web.archive.org/web/20251115155524/https://canarywharf.com/restaurant/garbanzos-reuters-plaza/",
    "title": "Garbanzos",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level 0",
     "Reuters Plaza",
@@ -4264,7 +4735,9 @@
    "sitemap_lastmod": "2024-04-19T15:49:45+00:00",
    "archived": "https://web.archive.org/web/20251115154258/https://canarywharf.com/restaurant/itsu-kiosk-canada-place-2/",
    "title": "Itsu Kiosk",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Canada Place, opposite Krispy Kreme",
     "Canary Wharf",
@@ -4284,7 +4757,9 @@
    "sitemap_lastmod": "2024-04-19T15:50:47+00:00",
    "archived": "https://web.archive.org/web/20251107011259/https://canarywharf.com/restaurant/five-guys/",
    "title": "Five Guys",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -4305,7 +4780,9 @@
    "sitemap_lastmod": "2024-04-19T15:56:28+00:00",
    "archived": "https://web.archive.org/web/20251107093925/https://canarywharf.com/restaurant/amerigo-vespucci/",
    "title": "Amerigo Vespucci",
-   "categories": [],
+   "categories": [
+    "Eat In"
+   ],
    "address_lines": [
     "25 Cabot Square",
     "Canary Wharf",
@@ -4316,7 +4793,8 @@
    "archived_on": "20251107",
    "mall": "Cabot Square",
    "level": null,
-   "postcode": "E14 4QA"
+   "postcode": "E14 4QA",
+   "street": "25 Cabot Square"
   },
   {
    "kind": "restaurant",
@@ -4325,7 +4803,9 @@
    "sitemap_lastmod": "2024-05-09T08:59:26+00:00",
    "archived": "https://web.archive.org/web/20251115144727/https://canarywharf.com/restaurant/zata/",
    "title": "Za’ta",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "Mall Level –1",
     "One Canada Square",
@@ -4336,7 +4816,8 @@
    "archived_on": "20251115",
    "mall": "One Canada Square",
    "level": "Mall Level –1",
-   "postcode": null
+   "postcode": null,
+   "street": "One Canada Square"
   },
   {
    "kind": "restaurant",
@@ -4367,7 +4848,9 @@
    "sitemap_lastmod": "2024-05-20T07:04:55+00:00",
    "archived": "https://web.archive.org/web/20251115142852/https://canarywharf.com/restaurant/brick-lane-bagel-co/",
    "title": "Brick Lane Bagel Co",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Reuters Plaza",
     "Canary Wharf",
@@ -4387,7 +4870,9 @@
    "sitemap_lastmod": "2024-05-20T07:05:46+00:00",
    "archived": "https://web.archive.org/web/20251117223420/https://canarywharf.com/restaurant/buns-from-home/",
    "title": "Buns From Home",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -4407,7 +4892,9 @@
    "sitemap_lastmod": "2024-05-20T07:06:19+00:00",
    "archived": "https://web.archive.org/web/20251104193454/https://canarywharf.com/restaurant/indi-go/",
    "title": "Indi-Go at Wharf Kitchen",
-   "categories": [],
+   "categories": [
+    "Indian"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -4428,7 +4915,9 @@
    "sitemap_lastmod": "2024-05-20T07:10:09+00:00",
    "archived": "https://web.archive.org/web/20251117221855/https://canarywharf.com/restaurant/scarpetta/",
    "title": "Scarpetta",
-   "categories": [],
+   "categories": [
+    "Italian"
+   ],
    "address_lines": [
     "20 Canada Square",
     "Canary Wharf",
@@ -4439,7 +4928,8 @@
    "archived_on": "20251117",
    "mall": "Canada Square",
    "level": null,
-   "postcode": "E14 5NN"
+   "postcode": "E14 5NN",
+   "street": "20 Canada Square"
   },
   {
    "kind": "restaurant",
@@ -4448,7 +4938,9 @@
    "sitemap_lastmod": "2024-05-20T07:12:18+00:00",
    "archived": "https://web.archive.org/web/20251117221927/https://canarywharf.com/restaurant/thunderbird-fried-chicken-at-wharf-kitchen/",
    "title": "Thunderbird Fried Chicken at Wharf Kitchen",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -4469,7 +4961,9 @@
    "sitemap_lastmod": "2024-05-20T08:44:25+00:00",
    "archived": "https://web.archive.org/web/20251030213845/https://canarywharf.com/restaurant/birleys-canada-place/",
    "title": "Birleys – Canada Place",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -4490,7 +4984,9 @@
    "sitemap_lastmod": "2024-05-20T08:44:57+00:00",
    "archived": "https://web.archive.org/web/20251102113052/https://canarywharf.com/restaurant/birleys-churchill-place/",
    "title": "Birleys – Churchill Place",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Churchill Place",
@@ -4511,7 +5007,9 @@
    "sitemap_lastmod": "2024-05-20T08:49:13+00:00",
    "archived": "https://web.archive.org/web/20251102045744/https://canarywharf.com/restaurant/cafe-brera-cabot-place/",
    "title": "Café Brera – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -4532,7 +5030,9 @@
    "sitemap_lastmod": "2024-05-20T08:49:34+00:00",
    "archived": "https://web.archive.org/web/20251107011633/https://canarywharf.com/restaurant/cafe-brera-jubilee-place/",
    "title": "Café Brera – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Mezzanine",
     "Jubilee Place",
@@ -4553,7 +5053,9 @@
    "sitemap_lastmod": "2024-05-20T08:50:46+00:00",
    "archived": "https://web.archive.org/web/20251115153412/https://canarywharf.com/restaurant/caffe-nero-jubilee-place/",
    "title": "Caffè Nero – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -4574,7 +5076,9 @@
    "sitemap_lastmod": "2024-05-20T08:51:29+00:00",
    "archived": "https://web.archive.org/web/20251115155624/https://canarywharf.com/restaurant/farmer-j-canada-place/",
    "title": "Farmer J – Canada Place",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -4595,7 +5099,9 @@
    "sitemap_lastmod": "2024-05-20T08:57:30+00:00",
    "archived": "https://web.archive.org/web/20251117223636/https://canarywharf.com/restaurant/farmer-j-jubilee-place/",
    "title": "Farmer J – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -4616,7 +5122,9 @@
    "sitemap_lastmod": "2024-05-20T08:59:33+00:00",
    "archived": "https://web.archive.org/web/20251117213735/https://canarywharf.com/restaurant/leon-jubilee-place/",
    "title": "Leon – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -4637,7 +5145,9 @@
    "sitemap_lastmod": "2024-05-20T09:00:44+00:00",
    "archived": "https://web.archive.org/web/20251117221414/https://canarywharf.com/restaurant/lolas-cupcakes/",
    "title": "Lola’s Cupcakes – Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -4658,7 +5168,9 @@
    "sitemap_lastmod": "2024-05-20T09:05:32+00:00",
    "archived": "https://web.archive.org/web/20251107093814/https://canarywharf.com/restaurant/ole-steen-jubilee-place/",
    "title": "Ole & Steen – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -2",
     "Jubilee Place",
@@ -4679,7 +5191,9 @@
    "sitemap_lastmod": "2024-05-20T09:05:51+00:00",
    "archived": "https://web.archive.org/web/20251115154029/https://canarywharf.com/restaurant/ole-steen-crossrail-place/",
    "title": "Ole & Steen – Crossrail Place",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -4700,7 +5214,9 @@
    "sitemap_lastmod": "2024-05-20T09:06:29+00:00",
    "archived": "https://web.archive.org/web/20251117214250/https://canarywharf.com/restaurant/paul-cabot-place/",
    "title": "Paul – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -4721,7 +5237,9 @@
    "sitemap_lastmod": "2024-05-20T09:06:45+00:00",
    "archived": "https://web.archive.org/web/20251115151336/https://canarywharf.com/restaurant/paul-jubilee-place/",
    "title": "Paul – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -4742,7 +5260,9 @@
    "sitemap_lastmod": "2024-05-20T09:46:56+00:00",
    "archived": "https://web.archive.org/web/20251117220359/https://canarywharf.com/restaurant/qube-east/",
    "title": "Qube East – Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "9 Park Drive",
     "Wood Wharf",
@@ -4753,7 +5273,8 @@
    "archived_on": "20251117",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QA"
+   "postcode": "E14 9QA",
+   "street": "9 Park Drive"
   },
   {
    "kind": "restaurant",
@@ -4762,7 +5283,9 @@
    "sitemap_lastmod": "2024-05-20T09:47:36+00:00",
    "archived": "https://web.archive.org/web/20251115151831/https://canarywharf.com/restaurant/starbucks-coffee-co-churchill-place/",
    "title": "Starbucks – Churchill Place",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Churchill Place",
@@ -4783,7 +5306,9 @@
    "sitemap_lastmod": "2024-05-20T09:49:00+00:00",
    "archived": "https://web.archive.org/web/20251107083611/https://canarywharf.com/restaurant/waitrose-partners/",
    "title": "Waitrose & Partners – Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "16-19 Canada Square",
@@ -4795,7 +5320,8 @@
    "archived_on": "20251107",
    "mall": "Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5EQ"
+   "postcode": "E14 5EQ",
+   "street": "16-19 Canada Square"
   },
   {
    "kind": "restaurant",
@@ -4804,7 +5330,9 @@
    "sitemap_lastmod": "2024-06-10T06:32:22+00:00",
    "archived": "https://web.archive.org/web/20251115155227/https://canarywharf.com/restaurant/watchhouse-cabot-place/",
    "title": "WatchHouse",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -4825,7 +5353,9 @@
    "sitemap_lastmod": "2024-06-11T07:55:03+00:00",
    "archived": "https://web.archive.org/web/20251115142225/https://canarywharf.com/restaurant/wharf-kitchen/",
    "title": "Wharf Kitchen",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -4846,7 +5376,9 @@
    "sitemap_lastmod": "2024-06-17T08:21:24+00:00",
    "archived": "https://web.archive.org/web/20251117214610/https://canarywharf.com/restaurant/starbucks-coffee-co-jubilee-place/",
    "title": "Starbucks – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -4867,7 +5399,9 @@
    "sitemap_lastmod": "2024-06-24T13:13:09+00:00",
    "archived": "https://web.archive.org/web/20251115145339/https://canarywharf.com/restaurant/marks-and-spencer-simply-food/",
    "title": "M&S Food – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -4888,7 +5422,9 @@
    "sitemap_lastmod": "2024-07-16T10:12:43+00:00",
    "archived": "https://web.archive.org/web/20251115152947/https://canarywharf.com/restaurant/gallio/",
    "title": "Gallio",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "Upper Level 2",
     "Cabot Place",
@@ -4909,7 +5445,9 @@
    "sitemap_lastmod": "2024-07-16T10:29:14+00:00",
    "archived": "https://web.archive.org/web/20251117213156/https://canarywharf.com/restaurant/shake-shack/",
    "title": "Shake Shack",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Street Level 0",
     "The Park Pavilion",
@@ -4930,7 +5468,9 @@
    "sitemap_lastmod": "2024-09-19T13:59:58+00:00",
    "archived": "https://web.archive.org/web/20251028024951/https://canarywharf.com/restaurant/badiani-gelato/",
    "title": "Badiani Gelato",
-   "categories": [],
+   "categories": [
+    "Ice cream"
+   ],
    "address_lines": [
     "Mall level -1",
     "Canada Place",
@@ -4951,7 +5491,9 @@
    "sitemap_lastmod": "2024-09-20T09:56:12+00:00",
    "archived": "https://web.archive.org/web/20251115153343/https://canarywharf.com/restaurant/rice-guys/",
    "title": "Rice Guys",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Reuters Plaza",
     "Canary Wharf",
@@ -4971,7 +5513,9 @@
    "sitemap_lastmod": "2024-09-20T11:38:33+00:00",
    "archived": "https://web.archive.org/web/20251031175200/https://canarywharf.com/restaurant/burger-king/",
    "title": "Burger King",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "Atrium Kitchen, Upper Level 2",
     "Cabot Place",
@@ -4991,7 +5535,9 @@
    "sitemap_lastmod": "2024-09-20T11:39:50+00:00",
    "archived": "https://web.archive.org/web/20251115151301/https://canarywharf.com/restaurant/caffe-nero-crossrail-place/",
    "title": "Caffè Nero – Crossrail Place",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Level -3",
     "Crossrail Place",
@@ -5012,7 +5558,9 @@
    "sitemap_lastmod": "2024-09-20T11:40:10+00:00",
    "archived": "https://web.archive.org/web/20251115144000/https://canarywharf.com/restaurant/change-please-reuters-plaza/",
    "title": "Change Please",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Reuters Plaza",
     "Canary Wharf",
@@ -5032,7 +5580,9 @@
    "sitemap_lastmod": "2024-09-20T12:47:11+00:00",
    "archived": "https://web.archive.org/web/20251101041736/https://canarywharf.com/restaurant/birleys-salt-beef-bar/",
    "title": "Birleys Salt Beef Bar",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -5044,7 +5594,8 @@
    "archived_on": "20251101",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "restaurant",
@@ -5053,7 +5604,9 @@
    "sitemap_lastmod": "2024-10-08T07:08:09+00:00",
    "archived": "https://web.archive.org/web/20251107095408/https://canarywharf.com/restaurant/blank-street/",
    "title": "Blank Street",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -5074,7 +5627,9 @@
    "sitemap_lastmod": "2024-10-08T07:19:03+00:00",
    "archived": "https://web.archive.org/web/20251117224918/https://canarywharf.com/restaurant/t4/",
    "title": "T4 Bubble Tea",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -5095,7 +5650,9 @@
    "sitemap_lastmod": "2024-11-07T07:13:14+00:00",
    "archived": "https://web.archive.org/web/20251117215623/https://canarywharf.com/restaurant/the-boathouse/",
    "title": "The Boathouse At Wood Wharf",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Boardwalk",
     "Wood Wharf",
@@ -5115,7 +5672,9 @@
    "sitemap_lastmod": "2025-03-03T16:18:00+00:00",
    "archived": "https://web.archive.org/web/20251027021926/https://canarywharf.com/restaurant/homepizza/",
    "title": "@homepizza",
-   "categories": [],
+   "categories": [
+    "Pizza"
+   ],
    "address_lines": [
     "1-5 Bank Street",
     "Canary Wharf",
@@ -5125,7 +5684,8 @@
    "archived_on": "20251027",
    "mall": "Bank Street",
    "level": null,
-   "postcode": "E14 4SG"
+   "postcode": "E14 4SG",
+   "street": "1-5 Bank Street"
   },
   {
    "kind": "restaurant",
@@ -5134,7 +5694,9 @@
    "sitemap_lastmod": "2025-03-03T16:30:06+00:00",
    "archived": "https://web.archive.org/web/20251027205841/https://canarywharf.com/restaurant/640east-water-street/",
    "title": "640East – Water Street",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Water Street",
     "Canary Wharf",
@@ -5153,7 +5715,9 @@
    "sitemap_lastmod": "2025-03-03T16:33:20+00:00",
    "archived": "https://web.archive.org/web/20251107091647/https://canarywharf.com/restaurant/argentinian-grill/",
    "title": "Argentinian Grill",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -5174,7 +5738,9 @@
    "sitemap_lastmod": "2025-03-03T16:54:56+00:00",
    "archived": "https://web.archive.org/web/20251117223256/https://canarywharf.com/restaurant/blank-street-coffee/",
    "title": "Blank Street Coffee",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "- 1 Level",
     "One Canada Square",
@@ -5186,7 +5752,8 @@
    "archived_on": "20251117",
    "mall": "One Canada Square",
    "level": "- 1 Level",
-   "postcode": "E14 5AB"
+   "postcode": "E14 5AB",
+   "street": "One Canada Square"
   },
   {
    "kind": "restaurant",
@@ -5195,7 +5762,9 @@
    "sitemap_lastmod": "2025-03-03T17:34:06+00:00",
    "archived": "https://web.archive.org/web/20251117214035/https://canarywharf.com/restaurant/grind/",
    "title": "Grind",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -5216,7 +5785,9 @@
    "sitemap_lastmod": "2025-03-03T17:40:39+00:00",
    "archived": "https://web.archive.org/web/20251115152257/https://canarywharf.com/restaurant/heytea/",
    "title": "HEYTEA",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -5237,7 +5808,9 @@
    "sitemap_lastmod": "2025-03-03T17:45:59+00:00",
    "archived": "https://web.archive.org/web/20251117220114/https://canarywharf.com/restaurant/ithai/",
    "title": "iThai",
-   "categories": [],
+   "categories": [
+    "Thai"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -5258,7 +5831,9 @@
    "sitemap_lastmod": "2025-03-03T17:48:59+00:00",
    "archived": "https://web.archive.org/web/20251117214356/https://canarywharf.com/restaurant/jamaica-patty/",
    "title": "Jamaica Patty Co.",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "2a Reuters Plaza",
     "Canary Wharf",
@@ -5269,7 +5844,8 @@
    "archived_on": "20251117",
    "mall": "Reuters Plaza",
    "level": null,
-   "postcode": "E14 5AJ"
+   "postcode": "E14 5AJ",
+   "street": "2a Reuters Plaza"
   },
   {
    "kind": "restaurant",
@@ -5278,7 +5854,9 @@
    "sitemap_lastmod": "2025-03-03T17:54:07+00:00",
    "archived": "https://web.archive.org/web/20251115154422/https://canarywharf.com/restaurant/joe-the-juice-cabot-place/",
    "title": "Joe & The Juice",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -5299,7 +5877,9 @@
    "sitemap_lastmod": "2025-03-04T05:39:09+00:00",
    "archived": "https://web.archive.org/web/20251115145835/https://canarywharf.com/restaurant/paris-baguette/",
    "title": "Paris Baguette",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Jubilee Place",
     "Canary Wharf",
@@ -5319,7 +5899,9 @@
    "sitemap_lastmod": "2025-03-04T05:51:18+00:00",
    "archived": "https://web.archive.org/web/20251117223703/https://canarywharf.com/restaurant/yummzy/",
    "title": "Yummzy",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "18-19 Cabot square",
     "Canary Wharf",
@@ -5330,7 +5912,8 @@
    "archived_on": "20251117",
    "mall": "Cabot Square",
    "level": null,
-   "postcode": "E14 4PZ"
+   "postcode": "E14 4PZ",
+   "street": "18-19 Cabot square"
   },
   {
    "kind": "restaurant",
@@ -5339,7 +5922,9 @@
    "sitemap_lastmod": "2025-04-17T10:31:24+00:00",
    "archived": "https://web.archive.org/web/20251104134608/https://canarywharf.com/restaurant/chai-guys/",
    "title": "Chai Guys",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -5360,7 +5945,9 @@
    "sitemap_lastmod": "2025-04-17T10:56:49+00:00",
    "archived": "https://web.archive.org/web/20251102214405/https://canarywharf.com/restaurant/badiani-gelato-cabot-place/",
    "title": "Badiani Gelato At Cabot Place",
-   "categories": [],
+   "categories": [
+    "Ice cream"
+   ],
    "address_lines": [
     "Street Level 0",
     "Cabot Place",
@@ -5380,7 +5967,9 @@
    "sitemap_lastmod": "2025-05-29T07:49:10+00:00",
    "archived": "https://web.archive.org/web/20251117215240/https://canarywharf.com/restaurant/starbucks-coffee-co-one-canada-square/",
    "title": "Starbucks – One Canada Square",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -5392,7 +5981,8 @@
    "archived_on": "20251117",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "restaurant",
@@ -5401,7 +5991,9 @@
    "sitemap_lastmod": "2025-05-29T13:56:55+00:00",
    "archived": "https://web.archive.org/web/20251027171151/https://canarywharf.com/restaurant/black-sheep-coffee-jubilee-place/",
    "title": "Black Sheep Coffee – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -5422,7 +6014,9 @@
    "sitemap_lastmod": "2025-05-29T14:00:13+00:00",
    "archived": "https://web.archive.org/web/20251102185832/https://canarywharf.com/restaurant/black-sheep-coffee-south-colonnade/",
    "title": "Black Sheep Coffee – South Colonnade",
-   "categories": [],
+   "categories": [
+    "Coffee"
+   ],
    "address_lines": [
     "8 South Colonnade",
     "Canary Wharf",
@@ -5432,7 +6026,8 @@
    "archived_on": "20251102",
    "mall": "South Colonnade",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "8 South Colonnade"
   },
   {
    "kind": "restaurant",
@@ -5441,7 +6036,9 @@
    "sitemap_lastmod": "2025-07-24T08:30:26+00:00",
    "archived": "https://web.archive.org/web/20251115145501/https://canarywharf.com/restaurant/hotel-chocolat-cafe/",
    "title": "Hotel Chocolat Cafe",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -5461,7 +6058,9 @@
    "sitemap_lastmod": "2025-07-24T08:30:46+00:00",
    "archived": "https://web.archive.org/web/20251115141843/https://canarywharf.com/restaurant/directors-box/",
    "title": "Directors Box",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Street Level 0",
     "Crossrail Place",
@@ -5482,7 +6081,9 @@
    "sitemap_lastmod": "2025-07-24T08:30:51+00:00",
    "archived": "https://web.archive.org/web/20251117210040/https://canarywharf.com/restaurant/obica/",
    "title": "Obicà – Mozzarella Bar, Pizza e Cucina",
-   "categories": [],
+   "categories": [
+    "Italian"
+   ],
    "address_lines": [
     "Street Level 0",
     "West Wintergarden",
@@ -5503,7 +6104,9 @@
    "sitemap_lastmod": "2025-08-12T10:22:01+00:00",
    "archived": "https://web.archive.org/web/20251117213649/https://canarywharf.com/restaurant/wasabi/",
    "title": "Wasabi",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -5524,7 +6127,9 @@
    "sitemap_lastmod": "2025-09-01T09:19:24+00:00",
    "archived": "https://web.archive.org/web/20251024142037/https://canarywharf.com/restaurant/jwd-hand-pulled-noodle-bar/",
    "title": "JWD Hand-Pulled Noodle Bar",
-   "categories": [],
+   "categories": [
+    "Chinese"
+   ],
    "address_lines": [
     "40 Bank Street",
     "Canary Wharf",
@@ -5535,7 +6140,8 @@
    "archived_on": "20251024",
    "mall": "Bank Street",
    "level": null,
-   "postcode": "E14 5NR"
+   "postcode": "E14 5NR",
+   "street": "40 Bank Street"
   },
   {
    "kind": "restaurant",
@@ -5544,7 +6150,9 @@
    "sitemap_lastmod": "2025-09-29T09:54:38+00:00",
    "archived": "https://web.archive.org/web/20251104020617/https://canarywharf.com/restaurant/chipotle/",
    "title": "Chipotle",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -5565,7 +6173,9 @@
    "sitemap_lastmod": "2025-10-06T14:57:38+00:00",
    "archived": "https://web.archive.org/web/20251028111506/https://canarywharf.com/restaurant/ong-lai-kopitiam/",
    "title": "Ong Lai Kopitiam",
-   "categories": [],
+   "categories": [
+    "Malaysian"
+   ],
    "address_lines": [
     "8 Harbord Square",
     "Wood Wharf"
@@ -5574,7 +6184,8 @@
    "archived_on": "20251028",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "8 Harbord Square"
   },
   {
    "kind": "restaurant",
@@ -5583,7 +6194,9 @@
    "sitemap_lastmod": "2025-10-06T15:06:15+00:00",
    "archived": "https://web.archive.org/web/20251115145623/https://canarywharf.com/restaurant/chicken-shop/",
    "title": "Chicken Shop",
-   "categories": [],
+   "categories": [
+    "British"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -5604,7 +6217,9 @@
    "sitemap_lastmod": "2025-10-06T15:11:45+00:00",
    "archived": "https://web.archive.org/web/20251117220605/https://canarywharf.com/restaurant/soma/",
    "title": "Soma",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Frobisher Passage",
     "Canary Wharf",
@@ -5632,9 +6247,10 @@
    ],
    "website": null,
    "archived_on": "20250124",
-   "mall": null,
+   "mall": "Water Street",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "5 Water St"
   },
   {
    "kind": "restaurant",
@@ -5643,7 +6259,9 @@
    "sitemap_lastmod": "2025-10-06T15:14:52+00:00",
    "archived": "https://web.archive.org/web/20251115143022/https://canarywharf.com/restaurant/brera-lounge/",
    "title": "Brera Lounge",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "15 Cabot Square",
     "Canary Wharf",
@@ -5654,7 +6272,8 @@
    "archived_on": "20251115",
    "mall": "Cabot Square",
    "level": null,
-   "postcode": "E14 4QT"
+   "postcode": "E14 4QT",
+   "street": "15 Cabot Square"
   },
   {
    "kind": "restaurant",
@@ -5663,7 +6282,9 @@
    "sitemap_lastmod": "2025-10-06T15:35:15+00:00",
    "archived": "https://web.archive.org/web/20251114122111/https://canarywharf.com/restaurant/hovarda/",
    "title": "Hovarda",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "5 Water Street",
     "Canary Wharf",
@@ -5674,7 +6295,8 @@
    "archived_on": "20251114",
    "mall": "Water Street",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "5 Water Street"
   },
   {
    "kind": "restaurant",
@@ -5683,7 +6305,9 @@
    "sitemap_lastmod": "2025-10-06T15:41:07+00:00",
    "archived": "https://web.archive.org/web/20251115143249/https://canarywharf.com/restaurant/boisdale-of-canary-wharf/",
    "title": "Boisdale of Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Cabot Place",
@@ -5704,7 +6328,9 @@
    "sitemap_lastmod": "2025-10-06T15:43:22+00:00",
    "archived": "https://web.archive.org/web/20251117225855/https://canarywharf.com/restaurant/wahaca/",
    "title": "Wahaca",
-   "categories": [],
+   "categories": [
+    "Mexican"
+   ],
    "address_lines": [
     "Upper Level 1",
     "The Park Pavilion",
@@ -5725,7 +6351,9 @@
    "sitemap_lastmod": "2025-10-07T10:23:57+00:00",
    "archived": "https://web.archive.org/web/20251115154658/https://canarywharf.com/restaurant/sacred-garden-at-house-of-gods/",
    "title": "Sacred Garden at House of Gods",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "12 Bank Street",
     "Canary Wharf",
@@ -5735,7 +6363,8 @@
    "archived_on": "20251115",
    "mall": "Bank Street",
    "level": null,
-   "postcode": "E14 4DD"
+   "postcode": "E14 4DD",
+   "street": "12 Bank Street"
   },
   {
    "kind": "restaurant",
@@ -5744,7 +6373,9 @@
    "sitemap_lastmod": "2025-10-14T15:38:00+00:00",
    "archived": "https://web.archive.org/web/20251114121826/https://canarywharf.com/restaurant/feels-like-june/",
    "title": "Feels Like June",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "15 Water Street",
     "Wood Wharf",
@@ -5755,7 +6386,8 @@
    "archived_on": "20251114",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "15 Water Street"
   },
   {
    "kind": "restaurant",
@@ -5764,7 +6396,9 @@
    "sitemap_lastmod": "2025-10-14T15:39:12+00:00",
    "archived": "https://web.archive.org/web/20251115151028/https://canarywharf.com/restaurant/patty-bun/",
    "title": "Patty&Bun",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "15 Park Drive",
     "Wood Wharf",
@@ -5775,7 +6409,8 @@
    "archived_on": "20251115",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "15 Park Drive"
   },
   {
    "kind": "restaurant",
@@ -5784,7 +6419,9 @@
    "sitemap_lastmod": "2025-10-14T15:39:47+00:00",
    "archived": "https://web.archive.org/web/20251027212822/https://canarywharf.com/restaurant/brewdog-canary-wharf/",
    "title": "BrewDog Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Street Level 0",
     "Churchill Place",
@@ -5805,7 +6442,9 @@
    "sitemap_lastmod": "2025-10-14T15:42:44+00:00",
    "archived": "https://web.archive.org/web/20251115153016/https://canarywharf.com/restaurant/franco-manca/",
    "title": "Franco Manca",
-   "categories": [],
+   "categories": [
+    "Pizza"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -5826,7 +6465,9 @@
    "sitemap_lastmod": "2025-10-14T15:43:56+00:00",
    "archived": "https://web.archive.org/web/20251115150948/https://canarywharf.com/restaurant/ippudo-canary-wharf/",
    "title": "Ippudo Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Japanese"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -5847,7 +6488,9 @@
    "sitemap_lastmod": "2025-10-14T15:44:32+00:00",
    "archived": "https://web.archive.org/web/20251115144210/https://canarywharf.com/restaurant/din-tai-fung/",
    "title": "Din Tai Fung",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Mall Level - 1",
     "Crossrail Place",
@@ -5868,7 +6511,9 @@
    "sitemap_lastmod": "2025-10-14T15:46:08+00:00",
    "archived": "https://web.archive.org/web/20251114112719/https://canarywharf.com/restaurant/roka/",
    "title": "ROKA",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "Upper Level 1",
     "The Park Pavilion",
@@ -5889,7 +6534,9 @@
    "sitemap_lastmod": "2025-10-14T15:48:04+00:00",
    "archived": "https://web.archive.org/web/20251115153656/https://canarywharf.com/restaurant/marugame-udon/",
    "title": "Marugame Udon",
-   "categories": [],
+   "categories": [
+    "Japanese"
+   ],
    "address_lines": [
     "Upper Level 2",
     "Cabot Place",
@@ -5910,7 +6557,9 @@
    "sitemap_lastmod": "2025-10-14T15:48:54+00:00",
    "archived": "https://web.archive.org/web/20251115154954/https://canarywharf.com/restaurant/nandos-cabot-place/",
    "title": "Nando's",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Upper Level 2",
     "Cabot Place",
@@ -5931,7 +6580,9 @@
    "sitemap_lastmod": "2025-11-13T13:38:54+00:00",
    "archived": "https://web.archive.org/web/20251013011511/https://canarywharf.com/restaurant/barbarella/",
    "title": "Barbarella",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "30 South Colonnade",
     "Canary Wharf",
@@ -5942,7 +6593,8 @@
    "archived_on": "20251013",
    "mall": "South Colonnade",
    "level": null,
-   "postcode": "E14 5HX"
+   "postcode": "E14 5HX",
+   "street": "30 South Colonnade"
   },
   {
    "kind": "restaurant",
@@ -5951,7 +6603,9 @@
    "sitemap_lastmod": "2025-12-10T12:39:56+00:00",
    "archived": "https://web.archive.org/web/20251214164623/https://canarywharf.com/restaurant/jenki-matcha-bar/",
    "title": "Jenki Matcha Bar",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "field_692d85e5bb6ad",
     "Jubilee Place"
@@ -5960,7 +6614,10 @@
    "archived_on": "20251214",
    "mall": "Jubilee Place",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "flags": [
+    "template field in address"
+   ]
   },
   {
    "kind": "restaurant",
@@ -5969,7 +6626,9 @@
    "sitemap_lastmod": "2025-12-11T10:55:33+00:00",
    "archived": "https://web.archive.org/web/20251117220445/https://canarywharf.com/restaurant/pret-a-manger-cabot-place/",
    "title": "Pret a Manger – Cabot Place",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -5990,7 +6649,9 @@
    "sitemap_lastmod": "2025-12-11T10:55:39+00:00",
    "archived": "https://web.archive.org/web/20251117222414/https://canarywharf.com/restaurant/pret-a-manger-one-canada-square/",
    "title": "Pret a Manger – One Canada Square",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -6002,7 +6663,8 @@
    "archived_on": "20251117",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "restaurant",
@@ -6011,7 +6673,9 @@
    "sitemap_lastmod": "2025-12-11T10:55:44+00:00",
    "archived": "https://web.archive.org/web/20251117223155/https://canarywharf.com/restaurant/pret-a-manger-canada-place/",
    "title": "Pret a Manger",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -6032,7 +6696,9 @@
    "sitemap_lastmod": "2025-12-11T10:55:50+00:00",
    "archived": "https://web.archive.org/web/20251115154104/https://canarywharf.com/restaurant/pret-a-manger-jubilee-place/",
    "title": "Pret a Manger – Jubilee Place",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Jubilee Place",
@@ -6053,7 +6719,9 @@
    "sitemap_lastmod": "2025-12-11T10:55:58+00:00",
    "archived": "https://web.archive.org/web/20251115144857/https://canarywharf.com/restaurant/pret-a-manger-westferry-circus/",
    "title": "Pret a Manger – Westferry Circus",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "10 Westferry Circus",
     "Canary Wharf",
@@ -6064,7 +6732,8 @@
    "archived_on": "20251115",
    "mall": "Westferry Circus",
    "level": null,
-   "postcode": "E14 4QP"
+   "postcode": "E14 4QP",
+   "street": "10 Westferry Circus"
   },
   {
    "kind": "restaurant",
@@ -6073,7 +6742,9 @@
    "sitemap_lastmod": "2025-12-11T10:56:03+00:00",
    "archived": "https://web.archive.org/web/20251115153757/https://canarywharf.com/restaurant/pret-a-manger-canada-place-2/",
    "title": "Pret a Manger – Canada Place",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -6094,7 +6765,9 @@
    "sitemap_lastmod": "2025-12-19T09:22:16+00:00",
    "archived": "https://web.archive.org/web/20260116022325/https://canarywharf.com/restaurant/supershakes/",
    "title": "Supershakes",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [],
    "website": null,
    "archived_on": "20260116",
@@ -6109,7 +6782,9 @@
    "sitemap_lastmod": "2026-01-05T11:00:39+00:00",
    "archived": "https://web.archive.org/web/20251115152811/https://canarywharf.com/restaurant/pure/",
    "title": "Pure",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Cabot Place",
@@ -6130,7 +6805,9 @@
    "sitemap_lastmod": "2026-01-07T14:29:08+00:00",
    "archived": "https://web.archive.org/web/20251115142321/https://canarywharf.com/restaurant/mercato-metropolitano/",
    "title": "Mercato Metropolitano",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "6 George Street",
     "Wood Wharf",
@@ -6141,7 +6818,8 @@
    "archived_on": "20251115",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QG"
+   "postcode": "E14 9QG",
+   "street": "6 George Street"
   },
   {
    "kind": "restaurant",
@@ -6150,7 +6828,9 @@
    "sitemap_lastmod": "2026-01-12T15:35:50+00:00",
    "archived": "https://web.archive.org/web/20251117222239/https://canarywharf.com/restaurant/the-ivy-in-the-park/",
    "title": "The Ivy In The Park At Canada Square",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "50 Canada Square",
     "Canary Wharf",
@@ -6161,7 +6841,8 @@
    "archived_on": "20251117",
    "mall": "Canada Square",
    "level": null,
-   "postcode": "E14 5FW"
+   "postcode": "E14 5FW",
+   "street": "50 Canada Square"
   },
   {
    "kind": "restaurant",
@@ -6170,7 +6851,9 @@
    "sitemap_lastmod": "2026-01-12T15:37:17+00:00",
    "archived": "https://web.archive.org/web/20251117213844/https://canarywharf.com/restaurant/the-winter-club/",
    "title": "The Winter Club",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Union Square",
     "Canary Wharf",
@@ -6180,7 +6863,7 @@
    "archived_on": "20251117",
    "mall": "Union Square",
    "level": null,
-   "postcode": null
+   "postcode": "E22 3AA"
   },
   {
    "kind": "restaurant",
@@ -6189,7 +6872,9 @@
    "sitemap_lastmod": "2026-01-12T15:41:06+00:00",
    "archived": "https://web.archive.org/web/20251117223733/https://canarywharf.com/restaurant/mildreds/",
    "title": "Mildreds",
-   "categories": [],
+   "categories": [
+    "Eat In"
+   ],
    "address_lines": [
     "12 Park Drive",
     "Wood Wharf",
@@ -6200,7 +6885,8 @@
    "archived_on": "20251117",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9ZW"
+   "postcode": "E14 9ZW",
+   "street": "12 Park Drive"
   },
   {
    "kind": "restaurant",
@@ -6209,7 +6895,9 @@
    "sitemap_lastmod": "2026-01-12T15:45:15+00:00",
    "archived": "https://web.archive.org/web/20251114121550/https://canarywharf.com/restaurant/no-35-mackenzie-walk/",
    "title": "No35 Mackenzie Walk",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "29-35 Mackenzie Walk",
     "Canary Wharf",
@@ -6220,7 +6908,8 @@
    "archived_on": "20251114",
    "mall": "Mackenzie Walk",
    "level": null,
-   "postcode": "E14 4PH"
+   "postcode": "E14 4PH",
+   "street": "29-35 Mackenzie Walk"
   },
   {
    "kind": "restaurant",
@@ -6229,7 +6918,9 @@
    "sitemap_lastmod": "2026-01-13T17:26:12+00:00",
    "archived": "https://web.archive.org/web/20251107082730/https://canarywharf.com/restaurant/bar-lina/",
    "title": "Bar Lina",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Crossrail Place",
     "London",
@@ -6239,7 +6930,7 @@
    "website": "https://www.linastores.co.uk/",
    "archived_on": "20251107",
    "mall": "Crossrail Place",
-   "level": "United Kingdom",
+   "level": null,
    "postcode": "E14 5AR"
   },
   {
@@ -6249,7 +6940,9 @@
    "sitemap_lastmod": "2026-01-13T17:26:21+00:00",
    "archived": "https://web.archive.org/web/20251114123012/https://canarywharf.com/restaurant/oasis-bar-terrace/",
    "title": "Oasis Bar & Terrace",
-   "categories": [],
+   "categories": [
+    "Cocktails"
+   ],
    "address_lines": [
     "Canada Square Park",
     "Canary Wharf",
@@ -6269,7 +6962,9 @@
    "sitemap_lastmod": "2026-01-13T17:26:37+00:00",
    "archived": "https://web.archive.org/web/20251115144757/https://canarywharf.com/restaurant/the-cocktail-club/",
    "title": "The Cocktail Club",
-   "categories": [],
+   "categories": [
+    "Cocktails"
+   ],
    "address_lines": [
     "Cabot Square",
     "Canary Wharf",
@@ -6289,7 +6984,9 @@
    "sitemap_lastmod": "2026-01-13T17:26:42+00:00",
    "archived": "https://web.archive.org/web/20251107084705/https://canarywharf.com/restaurant/hawksmoor-bar/",
    "title": "Hawksmoor Bar",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "1 Water Street",
     "Wood Wharf",
@@ -6300,7 +6997,8 @@
    "archived_on": "20251107",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "1 Water Street"
   },
   {
    "kind": "restaurant",
@@ -6309,7 +7007,9 @@
    "sitemap_lastmod": "2026-01-13T17:26:53+00:00",
    "archived": "https://web.archive.org/web/20251106234756/https://canarywharf.com/restaurant/pergola-on-the-wharf/",
    "title": "Pergola On The Wharf",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Crossrail Place",
@@ -6330,7 +7030,9 @@
    "sitemap_lastmod": "2026-01-13T17:27:09+00:00",
    "archived": "https://web.archive.org/web/20251107011320/https://canarywharf.com/restaurant/humble-grape/",
    "title": "Humble Grape – Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "18-20 Mackenzie Walk",
     "Canary Wharf",
@@ -6341,7 +7043,8 @@
    "archived_on": "20251107",
    "mall": "Mackenzie Walk",
    "level": null,
-   "postcode": "E14 4PH"
+   "postcode": "E14 4PH",
+   "street": "18-20 Mackenzie Walk"
   },
   {
    "kind": "restaurant",
@@ -6350,7 +7053,9 @@
    "sitemap_lastmod": "2026-01-13T17:27:15+00:00",
    "archived": "https://web.archive.org/web/20251031092935/https://canarywharf.com/restaurant/640-east/",
    "title": "640East",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Montgomery Square",
     "Canary Wharf",
@@ -6369,7 +7074,9 @@
    "sitemap_lastmod": "2026-01-13T17:27:20+00:00",
    "archived": "https://web.archive.org/web/20251107012319/https://canarywharf.com/restaurant/the-parlour/",
    "title": "The Parlour",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "Street Level 0",
     "The Park Pavilion",
@@ -6390,7 +7097,9 @@
    "sitemap_lastmod": "2026-01-16T11:33:48+00:00",
    "archived": "https://web.archive.org/web/20251117223919/https://canarywharf.com/restaurant/zizzi/",
    "title": "Zizzi",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "Upper Level 2",
     "Cabot Place",
@@ -6411,7 +7120,9 @@
    "sitemap_lastmod": "2026-01-19T10:32:45+00:00",
    "archived": "https://web.archive.org/web/20260120180541/https://canarywharf.com/restaurant/lockdown-rooms/",
    "title": "Lockdown",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [],
    "website": null,
    "archived_on": "20260120",
@@ -6426,7 +7137,9 @@
    "sitemap_lastmod": "2026-01-19T10:45:14+00:00",
    "archived": "https://web.archive.org/web/20251107095011/https://canarywharf.com/restaurant/amazing-grace/",
    "title": "Amazing Grace",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "12 Bank Street",
     "Canary Wharf",
@@ -6436,7 +7149,8 @@
    "archived_on": "20251107",
    "mall": "Bank Street",
    "level": null,
-   "postcode": "E14 5JP"
+   "postcode": "E14 5JP",
+   "street": "12 Bank Street"
   },
   {
    "kind": "restaurant",
@@ -6453,9 +7167,10 @@
    ],
    "website": "https://nora.london/",
    "archived_on": "20251214",
-   "mall": null,
+   "mall": "West Lane",
    "level": null,
-   "postcode": null
+   "postcode": "E22 3AA",
+   "street": "7 West Lane"
   },
   {
    "kind": "restaurant",
@@ -6464,7 +7179,9 @@
    "sitemap_lastmod": "2026-01-19T14:45:15+00:00",
    "archived": "https://web.archive.org/web/20251114122757/https://canarywharf.com/restaurant/lina-stores/",
    "title": "Lina Stores",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -6485,7 +7202,9 @@
    "sitemap_lastmod": "2026-01-19T14:45:37+00:00",
    "archived": "https://web.archive.org/web/20251013014727/https://canarywharf.com/restaurant/brother-marcus/",
    "title": "Brother Marcus",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "30 S Colonnade",
     "London",
@@ -6494,9 +7213,10 @@
    ],
    "website": "https://brothermarcus.co.uk/",
    "archived_on": "20251013",
-   "mall": null,
-   "level": "United Kingdom",
-   "postcode": "E14 5HX"
+   "mall": "South Colonnade",
+   "level": null,
+   "postcode": "E14 5HX",
+   "street": "30 S Colonnade"
   },
   {
    "kind": "restaurant",
@@ -6505,7 +7225,9 @@
    "sitemap_lastmod": "2026-01-19T14:46:34+00:00",
    "archived": "https://web.archive.org/web/20251115151906/https://canarywharf.com/restaurant/roe/",
    "title": "Roe",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "5 Park Drive",
     "London",
@@ -6515,7 +7237,8 @@
    "archived_on": "20251115",
    "mall": "Park Drive",
    "level": null,
-   "postcode": "E14 9GG"
+   "postcode": "E14 9GG",
+   "street": "5 Park Drive"
   },
   {
    "kind": "restaurant",
@@ -6524,7 +7247,9 @@
    "sitemap_lastmod": "2026-01-19T14:46:54+00:00",
    "archived": "https://web.archive.org/web/20251104080043/https://canarywharf.com/restaurant/kricket/",
    "title": "Kricket",
-   "categories": [],
+   "categories": [
+    "Indian"
+   ],
    "address_lines": [
     "Frobisher Passage",
     "Canary Wharf",
@@ -6544,7 +7269,9 @@
    "sitemap_lastmod": "2026-01-19T14:47:10+00:00",
    "archived": "https://web.archive.org/web/20251117215020/https://canarywharf.com/restaurant/oysteria/",
    "title": "Oysteria",
-   "categories": [],
+   "categories": [
+    "Italian"
+   ],
    "address_lines": [
     "40 Bank Street",
     "Canary Wharf",
@@ -6555,7 +7282,8 @@
    "archived_on": "20251117",
    "mall": "Bank Street",
    "level": null,
-   "postcode": "E14 5NR"
+   "postcode": "E14 5NR",
+   "street": "40 Bank Street"
   },
   {
    "kind": "restaurant",
@@ -6564,7 +7292,9 @@
    "sitemap_lastmod": "2026-01-19T14:47:34+00:00",
    "archived": "https://web.archive.org/web/20251114111836/https://canarywharf.com/restaurant/blacklock/",
    "title": "Blacklock",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "5 Frobisher Passage",
     "Canary Wharf",
@@ -6575,7 +7305,8 @@
    "archived_on": "20251114",
    "mall": "Frobisher Passage",
    "level": null,
-   "postcode": "E14 4PA"
+   "postcode": "E14 4PA",
+   "street": "5 Frobisher Passage"
   },
   {
    "kind": "restaurant",
@@ -6584,7 +7315,9 @@
    "sitemap_lastmod": "2026-01-19T14:47:48+00:00",
    "archived": "https://web.archive.org/web/20251107095605/https://canarywharf.com/restaurant/dishoom-canary-wharf/",
    "title": "Dishoom Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "13 Water Street",
     "Wood Wharf",
@@ -6595,7 +7328,8 @@
    "archived_on": "20251107",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "13 Water Street"
   },
   {
    "kind": "restaurant",
@@ -6604,7 +7338,9 @@
    "sitemap_lastmod": "2026-01-19T14:47:56+00:00",
    "archived": "https://web.archive.org/web/20251028102358/https://canarywharf.com/restaurant/caravan-canary-wharf/",
    "title": "Caravan Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "Reuters Plaza",
     "Canary Wharf",
@@ -6624,7 +7360,9 @@
    "sitemap_lastmod": "2026-01-19T14:48:12+00:00",
    "archived": "https://web.archive.org/web/20251115152917/https://canarywharf.com/restaurant/hawksmoor-wood-wharf/",
    "title": "Hawksmoor Wood Wharf",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "1 Water Street",
     "Wood Wharf",
@@ -6635,7 +7373,8 @@
    "archived_on": "20251115",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "1 Water Street"
   },
   {
    "kind": "restaurant",
@@ -6644,7 +7383,9 @@
    "sitemap_lastmod": "2026-01-19T14:48:19+00:00",
    "archived": "https://web.archive.org/web/20251107011835/https://canarywharf.com/restaurant/emilias-crafted-pasta/",
    "title": "Emilia's Crafted Pasta",
-   "categories": [],
+   "categories": [
+    "Italian"
+   ],
    "address_lines": [
     "12 George Street",
     "Wood Wharf",
@@ -6655,7 +7396,8 @@
    "archived_on": "20251107",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QG"
+   "postcode": "E14 9QG",
+   "street": "12 George Street"
   },
   {
    "kind": "restaurant",
@@ -6664,7 +7406,9 @@
    "sitemap_lastmod": "2026-01-19T14:48:28+00:00",
    "archived": "https://web.archive.org/web/20251115155941/https://canarywharf.com/restaurant/the-alchemist/",
    "title": "The Alchemist",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "Reuters Plaza",
     "Canary Wharf",
@@ -6684,7 +7428,9 @@
    "sitemap_lastmod": "2026-01-19T15:03:55+00:00",
    "archived": "https://web.archive.org/web/20251027171109/https://canarywharf.com/restaurant/atrium-kitchen/",
    "title": "Atrium Kitchen",
-   "categories": [],
+   "categories": [
+    "Restaurants"
+   ],
    "address_lines": [
     "Upper Level 2",
     "Cabot Place",
@@ -6705,7 +7451,9 @@
    "sitemap_lastmod": "2026-01-19T15:04:13+00:00",
    "archived": "https://web.archive.org/web/20251117220944/https://canarywharf.com/restaurant/cafe-seek/",
    "title": "Cafe Seek",
-   "categories": [],
+   "categories": [
+    "Japanese"
+   ],
    "address_lines": [
     "8 Harbord Square",
     "Wood Wharf",
@@ -6715,7 +7463,8 @@
    "archived_on": "20251117",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "8 Harbord Square"
   },
   {
    "kind": "restaurant",
@@ -6724,7 +7473,9 @@
    "sitemap_lastmod": "2026-01-19T15:04:27+00:00",
    "archived": "https://web.archive.org/web/20251114120309/https://canarywharf.com/restaurant/signorelli/",
    "title": "Signorelli",
-   "categories": [],
+   "categories": [
+    "Bakery"
+   ],
    "address_lines": [
     "3 West Lane",
     "Wood Wharf",
@@ -6734,7 +7485,8 @@
    "archived_on": "20251114",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "3 West Lane"
   },
   {
    "kind": "restaurant",
@@ -6743,7 +7495,9 @@
    "sitemap_lastmod": "2026-01-19T15:05:21+00:00",
    "archived": "https://web.archive.org/web/20251117212125/https://canarywharf.com/restaurant/market-halls/",
    "title": "Market Halls",
-   "categories": [],
+   "categories": [
+    "Cafes & Bars"
+   ],
    "address_lines": [
     "25 North Colonnade",
     "Canary Wharf",
@@ -6753,7 +7507,8 @@
    "archived_on": "20251117",
    "mall": "North Colonnade",
    "level": null,
-   "postcode": "E14 5HD"
+   "postcode": "E14 5HD",
+   "street": "25 North Colonnade"
   },
   {
    "kind": "restaurant",
@@ -6762,7 +7517,9 @@
    "sitemap_lastmod": "2026-01-19T15:05:34+00:00",
    "archived": "https://web.archive.org/web/20251115160325/https://canarywharf.com/restaurant/the-salad-kitchen/",
    "title": "The Salad Kitchen",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Jubilee Place",
@@ -6783,7 +7540,9 @@
    "sitemap_lastmod": "2026-01-19T15:05:47+00:00",
    "archived": "https://web.archive.org/web/20251117213349/https://canarywharf.com/restaurant/subway/",
    "title": "Subway",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Level -3",
     "Crossrail Place",
@@ -6804,7 +7563,9 @@
    "sitemap_lastmod": "2026-01-19T15:05:56+00:00",
    "archived": "https://web.archive.org/web/20251115143100/https://canarywharf.com/restaurant/coco-di-mama/",
    "title": "Coco Di Mama",
-   "categories": [],
+   "categories": [
+    "Italian"
+   ],
    "address_lines": [
     "Mall Level -1",
     "One Canada Square",
@@ -6816,7 +7577,8 @@
    "archived_on": "20251115",
    "mall": "One Canada Square",
    "level": "Mall Level -1",
-   "postcode": "E14 5AX"
+   "postcode": "E14 5AX",
+   "street": "One Canada Square"
   },
   {
    "kind": "restaurant",
@@ -6825,7 +7587,9 @@
    "sitemap_lastmod": "2026-01-19T16:32:08+00:00",
    "archived": "https://web.archive.org/web/20251115160341/https://canarywharf.com/restaurant/pittagoras-at-wharf-kitchen/",
    "title": "Pittagoras at Wharf Kitchen",
-   "categories": [],
+   "categories": [
+    "Greek"
+   ],
    "address_lines": [
     "Lower Mall - 2",
     "Jubilee Place",
@@ -6853,7 +7617,9 @@
    "sitemap_lastmod": "2026-01-20T17:18:56+00:00",
    "archived": "https://web.archive.org/web/20251115144515/https://canarywharf.com/restaurant/crate-bar-and-pizzeria/",
    "title": "Crate Bar and Pizzeria",
-   "categories": [],
+   "categories": [
+    "Bars"
+   ],
    "address_lines": [
     "14 Water Street",
     "Wood Wharf",
@@ -6863,7 +7629,8 @@
    "archived_on": "20251115",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "14 Water Street"
   },
   {
    "kind": "restaurant",
@@ -6872,7 +7639,9 @@
    "sitemap_lastmod": "2026-01-23T10:24:11+00:00",
    "archived": "https://web.archive.org/web/20251107011713/https://canarywharf.com/restaurant/gaucho/",
    "title": "Gaucho",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "29 Westferry Circus",
     "Canary Wharf",
@@ -6883,7 +7652,8 @@
    "archived_on": "20251107",
    "mall": "Westferry Circus",
    "level": null,
-   "postcode": "E14 8RR"
+   "postcode": "E14 8RR",
+   "street": "29 Westferry Circus"
   },
   {
    "kind": "restaurant",
@@ -6892,7 +7662,9 @@
    "sitemap_lastmod": "2026-01-23T10:24:51+00:00",
    "archived": "https://web.archive.org/web/20251107090753/https://canarywharf.com/restaurant/big-easy/",
    "title": "Big Easy",
-   "categories": [],
+   "categories": [
+    "American"
+   ],
    "address_lines": [
     "Upper Level 1",
     "Crossrail Place",
@@ -6913,7 +7685,9 @@
    "sitemap_lastmod": "2026-01-27T16:06:22+00:00",
    "archived": "https://web.archive.org/web/20251117223853/https://canarywharf.com/restaurant/sticksnsushi/",
    "title": "Sticks'n'Sushi",
-   "categories": [],
+   "categories": [
+    "Japanese"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Crossrail Place",
@@ -6949,7 +7723,9 @@
    "sitemap_lastmod": "2026-02-11T13:42:51+00:00",
    "archived": "https://web.archive.org/web/20251117222442/https://canarywharf.com/restaurant/mama-li/",
    "title": "Mama Li",
-   "categories": [],
+   "categories": [
+    "Asian"
+   ],
    "address_lines": [
     "3 West Lane",
     "Wood Wharf"
@@ -6958,7 +7734,8 @@
    "archived_on": "20251117",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "3 West Lane"
   },
   {
    "kind": "restaurant",
@@ -6967,7 +7744,9 @@
    "sitemap_lastmod": "2026-03-03T17:16:33+00:00",
    "archived": "https://web.archive.org/web/20251029173632/https://canarywharf.com/restaurant/atis/",
    "title": "atis",
-   "categories": [],
+   "categories": [
+    "Grab & Go"
+   ],
    "address_lines": [
     "Mall Level -1",
     "Canada Place",
@@ -7029,7 +7808,8 @@
    "archived_on": "20250329",
    "mall": "Hertsmere Road",
    "level": null,
-   "postcode": "E14 4ED"
+   "postcode": "E14 4ED",
+   "street": "22 Hertsmere Road"
   },
   {
    "kind": "stay",
@@ -7049,7 +7829,8 @@
    "archived_on": "20250521",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "15 Water Street"
   },
   {
    "kind": "see-do",
@@ -7069,7 +7850,8 @@
    "archived_on": "20250119",
    "mall": "Hertsmere Road",
    "level": null,
-   "postcode": "E14 4ED"
+   "postcode": "E14 4ED",
+   "street": "22 Hertsmere Road"
   },
   {
    "kind": "see-do",
@@ -7089,7 +7871,10 @@
    "archived_on": "20250119",
    "mall": null,
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "flags": [
+    "estate-wide"
+   ]
   },
   {
    "kind": "see-do",
@@ -7109,7 +7894,8 @@
    "archived_on": "20250209",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 5GX"
+   "postcode": "E14 5GX",
+   "street": "15 Water Street"
   },
   {
    "kind": "see-do",
@@ -7128,7 +7914,8 @@
    "archived_on": "20250319",
    "mall": "Cabot Square",
    "level": null,
-   "postcode": "E14 4QS"
+   "postcode": "E14 4QS",
+   "street": "15 Cabot Square"
   },
   {
    "kind": "see-do",
@@ -7169,7 +7956,8 @@
    "archived_on": "20250124",
    "mall": "Charter Street",
    "level": null,
-   "postcode": "E14 5GZ"
+   "postcode": "E14 5GZ",
+   "street": "14 Charter Street"
   },
   {
    "kind": "see-do",
@@ -7210,7 +7998,8 @@
    "archived_on": "20250418",
    "mall": "Churchill Place",
    "level": null,
-   "postcode": "E14 5RE"
+   "postcode": "E14 5RE",
+   "street": "22 Churchill Place"
   },
   {
    "kind": "see-do",
@@ -7230,7 +8019,8 @@
    "archived_on": "20250119",
    "mall": "Cabot Square",
    "level": null,
-   "postcode": "E14 4QJ"
+   "postcode": "E14 4QJ",
+   "street": "One Cabot Square"
   },
   {
    "kind": "see-do",
@@ -7250,7 +8040,8 @@
    "archived_on": "20250124",
    "mall": "Cabot Square",
    "level": null,
-   "postcode": "E14 4EY"
+   "postcode": "E14 4EY",
+   "street": "10 Cabot Square"
   },
   {
    "kind": "see-do",
@@ -7270,7 +8061,8 @@
    "archived_on": "20250313",
    "mall": "Fisherman’s Walk",
    "level": null,
-   "postcode": "E14 4DH"
+   "postcode": "E14 4DH",
+   "street": "25-35 Fisherman’s Walk"
   },
   {
    "kind": "see-do",
@@ -7290,7 +8082,8 @@
    "archived_on": "20250124",
    "mall": "Churchill Place",
    "level": null,
-   "postcode": "E14 5RE"
+   "postcode": "E14 5RE",
+   "street": "30 Churchill Place"
   },
   {
    "kind": "see-do",
@@ -7308,9 +8101,10 @@
    ],
    "website": null,
    "archived_on": "20250124",
-   "mall": null,
+   "mall": "West Lane",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "3 & 15 West Lane"
   },
   {
    "kind": "see-do",
@@ -7359,7 +8153,9 @@
    "sitemap_lastmod": "2026-01-05T16:31:33+00:00",
    "archived": "https://web.archive.org/web/20251117211934/https://canarywharf.com/see-do/virgin-active-canary-riverside/",
    "title": "Virgin Active, Canary Riverside",
-   "categories": [],
+   "categories": [
+    "Sport"
+   ],
    "address_lines": [
     "Level 0",
     "Westferry Circus",
@@ -7380,7 +8176,9 @@
    "sitemap_lastmod": "2026-01-05T16:32:05+00:00",
    "archived": "https://web.archive.org/web/20251115145713/https://canarywharf.com/see-do/ultimate-performance-wood-wharf/",
    "title": "Ultimate Performance, Wood Wharf",
-   "categories": [],
+   "categories": [
+    "Sport"
+   ],
    "address_lines": [
     "Level –2",
     "10 George Street",
@@ -7392,7 +8190,8 @@
    "archived_on": "20251115",
    "mall": "Wood Wharf",
    "level": "Level –2",
-   "postcode": "E14 4QT"
+   "postcode": "E14 4QT",
+   "street": "10 George Street"
   },
   {
    "kind": "see-do",
@@ -7401,7 +8200,9 @@
    "sitemap_lastmod": "2026-01-05T16:32:22+00:00",
    "archived": "https://web.archive.org/web/20251115152612/https://canarywharf.com/see-do/ultimate-performance-cabot-place/",
    "title": "Ultimate Performance, Cabot Place",
-   "categories": [],
+   "categories": [
+    "Sport"
+   ],
    "address_lines": [
     "Level –2",
     "Cabot Place Mall",
@@ -7422,7 +8223,9 @@
    "sitemap_lastmod": "2026-01-05T16:32:34+00:00",
    "archived": "https://web.archive.org/web/20251117224546/https://canarywharf.com/see-do/the-island-studio/",
    "title": "The Island Studio",
-   "categories": [],
+   "categories": [
+    "Sport"
+   ],
    "address_lines": [
     "10 Brannan Street",
     "Wood Wharf",
@@ -7433,7 +8236,8 @@
    "archived_on": "20251117",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": null
+   "postcode": "E22 3BE",
+   "street": "10 Brannan Street"
   },
   {
    "kind": "see-do",
@@ -7462,7 +8266,9 @@
    "sitemap_lastmod": "2026-01-05T16:34:27+00:00",
    "archived": "https://web.archive.org/web/20251102142936/https://canarywharf.com/see-do/barrys/",
    "title": "Barry's",
-   "categories": [],
+   "categories": [
+    "Sport"
+   ],
    "address_lines": [
     "Lower Mall -2",
     "Crossrail Place",
@@ -7483,7 +8289,9 @@
    "sitemap_lastmod": "2026-01-05T16:34:36+00:00",
    "archived": "https://web.archive.org/web/20251102175825/https://canarywharf.com/see-do/in2sports/",
    "title": "In2Sports",
-   "categories": [],
+   "categories": [
+    "Sport"
+   ],
    "address_lines": [
     "40 Harbord Square",
     "Wood Wharf",
@@ -7494,7 +8302,8 @@
    "archived_on": "20251102",
    "mall": "Wood Wharf",
    "level": null,
-   "postcode": "E14 9QH"
+   "postcode": "E14 9QH",
+   "street": "40 Harbord Square"
   },
   {
    "kind": "see-do",
@@ -7503,7 +8312,9 @@
    "sitemap_lastmod": "2026-01-05T16:34:45+00:00",
    "archived": "https://web.archive.org/web/20251117211759/https://canarywharf.com/see-do/third-space-wood-wharf/",
    "title": "Third Space Wood Wharf",
-   "categories": [],
+   "categories": [
+    "Sport"
+   ],
    "address_lines": [
     "14 Charter Street",
     "London"
@@ -7512,7 +8323,8 @@
    "archived_on": "20251117",
    "mall": "Charter Street",
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "street": "14 Charter Street"
   },
   {
    "kind": "see-do",
@@ -7521,7 +8333,9 @@
    "sitemap_lastmod": "2026-01-05T16:34:55+00:00",
    "archived": "https://web.archive.org/web/20251117212934/https://canarywharf.com/see-do/third-space-recovery-spa/",
    "title": "Third Space Recovery Spa",
-   "categories": [],
+   "categories": [
+    "Experience"
+   ],
    "address_lines": [
     "Upper Level 2",
     "16-19 Canada Square",
@@ -7533,7 +8347,8 @@
    "archived_on": "20251117",
    "mall": "Canada Square",
    "level": "Upper Level 2",
-   "postcode": "E14 5ER"
+   "postcode": "E14 5ER",
+   "street": "16-19 Canada Square"
   },
   {
    "kind": "see-do",
@@ -7542,7 +8357,9 @@
    "sitemap_lastmod": "2026-01-14T12:53:46+00:00",
    "archived": "https://web.archive.org/web/20251115155829/https://canarywharf.com/see-do/third-space-canary-wharf/",
    "title": "Third Space Canary Wharf",
-   "categories": [],
+   "categories": [
+    "Sport"
+   ],
    "address_lines": [
     "Upper Level 2",
     "16-19 Canada Square",
@@ -7554,7 +8371,8 @@
    "archived_on": "20251115",
    "mall": "Canada Square",
    "level": "Upper Level 2",
-   "postcode": "E14 5ER"
+   "postcode": "E14 5ER",
+   "street": "16-19 Canada Square"
   },
   {
    "kind": "see-do",
@@ -7574,7 +8392,10 @@
    "archived_on": "20250209",
    "mall": null,
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "flags": [
+    "estate-wide"
+   ]
   },
   {
    "kind": "see-do",
@@ -7594,7 +8415,10 @@
    "archived_on": "20250209",
    "mall": null,
    "level": null,
-   "postcode": null
+   "postcode": null,
+   "flags": [
+    "estate-wide"
+   ]
   },
   {
    "kind": "see-do",

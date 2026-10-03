@@ -15,3 +15,9 @@ data/raw/facades/
 tools/__pycache__/
 data/raw/towers/
 data/raw/trees/
+
+# website crawl cache (tools/crawl-sites.mjs)
+data/raw/crawl/
+
+# regulatory register downloads (tools/fetch-registers.mjs)
+data/raw/registers/
