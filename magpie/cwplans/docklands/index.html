@@ -402,7 +402,24 @@ let buildingColour = (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld;   // re
 let SKY = null, skyIdx = -1;
 const heightOf = (b, i) => { if (!SKY || skyIdx < 0) return b.h; const v = SKY.buildings[i]; if (!v || v[skyIdx] == null) return b.h; return v[skyIdx] / 10; };
 const notFlown = i => SKY && skyIdx >= 0 && SKY.buildings[i] && SKY.buildings[i][skyIdx] == null;   // that survey did not cover it: today's height, slate colour
-function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, notFlown(i) ? [.36, .42, .52] : buildingColour(b, i), !!b.mh); }); L.bld = M.upload(); }
+// measured tower massing (data/towers.json, tools/build-towers.py): stacked tiers, and One Canada Square's pyramid, in
+// place of one prism per OSM outline for the towers of 100 m and over. Only for today's skyline (the year slider uses prisms).
+let TOWERS = null; const towerOf = new Map();   // model building index -> tower record
+const encRings = rings => { const p = [], holes = []; let px = 0, pz = 0, n = 0; rings.forEach((r, k) => { if (k) holes.push(n); for (const [x, z] of r) { const X = Math.round(x * 10), Z = Math.round(z * 10); p.push(X - px, Z - pz); px = X; pz = Z; n++; } }); return { p, holes }; };
+function towerF(M, t, col) {
+  t.tiers.forEach((tr, k) => {
+    const last = k === t.tiers.length - 1, pyr = last && t.top && t.top.kind === 'pyramid' && t.top.apex;
+    if (!pyr) { prismF(M, encRings([tr.ring, ...(tr.holes || [])]), tr.y0, tr.y1, col, false); return; }
+    // pyramid: each edge of the ring at y0 to the apex; roof u (no window grid)
+    const [ax, ay, az] = t.top.apex, r = tr.ring, ru = -(1 + (ay - tr.y0));
+    for (let i = 0; i < r.length; i++) { const [x0, z0] = r[i], [x1, z1] = r[(i + 1) % r.length], n = norm3([x0, tr.y0, z0], [x1, tr.y0, z1], [ax, ay, az]);
+      const c = shade(col.map(v => Math.min(1, v * 1.08)), n[0], n[1], n[2]); M.tri(M.v(x0, tr.y0, z0, ru, c), M.v(x1, tr.y0, z1, ru, c), M.v(ax, ay, az, ru, c)); }
+  });
+}
+function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(), useT = TOWERS && skyIdx < 0;
+  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, notFlown(i) ? [.36, .42, .52] : buildingColour(b, i), !!b.mh); });
+  if (useT) for (const t of TOWERS) { const mi = t.model_buildings[0]; towerF(M, t, buildingColour(A.buildings[mi], mi)); }
+  L.bld = M.upload(); }
 buildBld();
 // photo style (drone frames for splat training): materials instead of the map colour codes, no diagram layers
 const PHOTO_BLD = [[.74, .75, .76], [.62, .66, .70], [.80, .78, .74], [.55, .60, .66], [.70, .68, .64], [.66, .70, .72]];
@@ -1440,6 +1457,7 @@ window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, re
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
 outs(); setView('cw');
+loadJSON('data/towers.json').then(T => { TOWERS = Object.values(T.buildings).filter(t => t.tiers && t.tiers.length && t.status === 'fitted'); for (const t of TOWERS) for (const mi of t.model_buildings) towerOf.set(mi, t); buildBld(); draw(); }).catch(e => console.warn('towers.json', e));
 // #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)
 const atM = /(?:^#|&)at=(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?/.exec(location.hash);
 if (atM) { Object.assign(cam, { tx: +atM[1], tz: +atM[2], ty: 0, dist: +(atM[3] || 600) }); unview(); draw(); }

@@ -4974,7 +4974,7 @@
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-towers"
    },
    "cwp:osmUse": "derived",
-   "cwp:review": "Planning documents listed under references are links only; nothing from them is copied. Not yet loaded by docklands/index.html; add it to pages[].loads when it is"
+   "cwp:review": "Planning documents listed under references are links only; nothing from them is copied."
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/trees.json",
