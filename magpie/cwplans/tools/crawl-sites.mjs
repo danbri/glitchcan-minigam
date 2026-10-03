@@ -135,7 +135,7 @@ const errClass = e => {
   if (e?.name === 'TimeoutError' || /timeout/i.test(c + m)) return 'timeout';
   if (/ENOTFOUND|EAI_AGAIN/.test(c + m)) return 'dns';
   if (/CERT|SSL|TLS|self.signed|UNABLE_TO_VERIFY/i.test(c + m)) return 'tls';
-  if (/ECONNRESET|ECONNREFUSED|UND_ERR_SOCKET|EPIPE|closed|reset/i.test(c + m)) return 'connection';
+  if (/ECONNRESET|ECONNREFUSED|UND_ERR_SOCKET|EPIPE|closed|reset|cancel/i.test(c + m)) return 'connection';
   return 'network: ' + (c || m).slice(0, 60);
 };
 async function request(url, { accept = 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5' } = {}) {
@@ -208,7 +208,7 @@ async function crawl(url) {
   const P = pathsFor(url);
   if (!args.has('--refresh') && existsSync(P.meta)) {
     const m = JSON.parse(readFileSync(P.meta, 'utf8'));
-    const transient = m.error_class && /timeout|connection|429|5xx|robots unreachable/.test(m.error_class);
+    const transient = m.error_class && /timeout|connection|429|5xx|robots unreachable|network/.test(m.error_class);
     if (!(transient && args.has('--retry-failed'))) return m;
   }
   mkdirSync(P.dir, { recursive: true });
@@ -230,7 +230,8 @@ async function crawl(url) {
   for (let hop = 0; ; hop++) {
     const cu = new URL(cur);
     const rb = await robotsFor(cu.origin);
-    if (rb.state === 'unreachable') { Object.assign(meta, { error_class: 'robots unreachable', detail: `robots.txt ${rb.status || rb.error}` }); break; }
+    // robots.txt unreachable: a network error there is the site's own fault (dns, tls, timeout...); a 5xx robots.txt means "disallow all"
+    if (rb.state === 'unreachable') { Object.assign(meta, { error_class: rb.error || 'robots.txt 5xx (treated as disallow)', detail: `on robots.txt (${rb.status || rb.error})` }); break; }
     if (!robotsAllows(rb.rules, cu.pathname + cu.search)) { Object.assign(meta, { error_class: 'robots disallowed', robots_host: cu.host }); break; }
     const r = await request(cur);
     if (r.error) { Object.assign(meta, { error_class: r.error, detail: r.detail }); break; }
@@ -391,7 +392,7 @@ function extract(html, baseUrl, meta, places) {
   const title = all.find(e => e.name === 'title');
   // feeds: <link rel=alternate> RSS, Atom, JSON Feed, iCalendar; anchors to .ics / webcal: / .rss / .atom
   const feeds = [], seenF = new Set();
-  const addFeed = (href, format, how, t) => { const u = abs(href); if (!u || seenF.has(u) || /\/comments\/feed\/?$|[?&]feed=comments/.test(u)) return; seenF.add(u); feeds.push(Object.fromEntries(Object.entries({ url: u, format, how, title: t && cut(t, 120) }).filter(([, v]) => v))); };
+  const addFeed = (href, format, how, t) => { const u = abs(href); if (!u || seenF.has(u) || /\/comments\/feed\/?$|[?&]feed=comments/.test(u) || /comments feed/i.test(t || '')) return; seenF.add(u); feeds.push(Object.fromEntries(Object.entries({ url: u, format, how, title: t && cut(t, 120) }).filter(([, v]) => v))); };
   for (const l of all.filter(e => e.name === 'link' && /\balternate\b/i.test(e.attrs.rel || '') && e.attrs.href)) {
     const ty = (l.attrs.type || '').toLowerCase();
     const f = /rss/.test(ty) ? 'rss' : /atom/.test(ty) ? 'atom' : /calendar/.test(ty) ? 'ical' : /feed\+json/.test(ty) ? 'json-feed' : null;
@@ -472,6 +473,7 @@ for (const u of all) {
   if (/web\.archive\.org\/web\/\d+\//.test(u)) { const [, ts, orig] = /\/web\/(\d+)\/(.+)$/.exec(u); rec.archived = { timestamp: ts, original: orig }; counts.archived_cwg_pages++; }
   if (m.method !== 'live') rec.method = m.method;
   if (m.redirects?.length) rec.redirects = m.redirects.length;
+  if (m.error_class === 'robots unreachable') { const why = (/robots\.txt (\S+)/.exec(m.detail || '') || [])[1]; m.error_class = /^\d+$/.test(why) ? 'robots.txt 5xx (treated as disallow)' : why === 'network:' ? 'connection' : why || 'connection'; m.detail = `on robots.txt (${(m.detail || '').replace('robots.txt ', '')})`; }
   if (m.error_class) {
     rec.error = m.error_class; failures[m.error_class] = (failures[m.error_class] || 0) + 1;
     if (m.error_class === 'robots disallowed') robotsBlocked.push({ url: u, host: m.robots_host });

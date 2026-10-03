@@ -70,6 +70,10 @@ Faults found in this project's joins and tools. "Open" means catalogued and meas
 
 | F13 | 2026-10-03 | Tunnel controls from secondary sources: Canada Water Jubilee "22 m down" (Wikipedia) and North Greenwich "25 m down" (an interview) were 4 m and 6 m deeper than TfL's measured rail levels; a depth "below ground" has no stated reference point | attribute conflict (source precedence) | fixed: TfL FOI rail levels added as controls, the old ones kept with `superseded_by` and not applied (`applyControls` skips them) | AT-5: 2 |
 
+| F14 | 2026-10-03 | `fetch-cwg.mjs` parse: the category regex stopped at the tag's own closing div (no category on any of 369 pages); "United Kingdom" (unit) and "55 Upper Bank Street" (upper) read as levels; the first place in list order won ("Bank Street" inside "Upper Bank Street"); only E14/E16 postcodes (Wood Wharf uses E22) | pipeline | fixed: `registry/sources/brands/tools/cwg-fields.mjs` with tests; re-run from the cached pages. 339 entries with categories; 4 levels, 1 mall, 5 missing malls, 3 postcodes corrected; branches unchanged | `tools/test/cwg-fields.test.mjs` |
+| F15 | 2026-10-03 | Business contact tags (phone, email, contact:*) dropped by `registry-osm.mjs`, and `build-registry.mjs` copied only website and opening_date to occupants | pipeline (coverage) | fixed: occupants keep opening_hours, cuisine, wheelchair, check_date, start_date, operator, url, website, phone, email, contact:* (cwplans exception) | buildings.json occupants |
+| F16 | 2026-10-03 | CWG directory joined only through the brand table: 226 of 374 entries had no registry occupant | coverage (join rule) | fixed in `build-registry.mjs`: name keys + place (mall, postcode or building), never across two malls; else a new occupant by street address, mall host outline or the one building of the postcode, with a confidence. 336 of 374 linked; 38 unplaced by class | CV-3: 38; SP-7: 8 low; CV-2: 205 → 162 |
+
 Add new faults here with the next F number, and in the activity log.
 
 ## Imagery
@@ -187,6 +191,11 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
   (F1). OSM itself tags three items on two outlines each (ID-1): model complex → building → part.
 - **The estate is three-dimensional.** A mall is a container of its own, below and between buildings;
   place its occupants by mall and level, and keep the building above only as context (F4).
+- **Join a directory on name and place, never on name alone.** A CWG entry joins an occupant only when a name key is
+  equal and the place agrees (same mall, shared postcode, or the building its address names); two malls never join,
+  except Canada Place and the One Canada Square mall, which CWG and the FSA name both ways (F16). Classes left over:
+  street addresses with no registry building (Wood Wharf is newer than many outlines), car parks, estate-wide entries,
+  pages with no address, renamed venues ("London Museum Docklands").
 - **Levels are labels.** OSM `level` is a mapper's index; CWG names levels per mall; measure the offset
   per mall (F9). Convert to metres only through published slab levels (`data/sourced-levels.json`).
 - **A position has a precision and a meaning.** Postcode-centre points place a postcode, not a building
@@ -203,6 +212,7 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 ## Rebuild order
 
     node magpie/cwplans/tools/build-registry.mjs        # registry/buildings.json (needs data/raw/registry/*)
+    node magpie/cwplans/tools/build-categories.mjs      # registry/categories.json (QLever only when its cache lacks an item)
     node magpie/cwplans/tools/build-atlas.mjs           # atlas/data/atlas.json (reads the registry and docklands/data/area.js)
     node magpie/cwplans/tools/audit-quality.mjs         # quality/issues.json, quality/CATALOGUE.md (reads the atlas)
     node magpie/cwplans/tools/check-data-register.mjs --write   # every committed data file registered?

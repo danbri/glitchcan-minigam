@@ -205,6 +205,47 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 - Pixel art: materials instead of a height ramp; measured facade colours on the towers.
 - Photo facades: 16 tower tiles from CC BY photos (atlas 243 kB), credited in About.
 
+## 2026-10-03: CWG directory joined into the registry; OSM contact tags kept; six new categories
+
+- `fetch-cwg.mjs` parse faults (F14) fixed with `registry/sources/brands/tools/cwg-fields.mjs` and fixture tests
+  (`tools/test/cwg-fields.test.mjs`); re-run from the cached archive pages (no new fetch except 2 failed retries for
+  pages that were never archived). Categories now on 339 of 374 entries (was 0); 4 wrong levels, 1 wrong mall, 5
+  missing malls, 3 missing E22 postcodes corrected. `build-branches.mjs` re-run: 271 branches, no change.
+- `registry-osm.mjs` keeps business phone, email, website and contact:* (F15); same 12,793 features. Occupants now
+  carry opening_hours, cuisine, wheelchair, check_date, start_date, opening_date, operator, url, website, phone,
+  email, contact links. Buildings keep addr:housename.
+- `build-registry.mjs` CWG join (F16). Entries: 148 linked by the branch join (before and after), 82 joined by name and
+  place (23 same mall, 32 same street or square, 12 shared postcode, 15 same building), 106 added as new occupants (19
+  street address, 79 mall host outline, 8 by postcode; confidence 17 high, 81 medium, 8 low), 38 unplaced. Linked to
+  an occupant: 148 → 336 of 374. Occupants 1,161 → 1,267. Mall hosts derived from OSM name or addr:housename: Cabot
+  Place cwb-0411, Canada Place cwb-0466, Jubilee Place cwb-0586, Crossrail Place cwb-0358, One Canada Square cwb-0413,
+  The Park Pavilion cwb-0460, West Wintergarden cwb-0584; Churchill Place has none (2 entries placed by the one retail
+  building of E14 5RB, low).
+- Unplaced classes (CV-3): street address on no registry building 13 (mostly Wood Wharf), car park 5, no archived page
+  5, page with no address 4, estate-wide 3, postcode names several buildings and no address 3, postcode on no building
+  2, E22 postcode and no address 1, no postcode and a street place 1, two OSM records in two buildings 1 (Vertus Edit,
+  "3 & 15 West Lane"). Also: 6 entries join OSM and FSA records that sit in different buildings (F4/F7 evidence);
+  "London Museum Docklands" does not join the museum's old name.
+- `build-categories.mjs`: bar, alcohol, education, health, sport, arts from stated classes (OSM, FSA type, Wikidata
+  P31, CWG section and single-class CWG labels; "Sport & Fitness" and the vet in "Healthcare" left out after reading
+  the examples). Totals (buildings/occupants): finance 17/28 → 18/30, shop 79/225 → 81/256, catering 144/505 →
+  145/540, leisure 28/31 → 28/32, entertainment 6/7 → 6/7; new: bar 28/42, alcohol 3/3, education 20/24, health
+  29/38, sport 19/29, arts 5/6. The 3D page glows only the first five (its list is in docklands/index.html).
+- `tools/scan-model-pois.mjs` → `registry/model-box-pois.json`: OSM POIs of the six classes in the whole model box
+  (total / in the registry / in the registry box but not in it / outside the registry box): bar 569/29/0/540, alcohol
+  51/4/0/47, education 303/19/3/281, health 336/35/2/299, sport 817/31/22/764, arts 97/7/1/89. In the registry box the
+  28 missing are 21 unnamed (the registry takes named features only) and 7 named (Boots node/4558839860, South Quay
+  College, Poplar Bowls Club and others) that lie more than 12 m from any outline.
+- Audit 34 checks / 1,463 issues → 36 / 1,481. New CV-3 (38) and SP-7 (8 low-confidence placements). CV-2 (CWG-only
+  entries) 205 → 162. SP-2 now leaves out key placements (173, unchanged). SP-6 reads addr:housename as a mall name:
+  issues 120 → 119 with population 181 → 304 (CWG malls now on 123 more occupants). Rises from new evidence, not
+  new faults: AT-3 46 → 59 (more OSM/CWG level pairs, F9), ID-2 83 → 84 (Third Space has two CWG pages), ID-3 20 → 22
+  (CWG entries named after their building). Tests: 8 of 8 pass.
+- Register: entries updated for buildings.json, categories.json, cwg-directory.json, issues.json; new
+  model-box-pois.json; pipeline.json: fetch-cwg, registry-osm, build-registry, build-categories, audit-quality
+  updated, scan-model-pois added, cwg-fields.mjs as a library, its test. The register check still fails on two tools
+  of the parallel sessions (tools/crawl-sites.mjs, tools/fetch-registers.mjs: not in pipeline.json).
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
@@ -218,3 +259,6 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 9. 3D: (skyline slider from the EA DSM series: done) add Wikidata inception and Tower Hamlets planning completions to it; live trains from TfL arrivals; Overture building heights where OSM has none. (Night texture: done.)
 10. Mall levels: compare the Living Map venue levels (-4, -3, -2, -1, -1M, 0, M, 1, 2) and the AccessAble lift floors with OSM and CWG levels, as input to the F9 offset table.
 11. Tunnel controls still unused: Blackwall Tunnel inverts (desk study), Silvertown Tunnel road levels (DCO sections), the Crossrail long section (digitised, licence not stated: ask the owner before committing).
+12. CWG join leftovers: a mall container for Churchill Place (no outline names it); Wood Wharf outlines without
+    addresses (13 street addresses match nothing); a postcode-to-building table; rename aliases (Museum of London
+    Docklands); show bar, alcohol, education, health, sport, arts in the 3D glow menu.
