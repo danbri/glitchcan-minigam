@@ -44,8 +44,12 @@
      "prompt": "A narrow canal lock of old brick and stone, full of still dark water right up to the top of its black-and-white wooden gates, on an October morning with low mist on the water. Blue-and-white police tape runs from a black-and-white balance beam to a wooden fence post. Willows and a towpath. Below the lock, far off, a green narrowboat moored.",
      "sound": "water lapping softly against lock gates, police tape fluttering in a light wind, a moorhen",
      "tiny": {
-      "prompt": "Locked-off camera, almost a still photograph. Only the low mist drifts very slowly over the still water and the police tape stirs slightly. No camera movement."
-     }
+      "prompt": "Locked-off camera, almost a still photograph. Only the low mist drifts very slowly over the still water and the police tape stirs slightly. No camera movement.",
+      "seconds": 1.6
+     },
+     "loopSrc": [
+      "media/p1-lock-tiny"
+     ]
     },
     {
      "knot": "bag",
@@ -179,8 +183,12 @@
      "prompt": "A long green hire narrowboat moored at a canal lock landing beside a small white sign on a post that reads NO MOORING, with red geraniums in a tin on its roof and a bicycle on the roof. Morning light, willows, a lock beyond.",
      "sound": "water slapping a steel hull, a mooring rope creaking, ducks",
      "tiny": {
-      "prompt": "Locked-off camera, almost a still photograph. Only small ripples move on the water and the geraniums stir slightly in a breeze. No camera movement."
-     }
+      "prompt": "Locked-off camera, almost a still photograph. Only small ripples move on the water and the geraniums stir slightly in a breeze. No camera movement.",
+      "seconds": 1.6
+     },
+     "loopSrc": [
+      "media/p3-wren-tiny"
+     ]
     }
    ]
   },
@@ -270,8 +278,12 @@
      "prompt": "A log fire burning in a wide old stone pub fireplace, horse brasses on the beam above, a dog asleep on the rug.",
      "sound": "a log fire crackling, a dog sighing",
      "tiny": {
-      "prompt": "Locked-off camera, almost a still photograph. Only the flames of the log fire move. No camera movement."
-     }
+      "prompt": "Locked-off camera, almost a still photograph. Only the flames of the log fire move. No camera movement.",
+      "seconds": 1.6
+     },
+     "loopSrc": [
+      "media/p5-fire-tiny"
+     ]
     },
     {
      "knot": "bins",
@@ -309,8 +321,12 @@
      "prompt": "A small cluttered coroner's office upstairs in an old market-town building: a desk with stacked buff folders, a desk phone, a kettle and mugs on a filing cabinet, a window onto a wet car park.",
      "sound": "a radiator ticking, a kettle coming to the boil, rain on a window",
      "tiny": {
-      "prompt": "Locked-off camera, almost a still photograph. Only rain runs down the window and steam rises slowly from the kettle spout. No camera movement."
-     }
+      "prompt": "Locked-off camera, almost a still photograph. Only rain runs down the window and steam rises slowly from the kettle spout. No camera movement.",
+      "seconds": 1.6
+     },
+     "loopSrc": [
+      "media/p6-office-tiny"
+     ]
     },
     {
      "knot": "phone",
@@ -358,8 +374,7 @@
      "cast": [],
      "alt": "The top gate of lock fourteen, with new black paint on its balance beam.",
      "prompt": "The top gate of a canal lock seen from the lockside: a heavy oak gate with a long balance beam freshly painted glossy black and white, the lock full of still water. Autumn leaves on the coping stones.",
-     "sound": "water seeping through lock gates, a balance beam creaking, a wren",
-     "noSound": true
+     "sound": "water seeping through lock gates, a balance beam creaking, a wren"
     },
     {
      "knot": "plate",
@@ -379,8 +394,7 @@
      "cast": [],
      "alt": "The paddle post of the lock, wrapped in a chain with a brass padlock, its spindle bright with new grease.",
      "prompt": "Close-up of an iron canal lock paddle post: a heavy chain wrapped round it and locked with a brass padlock, the square spindle at the top bright with fresh black grease, and a smear of the same grease on the chain.",
-     "sound": "a chain shifting on iron, a padlock tapping",
-     "noSound": true
+     "sound": "a chain shifting on iron, a padlock tapping"
     },
     {
      "knot": "pound",
@@ -441,9 +455,12 @@
      "prompt": "A flight of canal locks climbing a valley at dusk, seen from a small gravel car park through a car windscreen with raindrops, lights in a lock cottage window, mist on the water.",
      "sound": "rain on a windscreen, a car engine ticking as it cools, a distant owl",
      "tiny": {
-      "prompt": "Locked-off camera, almost a still photograph. Only the raindrops on the windscreen run slowly down and the lit cottage window glows. No camera movement."
+      "prompt": "Locked-off camera, almost a still photograph. Only the raindrops on the windscreen run slowly down and the lit cottage window glows. No camera movement.",
+      "seconds": 1.6
      },
-     "noSound": true
+     "loopSrc": [
+      "media/p8-dusk-tiny"
+     ]
     }
    ]
   },
@@ -460,8 +477,7 @@
      "cast": [],
      "alt": "The last house on Wyke Hill, a green estate car on the drive, the flight of locks below in the valley.",
      "prompt": "A neat stone house at the end of a hillside lane, a dark green estate car with a small sticker in its rear window on the gravel drive, and far below in the valley a flight of canal locks. October afternoon.",
-     "sound": "wind in a hedge, sheep in the distance, gravel underfoot",
-     "noSound": true
+     "sound": "wind in a hedge, sheep in the distance, gravel underfoot"
     },
     {
      "knot": "accounts",
@@ -471,8 +487,7 @@
      "cast": [],
      "alt": "Accounts laid out on a dining table, every column neat, a pair of reading glasses on top.",
      "prompt": "Close-up of a polished dining table with ledgers and printed accounts laid out neatly in a row, columns of figures too small to read, a pair of rimless reading glasses folded on top, a fountain pen.",
-     "sound": "a clock ticking, pages straightened on a table",
-     "noSound": true
+     "sound": "a clock ticking, pages straightened on a table"
     },
     {
      "knot": "clive",
@@ -484,8 +499,7 @@
      ],
      "alt": "Clive Amory at his door in a cardigan, reading glasses pushed up.",
      "prompt": "CLIVE stands in the doorway of his house wearing a grey cardigan instead of his fleece, reading glasses pushed up on his forehead, polite and welcoming, one hand on the door.",
-     "sound": "a front door opening, a man's polite greeting breath",
-     "noSound": true
+     "sound": "a front door opening, a man's polite greeting breath"
     },
     {
      "knot": "car",
@@ -495,8 +509,7 @@
      "cast": [],
      "alt": "An open car boot: a fleece, a first-aid box, wellingtons and a windlass with a worn wooden grip.",
      "prompt": "The open boot of a green estate car: a folded navy fleece, a green first-aid box, a pair of muddy wellington boots, and an iron canal windlass with a worn wooden grip, its square socket packed with fresh black grease.",
-     "sound": "a car boot opening, a windlass clinking on metal",
-     "noSound": true
+     "sound": "a car boot opening, a windlass clinking on metal"
     }
    ]
   },
@@ -525,8 +538,7 @@
      ],
      "alt": "DCI Quaile reading the file in silence, in her raincoat.",
      "prompt": "QUAILE sits on the visitor's chair of a small office still in her raincoat, reading a typed report in a buff folder in silence, one index card turned over in her other hand.",
-     "sound": "a page turned, a card turned over, a long silence with a clock",
-     "noSound": true
+     "sound": "a page turned, a card turned over, a long silence with a clock"
     },
     {
      "knot": "report",

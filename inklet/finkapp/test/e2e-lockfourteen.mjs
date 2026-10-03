@@ -71,6 +71,14 @@ try {
   await page.waitForFunction(() => window.__lock14.page === 1 && window.__lock14.bed === 'media/sfx/bed-1.mp3', null, { timeout: 15000 })
     .then(() => pass(`Begin with sound: page 1 and its sound bed${VOICED ? '' : ' (voices not recorded yet: none asked for)'}`)).catch(() => fail('page 1 did not start'));
 
+  // a short loop plays on the lock panel, and a looping panel has no vignette
+  if (data.pages[0].panels.find((x) => x.knot === 'lock').loopSrc) {
+    await page.waitForFunction(() => [...document.getElementById('lock').querySelectorAll('video')].some((x) => x.style.opacity === '1' && !x.paused), null, { timeout: 8000 }).catch(() => {});
+    const lock = await page.evaluate(() => { const s = document.getElementById('lock'); const v = [...s.querySelectorAll('video')].find((x) => x.style.opacity === '1');
+      return { playing: !!v && !v.paused, shade: getComputedStyle(s, '::after').boxShadow !== 'none' }; });
+    lock.playing && !lock.shade ? pass('the lock panel plays its short loop, with no vignette') : fail(`lock loop: ${JSON.stringify(lock)}`);
+  }
+
   const shot = async (n) => { if (process.env.SHOTS) { await wait(1500); await page.screenshot({ path: `${process.env.SHOTS}/page${String(n).padStart(2, '0')}.png` }); } };
   await shot(1);
   const pick = (m) => page.evaluate((m) => { const b = [...document.querySelectorAll('.ink .choice')];

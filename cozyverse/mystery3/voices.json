@@ -1,6 +1,6 @@
 {
  "takes": 1,
- "recorded": false,
+ "recorded": true,
  "secondTake": [],
  "about": "Every voiced line of the chapter's ink: who speaks it, the exact words shown on the page (\"text\"), and what the voice is given (\"say\": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves \"text\" matches the ink; tools/directions.py writes this file. Each line has \"takes\" takes, media/vo/<id>-1.mp3 and so on, and one more if its id is in \"secondTake\"; the page plays one at random.",
  "model": "eleven_v4",

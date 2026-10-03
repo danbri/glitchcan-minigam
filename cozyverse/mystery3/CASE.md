@@ -180,8 +180,6 @@ As in Steeple Wyke, one rare panel shows a small yellow bird once in a reading. 
 
 ## Media (October 2026)
 
-Pictures, the ten page beds, 32 of 40 panel sounds and the canary are done. Eight panels have no sound of their
-own (`"noSound"` in `pages.json`): the page bed plays there. The canary is on page 4, on the gatepost by Annette's rain gauge. The
-voices (195 lines) and five short loops (the lock, the Wren, the pub fire, the office window, the car at dusk) were
-not made: the ElevenLabs workspace reached its usage-based billing threshold. Their prompts are in `voices.json` and
-in `pages.json` (`tiny`). Until the voices exist the page plays sound only.
+Done: 40 pictures, 10 page beds, 40 panel sounds, five short loops (the lock, the Wren, the pub fire, the office
+window, the car at dusk), one take of each of the 195 voiced lines, and the canary on page 4, on the gatepost by
+Annette's rain gauge. The work stopped once at the ElevenLabs usage-based billing threshold; the owner raised it.
