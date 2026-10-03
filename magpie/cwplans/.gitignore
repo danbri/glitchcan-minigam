@@ -9,3 +9,4 @@ data/raw/registry/*
 data/raw/imagery/
 tools/native/ecw2ppm
 data/raw/splats/
+data/raw/drone/
