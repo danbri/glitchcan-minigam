@@ -32,11 +32,13 @@ CW = Path(__file__).resolve().parent.parent
 DSM = CW / 'data/raw/dsm'
 OUT_IMG = CW / 'data/raw/towers'
 E0, N0 = 537550, 180300
-MARGIN = 3
+MARGIN = 3                # m round the footprint read and searched
+CLIP = 2.5                # m: tiers stay within the (registered) OSM outline plus this
+SHIFT = 4                 # m: largest shift of an OSM outline onto the LiDAR building
 MIN_FEATURE = 16          # m2: plant, masts and crowns smaller than about 4 x 4 m are not kept as tiers
 TIER_GAP = 3.0            # m: two roof levels closer than this are one tier
 MIN_HOLE = 60             # m2: a smaller opening in a roof region is filled (plant wells, dropouts)
-MIN_TIER = 8.0            # m above the base: lower levels are ground, kerbs and misregistered pavement
+MIN_TIER = 5.0            # m above the base: lower levels are ground, kerbs and misregistered pavement
 
 SURVEYS = {   # id -> zip files (product, year); the 2022 composite merges P_10768 (2017-12 to 2018-01) and P_12151 (2020-12-12)
     '2022c': ['lidar_composite_first_return_dsm-2022-1-TQ3575.zip', 'lidar_composite_first_return_dsm-2022-1-TQ3580.zip'],
@@ -219,7 +221,7 @@ def roof_levels(v, kmax=7, seed=0):
     X = v.reshape(-1, 1); best = None
     for k in range(1, min(kmax, max(1, v.size // MIN_FEATURE)) + 1):
         g = GaussianMixture(k, random_state=seed, reg_covar=0.25).fit(X)
-        bic = g.bic(X) + 2 * k * math.log(v.size)       # extra penalty: a new tier must earn its keep
+        bic = g.bic(X) + k * math.log(v.size)           # extra penalty: a new tier must earn its keep
         if best is None or bic < best[0]: best = (bic, g)
     lab = best[1].predict(X)
     groups = sorted([v[lab == k] for k in np.unique(lab)], key=np.median)
@@ -281,6 +283,13 @@ def model_surface(rec, X0, Z0, shape):
 
 
 # ---------------------------------------------------------------- fitting one building
+def dropouts(r):
+    """Cells more than 8 m under the 75th percentile of their 5 x 5 m neighbourhood: no-return cells filled from far
+    below. The checks leave them out (and count them); they are neither filled nor scored."""
+    f = fill_nan(r)
+    return f < ndimage.percentile_filter(f, 75, size=5) - 8
+
+
 def pit_fill(h, k):
     """LiDAR dropouts: on dark or glazed roofs many cells have no return and the gridding fills them from far below
     (Maine Tower: 45% of roof cells more than 15 m under the roof). A grey closing (dilate, then erode, k x k m) fills
@@ -289,6 +298,21 @@ def pit_fill(h, k):
     c = ndimage.grey_closing(f, size=(k, k))
     c = ndimage.median_filter(c, size=3)
     return c, (f < c - 8) | np.isnan(h)
+
+
+def composite_voids(c22, s20):
+    """The 2022 composite fills cells the 2020 flight missed with values near the ground: One Canada Square has a
+    10 m hole at the pyramid's apex that reads 9.9 m OD in the composite and NaN in 2020. A gap in 2020 whose rim is
+    at least 8 m above its own composite values on 90% of the rim is such a hole in a roof: mark it as no data.
+    Gaps beside walls (LiDAR shadow) keep the composite's ground values."""
+    c = c22.copy()
+    lab, n = ndimage.label(np.isnan(s20))
+    for k in range(1, n + 1):
+        hole = lab == k
+        rim = ndimage.binary_dilation(hole, np.ones((3, 3))) & ~hole & np.isfinite(c22)
+        if not rim.any(): continue
+        if (c22[rim] > np.nanmedian(c22[hole]) + 8).mean() >= .9: c[hole] = np.nan
+    return c
 
 
 def fill_nan(a):
@@ -335,14 +359,14 @@ def fit_top(H, cells, poly, dom, X0, Z0):
 
 
 def register(fp, H, top):
-    """Shift (dx, dz) in whole metres, within 6 m, that best lays the OSM outline over the DSM building (cells above
+    """Shift (dx, dz) in whole metres, within SHIFT, that best lays the OSM outline over the DSM building (cells above
     half the roof). OSM outlines are traced from aerial photographs, where a tall building leans; the LiDAR is
     georeferenced to about 0.5 m."""
-    hi = H > top / 2; best = (-1, 0, 0)
+    hi = (H > .6 * top) & (H < 1.25 * top); best = (-1, 0, 0)
     zz, xx = np.nonzero(hi)
     if not zz.size: return 0, 0
-    for dx in range(-6, 7):
-        for dz in range(-6, 7):
+    for dx in range(-SHIFT, SHIFT + 1):
+        for dz in range(-SHIFT, SHIFT + 1):
             m = rasterize([shift(fp, dx, dz)], out_shape=H.shape, transform=Affine(1, 0, 0, 0, 1, 0)).astype(bool)
             j = (m & hi).sum() / (m | hi).sum()
             if j > best[0] + 1e-9 or (abs(j - best[0]) < 1e-9 and abs(dx) + abs(dz) < abs(best[1]) + abs(best[2])): best = (j, dx, dz)
@@ -366,10 +390,21 @@ def fit_building(b, A, surveys, judge):
     X0, Z0, X1, Z1 = int(math.floor(x0)) - pad, int(math.floor(z0)) - pad, int(math.ceil(x1)) + pad, int(math.ceil(z1)) + pad
     shp = (Z1 - Z0, X1 - X0); tr = Affine(1, 0, X0, 0, 1, Z0)
     raw = {sid: S.crop(X0, X1, Z0, Z1) for sid, S in surveys.items()}
-    H, drop = pit_fill(raw['2022c'] - base, J.get('closing', 5))
-    expected = max(b.get('wh') or 0, b.get('h') or 0, b.get('mh') or 0)
-    rec = dict(id=b['id'], name=b.get('n'), mi=b['mi'], base=base, ground=J.get('ground_m_od'), X0=X0, Z0=Z0, shape=shp, notes=[])
+    raw['2022c'] = composite_voids(raw['2022c'], raw['2020'])
+    surface = raw['2022c']
     M_fp0 = rasterize([fp], out_shape=shp, transform=tr).astype(bool)
+    # many dropouts and a 2018 flight of the finished building: dropouts fall on different cells in each flight, so
+    # the higher of the two surveys per cell recovers the roof (cranes and masts are thinner than MIN_FEATURE)
+    fused = False
+    d22 = float(dropouts(raw['2022c'])[M_fp0].mean())
+    if J.get('fuse_2018', d22 > .15) and np.isfinite(raw['2018'][M_fp0]).mean() > .8:
+        p22, p18 = np.nanpercentile(raw['2022c'][M_fp0], 90), np.nanpercentile(raw['2018'][M_fp0], 90)
+        if abs(p22 - p18) < 3:
+            surface = np.fmax(raw['2022c'], raw['2018']); fused = True
+    H, drop = pit_fill(surface - base, J.get('closing', 5))
+    expected = max(b.get('wh') or 0, b.get('h') or 0, b.get('mh') or 0)
+    rec = dict(id=b['id'], name=b.get('n'), mi=b['mi'], base=base, ground=J.get('ground_m_od'), X0=X0, Z0=Z0, shape=shp,
+               fused=fused, dropout_2022=d22)
     p90 = np.percentile(H[M_fp0], 90)
     if p90 < .5 * expected:
         # the survey (Dec 2020 at the latest) predates the building: extrude the OSM outline(s) at the model height
@@ -384,13 +419,13 @@ def fit_building(b, A, surveys, judge):
         parts = [shift(p, dx, dz) for p in parts]; fp = shift(fp, dx, dz)
     rec['shift'] = [dx, dz]
     M_fp = rasterize([fp], out_shape=shp, transform=tr).astype(bool)
-    M_buf = rasterize([fp.buffer(MARGIN)], out_shape=shp, transform=tr).astype(bool)
+    M_buf = rasterize([fp.buffer(CLIP)], out_shape=shp, transform=tr).astype(bool)
     core = ndimage.binary_erosion(M_fp, np.ones((3, 3)))
     if core.sum() < .5 * M_fp.sum(): core = M_fp
     dom = J.get('dom_deg'); dom = math.radians(dom) if dom is not None else dominant_angle(fp)
     rec.update(dom=dom, dropout=float(drop[M_fp].mean()))
 
-    levels = [l[0] for l in roof_levels(H[core & ~drop]) if l[0] >= MIN_TIER]
+    levels = [l[0] for l in roof_levels(H[core & ~drop]) if l[0] >= J.get('min_tier', MIN_TIER)]
     if J.get('levels'): levels = list(J['levels'])
 
     def regions_for(levels):
@@ -423,7 +458,7 @@ def fit_building(b, A, surveys, judge):
             src = 'dsm'
             if not p.interiors:
                 best = max(cands, key=lambda q: iou(p, q))
-                if iou(p, best) >= J.get('osm_iou', .85): p, src = Polygon(best.exterior.coords), 'osm'
+                if iou(p, best) >= J.get('osm_iou', .95): p, src = Polygon(best.exterior.coords), 'osm'
             tiers.append(dict(poly=p, y0=base + prev, y1=base + L, src=src, k=k))
         prev = L
     rec['levels'] = levels
@@ -485,8 +520,10 @@ def check(rec, b, reg):
     rec['surf'] = surf
     region = M_fp | np.isfinite(surf)
     model = np.where(np.isfinite(surf), surf, base)
-    band = (ndimage.maximum_filter(model, 3) - ndimage.minimum_filter(model, 3)) > 3   # walls: 1 m either side
-    roof = region & ~band
+    wall = lambda a: (ndimage.maximum_filter(a, 3) - ndimage.minimum_filter(a, 3)) > 3   # 1 m either side of a wall
+    roof = region & ~wall(model) & ~wall(rec['H'])   # walls of the model and of the dropout-filled DSM
+    bld = (rec['H'] >= MIN_TIER) & ndimage.binary_dilation(M_fp, np.ones((7, 7)))
+    out_iou = float((bld & np.isfinite(surf)).sum() / max(1, (bld | np.isfinite(surf)).sum()))
     top_m = max(t['y1'] for t in rec['tiers']) - base
     out = {}
     p90_22 = np.nanpercentile(rec['raw']['2022c'][M_fp], 90) - base
@@ -495,18 +532,22 @@ def check(rec, b, reg):
         if not np.isfinite(r[M_fp]).any(): out[key] = None; continue
         if sid != '2022c' and np.nanpercentile(r[M_fp], 90) - base < .85 * p90_22:
             out[key] = None; out.setdefault('surveys_before_completion', []).append(sid); continue   # not finished then
-        filled, drop = pit_fill(r - base, 5); filled += base
-        sel = roof & np.isfinite(r)
-        e = model[sel] - filled[sel]
+        drop = dropouts(r)
+        sel = roof & np.isfinite(r) & ~drop
+        e = model[sel] - r[sel]
         out[key] = round(float(np.sqrt(np.mean(e * e))), 1)
         if sid == '2022c':
             out['p95_m'] = round(float(np.percentile(np.abs(e), 95)), 1)
             sel = region & np.isfinite(r); e = model[sel] - r[sel]
             out['rmse_raw_m'] = round(float(np.sqrt(np.mean(e * e))), 1)
-            out['dropout_pct'] = round(100 * float(drop[roof].mean()))
+            out['dropout_pct'] = round(100 * float((drop | np.isnan(r))[roof].mean()))
+            out['outline_iou'] = round(out_iou, 2)
     r = rec['raw']['2022c'][M_fp]
+    if rec.get('fused'): out['fused_with_2018'] = True
     out['dsm_max_m'] = round(float(np.nanmax(r) - base), 1) if np.isfinite(r).any() else None
     out['model_top_m'] = round(top_m, 1)
+    if rec.get('ground') is not None:
+        out['ground_m_od'] = rec['ground']; out['model_top_above_ground_m'] = round(top_m + base - rec['ground'], 1)
     out['wikidata_height_m'] = b.get('wh')
     out['osm_height_m'] = b.get('h')
     # OSM building:part heights against the DSM inside the matching model building (matched by the part's height)
@@ -517,10 +558,10 @@ def check(rec, b, reg):
         for i in b['mi']:
             mb = A_GLOBAL['buildings'][i]
             if abs(mb['h'] - p['height']) < .05 and abs((mb.get('mh') or 0) - (p.get('min_height') or 0)) < .05:
-                m = rasterize([model_poly(mb)], out_shape=shp, transform=tr).astype(bool)
+                m = rasterize([shift(model_poly(mb), *(rec.get('shift') or (0, 0)))], out_shape=shp, transform=tr).astype(bool)
                 c = ndimage.binary_erosion(m, np.ones((3, 3)))
                 if c.sum() < 4: c = m
-                v = rec['raw']['2022c'][c]; v = v[np.isfinite(v)]
+                v = rec['raw']['2022c'][c & ~dropouts(rec['raw']['2022c'])]; v = v[np.isfinite(v)]
                 if v.size: rows.append([p['osm'], p['height'], round(float(np.percentile(v, 90) - mb['b']), 1)])
                 break
     if rows:
@@ -528,7 +569,7 @@ def check(rec, b, reg):
         out['osm_parts_agree'] = all(abs(r_[1] - r_[2]) <= 5 for r_ in rows)
     else: out['osm_parts_agree'] = None
     if rec['status'] == 'not_in_survey':
-        for k in ('rmse_m', 'p95_m', 'rmse_interior_m', 'rmse_2020_m', 'rmse_2018_m'): out[k] = None
+        for k in ('rmse_m', 'p95_m', 'rmse_raw_m', 'dropout_pct', 'outline_iou', 'rmse_2020_m', 'rmse_2018_m'): out[k] = None
     return out
 
 
@@ -554,8 +595,20 @@ def picture(rec, chk, scale_to=170):
 
 
 # ---------------------------------------------------------------- judgement (hand corrections, each with its reason)
-JUDGEMENT = {}
-SKIP = {}
+JUDGEMENT = {
+    'cwb-0715': dict(closing=3, why='Hampton Tower: the default 5 m dropout fill bridged the 3 m slot between the two '
+                     'towers (open in the raw DSM) and built a 151 m link; a 3 m fill keeps them apart.'),
+    'cwb-0417': dict(ground_m_od=9.7, why='8 Canada Square: the model base (1.6 m OD) is the DTM interpolated under the '
+                     'building from the dock edge; Canada Square plaza is 9.7 m OD (DTM round One Canada Square), so '
+                     'the height check uses 9.7. The tiers keep the model base as their foot.'),
+}
+SKIP = {
+    'cwb-0418': 'Same model buildings as cwb-0417 (8 Canada Square): OSM way/183242123, an untagged outline over the '
+                'tower, joined to the same 3D parts. A registry identity fault, not a second tower; see cwb-0417.',
+    'cwb-0523': 'Not a tower. OSM way/140235964 has three building:parts tagged 2 levels beside 25 Churchill Place; '
+                'the model gives two thin parts 123.7 m and 77.1 m because their outlines lie over the tower wall in '
+                'the LiDAR (90th percentile of the DSM). The DSM inside the outline is 11 m (median).',
+}
 REFERENCES = []
 
 
