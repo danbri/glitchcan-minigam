@@ -11,7 +11,7 @@ The audit does not correct anything. It measures the same 34 checks on every reb
 
 ## Summary (2026-10-03)
 
-1,686 issue records from 34 checks (the five routing-network checks NET-1 to NET-5 report counts only). 159 of the 1,129 buildings and 44 postcodes have at least one issue. Severity: 9 high, 819 medium, 858 low.
+1,567 issue records from 34 checks (the five routing-network checks NET-1 to NET-5 report counts only). Severity: 9 high, 752 medium, 806 low. The two pipeline faults (PL-1, PL-2) are fixed and read 0.
 
 | class | what goes wrong | checks | main numbers |
 |---|---|---|---|
@@ -19,7 +19,7 @@ The audit does not correct anything. It measures the same 34 checks on every reb
 | position | a point is placed in the wrong building, or its position means something else | SP-1 to SP-6 | 86 of 181 mall or below-ground occupants are placed by a 2D test in an outline that is not their mall (the malls run under several buildings); 412 of 764 FSA positions (54%) are postcode centres or shared points; 161 of 761 named OSM occupants are outside every outline; OSM and FSA put the same branch a median 34 m apart (90th percentile 107 m, maximum 258 m) |
 | attribute conflict | sources give different values for one attribute | AT-1 to AT-5 | 46 of 72 occupants have a CWG mall level that differs from the OSM level, in a pattern that depends on the mall; 9 buildings are newer than the LiDAR; 6 floor counts differ between OSM and Wikidata; the Jubilee line levels we took from Wikipedia and an interview are 4 m (Canada Water) and 6 m (North Greenwich) deeper than TfL's measured rail levels |
 | validity | a value is not in the form the tools expect | VA-1 to VA-4 | 100 of 881 OSM level values are lists or fractions ("0;1", "-3;-2", "0.5"); 20 features carry a terminated postcode |
-| pipeline | our own tools damage the data | PL-1, PL-2 | 79 OSM features carry several postcodes in one tag and our tools read the list as one invalid postcode: 247 postcode links lost; 52 branch addresses read "Unit Unit" because a tool adds "Unit " to a value that has it |
+| pipeline | our own tools damage the data | PL-1, PL-2 | fixed 2026-10-03, now 0. Before: 57 OSM features with several postcodes in one tag lost them from their registry record (our tools read the list as one invalid postcode); 52 branch addresses read "Unit Unit". The fix brought back 96 postcode links and 3,432 company-to-building matches |
 | currency | a value was true once | TM-1 to TM-4 | 1,902 of 16,619 companies at Canary Wharf postcodes (11%) are not active; the CWG directory copies are a median 322 days old; no Wikidata occupant link has a date |
 | coverage | a source does not see everything | CV-1, CV-2 | only 28% of buildings have a name and 8% a Wikidata item; 205 of 374 CWG directory entries are in no other source; of the 271 branches, OSM sees 214 (79%), CWG 165 (61%) and the FSA 120 (44%, food only), and 57 are not in OSM |
 | meaning | a field does not mean what its name suggests | SE-1, SE-2 | 21 postcodes have 100 or more registered companies (E14 5HU: 2,652): registered offices, not occupants; 5,888 of 6,629 heritage positions are where an object is kept, not where it was found |
@@ -36,7 +36,7 @@ The audit does not correct anything. It measures the same 34 checks on every reb
 
 **Levels are labels, not heights.** The OSM `level` tag is a floor index chosen by mappers. The CWG directory uses the estate's own names ("Mall Level -1", "Street Level 0"). AT-3 shows the offset between them depends on the mall: in Cabot Place, Canada Place, Crossrail Place and One Canada Square the CWG level is mostly the OSM level minus 1 (19 of 26 in Cabot Place); in Jubilee Place and Churchill Place they mostly agree. This is a scheme difference, not mapper error, and it can be measured and stored as a per-mall table. Heights in m OD come only from published slab levels (the Crossrail Place figures).
 
-**Several "errors" are ours.** PL-1 and PL-2 are faults in this project's tools, found by the audit: OSM's ";" lists are not split, and a label is added to a free-text field. They affect every rebuild until the parsers are fixed and tested on fixtures. The audit checks for both, so the counts will drop to zero when the tools are fixed.
+**Several "errors" are ours.** PL-1 and PL-2 are faults in this project's tools, found by the audit: OSM's ";" lists are not split, and a label is added to a free-text field. Both were fixed in the parsers on 2026-10-03 and tested on fixtures; the checks stay, and read 0. The fix also changed SE-1 (24 → 36): recovered postcodes matched more companies to residential buildings, so more registered-office clusters became visible. A fix in one layer can raise a count in another; say why when it happens.
 
 **Time is missing from most links.** Wikidata says the Financial Services Authority occupies One Canada Square; it was abolished in 2013. The query did not fetch start and end dates, so current and former tenants look the same (TM-4). Company status, FSA rating dates, CWG archive dates and the LiDAR survey date all need to travel with the values they qualify.
 
@@ -67,7 +67,7 @@ The classes above suggest five layers. Each layer is rebuilt from the one below;
 
 ## Next steps, in order
 
-1. Fix the two pipeline faults at the parser level (split ";" lists in `postcodes.mjs`, `build-registry.mjs` and `build-branches.mjs`; parse unit designators), with small fixture tests. Expected effect: PL-1 and PL-2 drop to 0, and 247 postcode links come back.
+1. Done 2026-10-03: the two pipeline faults are fixed at the parser level (`tools/osm-values.mjs`, fixture tests); PL-1 and PL-2 read 0. Still to do in the same layer: parse level lists and fractions (VA-2).
 2. Add a precision class and relation type to every position in the registry and the branch table; stop using postcode-centre FSA points for building placement.
 3. Store link records (method, distance, confidence) in the registry instead of bare results.
 4. Measure the per-mall level offset table from AT-3 and use it for the CWG levels.

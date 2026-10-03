@@ -10,6 +10,7 @@ import { writeFileSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { CW, OUT, RAW, readJSON, inBox } from './lib.mjs';
 import { matchAny, byId, byWd } from './nsi-matcher.mjs';
+import { osmList, unitLabel } from '../../../../tools/osm-values.mjs';
 
 const osm = readJSON(join(RAW, 'osm-branches.json')).branches;
 const fsa = readJSON(join(RAW, 'fsa-branches.json')).branches;
@@ -83,14 +84,14 @@ function attach(key, cand, preferUnclaimed) {
 
 // 1. OSM
 for (const o of osm) {
-  const a = o.addr;
+  const a = o.addr, pcs = osmList(a.postcode).map(normPc).filter(Boolean);   // ';' lists: first postcode is the branch's, all are kept (F2)
   let mall = canonMall((`${a.place || ''} ${a.street || ''} ${o.name || ''}`.match(MALLS) || [])[1]), mall_from = mall ? 'osm-address' : null;
-  if (!mall && (mall = PC_MALL[normPc(a.postcode)] || null)) mall_from = 'postcode';
+  if (!mall && (mall = pcs.map(p => PC_MALL[p]).find(Boolean) || null)) mall_from = 'postcode';
   B.push({
     key: brandKey(o.brand_wikidata, o.nsi_id, o.brand), brand: o.brand, nsi_id: o.nsi_id, brand_wikidata: o.brand_wikidata,
     name: o.name, kv: o.kv, category: category(o.kv), sources: ['osm'], osm_id: o.osm_id, osm_rule: o.rule, osm_fhrs: o.fhrs_id,
-    fhrs_ids: [], address: [a.unit && `Unit ${a.unit}`, a.housename, [a.housenumber, a.street].filter(Boolean).join(' '), a.place].filter(Boolean).join(', ') || null,
-    postcode: normPc(a.postcode), mall, mall_from, level: o.level, lat: o.lat, lon: o.lon, website: o.website, notes: [],
+    fhrs_ids: [], address: [unitLabel(a.unit), a.housename, [a.housenumber, a.street].filter(Boolean).join(' '), a.place].filter(Boolean).join(', ') || null,
+    postcode: pcs[0] || null, ...(pcs.length > 1 ? { postcodes: pcs } : {}), mall, mall_from, level: o.level, lat: o.lat, lon: o.lon, website: o.website, notes: [],
   });
 }
 // 2. FSA

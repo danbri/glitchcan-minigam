@@ -272,14 +272,19 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
 // ===== P. pipeline (faults in this project's own tools, measured on the data)
 {
   const c = { id: 'PL-1', cls: 'pipeline', dim: 'validity', title: 'OSM multi-value tags read as one value by our tools', sources: ['osm', 'this project'],
-    method: 'OSM separates several values with ";" ("E14 9DT;E14 9FQ"). tools/postcodes.mjs and tools/build-registry.mjs read addr:postcode as one value, so every postcode in such a list is lost from the postcode counts and the building record. Counted here per tag the tools read.', rule: 'Split ";" lists on ingest for every tag, keep the order, and test the parsers on multi-value fixtures.' };
-  const add = check(c), br = {}; let pop = 0;
+    method: 'OSM separates several values with ";" ("E14 9DT;E14 9FQ"). For every OSM feature in the box whose addr:postcode is a list: is each postcode of the list in the registry record that holds the feature (the building itself, or the building it is an occupant of)? A postcode missing there is a link our tools lost. The breakdown counts list values per tag in the source (not errors in themselves).', rule: 'Split ";" lists on ingest for every tag (tools/osm-values.mjs osmList), keep the order, and test the parsers on multi-value fixtures.' };
+  const add = check(c), br = {}; let pop = 0, lists = 0, links = 0;
   for (const f of OSM.features) for (const k of ['addr:postcode', 'level', 'fhrs:id', 'brand:wikidata', 'wikidata', 'building:levels']) {
-    const v = f.tags?.[k]; if (v == null) continue; pop++; if (!String(v).includes(';')) continue; br[k] = (br[k] || 0) + 1;
-    if (k === 'addr:postcode') { const p = osmPos.get(`${f.type}/${f.id}`); add({ ent: 'osm', id: `${f.type}/${f.id}`, sev: 'medium', note: `${f.tags.name || f.tags.building || ''} addr:postcode="${v}": ${v.split(';').length} postcodes lost`.trim(), ...(p ? { lat: p[1], lon: p[0] } : {}) }); }
+    const v = f.tags?.[k]; if (v == null) continue; if (String(v).includes(';')) br[k] = (br[k] || 0) + 1;
   }
-  c.population = pop; c.breakdown = br;
-  c.lost_postcode_links = OSM.features.filter(f => String(f.tags?.['addr:postcode'] || '').includes(';')).reduce((s, f) => s + f.tags['addr:postcode'].split(';').length, 0);
+  const holder = new Map(); for (const b of REG.buildings) { for (const o of b.osm || []) holder.set(o, b); for (const o of b.occupants) if (o.osm) holder.set(o.osm, b); }
+  for (const f of OSM.features) {
+    const v = f.tags?.['addr:postcode']; if (!v || !String(v).includes(';')) continue; lists++;
+    const key = `${f.type}/${f.id}`, b = holder.get(key); if (!b) continue; pop++;
+    const want = String(v).split(';').map(normPc).filter(Boolean), lost = want.filter(pc => !(b.postcodes || []).includes(pc)); links += want.length;
+    if (lost.length) { const p = osmPos.get(key); add({ ent: 'osm', id: key, sev: 'medium', note: `${f.tags.name || f.tags.building || ''} addr:postcode="${v}": ${lost.length} of ${want.length} postcodes missing from ${b.id}`.trim(), ...(p ? { lat: p[1], lon: p[0] } : {}) }); }
+  }
+  c.population = pop; c.breakdown = br; c.stats = { features_with_postcode_lists: lists, in_a_registry_record: pop, postcode_links: links };
 }
 
 {

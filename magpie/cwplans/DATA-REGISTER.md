@@ -26,22 +26,22 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `data/sourced-levels.json` | 8 kB | ids | OSM node and way ids that place each station |  |  |
 | `docklands/data/area.js` | 5.6 MB | derived | building outlines, parts and levels, water, greens, roads, railways, tunnels, place names | osmfr-greater-london | docklands/index.html |
 | `docklands/data/under.js` | 296 kB | derived | building:levels:underground, indoor ways and points with a level tag | osmfr-greater-london | docklands/index.html |
-| `data/raw/postcodes/osm-addr-postcodes.json` | 133 kB | counts | counts, street names and feature kinds per postcode | osmfr-greater-london |  |
+| `data/raw/postcodes/osm-addr-postcodes.json` | 154 kB | counts | counts, street names and feature kinds per postcode | osmfr-greater-london |  |
 | `postcodes/postcodes.json` | 1.2 MB | counts | osm_features, osm_streets, osm_kinds per postcode | osmfr-greater-london | postcodes/index.html |
-| `postcodes/postcodes.csv` | 353 kB | counts | as postcodes.json | osmfr-greater-london |  |
+| `postcodes/postcodes.csv` | 356 kB | counts | as postcodes.json | osmfr-greater-london |  |
 | `data/raw/registry/osm-cw.json.gz` | 840 kB | raw | buildings, parts, shops, offices, amenities, entrances, with all tags | osmfr-greater-london |  |
-| `registry/buildings.json` | 2.0 MB | derived | building outlines (centroid, area), names, levels, addresses, occupant names, brands and levels | osmfr-greater-london | registry/index.html |
+| `registry/buildings.json` | 2.3 MB | derived | building outlines (centroid, area), names, levels, addresses, occupant names, brands and levels | osmfr-greater-london | registry/index.html |
 | `registry/ids.json` | 36 kB | ids | OSM way and relation ids of building outlines | osmfr-greater-london |  |
 | `registry/sources/brands/branches.json` | 221 kB | derived | OSM ids, names, brand tags, levels, positions, match rules | osmfr-greater-london |  |
 | `registry/sources/brands/storelocator.json` | 33 kB | counts | Greater London branch counts per brand, and website=* tags used to find URLs | osmfr-greater-london |  |
 | `registry/sources/brands/README.md` | 72 kB | notes | branch table with OSM ids, names and levels |  |  |
 | `atlas/data/atlas.json` | 2.1 MB | derived | building outlines (microdegrees), names, levels; OSM feature counts and streets per postcode; model heights matched to outlines | osmfr-greater-london | atlas/index.html |
-| `quality/issues.json` | 255 kB | derived | OSM ids, names, tag values (level, addr:postcode, addr:unit) and positions of features with issues | osmfr-greater-london | atlas/index.html |
-| `quality/CATALOGUE.md` | 33 kB | notes | examples quote OSM ids, names and tag values |  |  |
-| `quality/README.md` | 11 kB | notes | counts from the audit |  |  |
+| `quality/issues.json` | 235 kB | derived | OSM ids, names, tag values (level, addr:postcode, addr:unit) and positions of features with issues | osmfr-greater-london | atlas/index.html |
+| `quality/CATALOGUE.md` | 34 kB | notes | examples quote OSM ids, names and tag values |  |  |
+| `quality/README.md` | 12 kB | notes | counts from the audit |  |  |
 | `docklands/data/indoor.js` | 434 kB | derived | walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances | osmfr-greater-london | docklands/index.html |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 15 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 19 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -93,18 +93,18 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `docklands/facts.json` | 166 kB | 360 cited facts (depths, tunnels, towers, docks, ground) | short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved); Wikidata (CC0 1.0) |
 | `docklands/FACTS.md` | 89 kB | the same facts as a table | short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved); Wikidata (CC0 1.0) |
 | `data/raw/postcodes/onspd-aug2026.json.gz` | 58 kB | ONSPD rows for E14 | ONS Postcode Directory, August 2026 (OGL v3.0) |
-| `data/raw/postcodes/osm-addr-postcodes.json` | 133 kB | per postcode: number of OSM features with that addr:postcode, their streets and kinds | OpenStreetMap (ODbL 1.0) |
+| `data/raw/postcodes/osm-addr-postcodes.json` | 154 kB | per postcode: number of OSM features with that addr:postcode, their streets and kinds | OpenStreetMap (ODbL 1.0) |
 | `data/raw/postcodes/wards.json` | 13 kB | ward codes and names | ONS ward names and boundaries (OGL v3.0) |
 | `postcodes/postcodes.json` | 1.2 MB | all 4,000 candidate E14 postcodes with status, tier, dates, ward, position, OSM streets | ONS Postcode Directory, August 2026 (OGL v3.0); ONS ward names and boundaries (OGL v3.0); OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
-| `postcodes/postcodes.csv` | 353 kB | the same as CSV | ONS Postcode Directory, August 2026 (OGL v3.0); ONS ward names and boundaries (OGL v3.0); OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
+| `postcodes/postcodes.csv` | 356 kB | the same as CSV | ONS Postcode Directory, August 2026 (OGL v3.0); ONS ward names and boundaries (OGL v3.0); OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
 | `postcodes/queries.json` | 291 kB | web search templates per postcode | ONS Postcode Directory, August 2026 (OGL v3.0); written or computed in this project (repository licence) |
 | `postcodes/canary-wharf-ward.geojson` | 12 kB | Canary Wharf ward boundary | ONS ward names and boundaries (OGL v3.0) |
 | `data/raw/registry/osm-cw.json.gz` | 840 kB | OSM features with full tags in the Canary Wharf box | OpenStreetMap (ODbL 1.0) |
 | `data/raw/registry/wikidata-cw.json` | 138 kB | Wikidata items, headquarters, occupants and owners in the box (QLever) | Wikidata (CC0 1.0) |
 | `data/raw/registry/fhrs/FHRS530-2026-10-03.json.gz` | 35 kB | FSA food premises snapshot, E14 | FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0) |
-| `registry/buildings.json` | 2.0 MB | 1,129 buildings with ids, names, occupants, owners, postcodes and joins | OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); ONS Postcode Directory, August 2026 (OGL v3.0); OS Open UPRN and Open Linked Identifiers (OGL v3.0); GLA London Building Stock Model 2 (OGL v3.0); HM Land Registry INSPIRE Index Polygons (OGL v3.0 with conditions); HM Land Registry Price Paid Data (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Canary Wharf Group directory pages (none stated (all rights reserved by default)); written or computed in this project (repository licence) |
+| `registry/buildings.json` | 2.3 MB | 1,129 buildings with ids, names, occupants, owners, postcodes and joins | OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); ONS Postcode Directory, August 2026 (OGL v3.0); OS Open UPRN and Open Linked Identifiers (OGL v3.0); GLA London Building Stock Model 2 (OGL v3.0); HM Land Registry INSPIRE Index Polygons (OGL v3.0 with conditions); HM Land Registry Price Paid Data (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Canary Wharf Group directory pages (none stated (all rights reserved by default)); written or computed in this project (repository licence) |
 | `registry/ids.json` | 36 kB | id register: OSM element to cwb-NNNN | OpenStreetMap (ODbL 1.0); written or computed in this project (repository licence) |
-| `registry/companies-by-postcode.json` | 2.8 MB | companies per postcode (number, name, status, category, dates, SIC) | Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)) |
+| `registry/companies-by-postcode.json` | 2.9 MB | companies per postcode (number, name, status, category, dates, SIC) | Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)) |
 | `registry/homes-by-postcode.json` | 95 kB | price-paid totals per postcode, at least 5 homes | HM Land Registry Price Paid Data (OGL v3.0) |
 | `registry/sources/uprn/uprn-summary.json` | 14 kB | UPRN counts in the box | OS Open UPRN and Open Linked Identifiers (OGL v3.0) |
 | `registry/sources/landregistry/inspire-canary-wharf.geojson` | 1.5 MB | INSPIRE index polygons touching the box | HM Land Registry INSPIRE Index Polygons (OGL v3.0 with conditions) |
@@ -126,9 +126,9 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/ukho_wrecks_obstructions_areas.geojson` | 2 kB | UKHO wrecks and obstructions, areas | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
 | `registry/sources/pla/ukho_wrecks_obstructions_points.geojson` | 13 kB | UKHO wrecks and obstructions, points | UKHO INSPIRE bathymetry and wrecks (OGL v3.0) |
 | `atlas/data/atlas.json` | 2.1 MB | the atlas index: building outlines and measures, postcodes with company and sales totals, heritage places, riverbed soundings in m OD, wrecks, flood defences, Wikidata items, published levels | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); HM Land Registry Price Paid Data (OGL v3.0); Historic England open data hub (OGL v3.0); ADS / ARIADNE catalogue records (per record: OGL v3.0 or CC-BY (Portable Antiquities Scheme)); UKHO INSPIRE bathymetry and wrecks (OGL v3.0); PLA Tide Booklet 2025 (two published numbers used as facts); Environment Agency Spatial Flood Defences (OGL v3.0); GLA London Building Stock Model 2 (OGL v3.0); short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved) |
-| `quality/issues.json` | 255 kB | data-quality audit: 34 checks with counts, breakdowns, examples and one record per issue | OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); Canary Wharf Group directory pages (none stated (all rights reserved by default)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Historic England open data hub (OGL v3.0); written or computed in this project (repository licence) |
-| `quality/CATALOGUE.md` | 33 kB | the audit as tables (generated) | written or computed in this project (repository licence); OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
-| `quality/README.md` | 11 kB | analysis of the error classes and the proposed compositing layers | written or computed in this project (repository licence) |
+| `quality/issues.json` | 235 kB | data-quality audit: 34 checks with counts, breakdowns, examples and one record per issue | OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); Canary Wharf Group directory pages (none stated (all rights reserved by default)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Historic England open data hub (OGL v3.0); written or computed in this project (repository licence) |
+| `quality/CATALOGUE.md` | 34 kB | the audit as tables (generated) | written or computed in this project (repository licence); OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
+| `quality/README.md` | 12 kB | analysis of the error classes and the proposed compositing layers | written or computed in this project (repository licence) |
 | `docklands/data/indoor.js` | 434 kB | walking network in 3D: footways, corridors, stairs, escalators, lifts, platforms and walkable areas by level, TfL station points and lifts, and named places, for routing | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Transport for London open data: step-free station topology (TfL open data terms (Powered by TfL Open Data; OGL-based); the terms page was not readable from the container: re-check before production) |
 | `docklands/data/tex/rgb2008.jpg` | 1.8 MB | ground texture: EA colour aerial photography 2007-08, 40 cm, mosaicked to 3 m a pixel over the model box | Environment Agency survey downloads: vertical aerial photography 2008 (OGL v3.0) |
 | `docklands/data/tex/night2012.jpg` | 792 kB | ground texture: EA night-time aerial photography January to April 2012, 20 cm, mosaicked to 3 m a pixel | Environment Agency survey downloads: vertical aerial photography 2008 (OGL v3.0) |
@@ -154,7 +154,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 15 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 19 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 

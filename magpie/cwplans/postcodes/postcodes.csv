@@ -32,15 +32,15 @@ E14 0BN,E14 0,live,cw-box-other-ward,200811,,false,E05009328,Poplar,false,true,5
 E14 0BP,E14 0,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510881,-0.015679,716,2,East India Dock Road
 E14 0BQ,E14 0,live,cw-box-other-ward,200904,,false,E05009328,Poplar,false,true,51.508584,-0.010129,769,1,Poplar High Street
 E14 0BS,E14 0,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510502,-0.017713,635,4,Hale Street
-E14 0BT,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509710,-0.018208,542,,
-E14 0BU,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509710,-0.018208,542,,
+E14 0BT,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509710,-0.018208,542,1,Hale Street
+E14 0BU,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509710,-0.018208,542,1,Hale Street
 E14 0BW,E14 0,live,e14-other,201105,,false,E05009325,Lansbury,false,false,51.516012,-0.007485,1491,1,Oakes Mews
 E14 0BX,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509159,-0.018103,483,1,Hale Street
 E14 0BY,E14 0,live,cw-box-other-ward,199606,,false,E05009328,Poplar,false,true,51.508300,-0.018875,380,5,Stoneyard Lane
 E14 0BZ,E14 0,live,e14-other,202110,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511184,0.005102,1845,1,Hope Street
 E14 0DA,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509310,-0.019033,491,1,Wade's Place
-E14 0DB,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509780,-0.018666,546,,
-E14 0DD,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509780,-0.018666,546,,
+E14 0DB,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509780,-0.018666,546,1,Wade's Place
+E14 0DD,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509780,-0.018666,546,1,Wade's Place
 E14 0DE,E14 0,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509941,-0.019683,561,2,Wade's Place
 E14 0DF,E14 0,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510449,-0.019387,617,1,Wade's Place
 E14 0DG,E14 0,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510633,-0.020172,639,2,East India Dock Road
@@ -105,8 +105,8 @@ E14 0GF,E14 0,terminated,terminated-other,201502,201503,false,E05009325,Lansbury
 E14 0GG,E14 0,live,e14-other,201705,,false,E05009325,Lansbury,false,false,51.513314,-0.002213,1522,2,Deauville Close
 E14 0GH,E14 0,live,e14-other,201508,,false,E05009325,Lansbury,false,false,51.513082,-0.000724,1589,1,New Village Avenue
 E14 0GJ,E14 0,live,e14-other,201509,,false,E05009325,Lansbury,false,false,51.513253,-0.001812,1540,2,New Village Avenue
-E14 0GL,E14 0,live,e14-other,201506,,false,E05009325,Lansbury,false,false,51.512899,-0.001582,1529,,
-E14 0GN,E14 0,live,e14-other,201509,,false,E05009325,Lansbury,false,false,51.512780,-0.001472,1528,,
+E14 0GL,E14 0,live,e14-other,201506,,false,E05009325,Lansbury,false,false,51.512899,-0.001582,1529,1,New Village Avenue
+E14 0GN,E14 0,live,e14-other,201509,,false,E05009325,Lansbury,false,false,51.512780,-0.001472,1528,1,New Village Avenue
 E14 0GP,E14 0,live,e14-other,200207,,false,E05009325,Lansbury,false,false,51.514269,-0.002315,1584,22,Abbott Road
 E14 0GQ,E14 0,live,e14-other,200303,,false,E05009325,Lansbury,false,false,51.514454,-0.002091,1609,22,Leven Road
 E14 0GR,E14 0,live,e14-other,200210,,false,E05009325,Lansbury,false,false,51.514738,-0.000262,1726,16,Oban Street
@@ -172,18 +172,18 @@ E14 0LR,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.513
 E14 0LS,E14 0,terminated,terminated-other,198001,200910,false,E05009325,Lansbury,false,false,51.513444,-0.000304,1636,,
 E14 0LT,E14 0,terminated,terminated-other,198001,200910,false,E05009325,Lansbury,false,false,51.513379,-0.001259,1579,,
 E14 0LU,E14 0,live,e14-other,201609,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511512,0.006399,1942,1,Botanic Square
-E14 0LW,E14 0,live,e14-other,201610,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511780,0.006512,1961,,
+E14 0LW,E14 0,live,e14-other,201610,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511780,0.006512,1961,1,Botanic Square
 E14 0LX,E14 0,terminated,terminated-other,198001,200910,false,E05009325,Lansbury,false,false,51.513379,-0.001259,1579,,
 E14 0LY,E14 0,terminated,terminated-other,198001,200405,false,E05009325,Lansbury,false,false,51.513738,-0.002799,1520,,
 E14 0LZ,E14 0,terminated,terminated-other,198001,200311,false,E05009325,Lansbury,false,false,51.513738,-0.002799,1520,,
 E14 0NA,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.514016,-0.001202,1625,2,Abbott Road
 E14 0NB,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.514499,-0.004178,1507,9,Abbott Road
-E14 0ND,E14 0,live,e14-other,201410,,false,E05009325,Lansbury,false,false,51.513289,-0.000182,1633,5,New Village Avenue
+E14 0ND,E14 0,live,e14-other,201410,,false,E05009325,Lansbury,false,false,51.513289,-0.000182,1633,6,New Village Avenue
 E14 0NE,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.515448,-0.006573,1477,28,Abbott Road
 E14 0NF,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.515581,-0.008037,1430,2,Abbott Road
 E14 0NG,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.516207,-0.008356,1476,2,Abbott Road
-E14 0NH,E14 0,live,e14-other,201410,,false,E05009325,Lansbury,false,false,51.513289,-0.000182,1633,,
-E14 0NJ,E14 0,live,e14-other,201610,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511780,0.006512,1961,,
+E14 0NH,E14 0,live,e14-other,201410,,false,E05009325,Lansbury,false,false,51.513289,-0.000182,1633,1,New Village Avenue
+E14 0NJ,E14 0,live,e14-other,201610,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511780,0.006512,1961,1,Botanic Square
 E14 0NL,E14 0,live,e14-other,200411,,false,E05009325,Lansbury,false,false,51.512170,-0.005260,1277,1,Aberfeldy Street
 E14 0NN,E14 0,live,e14-other,201706,,false,E05009325,Lansbury,false,false,51.512508,-0.003444,1399,1,Blair Street
 E14 0NP,E14 0,live,e14-other,199002,,false,E05009325,Lansbury,false,false,51.512249,-0.006727,1206,44,Athol Square
@@ -219,20 +219,20 @@ E14 0PZ,E14 0,live,e14-other,202111,,false,E05009325,Lansbury,false,false,51.512
 E14 0QA,E14 0,terminated,terminated-other,198001,201705,false,E05009325,Lansbury,false,false,51.512575,-0.005286,1305,,
 E14 0QB,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.514734,-0.006359,1424,1,Aberfeldy Street
 E14 0QD,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.514199,-0.005561,1416,1,Aberfeldy Street
-E14 0QE,E14 0,live,e14-other,201703,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511073,0.005774,1884,,
-E14 0QF,E14 0,live,e14-other,201704,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511073,0.005774,1884,,
-E14 0QG,E14 0,live,e14-other,201606,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512111,0.005604,1918,1,Hope Street
+E14 0QE,E14 0,live,e14-other,201703,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511073,0.005774,1884,1,City Island Way
+E14 0QF,E14 0,live,e14-other,201704,,false,E05009318,Blackwall & Cubitt Town,false,false,51.511073,0.005774,1884,1,City Island Way
+E14 0QG,E14 0,live,e14-other,201606,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512111,0.005604,1918,2,Hope Street
 E14 0QH,E14 0,terminated,terminated-other,198001,199806,false,E05009325,Lansbury,false,false,51.513640,-0.003395,1481,,
 E14 0QJ,E14 0,terminated,terminated-other,199308,199412,true,E05009325,Lansbury,false,false,51.512783,-0.006905,1238,,
-E14 0QL,E14 0,live,e14-other,201608,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512111,0.005604,1918,,
+E14 0QL,E14 0,live,e14-other,201608,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512111,0.005604,1918,1,Hope Street
 E14 0QN,E14 0,live,e14-other,201605,,false,E05009328,Poplar,false,false,51.510341,-0.013540,733,1,Woodall Close
 E14 0QP,E14 0,terminated,terminated-other,199109,199405,true,E05009325,Lansbury,false,false,51.512832,-0.009786,1110,,
-E14 0QQ,E14 0,live,cw-box-other-ward,202002,,false,E05009328,Poplar,false,true,51.508223,-0.007955,882,,
+E14 0QQ,E14 0,live,cw-box-other-ward,202002,,false,E05009328,Poplar,false,true,51.508223,-0.007955,882,1,Arniston Way
 E14 0QR,E14 0,terminated,terminated-other,198001,201811,false,E05009325,Lansbury,false,false,51.513580,-0.008859,1215,,
 E14 0QS,E14 0,terminated,terminated-other,198001,201811,false,E05009325,Lansbury,false,false,51.513580,-0.008859,1215,,
 E14 0QT,E14 0,terminated,terminated-other,198001,201811,false,E05009325,Lansbury,false,false,51.513580,-0.008859,1215,,
 E14 0QU,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.513080,-0.009054,1163,3,St Leonard's Road
-E14 0QW,E14 0,live,cw-box-other-ward,202002,,false,E05009328,Poplar,false,true,51.508223,-0.007955,882,,
+E14 0QW,E14 0,live,cw-box-other-ward,202002,,false,E05009328,Poplar,false,true,51.508223,-0.007955,882,1,Arniston Way
 E14 0QX,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.512920,-0.009724,1121,1,St Leonard's Road
 E14 0QY,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.513202,-0.009870,1140,2,St Leonard's Road
 E14 0QZ,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.515257,-0.010718,1303,2,St Leonard's Road
@@ -247,8 +247,8 @@ E14 0RJ,E14 0,live,cw-box-other-ward,201912,,false,E05009328,Poplar,false,true,5
 E14 0RL,E14 0,live,e14-other,201707,,false,E05009325,Lansbury,false,false,51.515294,-0.011264,1290,1,Byron Street
 E14 0RN,E14 0,live,e14-other,199007,,false,E05009325,Lansbury,false,false,51.515998,-0.009821,1405,2,Dewberry Street
 E14 0RP,E14 0,live,e14-other,201809,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512229,0.006056,1952,1,Lyell Street
-E14 0RQ,E14 0,live,e14-other,201809,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512555,0.005926,1959,,
-E14 0RR,E14 0,live,e14-other,201809,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512555,0.005926,1959,,
+E14 0RQ,E14 0,live,e14-other,201809,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512555,0.005926,1959,1,Lyell Street
+E14 0RR,E14 0,live,e14-other,201809,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512555,0.005926,1959,1,Lyell Street
 E14 0RS,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.515294,-0.011278,1289,4,St Leonard's Road
 E14 0RT,E14 0,live,e14-other,198106,,false,E05009325,Lansbury,false,false,51.515901,-0.012592,1314,1,Bright Street
 E14 0RU,E14 0,terminated,terminated-other,199208,199412,true,E05009325,Lansbury,false,false,51.514678,-0.012588,1188,,
@@ -265,14 +265,14 @@ E14 0SG,E14 0,terminated,terminated-other,199706,199812,true,E05009325,Lansbury,
 E14 0SH,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.513765,-0.011777,1122,6,Burcham Street
 E14 0SJ,E14 0,terminated,terminated-other,198001,199212,false,E05009325,Lansbury,false,false,51.513803,-0.014067,1059,,
 E14 0SL,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.514025,-0.010714,1184,1,Burcham Street
-E14 0SN,E14 0,live,e14-other,201406,,false,E05009325,Lansbury,false,false,51.514087,-0.009601,1231,,
+E14 0SN,E14 0,live,e14-other,201406,,false,E05009325,Lansbury,false,false,51.514087,-0.009601,1231,1,St Leonard's Road
 E14 0SP,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.516715,-0.010207,1464,3,Brion Place
 E14 0SQ,E14 0,terminated,terminated-other,199712,200603,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 0SR,E14 0,live,e14-other,198001,,false,E05009325,Lansbury,false,false,51.517069,-0.010927,1478,4,Brion Place
-E14 0SS,E14 0,live,e14-other,201808,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513134,0.005735,1976,,
-E14 0ST,E14 0,live,e14-other,201807,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513134,0.005735,1976,,
+E14 0SS,E14 0,live,e14-other,201808,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513134,0.005735,1976,1,Lyell Street
+E14 0ST,E14 0,live,e14-other,201807,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513134,0.005735,1976,1,Lyell Street
 E14 0SU,E14 0,live,e14-other,201809,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512925,0.005827,1972,1,Lyell Street
-E14 0SW,E14 0,live,e14-other,201405,,false,E05009325,Lansbury,false,false,51.514087,-0.009601,1231,,
+E14 0SW,E14 0,live,e14-other,201405,,false,E05009325,Lansbury,false,false,51.514087,-0.009601,1231,1,St Leonard's Road
 E14 0SX,E14 0,live,e14-other,201901,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513045,0.005659,1967,7,Lookout Lane
 E14 0SY,E14 0,live,e14-other,201907,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513468,0.006672,2051,7,Hopewell Square
 E14 0SZ,E14 0,live,e14-other,202001,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512521,0.006299,1981,4,Lyell Street
@@ -281,21 +281,21 @@ E14 0TB,E14 0,live,e14-other,202108,,false,E05009325,Lansbury,false,false,51.512
 E14 0TD,E14 0,live,e14-other,201904,,false,E05009325,Lansbury,false,false,51.513167,-0.003603,1436,1,Blair Street
 E14 0TE,E14 0,live,e14-other,201907,,false,E05009325,Lansbury,false,false,51.512376,-0.004156,1351,2,New Village Avenue
 E14 0TF,E14 0,terminated,terminated-other,202208,202504,false,E05009325,Lansbury,false,false,51.512321,-0.004634,1321,,
-E14 0TG,E14 0,live,e14-other,201907,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513818,0.006212,2042,,
-E14 0TH,E14 0,live,e14-other,201906,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513818,0.006212,2042,,
-E14 0TJ,E14 0,live,e14-other,201906,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513818,0.006212,2042,,
-E14 0TL,E14 0,live,e14-other,201908,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513438,0.006844,2060,,
-E14 0TN,E14 0,live,e14-other,201908,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513438,0.006844,2060,,
-E14 0TP,E14 0,live,e14-other,201909,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513438,0.006844,2060,,
-E14 0TQ,E14 0,live,e14-other,202004,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513438,0.006844,2060,,
+E14 0TG,E14 0,live,e14-other,201907,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513818,0.006212,2042,1,Lookout Lane
+E14 0TH,E14 0,live,e14-other,201906,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513818,0.006212,2042,1,Lookout Lane
+E14 0TJ,E14 0,live,e14-other,201906,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513818,0.006212,2042,1,Lookout Lane
+E14 0TL,E14 0,live,e14-other,201908,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513438,0.006844,2060,1,City Island Way
+E14 0TN,E14 0,live,e14-other,201908,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513438,0.006844,2060,1,City Island Way
+E14 0TP,E14 0,live,e14-other,201909,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513438,0.006844,2060,1,City Island Way
+E14 0TQ,E14 0,live,e14-other,202004,,false,E05009318,Blackwall & Cubitt Town,false,false,51.513438,0.006844,2060,1,City Island Way
 E14 0TR,E14 0,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510558,-0.018373,634,1,Malam Gardens
 E14 0TS,E14 0,live,e14-other,202005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512660,0.007141,2041,9,City Island Way
 E14 0TT,E14 0,live,e14-other,201909,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512288,0.006779,2001,1,City Island Way
-E14 0TU,E14 0,live,e14-other,202001,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512968,0.006982,2045,,
-E14 0TW,E14 0,live,e14-other,202004,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512968,0.006982,2045,,
-E14 0TX,E14 0,live,e14-other,202002,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512968,0.006982,2045,,
-E14 0TY,E14 0,live,e14-other,202109,,false,E05009328,Poplar,false,false,51.511687,0.001420,1637,,
-E14 0TZ,E14 0,live,e14-other,202112,,false,E05009328,Poplar,false,false,51.511687,0.001420,1637,,
+E14 0TU,E14 0,live,e14-other,202001,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512968,0.006982,2045,1,City Island Way
+E14 0TW,E14 0,live,e14-other,202004,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512968,0.006982,2045,1,City Island Way
+E14 0TX,E14 0,live,e14-other,202002,,false,E05009318,Blackwall & Cubitt Town,false,false,51.512968,0.006982,2045,1,City Island Way
+E14 0TY,E14 0,live,e14-other,202109,,false,E05009328,Poplar,false,false,51.511687,0.001420,1637,1,Silvocea Way
+E14 0TZ,E14 0,live,e14-other,202112,,false,E05009328,Poplar,false,false,51.511687,0.001420,1637,1,Silvocea Way
 E14 0UA,E14 0,terminated,terminated-other,199501,199512,true,E05009328,Poplar,false,false,51.510306,-0.019984,602,,
 E14 0UB,E14 0,terminated,terminated-other,199806,200007,true,E05009325,Lansbury,false,false,51.511624,-0.010199,988,,
 E14 0UD,E14 0,terminated,terminated-other,199812,200110,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
@@ -314,7 +314,7 @@ E14 0UT,E14 0,live,e14-other,202109,,false,E05009328,Poplar,false,false,51.51177
 E14 0UU,E14 0,live,e14-other,202109,,false,E05009328,Poplar,false,false,51.511786,0.000891,1609,,
 E14 0UW,E14 0,terminated,terminated-other,200106,200509,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 0UX,E14 0,live,e14-other,202009,,false,E05009325,Lansbury,false,false,51.516737,-0.008895,1508,2,Abbott Road
-E14 0UY,E14 0,live,e14-other,202112,,false,E05009325,Lansbury,false,false,51.513580,-0.008859,1215,,
+E14 0UY,E14 0,live,e14-other,202112,,false,E05009325,Lansbury,false,false,51.513580,-0.008859,1215,1,St Leonard's Road
 E14 0UZ,E14 0,terminated,terminated-other,202411,202501,false,E05009328,Poplar,false,false,51.511227,0.001025,1589,,
 E14 0WA,E14 0,terminated,terminated-other,200404,200510,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 0WB,E14 0,terminated,terminated-other,200212,200806,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
@@ -330,32 +330,32 @@ E14 0WQ,E14 0,live,e14-other,202412,,false,E05009328,Poplar,false,false,51.51011
 E14 0WR,E14 0,live,e14-other,202412,,false,E05009328,Poplar,false,false,51.510172,-0.008850,943,1,Escapade Place
 E14 0WS,E14 0,live,e14-other,202409,,false,E05009328,Poplar,false,false,51.510046,-0.009907,878,1,Woolmore Street
 E14 0WT,E14 0,live,cw-box-other-ward,202301,,false,E05009328,Poplar,false,true,51.508984,-0.008815,870,1,Poplar High Street
-E14 0WU,E14 0,live,e14-other,202009,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508268,0.006775,1862,,
-E14 0WW,E14 0,live,e14-other,202007,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508268,0.006775,1862,,
-E14 0WX,E14 0,live,e14-other,202006,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508268,0.006775,1862,,
+E14 0WU,E14 0,live,e14-other,202009,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508268,0.006775,1862,1,Orchard Place
+E14 0WW,E14 0,live,e14-other,202007,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508268,0.006775,1862,1,Orchard Place
+E14 0WX,E14 0,live,e14-other,202006,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508268,0.006775,1862,1,Orchard Place
 E14 0WY,E14 0,terminated,terminated-other,200606,200607,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 0WZ,E14 0,terminated,terminated-other,200406,200607,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 0XA,E14 0,live,e14-other,202111,,false,E05009325,Lansbury,false,false,51.512639,-0.005312,1308,3,Aberfeldy Square
 E14 0XB,E14 0,live,e14-other,202111,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509187,0.005677,1811,,
-E14 0XD,E14 0,live,e14-other,202202,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509143,0.006136,1841,,
-E14 0XE,E14 0,live,e14-other,202202,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509143,0.006136,1841,,
+E14 0XD,E14 0,live,e14-other,202202,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509143,0.006136,1841,1,Goodluck Hope Walk
+E14 0XE,E14 0,live,e14-other,202202,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509143,0.006136,1841,1,Goodluck Hope Walk
 E14 0XF,E14 0,live,e14-other,202112,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509106,0.006711,1879,1,Goodluck Hope Walk
-E14 0XG,E14 0,live,e14-other,202108,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509024,0.007284,1915,,
-E14 0XH,E14 0,live,e14-other,202109,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509024,0.007284,1915,,
+E14 0XG,E14 0,live,e14-other,202108,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509024,0.007284,1915,1,Goodluck Hope Walk
+E14 0XH,E14 0,live,e14-other,202109,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509024,0.007284,1915,1,Goodluck Hope Walk
 E14 0XJ,E14 0,live,e14-other,202108,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508954,0.007713,1942,1,Goodluck Hope Walk
-E14 0XL,E14 0,live,e14-other,202101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508881,0.008272,1978,,
-E14 0XN,E14 0,live,e14-other,202103,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508881,0.008272,1978,,
+E14 0XL,E14 0,live,e14-other,202101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508881,0.008272,1978,1,Goodluck Hope Walk
+E14 0XN,E14 0,live,e14-other,202103,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508881,0.008272,1978,1,Goodluck Hope Walk
 E14 0XP,E14 0,live,e14-other,202108,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508723,0.008582,1995,1,Goodluck Hope Walk
 E14 0XQ,E14 0,live,e14-other,202210,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508374,0.007414,1908,1,Orchard Place
 E14 0XR,E14 0,live,e14-other,202207,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508108,0.007243,1890,1,Orchard Place
-E14 0XS,E14 0,live,e14-other,202109,,false,E05009325,Lansbury,false,false,51.516009,-0.005208,1584,,
-E14 0XT,E14 0,live,e14-other,202109,,false,E05009325,Lansbury,false,false,51.516009,-0.005208,1584,,
-E14 0XU,E14 0,live,e14-other,202112,,false,E05009325,Lansbury,false,false,51.513580,-0.008859,1215,,
+E14 0XS,E14 0,live,e14-other,202109,,false,E05009325,Lansbury,false,false,51.516009,-0.005208,1584,1,Leven Road
+E14 0XT,E14 0,live,e14-other,202109,,false,E05009325,Lansbury,false,false,51.516009,-0.005208,1584,1,Leven Road
+E14 0XU,E14 0,live,e14-other,202112,,false,E05009325,Lansbury,false,false,51.513580,-0.008859,1215,1,St Leonard's Road
 E14 0XW,E14 0,live,e14-other,202507,,false,E05009325,Lansbury,false,false,51.516136,-0.003660,1664,1,Hemlock Street
 E14 0XX,E14 0,live,e14-other,202606,,false,E05009325,Lansbury,false,false,51.516034,-0.002958,1689,,
 E14 0XY,E14 0,live,e14-other,202311,,false,E05009325,Lansbury,false,false,51.515653,-0.003278,1642,1,Hemlock Street
-E14 0XZ,E14 0,live,e14-other,202307,,false,E05009325,Lansbury,false,false,51.515269,-0.003482,1602,,
-E14 0YA,E14 0,live,e14-other,202307,,false,E05009325,Lansbury,false,false,51.515269,-0.003482,1602,,
+E14 0XZ,E14 0,live,e14-other,202307,,false,E05009325,Lansbury,false,false,51.515269,-0.003482,1602,1,Hawser Lane
+E14 0YA,E14 0,live,e14-other,202307,,false,E05009325,Lansbury,false,false,51.515269,-0.003482,1602,1,Hawser Lane
 E14 0YB,E14 0,live,e14-other,202311,,false,E05009325,Lansbury,false,false,51.515497,-0.004149,1589,1,Wimhurst Street
 E14 0YD,E14 0,live,e14-other,202409,,false,E05009325,Lansbury,false,false,51.515862,-0.004494,1603,1,Hemlock Street
 E14 0YE,E14 0,live,e14-other,202412,,false,E05009325,Lansbury,false,false,51.515754,-0.003922,1620,1,Hemlock Street
@@ -780,8 +780,8 @@ E14 2DT,E14 2,live,e14-other,200306,,false,E05009318,Blackwall & Cubitt Town,fal
 E14 2DU,E14 2,live,e14-other,200308,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509055,-0.000857,1374,1,Newport Avenue
 E14 2DW,E14 2,live,e14-other,199806,,false,E05009318,Blackwall & Cubitt Town,false,false,51.508397,-0.000742,1359,1,Newport Avenue
 E14 2DY,E14 2,live,e14-other,201502,,false,E05009318,Blackwall & Cubitt Town,false,false,51.507923,-0.001944,1264,1,Prime Meridian Walk
-E14 2EA,E14 2,live,e14-other,200607,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509154,-0.001876,1312,,
-E14 2EB,E14 2,live,e14-other,200610,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509154,-0.001876,1312,,
+E14 2EA,E14 2,live,e14-other,200607,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509154,-0.001876,1312,1,Newport Avenue
+E14 2EB,E14 2,live,e14-other,200610,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509154,-0.001876,1312,1,Newport Avenue
 E14 2ED,E14 2,live,e14-other,200610,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509011,-0.001969,1300,3,Newport Avenue
 E14 2EH,E14 2,live,e14-other,200012,,false,E05009318,Blackwall & Cubitt Town,false,false,51.507269,-0.003702,1128,1,Paul Julius Close
 E14 2NX,E14 2,terminated,terminated-other,201203,201409,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
@@ -843,8 +843,8 @@ E14 3DE,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,fal
 E14 3DF,E14 3,terminated,terminated-other,199101,201207,false,E05009324,Island Gardens,false,false,51.489017,-0.008634,1921,,
 E14 3DG,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.488500,-0.008959,1966,1,Stebondale Street
 E14 3DH,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.488439,-0.008501,1984,1,Manchester Road
-E14 3DJ,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.488956,-0.008248,1938,,
-E14 3DL,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.488956,-0.008248,1938,,
+E14 3DJ,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.488956,-0.008248,1938,1,Glengarnock Avenue
+E14 3DL,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.488956,-0.008248,1938,1,Glengarnock Avenue
 E14 3DN,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.488710,-0.008072,1968,14,Manchester Road
 E14 3DP,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.490498,-0.006351,1844,1,Manchester Road
 E14 3DQ,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.488206,-0.009116,1992,1,Manchester Road
@@ -891,7 +891,7 @@ E14 3FQ,E14 3,terminated,terminated-other,200006,200101,true,E05009324,Island Ga
 E14 3FR,E14 3,terminated,terminated-other,199912,200006,true,E05009324,Island Gardens,false,false,51.491462,-0.009666,1644,,
 E14 3FS,E14 3,terminated,terminated-other,199912,200006,true,E05009324,Island Gardens,false,false,51.491462,-0.009666,1644,,
 E14 3FT,E14 3,terminated,terminated-other,199908,200009,true,E05009324,Island Gardens,false,false,51.491462,-0.009666,1644,,
-E14 3FU,E14 3,live,e14-other,201904,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497147,-0.013481,958,1,East Ferry Road
+E14 3FU,E14 3,live,e14-other,201904,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497147,-0.013481,958,2,East Ferry Road
 E14 3FW,E14 3,terminated,terminated-other,199912,200205,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 3FX,E14 3,terminated,terminated-other,199912,200201,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 3FY,E14 3,terminated,terminated-other,200606,200607,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
@@ -944,10 +944,10 @@ E14 3JF,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,fal
 E14 3JG,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496237,-0.007527,1273,1,Manchester Road
 E14 3JH,E14 3,terminated,terminated-other,200210,201801,false,E05009318,Blackwall & Cubitt Town,false,false,51.496403,-0.008312,1224,,
 E14 3JJ,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.494570,-0.006822,1448,17,Leerdam Drive
-E14 3JL,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496359,-0.006773,1298,,
-E14 3JN,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496359,-0.006773,1298,,
+E14 3JL,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496359,-0.006773,1298,1,Stewart Street
+E14 3JN,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496359,-0.006773,1298,1,Stewart Street
 E14 3JP,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497507,-0.008682,1114,1,Stewart Street
-E14 3JQ,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496359,-0.006773,1298,,
+E14 3JQ,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496359,-0.006773,1298,1,Stewart Street
 E14 3JR,E14 3,live,e14-other,199101,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497905,-0.008823,1075,1,Stewart Street
 E14 3JS,E14 3,terminated,terminated-other,199101,202008,false,E05009318,Blackwall & Cubitt Town,false,false,51.497359,-0.006859,1214,,
 E14 3JT,E14 3,terminated,terminated-other,199101,202008,false,E05009318,Blackwall & Cubitt Town,false,false,51.497158,-0.007761,1186,,
@@ -992,7 +992,7 @@ E14 3NR,E14 3,live,e14-other,201508,,false,E05009318,Blackwall & Cubitt Town,fal
 E14 3NS,E14 3,live,e14-other,201508,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496905,-0.007166,1235,1,New Union Close
 E14 3NT,E14 3,live,cw-box-other-ward,200106,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499965,-0.009410,890,1,Manchester Road
 E14 3NU,E14 3,live,cw-box-other-ward,199101,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500468,-0.009388,858,19,Manchester Road
-E14 3NW,E14 3,live,e14-other,201812,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497147,-0.013481,958,,
+E14 3NW,E14 3,live,e14-other,201812,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497147,-0.013481,958,2,East Ferry Road
 E14 3NX,E14 3,live,cw-box-other-ward,199101,,false,E05009318,Blackwall & Cubitt Town,false,true,51.498244,-0.009716,1005,3,Manchester Road
 E14 3NY,E14 3,live,cw-box-other-ward,200410,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499410,-0.009550,922,2,East Ferry Road
 E14 3NZ,E14 3,live,e14-other,200610,,false,E05009318,Blackwall & Cubitt Town,false,false,51.494204,-0.008523,1413,1,Manchester Road
@@ -1010,7 +1010,7 @@ E14 3PP,E14 3,live,e14-other,201901,,false,E05009318,Blackwall & Cubitt Town,fal
 E14 3PQ,E14 3,live,cw-box-other-ward,199109,,false,E05009318,Blackwall & Cubitt Town,false,true,51.498210,-0.010899,954,13,Castalia Square
 E14 3PR,E14 3,live,e14-other,201802,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497749,-0.007619,1146,15,Ovex Close
 E14 3PS,E14 3,live,e14-other,201906,,false,E05009324,Island Gardens,false,false,51.486896,-0.009793,2113,3,Saunders Ness Road
-E14 3PT,E14 3,live,e14-other,201904,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497147,-0.013481,958,,
+E14 3PT,E14 3,live,e14-other,201904,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497147,-0.013481,958,2,East Ferry Road
 E14 3PU,E14 3,live,e14-other,201911,,false,E05009324,Island Gardens,false,false,51.487953,-0.015926,1902,24,Sark Mews
 E14 3PW,E14 3,live,e14-other,201909,,false,E05009324,Island Gardens,false,false,51.487791,-0.015371,1925,14,Sark Mews
 E14 3PX,E14 3,terminated,terminated-other,199501,199606,true,E05009318,Blackwall & Cubitt Town,false,false,51.496680,-0.011931,1055,,
@@ -1039,8 +1039,8 @@ E14 3QZ,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,
 E14 3RA,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.490020,-0.020648,1657,1,Cahir Street
 E14 3RB,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.489604,-0.020478,1703,1,Cahir Street
 E14 3RD,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.489420,-0.020803,1725,1,Cahir Street
-E14 3RE,E14 3,live,e14-other,199301,,false,E05009324,Island Gardens,false,false,51.489057,-0.023253,1782,,
-E14 3RF,E14 3,live,e14-other,199301,,false,E05009324,Island Gardens,false,false,51.489057,-0.023253,1782,,
+E14 3RE,E14 3,live,e14-other,199301,,false,E05009324,Island Gardens,false,false,51.489057,-0.023253,1782,1,Mast House Terrace
+E14 3RF,E14 3,live,e14-other,199301,,false,E05009324,Island Gardens,false,false,51.489057,-0.023253,1782,1,Mast House Terrace
 E14 3RG,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.489490,-0.022241,1725,2,Britannia Road
 E14 3RH,E14 3,live,e14-other,199101,,false,E05009324,Island Gardens,false,false,51.489534,-0.021130,1713,4,Westferry Road
 E14 3RJ,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.489154,-0.021549,1758,37,Vulcan Square
@@ -1069,15 +1069,15 @@ E14 3SN,E14 3,live,cw-ward,199712,,false,E05009323,Canary Wharf,true,false,51.49
 E14 3SP,E14 3,live,e14-other,200401,,false,E05009324,Island Gardens,false,false,51.492116,-0.025440,1481,1,Crews Street
 E14 3SQ,E14 3,live,e14-other,202107,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497397,-0.008053,1153,2,Ovex Close
 E14 3SR,E14 3,terminated,terminated-cw,199109,199507,true,E05009323,Canary Wharf,true,true,51.500518,-0.026172,673,,
-E14 3SS,E14 3,live,cw-ward,200106,,false,E05009323,Canary Wharf,true,false,51.496093,-0.026680,1099,,
-E14 3ST,E14 3,live,cw-ward,200106,,false,E05009323,Canary Wharf,true,false,51.496093,-0.026680,1099,,
+E14 3SS,E14 3,live,cw-ward,200106,,false,E05009323,Canary Wharf,true,false,51.496093,-0.026680,1099,1,Arnhem Place
+E14 3ST,E14 3,live,cw-ward,200106,,false,E05009323,Canary Wharf,true,false,51.496093,-0.026680,1099,1,Arnhem Place
 E14 3SU,E14 3,live,e14-other,202107,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497015,-0.007810,1195,2,Stewart Street
 E14 3SW,E14 3,live,cw-ward,199712,,false,E05009323,Canary Wharf,true,false,51.494378,-0.026250,1261,17,Old Bellgate Place
 E14 3SX,E14 3,live,cw-ward,200106,,false,E05009323,Canary Wharf,true,false,51.494241,-0.025593,1259,1,Old Bellgate Place
 E14 3SY,E14 3,live,cw-ward,200106,,false,E05009323,Canary Wharf,true,false,51.494337,-0.027044,1287,1,Old Bellgate Place
 E14 3SZ,E14 3,live,e14-other,202107,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497583,-0.006849,1198,1,Ovex Close
-E14 3TA,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487429,-0.020573,1945,,
-E14 3TB,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487429,-0.020573,1945,,
+E14 3TA,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487429,-0.020573,1945,1,Burrells Wharf Square
+E14 3TB,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487429,-0.020573,1945,1,Burrells Wharf Square
 E14 3TD,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487911,-0.020364,1891,1,Burrells Wharf Square
 E14 3TE,E14 3,terminated,terminated-other,200508,200609,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 3TF,E14 3,terminated,terminated-other,200505,200605,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
@@ -1085,14 +1085,14 @@ E14 3TG,E14 3,live,e14-other,199501,,false,E05009324,Island Gardens,false,false,
 E14 3TH,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.488111,-0.019434,1868,1,Burrells Wharf Square
 E14 3TJ,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487624,-0.019325,1922,2,Burrells Wharf Square
 E14 3TL,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487316,-0.019180,1956,1,Burrells Wharf Square
-E14 3TN,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487143,-0.019605,1976,,
+E14 3TN,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487143,-0.019605,1976,1,Burrells Wharf Square
 E14 3TP,E14 3,live,e14-other,199301,,false,E05009324,Island Gardens,false,false,51.488040,-0.018933,1876,1,Scott Russell Place
 E14 3TQ,E14 3,live,e14-other,199109,,false,E05009324,Island Gardens,false,false,51.488291,-0.018331,1850,1,Transom Square
 E14 3TR,E14 3,live,e14-other,199301,,false,E05009324,Island Gardens,false,false,51.488567,-0.019774,1817,1,Burrells Wharf Square
 E14 3TS,E14 3,live,e14-other,200208,,false,E05009324,Island Gardens,false,false,51.492399,-0.026220,1467,1,Newton Place
 E14 3TT,E14 3,live,e14-other,200206,,false,E05009324,Island Gardens,false,false,51.492820,-0.026678,1433,1,Newton Place
 E14 3TU,E14 3,live,e14-other,200410,,false,E05009324,Island Gardens,false,false,51.491802,-0.026030,1526,1,Crews Street
-E14 3TW,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487143,-0.019605,1976,,
+E14 3TW,E14 3,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.487143,-0.019605,1976,1,Burrells Wharf Square
 E14 3TX,E14 3,live,e14-other,200411,,false,E05009324,Island Gardens,false,false,51.491802,-0.026030,1526,1,Crews Street
 E14 3TY,E14 3,terminated,terminated-other,200504,200605,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 3TZ,E14 3,terminated,terminated-other,200404,200705,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
@@ -1220,20 +1220,20 @@ E14 4BE,E14 4,terminated,terminated-cw,200811,201212,false,E05009323,Canary Whar
 E14 4BF,E14 4,live,cw-core,201504,,false,E05009323,Canary Wharf,true,true,51.505910,-0.021688,189,2,Hertsmere Road West
 E14 4BG,E14 4,live,cw-core,201711,,false,E05009323,Canary Wharf,true,true,51.503452,-0.024172,362,2,Bank Street
 E14 4BH,E14 4,live,cw-core,202108,,false,E05009323,Canary Wharf,true,true,51.504455,-0.024993,385,1,Newfoundland Place
-E14 4BJ,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,,
-E14 4BL,E14 4,live,cw-core,202109,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,,
-E14 4BN,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,,
-E14 4BP,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,,
-E14 4BQ,E14 4,live,cw-core,202109,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,,
-E14 4BS,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,,
+E14 4BJ,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,1,Newfoundland Place
+E14 4BL,E14 4,live,cw-core,202109,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,1,Newfoundland Place
+E14 4BN,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,1,Newfoundland Place
+E14 4BP,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,1,Newfoundland Place
+E14 4BQ,E14 4,live,cw-core,202109,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,1,Newfoundland Place
+E14 4BS,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,1,Newfoundland Place
 E14 4BT,E14 4,terminated,terminated-cw,199606,199906,true,E05009323,Canary Wharf,true,true,51.506022,-0.023484,303,,
 E14 4BU,E14 4,terminated,terminated-cw,199606,199912,true,E05009323,Canary Wharf,true,true,51.506022,-0.023484,303,,
-E14 4BW,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,,
+E14 4BW,E14 4,live,cw-core,202107,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,1,Newfoundland Place
 E14 4BX,E14 4,terminated,terminated-cw,199606,199906,true,E05009323,Canary Wharf,true,true,51.506022,-0.023484,303,,
 E14 4BY,E14 4,terminated,terminated-cw,199606,200006,true,E05009323,Canary Wharf,true,true,51.506022,-0.023484,303,,
 E14 4BZ,E14 4,terminated,terminated-cw,199606,199906,true,E05009323,Canary Wharf,true,true,51.506022,-0.023484,303,,
 E14 4DA,E14 4,live,cw-core,199606,,false,E05009323,Canary Wharf,true,true,51.505929,-0.025462,430,4,Columbus Courtyard
-E14 4DB,E14 4,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,,
+E14 4DB,E14 4,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.504087,-0.025038,395,1,Newfoundland Place
 E14 4DD,E14 4,live,cw-core,202510,,false,E05009323,Canary Wharf,true,true,51.503904,-0.023230,282,4,Bank Street
 E14 4DE,E14 4,live,cw-core,201803,,false,E05009323,Canary Wharf,true,true,51.503448,-0.023365,313,,
 E14 4DF,E14 4,terminated,terminated-cw,202207,202208,false,E05009323,Canary Wharf,true,true,51.503079,-0.021248,236,,
@@ -1242,8 +1242,8 @@ E14 4DL,E14 4,terminated,terminated-cw,200207,201701,true,E05009323,Canary Wharf
 E14 4EB,E14 4,live,cw-core,199507,,false,E05009323,Canary Wharf,true,true,51.505182,-0.021676,154,1,Cabot Square
 E14 4ED,E14 4,live,cw-core,200112,,false,E05009323,Canary Wharf,true,true,51.507109,-0.021290,275,2,Hertsmere Road
 E14 4EE,E14 4,live,cw-core,199208,,false,E05009323,Canary Wharf,true,true,51.505871,-0.020954,148,2,Frobisher Passage
-E14 4EF,E14 4,live,cw-core,200409,,false,E05009323,Canary Wharf,true,true,51.507248,-0.021010,281,,
-E14 4EG,E14 4,live,cw-core,200609,,false,E05009323,Canary Wharf,true,true,51.507121,-0.020958,267,,
+E14 4EF,E14 4,live,cw-core,200409,,false,E05009323,Canary Wharf,true,true,51.507248,-0.021010,281,2,Hertsmere Road
+E14 4EG,E14 4,live,cw-core,200609,,false,E05009323,Canary Wharf,true,true,51.507121,-0.020958,267,2,Hertsmere Road
 E14 4ER,E14 4,terminated,terminated-cw,199507,199706,true,E05009323,Canary Wharf,true,true,51.504841,-0.015898,250,,
 E14 4EU,E14 4,live,cw-core,199501,,false,E05009323,Canary Wharf,true,true,51.505308,-0.021181,125,1,North Colonnade
 E14 4EY,E14 4,live,cw-core,199201,,false,E05009323,Canary Wharf,true,true,51.505910,-0.021688,189,1,Cabot Square
@@ -1376,11 +1376,11 @@ E14 5EL,E14 5,terminated,terminated-cw,200707,201402,true,E05009323,Canary Wharf
 E14 5EN,E14 5,terminated,terminated-cw,200801,202401,true,E05009323,Canary Wharf,true,true,51.502535,-0.019384,263,,
 E14 5EP,E14 5,terminated,terminated-cw,200407,202308,true,E05009323,Canary Wharf,true,true,51.504351,-0.020430,89,,
 E14 5EQ,E14 5,live,cw-core,200212,,false,E05009323,Canary Wharf,true,true,51.504623,-0.016268,226,6,Canada Square
-E14 5ER,E14 5,live,cw-core,200112,,true,E05009323,Canary Wharf,true,true,51.504577,-0.016227,230,1,Canada Square
+E14 5ER,E14 5,live,cw-core,200112,,true,E05009323,Canary Wharf,true,true,51.504577,-0.016227,230,2,Canada Square
 E14 5ES,E14 5,terminated,terminated-other,199501,200203,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 5ET,E14 5,terminated,terminated-cw,199412,200806,true,E05009323,Canary Wharf,true,true,51.504326,-0.020503,95,,
 E14 5EU,E14 5,live,cw-box-other-ward,201403,,true,E05009318,Blackwall & Cubitt Town,false,true,51.503757,-0.015066,333,2,Churchill Place
-E14 5EW,E14 5,live,cw-core,200112,,true,E05009323,Canary Wharf,true,true,51.504577,-0.016227,230,7,Canada Square
+E14 5EW,E14 5,live,cw-core,200112,,true,E05009323,Canary Wharf,true,true,51.504577,-0.016227,230,8,Canada Square
 E14 5EX,E14 5,terminated,terminated-cw,201005,201008,false,E05009323,Canary Wharf,true,true,51.504326,-0.020503,95,,
 E14 5EY,E14 5,live,cw-box-other-ward,201505,,true,E05009318,Blackwall & Cubitt Town,false,true,51.503706,-0.014679,360,2,Churchill Place
 E14 5EZ,E14 5,live,cw-core,199712,,false,E05009323,Canary Wharf,true,true,51.504316,-0.020446,93,6,South Colonnade; Mackenzie Walk
@@ -1419,13 +1419,13 @@ E14 5GS,E14 5,live,cw-core,201408,,true,E05009323,Canary Wharf,true,true,51.5049
 E14 5GT,E14 5,live,cw-core,201709,,false,E05009323,Canary Wharf,true,true,51.505047,-0.016912,180,29,Myers Walk
 E14 5GU,E14 5,terminated,terminated-cw,201505,202401,true,E05009323,Canary Wharf,true,true,51.504413,-0.014519,350,,
 E14 5GW,E14 5,live,cw-core,201609,,true,E05009323,Canary Wharf,true,true,51.502583,-0.016904,315,1,Upper Bank Street
-E14 5GX,E14 5,live,cw-box-other-ward,201910,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502783,-0.014907,396,12,Water Street
+E14 5GX,E14 5,live,cw-box-other-ward,201910,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502783,-0.014907,396,13,Water Street
 E14 5GY,E14 5,live,cw-box-other-ward,201809,,false,E05009318,Blackwall & Cubitt Town,false,true,51.503810,-0.013940,405,,
 E14 5GZ,E14 5,live,cw-box-other-ward,202311,,false,E05009318,Blackwall & Cubitt Town,false,true,51.503116,-0.012803,505,1,Charter Street
 E14 5HA,E14 5,live,cw-core,199109,,false,E05009323,Canary Wharf,true,true,51.505782,-0.020468,119,1,Frobisher Passage
 E14 5HB,E14 5,terminated,terminated-cw,201005,201402,true,E05009323,Canary Wharf,true,true,51.505147,-0.014328,360,,
 E14 5HD,E14 5,live,cw-core,199912,,false,E05009323,Canary Wharf,true,true,51.505703,-0.020083,98,1,North Colonnade
-E14 5HE,E14 5,live,cw-box-other-ward,202109,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502794,-0.015007,390,,
+E14 5HE,E14 5,live,cw-box-other-ward,202109,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502794,-0.015007,390,1,Water Street
 E14 5HF,E14 5,live,cw-box-other-ward,202508,,false,E05009318,Blackwall & Cubitt Town,false,true,51.503872,-0.012842,476,1,Cartier Circle
 E14 5HG,E14 5,terminated,terminated-cw,202207,202208,false,E05009318,Blackwall & Cubitt Town,false,true,51.504322,-0.012318,503,,
 E14 5HH,E14 5,terminated,terminated-cw,200207,201207,true,E05009323,Canary Wharf,true,true,51.504955,-0.019424,8,,
@@ -1437,7 +1437,7 @@ E14 5HQ,E14 5,live,cw-core,200205,,true,E05009323,Canary Wharf,true,true,51.5055
 E14 5HR,E14 5,terminated,terminated-cw,200706,200707,false,E05009323,Canary Wharf,true,true,51.505459,-0.017312,164,,
 E14 5HS,E14 5,live,cw-core,199806,,true,E05009323,Canary Wharf,true,true,51.505761,-0.020296,110,2,North Colonnade
 E14 5HT,E14 5,live,cw-core,201608,,false,E05009323,Canary Wharf,true,true,51.504733,-0.017488,141,,
-E14 5HU,E14 5,live,cw-core,201106,,false,E05009323,Canary Wharf,true,true,51.504691,-0.013369,426,,
+E14 5HU,E14 5,live,cw-core,201106,,false,E05009323,Canary Wharf,true,true,51.504691,-0.013369,426,1,Churchill Place
 E14 5HX,E14 5,live,cw-core,200511,,false,E05009323,Canary Wharf,true,true,51.505703,-0.020068,98,8,North Colonnade; South Colonnade; Mackenzie Walk
 E14 5HY,E14 5,live,cw-core,201608,,false,E05009323,Canary Wharf,true,true,51.504577,-0.016227,230,,
 E14 5HZ,E14 5,live,cw-core,200106,,false,E05009323,Canary Wharf,true,true,51.505761,-0.020296,110,1,North Colonnade
@@ -1475,7 +1475,7 @@ E14 5NY,E14 5,live,cw-core,200309,,false,E05009323,Canary Wharf,true,true,51.503
 E14 5NZ,E14 5,terminated,terminated-cw,200402,201012,true,E05009323,Canary Wharf,true,true,51.504955,-0.019424,8,,
 E14 5RA,E14 5,terminated,terminated-cw,199812,200610,false,E05009323,Canary Wharf,true,true,51.504458,-0.013436,424,,
 E14 5RB,E14 5,live,cw-core,200501,,false,E05009323,Canary Wharf,true,true,51.504413,-0.014519,350,8,Churchill Place
-E14 5RD,E14 5,live,cw-core,200603,,true,E05009323,Canary Wharf,true,true,51.505088,-0.014518,346,,
+E14 5RD,E14 5,live,cw-core,200603,,true,E05009323,Canary Wharf,true,true,51.505088,-0.014518,346,1,Churchill Place
 E14 5RE,E14 5,live,cw-box-other-ward,201406,,false,E05009318,Blackwall & Cubitt Town,false,true,51.503691,-0.014911,346,2,Churchill Place
 E14 5RT,E14 5,terminated,terminated-other,200205,201812,true,E05009327,Mile End,false,false,51.513162,-0.028291,1103,,
 E14 5SA,E14 5,terminated,terminated-cw,199101,199212,true,E05009323,Canary Wharf,true,true,51.505740,-0.015859,269,,
@@ -1485,20 +1485,20 @@ E14 5SG,E14 5,live,cw-box-other-ward,200012,,false,E05009318,Blackwall & Cubitt 
 E14 5SH,E14 5,live,cw-box-other-ward,199812,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505978,-0.009768,686,9,Boardwalk Place
 E14 5SP,E14 5,live,cw-box-other-ward,199507,,false,E05009318,Blackwall & Cubitt Town,false,true,51.507067,-0.009288,749,2,Trafalgar Way
 E14 5SQ,E14 5,live,cw-box-other-ward,200012,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505044,-0.010356,635,2,Boardwalk Place
-E14 5ST,E14 5,live,cw-core,199109,,false,E05009323,Canary Wharf,true,true,51.506327,-0.013341,456,1,Trafalgar Way
+E14 5ST,E14 5,live,cw-core,199109,,false,E05009323,Canary Wharf,true,true,51.506327,-0.013341,456,2,Trafalgar Way
 E14 5SU,E14 5,terminated,terminated-cw,199101,201512,true,E05009323,Canary Wharf,true,true,51.506639,-0.014768,381,,
-E14 5SW,E14 5,live,cw-core,201212,,false,E05009323,Canary Wharf,true,true,51.506327,-0.013341,456,,
+E14 5SW,E14 5,live,cw-core,201212,,false,E05009323,Canary Wharf,true,true,51.506327,-0.013341,456,1,Trafalgar Way
 E14 5SX,E14 5,terminated,terminated-cw,199101,201212,true,E05009323,Canary Wharf,true,true,51.506324,-0.014767,365,,
 E14 5SY,E14 5,terminated,terminated-cw,199208,199507,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
 E14 5TA,E14 5,terminated,terminated-cw,199101,201804,true,E05009323,Canary Wharf,true,true,51.506336,-0.013326,457,,
 E14 5TB,E14 5,terminated,terminated-cw,199101,199507,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
-E14 5TD,E14 5,live,cw-core,199101,,true,E05009323,Canary Wharf,true,true,51.506327,-0.013341,456,,
+E14 5TD,E14 5,live,cw-core,199101,,true,E05009323,Canary Wharf,true,true,51.506327,-0.013341,456,1,Trafalgar Way
 E14 5TE,E14 5,terminated,terminated-cw,199101,201212,true,E05009323,Canary Wharf,true,true,51.506324,-0.014767,365,,
 E14 5TG,E14 5,terminated,terminated-cw,199101,201007,true,E05009323,Canary Wharf,true,true,51.506279,-0.011051,606,,
 E14 5TH,E14 5,terminated,terminated-cw,199101,199507,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
 E14 5TJ,E14 5,terminated,terminated-cw,199101,200108,true,E05009323,Canary Wharf,true,true,51.506324,-0.014767,365,,
 E14 5TN,E14 5,terminated,terminated-cw,199101,202301,true,E05009323,Canary Wharf,true,true,51.506639,-0.014768,381,,
-E14 5TQ,E14 5,live,cw-core,199101,,true,E05009323,Canary Wharf,true,true,51.506327,-0.013341,456,,
+E14 5TQ,E14 5,live,cw-core,199101,,true,E05009323,Canary Wharf,true,true,51.506327,-0.013341,456,1,Trafalgar Way
 E14 5UA,E14 5,terminated,terminated-other,199612,200305,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 5UD,E14 5,terminated,terminated-other,199806,200704,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 5UE,E14 5,terminated,terminated-other,199806,200203,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
@@ -1610,7 +1610,7 @@ E14 6EW,E14 6,live,e14-other,200801,,false,E05009325,Lansbury,false,false,51.513
 E14 6EX,E14 6,live,e14-other,198001,,false,E05009327,Mile End,false,false,51.512031,-0.022028,812,1,Saracen Street
 E14 6EY,E14 6,live,e14-other,198001,,false,E05009327,Mile End,false,false,51.511629,-0.022146,770,1,Saracen Street
 E14 6EZ,E14 6,live,e14-other,198001,,false,E05009327,Mile End,false,false,51.511898,-0.021053,786,3,Pekin Street
-E14 6FA,E14 6,live,e14-other,201307,,false,E05009325,Lansbury,false,false,51.513652,-0.013065,1071,,
+E14 6FA,E14 6,live,e14-other,201307,,false,E05009325,Lansbury,false,false,51.513652,-0.013065,1071,1,Hay Currie Street
 E14 6FB,E14 6,live,e14-other,201111,,false,E05009325,Lansbury,false,false,51.518638,-0.009633,1674,4,Wellspring Close
 E14 6FD,E14 6,live,e14-other,201002,,false,E05009325,Lansbury,false,false,51.516961,-0.015717,1367,1,Fawe Street
 E14 6FE,E14 6,live,e14-other,201003,,false,E05009325,Lansbury,false,false,51.517154,-0.015435,1392,3,Fawe Street
@@ -1633,7 +1633,7 @@ E14 6GA,E14 6,live,e14-other,201205,,false,E05009325,Lansbury,false,false,51.519
 E14 6GB,E14 6,live,e14-other,201205,,false,E05009325,Lansbury,false,false,51.519373,-0.013681,1660,4,Uamvar Street
 E14 6GD,E14 6,live,e14-other,200802,,false,E05009325,Lansbury,false,false,51.513097,-0.019603,912,4,Ricardo Street
 E14 6GE,E14 6,live,e14-other,201205,,false,E05009325,Lansbury,false,false,51.519641,-0.013597,1690,1,Hilary Mews
-E14 6GF,E14 6,live,e14-other,201307,,false,E05009325,Lansbury,false,false,51.513652,-0.013065,1071,,
+E14 6GF,E14 6,live,e14-other,201307,,false,E05009325,Lansbury,false,false,51.513652,-0.013065,1071,1,Hay Currie Street
 E14 6GG,E14 6,live,e14-other,201309,,false,E05009325,Lansbury,false,false,51.514391,-0.014777,1105,3,Chrisp Street
 E14 6GH,E14 6,live,e14-other,201301,,false,E05009325,Lansbury,false,false,51.514193,-0.014771,1084,1,Cordelia Street
 E14 6GJ,E14 6,live,e14-other,201209,,false,E05009325,Lansbury,false,false,51.514113,-0.015351,1064,10,Equinox Square
@@ -1824,8 +1824,8 @@ E14 6TY,E14 6,live,e14-other,200507,,false,E05009325,Lansbury,false,false,51.519
 E14 6TZ,E14 6,live,e14-other,201404,,false,E05009325,Lansbury,false,false,51.513444,-0.010379,1142,1,Tapley Close
 E14 6UA,E14 6,live,e14-other,201909,,false,E05009325,Lansbury,false,false,51.515366,-0.014979,1205,1,Radial Avenue
 E14 6UB,E14 6,live,e14-other,201910,,false,E05009325,Lansbury,false,false,51.515641,-0.014751,1239,1,Radial Avenue
-E14 6UD,E14 6,live,e14-other,201909,,false,E05009325,Lansbury,false,false,51.515125,-0.014600,1187,,
-E14 6UE,E14 6,live,e14-other,201910,,false,E05009325,Lansbury,false,false,51.515125,-0.014600,1187,,
+E14 6UD,E14 6,live,e14-other,201909,,false,E05009325,Lansbury,false,false,51.515125,-0.014600,1187,1,Radial Avenue
+E14 6UE,E14 6,live,e14-other,201910,,false,E05009325,Lansbury,false,false,51.515125,-0.014600,1187,1,Radial Avenue
 E14 6UF,E14 6,live,e14-other,201910,,false,E05009325,Lansbury,false,false,51.515612,-0.015199,1228,1,Chrisp Street
 E14 6UG,E14 6,live,e14-other,201804,,false,E05009325,Lansbury,false,false,51.516636,-0.020978,1309,2,Guthridge Close
 E14 6UH,E14 6,live,e14-other,201910,,false,E05009325,Lansbury,false,false,51.516247,-0.020331,1263,1,Broomfield Street
@@ -1894,7 +1894,7 @@ E14 7BL,E14 7,live,e14-other,200301,,false,E05009327,Mile End,false,false,51.516
 E14 7BN,E14 7,live,e14-other,198410,,false,E05009327,Mile End,false,false,51.516006,-0.024147,1277,15,Thomas Road Industrial Estate
 E14 7BP,E14 7,live,e14-other,200401,,false,E05009329,St Dunstan's,false,false,51.517127,-0.037921,1867,18,Coltman Street
 E14 7BQ,E14 7,live,e14-other,200311,,false,E05009329,St Dunstan's,false,false,51.517612,-0.037872,1904,1,Halley Street
-E14 7BS,E14 7,live,e14-other,200610,,false,E05009329,St Dunstan's,false,false,51.516616,-0.038001,1830,,
+E14 7BS,E14 7,live,e14-other,200610,,false,E05009329,St Dunstan's,false,false,51.516616,-0.038001,1830,1,Maroon Street
 E14 7BT,E14 7,live,e14-other,200611,,false,E05009327,Mile End,false,false,51.518001,-0.025675,1519,1,Burgess Street
 E14 7BU,E14 7,live,e14-other,200402,,false,E05009329,St Dunstan's,false,false,51.515935,-0.037627,1758,13,Hearnshaw Street
 E14 7BW,E14 7,live,e14-other,198303,,false,E05009327,Mile End,false,false,51.516519,-0.028463,1434,5,Wallwood Street; Masjid Lane
@@ -1969,8 +1969,8 @@ E14 7GF,E14 7,live,e14-other,201108,,false,E05009327,Mile End,false,false,51.513
 E14 7GG,E14 7,live,e14-other,201203,,false,E05009327,Mile End,false,false,51.513095,-0.033944,1355,1,Ross Way
 E14 7GH,E14 7,live,e14-other,201205,,false,E05009327,Mile End,false,false,51.512984,-0.033199,1309,1,Ross Way
 E14 7GJ,E14 7,live,e14-other,201110,,false,E05009327,Mile End,false,false,51.512793,-0.034187,1345,1,Salton Square
-E14 7GL,E14 7,live,e14-other,201205,,false,E05009327,Mile End,false,false,51.512645,-0.033358,1291,,
-E14 7GN,E14 7,live,e14-other,201206,,false,E05009327,Mile End,false,false,51.512645,-0.033358,1291,,
+E14 7GL,E14 7,live,e14-other,201205,,false,E05009327,Mile End,false,false,51.512645,-0.033358,1291,1,Salton Square
+E14 7GN,E14 7,live,e14-other,201206,,false,E05009327,Mile End,false,false,51.512645,-0.033358,1291,1,Salton Square
 E14 7GP,E14 7,live,e14-other,201103,,false,E05009327,Mile End,false,false,51.512277,-0.028632,1037,1,Chusan Place
 E14 7GQ,E14 7,live,e14-other,201204,,false,E05009326,Limehouse,false,false,51.512315,-0.036240,1425,2,John Nash Mews
 E14 7GR,E14 7,live,e14-other,201202,,false,E05009327,Mile End,false,false,51.515712,-0.028023,1340,1,Lovat Close
@@ -2026,8 +2026,8 @@ E14 7LB,E14 7,live,e14-other,200704,,false,E05009326,Limehouse,false,false,51.51
 E14 7LD,E14 7,terminated,terminated-other,198001,199507,true,E05009326,Limehouse,false,false,51.512346,-0.034308,1320,,
 E14 7LE,E14 7,live,e14-other,199412,,false,E05009327,Mile End,false,false,51.512620,-0.032422,1242,1,Commercial Road
 E14 7LF,E14 7,live,e14-other,198001,,false,E05009327,Mile End,false,false,51.512717,-0.035517,1411,5,Commercial Road
-E14 7LG,E14 7,live,e14-other,200604,,false,E05009327,Mile End,false,false,51.513091,-0.035846,1455,,
-E14 7LH,E14 7,live,e14-other,200604,,false,E05009327,Mile End,false,false,51.513598,-0.035508,1473,,
+E14 7LG,E14 7,live,e14-other,200604,,false,E05009327,Mile End,false,false,51.513091,-0.035846,1455,1,Commercial Road
+E14 7LH,E14 7,live,e14-other,200604,,false,E05009327,Mile End,false,false,51.513598,-0.035508,1473,1,Commercial Road
 E14 7LJ,E14 7,live,e14-other,201209,,false,E05009327,Mile End,false,false,51.517864,-0.024456,1482,2,Selsey Street
 E14 7LL,E14 7,live,e14-other,198001,,false,E05009329,St Dunstan's,false,false,51.513185,-0.037716,1565,10,Brunton Place
 E14 7LN,E14 7,live,e14-other,201304,,false,E05009329,St Dunstan's,false,false,51.517110,-0.037432,1842,21,Greaves Cottages
@@ -2129,7 +2129,7 @@ E14 7SG,E14 7,terminated,terminated-other,198001,199912,false,E05009329,St Dunst
 E14 7SH,E14 7,live,e14-other,198001,,false,E05009329,St Dunstan's,false,false,51.517096,-0.036597,1802,23,Donoghue Cottages
 E14 7SJ,E14 7,live,e14-other,198001,,false,E05009329,St Dunstan's,false,false,51.517614,-0.036891,1859,6,Elsa Cottages
 E14 7SL,E14 7,live,e14-other,198001,,false,E05009329,St Dunstan's,false,false,51.517408,-0.036929,1844,6,Burroughs Cottages
-E14 7SN,E14 7,live,e14-other,198001,,false,E05009329,St Dunstan's,false,false,51.516616,-0.038001,1830,1,Maroon Street
+E14 7SN,E14 7,live,e14-other,198001,,false,E05009329,St Dunstan's,false,false,51.516616,-0.038001,1830,2,Maroon Street
 E14 7SP,E14 7,terminated,terminated-other,200106,200203,false,E05009329,St Dunstan's,false,false,51.516460,-0.035658,1706,,
 E14 7SQ,E14 7,terminated,terminated-other,198001,199912,false,E05009329,St Dunstan's,false,false,51.516685,-0.036182,1749,,
 E14 7SR,E14 7,terminated,terminated-other,200106,200203,false,E05009329,St Dunstan's,false,false,51.516506,-0.035714,1713,,
@@ -2232,8 +2232,8 @@ E14 8AD,E14 8,live,cw-box-other-ward,198001,,false,E05009326,Limehouse,false,tru
 E14 8AE,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.510113,-0.028250,840,4,Stocks Place
 E14 8AF,E14 8,live,cw-box-other-ward,198001,,false,E05009326,Limehouse,false,true,51.509732,-0.028584,829,1,Gill Street
 E14 8AG,E14 8,live,cw-box-other-ward,198001,,false,E05009326,Limehouse,false,true,51.509492,-0.029286,850,1,Limehouse Causeway
-E14 8AH,E14 8,live,cw-box-other-ward,198001,,false,E05009326,Limehouse,false,true,51.509937,-0.029540,894,,
-E14 8AJ,E14 8,live,cw-box-other-ward,198001,,false,E05009326,Limehouse,false,true,51.509937,-0.029540,894,,
+E14 8AH,E14 8,live,cw-box-other-ward,198001,,false,E05009326,Limehouse,false,true,51.509937,-0.029540,894,1,Three Colt Street
+E14 8AJ,E14 8,live,cw-box-other-ward,198001,,false,E05009326,Limehouse,false,true,51.509937,-0.029540,894,1,Three Colt Street
 E14 8AL,E14 8,live,e14-other,199812,,false,E05009326,Limehouse,false,false,51.510609,-0.027277,833,1,Rich Street
 E14 8AN,E14 8,live,e14-other,200805,,false,E05009326,Limehouse,false,false,51.510053,-0.028411,843,1,Gill Street
 E14 8AP,E14 8,live,cw-box-other-ward,198001,,false,E05009326,Limehouse,false,true,51.508547,-0.029816,823,12,Three Colt Street
@@ -2295,13 +2295,13 @@ E14 8EH,E14 8,live,e14-other,199712,,false,E05009326,Limehouse,false,false,51.50
 E14 8EJ,E14 8,live,e14-other,199712,,false,E05009326,Limehouse,false,false,51.509744,-0.035198,1216,1,Narrow Street
 E14 8EL,E14 8,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510276,-0.021931,621,2,Morant Street
 E14 8EN,E14 8,live,e14-other,199712,,false,E05009326,Limehouse,false,false,51.509772,-0.036350,1289,2,Narrow Street
-E14 8EP,E14 8,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509878,-0.023908,633,,
+E14 8EP,E14 8,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509878,-0.023908,633,1,Rosefield Gardens
 E14 8EQ,E14 8,live,e14-other,199007,,false,E05009326,Limehouse,false,false,51.510045,-0.037102,1349,6,Goodhart Place
 E14 8ER,E14 8,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510441,-0.023725,682,3,Rosefield Gardens
 E14 8ES,E14 8,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510553,-0.024498,718,10,Pinefield Close
 E14 8ET,E14 8,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510990,-0.025344,790,8,Birchfield Street
 E14 8EU,E14 8,live,e14-other,200301,,false,E05009326,Limehouse,false,false,51.510306,-0.038690,1462,1,Narrow Street
-E14 8EW,E14 8,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509878,-0.023908,633,,
+E14 8EW,E14 8,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509878,-0.023908,633,1,Rosefield Gardens
 E14 8EX,E14 8,terminated,terminated-other,198001,201212,true,E05009328,Poplar,false,false,51.510645,-0.025662,769,,
 E14 8EY,E14 8,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.510242,-0.025218,714,1,Birchfield Street
 E14 8EZ,E14 8,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.511406,-0.027603,917,7,West India Dock Road
@@ -2320,7 +2320,7 @@ E14 8FQ,E14 8,live,cw-core,201812,,false,E05009323,Canary Wharf,true,true,51.502
 E14 8FR,E14 8,terminated,terminated-other,200006,200109,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 8FS,E14 8,terminated,terminated-other,200006,200205,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 8FT,E14 8,terminated,terminated-other,200006,200306,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
-E14 8FU,E14 8,live,cw-box-other-ward,202302,,false,E05009326,Limehouse,false,true,51.509710,-0.026754,735,1,Salter Street
+E14 8FU,E14 8,live,cw-box-other-ward,202302,,false,E05009326,Limehouse,false,true,51.509710,-0.026754,735,2,Salter Street
 E14 8FW,E14 8,terminated,terminated-cw,199912,200006,true,E05009326,Limehouse,false,true,51.507921,-0.028936,736,,
 E14 8FX,E14 8,terminated,terminated-other,200012,200205,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 8FY,E14 8,terminated,terminated-other,200007,200010,true,E05009328,Poplar,false,false,51.511091,-0.026536,844,,
@@ -2348,8 +2348,8 @@ E14 8GZ,E14 8,live,cw-core,200911,,false,E05009323,Canary Wharf,true,true,51.501
 E14 8HA,E14 8,terminated,terminated-other,199201,199507,true,E05009326,Limehouse,false,false,51.510428,-0.027184,814,,
 E14 8HB,E14 8,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.511238,-0.027221,886,1,West India Dock Road
 E14 8HD,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.511230,-0.028375,936,2,Beccles Street
-E14 8HE,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.510751,-0.028741,914,,
-E14 8HF,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.510751,-0.028741,914,,
+E14 8HE,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.510751,-0.028741,914,1,Beccles Street
+E14 8HF,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.510751,-0.028741,914,1,Beccles Street
 E14 8HG,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.510824,-0.029372,951,2,Gill Street
 E14 8HH,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.511190,-0.029731,997,7,Three Colt Street
 E14 8HJ,E14 8,live,e14-other,198001,,false,E05009326,Limehouse,false,false,51.510459,-0.030671,992,1,Three Colt Street
@@ -2373,22 +2373,22 @@ E14 8JF,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.498
 E14 8JG,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.508639,-0.025619,594,19,Garford Street
 E14 8JH,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.500807,-0.025698,627,13,Westferry Road; Tobago Street
 E14 8JJ,E14 8,live,cw-core,199301,,false,E05009323,Canary Wharf,true,true,51.508195,-0.024399,500,2,Hertsmere Road
-E14 8JL,E14 8,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.502456,-0.026981,586,,
-E14 8JN,E14 8,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.502456,-0.026981,586,,
+E14 8JL,E14 8,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.502456,-0.026981,586,1,Westferry Road
+E14 8JN,E14 8,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.502456,-0.026981,586,1,Westferry Road
 E14 8JP,E14 8,live,cw-core,200602,,false,E05009323,Canary Wharf,true,true,51.499405,-0.026292,772,1,Hutchings Street
 E14 8JQ,E14 8,live,cw-core,199806,,false,E05009323,Canary Wharf,true,true,51.508253,-0.026745,626,2,Garford Street
-E14 8JR,E14 8,live,cw-core,200309,,false,E05009323,Canary Wharf,true,true,51.499303,-0.027147,819,,
+E14 8JR,E14 8,live,cw-core,200309,,false,E05009323,Canary Wharf,true,true,51.499303,-0.027147,819,1,Hutchings Street
 E14 8JS,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.498472,-0.026923,882,1,Westferry Road
 E14 8JT,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.502864,-0.026056,509,4,Westferry Road
 E14 8JU,E14 8,terminated,terminated-cw,199812,200311,false,E05009323,Canary Wharf,true,true,51.506988,-0.028010,635,,
-E14 8JW,E14 8,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.502456,-0.026981,586,,
+E14 8JW,E14 8,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.502456,-0.026981,586,1,Westferry Road
 E14 8JX,E14 8,live,cw-core,200407,,false,E05009323,Canary Wharf,true,true,51.499680,-0.027116,786,1,Hutchings Street
 E14 8JY,E14 8,live,cw-core,199812,,false,E05009323,Canary Wharf,true,true,51.498923,-0.026471,823,1,Hutchings Street
 E14 8JZ,E14 8,live,cw-core,200106,,false,E05009323,Canary Wharf,true,true,51.501266,-0.025693,590,3,Manilla Street
 E14 8LA,E14 8,live,cw-core,199007,,false,E05009323,Canary Wharf,true,true,51.502104,-0.026348,568,11,Chandlers Mews
 E14 8LB,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.501696,-0.026150,583,2,Cuba Street
 E14 8LD,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.501289,-0.023848,503,2,Cuba Street
-E14 8LE,E14 8,live,cw-core,200402,,false,E05009323,Canary Wharf,true,true,51.499303,-0.027147,819,,
+E14 8LE,E14 8,live,cw-core,200402,,false,E05009323,Canary Wharf,true,true,51.499303,-0.027147,819,1,Hutchings Street
 E14 8LF,E14 8,terminated,terminated-cw,198001,200801,true,E05009323,Canary Wharf,true,true,51.501423,-0.024346,513,,
 E14 8LG,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.500912,-0.023360,519,2,Manilla Street
 E14 8LH,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.499137,-0.023710,705,42,Alpha Grove
@@ -2408,8 +2408,8 @@ E14 8LZ,E14 8,live,cw-core,199906,,false,E05009323,Canary Wharf,true,true,51.500
 E14 8NA,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.499692,-0.024075,661,7,Havannah Street
 E14 8NB,E14 8,terminated,terminated-cw,199812,202506,false,E05009323,Canary Wharf,true,true,51.500825,-0.024617,576,,
 E14 8ND,E14 8,terminated,terminated-cw,198001,199806,false,E05009323,Canary Wharf,true,false,51.497847,-0.027728,971,,
-E14 8NE,E14 8,live,cw-core,199007,,false,E05009323,Canary Wharf,true,true,51.501945,-0.027061,620,,
-E14 8NF,E14 8,live,cw-core,199007,,false,E05009323,Canary Wharf,true,true,51.501945,-0.027061,620,,
+E14 8NE,E14 8,live,cw-core,199007,,false,E05009323,Canary Wharf,true,true,51.501945,-0.027061,620,1,Cuba Street
+E14 8NF,E14 8,live,cw-core,199007,,false,E05009323,Canary Wharf,true,true,51.501945,-0.027061,620,1,Cuba Street
 E14 8NG,E14 8,live,cw-core,199912,,false,E05009323,Canary Wharf,true,true,51.501485,-0.026966,643,1,Westferry Road
 E14 8NH,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.498133,-0.025526,861,1,Westferry Road
 E14 8NJ,E14 8,live,cw-ward,198510,,false,E05009323,Canary Wharf,true,false,51.495959,-0.022969,1024,51,Claire Place
@@ -2419,8 +2419,8 @@ E14 8NP,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.49
 E14 8NQ,E14 8,live,cw-core,199906,,false,E05009323,Canary Wharf,true,true,51.500859,-0.027151,696,1,Westferry Road
 E14 8NR,E14 8,live,cw-ward,200401,,false,E05009323,Canary Wharf,true,false,51.495753,-0.021955,1032,2,Tiller Road
 E14 8NS,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.496989,-0.023774,929,3,Mellish Street
-E14 8NT,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.496970,-0.025346,971,,
-E14 8NU,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.496970,-0.025346,971,,
+E14 8NT,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.496970,-0.025346,971,1,Westferry Road
+E14 8NU,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.496970,-0.025346,971,1,Westferry Road
 E14 8NW,E14 8,live,cw-box-other-ward,201402,,false,E05009326,Limehouse,false,true,51.509832,-0.027066,759,5,Salter Street
 E14 8NX,E14 8,terminated,terminated-cw,198704,201909,true,E05009323,Canary Wharf,true,false,51.494925,-0.021948,1123,,
 E14 8NY,E14 8,live,cw-core,199912,,false,E05009323,Canary Wharf,true,true,51.500333,-0.022664,554,6,Bosun Close
@@ -2450,17 +2450,17 @@ E14 8QB,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.498
 E14 8QD,E14 8,terminated,terminated-cw,199412,199507,true,E05009323,Canary Wharf,true,false,51.496025,-0.026366,1097,,
 E14 8QE,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.497331,-0.024883,921,1,Cheval Street
 E14 8QF,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.497690,-0.023787,856,1,Janet Street
-E14 8QG,E14 8,live,cw-box-other-ward,202302,,false,E05009326,Limehouse,false,true,51.509710,-0.026754,735,1,Salter Street
+E14 8QG,E14 8,live,cw-box-other-ward,202302,,false,E05009326,Limehouse,false,true,51.509710,-0.026754,735,2,Salter Street
 E14 8QJ,E14 8,terminated,terminated-other,199109,199212,true,E05009324,Island Gardens,false,false,51.489613,-0.019441,1701,,
 E14 8QL,E14 8,terminated,terminated-other,199208,199507,true,E05009324,Island Gardens,false,false,51.490512,-0.019402,1601,,
 E14 8QN,E14 8,live,cw-box-other-ward,202208,,false,E05009326,Limehouse,false,true,51.509631,-0.026354,709,1,Limehouse Causeway
 E14 8QP,E14 8,terminated,terminated-other,200112,200207,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 8QQ,E14 8,live,cw-ward,202312,,false,E05009323,Canary Wharf,true,false,51.496802,-0.021751,915,1,Mellish Street
 E14 8QR,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.490512,-0.019402,1601,,
-E14 8QS,E14 8,live,cw-core,202312,,false,E05009323,Canary Wharf,true,true,51.500928,-0.023791,533,,
+E14 8QS,E14 8,live,cw-core,202312,,false,E05009323,Canary Wharf,true,true,51.500928,-0.023791,533,1,Manilla Street
 E14 8QT,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.490536,-0.020841,1601,,
 E14 8QU,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.490536,-0.020841,1601,,
-E14 8QW,E14 8,live,cw-core,202312,,false,E05009323,Canary Wharf,true,true,51.500928,-0.023791,533,,
+E14 8QW,E14 8,live,cw-core,202312,,false,E05009323,Canary Wharf,true,true,51.500928,-0.023791,533,1,Manilla Street
 E14 8QX,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.489638,-0.020880,1701,,
 E14 8QY,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.489638,-0.020880,1701,,
 E14 8QZ,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.489638,-0.020880,1701,,
@@ -2471,16 +2471,16 @@ E14 8RE,E14 8,terminated,terminated-other,202302,202307,false,E05009328,Poplar,f
 E14 8RF,E14 8,terminated,terminated-other,200112,200602,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 8RG,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.488763,-0.022359,1806,,
 E14 8RH,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.506164,-0.028219,621,1,Westferry Circus
-E14 8RJ,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.507150,-0.029070,710,,
-E14 8RL,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.507150,-0.029070,710,,
-E14 8RN,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.507232,-0.028043,647,,
+E14 8RJ,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.507150,-0.029070,710,1,Westferry Circus
+E14 8RL,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.507150,-0.029070,710,1,Westferry Circus
+E14 8RN,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.507232,-0.028043,647,1,Westferry Circus
 E14 8RP,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.506372,-0.027734,595,1,Westferry Circus
 E14 8RQ,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.490512,-0.019402,1601,,
 E14 8RR,E14 8,live,cw-core,200006,,false,E05009323,Canary Wharf,true,true,51.506089,-0.028035,607,7,Westferry Circus
 E14 8RS,E14 8,live,cw-core,199912,,true,E05009323,Canary Wharf,true,true,51.506690,-0.027951,620,1,Westferry Circus
 E14 8RT,E14 8,terminated,terminated-cw,199912,201901,true,E05009323,Canary Wharf,true,true,51.506227,-0.027683,587,,
 E14 8RU,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.492431,-0.026521,1471,,
-E14 8RW,E14 8,live,cw-core,200106,,false,E05009323,Canary Wharf,true,true,51.507232,-0.028043,647,,
+E14 8RW,E14 8,live,cw-core,200106,,false,E05009323,Canary Wharf,true,true,51.507232,-0.028043,647,1,Westferry Circus
 E14 8RX,E14 8,live,cw-box-other-ward,202405,,false,E05009326,Limehouse,false,true,51.509027,-0.027836,739,1,Limehouse Causeway
 E14 8RY,E14 8,terminated,terminated-other,198001,199012,false,E05009324,Island Gardens,false,false,51.490609,-0.025160,1638,,
 E14 8RZ,E14 8,terminated,terminated-other,198001,199012,true,E05009324,Island Gardens,false,false,51.491508,-0.025121,1540,,
@@ -2492,15 +2492,15 @@ E14 8SF,E14 8,live,cw-core,199512,,false,E05009323,Canary Wharf,true,true,51.508
 E14 8SG,E14 8,terminated,terminated-cw,198001,199012,true,E05009323,Canary Wharf,true,false,51.494228,-0.026444,1282,,
 E14 8SH,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.498809,-0.025079,781,5,The Quarterdeck
 E14 8SJ,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.497920,-0.024584,853,3,The Quarterdeck
-E14 8SL,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.499787,-0.024907,682,,
-E14 8SN,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.499787,-0.024907,682,,
-E14 8SP,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.498746,-0.024534,769,,
+E14 8SL,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.499787,-0.024907,682,1,The Quarterdeck
+E14 8SN,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.499787,-0.024907,682,1,The Quarterdeck
+E14 8SP,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.498746,-0.024534,769,1,The Quarterdeck
 E14 8SQ,E14 8,live,cw-core,202502,,false,E05009323,Canary Wharf,true,true,51.501342,-0.024378,521,1,Cuba Street
-E14 8SR,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.497892,-0.025090,871,,
-E14 8SS,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.497892,-0.025090,871,,
+E14 8SR,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.497892,-0.025090,871,1,The Quarterdeck
+E14 8SS,E14 8,live,cw-ward,198001,,false,E05009323,Canary Wharf,true,false,51.497892,-0.025090,871,1,The Quarterdeck
 E14 8ST,E14 8,terminated,terminated-cw,198402,199012,false,E05009323,Canary Wharf,true,true,51.506833,-0.027340,585,,
 E14 8SU,E14 8,terminated,terminated-cw,198301,199012,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
-E14 8SW,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.498746,-0.024534,769,,
+E14 8SW,E14 8,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.498746,-0.024534,769,1,The Quarterdeck
 E14 8SX,E14 8,terminated,terminated-cw,198301,199012,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
 E14 8SY,E14 8,terminated,terminated-cw,202502,202503,false,E05009323,Canary Wharf,true,true,51.498746,-0.024534,769,,
 E14 8SZ,E14 8,terminated,terminated-cw,199002,199112,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
@@ -2516,8 +2516,8 @@ E14 8TL,E14 8,terminated,terminated-cw,202502,202503,false,E05009323,Canary Whar
 E14 8TN,E14 8,terminated,terminated-cw,198303,199012,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
 E14 8TP,E14 8,terminated,terminated-cw,202502,202503,false,E05009323,Canary Wharf,true,true,51.498746,-0.024534,769,,
 E14 8TQ,E14 8,terminated,terminated-cw,198303,199012,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
-E14 8TR,E14 8,live,cw-core,202508,,false,E05009323,Canary Wharf,true,true,51.500804,-0.024445,571,,
-E14 8TT,E14 8,live,cw-core,202508,,false,E05009323,Canary Wharf,true,true,51.500804,-0.024445,571,,
+E14 8TR,E14 8,live,cw-core,202508,,false,E05009323,Canary Wharf,true,true,51.500804,-0.024445,571,1,Manilla Street
+E14 8TT,E14 8,live,cw-core,202508,,false,E05009323,Canary Wharf,true,true,51.500804,-0.024445,571,1,Manilla Street
 E14 8TW,E14 8,terminated,terminated-cw,198303,199012,true,E05009323,Canary Wharf,true,true,51.507683,-0.024421,461,,
 E14 8UA,E14 8,terminated,terminated-other,199002,199012,false,E05009324,Island Gardens,false,false,51.491508,-0.025121,1540,,
 E14 8UB,E14 8,terminated,terminated-other,199002,199012,false,E05009324,Island Gardens,false,false,51.491508,-0.025121,1540,,
@@ -2584,167 +2584,167 @@ E14 8ZR,E14 8,terminated,terminated-other,199308,199501,true,E05009324,Island Ga
 E14 8ZZ,E14 8,terminated,terminated-other,200504,200605,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 9AA,E14 9,live,cw-box-other-ward,201601,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506406,-0.005844,963,1,Blackwall Way
 E14 9AB,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502095,-0.024720,479,2,Landmark Square
-E14 9AD,E14 9,live,cw-box-other-ward,201611,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500724,-0.010155,798,,
+E14 9AD,E14 9,live,cw-box-other-ward,201611,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500724,-0.010155,798,1,Dollar Bay Place
 E14 9AE,E14 9,live,cw-core,200911,,false,E05009323,Canary Wharf,true,true,51.500363,-0.021741,528,1,Byng Street
-E14 9AF,E14 9,live,cw-core,200911,,false,E05009323,Canary Wharf,true,true,51.502277,-0.025419,504,,
+E14 9AF,E14 9,live,cw-core,200911,,false,E05009323,Canary Wharf,true,true,51.502277,-0.025419,504,1,Marsh Wall
 E14 9AG,E14 9,live,e14-other,199712,,true,E05009327,Mile End,false,false,51.513162,-0.028291,1103,,
-E14 9AH,E14 9,live,cw-core,200911,,false,E05009323,Canary Wharf,true,true,51.502277,-0.025419,504,,
+E14 9AH,E14 9,live,cw-core,200911,,false,E05009323,Canary Wharf,true,true,51.502277,-0.025419,504,1,Marsh Wall
 E14 9AJ,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.500327,-0.021209,523,1,Mastmaker Road
-E14 9AL,E14 9,live,cw-core,200909,,false,E05009323,Canary Wharf,true,true,51.502277,-0.025419,504,,
+E14 9AL,E14 9,live,cw-core,200909,,false,E05009323,Canary Wharf,true,true,51.502277,-0.025419,504,1,Marsh Wall
 E14 9AN,E14 9,live,cw-core,201511,,false,E05009323,Canary Wharf,true,true,51.498815,-0.020065,678,2,Indescon Square
 E14 9AP,E14 9,terminated,terminated-cw,201612,202401,true,E05009323,Canary Wharf,true,true,51.502458,-0.023883,408,,
 E14 9AQ,E14 9,live,e14-other,201003,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497207,-0.015380,903,2,Baltimore Wharf
 E14 9AR,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.500300,-0.021758,535,3,Byng Street
 E14 9AS,E14 9,terminated,terminated-cw,202006,202008,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,,
-E14 9AT,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,,
+E14 9AT,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,1,Park Drive
 E14 9AU,E14 9,live,cw-box-other-ward,201512,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506990,-0.006308,945,1,Biscayne Avenue
 E14 9AW,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.500076,-0.021278,551,1,Mastmaker Road
 E14 9AX,E14 9,live,cw-core,201004,,false,E05009323,Canary Wharf,true,true,51.501942,-0.024741,491,1,Marsh Wall
-E14 9AY,E14 9,live,cw-box-other-ward,201605,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,,
-E14 9AZ,E14 9,live,cw-core,202009,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,,
+E14 9AY,E14 9,live,cw-box-other-ward,201605,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,1,Biscayne Avenue
+E14 9AZ,E14 9,live,cw-core,202009,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,1,Wards Place
 E14 9BA,E14 9,live,cw-box-other-ward,201203,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506752,-0.006607,918,1,Blackwall Way
-E14 9BB,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,,
+E14 9BB,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,1,Park Drive
 E14 9BD,E14 9,live,cw-core,201601,,false,E05009323,Canary Wharf,true,true,51.498458,-0.019187,717,2,Lincoln Plaza
-E14 9BE,E14 9,live,cw-box-other-ward,201606,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,,
-E14 9BF,E14 9,live,cw-box-other-ward,201606,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,,
-E14 9BG,E14 9,live,cw-box-other-ward,201606,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,,
-E14 9BH,E14 9,live,cw-box-other-ward,201608,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505039,-0.006855,878,,
+E14 9BE,E14 9,live,cw-box-other-ward,201606,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,1,Biscayne Avenue
+E14 9BF,E14 9,live,cw-box-other-ward,201606,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,1,Biscayne Avenue
+E14 9BG,E14 9,live,cw-box-other-ward,201606,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,1,Biscayne Avenue
+E14 9BH,E14 9,live,cw-box-other-ward,201608,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505039,-0.006855,878,1,Yabsley Street
 E14 9BJ,E14 9,live,cw-core,201002,,false,E05009323,Canary Wharf,true,true,51.498203,-0.021128,754,1,Cassilis Road
-E14 9BL,E14 9,live,cw-core,201512,,false,E05009323,Canary Wharf,true,true,51.498465,-0.019619,716,,
-E14 9BN,E14 9,live,cw-core,201602,,false,E05009323,Canary Wharf,true,true,51.498465,-0.019619,716,,
-E14 9BP,E14 9,live,cw-core,201606,,false,E05009323,Canary Wharf,true,true,51.498726,-0.019607,687,,
-E14 9BQ,E14 9,live,cw-box-other-ward,201606,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,,
+E14 9BL,E14 9,live,cw-core,201512,,false,E05009323,Canary Wharf,true,true,51.498465,-0.019619,716,1,Lincoln Plaza
+E14 9BN,E14 9,live,cw-core,201602,,false,E05009323,Canary Wharf,true,true,51.498465,-0.019619,716,1,Lincoln Plaza
+E14 9BP,E14 9,live,cw-core,201606,,false,E05009323,Canary Wharf,true,true,51.498726,-0.019607,687,1,Lincoln Plaza
+E14 9BQ,E14 9,live,cw-box-other-ward,201606,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506823,-0.005480,996,1,Biscayne Avenue
 E14 9BS,E14 9,live,cw-core,201002,,false,E05009323,Canary Wharf,true,true,51.498183,-0.021000,755,1,Cassilis Road
-E14 9BT,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502014,-0.024738,485,,
-E14 9BU,E14 9,live,cw-core,201605,,false,E05009323,Canary Wharf,true,true,51.498726,-0.019607,687,1,Lincoln Plaza
-E14 9BW,E14 9,live,cw-core,201507,,false,E05009323,Canary Wharf,true,true,51.498075,-0.019419,759,,
-E14 9BX,E14 9,live,cw-box-other-ward,201611,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500724,-0.010155,798,,
+E14 9BT,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502014,-0.024738,485,1,Marsh Wall
+E14 9BU,E14 9,live,cw-core,201605,,false,E05009323,Canary Wharf,true,true,51.498726,-0.019607,687,2,Lincoln Plaza
+E14 9BW,E14 9,live,cw-core,201507,,false,E05009323,Canary Wharf,true,true,51.498075,-0.019419,759,1,Lanterns Way
+E14 9BX,E14 9,live,cw-box-other-ward,201611,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500724,-0.010155,798,1,Dollar Bay Place
 E14 9BY,E14 9,terminated,terminated-other,198504,199012,false,E05009324,Island Gardens,false,false,51.486747,-0.009482,2136,,
 E14 9BZ,E14 9,terminated,terminated-other,198607,199012,false,E05009324,Island Gardens,false,false,51.488495,-0.006525,2035,,
-E14 9DA,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,,
-E14 9DB,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502014,-0.024738,485,,
-E14 9DD,E14 9,live,cw-core,202005,,false,E05009323,Canary Wharf,true,true,51.499265,-0.020117,629,,
+E14 9DA,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,1,Wards Place
+E14 9DB,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502014,-0.024738,485,1,Marsh Wall
+E14 9DD,E14 9,live,cw-core,202005,,false,E05009323,Canary Wharf,true,true,51.499265,-0.020117,629,1,Harbour Way
 E14 9DE,E14 9,live,cw-box-other-ward,201105,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506346,-0.006509,916,2,Blackwall Way
-E14 9DF,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.498332,-0.018126,737,,
+E14 9DF,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.498332,-0.018126,737,1,Millharbour
 E14 9DG,E14 9,live,cw-core,201003,,false,E05009323,Canary Wharf,true,true,51.498167,-0.020611,753,1,Indescon Square
 E14 9DH,E14 9,live,cw-ward,200912,,false,E05009323,Canary Wharf,true,false,51.497731,-0.017648,808,1,West Quay Walk
 E14 9DJ,E14 9,live,cw-ward,201106,,false,E05009323,Canary Wharf,true,false,51.497291,-0.019281,847,1,Millharbour
-E14 9DL,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.498332,-0.018126,737,,
-E14 9DN,E14 9,live,cw-core,202005,,false,E05009323,Canary Wharf,true,true,51.499265,-0.020117,629,,
-E14 9DP,E14 9,live,cw-core,202005,,false,E05009323,Canary Wharf,true,true,51.499265,-0.020117,629,,
+E14 9DL,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.498332,-0.018126,737,1,Millharbour
+E14 9DN,E14 9,live,cw-core,202005,,false,E05009323,Canary Wharf,true,true,51.499265,-0.020117,629,1,Harbour Way
+E14 9DP,E14 9,live,cw-core,202005,,false,E05009323,Canary Wharf,true,true,51.499265,-0.020117,629,1,Harbour Way
 E14 9DQ,E14 9,live,cw-core,201005,,false,E05009323,Canary Wharf,true,true,51.498770,-0.020614,687,3,Indescon Square
 E14 9DR,E14 9,live,cw-core,200909,,false,E05009323,Canary Wharf,true,true,51.498178,-0.020150,749,1,Indescon Square
 E14 9DS,E14 9,live,cw-core,201812,,false,E05009323,Canary Wharf,true,true,51.498400,-0.021077,732,1,Indescon Square
-E14 9DT,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.498268,-0.018575,741,,
-E14 9DU,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,,
+E14 9DT,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.498268,-0.018575,741,1,Millharbour
+E14 9DU,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,1,Wards Place
 E14 9DW,E14 9,live,cw-box-other-ward,201106,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506664,-0.006697,910,1,Province Square
-E14 9DX,E14 9,live,cw-core,201912,,false,E05009323,Canary Wharf,true,true,51.499265,-0.020117,629,,
-E14 9DY,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,,
+E14 9DX,E14 9,live,cw-core,201912,,false,E05009323,Canary Wharf,true,true,51.499265,-0.020117,629,1,Harbour Way
+E14 9DY,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,1,Wards Place
 E14 9DZ,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496315,-0.015332,998,3,Westward Parade
 E14 9EA,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496640,-0.015894,953,3,Oakland Quay
-E14 9EB,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502014,-0.024738,485,,
-E14 9ED,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,,
+E14 9EB,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502014,-0.024738,485,1,Marsh Wall
+E14 9ED,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,1,Wards Place
 E14 9EE,E14 9,terminated,terminated-other,200607,200707,true,E05009327,Mile End,false,false,51.513198,-0.028275,1106,,
 E14 9EF,E14 9,terminated,terminated-other,202510,202601,false,E05009318,Blackwall & Cubitt Town,false,false,51.506920,-0.004827,1043,,
-E14 9EG,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502014,-0.024738,485,,
+E14 9EG,E14 9,live,cw-core,200912,,false,E05009323,Canary Wharf,true,true,51.502014,-0.024738,485,1,Marsh Wall
 E14 9EH,E14 9,live,cw-box-other-ward,201105,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505929,-0.006311,923,1,Blackwall Way
-E14 9EJ,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,,
-E14 9EL,E14 9,live,cw-box-other-ward,200902,,false,E05009328,Poplar,false,true,51.508217,-0.009180,806,,
-E14 9EN,E14 9,live,cw-box-other-ward,202410,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499929,-0.012077,756,,
+E14 9EJ,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501773,-0.022155,394,1,Wards Place
+E14 9EL,E14 9,live,cw-box-other-ward,200902,,false,E05009328,Poplar,false,true,51.508217,-0.009180,806,1,Prestons Road
+E14 9EN,E14 9,live,cw-box-other-ward,202410,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499929,-0.012077,756,1,Marsh Wall
 E14 9EP,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496839,-0.015425,941,2,Baltimore Wharf
-E14 9EQ,E14 9,live,e14-other,201002,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497172,-0.014920,917,,
-E14 9ER,E14 9,live,e14-other,201708,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497298,-0.014439,916,,
-E14 9ES,E14 9,live,cw-box-other-ward,202012,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499975,-0.013718,679,,
-E14 9ET,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496646,-0.014655,978,,
+E14 9EQ,E14 9,live,e14-other,201002,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497172,-0.014920,917,2,Baltimore Wharf
+E14 9ER,E14 9,live,e14-other,201708,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497298,-0.014439,916,2,Baltimore Wharf
+E14 9ES,E14 9,live,cw-box-other-ward,202012,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499975,-0.013718,679,2,Marsh Wall
+E14 9ET,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496646,-0.014655,978,1,East Ferry Road
 E14 9EU,E14 9,live,e14-other,201004,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496315,-0.015332,998,1,Alexia Square
-E14 9EW,E14 9,live,cw-core,201605,,false,E05009323,Canary Wharf,true,true,51.498726,-0.019607,687,,
-E14 9EX,E14 9,live,cw-box-other-ward,200902,,false,E05009328,Poplar,false,true,51.508217,-0.009180,806,1,Prestons Road
+E14 9EW,E14 9,live,cw-core,201605,,false,E05009323,Canary Wharf,true,true,51.498726,-0.019607,687,1,Lincoln Plaza
+E14 9EX,E14 9,live,cw-box-other-ward,200902,,false,E05009328,Poplar,false,true,51.508217,-0.009180,806,2,Prestons Road
 E14 9EY,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496837,-0.015857,932,1,Baltimore Wharf
 E14 9EZ,E14 9,live,cw-core,200909,,false,E05009323,Canary Wharf,true,true,51.498832,-0.021072,684,1,Indescon Square
 E14 9FA,E14 9,live,e14-other,201004,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496640,-0.015894,953,1,Alexia Square
 E14 9FB,E14 9,live,e14-other,200902,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496859,-0.015568,935,1,Baltimore Wharf
 E14 9FD,E14 9,live,e14-other,201004,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496641,-0.014929,972,1,Alexia Square
-E14 9FE,E14 9,live,cw-box-other-ward,199712,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500559,-0.012612,680,1,Meridian Place
-E14 9FF,E14 9,live,cw-box-other-ward,199712,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500652,-0.013328,638,3,Meridian Place
-E14 9FG,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497240,-0.015753,891,,
-E14 9FH,E14 9,live,e14-other,202109,,false,E05009318,Blackwall & Cubitt Town,false,false,51.495511,-0.015598,1079,,
+E14 9FE,E14 9,live,cw-box-other-ward,199712,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500559,-0.012612,680,2,Meridian Place
+E14 9FF,E14 9,live,cw-box-other-ward,199712,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500652,-0.013328,638,4,Meridian Place
+E14 9FG,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497240,-0.015753,891,1,Baltimore Wharf
+E14 9FH,E14 9,live,e14-other,202109,,false,E05009318,Blackwall & Cubitt Town,false,false,51.495511,-0.015598,1079,1,Selsdon Way
 E14 9FJ,E14 9,live,cw-box-other-ward,199002,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500566,-0.011459,738,8,Marsh Wall
-E14 9FL,E14 9,live,cw-core,201507,,false,E05009323,Canary Wharf,true,true,51.498075,-0.019419,759,,
-E14 9FN,E14 9,live,cw-box-other-ward,201507,,false,E05009318,Blackwall & Cubitt Town,false,true,51.507198,-0.005867,980,,
-E14 9FP,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496646,-0.014655,978,1,East Ferry Road
-E14 9FQ,E14 9,live,cw-core,200905,,false,E05009323,Canary Wharf,true,true,51.498268,-0.018575,741,,
-E14 9FR,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
+E14 9FL,E14 9,live,cw-core,201507,,false,E05009323,Canary Wharf,true,true,51.498075,-0.019419,759,1,Lanterns Way
+E14 9FN,E14 9,live,cw-box-other-ward,201507,,false,E05009318,Blackwall & Cubitt Town,false,true,51.507198,-0.005867,980,1,Dominion Walk
+E14 9FP,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496646,-0.014655,978,2,East Ferry Road
+E14 9FQ,E14 9,live,cw-core,200905,,false,E05009323,Canary Wharf,true,true,51.498268,-0.018575,741,1,Millharbour
+E14 9FR,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
 E14 9FS,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496793,-0.014850,958,1,Baltimore Wharf
-E14 9FT,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497240,-0.015753,891,1,Baltimore Wharf
+E14 9FT,E14 9,live,e14-other,201005,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497240,-0.015753,891,2,Baltimore Wharf
 E14 9FU,E14 9,live,cw-box-other-ward,201607,,false,E05009318,Blackwall & Cubitt Town,false,true,51.504613,-0.007205,854,1,Prestons Road
 E14 9FW,E14 9,live,cw-box-other-ward,202511,,false,E05009318,Blackwall & Cubitt Town,false,true,51.501922,-0.010261,722,,
-E14 9FX,E14 9,live,cw-box-other-ward,201506,,false,E05009318,Blackwall & Cubitt Town,false,true,51.507198,-0.005867,980,1,Dominion Walk
-E14 9FY,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
+E14 9FX,E14 9,live,cw-box-other-ward,201506,,false,E05009318,Blackwall & Cubitt Town,false,true,51.507198,-0.005867,980,2,Dominion Walk
+E14 9FY,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
 E14 9FZ,E14 9,live,cw-core,201806,,false,E05009323,Canary Wharf,true,true,51.498080,-0.019174,759,1,Millharbour
 E14 9GA,E14 9,live,e14-other,200411,,false,E05009324,Island Gardens,false,false,51.491417,-0.022949,1519,1,Sherwood Gardens
-E14 9GB,E14 9,live,e14-other,200806,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509790,-0.001762,1346,1,Blackwall Way
-E14 9GD,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502472,-0.014041,465,,
-E14 9GE,E14 9,live,cw-box-other-ward,199002,,false,E05009318,Blackwall & Cubitt Town,false,true,51.498934,-0.015953,708,16,Harbour Exchange Square
-E14 9GF,E14 9,live,e14-other,200806,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509790,-0.001762,1346,,
-E14 9GG,E14 9,live,cw-box-other-ward,202105,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,3,Park Drive
+E14 9GB,E14 9,live,e14-other,200806,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509790,-0.001762,1346,2,Blackwall Way
+E14 9GD,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502472,-0.014041,465,1,Park Drive
+E14 9GE,E14 9,live,cw-box-other-ward,199002,,false,E05009318,Blackwall & Cubitt Town,false,true,51.498934,-0.015953,708,18,Harbour Exchange Square
+E14 9GF,E14 9,live,e14-other,200806,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509790,-0.001762,1346,1,Blackwall Way
+E14 9GG,E14 9,live,cw-box-other-ward,202105,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,4,Park Drive
 E14 9GH,E14 9,live,e14-other,201707,,false,E05009318,Blackwall & Cubitt Town,false,false,51.495954,-0.015780,1028,1,Turnberry Quay
 E14 9GJ,E14 9,live,e14-other,201707,,false,E05009318,Blackwall & Cubitt Town,false,false,51.495750,-0.015904,1048,1,Turnberry Quay
 E14 9GL,E14 9,live,e14-other,199007,,false,E05009318,Blackwall & Cubitt Town,false,false,51.494500,-0.014864,1201,9,Selsdon Way
-E14 9GN,E14 9,live,e14-other,200802,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509742,-0.001029,1391,,
-E14 9GP,E14 9,live,e14-other,200802,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509742,-0.001029,1391,,
+E14 9GN,E14 9,live,e14-other,200802,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509742,-0.001029,1391,1,Blackwall Way
+E14 9GP,E14 9,live,e14-other,200802,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509742,-0.001029,1391,1,Blackwall Way
 E14 9GQ,E14 9,terminated,terminated-cw,199002,201908,true,E05009318,Blackwall & Cubitt Town,false,true,51.499400,-0.015875,662,,
 E14 9GR,E14 9,live,e14-other,199806,,false,E05009318,Blackwall & Cubitt Town,false,false,51.494311,-0.015938,1204,1,Selsdon Way
-E14 9GS,E14 9,live,cw-core,202405,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,,
-E14 9GT,E14 9,live,e14-other,200801,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509848,-0.000376,1437,,
-E14 9GU,E14 9,live,cw-core,201909,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
-E14 9GW,E14 9,live,e14-other,200802,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509848,-0.000376,1437,,
-E14 9GX,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,,
+E14 9GS,E14 9,live,cw-core,202405,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,1,Marsh Wall
+E14 9GT,E14 9,live,e14-other,200801,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509848,-0.000376,1437,1,Blackwall Way
+E14 9GU,E14 9,live,cw-core,201909,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
+E14 9GW,E14 9,live,e14-other,200802,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509848,-0.000376,1437,1,Blackwall Way
+E14 9GX,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
 E14 9GY,E14 9,live,e14-other,201707,,false,E05009318,Blackwall & Cubitt Town,false,false,51.495745,-0.016149,1045,2,Turnberry Quay
 E14 9GZ,E14 9,live,e14-other,201004,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496641,-0.014929,972,1,Alexia Square
-E14 9HA,E14 9,live,cw-core,200905,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,,
-E14 9HB,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.498332,-0.018126,737,,
-E14 9HD,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,,
+E14 9HA,E14 9,live,cw-core,200905,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,1,Pan Peninsula Square
+E14 9HB,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.498332,-0.018126,737,1,Millharbour
+E14 9HD,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,1,Pan Peninsula Square
 E14 9HE,E14 9,live,cw-box-other-ward,199812,,false,E05009318,Blackwall & Cubitt Town,false,true,51.498108,-0.014433,834,1,Harbour Exchange Square
 E14 9HF,E14 9,live,cw-box-other-ward,199912,,false,E05009318,Blackwall & Cubitt Town,false,true,51.498187,-0.015380,800,1,Harbour Exchange Square
-E14 9HG,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,,
-E14 9HH,E14 9,live,cw-core,202405,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,,
-E14 9HJ,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,,
-E14 9HL,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,,
-E14 9HN,E14 9,live,cw-core,200902,,false,E05009323,Canary Wharf,true,true,51.499803,-0.017342,587,1,Pan Peninsula Square
-E14 9HP,E14 9,live,cw-core,200905,,false,E05009323,Canary Wharf,true,true,51.499803,-0.017342,587,,
-E14 9HQ,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.499803,-0.017342,587,1,Pan Peninsula Square
-E14 9HR,E14 9,live,cw-core,200909,,false,E05009323,Canary Wharf,true,true,51.499803,-0.017342,587,,
+E14 9HG,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,1,Pan Peninsula Square
+E14 9HH,E14 9,live,cw-core,202405,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,1,Marsh Wall
+E14 9HJ,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,1,Pan Peninsula Square
+E14 9HL,E14 9,live,cw-core,200907,,false,E05009323,Canary Wharf,true,true,51.500066,-0.018051,547,1,Pan Peninsula Square
+E14 9HN,E14 9,live,cw-core,200902,,false,E05009323,Canary Wharf,true,true,51.499803,-0.017342,587,2,Pan Peninsula Square
+E14 9HP,E14 9,live,cw-core,200905,,false,E05009323,Canary Wharf,true,true,51.499803,-0.017342,587,1,Pan Peninsula Square
+E14 9HQ,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.499803,-0.017342,587,2,Pan Peninsula Square
+E14 9HR,E14 9,live,cw-core,200909,,false,E05009323,Canary Wharf,true,true,51.499803,-0.017342,587,1,Pan Peninsula Square
 E14 9HS,E14 9,live,e14-other,200301,,true,E05009326,Limehouse,false,false,51.511024,-0.038054,1457,1,Branch Road
 E14 9HT,E14 9,live,cw-ward,201308,,false,E05009323,Canary Wharf,true,false,51.497492,-0.021102,832,1,Larson Walk
 E14 9HU,E14 9,live,cw-ward,201107,,false,E05009323,Canary Wharf,true,false,51.497612,-0.019684,811,1,Barton Mews
-E14 9HW,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.498332,-0.018126,737,,
+E14 9HW,E14 9,live,cw-core,200906,,false,E05009323,Canary Wharf,true,true,51.498332,-0.018126,737,1,Millharbour
 E14 9HX,E14 9,live,cw-ward,202404,,false,E05009323,Canary Wharf,true,false,51.497588,-0.019340,814,,
 E14 9HY,E14 9,live,cw-ward,201308,,false,E05009323,Canary Wharf,true,false,51.497605,-0.019238,812,2,Millharbour; Larson Walk
 E14 9HZ,E14 9,live,cw-ward,201105,,false,E05009323,Canary Wharf,true,false,51.497371,-0.020343,840,5,Larson Walk
-E14 9JA,E14 9,live,e14-other,200707,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506981,-0.004709,1052,,
-E14 9JB,E14 9,live,e14-other,200712,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506981,-0.004709,1052,1,Fairmont Avenue
-E14 9JD,E14 9,live,e14-other,200708,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506981,-0.004709,1052,,
+E14 9JA,E14 9,live,e14-other,200707,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506981,-0.004709,1052,1,Fairmont Avenue
+E14 9JB,E14 9,live,e14-other,200712,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506981,-0.004709,1052,2,Fairmont Avenue
+E14 9JD,E14 9,live,e14-other,200708,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506981,-0.004709,1052,1,Fairmont Avenue
 E14 9JE,E14 9,live,cw-core,201702,,false,E05009323,Canary Wharf,true,true,51.499159,-0.019171,639,1,Lightermans Road
 E14 9JF,E14 9,live,cw-core,202011,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,1,Erebus Gardens
-E14 9JG,E14 9,live,cw-ward,201011,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,,
-E14 9JH,E14 9,live,cw-ward,201012,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,,
-E14 9JJ,E14 9,live,cw-ward,201011,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,,
-E14 9JL,E14 9,live,cw-ward,201012,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,,
-E14 9JN,E14 9,live,cw-ward,201102,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,,
+E14 9JG,E14 9,live,cw-ward,201011,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,1,Lanterns Way
+E14 9JH,E14 9,live,cw-ward,201012,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,1,Lanterns Way
+E14 9JJ,E14 9,live,cw-ward,201011,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,1,Lanterns Way
+E14 9JL,E14 9,live,cw-ward,201012,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,1,Lanterns Way
+E14 9JN,E14 9,live,cw-ward,201102,,false,E05009323,Canary Wharf,true,false,51.497861,-0.020596,787,1,Lanterns Way
 E14 9JP,E14 9,live,cw-ward,201604,,false,E05009323,Canary Wharf,true,false,51.497799,-0.019561,790,,
-E14 9JQ,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
+E14 9JQ,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
 E14 9JR,E14 9,terminated,terminated-cw,202012,202102,false,E05009323,Canary Wharf,true,true,51.500579,-0.017539,500,,
 E14 9JS,E14 9,live,cw-ward,201506,,false,E05009323,Canary Wharf,true,false,51.497667,-0.019235,805,2,Millharbour
-E14 9JT,E14 9,live,cw-ward,201106,,false,E05009323,Canary Wharf,true,false,51.497738,-0.019146,797,,
-E14 9JU,E14 9,live,cw-ward,201106,,false,E05009323,Canary Wharf,true,false,51.497738,-0.019146,797,,
+E14 9JT,E14 9,live,cw-ward,201106,,false,E05009323,Canary Wharf,true,false,51.497738,-0.019146,797,1,Millharbour
+E14 9JU,E14 9,live,cw-ward,201106,,false,E05009323,Canary Wharf,true,false,51.497738,-0.019146,797,1,Millharbour
 E14 9JW,E14 9,live,cw-ward,201106,,false,E05009323,Canary Wharf,true,false,51.497622,-0.019727,810,1,Quadrant Walk
-E14 9JX,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502472,-0.014041,465,,
+E14 9JX,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502472,-0.014041,465,1,Park Drive
 E14 9JY,E14 9,terminated,terminated-cw,200006,201908,true,E05009318,Blackwall & Cubitt Town,false,true,51.498205,-0.015380,798,,
 E14 9JZ,E14 9,live,e14-other,200210,,false,E05009328,Poplar,false,false,51.509203,-0.004252,1161,1,Naval Row
 E14 9LA,E14 9,terminated,terminated-other,199912,201804,true,E05009318,Blackwall & Cubitt Town,false,false,51.495524,-0.015885,1073,,
 E14 9LB,E14 9,live,cw-ward,200402,,false,E05009323,Canary Wharf,true,false,51.497421,-0.022214,853,1,Cassilis Road
 E14 9LD,E14 9,live,cw-ward,200401,,false,E05009323,Canary Wharf,true,false,51.497370,-0.021885,854,1,Cassilis Road
-E14 9LE,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,,
+E14 9LE,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,1,Wards Place
 E14 9LF,E14 9,live,cw-ward,200402,,false,E05009323,Canary Wharf,true,false,51.497473,-0.021549,839,1,Cassilis Road
 E14 9LG,E14 9,live,cw-ward,200402,,false,E05009323,Canary Wharf,true,false,51.497327,-0.021455,854,1,Cassilis Road
 E14 9LH,E14 9,live,cw-ward,200403,,false,E05009323,Canary Wharf,true,false,51.497842,-0.021576,799,1,Cassilis Road
@@ -2752,23 +2752,23 @@ E14 9LJ,E14 9,live,cw-ward,200407,,false,E05009323,Canary Wharf,true,false,51.49
 E14 9LL,E14 9,live,cw-core,200408,,false,E05009323,Canary Wharf,true,true,51.498410,-0.022229,747,1,Cassilis Road
 E14 9LN,E14 9,live,cw-core,200407,,false,E05009323,Canary Wharf,true,true,51.498409,-0.021581,737,1,Cassilis Road
 E14 9LP,E14 9,live,cw-ward,200407,,false,E05009323,Canary Wharf,true,false,51.497719,-0.022288,822,1,Cassilis Road
-E14 9LQ,E14 9,live,cw-core,200411,,false,E05009323,Canary Wharf,true,true,51.498664,-0.021786,712,3,Cassilis Road
-E14 9LR,E14 9,live,cw-core,200501,,false,E05009323,Canary Wharf,true,true,51.498664,-0.021786,712,,
-E14 9LS,E14 9,live,e14-other,200702,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497677,-0.013429,907,3,Limeharbour
-E14 9LT,E14 9,live,cw-core,200510,,false,E05009323,Canary Wharf,true,true,51.501432,-0.019029,387,,
-E14 9LU,E14 9,live,e14-other,200704,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497677,-0.013429,907,,
-E14 9LW,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,,
-E14 9LX,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,,
-E14 9LY,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500068,-0.013382,685,,
-E14 9LZ,E14 9,live,cw-box-other-ward,202211,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499929,-0.012077,756,,
-E14 9NA,E14 9,live,cw-ward,200503,,false,E05009323,Canary Wharf,true,false,51.497785,-0.018193,797,,
-E14 9NB,E14 9,live,cw-ward,200504,,false,E05009323,Canary Wharf,true,false,51.497785,-0.018193,797,,
-E14 9ND,E14 9,live,cw-ward,200504,,false,E05009323,Canary Wharf,true,false,51.497785,-0.018193,797,,
-E14 9NE,E14 9,live,cw-ward,200502,,false,E05009323,Canary Wharf,true,false,51.497785,-0.018193,797,,
+E14 9LQ,E14 9,live,cw-core,200411,,false,E05009323,Canary Wharf,true,true,51.498664,-0.021786,712,4,Cassilis Road
+E14 9LR,E14 9,live,cw-core,200501,,false,E05009323,Canary Wharf,true,true,51.498664,-0.021786,712,1,Cassilis Road
+E14 9LS,E14 9,live,e14-other,200702,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497677,-0.013429,907,4,Limeharbour
+E14 9LT,E14 9,live,cw-core,200510,,false,E05009323,Canary Wharf,true,true,51.501432,-0.019029,387,1,South Quay Square
+E14 9LU,E14 9,live,e14-other,200704,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497677,-0.013429,907,1,Limeharbour
+E14 9LW,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
+E14 9LX,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,1,Park Drive
+E14 9LY,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500068,-0.013382,685,2,Marsh Wall
+E14 9LZ,E14 9,live,cw-box-other-ward,202211,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499929,-0.012077,756,1,Marsh Wall
+E14 9NA,E14 9,live,cw-ward,200503,,false,E05009323,Canary Wharf,true,false,51.497785,-0.018193,797,1,Millharbour
+E14 9NB,E14 9,live,cw-ward,200504,,false,E05009323,Canary Wharf,true,false,51.497785,-0.018193,797,1,Millharbour
+E14 9ND,E14 9,live,cw-ward,200504,,false,E05009323,Canary Wharf,true,false,51.497785,-0.018193,797,1,Millharbour
+E14 9NE,E14 9,live,cw-ward,200502,,false,E05009323,Canary Wharf,true,false,51.497785,-0.018193,797,1,Millharbour
 E14 9NF,E14 9,live,cw-box-other-ward,202307,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499849,-0.012095,762,1,Marsh Wall
 E14 9NG,E14 9,live,cw-ward,201810,,false,E05009323,Canary Wharf,true,false,51.497214,-0.017944,862,2,Watergate Walk
-E14 9NH,E14 9,live,cw-ward,200507,,false,E05009323,Canary Wharf,true,false,51.497719,-0.018052,805,1,Millharbour
-E14 9NJ,E14 9,live,cw-box-other-ward,202108,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502897,-0.010464,666,,
+E14 9NH,E14 9,live,cw-ward,200507,,false,E05009323,Canary Wharf,true,false,51.497719,-0.018052,805,2,Millharbour
+E14 9NJ,E14 9,live,cw-box-other-ward,202108,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502897,-0.010464,666,1,Harbord Square
 E14 9NL,E14 9,live,cw-box-other-ward,199912,,false,E05009318,Blackwall & Cubitt Town,false,true,51.503702,-0.007071,873,2,Cold Harbour
 E14 9NN,E14 9,live,cw-ward,199208,,false,E05009323,Canary Wharf,true,false,51.494694,-0.018342,1138,5,Greenwich View Place
 E14 9NP,E14 9,live,cw-box-other-ward,199712,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502331,-0.008385,823,5,Prestons Road
@@ -2781,35 +2781,35 @@ E14 9NW,E14 9,live,cw-box-other-ward,201710,,false,E05009328,Poplar,false,true,5
 E14 9NX,E14 9,live,cw-box-other-ward,199712,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502556,-0.007856,849,3,Horatio Place
 E14 9NY,E14 9,live,cw-box-other-ward,199806,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502884,-0.008159,819,5,Vantage Mews
 E14 9NZ,E14 9,live,cw-box-other-ward,200502,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505478,-0.006273,920,1,Blackwall Way
-E14 9PA,E14 9,live,cw-box-other-ward,200305,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505738,-0.005167,999,1,Fairmont Avenue
-E14 9PB,E14 9,live,cw-box-other-ward,200309,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505738,-0.005167,999,,
+E14 9PA,E14 9,live,cw-box-other-ward,200305,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505738,-0.005167,999,2,Fairmont Avenue
+E14 9PB,E14 9,live,cw-box-other-ward,200309,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505738,-0.005167,999,1,Fairmont Avenue
 E14 9PD,E14 9,live,cw-core,202005,,false,E05009323,Canary Wharf,true,true,51.499549,-0.019341,596,1,Harbour Way
 E14 9PE,E14 9,live,cw-box-other-ward,199906,,false,E05009318,Blackwall & Cubitt Town,false,true,51.507121,-0.007138,893,2,Baffin Way
-E14 9PF,E14 9,live,cw-box-other-ward,200311,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506197,-0.005190,1004,,
-E14 9PG,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
-E14 9PH,E14 9,live,cw-box-other-ward,202411,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499929,-0.012077,756,,
-E14 9PJ,E14 9,live,cw-box-other-ward,200311,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506197,-0.005190,1004,1,Fairmont Avenue
-E14 9PL,E14 9,live,e14-other,200401,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506292,-0.004379,1061,,
+E14 9PF,E14 9,live,cw-box-other-ward,200311,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506197,-0.005190,1004,1,Fairmont Avenue
+E14 9PG,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
+E14 9PH,E14 9,live,cw-box-other-ward,202411,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499929,-0.012077,756,1,Marsh Wall
+E14 9PJ,E14 9,live,cw-box-other-ward,200311,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506197,-0.005190,1004,2,Fairmont Avenue
+E14 9PL,E14 9,live,e14-other,200401,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506292,-0.004379,1061,1,Fairmont Avenue
 E14 9PN,E14 9,live,e14-other,199912,,false,E05009328,Poplar,false,false,51.511044,-0.008869,1006,14,Indigo Mews
 E14 9PP,E14 9,live,e14-other,199906,,false,E05009328,Poplar,false,false,51.511137,-0.007986,1058,1,Ashton Street
 E14 9PQ,E14 9,live,e14-other,200708,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506857,-0.004297,1077,1,Fairmont Avenue
-E14 9PR,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
+E14 9PR,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
 E14 9PS,E14 9,live,e14-other,198001,,false,E05009328,Poplar,false,false,51.509083,-0.004617,1133,5,Naval Row
 E14 9PT,E14 9,live,cw-box-other-ward,198704,,false,E05009318,Blackwall & Cubitt Town,false,true,51.503381,-0.008829,760,9,Lancaster Drive
 E14 9PU,E14 9,terminated,terminated-cw,198001,201909,false,E05009328,Poplar,false,true,51.508948,-0.005127,1094,,
-E14 9PW,E14 9,live,e14-other,200405,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506292,-0.004379,1061,1,Fairmont Avenue
-E14 9PX,E14 9,live,e14-other,200408,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506292,-0.004379,1061,,
+E14 9PW,E14 9,live,e14-other,200405,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506292,-0.004379,1061,2,Fairmont Avenue
+E14 9PX,E14 9,live,e14-other,200408,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506292,-0.004379,1061,1,Fairmont Avenue
 E14 9PY,E14 9,live,cw-box-other-ward,199002,,false,E05009318,Blackwall & Cubitt Town,false,true,51.503284,-0.009424,722,12,Lovegrove Walk
 E14 9PZ,E14 9,terminated,terminated-cw,199002,202108,false,E05009318,Blackwall & Cubitt Town,false,true,51.502894,-0.009758,712,,
-E14 9QA,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,,
+E14 9QA,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
 E14 9QB,E14 9,live,cw-box-other-ward,198001,,false,E05009318,Blackwall & Cubitt Town,false,true,51.507425,-0.007024,910,1,Blackwall Way
 E14 9QD,E14 9,live,e14-other,199201,,false,E05009318,Blackwall & Cubitt Town,false,false,51.495841,-0.014906,1057,3,Lanark Square
 E14 9QE,E14 9,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.508524,-0.006630,980,9,Prestage Way
-E14 9QF,E14 9,live,cw-core,201908,,false,E05009323,Canary Wharf,true,true,51.499311,-0.019121,622,,
-E14 9QG,E14 9,live,cw-box-other-ward,202002,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502181,-0.013362,523,11,George Street
+E14 9QF,E14 9,live,cw-core,201908,,false,E05009323,Canary Wharf,true,true,51.499311,-0.019121,622,1,Harbour Way
+E14 9QG,E14 9,live,cw-box-other-ward,202002,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502181,-0.013362,523,12,George Street
 E14 9QH,E14 9,live,cw-box-other-ward,202107,,false,E05009318,Blackwall & Cubitt Town,false,true,51.501966,-0.009698,755,3,Harbord Square
-E14 9QJ,E14 9,live,e14-other,200408,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506292,-0.004379,1061,,
-E14 9QL,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502181,-0.013362,523,,
+E14 9QJ,E14 9,live,e14-other,200408,,false,E05009318,Blackwall & Cubitt Town,false,false,51.506292,-0.004379,1061,1,Fairmont Avenue
+E14 9QL,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502181,-0.013362,523,1,George Street
 E14 9QN,E14 9,live,e14-other,201105,,false,E05009318,Blackwall & Cubitt Town,false,false,51.509429,-0.002181,1303,1,Blackwall Way
 E14 9QP,E14 9,terminated,terminated-cw,202211,202303,false,E05009318,Blackwall & Cubitt Town,false,true,51.505007,-0.007620,825,2,East Lane
 E14 9QQ,E14 9,live,cw-box-other-ward,198704,,false,E05009318,Blackwall & Cubitt Town,false,true,51.504616,-0.008458,767,2,Landons Close
@@ -2819,32 +2819,32 @@ E14 9QT,E14 9,live,cw-box-other-ward,200408,,false,E05009318,Blackwall & Cubitt 
 E14 9QU,E14 9,live,cw-box-other-ward,200501,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506281,-0.005892,957,1,Blackwall Way
 E14 9QW,E14 9,live,cw-box-other-ward,198607,,false,E05009318,Blackwall & Cubitt Town,false,true,51.504104,-0.008466,771,2,Bridge House Quay
 E14 9QX,E14 9,live,cw-box-other-ward,200501,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505813,-0.005855,953,1,Blackwall Way
-E14 9QY,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502472,-0.014041,465,,
+E14 9QY,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502472,-0.014041,465,1,Park Drive
 E14 9QZ,E14 9,live,cw-box-other-ward,199712,,false,E05009318,Blackwall & Cubitt Town,false,true,51.506474,-0.007167,874,2,Gaselee Street
-E14 9RA,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,,
+E14 9RA,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
 E14 9RB,E14 9,live,e14-other,199002,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496343,-0.016426,976,5,Pepper Street
 E14 9RD,E14 9,live,e14-other,199002,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496018,-0.015849,1020,1,Turnberry Quay
 E14 9RE,E14 9,live,e14-other,199002,,false,E05009318,Blackwall & Cubitt Town,false,false,51.496040,-0.015560,1023,1,Lanark Square
 E14 9RF,E14 9,live,cw-box-other-ward,200501,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505813,-0.005855,953,2,Blackwall Way
-E14 9RG,E14 9,live,cw-box-other-ward,201609,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505039,-0.006855,878,2,Yabsley Street
+E14 9RG,E14 9,live,cw-box-other-ward,201609,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505039,-0.006855,878,3,Yabsley Street
 E14 9RH,E14 9,live,e14-other,199412,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497198,-0.014357,928,1,Limeharbour
-E14 9RJ,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,,
+E14 9RJ,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
 E14 9RL,E14 9,live,cw-box-other-ward,199002,,false,E05009328,Poplar,false,true,51.508085,-0.009906,754,3,Prestons Road
 E14 9RN,E14 9,live,cw-box-other-ward,199912,,false,E05009318,Blackwall & Cubitt Town,false,true,51.504120,-0.007284,852,1,Raleana Road
 E14 9RP,E14 9,live,cw-ward,199208,,false,E05009323,Canary Wharf,true,false,51.496390,-0.017620,956,10,Pepper Street
 E14 9RQ,E14 9,live,cw-box-other-ward,198001,,false,E05009318,Blackwall & Cubitt Town,false,true,51.504534,-0.006271,919,1,Raleana Road
 E14 9RR,E14 9,live,cw-core,201105,,false,E05009323,Canary Wharf,true,true,51.500976,-0.018645,441,1,South Quay Square
-E14 9RS,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502181,-0.013362,523,,
-E14 9RT,E14 9,live,cw-core,200607,,false,E05009323,Canary Wharf,true,true,51.501432,-0.019029,387,3,South Quay Square
-E14 9RU,E14 9,live,cw-core,200506,,false,E05009323,Canary Wharf,true,true,51.501291,-0.018142,413,2,South Quay Square
-E14 9RW,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,,
+E14 9RS,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502181,-0.013362,523,1,George Street
+E14 9RT,E14 9,live,cw-core,200607,,false,E05009323,Canary Wharf,true,true,51.501432,-0.019029,387,4,South Quay Square
+E14 9RU,E14 9,live,cw-core,200506,,false,E05009323,Canary Wharf,true,true,51.501291,-0.018142,413,3,South Quay Square
+E14 9RW,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
 E14 9RX,E14 9,live,cw-box-other-ward,200411,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505446,-0.006462,907,1,Yabsley Street
 E14 9RY,E14 9,live,cw-box-other-ward,198001,,false,E05009328,Poplar,false,true,51.509395,-0.006520,1030,1,Naval Row
-E14 9RZ,E14 9,live,cw-core,200509,,false,E05009323,Canary Wharf,true,true,51.501291,-0.018142,413,,
+E14 9RZ,E14 9,live,cw-core,200509,,false,E05009323,Canary Wharf,true,true,51.501291,-0.018142,413,1,South Quay Square
 E14 9SA,E14 9,live,cw-box-other-ward,200502,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505413,-0.006680,892,1,Yabsley Street
-E14 9SB,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,,
+E14 9SB,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,1,Park Drive
 E14 9SD,E14 9,live,cw-box-other-ward,200106,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499832,-0.011116,810,1,Marsh Wall
-E14 9SE,E14 9,live,cw-box-other-ward,202108,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500068,-0.013382,685,,
+E14 9SE,E14 9,live,cw-box-other-ward,202108,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500068,-0.013382,685,2,Marsh Wall
 E14 9SF,E14 9,terminated,terminated-cw,202407,202409,false,E05009318,Blackwall & Cubitt Town,false,true,51.501680,-0.009768,765,,
 E14 9SG,E14 9,live,cw-box-other-ward,199002,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500729,-0.014146,595,7,Marsh Wall; Thames Quay
 E14 9SH,E14 9,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.500726,-0.016610,506,13,Marsh Wall
@@ -2852,39 +2852,39 @@ E14 9SJ,E14 9,live,cw-core,199201,,false,E05009323,Canary Wharf,true,true,51.502
 E14 9SL,E14 9,live,cw-core,198001,,false,E05009323,Canary Wharf,true,true,51.499982,-0.017824,560,3,Marsh Wall
 E14 9SN,E14 9,live,cw-core,198301,,false,E05009323,Canary Wharf,true,true,51.501485,-0.020064,382,8,Admirals Way
 E14 9SP,E14 9,live,cw-core,200610,,true,E05009323,Canary Wharf,true,true,51.501177,-0.019371,414,1,Admirals Way
-E14 9SQ,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,,
-E14 9SR,E14 9,live,cw-core,200006,,true,E05009323,Canary Wharf,true,true,51.500989,-0.017290,462,,
-E14 9SS,E14 9,live,e14-other,201702,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,,
+E14 9SQ,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502111,-0.015037,439,1,Park Drive
+E14 9SR,E14 9,live,cw-core,200006,,true,E05009323,Canary Wharf,true,true,51.500989,-0.017290,462,1,Harbour Exchange Square
+E14 9SS,E14 9,live,e14-other,201702,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,1,Crossharbour Plaza
 E14 9ST,E14 9,live,cw-box-other-ward,199712,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500940,-0.008546,879,1,Manchester Road
 E14 9SU,E14 9,live,cw-box-other-ward,200504,,false,E05009318,Blackwall & Cubitt Town,false,true,51.505383,-0.007012,868,1,Prestons Road
-E14 9SW,E14 9,live,cw-core,202405,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,,
+E14 9SW,E14 9,live,cw-core,202405,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,1,Marsh Wall
 E14 9SX,E14 9,live,cw-box-other-ward,201707,,false,E05009328,Poplar,false,true,51.508055,-0.011334,666,6,Williamsburg Plaza
 E14 9SY,E14 9,terminated,terminated-cw,200610,201605,false,E05009318,Blackwall & Cubitt Town,false,true,51.501734,-0.009232,795,,
 E14 9SZ,E14 9,live,cw-ward,199201,,false,E05009323,Canary Wharf,true,false,51.496789,-0.018337,906,2,Muirfield Crescent
-E14 9TA,E14 9,live,e14-other,201702,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,,
-E14 9TB,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
+E14 9TA,E14 9,live,e14-other,201702,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,1,Crossharbour Plaza
+E14 9TB,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
 E14 9TD,E14 9,live,cw-ward,199208,,false,E05009323,Canary Wharf,true,false,51.496312,-0.018848,957,2,Millharbour
-E14 9TE,E14 9,live,cw-core,199201,,false,E05009323,Canary Wharf,true,true,51.498600,-0.018014,709,,
+E14 9TE,E14 9,live,cw-core,199201,,false,E05009323,Canary Wharf,true,true,51.498600,-0.018014,709,1,Millharbour
 E14 9TF,E14 9,live,cw-box-other-ward,201904,,false,E05009328,Poplar,false,true,51.507877,-0.011414,651,4,Astoria Way
-E14 9TG,E14 9,live,e14-other,202111,,false,E05009318,Blackwall & Cubitt Town,false,false,51.495511,-0.015598,1079,,
-E14 9TH,E14 9,live,cw-box-other-ward,202107,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502897,-0.010464,666,1,Harbord Square
+E14 9TG,E14 9,live,e14-other,202111,,false,E05009318,Blackwall & Cubitt Town,false,false,51.495511,-0.015598,1079,1,Selsdon Way
+E14 9TH,E14 9,live,cw-box-other-ward,202107,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502897,-0.010464,666,2,Harbord Square
 E14 9TJ,E14 9,live,cw-box-other-ward,202106,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502606,-0.009771,722,1,Harbord Square
 E14 9TL,E14 9,live,cw-box-other-ward,202601,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500608,-0.010189,804,,
-E14 9TN,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
+E14 9TN,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
 E14 9TP,E14 9,live,cw-core,198710,,false,E05009323,Canary Wharf,true,true,51.500879,-0.021935,478,5,Marsh Wall
-E14 9TQ,E14 9,live,cw-box-other-ward,201506,,true,E05009318,Blackwall & Cubitt Town,false,true,51.499508,-0.014271,701,,
+E14 9TQ,E14 9,live,cw-box-other-ward,201506,,true,E05009318,Blackwall & Cubitt Town,false,true,51.499508,-0.014271,701,1,Harbour Exchange Square
 E14 9TR,E14 9,live,cw-ward,198504,,false,E05009323,Canary Wharf,true,false,51.497229,-0.018275,858,1,Millharbour
 E14 9TS,E14 9,live,cw-box-other-ward,198504,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499196,-0.012830,786,71,Skylines Village
-E14 9TT,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,,
+E14 9TT,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
 E14 9TU,E14 9,terminated,terminated-cw,198803,201005,false,E05009323,Canary Wharf,true,false,51.497687,-0.020373,805,,
-E14 9TW,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500068,-0.013382,685,,
+E14 9TW,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500068,-0.013382,685,2,Marsh Wall
 E14 9TX,E14 9,live,cw-core,200909,,false,E05009323,Canary Wharf,true,true,51.498336,-0.017838,739,3,Millharbour
-E14 9TY,E14 9,live,cw-core,201812,,false,E05009323,Canary Wharf,true,true,51.499534,-0.019558,597,,
-E14 9TZ,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,,
-E14 9UA,E14 9,live,cw-core,201908,,false,E05009323,Canary Wharf,true,true,51.499311,-0.019121,622,,
+E14 9TY,E14 9,live,cw-core,201812,,false,E05009323,Canary Wharf,true,true,51.499534,-0.019558,597,1,Harbour Way
+E14 9TZ,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,1,Wards Place
+E14 9UA,E14 9,live,cw-core,201908,,false,E05009323,Canary Wharf,true,true,51.499311,-0.019121,622,1,Harbour Way
 E14 9UB,E14 9,live,cw-core,198510,,false,E05009323,Canary Wharf,true,true,51.499498,-0.021649,619,9,Mastmaker Road
 E14 9UD,E14 9,live,cw-core,198607,,false,E05009323,Canary Wharf,true,true,51.501756,-0.021147,368,1,Admirals Way
-E14 9UE,E14 9,live,e14-other,201704,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,,
+E14 9UE,E14 9,live,e14-other,201704,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,1,Crossharbour Plaza
 E14 9UF,E14 9,live,cw-core,198607,,false,E05009323,Canary Wharf,true,true,51.501663,-0.020964,374,1,Admirals Way
 E14 9UG,E14 9,live,cw-core,198607,,false,E05009323,Canary Wharf,true,true,51.501704,-0.020746,366,1,Admirals Way
 E14 9UH,E14 9,live,cw-core,198607,,false,E05009323,Canary Wharf,true,true,51.501572,-0.020392,376,1,Admirals Way
@@ -2914,7 +2914,7 @@ E14 9WN,E14 9,live,e14-other,199002,,false,E05009324,Island Gardens,false,false,
 E14 9WP,E14 9,live,e14-other,199002,,false,E05009324,Island Gardens,false,false,51.492083,-0.021350,1432,6,Copeland Drive
 E14 9WQ,E14 9,live,e14-other,199002,,false,E05009324,Island Gardens,false,false,51.492322,-0.022233,1412,5,Rothsay Walk
 E14 9WR,E14 9,live,e14-other,199002,,false,E05009324,Island Gardens,false,false,51.491825,-0.020987,1458,39,Barnsdale Avenue
-E14 9WS,E14 9,live,cw-core,202011,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
+E14 9WS,E14 9,live,cw-core,202011,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,2,Marsh Wall
 E14 9WT,E14 9,live,cw-core,199208,,false,E05009323,Canary Wharf,true,true,51.499927,-0.020449,557,1,Mastmaker Road
 E14 9WU,E14 9,live,e14-other,199201,,false,E05009324,Island Gardens,false,false,51.491152,-0.021117,1534,3,Spindrift Avenue
 E14 9WW,E14 9,live,e14-other,199002,,false,E05009324,Island Gardens,false,false,51.491505,-0.022297,1503,2,Sherwood Gardens
@@ -2925,58 +2925,58 @@ E14 9XA,E14 9,live,e14-other,199706,,false,E05009324,Island Gardens,false,false,
 E14 9XB,E14 9,live,e14-other,199806,,false,E05009324,Island Gardens,false,false,51.492125,-0.019591,1421,14,Telegraph Place
 E14 9XD,E14 9,live,e14-other,199712,,false,E05009324,Island Gardens,false,false,51.491598,-0.018735,1481,34,Telegraph Place
 E14 9XE,E14 9,live,e14-other,199812,,false,E05009324,Island Gardens,false,false,51.492286,-0.019022,1404,1,Telegraph Place
-E14 9XF,E14 9,live,cw-core,202412,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,,
+E14 9XF,E14 9,live,cw-core,202412,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,1,Marsh Wall
 E14 9XG,E14 9,live,cw-core,198803,,false,E05009323,Canary Wharf,true,true,51.501791,-0.021636,377,1,Admirals Way
 E14 9XH,E14 9,live,cw-ward,201901,,false,E05009323,Canary Wharf,true,false,51.497244,-0.018649,854,1,Watergate Walk
-E14 9XJ,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,,
+E14 9XJ,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,1,Wards Place
 E14 9XL,E14 9,live,cw-core,199101,,false,E05009323,Canary Wharf,true,true,51.501148,-0.020324,422,2,Admirals Way
 E14 9XN,E14 9,live,e14-other,201705,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497298,-0.014439,916,3,Crossharbour Plaza
-E14 9XP,E14 9,live,cw-core,198803,,false,E05009323,Canary Wharf,true,true,51.498627,-0.018041,705,5,Millharbour
-E14 9XQ,E14 9,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.501295,-0.021038,415,,
+E14 9XP,E14 9,live,cw-core,198803,,false,E05009323,Canary Wharf,true,true,51.498627,-0.018041,705,6,Millharbour
+E14 9XQ,E14 9,live,cw-core,199002,,false,E05009323,Canary Wharf,true,true,51.501295,-0.021038,415,1,Admirals Way
 E14 9XR,E14 9,live,cw-ward,201812,,false,E05009323,Canary Wharf,true,false,51.497231,-0.018404,857,1,Watergate Walk
-E14 9XS,E14 9,live,cw-core,201912,,false,E05009323,Canary Wharf,true,true,51.499528,-0.020797,605,1,Mastmaker Road
+E14 9XS,E14 9,live,cw-core,201912,,false,E05009323,Canary Wharf,true,true,51.499528,-0.020797,605,2,Mastmaker Road
 E14 9XT,E14 9,live,cw-box-other-ward,201710,,false,E05009328,Poplar,false,true,51.508219,-0.011442,670,2,Williamsburg Plaza
 E14 9XU,E14 9,live,cw-box-other-ward,202204,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502015,-0.013082,549,1,Harbour Quay
 E14 9XW,E14 9,terminated,terminated-cw,198710,199112,true,E05009323,Canary Wharf,true,true,51.501344,-0.021814,427,,
 E14 9XX,E14 9,live,cw-box-other-ward,201710,,false,E05009328,Poplar,false,true,51.507993,-0.011366,661,2,Williamsburg Plaza
-E14 9XY,E14 9,live,cw-core,201912,,false,E05009323,Canary Wharf,true,true,51.499528,-0.020797,605,,
-E14 9XZ,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,,
+E14 9XY,E14 9,live,cw-core,201912,,false,E05009323,Canary Wharf,true,true,51.499528,-0.020797,605,1,Mastmaker Road
+E14 9XZ,E14 9,live,cw-core,202110,,false,E05009323,Canary Wharf,true,true,51.502736,-0.025428,477,1,Marsh Wall
 E14 9YA,E14 9,live,e14-other,198710,,false,E05009324,Island Gardens,false,false,51.490479,-0.020671,1606,30,Barnfield Place
 E14 9YB,E14 9,live,e14-other,198710,,false,E05009324,Island Gardens,false,false,51.490135,-0.021579,1649,25,Barnfield Place
 E14 9YD,E14 9,live,e14-other,198710,,false,E05009324,Island Gardens,false,false,51.490735,-0.021985,1585,39,Ironmongers Place
 E14 9YE,E14 9,live,cw-core,202502,,false,E05009323,Canary Wharf,true,true,51.500730,-0.018454,470,,
-E14 9YF,E14 9,live,e14-other,201704,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,1,Crossharbour Plaza
+E14 9YF,E14 9,live,e14-other,201704,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,2,Crossharbour Plaza
 E14 9YG,E14 9,live,cw-box-other-ward,199912,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500472,-0.010670,786,1,Lawn House Close
 E14 9YH,E14 9,live,cw-box-other-ward,202106,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502187,-0.009976,727,1,Harbord Square
 E14 9YJ,E14 9,terminated,terminated-cw,199712,201409,false,E05009318,Blackwall & Cubitt Town,false,true,51.500679,-0.010128,802,,
-E14 9YL,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502181,-0.013362,523,,
+E14 9YL,E14 9,live,cw-box-other-ward,202110,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502181,-0.013362,523,1,George Street
 E14 9YN,E14 9,live,cw-core,201906,,false,E05009323,Canary Wharf,true,true,51.499428,-0.020153,611,1,Harbour Way
 E14 9YP,E14 9,terminated,terminated-cw,199002,199405,true,E05009323,Canary Wharf,true,true,51.502316,-0.026094,541,,
 E14 9YQ,E14 9,live,cw-box-other-ward,199101,,true,E05009318,Blackwall & Cubitt Town,false,true,51.500168,-0.010251,830,2,Lawn House Close
-E14 9YR,E14 9,terminated,terminated-cw,199002,202607,true,E05009323,Canary Wharf,true,true,51.501286,-0.021038,416,,
-E14 9YS,E14 9,live,cw-core,199002,,true,E05009323,Canary Wharf,true,true,51.501286,-0.021038,416,,
+E14 9YR,E14 9,terminated,terminated-cw,199002,202607,true,E05009323,Canary Wharf,true,true,51.501286,-0.021038,416,1,Admirals Way
+E14 9YS,E14 9,live,cw-core,199002,,true,E05009323,Canary Wharf,true,true,51.501286,-0.021038,416,1,Admirals Way
 E14 9YT,E14 9,terminated,terminated-cw,199002,201804,false,E05009318,Blackwall & Cubitt Town,false,true,51.499965,-0.013099,706,,
 E14 9YU,E14 9,live,e14-other,200112,,true,E05009327,Mile End,false,false,51.513162,-0.028291,1103,,
 E14 9YW,E14 9,terminated,terminated-cw,199002,199405,true,E05009323,Canary Wharf,true,true,51.502316,-0.026094,541,,
 E14 9YX,E14 9,live,cw-core,202005,,false,E05009323,Canary Wharf,true,true,51.499562,-0.019038,595,2,Dockyard Lane
 E14 9YY,E14 9,live,e14-other,199002,,false,E05009328,Poplar,false,false,51.511149,-0.006054,1164,1,East India Dock Road
 E14 9YZ,E14 9,terminated,terminated-cw,199002,199612,true,E05009323,Canary Wharf,true,true,51.500446,-0.021852,522,,
-E14 9ZA,E14 9,live,cw-core,201908,,false,E05009323,Canary Wharf,true,true,51.499311,-0.019121,622,,
-E14 9ZB,E14 9,live,cw-core,202406,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,,
-E14 9ZD,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,,
+E14 9ZA,E14 9,live,cw-core,201908,,false,E05009323,Canary Wharf,true,true,51.499311,-0.019121,622,1,Harbour Way
+E14 9ZB,E14 9,live,cw-core,202406,,false,E05009323,Canary Wharf,true,true,51.500825,-0.018767,456,1,Marsh Wall
+E14 9ZD,E14 9,live,cw-core,202010,,false,E05009323,Canary Wharf,true,true,51.501477,-0.022744,443,1,Wards Place
 E14 9ZE,E14 9,live,cw-core,201905,,false,E05009323,Canary Wharf,true,true,51.499547,-0.019240,596,1,Harbour Way
 E14 9ZF,E14 9,live,cw-core,201904,,false,E05009323,Canary Wharf,true,true,51.499600,-0.020218,592,3,Dockyard Lane
 E14 9ZG,E14 9,terminated,terminated-cw,199308,199412,true,E05009323,Canary Wharf,true,true,51.500446,-0.021852,522,,
-E14 9ZH,E14 9,live,cw-box-other-ward,202012,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499975,-0.013718,679,,
-E14 9ZJ,E14 9,live,e14-other,201702,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,,
-E14 9ZN,E14 9,live,cw-box-other-ward,202108,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500068,-0.013382,685,,
-E14 9ZP,E14 9,live,cw-core,201702,,false,E05009323,Canary Wharf,true,true,51.499534,-0.019558,597,1,Harbour Way
+E14 9ZH,E14 9,live,cw-box-other-ward,202012,,false,E05009318,Blackwall & Cubitt Town,false,true,51.499975,-0.013718,679,2,Marsh Wall
+E14 9ZJ,E14 9,live,e14-other,201702,,false,E05009318,Blackwall & Cubitt Town,false,false,51.497722,-0.015545,845,1,Crossharbour Plaza
+E14 9ZN,E14 9,live,cw-box-other-ward,202108,,false,E05009318,Blackwall & Cubitt Town,false,true,51.500068,-0.013382,685,2,Marsh Wall
+E14 9ZP,E14 9,live,cw-core,201702,,false,E05009323,Canary Wharf,true,true,51.499534,-0.019558,597,2,Harbour Way
 E14 9ZQ,E14 9,terminated,terminated-cw,202407,202409,false,E05009318,Blackwall & Cubitt Town,false,true,51.501680,-0.009768,765,,
 E14 9ZR,E14 9,live,cw-box-other-ward,202305,,false,E05009318,Blackwall & Cubitt Town,false,true,51.503257,-0.010477,652,1,Brannan Street
-E14 9ZS,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,,
+E14 9ZS,E14 9,live,cw-core,202012,,false,E05009323,Canary Wharf,true,true,51.500961,-0.017234,466,1,Marsh Wall
 E14 9ZT,E14 9,live,e14-other,201605,,false,E05009324,Island Gardens,false,false,51.491133,-0.015687,1554,2,Nauticus Walk
 E14 9ZU,E14 9,terminated,terminated-other,199208,199906,true,E05009318,Blackwall & Cubitt Town,false,false,51.496157,-0.016592,994,,
-E14 9ZW,E14 9,live,cw-box-other-ward,202007,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502472,-0.014041,465,3,Park Drive
+E14 9ZW,E14 9,live,cw-box-other-ward,202007,,false,E05009318,Blackwall & Cubitt Town,false,true,51.502472,-0.014041,465,4,Park Drive
 E14 9ZX,E14 9,live,cw-core,201912,,false,E05009323,Canary Wharf,true,true,51.499311,-0.019121,622,,
 E14 9ZY,E14 9,terminated,terminated-cw,202407,202409,false,E05009318,Blackwall & Cubitt Town,false,true,51.501680,-0.009768,765,,
 E14 9ZZ,E14 9,terminated,terminated-other,199208,199906,true,E05009318,Blackwall & Cubitt Town,false,false,51.496157,-0.016592,994,,

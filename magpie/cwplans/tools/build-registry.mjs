@@ -12,6 +12,7 @@ import { join } from 'path';
 import { TOOLS, RAW, bngProjector, polyArea, pointIn, joinRings } from './lib.mjs';
 import { ORIGIN } from './fetch-docklands.mjs';
 import { CW_BOX } from './registry-osm.mjs';
+import { osmList } from './osm-values.mjs';
 
 const OUT = join(TOOLS, '..', 'registry'), R = join(RAW, 'registry');
 mkdirSync(OUT, { recursive: true });
@@ -78,7 +79,7 @@ const rec = new Map(outlines.map(b => {
   const t = b.f.tags, lr = b.rs[0].map(([lon, lat]) => local(lon, lat));
   return [b.id, {
     id: b.id, name: t.name || null, osm_name: t.name || null, osm: [key(b)], wikidata: t.wikidata || null, wikipedia: t.wikipedia || null,
-    address: [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ') || null, postcodes: new Set(t['addr:postcode'] ? [normPc(t['addr:postcode'])] : []),
+    address: [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ') || null, postcodes: new Set(osmList(t['addr:postcode']).map(normPc)),
     building: t.building, levels: t['building:levels'] ? +t['building:levels'] : null, levels_underground: t['building:levels:underground'] ? +t['building:levels:underground'] : null, height: t.height ? parseFloat(t.height) : null,
     lat: +b.c[1].toFixed(6), lon: +b.c[0].toFixed(6), x: r1(b.xz[0]), z: r1(b.xz[1]), area_m2: Math.round(Math.abs(polyArea(lr))),
     parts: [], occupants: [], features: [], owners: [], facts: {},
@@ -99,7 +100,7 @@ for (const f of osm.features) {
   // public art, information boards and the like are features of the building, not occupants
   if (/^tourism: (artwork|information|viewpoint|attraction)$/.test(role)) { r.features.push({ name: t.name, kind: role.replace('tourism: ', ''), osm: `${f.type}/${f.id}` }); continue; }
   r.occupants.push({ name: t.name, role, source: 'osm', osm: `${f.type}/${f.id}`, placed: h.how, ...(t.level ? { level: t.level } : {}), ...(t.brand ? { brand: t.brand } : {}), ...(t['brand:wikidata'] ? { brand_wikidata: t['brand:wikidata'] } : {}), ...(t.website ? { website: t.website } : {}), ...(t.opening_date ? { opening_date: t.opening_date } : {}) });
-  if (t['addr:postcode']) r.postcodes.add(normPc(t['addr:postcode']));
+  for (const pc of osmList(t['addr:postcode'])) r.postcodes.add(normPc(pc));
 }
 
 // ---- occupants from the FSA file: positioned premises by location; the rest listed under their postcode

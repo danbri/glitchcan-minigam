@@ -127,9 +127,24 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
   (committed in a1b0dd4 without an entry: found by the check). Audit: 34 checks, 1,686 records (9 high, 819 medium,
   858 low); before: 1,684 (8 high).
 
+## 2026-10-03: F2 and F3 fixed in the parsers
+
+- `tools/osm-values.mjs`: `osmList` (split ";" lists) and `unitLabel` (add "Unit" only to a bare designator), with
+  fixture tests (`node --test magpie/cwplans/tools/test/*.test.mjs`: 2 tests, pass). Used by `postcodes.mjs`,
+  `build-registry.mjs` and `build-branches.mjs`. `postcodes.mjs osm` reruns the OSM address tally without the
+  network steps.
+- PL-1 redefined to measure our loss, not the source lists: for each OSM feature with a postcode list, are all its
+  postcodes in the registry record that holds it? Before the fix 57 of 59; after 0. PL-2: 52 → 0.
+- Effects: registry postcode links 1,050 → 1,146 (the audit's earlier estimate of 247 lost links counted list
+  values, many of which the buildings already had from other features); companies matched to a building
+  6,355 → 9,787; 299 E14 postcodes gained 312 OSM features (all gains inside the box trace to a list feature).
+- SE-1 rose 24 → 36: 12 more residential buildings with 20 or more registered companies, made visible by the
+  recovered postcode links (the same class, not new errors). No other count changed.
+- Audit: 34 checks, 1,567 records (9 high, 752 medium, 806 low).
+
 ## Open, in the order proposed
 
-1. Fix F2 and F3 in the parsers, with fixture tests; expect PL-1 and PL-2 to fall to 0.
+1. (Done: F2 and F3.) Parse OSM level lists and fractions in the level readers (VA-2: 100 values).
 2. F4: mall containers (CWG mall, OSM indoor areas) with levels; place mall occupants by mall.
 3. F7: precision class and relation type on every position; no building placement from postcode centres.
 4. Link records (method, distance, confidence) in the registry.

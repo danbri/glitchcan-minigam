@@ -3,6 +3,7 @@
 // classified by the official ward, the model's estate box and OSM addresses; then postcode-keyed queries
 // against open web sources.
 //   node magpie/cwplans/tools/postcodes.mjs fetch    # ONSPD rows for the districts, ward names, ward boundary, OSM addresses
+//   node magpie/cwplans/tools/postcodes.mjs osm      # only the OSM address tally (no network)
 //   node magpie/cwplans/tools/postcodes.mjs build    # -> magpie/cwplans/postcodes/postcodes.json, .csv
 //   node magpie/cwplans/tools/postcodes.mjs query    # -> magpie/cwplans/postcodes/queries.json (GOV.UK, Wikipedia, FSA, Wikidata)
 // Method, definitions and limits: magpie/cwplans/postcodes/README.md.
@@ -12,6 +13,7 @@ import { join } from 'path';
 import { Writable } from 'stream';
 import { createRequire } from 'module';
 import { TOOLS, RAW, get, sparql } from './lib.mjs';
+import { osmList } from './osm-values.mjs';
 import { DIR as DOCK, ORIGIN } from './fetch-docklands.mjs';
 
 const OUT = join(TOOLS, '..', 'postcodes'), PRAW = join(RAW, 'postcodes');
@@ -51,7 +53,13 @@ async function fetchAll() {
   const names = JSON.parse(await get(`${WARDS}/query?where=${encodeURIComponent(`WD26CD IN (${wards.map(w => `'${w}'`).join(',')})`)}&outFields=WD26CD,WD26NM,LAD26NM&returnGeometry=false&f=json`));
   const poly = JSON.parse(await get(`${WARDS}/query?where=${encodeURIComponent(`WD26CD='${CW_WARD}'`)}&outFields=WD26CD,WD26NM&outSR=4326&f=geojson`));
   writeFileSync(join(PRAW, 'wards.json'), JSON.stringify({ names: names.features.map(f => f.attributes), canaryWharf: poly }));
-  // OSM addresses in the districts, from the Greater London extract if present (fetch-docklands.mjs osm)
+  const osm = await osmAddresses();
+  console.log(`ONSPD rows ${rows.length}; wards ${names.features.length}; OSM addressed postcodes ${Object.keys(osm).length}`);
+}
+
+// OSM addresses in the districts, from the Greater London extract if present (fetch-docklands.mjs osm). No network.
+async function osmAddresses() {
+  mkdirSync(PRAW, { recursive: true });
   const pbf = join(DOCK, 'greater_london-latest.osm.pbf'), osm = {};
   if (existsSync(pbf)) {
     const parse = createRequire(import.meta.url)('osm-pbf-parser');
@@ -59,19 +67,20 @@ async function fetchAll() {
       objectMode: true,
       write(items, e, next) {
         for (const it of items) {
-          const pc = it.tags?.['addr:postcode']; if (!pc) continue;
-          const n = norm(pc); if (!DISTRICTS.some(d => n.startsWith(d + ' '))) continue;
-          const o = (osm[n] ||= { features: 0, streets: {}, kinds: {} }); o.features++;
-          if (it.tags['addr:street']) o.streets[it.tags['addr:street']] = (o.streets[it.tags['addr:street']] || 0) + 1;
-          const k = it.tags.shop ? 'shop' : it.tags.amenity ? 'amenity:' + it.tags.amenity : it.tags.office ? 'office' : it.tags.building ? 'building' : it.tags.entrance ? 'entrance' : 'other';
-          o.kinds[k] = (o.kinds[k] || 0) + 1;
+          for (const pc of osmList(it.tags?.['addr:postcode'])) {   // a ";" list counts the feature under each postcode (F2)
+            const n = norm(pc); if (!DISTRICTS.some(d => n.startsWith(d + ' '))) continue;
+            const o = (osm[n] ||= { features: 0, streets: {}, kinds: {} }); o.features++;
+            if (it.tags['addr:street']) o.streets[it.tags['addr:street']] = (o.streets[it.tags['addr:street']] || 0) + 1;
+            const k = it.tags.shop ? 'shop' : it.tags.amenity ? 'amenity:' + it.tags.amenity : it.tags.office ? 'office' : it.tags.building ? 'building' : it.tags.entrance ? 'entrance' : 'other';
+            o.kinds[k] = (o.kinds[k] || 0) + 1;
+          }
         }
         next();
       },
     })).on('finish', res).on('error', rej));
   }
   writeFileSync(join(PRAW, 'osm-addr-postcodes.json'), JSON.stringify(osm));
-  console.log(`ONSPD rows ${rows.length}; wards ${names.features.length}; OSM addressed postcodes ${Object.keys(osm).length}`);
+  return osm;
 }
 
 function build() {
@@ -154,6 +163,7 @@ async function query(tiers) {
 
 const [cmd, ...rest] = process.argv.slice(2);
 if (cmd === 'fetch') await fetchAll();
+else if (cmd === 'osm') console.log(`OSM addressed postcodes ${Object.keys(await osmAddresses()).length}`);
 else if (cmd === 'build') build();
 else if (cmd === 'query') await query(rest.length ? rest : ['cw-core', 'cw-ward', 'cw-box-other-ward']);
 else { console.error('usage: postcodes.mjs fetch | build | query [tier ...]'); process.exit(2); }
