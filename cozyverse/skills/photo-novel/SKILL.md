@@ -233,3 +233,38 @@ What chapter two taught:
   shows against it, and proves the answer is unique (only one silent bell fits Glenys's rows at any place in the hunt).
 - Random readers (`tools/walk.mjs`) with an evidence bar of four solved too easily (clues found on the way are
   nearly free); five makes either route (the ringing, or the board) need its puzzle.
+
+Lock Fourteen (`mystery3/`, October 2026, a stand-alone episode on a canal), measured: 7 sheets 8,526 plus 2 sheet
+fixes 840; 40 panels 55,420 (the 11 with cast references cost 1,827 each); 4 fixes 6,699; 42 of 50 sounds 5,400;
+one canary clip 2,121. About 79,000 credits. Then the workspace stopped at its **usage-based billing threshold (550,000
+credits)**: five short-loop clips (10,605) and the voices (195 lines, 22,376 characters, about 22,400 for one take)
+were refused, and so were 8 panel sounds that were still queued behind a concurrency limit when the canary clip
+took the last credits. The episode shipped with pictures, sounds and the canary, `"recorded": false` in `voices.json` and no
+`loopSrc`; a panel with `"noSound": true` plays the page bed alone (the host neither sets nor preloads its file);
+each tiny-loop panel keeps its `tiny.prompt` in `pages.json` for when there is budget. Before a chapter,
+ask what is left under the threshold, not only what the chapter costs: a refused node still shows in the flow, and
+the run reports `quota_exceeded` per node, so a batch can half-run (here the one clip that started was the canary).
+
+What Lock Fourteen taught:
+
+- **Pictures carry real brands and wrong words, not only wrong spelling.** A fleece came back with a real
+  canal charity's logo (removed with a gpt-image-2 edit, and the bible look now says "a small pale-blue embroidered
+  oval badge with a wavy-line emblem and no words"); a box file said TAX/BILLS 2023-24 where the story needs GATES; a
+  cake box carried a bakery name; a lock beam said LOCK 3; one "21:9" panel came back as two pictures side by side
+  (say "one single continuous wide photograph, not a diptych"). Look at every panel at full size for words, logos
+  and the one fact the scene depends on (here: the lock must be full). A tool you hold must be described by shape:
+  "windlass" alone gave gear wheels; "an L-shaped black iron crank handle" worked.
+- **A panel whose `ink` is the page's own knot does nothing on a tap**: the story goes to that knot, its
+  `# panel: page` tag sends the view back to the overview, and the reader sees no change. Give such a panel no
+  `ink` (the host then sets no `knot` attribute): a tap zooms into the picture and the story stays where it is.
+  Earlier chapters gave every panel its own knot, so they never met this.
+- **A story with a day clock hides lines from the line finder.** `tools/lines.mjs` now visits each knot's stitches,
+  sets `at` from the knot name and tries each `day`, and reads `<story>/lines-states.json` (a list of variable
+  states) for lines that need a string or a mix the finder cannot guess (`r_how`, `r_whom`). Chapter 2 still gives
+  its 229 lines.
+- **Big status responses fill the context.** Twenty sound generations in one `creative_get_flow_run_status` call
+  return two signed URLs each, about 25,000 tokens. Hand the downloads to a background agent with the session ids
+  and a `generationId=name` map, so the conversation keeps only the result.
+- The peek-window tool finds the event, not the clean part of it: Kling's bird landed at 0.75 s, turned, flew to the
+  gate rail and stayed in the frame to the end. Look at a frame sheet across the whole clip and cut forward-then-back
+  from before the arrival to before the departure (0.6 to 2.5 s).

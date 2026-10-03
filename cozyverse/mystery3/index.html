@@ -301,9 +301,11 @@ function buildPage(n) {
   for (const s of [...page.querySelectorAll(":scope > section")]) s.remove();
   for (const panel of p.panels) {
     const s = document.createElement("section");
-    s.id = panel.knot; s.setAttribute("knot", panel.ink); s.setAttribute("points", lay[panel.slot]);
+    // a panel with no "ink" of its own is a view only: a tap zooms in and the story stays where it is
+    s.id = panel.knot; if (panel.ink) s.setAttribute("knot", panel.ink); s.setAttribute("points", lay[panel.slot]);
     s.setAttribute("aria-label", ui.alt?.[`p${n}-${panel.knot}`] || panel.alt);
-    s.dataset.sound = `${SHARED}sfx/p${n}-${panel.knot}.mp3`;
+    // "noSound": that panel's sound was never made; the page bed plays alone there
+    if (!panel.noSound) s.dataset.sound = `${SHARED}sfx/p${n}-${panel.knot}.mp3`;
     const pic = `${SHARED}p${n}-${panel.knot}.jpg`;
     const peek = panel.peek?.src ? canaryPeek(panel) : null;
     if (peek) {
@@ -322,7 +324,7 @@ function buildPage(n) {
   page.setAttribute("aria-label", say("pageOf", { n, total: data.pages.length, title }));
   folio.textContent = `${n} / ${data.pages.length} · ${title}`;
   page.classList.add("turning"); requestAnimationFrame(() => requestAnimationFrame(() => page.classList.remove("turning")));
-  if (ac) { bed.play(`${SHARED}sfx/bed-${n}.mp3`); panelLoop.play(null); for (const panel of p.panels) load(`${SHARED}sfx/p${n}-${panel.knot}.mp3`); }
+  if (ac) { bed.play(`${SHARED}sfx/bed-${n}.mp3`); panelLoop.play(null); for (const panel of p.panels) if (!panel.noSound) load(`${SHARED}sfx/p${n}-${panel.knot}.mp3`); }
 }
 
 page.addEventListener("panelchange", (e) => {

@@ -37,7 +37,6 @@
    "panels": [
     {
      "knot": "lock",
-     "ink": "p1",
      "slot": "a",
      "ratio": "16:9",
      "cast": [],
@@ -90,7 +89,6 @@
    "panels": [
     {
      "knot": "flight",
-     "ink": "p2",
      "slot": "a",
      "ratio": "21:9",
      "cast": [],
@@ -174,7 +172,6 @@
     },
     {
      "knot": "wren",
-     "ink": "p3",
      "slot": "d",
      "ratio": "21:9",
      "cast": [],
@@ -195,13 +192,22 @@
    "panels": [
     {
      "knot": "lane",
-     "ink": "p4",
      "slot": "a",
      "ratio": "21:9",
      "cast": [],
      "alt": "A stone semi on a village lane, with a rain gauge on a post in the front garden.",
      "prompt": "A honey-coloured stone semi-detached house on a quiet Cotswold village lane on a grey October morning, with a tidy front garden and a small plastic rain gauge on a wooden post by the gate. Wet leaves on the path.",
-     "sound": "rain dripping, a garden gate clicking, a distant car"
+     "sound": "rain dripping, a garden gate clicking, a distant car",
+     "peek": {
+      "src": "media/p4-lane-canary",
+      "every": 8,
+      "first": 3,
+      "at": [
+       70,
+       28
+      ]
+     },
+     "note": "peek: kling-2.5-turbo from the still; the bird lands on the gatepost at 0.75 s; 0.6-2.5 s forward then back (it flies on to the gate rail after 4 s)"
     },
     {
      "knot": "annette",
@@ -257,7 +263,6 @@
     },
     {
      "knot": "fire",
-     "ink": "p5",
      "slot": "b",
      "ratio": "1:1",
      "cast": [],
@@ -280,7 +285,6 @@
     },
     {
      "knot": "inn",
-     "ink": "p5",
      "slot": "d",
      "ratio": "21:9",
      "cast": [],
@@ -298,7 +302,6 @@
    "panels": [
     {
      "knot": "office",
-     "ink": "p6",
      "slot": "a",
      "ratio": "16:9",
      "cast": [],
@@ -333,7 +336,6 @@
     },
     {
      "knot": "window",
-     "ink": "p6",
      "slot": "d",
      "ratio": "21:9",
      "cast": [],
@@ -351,13 +353,13 @@
    "panels": [
     {
      "knot": "gate",
-     "ink": "p7",
      "slot": "a",
      "ratio": "21:9",
      "cast": [],
      "alt": "The top gate of lock fourteen, with new black paint on its balance beam.",
      "prompt": "The top gate of a canal lock seen from the lockside: a heavy oak gate with a long balance beam freshly painted glossy black and white, the lock full of still water. Autumn leaves on the coping stones.",
-     "sound": "water seeping through lock gates, a balance beam creaking, a wren"
+     "sound": "water seeping through lock gates, a balance beam creaking, a wren",
+     "noSound": true
     },
     {
      "knot": "plate",
@@ -377,7 +379,8 @@
      "cast": [],
      "alt": "The paddle post of the lock, wrapped in a chain with a brass padlock, its spindle bright with new grease.",
      "prompt": "Close-up of an iron canal lock paddle post: a heavy chain wrapped round it and locked with a brass padlock, the square spindle at the top bright with fresh black grease, and a smear of the same grease on the chain.",
-     "sound": "a chain shifting on iron, a padlock tapping"
+     "sound": "a chain shifting on iron, a padlock tapping",
+     "noSound": true
     },
     {
      "knot": "pound",
@@ -431,7 +434,6 @@
     },
     {
      "knot": "dusk",
-     "ink": "p8",
      "slot": "d",
      "ratio": "21:9",
      "cast": [],
@@ -440,7 +442,8 @@
      "sound": "rain on a windscreen, a car engine ticking as it cools, a distant owl",
      "tiny": {
       "prompt": "Locked-off camera, almost a still photograph. Only the raindrops on the windscreen run slowly down and the lit cottage window glows. No camera movement."
-     }
+     },
+     "noSound": true
     }
    ]
   },
@@ -452,13 +455,13 @@
    "panels": [
     {
      "knot": "house",
-     "ink": "p9",
      "slot": "a",
      "ratio": "16:9",
      "cast": [],
      "alt": "The last house on Wyke Hill, a green estate car on the drive, the flight of locks below in the valley.",
      "prompt": "A neat stone house at the end of a hillside lane, a dark green estate car with a small sticker in its rear window on the gravel drive, and far below in the valley a flight of canal locks. October afternoon.",
-     "sound": "wind in a hedge, sheep in the distance, gravel underfoot"
+     "sound": "wind in a hedge, sheep in the distance, gravel underfoot",
+     "noSound": true
     },
     {
      "knot": "accounts",
@@ -468,7 +471,8 @@
      "cast": [],
      "alt": "Accounts laid out on a dining table, every column neat, a pair of reading glasses on top.",
      "prompt": "Close-up of a polished dining table with ledgers and printed accounts laid out neatly in a row, columns of figures too small to read, a pair of rimless reading glasses folded on top, a fountain pen.",
-     "sound": "a clock ticking, pages straightened on a table"
+     "sound": "a clock ticking, pages straightened on a table",
+     "noSound": true
     },
     {
      "knot": "clive",
@@ -480,7 +484,8 @@
      ],
      "alt": "Clive Amory at his door in a cardigan, reading glasses pushed up.",
      "prompt": "CLIVE stands in the doorway of his house wearing a grey cardigan instead of his fleece, reading glasses pushed up on his forehead, polite and welcoming, one hand on the door.",
-     "sound": "a front door opening, a man's polite greeting breath"
+     "sound": "a front door opening, a man's polite greeting breath",
+     "noSound": true
     },
     {
      "knot": "car",
@@ -490,7 +495,8 @@
      "cast": [],
      "alt": "An open car boot: a fleece, a first-aid box, wellingtons and a windlass with a worn wooden grip.",
      "prompt": "The open boot of a green estate car: a folded navy fleece, a green first-aid box, a pair of muddy wellington boots, and an iron canal windlass with a worn wooden grip, its square socket packed with fresh black grease.",
-     "sound": "a car boot opening, a windlass clinking on metal"
+     "sound": "a car boot opening, a windlass clinking on metal",
+     "noSound": true
     }
    ]
   },
@@ -502,7 +508,6 @@
    "panels": [
     {
      "knot": "office10",
-     "ink": "p10",
      "slot": "a",
      "ratio": "21:9",
      "cast": [],
@@ -520,7 +525,8 @@
      ],
      "alt": "DCI Quaile reading the file in silence, in her raincoat.",
      "prompt": "QUAILE sits on the visitor's chair of a small office still in her raincoat, reading a typed report in a buff folder in silence, one index card turned over in her other hand.",
-     "sound": "a page turned, a card turned over, a long silence with a clock"
+     "sound": "a page turned, a card turned over, a long silence with a clock",
+     "noSound": true
     },
     {
      "knot": "report",
