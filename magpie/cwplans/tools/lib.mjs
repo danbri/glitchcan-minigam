@@ -16,6 +16,26 @@ export async function get(url, opts = {}) {
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return Buffer.from(await r.arrayBuffer());
 }
+// Wikidata through QLever: one POST per query, paced by us (at least minGapMs between calls, one call at a time) and
+// retried with a growing pause on 429 or 5xx, so we never lean on the service. Prefer one well-posed query (VALUES
+// over all ids, qualifiers in the same pattern) to many small ones.
+export const QLEVER = 'https://qlever.dev/api/wikidata';
+export const WD_PREFIX = ['wd: <http://www.wikidata.org/entity/>', 'wdt: <http://www.wikidata.org/prop/direct/>', 'p: <http://www.wikidata.org/prop/>',
+  'ps: <http://www.wikidata.org/prop/statement/>', 'pq: <http://www.wikidata.org/prop/qualifier/>', 'rdfs: <http://www.w3.org/2000/01/rdf-schema#>'].map(x => 'PREFIX ' + x).join('\n');
+let qlChain = Promise.resolve(), qlLast = 0;
+export function qlever(query, { minGapMs = 1500, tries = 5 } = {}) {
+  const run = async () => {
+    for (let k = 1; ; k++) {
+      const wait = qlLast + minGapMs - Date.now(); if (wait > 0) await new Promise(r => setTimeout(r, wait));
+      qlLast = Date.now();
+      const r = await fetch(QLEVER, { method: 'POST', headers: { 'User-Agent': UA, Accept: 'application/sparql-results+json', 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ query: WD_PREFIX + '\n' + query }) });
+      if (r.ok) return (await r.json()).results.bindings;
+      if (k >= tries || !(r.status === 429 || r.status >= 500)) throw new Error(`QLever ${r.status}: ${(await r.text()).slice(0, 300)}`);
+      await new Promise(res => setTimeout(res, minGapMs * 2 ** k));
+    }
+  };
+  const p = qlChain.then(run, run); qlChain = p.catch(() => {}); return p;
+}
 export const sparql = q => get('https://query.wikidata.org/sparql', {
   method: 'POST', body: new URLSearchParams({ query: q }),
   headers: { Accept: 'application/sparql-results+json', 'Content-Type': 'application/x-www-form-urlencoded' },

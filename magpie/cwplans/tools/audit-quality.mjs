@@ -10,7 +10,7 @@
 //      registry/companies-by-postcode.json, registry/homes-by-postcode.json
 // out: quality/issues.json (checks with counts, rates and examples; one record per issue)
 //      quality/CATALOGUE.md (generated tables). The analysis is quality/README.md (hand-written).
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { TOOLS } from './lib.mjs';
@@ -348,11 +348,15 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
   c.population = pop; c.breakdown = br;
 }
 {
-  const c = { id: 'TM-4', cls: 'currency', dim: 'timeliness', title: 'Wikidata occupants and headquarters without dates', sources: ['wikidata'],
-    method: 'Occupant (P466) and headquarters (P159) links used in the registry. The query fetched no start or end time qualifiers, so a former tenant cannot be told from a current one (for example the Financial Services Authority, abolished in 2013, is listed at One Canada Square).', rule: 'Fetch P580/P582 qualifiers and the organisation\'s dissolution date; treat links without dates as "at some time".' };
-  const add = check(c); let pop = 0;
-  for (const b of REG.buildings) for (const o of b.occupants) if (/P466|P159/.test(o.role)) { pop++; add({ ent: 'b', id: b.id, sev: 'low', note: `${o.name} (${o.role})` }); }
-  c.population = pop;
+  const c = { id: 'TM-4', cls: 'currency', dim: 'timeliness', title: 'Wikidata occupants and headquarters without dates, or former', sources: ['wikidata'],
+    method: 'Occupant (P466) and headquarters (P159) links used in the registry, against their P580 start and P582 end qualifiers and the organisation\'s P576 dissolution, fetched in one QLever query by tools/build-categories.mjs (data/raw/registry/wikidata-occupant-classes.json). Former: an end date or a dissolved organisation, still listed as an occupant by the registry. Undated: no qualifier, so a former tenant cannot be told from a current one.', rule: 'Carry the link status (current, former, undated) with every Wikidata occupant; never show a former occupant as current; treat undated links as "at some time".' };
+  const add = check(c), WDC = join(CW, 'data/raw/registry/wikidata-occupant-classes.json'), links = new Map(); let pop = 0; const br = { current: 0, former: 0, undated: 0, 'not in the link query': 0 };
+  if (existsSync(WDC)) for (const l of JSON.parse(readFileSync(WDC, 'utf8')).links || []) { const k = `${l.b}|${l.o}`, s = l.end || l.dissolved ? 'former' : l.start ? 'current' : 'undated', prev = links.get(k); if (!prev || prev.s === 'former' || (prev.s === 'undated' && s === 'current')) links.set(k, { ...l, s }); }
+  for (const b of REG.buildings) for (const o of b.occupants) if (/P466|P159/.test(o.role)) { pop++;
+    const l = links.get(`${b.wikidata}|${o.wikidata}`), s = l ? l.s : 'not in the link query'; br[s]++;
+    if (s === 'former') add({ ent: 'b', id: b.id, sev: 'medium', note: `${o.name}: former (${l.end ? 'link ended ' + l.end : 'organisation dissolved ' + l.dissolved}), still listed as an occupant` });
+    else if (s !== 'current') add({ ent: 'b', id: b.id, sev: 'low', note: `${o.name} (${o.role}): ${s}` }); }
+  c.population = pop; c.breakdown = br;
 }
 
 // ===== F. coverage
@@ -399,7 +403,7 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
 const sources = [
   { source: 'OpenStreetMap extract', as_of: '2026-10-01', note: 'openstreetmap.fr Greater London, replication time 01:43 UTC' },
   { source: 'EA LiDAR Composite', as_of: 'multi-year composite', note: 'the survey year differs by tile; buildings finished later show as low (AT-1 "newer")' },
-  { source: 'Wikidata (QLever)', as_of: WD.fetched, note: 'live edits; no time qualifiers fetched' },
+  { source: 'Wikidata (QLever)', as_of: WD.fetched, note: 'live edits; occupant link qualifiers (P580, P582, P576) fetched by tools/build-categories.mjs' },
   { source: 'FSA food hygiene (FHRS530)', as_of: FSA.fetched, note: `${FSA.establishments.length} premises in E14` },
   { source: 'ONS Postcode Directory', as_of: '2026-08', note: 'quarterly release' },
   { source: 'Companies House Basic Company Data', as_of: 'monthly snapshot, 2026-10', note: 'registered offices, not trading addresses' },

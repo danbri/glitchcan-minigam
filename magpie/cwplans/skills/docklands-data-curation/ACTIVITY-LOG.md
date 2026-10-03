@@ -142,6 +142,19 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
   recovered postcode links (the same class, not new errors). No other count changed.
 - Audit: 34 checks, 1,567 records (9 high, 752 medium, 806 low).
 
+## 2026-10-03: drone, splats, glow, Wikidata through QLever
+
+- 3D page: facade shader (window grid, night lights, aerial roofs), glow outlines by occupant kind, free camera and
+  capture mode, Gaussian splats synthesised from the model (`tools/build-splats.mjs`, 669,306 splats) with depth
+  compositing. Two subagents: drone flight and capture, CPU 3DGS training.
+- `tools/build-categories.mjs`: occupant kinds from stated classes only. First version fetched Wikidata classes with
+  wbgetentities and hit "too many requests". Owner: pace ourselves, or one well-posed query; QLever. Now
+  `tools/lib.mjs` `qlever()` (one call at a time, 1.5 s apart, backoff on 429/5xx) and two queries in total, which
+  also fetch the P580/P582 qualifiers and P576 dissolution of every occupant link (F8, partly fixed).
+- Effect: of 34 Wikidata occupant links 4 are current, 6 former (FCA left 25 North Colonnade in 2018; FSA, NYSE
+  Euronext Liffe, Allianz Trade at One Canada Square; Banc of America Securities at 5 Canada Square), 24 undated.
+  Finance glow 18 → 17 buildings. TM-4 34 → 30 issues (6 medium, 24 low). Audit 1,563 records.
+
 ## Open, in the order proposed
 
 1. (Done: F2 and F3.) Parse OSM level lists and fractions in the level readers (VA-2: 100 values).
@@ -149,7 +162,7 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 3. F7: precision class and relation type on every position; no building placement from postcode centres.
 4. Link records (method, distance, confidence) in the registry.
 5. F9: per-mall level offset table.
-6. F8: Wikidata P580/P582 and dissolution dates; company status dates.
+6. F8: done for occupant links (QLever qualifiers); still to do: drop or mark former occupants in the registry itself, and company status dates.
 7. Re-crawl the CWG directory and expire entries not seen.
 8. Privacy limits: the owner approved removal (2026-10-03); the change was blocked by the environment's safety check. Waiting on the owner.
 9. 3D: time slider from the EA DSM series (1999 to 2022, all fetched by the same survey API) with Wikidata inception and Tower Hamlets planning completions; live trains from TfL arrivals; Overture building heights where OSM has none. (Night texture: done.)

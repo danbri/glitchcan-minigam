@@ -52,7 +52,7 @@ Faults found in this project's joins and tools. "Open" means catalogued and meas
 | F5 | 2026-10-03 | The registry had no heights for most buildings: only OSM `height` tags and Wikidata were read | coverage | fixed in 02da9a3 for the atlas: `build-atlas.mjs` takes the 3D model's LiDAR height by point-in-polygon of the model footprints (1,079 of 1,129) | CV-1: height 95.6% |
 | F6 | 2026-10-03 | OSM names buildings after tenants ("HSBC UK" for 8 Canada Square) | identity (source) | rule in use: Wikidata label first | ID-3: 20 |
 | F7 | 2026-10-03 | FSA positions: more than half are postcode centres or shared points, and were used for building placement | position (source + join rule) | open | SP-3: 412 of 764 |
-| F8 | 2026-10-03 | Wikidata occupant and headquarters links fetched without dates: former tenants look current (the Financial Services Authority at One Canada Square) | currency (query) | open | TM-4: 34 |
+| F8 | 2026-10-03 | Wikidata occupant and headquarters links fetched without dates: former tenants look current (the Financial Services Authority at One Canada Square) | currency (query) | partly fixed: one QLever query fetches P580/P582 and P576 for every occupant and headquarters link (`tools/build-categories.mjs`); former tenants no longer glow. The registry still lists them | TM-4: 34 undated → 4 current, 6 former, 24 undated |
 | F9 | 2026-10-03 | OSM level and CWG mall level use different schemes; the offset depends on the mall | attribute conflict (source schemes) | open: needs a per-mall offset table | AT-3: 46 of 72 differ; Cabot Place −1 for 19 of 26, Jubilee Place 0 for 11 of 13 |
 | F10 | 2026-10-02/03 | Earlier faults, fixed when found: `simplify()` collapsed closed rings; incomplete Thames multipolygons dropped (needed relation members); DLR drawn on station roofs (DSM) until bridge points over 20 m were interpolated; scripts ran side effects when imported (main guards added) | pipeline | fixed | ACTIVITY-LOG.md, 2026-10-02 |
 | F11 | 2026-10-02/03 | Wrong claims in our own text, fixed: an FSA search URL and a flood-check link that returned 404; a guessed Wikidata id; a feed marked verified behind a bot challenge; wrong bearings in a README; "Geofabrik" named as the OSM source (it was openstreetmap.fr) | documentation | fixed | ACTIVITY-LOG.md |
@@ -103,9 +103,13 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 - Depth compositing: "Splats only" draws the model into the depth buffer with the colour mask off and a polygon
   offset (splats lie on the walls and the ground), then the splats with the depth test and no depth write, then the
   glow. Without the offset, wall splats flicker against their own wall.
-- Categories for the glow come only from stated classes (`tools/build-categories.mjs`). Wikidata answers "too many
-  requests" in plain text under load: retry with a pause; the classes are cached in
-  `data/raw/registry/wikidata-occupant-classes.json`.
+- Categories for the glow come only from stated classes (`tools/build-categories.mjs`).
+- **Wikidata: pace ourselves and ask once.** The first version called wbgetentities in batches and got "too many
+  requests" (owner, 2026-10-03: "maybe the rate limiting should come from us? Or a more carefully posed efficient
+  query? QLever is very good"). Now `tools/lib.mjs` `qlever()` runs one query at a time, at least 1.5 s apart, with
+  backoff on 429 and 5xx; and the tool asks two questions in total: the classes of all 65 occupant items (VALUES over
+  the ids) and all occupant and headquarters links of the 86 building items with their qualifiers. 2.9 s, no
+  retries. Cached in `data/raw/registry/wikidata-occupant-classes.json`; delete it to refresh.
 
 ## Measured lessons (the reasons behind the rules)
 
