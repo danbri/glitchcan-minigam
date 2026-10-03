@@ -273,7 +273,11 @@ if (has('brands/cwg-directory.json')) {
     cand.push({ o, r, mall, pcs, keys: new Set([...nameKeys(o.name)]) });
   }
   const linked = new Set(cand.map(c => c.o.cwg_url).filter(Boolean));
-  const malls = (a, b) => a && b && MALL.has(a) && MALL.has(b) && a !== b;   // two different named malls: never the same place
+  // two different named malls are never the same place; but Canada Place and the One Canada Square mall are one connected
+  // level that CWG and the FSA name both ways ("Unit 463 Canada Place, 1 Canada Square"), as in build-branches.mjs
+  const CANADA = /^(Canada Place|One Canada Square)$/;
+  const malls = (a, b) => a && b && MALL.has(a) && MALL.has(b) && a !== b && !(CANADA.test(a) && CANADA.test(b));
+  const kindOf = new Map(D.map(e => [e.cwg_url, e.kind]));
   // "mall" only for a named mall; a street, square or district CWG names is kept as cwg_place
   const cwgInfo = (e, f) => ({ cwg_url: e.cwg_url, cwg_archived: e.archived || null, cwg_kind: e.kind, ...(e.categories?.length ? { cwg_categories: e.categories } : {}),
     ...(e.mall && MALL.has(e.mall) ? { mall: e.mall } : e.mall ? { cwg_place: e.mall } : {}), ...(e.level ? { level_cwg: e.level } : {}), ...(e.website ? { cwg_website: e.website } : {}), ...(f.flags?.length ? { cwg_flags: f.flags } : {}) });
@@ -292,7 +296,7 @@ if (has('brands/cwg-directory.json')) {
     // 1. join: same name key, and the same place: the same mall, a shared postcode, or the entry's own building; never two different malls
     // an occupant that already has a CWG link takes a second entry only from another CWG section (GoBoat under shop and
     // see-do); two entries of one section are two places (two photo booths in Canada Place)
-    const hits = cand.filter(c => keys.some(k => c.keys.has(k)) && !malls(c.mall, e.mall) && (!c.o.cwg_url || (c.o.cwg_kind && c.o.cwg_kind !== e.kind && !(c.o.cwg_also || []).length)));
+    const hits = cand.filter(c => keys.some(k => c.keys.has(k)) && !malls(c.mall, e.mall) && (!c.o.cwg_url || (kindOf.get(c.o.cwg_url) !== e.kind && !(c.o.cwg_also || []).length)));
     const tiers = [[MALL.has(e.mall) ? 'name + mall' : 'name + street or square', c => c.mall && c.mall === e.mall], ['name + postcode', c => pc && c.pcs.has(pc)], ['name + building', c => home && c.r.id === home.id]];
     let joinedTo = null;
     for (const [how, test] of tiers) {
