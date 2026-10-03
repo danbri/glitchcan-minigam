@@ -34,6 +34,9 @@ dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:6px 0}
 <h1>Canary Wharf postcodes: actual and possible</h1>
 <p class="small">Every syntactically valid postcode in the E14 district (10 sectors × 400 unit codes), checked against the ONS Postcode Directory (August 2026). "Actual" postcodes are in the directory (live or terminated); "possible" ones are valid codes that Royal Mail has never allocated. Each actual postcode is placed by its ONS grid reference and classified against two definitions of Canary Wharf: the official ward and the 3D model's estate box. Method and limits: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/postcodes/README.md">README</a>. Data: <a href="postcodes.csv">postcodes.csv</a> · <a href="postcodes.json">postcodes.json</a> · <a href="queries.json">queries.json</a> · <a href="canary-wharf-ward.geojson">ward boundary</a>. Related: <a href="../docklands/">Docklands 3D</a> · <a href="../feeds/">feeds and APIs</a>.</p>
 <div class="tiles" id="tiles"></div>
+<h2>Openings and closings</h2>
+<p class="small">Four official signals from the data on this page. FSA "Awaiting Inspection": a food business that has registered but has not had its first inspection, usually because it is new. Newest ratings: inspections in the last weeks (new or changed premises). New postcodes: Royal Mail allocates them for new buildings or large users. Terminated postcodes: addresses that no longer exist as such.</p>
+<div id="signals" class="small"></div>
 <h2>Where they are</h2>
 <svg id="map" role="img" aria-label="Postcode centroids around Canary Wharf, coloured by tier, with the Canary Wharf ward boundary"></svg>
 <div class="small" id="legend"></div>
@@ -66,7 +69,7 @@ const col = t => getComputedStyle(document.documentElement).getPropertyValue(TIE
 const ym = v => v ? String(v).replace(/^(\d{4})(\d{2})$/, '$1-$2') : '';
 let P = [], S = null, Q = {}, ward = null;
 Promise.all([fetch('postcodes.json').then(r => r.json()), fetch('canary-wharf-ward.geojson').then(r => r.json()).catch(() => null), fetch('queries.json').then(r => r.ok ? r.json() : null).catch(() => null)])
-  .then(([d, w, q]) => { P = d.postcodes; S = d.summary; ward = w; Q = q ? q.results : {}; init(); })
+  .then(([d, w, q]) => { P = d.postcodes; S = d.summary; ward = w; Q = q ? q.results : {}; window.__qgen = q ? q.generated : ''; init(); })
   .catch(e => { $('tab').innerHTML = `<tr><td>Could not load the data (${esc(e.message)}). Opened from a file? Use <a href="https://danbri.github.io/glitchcan-minigam/magpie/cwplans/postcodes/">https://danbri.github.io/glitchcan-minigam/magpie/cwplans/postcodes/</a></td></tr>`; });
 function init() {
   const t = S.tiers, cw = (t['cw-core'] || 0) + (t['cw-ward'] || 0) + (t['cw-box-other-ward'] || 0);
@@ -75,7 +78,7 @@ function init() {
   $('defs').innerHTML = Object.entries(TIERS).map(([k, [n, d]]) => `<dt><span class="dot" style="background:${col(k)}"></span>${esc(n)}</dt><dd>${esc(d)} (${t[k] || 0})</dd>`).join('') +
     `<dt>Ward</dt><dd>Tower Hamlets ward "${esc(S.cw_ward.name)}" (${esc(S.cw_ward.code)}), from the ONS directory field wd26cd</dd><dt>Box</dt><dd>${S.box.join(', ')} (west, south, east, north): the 3D model's Canary Wharf box (estate, Wood Wharf, Heron Quays, Crossrail Place)</dd><dt>Large user</dt><dd>A postcode given to one organisation that receives a lot of mail (ONS usrtypind = 1)</dd>`;
   $('sector').innerHTML += S.sectors.map(s => `<option>${esc(s)}</option>`).join('');
-  map();
+  map(); signals();
   for (const id of ['q', 'tier', 'sector', 'lu']) $(id).oninput = render;
   render();
 }
@@ -90,6 +93,18 @@ function map() {
   const ocs = P.find(p => p.pc === 'E14 5AB'); if (ocs) s += `<text x="${X(ocs.lon) + 6}" y="${Y(ocs.lat) - 6}" font-size="12" fill="var(--fg)">One Canada Square</text>`;
   $('map').setAttribute('viewBox', `0 0 ${W} ${H}`); $('map').innerHTML = s;
   $('legend').innerHTML = ['cw-core', 'cw-ward', 'cw-box-other-ward', 'terminated-cw'].map(k => `<span class="dot" style="background:${col(k)}"></span>${esc(TIERS[k][0])}`).join(' &nbsp; ') + ' &nbsp; dashed line: Canary Wharf ward · rectangle: estate box · larger dots: large-user postcodes. Hover a dot for its postcode.';
+}
+function signals() {
+  const cw = new Set(P.filter(p => /^cw-/.test(p.tier)).map(p => p.pc));
+  const fsa = Object.entries(Q).filter(([pc]) => cw.has(pc)).flatMap(([pc, r]) => (r.fsa && r.fsa.items || []).map(e => ({ pc, ...e })));
+  const li = (arr, f) => arr.length ? '<ul>' + arr.map(f).join('') + '</ul>' : '<p>none in the data</p>';
+  const awaiting = fsa.filter(e => /Awaiting/i.test(e.rating)), newest = fsa.filter(e => e.rating_date).sort((a, b) => b.rating_date.localeCompare(a.rating_date)).slice(0, 12);
+  const intro = P.filter(p => /^cw-/.test(p.tier)).sort((a, b) => b.introduced - a.introduced).slice(0, 12), term = P.filter(p => p.tier === 'terminated-cw').sort((a, b) => b.terminated - a.terminated).slice(0, 12);
+  $('signals').innerHTML = (fsa.length ? `<details open><summary>FSA awaiting inspection (${awaiting.length})</summary>${li(awaiting, e => `<li><a href="${esc(e.url)}">${esc(e.name)}</a>, ${esc(e.pc)}, ${esc(e.type)}</li>`)}</details>
+    <details><summary>FSA newest ratings</summary>${li(newest, e => `<li>${esc(e.rating_date)}: <a href="${esc(e.url)}">${esc(e.name)}</a>, ${esc(e.pc)}, rating ${esc(e.rating)}</li>`)}</details>` : '<p>Load queries.json for the FSA signals.</p>') +
+    `<details><summary>Newest postcodes (ONSPD introduction date)</summary>${li(intro, p => `<li>${ym(p.introduced)}: ${esc(p.pc)}${p.osm_streets ? ', ' + esc(p.osm_streets.join(', ')) : ''}</li>`)}</details>
+    <details><summary>Most recently terminated postcodes</summary>${li(term, p => `<li>${ym(p.terminated)}: ${esc(p.pc)} (introduced ${ym(p.introduced)})${p.osm_streets ? ', ' + esc(p.osm_streets.join(', ')) : ''}</li>`)}</details>
+    <p>FSA data from the queries run on ${esc((window.__qgen || ''))}. Run <code>postcodes.mjs query</code> again for fresh results.</p>`;
 }
 function links(p) {
   const q = encodeURIComponent(`"${p.pc}"`);

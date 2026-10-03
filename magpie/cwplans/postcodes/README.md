@@ -57,6 +57,14 @@ Terminations show change in the other direction: 224 Canary Wharf postcodes have
 - **Wikipedia full-text search**: articles that contain the postcode.
 - **Wikidata**: items whose postal code (P281) is one of the postcodes.
 
+Results of the run on 2026-10-03 (658 postcodes, no errors):
+- FSA: 526 food premises at 158 postcodes. 34 were "Awaiting Inspection", which usually means a new business. The newest ratings were from 23 September 2026.
+- GOV.UK: 111 documents at 34 postcodes.
+- Wikipedia: 22 articles at 16 postcodes. Most are organisations based at Canary Wharf, for example the Competition and Markets Authority and the EBRD.
+- Wikidata: 23 items.
+
+The page's "Openings and closings" section lists the FSA premises awaiting inspection, the newest ratings, the newest postcodes and the most recently terminated postcodes.
+
 For general web search engines, `queries.json` gives templates such as `"{postcode}" "Canary Wharf" "now open"`. A test on 2026-10-03 showed why each template names the place:
 - `"E14 5AB" events` returned events at MIT's Building E14 in Cambridge, Massachusetts.
 - `"E14 5NY" opening` returned opening-hours directories. These list the businesses at the postcode (for example the Jubilee Place shops), which is useful as a list of occupiers but does not show openings.
