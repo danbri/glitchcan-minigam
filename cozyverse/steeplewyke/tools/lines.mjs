@@ -30,10 +30,17 @@ let seed = 7;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
 for (let i = 0; i < 300; i++) MIXES.push({ on: Object.fromEntries(CLUES.map((c) => [c, rnd() < 0.5])), seen: SEEN.filter(() => rnd() < 0.5), ending: '', visits: 1 });
 const probe = new inkjs.Story(compiled);
-const knots = [...probe.mainContentContainer.namedContent.keys()].filter((k) => !k.startsWith('global') && k !== 'evidence');
+const top = [...probe.mainContentContainer.namedContent.keys()].filter((k) => !k.startsWith('global') && k !== 'evidence');
+// stitches too (a story that diverts to "knot.stitch" never passes the knot's own start)
+const knots = top.flatMap((k) => [k, ...[...(probe.mainContentContainer.namedContent.get(k)?.namedContent?.keys() || [])].map((st) => `${k}.${st}`)]);
+// Lock Fourteen guards every panel knot with the page being visited ("at") and keys scenes to the day: when a story
+// has those variables, set "at" from the knot's page number (pN...) and try each day
+const AT = names.includes('at'), DAYS = names.includes('day') ? [1, 2, 3, 4] : [null];
 const out = {};
-for (const knot of knots) for (const { on, seen, ending, visits } of MIXES) {
+for (const knot of knots) for (const day of DAYS) for (const { on, seen, ending, visits } of MIXES) {
   const s = new inkjs.Story(compiled);
+  if (AT) s.variablesState.at = +(/^p(\d+)/.exec(knot)?.[1] ?? 8);
+  if (day !== null) s.variablesState.day = day;
   for (const c of CLUES) s.variablesState[c] = typeof on === 'object' ? on[c] : on;
   for (const c of SEEN) s.variablesState[c] = seen.includes(c);
   s.variablesState.ending = ending; s.variablesState.visits = visits;
@@ -58,6 +65,7 @@ for (const knot of knots) for (const { on, seen, ending, visits } of MIXES) {
 // a scene visited again says something shorter (pN > 1, a conversation revisited): visit each knot three times
 for (const knot of knots) {
   const s = new inkjs.Story(compiled);
+  if (AT) s.variablesState.at = +(/^p(\d+)/.exec(knot)?.[1] ?? 8);
   s.onError = () => {};
   for (let n = 0; n < 3; n++) {
     try { s.ChoosePathString(knot); } catch { break; }
@@ -70,6 +78,27 @@ for (const knot of knots) {
         const who = /^([A-Z][a-z]+): /.exec(line);
         out[id] = { speaker: who ? who[1].toLowerCase() : 'narrator', text: who ? line.slice(who[0].length) : line };
       }
+    }
+  }
+}
+// states the mixes above never make (a string such as r_whom == "vandams"): a story may list them in lines-states.json,
+// each an object of variable values, and every knot is visited once under each
+let states = [];
+try { states = JSON.parse(readFileSync(join(story, 'lines-states.json'), 'utf8')); } catch { /* none */ }
+for (const st of states) for (const knot of knots) {
+  const s = new inkjs.Story(compiled);
+  s.onError = () => {};
+  if (AT) s.variablesState.at = +(/^p(\d+)/.exec(knot)?.[1] ?? 8);
+  for (const [k, v] of Object.entries(st)) s.variablesState[k] = v;
+  try { s.ChoosePathString(knot); } catch { continue; }
+  while (s.canContinue) {
+    let line;
+    try { line = s.Continue().trim(); } catch { break; }
+    for (const t of s.currentTags) {
+      const id = /^voice\s*:\s*([\w-]+)$/.exec(t.trim())?.[1];
+      if (!id || out[id]) continue;
+      const who = /^([A-Z][a-z]+): /.exec(line);
+      out[id] = { speaker: who ? who[1].toLowerCase() : 'narrator', text: who ? line.slice(who[0].length) : line };
     }
   }
 }

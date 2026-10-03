@@ -1,0 +1,999 @@
+{
+ "takes": 1,
+ "recorded": false,
+ "secondTake": [],
+ "about": "Every voiced line of the chapter's ink: who speaks it, the exact words shown on the page (\"text\"), and what the voice is given (\"say\": the same words with eleven_v3 audio tags). tools/lines.mjs --check voices.json proves \"text\" matches the ink; tools/directions.py writes this file. Each line has \"takes\" takes, media/vo/<id>-1.mp3 and so on, and one more if its id is in \"secondTake\"; the page plays one at random.",
+ "model": "eleven_v4",
+ "voices": {
+  "quaile": "XEoBW4iDmiawQP72xnAF",
+  "sam": "dqdOhmL2BvMSx2KtSAtN",
+  "ros": "Y3AzrcXdenDXrjb0dALG",
+  "clive": "JLkaQv8hpW56lUC7nj5m",
+  "kit": "ZF6FPAbjXT4488VcRRnw",
+  "joost": "i7G4u9tyZGel56RnYhXb",
+  "maaike": "sP3q7DZvU8X3maXCONzw",
+  "annette": "ApuKum9r0H3W3sf1xR2S",
+  "pete": "MmQAnDAp0dcTNc35QhwG",
+  "narrator": "3XD5qTvPWht0mpTnYXY0",
+  "shah": "vbL38HT4L93tShaai4rW",
+  "coroner": "JBFqnCBsd6RMkjVDRZzb",
+  "constable": "JlptfLxaUpd8pZcw9dKd"
+ },
+ "lines": {
+  "call-coroner-1": {
+   "speaker": "narrator",
+   "text": "You phone the coroner at home. He is in his garden; you can hear a mower stop.",
+   "say": "[quiet, observant] You phone the coroner at home. He is in his garden; you can hear a mower stop."
+  },
+  "call-coroner-2": {
+   "speaker": "ros",
+   "text": "The deceased drowned. He has a bruise on the head that Dr Shah can't measure yet.",
+   "say": "[calm, plain] The deceased drowned. He has a bruise on the head that Dr Shah can't measure yet."
+  },
+  "call-coroner-3": {
+   "speaker": "ros",
+   "text": "If he was knocked out, it's an accident. If he was awake, someone has to explain the water.",
+   "say": "[calm, plain] If he was knocked out, it's an accident. If he was awake, someone has to explain the water."
+  },
+  "call-coroner-4": {
+   "speaker": "ros",
+   "text": "I'd like a forensic post-mortem. Before the body is released.",
+   "say": "[calm, plain] I'd like a forensic post-mortem. Before the body is released."
+  },
+  "call-coroner-5": {
+   "speaker": "coroner",
+   "text": "The funeral's booked for Wednesday, Ros.",
+   "say": "[weary, kind] The funeral's booked for Wednesday, Ros."
+  },
+  "call-coroner-6": {
+   "speaker": "ros",
+   "text": "I know.",
+   "say": "[calm, plain] I know."
+  },
+  "call-coroner-7": {
+   "speaker": "coroner",
+   "text": "All right. Dr Shah can do it tomorrow morning. Someone had better tell Mrs Strand before the undertaker does.",
+   "say": "[weary, kind] All right. Dr Shah can do it tomorrow morning. Someone had better tell Mrs Strand before the undertaker does."
+  },
+  "end-accident-1": {
+   "speaker": "narrator",
+   "text": "Quaile closes the folder and gives it back to you.",
+   "say": "[quiet, observant] Quaile closes the folder and gives it back to you."
+  },
+  "end-accident-2": {
+   "speaker": "narrator",
+   "text": "The coroner records an accident. At the funeral Clive Amory gives the address. Kit Rowe stands at the back, in her lock-keeper's fleece.",
+   "say": "[quiet, observant] The coroner records an accident. At the funeral Clive Amory gives the address. Kit Rowe stands at the back, in her lock-keeper's fleece."
+  },
+  "end-full-1": {
+   "speaker": "narrator",
+   "text": "Quaile takes the folder. At four o'clock she rings you.",
+   "say": "[quiet, observant] Quaile takes the folder. At four o'clock she rings you."
+  },
+  "end-full-2": {
+   "speaker": "quaile",
+   "text": "He's asked to speak to you. Not to me. You can say no.",
+   "say": "[drily] He's asked to speak to you. Not to me. You can say no."
+  },
+  "end-full-3": {
+   "speaker": "narrator",
+   "text": "In the interview room Clive Amory has his reading glasses on, and a solicitor beside him who has stopped writing.",
+   "say": "[quiet, observant] In the interview room Clive Amory has his reading glasses on, and a solicitor beside him who has stopped writing."
+  },
+  "end-full-4": {
+   "speaker": "clive",
+   "text": "I put the reserve into the Meridian fund on Ted Hollins's advice, and when it closed I told the committee nothing, because I thought I could put it right before anyone needed the money.",
+   "say": "[quiet, steady] I put the reserve into the Meridian fund on Ted Hollins's advice, and when it closed I told the committee nothing, because I thought I could put it right before anyone needed the money."
+  },
+  "end-full-5": {
+   "speaker": "clive",
+   "text": "When he fell I could hear him, and I went to the car for my windlass, and I wound the paddles up; when it was full I wound them down and put the chain back on, because that is what you do at night.",
+   "say": "[very quiet] When he fell I could hear him, and I went to the car for my windlass, and I wound the paddles up; when it was full I wound them down and put the chain back on, because that is what you do at night."
+  },
+  "end-full-6": {
+   "speaker": "clive",
+   "text": "Ted gave the parish council the same advice about Meridian, and he has made gates for four other trusts since nineteen ninety. You might ask how many of those were new.",
+   "say": "[gentle, precise] Ted gave the parish council the same advice about Meridian, and he has made gates for four other trusts since nineteen ninety. You might ask how many of those were new."
+  },
+  "end-full-7": {
+   "speaker": "clive",
+   "text": "Neville was right about the gates.",
+   "say": "[long pause] [almost a whisper] Neville was right about the gates."
+  },
+  "end-half-1": {
+   "speaker": "quaile",
+   "text": "This is a fraud, Mrs Kettering. I'll pass it on.",
+   "say": "[drily] This is a fraud, Mrs Kettering. I'll pass it on."
+  },
+  "end-half-2": {
+   "speaker": "narrator",
+   "text": "Quaile takes the folder.",
+   "say": "[quiet, observant] Quaile takes the folder."
+  },
+  "end-half-3": {
+   "speaker": "narrator",
+   "text": "Clive Amory's solicitor takes the push apart in an hour. Nobody saw a push, and nothing in the file shows one.",
+   "say": "[quiet, observant] Clive Amory's solicitor takes the push apart in an hour. Nobody saw a push, and nothing in the file shows one."
+  },
+  "end-half-4": {
+   "speaker": "narrator",
+   "text": "The file names the right man and cannot say what he did. Clive's solicitor asks for the evidence on the chain and the water, and there is not enough.",
+   "say": "[quiet, observant] The file names the right man and cannot say what he did. Clive's solicitor asks for the evidence on the chain and the water, and there is not enough."
+  },
+  "end-half-5": {
+   "speaker": "narrator",
+   "text": "In the spring Clive Amory pleads guilty to fraud over the gate grant, and pays it back, and says in court that the chairman was the best friend the canal ever had.",
+   "say": "[quiet, observant] In the spring Clive Amory pleads guilty to fraud over the gate grant, and pays it back, and says in court that the chairman was the best friend the canal ever had."
+  },
+  "end-open-1": {
+   "speaker": "narrator",
+   "text": "Quaile closes the folder and gives it back to you.",
+   "say": "[quiet, observant] Quaile closes the folder and gives it back to you."
+  },
+  "end-open-2": {
+   "speaker": "narrator",
+   "text": "The coroner records an open conclusion. In November Annette Strand writes to you: one page, in a teacher's hand. She asks what happened in the last hour.",
+   "say": "[quiet, observant] The coroner records an open conclusion. In November Annette Strand writes to you: one page, in a teacher's hand. She asks what happened in the last hour."
+  },
+  "end-thin-1": {
+   "speaker": "narrator",
+   "text": "Quaile takes the folder.",
+   "say": "[quiet, observant] Quaile takes the folder."
+  },
+  "end-thin-2": {
+   "speaker": "narrator",
+   "text": "On Wednesday Neville Strand is cremated, as booked.",
+   "say": "[quiet, observant] On Wednesday Neville Strand is cremated, as booked."
+  },
+  "end-thin-3": {
+   "speaker": "narrator",
+   "text": "In January Clive Amory's solicitor tells a judge that a man with a head injury can drown in half a metre of water, and there is no second post-mortem to say otherwise. Clive is convicted of fraud, and of perverting the course of justice for what he told you. He serves fourteen months.",
+   "say": "[quiet, observant] In January Clive Amory's solicitor tells a judge that a man with a head injury can drown in half a metre of water, and there is no second post-mortem to say otherwise. Clive is convicted of fraud, and of perverting the course of justice for what he told you. He serves fourteen months."
+  },
+  "end-thin-4": {
+   "speaker": "narrator",
+   "text": "In February Annette writes to ask for a copy of your report.",
+   "say": "[quiet, observant] In February Annette writes to ask for a copy of your report."
+  },
+  "end-wrong-1": {
+   "speaker": "narrator",
+   "text": "Quaile reads your file again and takes it.",
+   "say": "[quiet, observant] Quaile reads your file again and takes it."
+  },
+  "end-wrong-2": {
+   "speaker": "narrator",
+   "text": "The van Dams are stopped at Harwich with their car on the ferry. They are held for two days and released without charge. Maaike sends you all of her photographs from the holiday, eighty-one of them, with no message.",
+   "say": "[quiet, observant] The van Dams are stopped at Harwich with their car on the ferry. They are held for two days and released without charge. Maaike sends you all of her photographs from the holiday, eighty-one of them, with no message."
+  },
+  "end-wrong-3": {
+   "speaker": "narrator",
+   "text": "Kit Rowe is interviewed under caution on Tuesday. On Wednesday the Harbour in Bristol withdraws its offer. On Thursday the committee ends her post, as Neville proposed. Clive Amory writes her a reference.",
+   "say": "[quiet, observant] Kit Rowe is interviewed under caution on Tuesday. On Wednesday the Harbour in Bristol withdraws its offer. On Thursday the committee ends her post, as Neville proposed. Clive Amory writes her a reference."
+  },
+  "end-wrong-4": {
+   "speaker": "narrator",
+   "text": "Clive Amory keeps the trust's accounts.",
+   "say": "[quiet, observant] Clive Amory keeps the trust's accounts."
+  },
+  "evening-1": {
+   "speaker": "narrator",
+   "text": "At eight the phone rings. Dr Shah, from a station platform.",
+   "say": "[quiet, observant] At eight the phone rings. Dr Shah, from a station platform."
+  },
+  "evening-2": {
+   "speaker": "shah",
+   "text": "Second post-mortem. The bruise on the head is slight. No fracture, no bleeding inside the skull. He was conscious.",
+   "say": "[brisk, clinical] Second post-mortem. The bruise on the head is slight. No fracture, no bleeding inside the skull. He was conscious."
+  },
+  "evening-3": {
+   "speaker": "shah",
+   "text": "The nails on both hands are torn, with brick in them. He tried to climb the chamber wall. The broken thigh bled into the muscle for some minutes before he died.",
+   "say": "[brisk, clinical] The nails on both hands are torn, with brick in them. He tried to climb the chamber wall. The broken thigh bled into the muscle for some minutes before he died."
+  },
+  "evening-4": {
+   "speaker": "shah",
+   "text": "Plainly: a conscious man with a broken leg can sit up in half a metre of water. He drowned because the water got deeper.",
+   "say": "[brisk, clinical] Plainly: a conscious man with a broken leg can sit up in half a metre of water. He drowned because the water got deeper."
+  },
+  "p1-1": {
+   "speaker": "narrator",
+   "text": "Lock fourteen of the Wyke Arm. Friday, nine in the morning.",
+   "say": "[quiet, observant] Lock fourteen of the Wyke Arm. Friday, nine in the morning."
+  },
+  "p1-2": {
+   "speaker": "narrator",
+   "text": "You are Ros Kettering, coroner's officer for the county. A sudden death comes to you before it goes to the coroner. You retire in March.",
+   "say": "[quiet, observant] You are Ros Kettering, coroner's officer for the county. A sudden death comes to you before it goes to the coroner. You retire in March."
+  },
+  "p1-3": {
+   "speaker": "narrator",
+   "text": "The police tape runs from a balance beam to a fence post. The body went to the mortuary an hour ago. Neville Strand, sixty-six, chairman of the canal trust. Found at ten past seven by the crew of a hire boat.",
+   "say": "[quiet, observant] The police tape runs from a balance beam to a fence post. The body went to the mortuary an hour ago. Neville Strand, sixty-six, chairman of the canal trust. Found at ten past seven by the crew of a hire boat."
+  },
+  "p1-4": {
+   "speaker": "narrator",
+   "text": "The lock is full to the top of the gates. Below thirteen you can see the hire boat that came down the flight last night, moored.",
+   "say": "[quiet, observant] The lock is full to the top of the gates. Below thirteen you can see the hire boat that came down the flight last night, moored."
+  },
+  "p1-5": {
+   "speaker": "narrator",
+   "text": "A man in a trust fleece waits by the top gate with two coffees.",
+   "say": "[quiet, observant] A man in a trust fleece waits by the top gate with two coffees."
+  },
+  "p1-6": {
+   "speaker": "narrator",
+   "text": "Lock fourteen. Full.",
+   "say": "[quiet, observant] Lock fourteen. Full."
+  },
+  "p1-bag-1": {
+   "speaker": "narrator",
+   "text": "A police exhibit bag lies on the lockside. In it is a windlass: an iron handle, bent in an L, for winding paddles. A plastic tag on it says WREN, and the name of the hire company.",
+   "say": "[quiet, observant] A police exhibit bag lies on the lockside. In it is a windlass: an iron handle, bent in an L, for winding paddles. A plastic tag on it says WREN, and the name of the hire company."
+  },
+  "p1-bag-2": {
+   "speaker": "narrator",
+   "text": "A constable lifts the tape for you.",
+   "say": "[quiet, observant] A constable lifts the tape for you."
+  },
+  "p1-bag-3": {
+   "speaker": "constable",
+   "text": "It was by the top gate, ma'am. It's off the hire boat. Dutch couple. They came down through the locks last night and found him this morning.",
+   "say": "[polite] It was by the top gate, ma'am. It's off the hire boat. Dutch couple. They came down through the locks last night and found him this morning."
+  },
+  "p1-clive-1": {
+   "speaker": "clive",
+   "text": "Anything else I can tell you, Mrs Kettering?",
+   "say": "[gentle, precise] Anything else I can tell you, Mrs Kettering?"
+  },
+  "p1-clive-10": {
+   "speaker": "clive",
+   "text": "At night we chain the paddle gear, to save water. The chairman did it on his walk. Every night at ten.",
+   "say": "[gentle, precise] At night we chain the paddle gear, to save water. The chairman did it on his walk. Every night at ten."
+  },
+  "p1-clive-11": {
+   "speaker": "ros",
+   "text": "When did you last speak to the deceased?",
+   "say": "[calm, plain] When did you last speak to the deceased?"
+  },
+  "p1-clive-12": {
+   "speaker": "clive",
+   "text": "He rang me at five to eleven last night, about the minutes of our meeting. I told him to ring me in the morning, and I went to bed.",
+   "say": "[gentle, precise] He rang me at five to eleven last night, about the minutes of our meeting. I told him to ring me in the morning, and I went to bed."
+  },
+  "p1-clive-13": {
+   "speaker": "narrator",
+   "text": "His car is in the lock car park: a green estate with a trust sticker in the back window.",
+   "say": "[quiet, observant] His car is in the lock car park: a green estate with a trust sticker in the back window."
+  },
+  "p1-clive-2": {
+   "speaker": "clive",
+   "text": "Mrs Kettering? Clive Amory. I'm the trust's treasurer. Kit's away, so I said I'd meet you. White, no sugar. I guessed.",
+   "say": "[gentle, precise] Mrs Kettering? Clive Amory. I'm the trust's treasurer. Kit's away, so I said I'd meet you. White, no sugar. I guessed."
+  },
+  "p1-clive-3": {
+   "speaker": "ros",
+   "text": "Thank you. You knew him well.",
+   "say": "[calm, plain] Thank you. You knew him well."
+  },
+  "p1-clive-4": {
+   "speaker": "clive",
+   "text": "Fourteen years on the committee with the chairman.",
+   "say": "[gentle, precise] Fourteen years on the committee with the chairman."
+  },
+  "p1-clive-5": {
+   "speaker": "narrator",
+   "text": "He has a windlass in his fleece pocket, and he holds the coffee with both hands.",
+   "say": "[quiet, observant] He has a windlass in his fleece pocket, and he holds the coffee with both hands."
+  },
+  "p1-clive-6": {
+   "speaker": "clive",
+   "text": "A lock is a box of water with a pair of gates at each end. To take a boat up, you bring it into the box while it's empty, shut the bottom gates and wind up the top paddles. The water comes in from the canal above.",
+   "say": "[gentle, precise] A lock is a box of water with a pair of gates at each end. To take a boat up, you bring it into the box while it's empty, shut the bottom gates and wind up the top paddles. The water comes in from the canal above."
+  },
+  "p1-clive-7": {
+   "speaker": "clive",
+   "text": "To go down, you do it the other way round. So a boat that goes down leaves the lock empty, and a boat that goes up leaves it full.",
+   "say": "[gentle, precise] To go down, you do it the other way round. So a boat that goes down leaves the lock empty, and a boat that goes up leaves it full."
+  },
+  "p1-clive-8": {
+   "speaker": "ros",
+   "text": "And the water for it?",
+   "say": "[calm, plain] And the water for it?"
+  },
+  "p1-clive-9": {
+   "speaker": "clive",
+   "text": "From the pound, the stretch of canal between this lock and the next one up. A lock this size holds about sixty tonnes. When it fills, the pound drops.",
+   "say": "[gentle, precise] From the pound, the stretch of canal between this lock and the next one up. A lock this size holds about sixty tonnes. When it fills, the pound drops."
+  },
+  "p1-fifteen-1": {
+   "speaker": "narrator",
+   "text": "Two hundred metres up the towpath, lock fifteen is empty. Both pairs of gates are shut.",
+   "say": "[quiet, observant] Two hundred metres up the towpath, lock fifteen is empty. Both pairs of gates are shut."
+  },
+  "p1-fifteen-2": {
+   "speaker": "narrator",
+   "text": "Between the two locks the canal is low. A strip of wet brick, a foot high, runs along the bank above the water. The trust's work boat sits on the mud at an angle, its mooring ropes tight.",
+   "say": "[quiet, observant] Between the two locks the canal is low. A strip of wet brick, a foot high, runs along the bank above the water. The trust's work boat sits on the mud at an angle, its mooring ropes tight."
+  },
+  "p10-1": {
+   "speaker": "narrator",
+   "text": "Monday, half past eight. The coroner's office. Your report is on three sheets, in a card folder, with the index cards from your board clipped to the back.",
+   "say": "[quiet, observant] Monday, half past eight. The coroner's office. Your report is on three sheets, in a card folder, with the index cards from your board clipped to the back."
+  },
+  "p10-2": {
+   "speaker": "narrator",
+   "text": "At ten to nine there is a knock. DCI Hester Quaile, in a raincoat. Her hearing aid is on.",
+   "say": "[quiet, observant] At ten to nine there is a knock. DCI Hester Quaile, in a raincoat. Her hearing aid is on."
+  },
+  "p10-3": {
+   "speaker": "quaile",
+   "text": "The coroner says you've a file on the canal death that I'll want. I've come to read it before he does.",
+   "say": "[drily] The coroner says you've a file on the canal death that I'll want. I've come to read it before he does."
+  },
+  "p10-quaile-1": {
+   "speaker": "narrator",
+   "text": "Quaile reads the whole file, every sheet and every card, without a word. It takes eleven minutes. Once she turns a card over to see if there is anything on the back.",
+   "say": "[quiet, observant] Quaile reads the whole file, every sheet and every card, without a word. It takes eleven minutes. Once she turns a card over to see if there is anything on the back."
+  },
+  "p10-quaile-2": {
+   "speaker": "quaile",
+   "text": "One question. The chain on fourteen. Who unlocked it?",
+   "say": "[drily] One question. The chain on fourteen. Who unlocked it?"
+  },
+  "p10-quaile-3": {
+   "speaker": "ros",
+   "text": "It was chained at 23:13; Neville photographed it. To fill the lock someone unlocked it after that. Two of the three keys were in Neville's coat, in the water. The third is Clive Amory's.",
+   "say": "[calm, plain] It was chained at 23:13; Neville photographed it. To fill the lock someone unlocked it after that. Two of the three keys were in Neville's coat, in the water. The third is Clive Amory's."
+  },
+  "p10-quaile-4": {
+   "speaker": "ros",
+   "text": "I think so.",
+   "say": "[calm, plain] I think so."
+  },
+  "p10-quaile-5": {
+   "speaker": "quaile",
+   "text": "Thinking won't do. His solicitor will ask how.",
+   "say": "[drily] Thinking won't do. His solicitor will ask how."
+  },
+  "p10-quaile-6": {
+   "speaker": "quaile",
+   "text": "Yes. That's what I'd have asked him.",
+   "say": "[drily] Yes. That's what I'd have asked him."
+  },
+  "p10-quaile-7": {
+   "speaker": "quaile",
+   "text": "Then his solicitor will say it was never unlocked at all.",
+   "say": "[drily] Then his solicitor will say it was never unlocked at all."
+  },
+  "p2-1": {
+   "speaker": "narrator",
+   "text": "The towpath climbs beside the flight. Sixteen, fifteen and fourteen have their paddle gear chained, each post wrapped in a chain with a brass padlock. Thirteen, below the cottage, is not.",
+   "say": "[quiet, observant] The towpath climbs beside the flight. Sixteen, fifteen and fourteen have their paddle gear chained, each post wrapped in a chain with a brass padlock. Thirteen, below the cottage, is not."
+  },
+  "p2-2": {
+   "speaker": "narrator",
+   "text": "The lock cottage is the trust's office, with a flat upstairs for the lock-keeper.",
+   "say": "[quiet, observant] The lock cottage is the trust's office, with a flat upstairs for the lock-keeper."
+  },
+  "p2-3": {
+   "speaker": "narrator",
+   "text": "The lock cottage.",
+   "say": "[quiet, observant] The lock cottage."
+  },
+  "p2-coat-1": {
+   "speaker": "narrator",
+   "text": "The police have left Neville's coat on a hook, in a clear bag, with a form for you to sign. Wallet. A torch, switched off. A phone, dead from the water. A ring with two small brass keys: one with N.S. scratched on the bow, one with a paper label in round handwriting, K.R.",
+   "say": "[quiet, observant] The police have left Neville's coat on a hook, in a clear bag, with a form for you to sign. Wallet. A torch, switched off. A phone, dead from the water. A ring with two small brass keys: one with N.S. scratched on the bow, one with a paper label in round handwriting, K.R."
+  },
+  "p2-coat-2": {
+   "speaker": "narrator",
+   "text": "Above the hook, on the wall, a typed list: Chain keys. N. Strand. C. Amory. K. Rowe.",
+   "say": "[quiet, observant] Above the hook, on the wall, a typed list: Chain keys. N. Strand. C. Amory. K. Rowe."
+  },
+  "p2-kit-1": {
+   "speaker": "kit",
+   "text": "What now?",
+   "say": "[flat, quick] What now?"
+  },
+  "p2-kit-10": {
+   "speaker": "kit",
+   "text": "He's why I can do this job.",
+   "say": "[flat, quick] He's why I can do this job."
+  },
+  "p2-kit-11": {
+   "speaker": "narrator",
+   "text": "She turns the label over. On the back, in the same hand: spare.",
+   "say": "[quiet, observant] She turns the label over. On the back, in the same hand: spare."
+  },
+  "p2-kit-12": {
+   "speaker": "kit",
+   "text": "I gave him that at twenty to eight. I had a train.",
+   "say": "[quietly] I gave him that at twenty to eight. I had a train."
+  },
+  "p2-kit-13": {
+   "speaker": "kit",
+   "text": "I was in Bristol. Interview at nine on Friday, at Cumberland Basin. Lock-keeper for the Harbour, on the big locks to the river. Neville knew. He said he wouldn't tell the committee.",
+   "say": "[flat, quick] I was in Bristol. Interview at nine on Friday, at Cumberland Basin. Lock-keeper for the Harbour, on the big locks to the river. Neville knew. He said he wouldn't tell the committee."
+  },
+  "p2-kit-14": {
+   "speaker": "narrator",
+   "text": "She fetches a train ticket and a letter from the flat: the 19:52 from Kemble on Thursday, and an interview at nine, Friday, signed by the Harbour Master's office.",
+   "say": "[quiet, observant] She fetches a train ticket and a letter from the flat: the 19:52 from Kemble on Thursday, and an interview at nine, Friday, signed by the Harbour Master's office."
+  },
+  "p2-kit-15": {
+   "speaker": "kit",
+   "text": "Don't tell Clive. Please. If they know I'm going they'll end the post before I've got the other one.",
+   "say": "[urgent, low] Don't tell Clive. Please. If they know I'm going they'll end the post before I've got the other one."
+  },
+  "p2-kit-2": {
+   "speaker": "narrator",
+   "text": "A card is pinned to the door of the flat: AWAY TILL SAT. Kit.",
+   "say": "[quiet, observant] A card is pinned to the door of the flat: AWAY TILL SAT. Kit."
+  },
+  "p2-kit-3": {
+   "speaker": "narrator",
+   "text": "Kit Rowe is twenty-four, in a lock-keeper's fleece with the sleeves pushed up. She has a mug in one hand and a windlass hooked in her belt.",
+   "say": "[quiet, observant] Kit Rowe is twenty-four, in a lock-keeper's fleece with the sleeves pushed up. She has a mug in one hand and a windlass hooked in her belt."
+  },
+  "p2-kit-4": {
+   "speaker": "ros",
+   "text": "Ros Kettering, coroner's officer. I'm sorry about Mr Strand.",
+   "say": "[calm, plain] Ros Kettering, coroner's officer. I'm sorry about Mr Strand."
+  },
+  "p2-kit-5": {
+   "speaker": "kit",
+   "text": "Yeah.",
+   "say": "[flat, quick] Yeah."
+  },
+  "p2-kit-6": {
+   "speaker": "ros",
+   "text": "Were you here on Thursday night?",
+   "say": "[calm, plain] Were you here on Thursday night?"
+  },
+  "p2-kit-7": {
+   "speaker": "kit",
+   "text": "I was here all night. Upstairs. I heard nothing. I sleep with the window shut.",
+   "say": "[flat, quick] I was here all night. Upstairs. I heard nothing. I sleep with the window shut."
+  },
+  "p2-kit-8": {
+   "speaker": "kit",
+   "text": "Down leaves it empty, up leaves it full. You fill it from the pound above. Fifteen's slow; the bottom paddles stick.",
+   "say": "[flat, quick] Down leaves it empty, up leaves it full. You fill it from the pound above. Fifteen's slow; the bottom paddles stick."
+  },
+  "p2-kit-9": {
+   "speaker": "kit",
+   "text": "He walked the flight every night at ten and wrote down the levels. He knew every lock on the Arm by its sound.",
+   "say": "[flat, quick] He walked the flight every night at ten and wrote down the levels. He knew every lock on the Arm by its sound."
+  },
+  "p2-minutes-1": {
+   "speaker": "narrator",
+   "text": "The minutes of Thursday's committee, in the same round handwriting.",
+   "say": "[quiet, observant] The minutes of Thursday's committee, in the same round handwriting."
+  },
+  "p2-minutes-2": {
+   "speaker": "narrator",
+   "text": "Item four. The chairman proposed that the paid lock-keeper post end in March. To be discussed in November.",
+   "say": "[quiet, observant] Item four. The chairman proposed that the paid lock-keeper post end in March. To be discussed in November."
+  },
+  "p2-minutes-3": {
+   "speaker": "narrator",
+   "text": "Item seven, any other business. The chairman will bring something about the gates to the next meeting.",
+   "say": "[quiet, observant] Item seven, any other business. The chairman will bring something about the gates to the next meeting."
+  },
+  "p2-minutes-4": {
+   "speaker": "narrator",
+   "text": "Under it, in pencil, a drawing of a gate with a face.",
+   "say": "[quiet, observant] Under it, in pencil, a drawing of a gate with a face."
+  },
+  "p3-1": {
+   "speaker": "narrator",
+   "text": "Wren is moored on the lock landing below thirteen, next to a sign that says NO MOORING. A green hire boat, fifty feet long, with geraniums in a tin on the roof. The police have asked the van Dams to stay until Monday.",
+   "say": "[quiet, observant] Wren is moored on the lock landing below thirteen, next to a sign that says NO MOORING. A green hire boat, fifty feet long, with geraniums in a tin on the roof. The police have asked the van Dams to stay until Monday."
+  },
+  "p3-2": {
+   "speaker": "narrator",
+   "text": "Wren, below thirteen.",
+   "say": "[quiet, observant] Wren, below thirteen."
+  },
+  "p3-joost-1": {
+   "speaker": "joost",
+   "text": "Yes?",
+   "say": "[careful, formal] Yes?"
+  },
+  "p3-joost-10": {
+   "speaker": "joost",
+   "text": "We were afraid it looks like a fight. It was not a fight. He was a man who wants to show you.",
+   "say": "[careful, formal] We were afraid it looks like a fight. It was not a fight. He was a man who wants to show you."
+  },
+  "p3-joost-11": {
+   "speaker": "joost",
+   "text": "Then we moored here. I know, it is not allowed. We walked down to the pub, and came back at a quarter to twelve. In the car park by the cottage there was a car, with the lights off. Maaike said, lovers.",
+   "say": "[careful, formal] Then we moored here. I know, it is not allowed. We walked down to the pub, and came back at a quarter to twelve. In the car park by the cottage there was a car, with the lights off. Maaike said, lovers."
+  },
+  "p3-joost-2": {
+   "speaker": "narrator",
+   "text": "Joost van Dam is coiling a rope on the roof. He coils it twice.",
+   "say": "[quiet, observant] Joost van Dam is coiling a rope on the roof. He coils it twice."
+  },
+  "p3-joost-3": {
+   "speaker": "joost",
+   "text": "You are from the police?",
+   "say": "[careful, formal] You are from the police?"
+  },
+  "p3-joost-4": {
+   "speaker": "ros",
+   "text": "From the coroner. I find out how people died.",
+   "say": "[calm, plain] From the coroner. I find out how people died."
+  },
+  "p3-joost-5": {
+   "speaker": "joost",
+   "text": "We did not see him after lock fifteen. He shouted at us there, about a paddle. Then we went on, and we did not see him again.",
+   "say": "[careful, formal] We did not see him after lock fifteen. He shouted at us there, about a paddle. Then we went on, and we did not see him again."
+  },
+  "p3-joost-6": {
+   "speaker": "joost",
+   "text": "I do not know about this.",
+   "say": "[careful, formal] I do not know about this."
+  },
+  "p3-joost-7": {
+   "speaker": "joost",
+   "text": "Yes, it is ours. We lost it somewhere. I do not know where.",
+   "say": "[careful, formal] Yes, it is ours. We lost it somewhere. I do not know where."
+  },
+  "p3-joost-8": {
+   "speaker": "narrator",
+   "text": "He looks at the man with the torch on his wife's phone.",
+   "say": "[quiet, observant] He looks at the man with the torch on his wife's phone."
+  },
+  "p3-joost-9": {
+   "speaker": "joost",
+   "text": "Yes. At fourteen also. He stood there and told us how to do it. Then he took my windlass, to show me. I took it back from him, and it fell on the stones. In the dark I could not find it.",
+   "say": "[reluctant] Yes. At fourteen also. He stood there and told us how to do it. Then he took my windlass, to show me. I took it back from him, and it fell on the stones. In the dark I could not find it."
+  },
+  "p3-maaike-1": {
+   "speaker": "maaike",
+   "text": "You can have all of them. I will send them.",
+   "say": "[direct] You can have all of them. I will send them."
+  },
+  "p3-maaike-2": {
+   "speaker": "narrator",
+   "text": "Maaike van Dam opens the hatch before you knock. She has her phone ready.",
+   "say": "[quiet, observant] Maaike van Dam opens the hatch before you knock. She has her phone ready."
+  },
+  "p3-maaike-3": {
+   "speaker": "maaike",
+   "text": "You want these. I took them for my sister, because the locks are so old.",
+   "say": "[direct] You want these. I took them for my sister, because the locks are so old."
+  },
+  "p3-maaike-4": {
+   "speaker": "narrator",
+   "text": "Two photographs, by headlamp. 22:38: lock fourteen, nearly empty, the hire boat low in the chamber. 22:41: the lock empty, the boat leaving through the open bottom gates, and on the lockside above, a man in a dark coat with a torch, pointing.",
+   "say": "[quiet, observant] Two photographs, by headlamp. 22:38: lock fourteen, nearly empty, the hire boat low in the chamber. 22:41: the lock empty, the boat leaving through the open bottom gates, and on the lockside above, a man in a dark coat with a torch, pointing."
+  },
+  "p3-maaike-5": {
+   "speaker": "maaike",
+   "text": "That is him, with the torch. Joost, tell her about the windlass.",
+   "say": "[direct] That is him, with the torch. Joost, tell her about the windlass."
+  },
+  "p3-maaike-6": {
+   "speaker": "narrator",
+   "text": "Joost, on the roof, does not answer.",
+   "say": "[quiet, observant] Joost, on the roof, does not answer."
+  },
+  "p4-1": {
+   "speaker": "narrator",
+   "text": "The Strands' house is on Mill Lane in Steeple Wyke: a stone semi with a rain gauge on a post in the front garden.",
+   "say": "[quiet, observant] The Strands' house is on Mill Lane in Steeple Wyke: a stone semi with a rain gauge on a post in the front garden."
+  },
+  "p4-2": {
+   "speaker": "narrator",
+   "text": "Mill Lane.",
+   "say": "[quiet, observant] Mill Lane."
+  },
+  "p4-annette-1": {
+   "speaker": "annette",
+   "text": "Yes?",
+   "say": "[composed, exact] Yes?"
+  },
+  "p4-annette-10": {
+   "speaker": "annette",
+   "text": "Yes. They should.",
+   "say": "[composed, exact] Yes. They should."
+  },
+  "p4-annette-11": {
+   "speaker": "annette",
+   "text": "He came back from the Navigation at nine. One pint; he always had one. He went out again at ten to ten with the torch.",
+   "say": "[composed, exact] He came back from the Navigation at nine. One pint; he always had one. He went out again at ten to ten with the torch."
+  },
+  "p4-annette-12": {
+   "speaker": "annette",
+   "text": "The phone bill's online. I looked last night, because I couldn't sleep. He rang Clive at five to eleven. Two minutes. After that, nothing.",
+   "say": "[composed, exact] The phone bill's online. I looked last night, because I couldn't sleep. He rang Clive at five to eleven. Two minutes. After that, nothing."
+  },
+  "p4-annette-13": {
+   "speaker": "annette",
+   "text": "No. Not today.",
+   "say": "[composed, exact] No. Not today."
+  },
+  "p4-annette-14": {
+   "speaker": "narrator",
+   "text": "She opens a laptop on the kitchen table. Neville's phone sent its photographs to his account as he took them. The last three came in at 23:13.",
+   "say": "[quiet, observant] She opens a laptop on the kitchen table. Neville's phone sent its photographs to his account as he took them. The last three came in at 23:13."
+  },
+  "p4-annette-15": {
+   "speaker": "narrator",
+   "text": "The first: a cast iron plate on the beam of a lock gate. The new black paint has been scraped off round it. HOLLINS 1987.",
+   "say": "[quiet, observant] The first: a cast iron plate on the beam of a lock gate. The new black paint has been scraped off round it. HOLLINS 1987."
+  },
+  "p4-annette-16": {
+   "speaker": "narrator",
+   "text": "The second: two round wooden plugs in the gate timber, painted over, where bolts had been.",
+   "say": "[quiet, observant] The second: two round wooden plugs in the gate timber, painted over, where bolts had been."
+  },
+  "p4-annette-17": {
+   "speaker": "narrator",
+   "text": "The third: the plate again, from further back, in the torchlight. Behind it, the paddle post of lock fourteen, with its chain on.",
+   "say": "[quiet, observant] The third: the plate again, from further back, in the torchlight. Behind it, the paddle post of lock fourteen, with its chain on."
+  },
+  "p4-annette-18": {
+   "speaker": "annette",
+   "text": "That's fourteen. He was looking at the gates.",
+   "say": "[composed, exact] That's fourteen. He was looking at the gates."
+  },
+  "p4-annette-19": {
+   "speaker": "annette",
+   "text": "He kept every receipt. He'd been up in the study every night since the summer.",
+   "say": "[composed, exact] He kept every receipt. He'd been up in the study every night since the summer."
+  },
+  "p4-annette-2": {
+   "speaker": "narrator",
+   "text": "Annette Strand is sixty-four, in a cardigan buttoned to the top. She has made tea and not drunk it.",
+   "say": "[quiet, observant] Annette Strand is sixty-four, in a cardigan buttoned to the top. She has made tea and not drunk it."
+  },
+  "p4-annette-20": {
+   "speaker": "narrator",
+   "text": "In the study, a box file marked GATES.",
+   "say": "[quiet, observant] In the study, a box file marked GATES."
+  },
+  "p4-annette-21": {
+   "speaker": "narrator",
+   "text": "A letter from the heritage grant office in Bristol: £180,000 paid in April for two pairs of new oak gates, locks thirteen and fourteen, maker Hollins and Daughter. The work signed off as complete by C. Amory, treasurer. Pinned to it, in Neville's pencil: Rang Bristol Wed. for maker's certificate. They have none.",
+   "say": "[quiet, observant] A letter from the heritage grant office in Bristol: £180,000 paid in April for two pairs of new oak gates, locks thirteen and fourteen, maker Hollins and Daughter. The work signed off as complete by C. Amory, treasurer. Pinned to it, in Neville's pencil: Rang Bristol Wed. for maker's certificate. They have none."
+  },
+  "p4-annette-22": {
+   "speaker": "narrator",
+   "text": "Under it, a statement for the trust's reserve account, with two lines ringed. Two years ago: £150,000 out, to the Meridian Income Fund, authorised C. Amory. This June: £150,000 in, \"anonymous donation\". In the margin: Meridian closed March 2025.",
+   "say": "[quiet, observant] Under it, a statement for the trust's reserve account, with two lines ringed. Two years ago: £150,000 out, to the Meridian Income Fund, authorised C. Amory. This June: £150,000 in, \"anonymous donation\". In the margin: Meridian closed March 2025."
+  },
+  "p4-annette-3": {
+   "speaker": "annette",
+   "text": "You'll want to know about Thursday.",
+   "say": "[composed, exact] You'll want to know about Thursday."
+  },
+  "p4-annette-4": {
+   "speaker": "narrator",
+   "text": "Before the undertaker can ring her, you tell her yourself.",
+   "say": "[quiet, observant] Before the undertaker can ring her, you tell her yourself."
+  },
+  "p4-annette-5": {
+   "speaker": "ros",
+   "text": "I've asked the coroner for a second post-mortem. The funeral will have to move.",
+   "say": "[calm, plain] I've asked the coroner for a second post-mortem. The funeral will have to move."
+  },
+  "p4-annette-6": {
+   "speaker": "annette",
+   "text": "The undertaker rang. He says there's to be another post-mortem, and the funeral can't be Wednesday. Nobody from your office rang me.",
+   "say": "[cold, controlled] The undertaker rang. He says there's to be another post-mortem, and the funeral can't be Wednesday. Nobody from your office rang me."
+  },
+  "p4-annette-7": {
+   "speaker": "ros",
+   "text": "The first post-mortem can't tell if he was awake in the water. The second one can. If he was awake, I need to know how the lock came to be full.",
+   "say": "[calm, plain] The first post-mortem can't tell if he was awake in the water. The second one can. If he was awake, I need to know how the lock came to be full."
+  },
+  "p4-annette-8": {
+   "speaker": "annette",
+   "text": "Then do it properly.",
+   "say": "[short pause] [steady] Then do it properly."
+  },
+  "p4-annette-9": {
+   "speaker": "ros",
+   "text": "I'm sorry. Someone should have told you first.",
+   "say": "[calm, plain] I'm sorry. Someone should have told you first."
+  },
+  "p4-notebook-1": {
+   "speaker": "narrator",
+   "text": "On the hall table is a small notebook with a pencil in the spine. Annette sees you looking.",
+   "say": "[quiet, observant] On the hall table is a small notebook with a pencil in the spine. Annette sees you looking."
+  },
+  "p4-notebook-2": {
+   "speaker": "annette",
+   "text": "The water levels. Every lock, every night, for eleven years.",
+   "say": "[composed, exact] The water levels. Every lock, every night, for eleven years."
+  },
+  "p4-notebook-3": {
+   "speaker": "narrator",
+   "text": "The pages are columns of numbers in pencil. The last entry is Thursday. Lock fifteen. Then the page is blank.",
+   "say": "[quiet, observant] The pages are columns of numbers in pencil. The last entry is Thursday. Lock fifteen. Then the page is blank."
+  },
+  "p5-1": {
+   "speaker": "narrator",
+   "text": "The Navigation Inn, by lock eleven: low beams, a fire, a darts board, a lane up to the lock car park.",
+   "say": "[quiet, observant] The Navigation Inn, by lock eleven: low beams, a fire, a darts board, a lane up to the lock car park."
+  },
+  "p5-2": {
+   "speaker": "narrator",
+   "text": "The Navigation.",
+   "say": "[quiet, observant] The Navigation."
+  },
+  "p5-pete-1": {
+   "speaker": "narrator",
+   "text": "Pete Garrow is behind the bar, drying glasses.",
+   "say": "[quiet, observant] Pete Garrow is behind the bar, drying glasses."
+  },
+  "p5-pete-2": {
+   "speaker": "pete",
+   "text": "One pint of Hook Norton, half eight, same as every Thursday. Gone by nine.",
+   "say": "[gruff, unhurried] One pint of Hook Norton, half eight, same as every Thursday. Gone by nine."
+  },
+  "p5-pete-3": {
+   "speaker": "pete",
+   "text": "Came in at five past eleven. Two halves of cider and two packets of crisps. Left at twenty to twelve. She paid.",
+   "say": "[gruff, unhurried] Came in at five past eleven. Two halves of cider and two packets of crisps. Left at twenty to twelve. She paid."
+  },
+  "p5-pete-4": {
+   "speaker": "pete",
+   "text": "Put the bins out at twenty to twelve. Clive Amory's car was up in the lock car park. Green estate, trust sticker. He leaves it here on quiz nights. Engine off, lights off.",
+   "say": "[gruff, unhurried] Put the bins out at twenty to twelve. Clive Amory's car was up in the lock car park. Green estate, trust sticker. He leaves it here on quiz nights. Engine off, lights off."
+  },
+  "p5-pete-5": {
+   "speaker": "pete",
+   "text": "Somebody in it. I didn't look.",
+   "say": "[gruff, unhurried] Somebody in it. I didn't look."
+  },
+  "p6-1": {
+   "speaker": "narrator",
+   "text": "The coroner's office in Cirencester, above a solicitor's. Your desk, your kettle, a window on the car park.",
+   "say": "[quiet, observant] The coroner's office in Cirencester, above a solicitor's. Your desk, your kettle, a window on the car park."
+  },
+  "p6-2": {
+   "speaker": "narrator",
+   "text": "The office.",
+   "say": "[quiet, observant] The office."
+  },
+  "p6-sam-1": {
+   "speaker": "sam",
+   "text": "You're still here, then.",
+   "say": "[measured, kind] You're still here, then."
+  },
+  "p6-sam-2": {
+   "speaker": "narrator",
+   "text": "DS Sam Adeyemi is at the door with a box of pastries from the station.",
+   "say": "[quiet, observant] DS Sam Adeyemi is at the door with a box of pastries from the station."
+  },
+  "p6-sam-3": {
+   "speaker": "sam",
+   "text": "The DCI said you'd be in. I'm to tell you there's no crime on our side. A man of sixty-six on a towpath in the dark. I'm sorry.",
+   "say": "[measured, kind] The DCI said you'd be in. I'm to tell you there's no crime on our side. A man of sixty-six on a towpath in the dark. I'm sorry."
+  },
+  "p6-sam-4": {
+   "speaker": "ros",
+   "text": "Do you think there's no crime?",
+   "say": "[calm, plain] Do you think there's no crime?"
+  },
+  "p6-sam-5": {
+   "speaker": "sam",
+   "text": "I think he fell. I'd tell you if I thought he didn't.",
+   "say": "[measured, kind] I think he fell. I'd tell you if I thought he didn't."
+  },
+  "p6-sam-6": {
+   "speaker": "narrator",
+   "text": "He leaves you the pastries.",
+   "say": "[quiet, observant] He leaves you the pastries."
+  },
+  "p6-shah-1": {
+   "speaker": "narrator",
+   "text": "Dr Shah rings from the mortuary.",
+   "say": "[quiet, observant] Dr Shah rings from the mortuary."
+  },
+  "p6-shah-2": {
+   "speaker": "shah",
+   "text": "I've done the second one this morning. I'll ring you tonight, when it's written up.",
+   "say": "[brisk, clinical] I've done the second one this morning. I'll ring you tonight, when it's written up."
+  },
+  "p6-shah-3": {
+   "speaker": "narrator",
+   "text": "Dr Imogen Shah rings on the dot of ten. You can hear a station announcer.",
+   "say": "[quiet, observant] Dr Imogen Shah rings on the dot of ten. You can hear a station announcer."
+  },
+  "p6-shah-4": {
+   "speaker": "shah",
+   "text": "Neville Strand. Drowning: water in the lungs and airways, froth. In plain words, he breathed water in, so he was alive in it.",
+   "say": "[brisk, clinical] Neville Strand. Drowning: water in the lungs and airways, froth. In plain words, he breathed water in, so he was alive in it."
+  },
+  "p6-shah-5": {
+   "speaker": "shah",
+   "text": "Left thigh broken, from a fall onto an edge. A bruise on the back of the head. I can't tell you yet how hard he hit it. Blood alcohol low. About one pint.",
+   "say": "[brisk, clinical] Left thigh broken, from a fall onto an edge. A bruise on the back of the head. I can't tell you yet how hard he hit it. Blood alcohol low. About one pint."
+  },
+  "p6-shah-6": {
+   "speaker": "shah",
+   "text": "There's always some water at the bottom of an empty lock, isn't there? Half a metre is enough if you're unconscious. I can't tell you how deep it was.",
+   "say": "[brisk, clinical] There's always some water at the bottom of an empty lock, isn't there? Half a metre is enough if you're unconscious. I can't tell you how deep it was."
+  },
+  "p6-shah-7": {
+   "speaker": "shah",
+   "text": "A forensic one. The brain, for the head injury. The hands, the nails. Bruising under the skin. It would tell you whether he was awake.",
+   "say": "[brisk, clinical] A forensic one. The brain, for the head injury. The hands, the nails. Bruising under the skin. It would tell you whether he was awake."
+  },
+  "p7-1": {
+   "speaker": "narrator",
+   "text": "The top gate of lock fourteen. The police tape is gone. The new black paint on the balance beam shines.",
+   "say": "[quiet, observant] The top gate of lock fourteen. The police tape is gone. The new black paint on the balance beam shines."
+  },
+  "p7-2": {
+   "speaker": "narrator",
+   "text": "The top gate of fourteen.",
+   "say": "[quiet, observant] The top gate of fourteen."
+  },
+  "p7-plate-1": {
+   "speaker": "narrator",
+   "text": "At the end of the beam the paint has been scraped back with a blade, in a rough square. Under it is a cast iron plate: HOLLINS 1987.",
+   "say": "[quiet, observant] At the end of the beam the paint has been scraped back with a blade, in a rough square. Under it is a cast iron plate: HOLLINS 1987."
+  },
+  "p7-plate-2": {
+   "speaker": "narrator",
+   "text": "Lower down, two round wooden plugs in the timber, painted over, where bolts went through once. There is no ironwork that fits them on this lock.",
+   "say": "[quiet, observant] Lower down, two round wooden plugs in the timber, painted over, where bolts went through once. There is no ironwork that fits them on this lock."
+  },
+  "p7-post-1": {
+   "speaker": "narrator",
+   "text": "The paddle post has its chain on, and a brass padlock. The square spindle where a windlass fits is bright with new grease. A smear of the same grease is on the chain, at the height of a hand.",
+   "say": "[quiet, observant] The paddle post has its chain on, and a brass padlock. The square spindle where a windlass fits is bright with new grease. A smear of the same grease is on the chain, at the height of a hand."
+  },
+  "p7-pound-1": {
+   "speaker": "narrator",
+   "text": "The pound to fifteen is still a foot down. The work boat sits on the mud. Fifteen is empty.",
+   "say": "[quiet, observant] The pound to fifteen is still a foot down. The work boat sits on the mud. Fifteen is empty."
+  },
+  "p7-pound-2": {
+   "speaker": "narrator",
+   "text": "The pound to fifteen has come back up from the overflow weir at fifteen, and the work boat floats again. Fifteen is still empty, its gates shut and chained.",
+   "say": "[quiet, observant] The pound to fifteen has come back up from the overflow weir at fifteen, and the work boat floats again. Fifteen is still empty, its gates shut and chained."
+  },
+  "p9-1": {
+   "speaker": "narrator",
+   "text": "Clive Amory lives in the last house on Wyke Hill, with a view of the whole flight. The green estate is on the drive.",
+   "say": "[quiet, observant] Clive Amory lives in the last house on Wyke Hill, with a view of the whole flight. The green estate is on the drive."
+  },
+  "p9-2": {
+   "speaker": "narrator",
+   "text": "Wyke Hill.",
+   "say": "[quiet, observant] Wyke Hill."
+  },
+  "p9-car-1": {
+   "speaker": "narrator",
+   "text": "Clive opens the boot. A trust fleece, a first-aid box, wellingtons, and a windlass with a worn wooden grip.",
+   "say": "[quiet, observant] Clive opens the boot. A trust fleece, a first-aid box, wellingtons, and a windlass with a worn wooden grip."
+  },
+  "p9-car-2": {
+   "speaker": "narrator",
+   "text": "The socket of the windlass is packed with fresh grease.",
+   "say": "[quiet, observant] The socket of the windlass is packed with fresh grease."
+  },
+  "p9-car-3": {
+   "speaker": "clive",
+   "text": "I did the paddles on sixteen on Wednesday.",
+   "say": "[gentle, precise] I did the paddles on sixteen on Wednesday."
+  },
+  "p9-clive-1": {
+   "speaker": "clive",
+   "text": "More questions? Of course.",
+   "say": "[gentle, precise] More questions? Of course."
+  },
+  "p9-clive-10": {
+   "speaker": "clive",
+   "text": "Reclaimed ironwork, perhaps. A good maker reuses a sound plate, and Ted Hollins is a very good maker. You would have to ask him; I only sign for the work, I don't build it.",
+   "say": "[gentle, precise] Reclaimed ironwork, perhaps. A good maker reuses a sound plate, and Ted Hollins is a very good maker. You would have to ask him; I only sign for the work, I don't build it."
+  },
+  "p9-clive-11": {
+   "speaker": "clive",
+   "text": "Every windlass on this canal has grease on it, Mrs Kettering, and every paddle on the flight was greased in the spring. I did sixteen on Wednesday. Fourteen is Kit's job, not mine.",
+   "say": "[gentle, precise] Every windlass on this canal has grease on it, Mrs Kettering, and every paddle on the flight was greased in the spring. I did sixteen on Wednesday. Fourteen is Kit's job, not mine."
+  },
+  "p9-clive-12": {
+   "speaker": "narrator",
+   "text": "Clive takes his glasses off.",
+   "say": "[quiet, observant] Clive takes his glasses off."
+  },
+  "p9-clive-13": {
+   "speaker": "clive",
+   "text": "Yes. I went down, after all. I was worried about him; he'd sounded upset. I drove to the car park and walked to fourteen, and he wasn't there. I sat in the car for a while, in case he came back. Then I came home.",
+   "say": "[gentle, precise] Yes. I went down, after all. I was worried about him; he'd sounded upset. I drove to the car park and walked to fourteen, and he wasn't there. I sat in the car for a while, in case he came back. Then I came home."
+  },
+  "p9-clive-14": {
+   "speaker": "clive",
+   "text": "I didn't say so, because it sounds as if I left him there.",
+   "say": "[gentle, precise] I didn't say so, because it sounds as if I left him there."
+  },
+  "p9-clive-15": {
+   "speaker": "narrator",
+   "text": "He puts his glasses back on and goes through the three photographs twice: the plate, the plugs, the post with its chain.",
+   "say": "[quiet, observant] He puts his glasses back on and goes through the three photographs twice: the plate, the plugs, the post with its chain."
+  },
+  "p9-clive-16": {
+   "speaker": "clive",
+   "text": "The chairman was very thorough.",
+   "say": "[short pause] [quiet] The chairman was very thorough."
+  },
+  "p9-clive-17": {
+   "speaker": "clive",
+   "text": "I think I'd like to stop now, Mrs Kettering. Will you see yourself out?",
+   "say": "[gentle, precise] I think I'd like to stop now, Mrs Kettering. Will you see yourself out?"
+  },
+  "p9-clive-2": {
+   "speaker": "narrator",
+   "text": "Clive opens the door in a cardigan, with his reading glasses pushed up.",
+   "say": "[quiet, observant] Clive opens the door in a cardigan, with his reading glasses pushed up."
+  },
+  "p9-clive-3": {
+   "speaker": "clive",
+   "text": "Mrs Kettering. Come in. I've put the trust's accounts out for you; I thought you'd want them. They're in order.",
+   "say": "[gentle, precise] Mrs Kettering. Come in. I've put the trust's accounts out for you; I thought you'd want them. They're in order."
+  },
+  "p9-clive-4": {
+   "speaker": "narrator",
+   "text": "They are. Every column adds up. The reserve account is shown at £150,000 in each of the last three years.",
+   "say": "[quiet, observant] They are. Every column adds up. The reserve account is shown at £150,000 in each of the last three years."
+  },
+  "p9-clive-5": {
+   "speaker": "clive",
+   "text": "As I said, the chairman rang me at five to eleven, and I told him to ring me in the morning. Then I went to bed.",
+   "say": "[gentle, precise] As I said, the chairman rang me at five to eleven, and I told him to ring me in the morning. Then I went to bed."
+  },
+  "p9-clive-6": {
+   "speaker": "narrator",
+   "text": "He takes his car keys from his pocket. With them is a small brass key with C.A. scratched on the bow.",
+   "say": "[quiet, observant] He takes his car keys from his pocket. With them is a small brass key with C.A. scratched on the bow."
+  },
+  "p9-clive-7": {
+   "speaker": "clive",
+   "text": "Always. The chairman was very particular about the keys.",
+   "say": "[gentle, precise] Always. The chairman was very particular about the keys."
+  },
+  "p9-clive-8": {
+   "speaker": "clive",
+   "text": "Hollins and Daughter. Ted Hollins is a craftsman; I was at school with him. Oak, from a French forest, seasoned four years. I can show you the invoice. It's in the file.",
+   "say": "[gentle, precise] Hollins and Daughter. Ted Hollins is a craftsman; I was at school with him. Oak, from a French forest, seasoned four years. I can show you the invoice. It's in the file."
+  },
+  "p9-clive-9": {
+   "speaker": "clive",
+   "text": "Meridian was a mistake, and it was mine; the committee approved the investment, and the fund failed, as funds do. The gift in June came from someone who loves this canal and wants no thanks for it, and I have respected that, as I'd respect it from anyone.",
+   "say": "[gentle, precise] Meridian was a mistake, and it was mine; the committee approved the investment, and the fund failed, as funds do. The gift in June came from someone who loves this canal and wants no thanks for it, and I have respected that, as I'd respect it from anyone."
+  },
+  "q-alive-1": {
+   "speaker": "narrator",
+   "text": "He fell into an empty lock and broke his leg. He breathed water in, so he was alive in it. Someone filled the lock.",
+   "say": "[quiet, observant] He fell into an empty lock and broke his leg. He breathed water in, so he was alive in it. Someone filled the lock."
+  },
+  "q-alive-2": {
+   "speaker": "narrator",
+   "text": "Dr Shah's second report: he was awake, and he could have sat up in the water at the bottom. He drowned because someone made it deeper.",
+   "say": "[quiet, observant] Dr Shah's second report: he was awake, and he could have sat up in the water at the bottom. He drowned because someone made it deeper."
+  },
+  "q-alive-3": {
+   "speaker": "narrator",
+   "text": "If he was knocked out, he could have drowned in the water at the bottom of an empty lock. If he was awake, he drowned because someone filled it. Only a second post-mortem can say which.",
+   "say": "[quiet, observant] If he was knocked out, he could have drowned in the water at the bottom of an empty lock. If he was awake, he drowned because someone filled it. Only a second post-mortem can say which."
+  },
+  "q-chain-1": {
+   "speaker": "narrator",
+   "text": "At 23:13 the paddle gear on fourteen was chained. To fill the lock, someone had to unlock it after that. A padlock snaps shut without a key, so the chain on it at dawn proves nothing. The unlocking does. There are three keys. Two were in Neville's pocket, in the water.",
+   "say": "[quiet, observant] At 23:13 the paddle gear on fourteen was chained. To fill the lock, someone had to unlock it after that. A padlock snaps shut without a key, so the chain on it at dawn proves nothing. The unlocking does. There are three keys. Two were in Neville's pocket, in the water."
+  },
+  "q-filled-1": {
+   "speaker": "narrator",
+   "text": "The hire boat came down the flight last night, through fifteen and fourteen, and left both empty. A boat coming up would have filled fourteen and then had to fill fifteen. Fifteen is still empty. So nobody came up. Someone wound the paddles on fourteen by hand, and the water came out of the pound.",
+   "say": "[quiet, observant] The hire boat came down the flight last night, through fifteen and fourteen, and left both empty. A boat coming up would have filled fourteen and then had to fill fifteen. Fifteen is still empty. So nobody came up. Someone wound the paddles on fourteen by hand, and the water came out of the pound."
+  }
+ }
+}

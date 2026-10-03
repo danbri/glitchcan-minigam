@@ -1,0 +1,29 @@
+{
+ "about": "Delivery directions for Lock Fourteen's voices (eleven_v4 audio tags). 'default' is per speaker; 'say' is a line's full spoken text with tags, which must equal the page text once the tags are removed. Run from cozyverse/steeplewyke: STORY=../mystery3 python3 tools/directions.py <lines.json> writes ../mystery3/voices.json.",
+ "default": {
+  "narrator": "[quiet, observant]",
+  "ros": "[calm, plain]",
+  "clive": "[gentle, precise]",
+  "kit": "[flat, quick]",
+  "joost": "[careful, formal]",
+  "maaike": "[direct]",
+  "annette": "[composed, exact]",
+  "pete": "[gruff, unhurried]",
+  "shah": "[brisk, clinical]",
+  "quaile": "[drily]",
+  "sam": "[measured, kind]",
+  "coroner": "[weary, kind]",
+  "constable": "[polite]"
+ },
+ "say": {
+  "end-full-4": "[quiet, steady] I put the reserve into the Meridian fund on Ted Hollins's advice, and when it closed I told the committee nothing, because I thought I could put it right before anyone needed the money.",
+  "end-full-5": "[very quiet] When he fell I could hear him, and I went to the car for my windlass, and I wound the paddles up; when it was full I wound them down and put the chain back on, because that is what you do at night.",
+  "end-full-7": "[long pause] [almost a whisper] Neville was right about the gates.",
+  "p2-kit-12": "[quietly] I gave him that at twenty to eight. I had a train.",
+  "p2-kit-15": "[urgent, low] Don't tell Clive. Please. If they know I'm going they'll end the post before I've got the other one.",
+  "p4-annette-6": "[cold, controlled] The undertaker rang. He says there's to be another post-mortem, and the funeral can't be Wednesday. Nobody from your office rang me.",
+  "p4-annette-8": "[short pause] [steady] Then do it properly.",
+  "p9-clive-16": "[short pause] [quiet] The chairman was very thorough.",
+  "p3-joost-9": "[reluctant] Yes. At fourteen also. He stood there and told us how to do it. Then he took my windlass, to show me. I took it back from him, and it fell on the stones. In the dark I could not find it."
+ }
+}

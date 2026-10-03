@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lock Fourteen (text draft)</title>
+<meta name="description" content="Lock Fourteen, a coroner's officer mystery on the Wyke Arm: the text-only playable draft, before pictures and voices.">
+<!--
+  Gate 2 text draft of lockfourteen.ink: the real ink compiler and Story API, no pictures, sounds or voices. The
+  panels of the page in view are listed as "Look closer" buttons, so a reader can make the same taps as on a
+  novel page (pages.json). A line that starts "Name:" is that person speaking.
+-->
+<style>
+:root { --bg: #f4f1ea; --ink: #222; --dim: #6b6559; --line: #d8d1c2; --accent: #2f5d62; --btn: #fffdf8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1b1d1e; --ink: #e6e2d8; --dim: #a29c90; --line: #3a3d3f; --accent: #8cc3c9; --btn: #24272a; } }
+:root[data-theme="dark"] { --bg: #1b1d1e; --ink: #e6e2d8; --dim: #a29c90; --line: #3a3d3f; --accent: #8cc3c9; --btn: #24272a; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 18px/1.55 Georgia, "Times New Roman", serif; }
+main { max-width: 40rem; margin: 0 auto; padding: 16px 16px 48px; }
+header { border-bottom: 1px solid var(--line); margin-bottom: 16px; padding-bottom: 8px; }
+h1 { font-size: 1.3rem; margin: 0; }
+#where { font: 600 0.8rem/1.4 system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); margin: 4px 0 0; }
+#prose p { margin: 0 0 0.8em; }
+#prose b { font: 600 0.75rem/1 system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin-right: 0.4em; }
+#prose:focus { outline: none; }
+.group { margin-top: 16px; }
+.group h2 { font: 600 0.75rem/1 system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); margin: 0 0 6px; }
+button { display: block; width: 100%; min-height: 44px; margin: 6px 0 0; padding: 10px 12px; text-align: left; font: inherit; font-size: 1rem;
+  color: var(--ink); background: var(--btn); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+button:hover, button:focus-visible { border-color: var(--accent); }
+.taps button { font-size: 0.9rem; color: var(--dim); min-height: 40px; }
+footer { margin-top: 32px; font: 0.8rem/1.4 system-ui, sans-serif; color: var(--dim); }
+footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Lock Fourteen</h1>
+    <p id="where" aria-live="polite">Loading…</p>
+  </header>
+  <section id="prose" tabindex="-1" aria-live="polite" aria-label="Story"></section>
+  <nav class="group" aria-label="What you do next"><h2>Next</h2><div id="choices"></div></nav>
+  <nav class="group taps" aria-label="Look closer at the page" hidden><h2>Look closer</h2><div id="taps"></div></nav>
+  <footer>Text draft, before pictures and voices. Case file and voices:
+    <a href="https://github.com/danbri/glitchcan-minigam/blob/master/cozyverse/mystery3/CASE.md">CASE.md</a>,
+    <a href="https://github.com/danbri/glitchcan-minigam/blob/master/cozyverse/mystery3/VOICES.md">VOICES.md</a>.</footer>
+</main>
+<script src="../../third_party/ink/ink-full.js"></script>
+<script type="module">
+const prose = document.getElementById("prose"), choices = document.getElementById("choices");
+const tapsBox = document.getElementById("taps"), tapsNav = tapsBox.parentElement, where = document.getElementById("where");
+const [src, data] = await Promise.all([fetch("lockfourteen.ink").then((r) => r.text()), fetch("pages.json").then((r) => r.json())]);
+const story = new inkjs.Story(new inkjs.Compiler(src).Compile().ToJson());
+let page = 1;
+const titleOf = (n) => (data.pages.find((p) => p.n === n) || {}).title || "";
+function line(text) {
+  const p = document.createElement("p");
+  const m = /^([A-Z][\w'. ]{0,24}):\s+(.*)$/.exec(text);
+  if (m) { const b = document.createElement("b"); b.textContent = m[1]; p.append(b, m[2]); } else p.textContent = text;
+  prose.appendChild(p);
+}
+function step() {
+  prose.textContent = ""; choices.textContent = ""; tapsBox.textContent = "";
+  let restart = false;
+  while (story.canContinue) {
+    const t = story.Continue().trim();
+    for (const tag of story.currentTags) {
+      const m = /^page:\s*(\d+)/.exec(tag); if (m) page = +m[1];
+      if (/^restart$/.test(tag)) restart = true;
+    }
+    if (t) line(t);
+  }
+  if (restart) { story.ResetState(); page = 1; return step(); }
+  const day = ["", "Friday", "Saturday", "Sunday", "Monday"][story.variablesState.day] || "";
+  where.textContent = `${day} · ${titleOf(page)}`;
+  story.currentChoices.forEach((c) => {
+    const b = document.createElement("button"); b.textContent = c.text;
+    b.onclick = () => { story.ChooseChoiceIndex(c.index); step(); };
+    choices.appendChild(b);
+  });
+  const pg = data.pages.find((p) => p.n === page);
+  const panels = story.currentChoices.length && pg ? pg.panels : [];
+  tapsNav.hidden = !panels.length;
+  panels.forEach((x) => {
+    const b = document.createElement("button"); b.textContent = x.id;
+    b.onclick = () => { story.ChoosePathString(x.ink); step(); };
+    tapsBox.appendChild(b);
+  });
+  prose.focus({ preventScroll: true }); window.scrollTo(0, 0);
+}
+step();
+window.__lock14 = { story, get page() { return page; } };
+</script>
+</body>
+</html>

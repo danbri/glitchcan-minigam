@@ -75,12 +75,18 @@ VAR was_quaile = 0
 # panel: page
 {at != 1: -> hub}
 {p1 == 1:
+    # voice: p1-1
     Lock fourteen of the Wyke Arm. Friday, nine in the morning.
+    # voice: p1-2
     You are Ros Kettering, coroner's officer for the county. A sudden death comes to you before it goes to the coroner. You retire in March.
+    # voice: p1-3
     The police tape runs from a balance beam to a fence post. The body went to the mortuary an hour ago. Neville Strand, sixty-six, chairman of the canal trust. Found at ten past seven by the crew of a hire boat.
+    # voice: p1-4
     The lock is full to the top of the gates. Below thirteen you can see the hire boat that came down the flight last night, moored.
+    # voice: p1-5
     A man in a trust fleece waits by the top gate with two coffees.
 - else:
+    # voice: p1-6
     Lock fourteen. Full.
 }
 + {p1_clive == 0} [Take the coffee] -> p1_clive
@@ -92,28 +98,41 @@ VAR was_quaile = 0
 # panel: clive
 {at != 1: -> hub}
 {p1_clive > 1:
+    # voice: p1-clive-1
     Clive: Anything else I can tell you, Mrs Kettering?
     -> p1_clive_choices
 }
+# voice: p1-clive-2
 Clive: Mrs Kettering? Clive Amory. I'm the trust's treasurer. Kit's away, so I said I'd meet you. White, no sugar. I guessed.
+# voice: p1-clive-3
 Ros: Thank you. You knew him well.
+# voice: p1-clive-4
 Clive: Fourteen years on the committee with the chairman.
+# voice: p1-clive-5
 He has a windlass in his fleece pocket, and he holds the coffee with both hands.
 + [Ask him how a lock works] -> p1_logic
 + [Tell him you know how locks work] -> p1_statement
 
 = p1_logic
 ~ logic = true
+# voice: p1-clive-6
 Clive: A lock is a box of water with a pair of gates at each end. To take a boat up, you bring it into the box while it's empty, shut the bottom gates and wind up the top paddles. The water comes in from the canal above.
+# voice: p1-clive-7
 Clive: To go down, you do it the other way round. So a boat that goes down leaves the lock empty, and a boat that goes up leaves it full.
+# voice: p1-clive-8
 Ros: And the water for it?
+# voice: p1-clive-9
 Clive: From the pound, the stretch of canal between this lock and the next one up. A lock this size holds about sixty tonnes. When it fills, the pound drops.
+# voice: p1-clive-10
 Clive: At night we chain the paddle gear, to save water. The chairman did it on his walk. Every night at ten.
 -> p1_statement
 
 = p1_statement
+# voice: p1-clive-11
 Ros: When did you last speak to the deceased?
+# voice: p1-clive-12
 Clive: He rang me at five to eleven last night, about the minutes of our meeting. I told him to ring me in the morning, and I went to bed.
+# voice: p1-clive-13
 His car is in the lock car park: a green estate with a trust sticker in the back window.
 -> p1_clive_choices
 
@@ -126,7 +145,9 @@ His car is in the lock car park: a green estate with a trust sticker in the back
 # panel: fifteen
 {at != 1: -> hub}
 ~ fifteen = true
+# voice: p1-fifteen-1
 Two hundred metres up the towpath, lock fifteen is empty. Both pairs of gates are shut.
+# voice: p1-fifteen-2
 Between the two locks the canal is low. A strip of wet brick, a foot high, runs along the bank above the water. The trust's work boat sits on the mud at an angle, its mooring ropes tight.
 + {p1_clive == 0} [Go back to the man with the coffees] -> p1_clive
 + {p1_bag == 0} [Look at the bag by the top gate] -> p1_bag
@@ -136,8 +157,11 @@ Between the two locks the canal is low. A strip of wet brick, a foot high, runs 
 # panel: bag
 {at != 1: -> hub}
 ~ windlass = true
-A police exhibit bag lies on the lockside. In it is a windlass: an iron handle, bent in an L, for winding paddles. A plastic tag on it says WREN, with the name of a hire company in Banbury.
+# voice: p1-bag-1
+A police exhibit bag lies on the lockside. In it is a windlass: an iron handle, bent in an L, for winding paddles. A plastic tag on it says WREN, and the name of the hire company.
+# voice: p1-bag-2
 A constable lifts the tape for you.
+# voice: p1-bag-3
 Constable: It was by the top gate, ma'am. It's off the hire boat. Dutch couple. They came down through the locks last night and found him this morning.
 + {p1_clive == 0} [Go back to the man with the coffees] -> p1_clive
 + {p1_fifteen == 0} [Walk up to lock fifteen] -> p1_fifteen
@@ -202,12 +226,19 @@ Constable: It was by the top gate, ma'am. It's off the hire boat. Dutch couple. 
 
 === call_coroner ===
 ~ pm2_asked = true
+# voice: call-coroner-1
 You phone the coroner at home. He is in his garden; you can hear a mower stop.
+# voice: call-coroner-2
 Ros: The deceased drowned. He has a bruise on the head that Dr Shah can't measure yet.
+# voice: call-coroner-3
 Ros: If he was knocked out, it's an accident. If he was awake, someone has to explain the water.
+# voice: call-coroner-4
 Ros: I'd like a forensic post-mortem. Before the body is released.
+# voice: call-coroner-5
 Coroner: The funeral's booked for Wednesday, Ros.
+# voice: call-coroner-6
 Ros: I know.
+# voice: call-coroner-7
 Coroner: All right. Dr Shah can do it tomorrow morning. Someone had better tell Mrs Strand before the undertaker does.
 -> hub
 
@@ -266,6 +297,7 @@ Lock fourteen was full at dawn. The hire boat came down the flight last night.
 + [Not yet] -> board.board_choices
 = right
 ~ c_filled = true
+# voice: q-filled-1
 The hire boat came down the flight last night, through fifteen and fourteen, and left both empty. A boat coming up would have filled fourteen and then had to fill fifteen. Fifteen is still empty. So nobody came up. Someone wound the paddles on fourteen by hand, and the water came out of the pound.
 New card: someone filled lock fourteen after the last boat.
 -> board.board_choices
@@ -280,11 +312,14 @@ It does not join.
 + [Not yet] -> board.board_choices
 = right
 ~ c_alive = true
+# voice: q-alive-1
 He fell into an empty lock and broke his leg. He breathed water in, so he was alive in it. Someone filled the lock.
 {pm2:
+    # voice: q-alive-2
     Dr Shah's second report: he was awake, and he could have sat up in the water at the bottom. He drowned because someone made it deeper.
     New card: Neville was alive and awake in the water when the lock was filled.
 - else:
+    # voice: q-alive-3
     If he was knocked out, he could have drowned in the water at the bottom of an empty lock. If he was awake, he drowned because someone filled it. Only a second post-mortem can say which.
     New card: Neville was alive in the water when the lock was filled.
 }
@@ -300,6 +335,7 @@ It does not join.
 + [Not yet] -> board.board_choices
 = right
 ~ c_chain = true
+# voice: q-chain-1
 At 23:13 the paddle gear on fourteen was chained. To fill the lock, someone had to unlock it after that. A padlock snaps shut without a key, so the chain on it at dawn proves nothing. The unlocking does. There are three keys. Two were in Neville's pocket, in the water.
 New card: whoever filled the lock had the third key, Clive Amory's.
 -> board.board_choices
@@ -315,9 +351,13 @@ It does not join.
 {evening_line()}
 {day == 3 && pm2_asked && not pm2:
     ~ pm2 = true
+    # voice: evening-1
     At eight the phone rings. Dr Shah, from a station platform.
+    # voice: evening-2
     Shah: Second post-mortem. The bruise on the head is slight. No fracture, no bleeding inside the skull. He was conscious.
+    # voice: evening-3
     Shah: The nails on both hands are torn, with brick in them. He tried to climb the chamber wall. The broken thigh bled into the muscle for some minutes before he died.
+    # voice: evening-4
     Shah: Plainly: a conscious man with a broken leg can sit up in half a metre of water. He drowned because the water got deeper.
 }
 + [Look at the board before bed] -> board_evening
@@ -345,9 +385,12 @@ It does not join.
 # panel: page
 {at != 2: -> hub}
 {p2 == 1:
+    # voice: p2-1
     The towpath climbs beside the flight. Sixteen, fifteen and fourteen have their paddle gear chained, each post wrapped in a chain with a brass padlock. Thirteen, below the cottage, is not.
+    # voice: p2-2
     The lock cottage is the trust's office, with a flat upstairs for the lock-keeper.
 - else:
+    # voice: p2-3
     The lock cottage.
 }
 + {p2_coat == 0} [Sign for Neville's coat] -> p2_coat
@@ -359,7 +402,9 @@ It does not join.
 # panel: coat
 {at != 2: -> hub}
 ~ keys = true
+# voice: p2-coat-1
 The police have left Neville's coat on a hook, in a clear bag, with a form for you to sign. Wallet. A torch, switched off. A phone, dead from the water. A ring with two small brass keys: one with N.S. scratched on the bow, one with a paper label in round handwriting, K.R.
+# voice: p2-coat-2
 Above the hook, on the wall, a typed list: Chain keys. N. Strand. C. Amory. K. Rowe.
 + {p2_minutes == 0} [Read the minutes book on the table] -> p2_minutes
 + [Knock at the flat upstairs] -> p2_kit
@@ -368,9 +413,13 @@ Above the hook, on the wall, a typed list: Chain keys. N. Strand. C. Amory. K. R
 === p2_minutes ===
 # panel: minutes
 {at != 2: -> hub}
+# voice: p2-minutes-1
 The minutes of Thursday's committee, in the same round handwriting.
+# voice: p2-minutes-2
 Item four. The chairman proposed that the paid lock-keeper post end in March. To be discussed in November.
+# voice: p2-minutes-3
 Item seven, any other business. The chairman will bring something about the gates to the next meeting.
+# voice: p2-minutes-4
 Under it, in pencil, a drawing of a gate with a face.
 + {p2_coat == 0} [Sign for Neville's coat] -> p2_coat
 + [Knock at the flat upstairs] -> p2_kit
@@ -381,22 +430,29 @@ Under it, in pencil, a drawing of a gate with a face.
 {at != 2: -> hub}
 {day == 1: -> p2_kit_away}
 {p2_kit_met:
+    # voice: p2-kit-1
     Kit: What now?
     -> p2_kit_choices
 }
 -> p2_kit_met
 
 = p2_kit_away
+# voice: p2-kit-2
 A card is pinned to the door of the flat: AWAY TILL SAT. Kit.
 + {p2_coat == 0} [Sign for Neville's coat] -> p2_coat
 + {p2_minutes == 0} [Read the minutes book on the table] -> p2_minutes
 + [Leave] -> hub
 
 = p2_kit_met
+# voice: p2-kit-3
 Kit Rowe is twenty-four, in a lock-keeper's fleece with the sleeves pushed up. She has a mug in one hand and a windlass hooked in her belt.
+# voice: p2-kit-4
 Ros: Ros Kettering, coroner's officer. I'm sorry about Mr Strand.
+# voice: p2-kit-5
 Kit: Yeah.
+# voice: p2-kit-6
 Ros: Were you here on Thursday night?
+# voice: p2-kit-7
 Kit: I was here all night. Upstairs. I heard nothing. I sleep with the window shut.
 -> p2_kit_choices
 
@@ -408,11 +464,14 @@ Kit: I was here all night. Upstairs. I heard nothing. I sleep with the window sh
 
 = p2_kit_logic
 ~ logic = true
+# voice: p2-kit-8
 Kit: Down leaves it empty, up leaves it full. You fill it from the pound above. Fifteen's slow; the bottom paddles stick.
 -> p2_kit_choices
 
 = p2_kit_neville
+# voice: p2-kit-9
 Kit: He walked the flight every night at ten and wrote down the levels. He knew every lock on the Arm by its sound.
+# voice: p2-kit-10
 Kit: He's why I can do this job.
 -> p2_kit_choices
 
@@ -429,10 +488,15 @@ Kit: {&What's that got to do with me?|I don't know anything about that.}
 = p2_kit_broke
 ~ kit_broke = true
 ~ ticket = true
+# voice: p2-kit-11
 She turns the label over. On the back, in the same hand: spare.
+# voice: p2-kit-12
 Kit: I gave him that at twenty to eight. I had a train.
+# voice: p2-kit-13
 Kit: I was in Bristol. Interview at nine on Friday, at Cumberland Basin. Lock-keeper for the Harbour, on the big locks to the river. Neville knew. He said he wouldn't tell the committee.
+# voice: p2-kit-14
 She fetches a train ticket and a letter from the flat: the 19:52 from Kemble on Thursday, and an interview at nine, Friday, signed by the Harbour Master's office.
+# voice: p2-kit-15
 Kit: Don't tell Clive. Please. If they know I'm going they'll end the post before I've got the other one.
 -> p2_kit_choices
 
@@ -442,8 +506,10 @@ Kit: Don't tell Clive. Please. If they know I'm going they'll end the post befor
 # panel: page
 {at != 3: -> hub}
 {p3 == 1:
+    # voice: p3-1
     Wren is moored on the lock landing below thirteen, next to a sign that says NO MOORING. A green hire boat, fifty feet long, with geraniums in a tin on the roof. The police have asked the van Dams to stay until Monday.
 - else:
+    # voice: p3-2
     Wren, below thirteen.
 }
 + [Talk to the man on the roof] -> p3_joost
@@ -454,15 +520,20 @@ Kit: Don't tell Clive. Please. If they know I'm going they'll end the post befor
 # panel: joost
 {at != 3: -> hub}
 {p3_joost_met:
+    # voice: p3-joost-1
     Joost: Yes?
     -> p3_joost_choices
 }
 -> p3_joost_met
 
 = p3_joost_met
+# voice: p3-joost-2
 Joost van Dam is coiling a rope on the roof. He coils it twice.
+# voice: p3-joost-3
 Joost: You are from the police?
+# voice: p3-joost-4
 Ros: From the coroner. I find out how people died.
+# voice: p3-joost-5
 Joost: We did not see him after lock fifteen. He shouted at us there, about a paddle. Then we went on, and we did not see him again.
 -> p3_joost_choices
 
@@ -477,18 +548,24 @@ Joost: We did not see him after lock fifteen. He shouted at us there, about a pa
 + [Put it away] -> p3_joost_choices
 
 = p3_joost_wrong
+# voice: p3-joost-6
 Joost: I do not know about this.
 -> p3_joost_choices
 
 = p3_joost_windlass
+# voice: p3-joost-7
 Joost: Yes, it is ours. We lost it somewhere. I do not know where.
 -> p3_joost_choices
 
 = p3_joost_broke
 ~ joost_broke = true
+# voice: p3-joost-8
 He looks at the man with the torch on his wife's phone.
+# voice: p3-joost-9
 Joost: Yes. At fourteen also. He stood there and told us how to do it. Then he took my windlass, to show me. I took it back from him, and it fell on the stones. In the dark I could not find it.
+# voice: p3-joost-10
 Joost: We were afraid it looks like a fight. It was not a fight. He was a man who wants to show you.
+# voice: p3-joost-11
 Joost: Then we moored here. I know, it is not allowed. We walked down to the pub, and came back at a quarter to twelve. In the car park by the cottage there was a car, with the lights off. Maaike said, lovers.
 -> p3_joost_choices
 
@@ -496,14 +573,20 @@ Joost: Then we moored here. I know, it is not allowed. We walked down to the pub
 # panel: maaike
 {at != 3: -> hub}
 {p3_maaike > 1:
+    # voice: p3-maaike-1
     Maaike: You can have all of them. I will send them.
     -> p3_maaike_choices
 }
 ~ photos = true
+# voice: p3-maaike-2
 Maaike van Dam opens the hatch before you knock. She has her phone ready.
+# voice: p3-maaike-3
 Maaike: You want these. I took them for my sister, because the locks are so old.
+# voice: p3-maaike-4
 Two photographs, by headlamp. 22:38: lock fourteen, nearly empty, the hire boat low in the chamber. 22:41: the lock empty, the boat leaving through the open bottom gates, and on the lockside above, a man in a dark coat with a torch, pointing.
+# voice: p3-maaike-5
 Maaike: That is him, with the torch. Joost, tell her about the windlass.
+# voice: p3-maaike-6
 Joost, on the roof, does not answer.
 -> p3_maaike_choices
 
@@ -517,8 +600,10 @@ Joost, on the roof, does not answer.
 # panel: page
 {at != 4: -> hub}
 {p4 == 1:
+    # voice: p4-1
     The Strands' house is on Mill Lane in Steeple Wyke: a stone semi with a rain gauge on a post in the front garden.
 - else:
+    # voice: p4-2
     Mill Lane.
 }
 + [Talk to Annette] -> p4_annette
@@ -529,23 +614,29 @@ Joost, on the roof, does not answer.
 # panel: annette
 {at != 4: -> hub}
 {p4_annette > 1:
+    # voice: p4-annette-1
     Annette: Yes?
     -> p4_choices
 }
+# voice: p4-annette-2
 Annette Strand is sixty-four, in a cardigan buttoned to the top. She has made tea and not drunk it.
 {pm2_asked && not pm2_told && day == 2: -> p4_first}
 {pm2_asked && not pm2_told: -> p4_undertaker}
+# voice: p4-annette-3
 Annette: You'll want to know about Thursday.
 -> p4_choices
 
 = p4_first
+# voice: p4-annette-4
 Before the undertaker can ring her, you tell her yourself.
+# voice: p4-annette-5
 Ros: I've asked the coroner for a second post-mortem. The funeral will have to move.
 -> p4_why
 
 = p4_undertaker
 ~ annette_cold = day
 ~ pm2_told = true
+# voice: p4-annette-6
 Annette: The undertaker rang. He says there's to be another post-mortem, and the funeral can't be Wednesday. Nobody from your office rang me.
 + [Tell her why] -> p4_why
 + [Say you are sorry] -> p4_sorry
@@ -553,12 +644,16 @@ Annette: The undertaker rang. He says there's to be another post-mortem, and the
 = p4_why
 ~ pm2_told = true
 ~ annette_cold = 0
+# voice: p4-annette-7
 Ros: The first post-mortem can't tell if he was awake in the water. The second one can. If he was awake, I need to know how the lock came to be full.
+# voice: p4-annette-8
 Annette: Then do it properly.
 -> p4_choices
 
 = p4_sorry
+# voice: p4-annette-9
 Ros: I'm sorry. Someone should have told you first.
+# voice: p4-annette-10
 Annette: Yes. They should.
 -> p4_choices
 
@@ -569,36 +664,51 @@ Annette: Yes. They should.
 + [Leave] -> hub
 
 = p4_thursday
+# voice: p4-annette-11
 Annette: He came back from the Navigation at nine. One pint; he always had one. He went out again at ten to ten with the torch.
+# voice: p4-annette-12
 Annette: The phone bill's online. I looked last night, because I couldn't sleep. He rang Clive at five to eleven. Two minutes. After that, nothing.
 -> p4_choices
 
 = p4_cloud
 {annette_cold == day:
+    # voice: p4-annette-13
     Annette: No. Not today.
     -> p4_choices
 }
 ~ cloud = true
+# voice: p4-annette-14
 She opens a laptop on the kitchen table. Neville's phone sent its photographs to his account as he took them. The last three came in at 23:13.
+# voice: p4-annette-15
 The first: a cast iron plate on the beam of a lock gate. The new black paint has been scraped off round it. HOLLINS 1987.
+# voice: p4-annette-16
 The second: two round wooden plugs in the gate timber, painted over, where bolts had been.
+# voice: p4-annette-17
 The third: the plate again, from further back, in the torchlight. Behind it, the paddle post of lock fourteen, with its chain on.
+# voice: p4-annette-18
 Annette: That's fourteen. He was looking at the gates.
 -> p4_choices
 
 = p4_gates
 ~ box = true
+# voice: p4-annette-19
 Annette: He kept every receipt. He'd been up in the study every night since the summer.
+# voice: p4-annette-20
 In the study, a box file marked GATES.
+# voice: p4-annette-21
 A letter from the heritage grant office in Bristol: £180,000 paid in April for two pairs of new oak gates, locks thirteen and fourteen, maker Hollins and Daughter. The work signed off as complete by C. Amory, treasurer. Pinned to it, in Neville's pencil: Rang Bristol Wed. for maker's certificate. They have none.
+# voice: p4-annette-22
 Under it, a statement for the trust's reserve account, with two lines ringed. Two years ago: £150,000 out, to the Meridian Income Fund, authorised C. Amory. This June: £150,000 in, "anonymous donation". In the margin: Meridian closed March 2025.
 -> p4_choices
 
 === p4_notebook ===
 # panel: notebook
 {at != 4: -> hub}
+# voice: p4-notebook-1
 On the hall table is a small notebook with a pencil in the spine. Annette sees you looking.
+# voice: p4-notebook-2
 Annette: The water levels. Every lock, every night, for eleven years.
+# voice: p4-notebook-3
 The pages are columns of numbers in pencil. The last entry is Thursday. Lock fifteen. Then the page is blank.
 + [Talk to Annette] -> p4_annette
 + [Leave] -> hub
@@ -609,8 +719,10 @@ The pages are columns of numbers in pencil. The last entry is Thursday. Lock fif
 # panel: page
 {at != 5: -> hub}
 {p5 == 1:
+    # voice: p5-1
     The Navigation Inn, by lock eleven: low beams, a fire, a darts board, a lane up to the lock car park.
 - else:
+    # voice: p5-2
     The Navigation.
 }
 + [Talk to the landlord] -> p5_pete
@@ -620,6 +732,7 @@ The pages are columns of numbers in pencil. The last entry is Thursday. Lock fif
 # panel: pete
 {at != 5: -> hub}
 {p5_pete == 1:
+    # voice: p5-pete-1
     Pete Garrow is behind the bar, drying glasses.
 }
 + {p5_neville == 0} [Ask about Neville on Thursday] -> p5_neville
@@ -628,16 +741,20 @@ The pages are columns of numbers in pencil. The last entry is Thursday. Lock fif
 + [Leave] -> hub
 
 = p5_neville
+# voice: p5-pete-2
 Pete: One pint of Hook Norton, half eight, same as every Thursday. Gone by nine.
 -> p5_pete
 
 = p5_dutch
+# voice: p5-pete-3
 Pete: Came in at five past eleven. Two halves of cider and two packets of crisps. Left at twenty to twelve. She paid.
 -> p5_pete
 
 = p5_closing
 ~ pub = true
+# voice: p5-pete-4
 Pete: Put the bins out at twenty to twelve. Clive Amory's car was up in the lock car park. Green estate, trust sticker. He leaves it here on quiz nights. Engine off, lights off.
+# voice: p5-pete-5
 Pete: Somebody in it. I didn't look.
 -> p5_pete
 
@@ -647,8 +764,10 @@ Pete: Somebody in it. I didn't look.
 # panel: page
 {at != 6: -> hub}
 {p6 == 1:
+    # voice: p6-1
     The coroner's office in Cirencester, above a solicitor's. Your desk, your kettle, a window on the car park.
 - else:
+    # voice: p6-2
     The office.
 }
 + [Take the call from Dr Shah] -> p6_shah
@@ -664,12 +783,17 @@ Pete: Somebody in it. I didn't look.
     -> p6_shah_choices
 }
 {day == 3 && pm2_asked:
+    # voice: p6-shah-1
     Dr Shah rings from the mortuary.
+    # voice: p6-shah-2
     Shah: I've done the second one this morning. I'll ring you tonight, when it's written up.
     -> p6_shah_choices
 }
+# voice: p6-shah-3
 Dr Imogen Shah rings on the dot of ten. You can hear a station announcer.
+# voice: p6-shah-4
 Shah: Neville Strand. Drowning: water in the lungs and airways, froth. In plain words, he breathed water in, so he was alive in it.
+# voice: p6-shah-5
 Shah: Left thigh broken, from a fall onto an edge. A bruise on the back of the head. I can't tell you yet how hard he hit it. Blood alcohol low. About one pint.
 {day == 2: Shah: The coroner releases the body tomorrow at noon, unless he orders more.}
 -> p6_shah_choices
@@ -680,10 +804,12 @@ Shah: Left thigh broken, from a fall onto an edge. A bruise on the back of the h
 + [Thank her] -> p6
 
 = p6_shah_empty
+# voice: p6-shah-6
 Shah: There's always some water at the bottom of an empty lock, isn't there? Half a metre is enough if you're unconscious. I can't tell you how deep it was.
 -> p6_shah_choices
 
 = p6_shah_second
+# voice: p6-shah-7
 Shah: A forensic one. The brain, for the head injury. The hands, the nails. Bruising under the skin. It would tell you whether he was awake.
 {
 - pm2_asked: Shah: The coroner's ordered it. I'll ring you when it's done.
@@ -697,13 +823,19 @@ Shah: A forensic one. The brain, for the head injury. The hands, the nails. Brui
 {at != 6: -> hub}
 {day != 2: -> p6}
 {p6_sam > 1:
+    # voice: p6-sam-1
     Sam: You're still here, then.
     -> p6_sam_end
 }
+# voice: p6-sam-2
 DS Sam Adeyemi is at the door with a box of pastries from the station.
+# voice: p6-sam-3
 Sam: The DCI said you'd be in. I'm to tell you there's no crime on our side. A man of sixty-six on a towpath in the dark. I'm sorry.
+# voice: p6-sam-4
 Ros: Do you think there's no crime?
+# voice: p6-sam-5
 Sam: I think he fell. I'd tell you if I thought he didn't.
+# voice: p6-sam-6
 He leaves you the pastries.
 -> p6_sam_end
 
@@ -716,8 +848,10 @@ He leaves you the pastries.
 # panel: page
 {at != 7: -> hub}
 {p7 == 1:
+    # voice: p7-1
     The top gate of lock fourteen. The police tape is gone. The new black paint on the balance beam shines.
 - else:
+    # voice: p7-2
     The top gate of fourteen.
 }
 + {p7_plate == 0} [Look at the end of the gate beam] -> p7_plate
@@ -729,7 +863,9 @@ He leaves you the pastries.
 # panel: plate
 {at != 7: -> hub}
 ~ plate = true
+# voice: p7-plate-1
 At the end of the beam the paint has been scraped back with a blade, in a rough square. Under it is a cast iron plate: HOLLINS 1987.
+# voice: p7-plate-2
 Lower down, two round wooden plugs in the timber, painted over, where bolts went through once. There is no ironwork that fits them on this lock.
 + {p7_post == 0} [Look at the paddle post] -> p7_post
 + {p7_pound == 0} [Look up the pound to fifteen] -> p7_pound
@@ -739,6 +875,7 @@ Lower down, two round wooden plugs in the timber, painted over, where bolts went
 # panel: post
 {at != 7: -> hub}
 ~ grease = true
+# voice: p7-post-1
 The paddle post has its chain on, and a brass padlock. The square spindle where a windlass fits is bright with new grease. A smear of the same grease is on the chain, at the height of a hand.
 + {p7_plate == 0} [Look at the end of the gate beam] -> p7_plate
 + {p7_pound == 0} [Look up the pound to fifteen] -> p7_pound
@@ -749,8 +886,10 @@ The paddle post has its chain on, and a brass padlock. The square spindle where 
 {at != 7: -> hub}
 ~ fifteen = true
 {day == 1:
+    # voice: p7-pound-1
     The pound to fifteen is still a foot down. The work boat sits on the mud. Fifteen is empty.
 - else:
+    # voice: p7-pound-2
     The pound to fifteen has come back up from the overflow weir at fifteen, and the work boat floats again. Fifteen is still empty, its gates shut and chained.
 }
 + {p7_plate == 0} [Look at the end of the gate beam] -> p7_plate
@@ -763,8 +902,10 @@ The paddle post has its chain on, and a brass padlock. The square spindle where 
 # panel: page
 {at != 9: -> hub}
 {p9 == 1:
+    # voice: p9-1
     Clive Amory lives in the last house on Wyke Hill, with a view of the whole flight. The green estate is on the drive.
 - else:
+    # voice: p9-2
     Wyke Hill.
 }
 + [Talk to Clive] -> p9_clive
@@ -775,13 +916,18 @@ The paddle post has its chain on, and a brass padlock. The square spindle where 
 # panel: clive
 {at != 9: -> hub}
 {p9_clive > 1:
+    # voice: p9-clive-1
     Clive: More questions? Of course.
     -> p9_choices
 }
+# voice: p9-clive-2
 Clive opens the door in a cardigan, with his reading glasses pushed up.
+# voice: p9-clive-3
 Clive: Mrs Kettering. Come in. I've put the trust's accounts out for you; I thought you'd want them. They're in order.
+# voice: p9-clive-4
 They are. Every column adds up. The reserve account is shown at £150,000 in each of the last three years.
 {not clive1_broke:
+    # voice: p9-clive-5
     Clive: As I said, the chairman rang me at five to eleven, and I told him to ring me in the morning. Then I went to bed.
 }
 -> p9_choices
@@ -794,11 +940,14 @@ They are. Every column adds up. The reserve account is shown at £150,000 in eac
 
 = p9_key
 ~ clive_key = true
+# voice: p9-clive-6
 He takes his car keys from his pocket. With them is a small brass key with C.A. scratched on the bow.
+# voice: p9-clive-7
 Clive: Always. The chairman was very particular about the keys.
 -> p9_choices
 
 = p9_gates
+# voice: p9-clive-8
 Clive: Hollins and Daughter. Ted Hollins is a craftsman; I was at school with him. Oak, from a French forest, seasoned four years. I can show you the invoice. It's in the file.
 -> p9_choices
 
@@ -817,28 +966,37 @@ Clive: {&I'm not sure what you want me to say about that, Mrs Kettering; it's a 
 -> p9_choices
 
 = p9_box
+# voice: p9-clive-9
 Clive: Meridian was a mistake, and it was mine; the committee approved the investment, and the fund failed, as funds do. The gift in June came from someone who loves this canal and wants no thanks for it, and I have respected that, as I'd respect it from anyone.
 -> p9_choices
 
 = p9_plate
+# voice: p9-clive-10
 Clive: Reclaimed ironwork, perhaps. A good maker reuses a sound plate, and Ted Hollins is a very good maker. You would have to ask him; I only sign for the work, I don't build it.
 -> p9_choices
 
 = p9_grease
+# voice: p9-clive-11
 Clive: Every windlass on this canal has grease on it, Mrs Kettering, and every paddle on the flight was greased in the spring. I did sixteen on Wednesday. Fourteen is Kit's job, not mine.
 -> p9_choices
 
 = p9_broke1
 ~ clive1_broke = true
+# voice: p9-clive-12
 Clive takes his glasses off.
+# voice: p9-clive-13
 Clive: Yes. I went down, after all. I was worried about him; he'd sounded upset. I drove to the car park and walked to fourteen, and he wasn't there. I sat in the car for a while, in case he came back. Then I came home.
+# voice: p9-clive-14
 Clive: I didn't say so, because it sounds as if I left him there.
 -> p9_choices
 
 = p9_broke2
 ~ clive2_broke = true
+# voice: p9-clive-15
 He puts his glasses back on and goes through the three photographs twice: the plate, the plugs, the post with its chain.
+# voice: p9-clive-16
 Clive: The chairman was very thorough.
+# voice: p9-clive-17
 Clive: I think I'd like to stop now, Mrs Kettering. Will you see yourself out?
 + {not clive_windlass} [Ask to see the windlass in his car] -> p9_car
 + [Leave] -> hub
@@ -847,8 +1005,11 @@ Clive: I think I'd like to stop now, Mrs Kettering. Will you see yourself out?
 # panel: car
 {at != 9: -> hub}
 ~ clive_windlass = true
+# voice: p9-car-1
 Clive opens the boot. A trust fleece, a first-aid box, wellingtons, and a windlass with a worn wooden grip.
+# voice: p9-car-2
 The socket of the windlass is packed with fresh grease.
+# voice: p9-car-3
 Clive: I did the paddles on sixteen on Wednesday.
 + {p9_clive == 0} [Talk to Clive] -> p9_clive
 + [Leave] -> hub
@@ -859,8 +1020,11 @@ Clive: I did the paddles on sixteen on Wednesday.
 # panel: page
 ~ at = 10
 {p10 == 1:
+    # voice: p10-1
     Monday, half past eight. The coroner's office. Your report is on three sheets, in a card folder, with the index cards from your board clipped to the back.
+    # voice: p10-2
     At ten to nine there is a knock. DCI Hester Quaile, in a raincoat. Her hearing aid is on.
+    # voice: p10-3
     Quaile: The coroner says you've a file on the canal death that I'll want. I've come to read it before he does.
 }
 -> p10_ready
@@ -933,11 +1097,13 @@ Part three. The coroner may not name anyone. The police can. Whom do you name to
 # panel: quaile
 {ending != "": -> credits}
 {r_whom == "": -> p10_ready}
+# voice: p10-quaile-1
 Quaile reads the whole file, every sheet and every card, without a word. It takes eleven minutes. Once she turns a card over to see if there is anything on the back.
 {r_whom == "clive_death": -> question}
 -> p10_verdict
 
 = question
+# voice: p10-quaile-2
 Quaile: One question. The chain on fourteen. Who unlocked it?
 + [Clive Amory] -> chain_clive
 + [Kit Rowe] -> chain_wrong
@@ -945,19 +1111,24 @@ Quaile: One question. The chain on fourteen. Who unlocked it?
 
 = chain_clive
 {c_chain:
+    # voice: p10-quaile-3
     Ros: It was chained at 23:13; Neville photographed it. To fill the lock someone unlocked it after that. Two of the three keys were in Neville's coat, in the water. The third is Clive Amory's.
     -> chain_right
 }
+# voice: p10-quaile-4
 Ros: I think so.
+# voice: p10-quaile-5
 Quaile: Thinking won't do. His solicitor will ask how.
 -> p10_verdict
 
 = chain_right
 ~ chain_answer = true
+# voice: p10-quaile-6
 Quaile: Yes. That's what I'd have asked him.
 -> p10_verdict
 
 = chain_wrong
+# voice: p10-quaile-7
 Quaile: Then his solicitor will say it was never unlocked at all.
 -> p10_verdict
 
@@ -981,21 +1152,32 @@ Quaile: Then his solicitor will say it was never unlocked at all.
     ~ rel_quaile += 1
     # memory: quaile +1 You brought Quaile a lock, a chain and a second post-mortem.
 }
+# voice: end-full-1
 Quaile takes the folder. At four o'clock she rings you.
+# voice: end-full-2
 Quaile: He's asked to speak to you. Not to me. You can say no.
+# voice: end-full-3
 In the interview room Clive Amory has his reading glasses on, and a solicitor beside him who has stopped writing.
+# voice: end-full-4
 Clive: I put the reserve into the Meridian fund on Ted Hollins's advice, and when it closed I told the committee nothing, because I thought I could put it right before anyone needed the money.
+# voice: end-full-5
 Clive: When he fell I could hear him, and I went to the car for my windlass, and I wound the paddles up; when it was full I wound them down and put the chain back on, because that is what you do at night.
+# voice: end-full-6
 Clive: Ted gave the parish council the same advice about Meridian, and he has made gates for four other trusts since nineteen ninety. You might ask how many of those were new.
+# voice: end-full-7
 Clive: Neville was right about the gates.
 -> credits
 
 === end_thin ===
 # panel: clive
 ~ ending = "thin"
+# voice: end-thin-1
 Quaile takes the folder.
+# voice: end-thin-2
 On Wednesday Neville Strand is cremated, as booked.
+# voice: end-thin-3
 In January Clive Amory's solicitor tells a judge that a man with a head injury can drown in half a metre of water, and there is no second post-mortem to say otherwise. Clive is convicted of fraud, and of perverting the course of justice for what he told you. He serves fourteen months.
+# voice: end-thin-4
 In February Annette writes to ask for a copy of your report.
 -> credits
 
@@ -1003,42 +1185,55 @@ In February Annette writes to ask for a copy of your report.
 # panel: quaile
 ~ ending = "half"
 {r_whom == "clive_theft":
+    # voice: end-half-1
     Quaile: This is a fraud, Mrs Kettering. I'll pass it on.
 - else:
+    # voice: end-half-2
     Quaile takes the folder.
     {r_how == "pushed":
+        # voice: end-half-3
         Clive Amory's solicitor takes the push apart in an hour. Nobody saw a push, and nothing in the file shows one.
     - else:
+        # voice: end-half-4
         The file names the right man and cannot say what he did. Clive's solicitor asks for the evidence on the chain and the water, and there is not enough.
     }
 }
 The coroner records {r_conclusion == "accident": an accident|an open conclusion}.
+# voice: end-half-5
 In the spring Clive Amory pleads guilty to fraud over the gate grant, and pays it back, and says in court that the chairman was the best friend the canal ever had.
 -> credits
 
 === end_wrong ===
 # panel: quaile
 ~ ending = "wrong"
+# voice: end-wrong-1
 Quaile reads your file again and takes it.
 {r_whom == "vandams":
+    # voice: end-wrong-2
     The van Dams are stopped at Harwich with their car on the ferry. They are held for two days and released without charge. Maaike sends you all of her photographs from the holiday, eighty-one of them, with no message.
 - else:
+    # voice: end-wrong-3
     Kit Rowe is interviewed under caution on Tuesday. On Wednesday the Harbour in Bristol withdraws its offer. On Thursday the committee ends her post, as Neville proposed. Clive Amory writes her a reference.
 }
+# voice: end-wrong-4
 Clive Amory keeps the trust's accounts.
 -> credits
 
 === end_open ===
 # panel: quaile
 ~ ending = "open"
+# voice: end-open-1
 Quaile closes the folder and gives it back to you.
+# voice: end-open-2
 The coroner records an open conclusion. In November Annette Strand writes to you: one page, in a teacher's hand. She asks what happened in the last hour.
 -> credits
 
 === end_accident ===
 # panel: quaile
 ~ ending = "accident"
+# voice: end-accident-1
 Quaile closes the folder and gives it back to you.
+# voice: end-accident-2
 The coroner records an accident. At the funeral Clive Amory gives the address. Kit Rowe stands at the back, in her lock-keeper's fleece.
 -> credits
 

@@ -1,91 +1,162 @@
 {
-  "about": "Steeple Wyke (chapter 1, The Marrow Show; chapter 2, Plain Hunt). The people, and the 'look' text pasted word for word into every picture prompt that shows them, with their photographic reference sheet (sheets/<id>.png, made with gemini-3-pro-image). Every person is invented; no real person's likeness is wanted. Voices are ElevenLabs voice ids.",
-  "style": "A real photograph, hyper-photorealistic, full-frame camera, 35mm lens, natural light, true skin texture with pores and lines, slight film grain, the muted natural colour of a British TV drama. Not an illustration, not a painting, not CGI, no captions.",
-  "place": "Steeple Wyke, a Cotswold village of honey-coloured stone with a church spire, in July.",
-  "characters": [
-    {
-      "id": "quaile",
-      "name": "DCI Hester Quaile",
-      "voice": "XEoBW4iDmiawQP72xnAF",
-      "role": "Detective Chief Inspector. Judging the chutney. Wears a hearing aid in her left ear and switches it off when she does not want to hear.",
-      "look": "a 58-year-old white British woman with a short grey bob, reading glasses pushed up into her hair, a small beige hearing aid in her left ear, a lined, humorous face, wearing an olive waxed-cotton jacket over a navy crew-neck jumper, dark jeans and muddy green wellington boots"
-    },
-    {
-      "id": "sam",
-      "name": "DS Sam Adeyemi",
-      "voice": "dqdOhmL2BvMSx2KtSAtN",
-      "role": "Detective Sergeant, nineteen days in the county, from London. The reader plays him.",
-      "look": "a 31-year-old Black British man with close-cropped hair and a short neat beard, tall and lean, wearing a navy rain mac over a white shirt and a loosened dark tie, grey trousers, polished brown leather city shoes, holding a small black police notebook"
-    },
-    {
-      "id": "gerald",
-      "name": "Gerald Pike",
-      "voice": "fGIZlgPQ75MMlvQ6WxgY",
-      "role": "Chairman of the Horticultural Society for thirty-one years. Judges the marrows; his own has won for nine. The victim.",
-      "look": "a 72-year-old white British man, stout, with a ruddy face, bushy white eyebrows and a clipped white moustache, wearing a cream linen jacket, a pale blue shirt, a panama hat with a green-and-gold ribbon band and a red rosette on his lapel"
-    },
-    {
-      "id": "margaret",
-      "name": "Margaret Pike",
-      "voice": "pbVD3LqiqlzGqszOvKuT",
-      "role": "Gerald's wife. Gardener. Forty-one foxgloves, none cut.",
-      "look": "a 68-year-old white British woman, thin and very upright, with silver hair in a loose bun and pale watchful eyes, wearing a quilted bottle-green gilet over a faded floral blouse, beige trousers, garden clogs, and red-handled secateurs on a cord round her neck"
-    },
-    {
-      "id": "clement",
-      "name": "The Reverend Clement Ashby",
-      "voice": "yZ3w1DL4ZAxIdOscv2t8",
-      "role": "Vicar of St Aldhelm's and treasurer of the Society. Took four thousand pounds from the prize fund for the church roof. The murderer.",
-      "look": "a 46-year-old white British man, slim, with thinning sandy hair and rimless glasses, wearing a black clerical shirt with a white dog collar under an unzipped bright yellow cycling jacket, black trousers with steel cycle clips at the ankle, black trainers"
-    },
-    {
-      "id": "dilys",
-      "name": "Dilys Rudd",
-      "voice": "Ky9j3wxFbp3dSAdrkOEv",
-      "role": "The village butcher and Gerald's marrow rival. Injects water into her marrows.",
-      "look": "a 55-year-old white British woman, broad and strong, with curly hennaed red hair and freckled forearms, wearing a blue-and-white striped butcher's apron over a red checked flannel shirt with rolled sleeves, jeans and work boots, a pencil behind her ear"
-    },
-    {
-      "id": "toby",
-      "name": "Toby Pike",
-      "voice": "NXaTw4ifg0LAguvKuIwZ",
-      "role": "Gerald's son, an estate agent in Cirencester. Wants forty houses on his father's fields. Was on the phone.",
-      "look": "a 36-year-old white British man with swept-back brown hair, a fresh tan and very white teeth, wearing a navy quilted gilet over a salmon-pink shirt, beige chinos and tan suede loafers without socks, a phone in his hand"
-    },
-    {
-      "id": "win",
-      "name": "Win Haskett",
-      "voice": "aAsWcN5jdLdiYG7Hq0YL",
-      "chapter": 2,
-      "role": "Tower captain of St Aldhelm's for forty-one years, 78. The bells took most of her hearing; she reads lips and writes on a notepad on a string. Rang the three on the night Hugh died.",
-      "look": "a 78-year-old white British woman, small and wiry, with cropped white hair, large square tortoiseshell glasses, strong freckled forearms, a beige hearing aid behind each ear, wearing a navy fisherman's jumper with the sleeves pushed up, a brown tweed skirt, thick tights and sturdy brown lace-up shoes, a small reporter's notepad and a pencil on a string round her neck"
-    },
-    {
-      "id": "jeremy",
-      "name": "Jeremy Cole",
-      "voice": "PXeRjE4VWrRQnsaBOFBc",
-      "chapter": 2,
-      "role": "Antiques dealer, Cole Antiques, a barn on the Cirencester road: 'restored with sympathy'. Sold the parish a fake 1897 peal board for nine thousand pounds. Rings the five. The culprit of chapter 2.",
-      "look": "a 52-year-old white British man, tall and soft round the middle, with collar-length greying hair swept back, a neat salt-and-pepper beard, half-moon reading glasses on a cord, wearing a mustard corduroy jacket over a checked shirt and a knitted green tie, brown moleskin trousers and polished brown brogues, a silk handkerchief in his breast pocket"
-    },
-    {
-      "id": "achebe",
-      "name": "The Reverend Dr Ruth Achebe",
-      "voice": "UWhYG4NgASy4ripg5Ov6",
-      "chapter": 2,
-      "role": "Interim vicar of St Aldhelm's since August, 44. An actuary for twenty years before ordination; gives everything a probability. Learning to ring; rings the tenor. Found Hugh.",
-      "look": "a 44-year-old Black British woman, tall, with short natural black hair, round gold-rimmed glasses and a calm, amused face, wearing a black clerical shirt with a white dog collar under a long grey cardigan, a dark green waxed jacket, black trousers and walking boots, a chunky digital calculator watch on her left wrist"
-    }
-  ],
-  "narrator": {
-    "name": "Narrator",
-    "voice": "3XD5qTvPWht0mpTnYXY0"
+ "about": "Steeple Wyke (chapter 1, The Marrow Show; chapter 2, Plain Hunt; and Lock Fourteen, cozyverse/mystery3, on the Wyke Arm below the village). The people, and the 'look' text pasted word for word into every picture prompt that shows them, with their photographic reference sheet (sheets/<id>.png, made with gemini-3-pro-image). Every person is invented; no real person's likeness is wanted. Voices are ElevenLabs voice ids.",
+ "style": "A real photograph, hyper-photorealistic, full-frame camera, 35mm lens, natural light, true skin texture with pores and lines, slight film grain, the muted natural colour of a British TV drama. Not an illustration, not a painting, not CGI, no captions.",
+ "place": "Steeple Wyke, a Cotswold village of honey-coloured stone with a church spire, in July.",
+ "characters": [
+  {
+   "id": "quaile",
+   "name": "DCI Hester Quaile",
+   "voice": "XEoBW4iDmiawQP72xnAF",
+   "role": "Detective Chief Inspector. Judging the chutney. Wears a hearing aid in her left ear and switches it off when she does not want to hear.",
+   "look": "a 58-year-old white British woman with a short grey bob, reading glasses pushed up into her hair, a small beige hearing aid in her left ear, a lined, humorous face, wearing an olive waxed-cotton jacket over a navy crew-neck jumper, dark jeans and muddy green wellington boots"
   },
-  "extras": {
-    "landlord": {
-      "name": "The landlord of the Plough",
-      "voice": "7rQX8r6PVq3gfJ8rZzyE",
-      "chapter": 2
-    }
+  {
+   "id": "sam",
+   "name": "DS Sam Adeyemi",
+   "voice": "dqdOhmL2BvMSx2KtSAtN",
+   "role": "Detective Sergeant, nineteen days in the county, from London. The reader plays him.",
+   "look": "a 31-year-old Black British man with close-cropped hair and a short neat beard, tall and lean, wearing a navy rain mac over a white shirt and a loosened dark tie, grey trousers, polished brown leather city shoes, holding a small black police notebook"
+  },
+  {
+   "id": "gerald",
+   "name": "Gerald Pike",
+   "voice": "fGIZlgPQ75MMlvQ6WxgY",
+   "role": "Chairman of the Horticultural Society for thirty-one years. Judges the marrows; his own has won for nine. The victim.",
+   "look": "a 72-year-old white British man, stout, with a ruddy face, bushy white eyebrows and a clipped white moustache, wearing a cream linen jacket, a pale blue shirt, a panama hat with a green-and-gold ribbon band and a red rosette on his lapel"
+  },
+  {
+   "id": "margaret",
+   "name": "Margaret Pike",
+   "voice": "pbVD3LqiqlzGqszOvKuT",
+   "role": "Gerald's wife. Gardener. Forty-one foxgloves, none cut.",
+   "look": "a 68-year-old white British woman, thin and very upright, with silver hair in a loose bun and pale watchful eyes, wearing a quilted bottle-green gilet over a faded floral blouse, beige trousers, garden clogs, and red-handled secateurs on a cord round her neck"
+  },
+  {
+   "id": "clement",
+   "name": "The Reverend Clement Ashby",
+   "voice": "yZ3w1DL4ZAxIdOscv2t8",
+   "role": "Vicar of St Aldhelm's and treasurer of the Society. Took four thousand pounds from the prize fund for the church roof. The murderer.",
+   "look": "a 46-year-old white British man, slim, with thinning sandy hair and rimless glasses, wearing a black clerical shirt with a white dog collar under an unzipped bright yellow cycling jacket, black trousers with steel cycle clips at the ankle, black trainers"
+  },
+  {
+   "id": "dilys",
+   "name": "Dilys Rudd",
+   "voice": "Ky9j3wxFbp3dSAdrkOEv",
+   "role": "The village butcher and Gerald's marrow rival. Injects water into her marrows.",
+   "look": "a 55-year-old white British woman, broad and strong, with curly hennaed red hair and freckled forearms, wearing a blue-and-white striped butcher's apron over a red checked flannel shirt with rolled sleeves, jeans and work boots, a pencil behind her ear"
+  },
+  {
+   "id": "toby",
+   "name": "Toby Pike",
+   "voice": "NXaTw4ifg0LAguvKuIwZ",
+   "role": "Gerald's son, an estate agent in Cirencester. Wants forty houses on his father's fields. Was on the phone.",
+   "look": "a 36-year-old white British man with swept-back brown hair, a fresh tan and very white teeth, wearing a navy quilted gilet over a salmon-pink shirt, beige chinos and tan suede loafers without socks, a phone in his hand"
+  },
+  {
+   "id": "win",
+   "name": "Win Haskett",
+   "voice": "aAsWcN5jdLdiYG7Hq0YL",
+   "chapter": 2,
+   "role": "Tower captain of St Aldhelm's for forty-one years, 78. The bells took most of her hearing; she reads lips and writes on a notepad on a string. Rang the three on the night Hugh died.",
+   "look": "a 78-year-old white British woman, small and wiry, with cropped white hair, large square tortoiseshell glasses, strong freckled forearms, a beige hearing aid behind each ear, wearing a navy fisherman's jumper with the sleeves pushed up, a brown tweed skirt, thick tights and sturdy brown lace-up shoes, a small reporter's notepad and a pencil on a string round her neck"
+  },
+  {
+   "id": "jeremy",
+   "name": "Jeremy Cole",
+   "voice": "PXeRjE4VWrRQnsaBOFBc",
+   "chapter": 2,
+   "role": "Antiques dealer, Cole Antiques, a barn on the Cirencester road: 'restored with sympathy'. Sold the parish a fake 1897 peal board for nine thousand pounds. Rings the five. The culprit of chapter 2.",
+   "look": "a 52-year-old white British man, tall and soft round the middle, with collar-length greying hair swept back, a neat salt-and-pepper beard, half-moon reading glasses on a cord, wearing a mustard corduroy jacket over a checked shirt and a knitted green tie, brown moleskin trousers and polished brown brogues, a silk handkerchief in his breast pocket"
+  },
+  {
+   "id": "achebe",
+   "name": "The Reverend Dr Ruth Achebe",
+   "voice": "UWhYG4NgASy4ripg5Ov6",
+   "chapter": 2,
+   "role": "Interim vicar of St Aldhelm's since August, 44. An actuary for twenty years before ordination; gives everything a probability. Learning to ring; rings the tenor. Found Hugh.",
+   "look": "a 44-year-old Black British woman, tall, with short natural black hair, round gold-rimmed glasses and a calm, amused face, wearing a black clerical shirt with a white dog collar under a long grey cardigan, a dark green waxed jacket, black trousers and walking boots, a chunky digital calculator watch on her left wrist"
+  },
+  {
+   "id": "ros",
+   "name": "Ros Kettering",
+   "voice": "Y3AzrcXdenDXrjb0dALG",
+   "chapter": "lock14",
+   "role": "Coroner's officer for the county, 58, twenty years a police constable before that; retires in March. The reader plays her in Lock Fourteen.",
+   "look": "a 58-year-old white British woman with short ash-blonde hair going grey, cut practically, a lined, patient face, reading glasses on a cord round her neck, wearing a dark green waxed jacket over a grey wool jumper, navy trousers and black walking shoes, a lanyard with an ID card"
+  },
+  {
+   "id": "clive",
+   "name": "Clive Amory",
+   "voice": "JLkaQv8hpW56lUC7nj5m",
+   "chapter": "lock14",
+   "role": "Treasurer of the Wyke Arm Restoration Trust, 61, retired bank manager. Kind, exact, the best explainer on the canal. Filled lock fourteen with Neville in it. The culprit of Lock Fourteen.",
+   "look": "a 61-year-old white British man, slim and neat, with short grey hair parted at the side, clean-shaven, a gentle careful face, rimless reading glasses, wearing a navy fleece with a small pale-blue embroidered oval badge with a wavy-line emblem and no words, over a blue checked shirt, beige chinos and brown walking boots"
+  },
+  {
+   "id": "kit",
+   "name": "Kit Rowe",
+   "voice": "ZF6FPAbjXT4488VcRRnw",
+   "chapter": "lock14",
+   "role": "The trust's only paid lock-keeper, 24; lives in the lock cottage. Was at an interview with Bristol Harbour on the night.",
+   "look": "a 24-year-old British woman with olive skin, dark curly hair in a loose bun, a few freckles, strong forearms, wearing a red lock-keeper's fleece with the sleeves pushed up, dark work trousers and steel-toe boots, a plain black work belt with a canal windlass, an L-shaped black iron crank handle, hanging at her right hip"
+  },
+  {
+   "id": "joost",
+   "name": "Joost van Dam",
+   "voice": "i7G4u9tyZGel56RnYhXb",
+   "chapter": "lock14",
+   "role": "Dutch, 34, on a first canal holiday on the hire boat Wren. Lied about seeing Neville at lock fourteen.",
+   "look": "a 34-year-old white Dutch man, very tall, with short blond hair and light stubble, wearing a yellow waterproof sailing jacket, a grey hoodie, jeans and blue deck shoes"
+  },
+  {
+   "id": "maaike",
+   "name": "Maaike van Dam",
+   "voice": "sP3q7DZvU8X3maXCONzw",
+   "chapter": "lock14",
+   "role": "Dutch, 33, Joost's wife. Photographed lock fourteen by headlamp; offers her phone before she is asked.",
+   "look": "a 33-year-old white Dutch woman with straight shoulder-length brown hair and a direct gaze, wearing a navy-and-white striped Breton top under an open grey fleece, a small headlamp on an elastic strap round her neck"
+  },
+  {
+   "id": "annette",
+   "name": "Annette Strand",
+   "voice": "ApuKum9r0H3W3sf1xR2S",
+   "chapter": "lock14",
+   "role": "Retired primary-school head, 64, widow of Neville Strand. Wants to know what happened in the last hour.",
+   "look": "a 64-year-old white British woman, small and composed, with neat short white hair, pearl stud earrings, wearing a navy cardigan buttoned to the top over a white blouse and a grey wool skirt"
+  },
+  {
+   "id": "pete",
+   "name": "Pete Garrow",
+   "voice": "MmQAnDAp0dcTNc35QhwG",
+   "chapter": "lock14",
+   "role": "Landlord of the Navigation Inn by lock eleven. Few words; notices cars and who pays.",
+   "look": "a 56-year-old white British man, heavy-set, with a shaved head and grey stubble, wearing a black polo shirt and a tea towel over one shoulder"
   }
+ ],
+ "narrator": {
+  "name": "Narrator",
+  "voice": "3XD5qTvPWht0mpTnYXY0"
+ },
+ "extras": {
+  "landlord": {
+   "name": "The landlord of the Plough",
+   "voice": "7rQX8r6PVq3gfJ8rZzyE",
+   "chapter": 2
+  },
+  "shah": {
+   "name": "Dr Imogen Shah, pathologist (on the phone)",
+   "voice": "vbL38HT4L93tShaai4rW",
+   "chapter": "lock14"
+  },
+  "coroner": {
+   "name": "The county coroner (on the phone)",
+   "voice": "JBFqnCBsd6RMkjVDRZzb",
+   "chapter": "lock14"
+  },
+  "constable": {
+   "name": "A police constable at the lock",
+   "voice": "JlptfLxaUpd8pZcw9dKd",
+   "chapter": "lock14"
+  }
+ }
 }
