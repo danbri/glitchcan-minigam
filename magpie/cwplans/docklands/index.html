@@ -274,8 +274,8 @@ const ffs = 'precision mediump float;varying vec4 v;varying float wy;varying flo
   'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
   'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
   'if(pxm>0.)col=min(vec3(1.),col*1.3);' +   // pixel art: brighter walls, windows on the art-pixel grid
-  'if(uu>=0.&&win>.5&&pxm>0.){float fl=wy/(pxm*4.),fy=fract(fl);float w=step(mod(floor(gl_FragCoord.x),3.),1.)*step(.26,fy);col=mix(col,col*(lum<.45?1.4:.84),w);}' +   // pixel art: regular windows on the art-pixel grid, low contrast so the outline pass leaves them alone
-  'else if(uu>=0.&&win>.5){float bw=1.8,fh=3.6;vec2 g=vec2(uu/bw,wy/fh),cell=floor(g),f=fract(g);float w=step(.14,f.x)*step(f.x,.86)*step(.2,f.y)*step(f.y,.84)*clamp(1.4-dist/900.,.15,1.);' +
+  'if(uu>=0.&&win>.5&&pxm>0.&&pxm<1.5){float fl=wy/(pxm*4.),fy=fract(fl);float w=step(mod(floor(gl_FragCoord.x),3.),1.)*step(.26,fy);col=mix(col,col*(lum<.45?1.4:.84),w);}' +   // pixel art: regular windows on the art-pixel grid, low contrast so the outline pass leaves them alone
+  'else if(uu>=0.&&win>.5&&pxm==0.){float bw=1.8,fh=3.6;vec2 g=vec2(uu/bw,wy/fh),cell=floor(g),f=fract(g);float w=step(.14,f.x)*step(f.x,.86)*step(.2,f.y)*step(f.y,.84)*clamp(1.4-dist/900.,.15,1.);' +
   'vec3 gl=pxm>0.?(lum<.45?vec3(.50,.58,.64):vec3(.30,.35,.45))+vec3(.18,.18,.18)*step(.92,h(vec2(cell.x,0.))):mix(vec3(.13,.18,.25),vec3(.42,.52,.62),clamp(wy/300.,0.,1.)+h(cell)*.12)*(.55+.7*lum);' +
   'if(night>.5){float lit=step(.58,h(cell+7.3));col=mix(col*.22,vec3(1.,.8,.48)*(.55+.45*h(cell+1.7)),w*lit);col=mix(col,gl*.25,w*(1.-lit));}else col=mix(col,gl,w*.8);}' +
   'else if(uu<0.&&uu>-41.&&roofTex>.5){col=min(vec3(1.),texture2D(tx,uv).rgb*(.6+.9*lum));}' +
@@ -373,13 +373,14 @@ function buildTerrain(rgb) {   // rgb: per-vertex colours, 'tex' (shading only, 
 }
 buildTerrain(null);
 const groundAt = (x, z) => { const T = A.terrain, i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
-function buildWater() { if (L.water) L.water.free(); const M = new Mesh(); for (const w of A.water) if (!w.tidal) flat(M, w, w.level + .1, C.water); L.water = M.upload(); }
+let PHOTO = false, PIXSTYLE = null;   // PIXSTYLE: colours of the pixel-art style while it is on
+function buildWater() { if (L.water) L.water.free(); const M = new Mesh(); for (const w of A.water) if (!w.tidal) flat(M, w, w.level + (PIXSTYLE ? 1.2 : .1), C.water); L.water = M.upload(); }
 buildWater();
 // tidal water (the Thames, creeks): at its LiDAR level, or at a live gauge level when the visitor asks
 // docks with a published bed level: the water as a volume from bed to surface
 { const M = new Mesh(); for (const st of U.structures || []) if (st.bed != null) prism(M, st, st.bed, st.water, C.water.map(c => c * .8), true); L.dockVol = M.upload(); }
 let tidalLevel = null;
-function buildTidal() { if (L.tidal) L.tidal.free(); const M = new Mesh(); for (const w of A.water) if (w.tidal) flat(M, w, (tidalLevel ?? w.level) + .1, C.water.map(c => tidalLevel == null ? c : c * 1.15)); L.tidal = M.upload(); }
+function buildTidal() { if (L.tidal) L.tidal.free(); const M = new Mesh(); for (const w of A.water) if (w.tidal) flat(M, w, (tidalLevel ?? w.level) + (PIXSTYLE ? 1.2 : .1), C.water.map(c => tidalLevel == null ? c : c * 1.15)); L.tidal = M.upload(); }
 buildTidal();
 function buildGreens() { if (L.greens) L.greens.free(); const M = new Mesh(); const T = A.terrain; const gh = (x, z) => { const i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
   for (const g of A.greens) { const f = dec(g.p); flat(M, g, gh(f[0], f[1]) + .4, C.green); } L.greens = M.upload(); }
@@ -392,7 +393,6 @@ const notFlown = i => SKY && skyIdx >= 0 && SKY.buildings[i] && SKY.buildings[i]
 function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismF(M, b, b.b + (b.mh || 0), b.b + h, notFlown(i) ? [.36, .42, .52] : buildingColour(b, i), !!b.mh); }); L.bld = M.upload(); }
 buildBld();
 // photo style (drone frames for splat training): materials instead of the map colour codes, no diagram layers
-let PHOTO = false, PIXSTYLE = null;   // PIXSTYLE: colours of the pixel-art style while it is on
 const PHOTO_BLD = [[.74, .75, .76], [.62, .66, .70], [.80, .78, .74], [.55, .60, .66], [.70, .68, .64], [.66, .70, .72]];
 const photoColour = (b, i) => { const h = ((i * 2654435761) >>> 0) / 4294967296, c = PHOTO_BLD[Math.floor(h * PHOTO_BLD.length)], v = .92 + .16 * (((i * 40503) >>> 0) % 100) / 100; return c.map(x => Math.min(1, x * v)); };
 function buildLines() { if (L.railOpen) { L.railOpen.free(); L.roads.free(); } const M = new Mesh(), R = new Mesh();
@@ -1103,15 +1103,16 @@ $('showWalk').onchange = async () => { if ($('showWalk').checked) { try { await 
 const PIX = { on: false, px: 2, fbo: null, tex: null, depth: null, fw: 0, fh: 0, pal: null, k: 0, river: null, ents: null, loop: 0, last: 0, saved: null, actors: null };
 const hexc = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 const ppr = gl.createProgram(); gl.attachShader(ppr, sh(gl.VERTEX_SHADER, 'attribute vec2 q;varying vec2 uv;void main(){uv=q*.5+.5;gl_Position=vec4(q,0.,1.);}'));
-gl.attachShader(ppr, sh(gl.FRAGMENT_SHADER, 'precision mediump float;varying vec2 uv;uniform sampler2D t;uniform vec2 px;uniform vec3 pal[33];' +
+gl.attachShader(ppr, sh(gl.FRAGMENT_SHADER, 'precision mediump float;varying vec2 uv;uniform sampler2D t;uniform vec2 px;uniform vec3 pal[33];uniform float edge;' +
   'vec3 near(vec3 c){float bd=1e9;vec3 b=c;for(int i=0;i<33;i++){vec3 d=c-pal[i];float e=dot(d*d,vec3(.3,.59,.11));if(e<bd){bd=e;b=pal[i];}}return b;}' +
   'float lum(vec3 c){return dot(c,vec3(.3,.59,.11));}' +
   'void main(){vec3 c=texture2D(t,uv).rgb,r=texture2D(t,uv+vec2(px.x,0.)).rgb,u=texture2D(t,uv+vec2(0.,px.y)).rgb;' +
-  'float e=max(abs(lum(c)-lum(r)),abs(lum(c)-lum(u)));gl_FragColor=vec4(near(e>.2?c*.55:c),1.);}'));
+  'float e=max(abs(lum(c)-lum(r)),abs(lum(c)-lum(u)));gl_FragColor=vec4(near(e>edge?c*.55:c),1.);}'));
 gl.bindAttribLocation(ppr, aP, 'q'); gl.linkProgram(ppr);
-const PU = { t: gl.getUniformLocation(ppr, 't'), px: gl.getUniformLocation(ppr, 'px'), pal: gl.getUniformLocation(ppr, 'pal') };
+const PU = { edge: gl.getUniformLocation(ppr, 'edge'), t: gl.getUniformLocation(ppr, 't'), px: gl.getUniformLocation(ppr, 'px'), pal: gl.getUniformLocation(ppr, 'pal') };
 const quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
 function pixBegin() {
+  PIX.px = cam.dist > 700 ? 1 : 2;   // finer pixels when zoomed out, so small features survive
   const fw = Math.max(64, Math.round(cv.clientWidth / PIX.px)), fh = Math.max(64, Math.round(cv.clientHeight / PIX.px));
   if (!PIX.fbo || fw !== PIX.fw || fh !== PIX.fh) {
     if (PIX.fbo) { gl.deleteFramebuffer(PIX.fbo); gl.deleteTexture(PIX.tex); gl.deleteRenderbuffer(PIX.depth); }
@@ -1126,7 +1127,7 @@ function pixBegin() {
 }
 function pixEnd(w, h) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
-  gl.useProgram(ppr); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, PIX.tex); gl.uniform1i(PU.t, 0); gl.uniform2f(PU.px, 1 / PIX.fw, 1 / PIX.fh); gl.uniform3fv(PU.pal, PIX.palFlat);
+  gl.useProgram(ppr); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, PIX.tex); gl.uniform1i(PU.t, 0); gl.uniform2f(PU.px, 1 / PIX.fw, 1 / PIX.fh); gl.uniform3fv(PU.pal, PIX.palFlat); gl.uniform1f(PU.edge, cam.dist * .84 / PIX.fh > 1.5 ? 9 : .2);   // no outlines when zoomed out: every small building would become speckle
   gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   gl.bindTexture(gl.TEXTURE_2D, null); gl.useProgram(pr); gl.enable(gl.DEPTH_TEST);
 }
@@ -1239,7 +1240,9 @@ async function setStyle(mode) {
     PIXSTYLE = { road: hexc('#746b70'), rail: hexc('#999698'), trunk: hexc('#584851'), leaf: hexc(a.tree_dark), leaf2: hexc('#607649'), leafHi: hexc(a.tree_light) };
     C.ground = hexc('#cec5bb'); C.green = hexc('#849953'); C.water = hexc(a.water);
     const BC = ['#f5c796', '#f3dbbe', '#bb927c', '#a27261', '#705858', '#584851', '#cec5bb'].map(hexc), GL = ['#788b9c', '#5d738a', '#50596e', '#999698'].map(hexc);
-    buildingColour = (b, i) => { const h = ((i * 2654435761) >>> 0) / 4294967296; return (b.h > 70 ? GL : BC)[Math.floor(h * (b.h > 70 ? GL.length : BC.length))]; };
+    buildingColour = (b, i) => {   // districts, not confetti: the colour family comes from the 150 m block, a little variation per building
+      const x = b.p[0] / 10, z = b.p[1] / 10, cell = (Math.floor(x / 150) * 73856093) ^ (Math.floor(z / 150) * 19349663), hb = ((cell * 2654435761) >>> 0) / 4294967296, hi = ((i * 40503) >>> 0) % 100 / 100;
+      const L = b.h > 70 ? GL : BC, k = Math.floor(hb * L.length), pick = hi < .7 ? L[k] : L[(k + 1) % L.length]; return pick; };
     for (const id of ['showLabels', 'showUnder', 'showWalls', 'showBed']) $(id).checked = false;
     buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); const nt = buildTrees();
     PIX.on = true; PIX.actors = makeActors(); Object.assign(cam, { pitch: .5236, yaw: Math.PI / 4, dist: Math.min(cam.dist, 520) }); unview();
