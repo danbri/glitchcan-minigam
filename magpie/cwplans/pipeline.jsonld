@@ -430,7 +430,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-cwg",
    "@type": "prov:Activity",
    "rdfs:label": "fetch-cwg",
-   "dct:description": "Reads the Canary Wharf Group directory from Internet Archive copies (the live site blocks scripts) and extracts each entry's title, categories, address lines, mall, level, postcode and website.",
+   "dct:description": "Reads the Canary Wharf Group directory from Internet Archive copies (the live site blocks scripts) and extracts each entry's title, categories, address lines, mall, level, postcode website and street line, with flags for entries that are not one place.",
    "prov:used": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site",
@@ -464,8 +464,9 @@
    "cwp:rule": [
     "Capture order per entry: its own URL from the CDX list, its 2025 URL (eating-drinking/ or shops-services/ directory), then the capture closest to 2026-03-04.",
     "Captures of the Incapsula bot-challenge page are skipped and counted.",
-    "Mall = the first name from a fixed list found in the address lines; level = the first address line that names a level, floor, unit or kiosk; postcode = the first E14 or E16 postcode in the address.",
-    "Raw pages are cached and not fetched again."
+    "Fields from the address lines (registry/sources/brands/tools/cwg-fields.mjs): mall = the first name of a fixed place list found in the lines, but never a name inside a longer one that is also found (\"Upper Bank Street\", not \"Bank Street\"); level = the first line that names a level, floor, mezzanine, podium or kiosk, or starts with \"Lower Mall\", \"Upper Mall\" or \"Unit\" (not \"Upper Bank Street\", not \"United Kingdom\"); postcode = the first full UK postcode in any district (Wood Wharf uses E22); street = the first line that starts with a house number or One/Two/Three; flags: template field, estate-wide, car park. Fixed 2026-10-03: the first parser read 4 levels and 1 mall wrongly and missed 5 malls and 3 E22 postcodes.",
+    "Raw pages are cached and not fetched again.",
+    "Categories: every tag div between the category block and the title (the first parser found none on any page; 339 entries have one now)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -654,7 +655,7 @@
    "cwp:kind": "clip",
    "cwp:rule": [
     "Box -0.0300, 51.4980 to -0.0050, 51.5100 plus a 0.0015 degree margin.",
-    "Tags dropped: contact:email, contact:phone, contact:mobile, email, phone, mobile, fax, operator:person, addr:flats, note, fixme, FIXME, source*, created_by.",
+    "Tags dropped: contact:mobile, mobile, operator:person, addr:flats, note, fixme, FIXME, source*, created_by. Business contact tags (phone, contact:phone, email, contact:email, website, contact:*) are kept from 2026-10-03 (owner: cwplans exception, organisation data allowed in the prototyping phase).",
     "Relations kept: type multipolygon or building with building, building:part or name, and at least one kept member way."
    ],
    "cwp:network": false,
@@ -1733,7 +1734,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry",
    "@type": "prov:Activity",
    "rdfs:label": "build-registry",
-   "dct:description": "Builds the Canary Wharf building registry: one record per OSM building outline with a stable cwb- id, its parts, occupants (OSM, FSA, Wikidata, chain-store branches), owners, postcodes, Wikidata facts, and company and property joins.",
+   "dct:description": "Builds the Canary Wharf building registry: one record per OSM building outline with a stable cwb- id, its parts, occupants (OSM, FSA, Wikidata, chain-store branches, the Canary Wharf Group directory), owners, postcodes, Wikidata facts, and company and property joins.",
    "prov:used": [
     {
      "@id": "urn:cwplans:local:data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
@@ -1773,6 +1774,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/branches.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory.json"
     }
    ],
    "prov:generated": [
@@ -1797,7 +1801,7 @@
    "cwp:rule": [
     "A building is an OSM building outline (way or multipolygon) whose vertex mean is in the Canary Wharf box; building:part shapes are listed under the outline that contains their centre.",
     "Ids: reused from registry/ids.json by OSM element; new outlines get the next number in reading order (north to south in 100 m bands, then west to east); a retired id is never reused.",
-    "OSM occupants: named features with a shop, food and drink, office, amenity, leisure, tourism, healthcare, craft or transport role, placed in the outline that contains them or the nearest outline within 12 m; artworks, information boards, viewpoints and attractions are features, not occupants.",
+    "OSM occupants: named features with a shop, food and drink, office, amenity, leisure, tourism, healthcare, craft or transport role, placed in the outline that contains them or the nearest outline within 12 m; artworks, information boards, viewpoints and attractions are features, not occupants. Each OSM occupant keeps its tags opening_hours, cuisine, wheelchair, check_date, start_date, opening_date, operator, url, level, brand, brand:wikidata, website (or contact:website), phone (or contact:phone), email (or contact:email) and the other contact:* links (as contact).",
     "FSA premises with a position in the box are placed the same way; the others are listed under their postcode when its tier is cw-*.",
     "Wikidata: an OSM wikidata tag wins; else the one building-like item whose coordinate is in the outline (within 5 m) and no other building-like item is inside it; an item already named by an OSM tag is not attached to a second outline; other items inside are occupants 'located here'.",
     "The Wikidata label replaces the OSM name; the OSM name is kept as osm_name.",
@@ -1807,7 +1811,10 @@
     "INSPIRE polygons that contain the building's centre are linked by INSPIRE id.",
     "Companies and price-paid sales join a building when the postcode is one of its postcodes and the normalised address contains one of its keys (address, name, OSM name, Wikidata street address), and exactly one building matches.",
     "A residential building lists only the count of registered companies, not their names.",
-    "Branches enrich the occupant with the same OSM or FSA id, else are placed by position (marked approximate when the position is a mall or postcode centre)."
+    "Branches enrich the occupant with the same OSM or FSA id, else are placed by position (marked approximate when the position is a mall or postcode centre).",
+    "Buildings keep the OSM addr:housename (housename): it names the complex for a mall outline (Canada Place on 16-19 Canada Square).",
+    "CWG directory: an entry already linked by the branch join keeps that link. Else it joins existing occupants (OSM, FSA, Wikidata, branches, and CWG occupants added earlier in the same pass) when a name key is equal (registry/sources/brands/tools/cwg-fields.mjs nameKeys) and the place agrees, tried in this order: same mall (or same street or square), a shared postcode, or the building the entry itself would be placed in. Two different named malls never join (Canada Place and the One Canada Square mall count as one). An occupant with a CWG link takes a second entry only from another CWG section (cwg_also). Records of one source in two buildings: ambiguous, not joined.",
+    "CWG entries that join nothing become occupants (source cwg, role directory: <section>) placed by: the one building whose address key equals the street line (confidence high with the postcode, medium without); else the host outline of a named mall (the one outline whose OSM name, else addr:housename, is the mall name or starts with it; medium); else the one registry building with the entry postcode, or the one of them OSM tags as retail (low). Estate-wide entries, car parks and entries with no page, address or single building stay unplaced with a reason (cwg_unplaced, summary.joins.cwg)."
    ],
    "cwp:network": false,
    "cwp:deterministic": false,
@@ -1844,6 +1851,9 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-branches"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-cwg"
     }
    ]
   },
@@ -1851,7 +1861,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-categories",
    "@type": "prov:Activity",
    "rdfs:label": "build-categories",
-   "dct:description": "Gives each registry building its occupant categories (finance, shop, catering, leisure, entertainment) from the classes the sources state, for the glow outlines and the atlas.",
+   "dct:description": "Gives each registry building its occupant categories (finance, shop, catering, leisure, entertainment; and bar, alcohol, education, health, sport, arts) from the classes the sources state, for the glow outlines and the atlas.",
    "prov:used": [
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
@@ -1866,6 +1876,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata",
      "dcat:accessURL": "https://qlever.dev/api/wikidata",
      "dct:description": "SPARQL: P31 and P452 classes (English labels) of every Wikidata occupant item in registry/buildings.json; P466 and P159 statements of every registry building item with P580 and P582 qualifiers and the organisation's P576"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory.json"
     }
    ],
    "prov:generated": [
@@ -1887,6 +1900,13 @@
     "catering: OSM amenity restaurant, cafe, bar, pub, fast_food, food_court, ice_cream or biergarten; the role 'food and drink' or a food branch; or an FSA catering type.",
     "leisure: OSM leisure fitness_centre, sports_centre, swimming_pool, sauna, dance or sports_hall; a hotel role or FSA hotel type.",
     "entertainment: OSM cinema, theatre, nightclub, arts centre, casino, events or music venue, planetarium, amusement and bowling leisure, museum or gallery; or a Wikidata class matching those.",
+    "bar: OSM amenity pub, bar, nightclub or biergarten; FSA type Pub/bar/nightclub; CWG category Bars or Cocktails; a Wikidata class pub, bar, nightclub.",
+    "alcohol: OSM shop alcohol, wine or beverages.",
+    "education: OSM amenity school, college, university, kindergarten or childcare; FSA type School/college/university; CWG category Childcare; a Wikidata class school, university, college, academic institution, kindergarten or nursery; the role branch: childcare.",
+    "health: OSM amenity doctors, dentist, pharmacy, clinic or hospital, or any healthcare tag; CWG category Healthcare unless OSM says amenity=veterinary; a Wikidata class hospital, clinic, doctor's office, medical organization, dental, pharmacy.",
+    "sport: OSM leisure sports_centre, fitness_centre, pitch, swimming_pool or sports_hall, or any sport tag; CWG category Sport (not Sport & Fitness, which lists sportswear shops); a Wikidata sports venue or gym class; the role branch: gym.",
+    "arts: OSM amenity cinema, theatre, arts_centre, nightclub, music_venue, events_venue or concert_hall, or any theatre:genre tag; a Wikidata class movie theater, cinema, theatre, music venue, concert hall, arts centre or nightclub.",
+    "CWG directory classes for the first five: section restaurant gives catering, section stay or category Hotels & Apartments gives leisure, category Banks & Foreign Exchange gives finance, and goods categories (Shoes & Footwear, Menswear, Jewellery & Watches and others listed in the tool) give shop. CWG labels that mix classes (Services, Health & Beauty, Cafes & Bars, Sport & Fitness) and the FSA type Hospitals/Childcare/Caring Premises are not used.",
     "Names are never used to guess a class; Companies House registered offices are not used.",
     "Wikidata occupant links: an end date (P582) or a dissolved organisation (P576) makes the entry 'former' and it is not counted; a start date and no end makes it 'current'; no qualifier makes it 'undated'."
    ],
@@ -1898,6 +1918,46 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-osm"
+    }
+   ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/scan-model-pois",
+   "@type": "prov:Activity",
+   "rdfs:label": "scan-model-pois",
+   "dct:description": "Lists the OSM points of interest of the October 2026 occupant categories (bar, alcohol, education, health, sport, arts) across the whole 3D model box and counts how many the building registry already has.",
+   "prov:used": [
+    {
+     "@id": "urn:cwplans:local:data/raw/docklands/greater_london-latest.osm.pbf"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/model-box-pois.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/scan-model-pois.mjs"
+   },
+   "cwp:command": "node --max-old-space-size=6000 magpie/cwplans/tools/scan-model-pois.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Model box -0.0950, 51.4740 to 0.0150, 51.5220 (fetch-docklands BOX_WGS84); registry box as registry-osm CW_BOX.",
+    "Classes: the OSM tag rules of build-categories for the six categories; never a name.",
+    "A way is placed at the mean of its nodes; a multipolygon at the mean of its first outer way known in the box.",
+    "in_registry: the OSM id is a registry occupant or building outline."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-docklands-osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry"
     }
    ]
   },
@@ -3104,7 +3164,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/audit-quality",
    "@type": "prov:Activity",
    "rdfs:label": "audit-quality",
-   "dct:description": "Runs 34 data-quality checks over every Canary Wharf source (identity, spatial, attribute, validity, parsing, network, timeliness, coverage, semantics) and writes one record per issue with counts, rates and examples, and a generated Markdown catalogue.",
+   "dct:description": "Runs 36 data-quality checks over every Canary Wharf source (identity, spatial, attribute, validity, parsing, network, timeliness, coverage, semantics) and writes one record per issue with counts, rates and examples, and a generated Markdown catalogue.",
    "prov:used": [
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
@@ -3163,10 +3223,11 @@
    "cwp:command": "node magpie/cwplans/tools/audit-quality.mjs",
    "cwp:kind": "audit",
    "cwp:rule": [
-    "Checks ID-1 to ID-4, SP-1 to SP-6, AT-1 to AT-5, VA-1 to VA-4, PL-1, PL-2, NET-1 to NET-5, TM-1 to TM-4, CV-1, CV-2, SE-1, SE-2.",
+    "Checks ID-1 to ID-4, SP-1 to SP-7, AT-1 to AT-5, VA-1 to VA-4, PL-1, PL-2, NET-1 to NET-5, TM-1 to TM-4, CV-1 to CV-3, SE-1, SE-2.",
     "The audit date is fixed in the code (2026-10-03): FSA ratings before 2023-10-03 are 'older than 3 years'; CWG copy ages are counted to that date.",
     "VA-2 issues are the level tokens tools/osm-values.mjs cannot read (osmLevelsUnread).",
-    "Each issue has a severity (high, medium, low) and an entity (building, postcode, OSM element, FSA premises and others)."
+    "Each issue has a severity (high, medium, low) and an entity (building, postcode, OSM element, FSA premises and others).",
+    "SP-2 leaves out occupants placed by a key (placed_confidence: SP-7). SP-6 counts an outline as the mall when its name, OSM name or addr:housename names it. CV-2 counts a CWG entry as seen by another source when a registry occupant from another source carries its URL after the registry join. CV-3: CWG entries the registry could not place, by reason."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
@@ -3823,7 +3884,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "1,129 buildings with ids, names, occupants, owners, postcodes and joins",
+   "dct:title": "1,129 buildings with ids, names, house names, occupants (OSM, FSA, Wikidata, chain-store branches and the Canary Wharf Group directory), owners, postcodes and joins",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
@@ -3866,7 +3927,7 @@
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry"
    },
    "cwp:osmUse": "derived",
-   "cwp:review": "occupants include CWG page links and mall names from cwg-directory.json"
+   "cwp:review": "occupants include CWG page links, mall names and levels from cwg-directory.json; 106 occupants come from the CWG directory alone, placed by street address, mall host outline or postcode with a confidence; cwg_unplaced lists the entries with no building and why. Business phone and email from OSM are kept under the cwplans exception (owner, 2026-10-03)"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/ids.json",
@@ -4072,7 +4133,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "374 entries of the Canary Wharf Group shop, restaurant and venue directory",
+   "dct:title": "374 entries of the Canary Wharf Group shop, restaurant and venue directory: title, categories, address lines, mall, level, postcode, street line, flags, website",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
@@ -4336,7 +4397,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "data-quality audit: 34 checks with counts, breakdowns, examples and one record per issue",
+   "dct:title": "data-quality audit: 36 checks with counts, breakdowns, examples and one record per issue",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
@@ -4659,7 +4720,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "occupant categories per registry building (finance, shops, catering, leisure, entertainment) with the stated class behind each; drives the 3D glow layers",
+   "dct:title": "occupant categories per registry building (finance, shops, catering, leisure, entertainment; and pubs and bars, alcohol shops, education, health, sport, cinemas and arts venues) with the stated class behind each; the first five drive the 3D glow layers",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
@@ -4679,6 +4740,26 @@
    ],
    "prov:wasGeneratedBy": {
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-categories"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/model-box-pois.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "OSM points of interest of six occupant categories (pubs and bars, alcohol shops, education, health, sport, arts venues) in the 3D model box, with counts and whether the building registry has each",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/scan-model-pois"
    },
    "cwp:osmUse": "derived"
   },
