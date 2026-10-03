@@ -236,14 +236,16 @@ What chapter two taught:
 
 Lock Fourteen (`mystery3/`, October 2026, a stand-alone episode on a canal), measured: 7 sheets 8,526 plus 2 sheet
 fixes 840; 40 panels 55,420 (the 11 with cast references cost 1,827 each); 4 fixes 6,699; 42 of 50 sounds 5,400;
-one canary clip 2,121. About 79,000 credits. Then the workspace stopped at its **usage-based billing threshold (550,000
-credits)**: five short-loop clips (10,605) and the voices (195 lines, 22,376 characters, about 22,400 for one take)
-were refused, and so were 8 panel sounds that were still queued behind a concurrency limit when the canary clip
-took the last credits. The episode shipped with pictures, sounds and the canary, `"recorded": false` in `voices.json` and no
-`loopSrc`; a panel with `"noSound": true` plays the page bed alone (the host neither sets nor preloads its file);
-each tiny-loop panel keeps its `tiny.prompt` in `pages.json` for when there is budget. Before a chapter,
-ask what is left under the threshold, not only what the chapter costs: a refused node still shows in the flow, and
-the run reports `quota_exceeded` per node, so a batch can half-run (here the one clip that started was the canary).
+one canary clip 2,121. About 79,000 credits. Then the workspace stopped at its **usage-based billing threshold
+(550,000 credits)**: five short-loop clips, the voices and 8 panel sounds still queued behind a concurrency limit
+were refused, and the run reports `quota_exceeded` per node, so a batch can half-run (here the one clip that started
+was the canary). The first release shipped without them: `"recorded": false` in `voices.json`, no `loopSrc`, and
+`"noSound": true` on the eight panels (the host then neither sets nor preloads that panel's file, and the page bed
+plays alone). After the owner raised the threshold: 5 clips 10,605 and 8 sounds 800, then one eleven_v4 take of
+each of the 195 lines (22,376 characters), recorded by three background agents of 65 lines each. The tool reported
+0 credits per take; check the account, not the tool. 37 transcript differences, all the recogniser's spelling
+("White kill" for Wyke Hill, "sire ancestor" for Cirencester); no second takes. Before a chapter, ask what is left
+under the threshold, not only what the chapter costs.
 
 What Lock Fourteen taught:
 
