@@ -45,7 +45,7 @@ details{margin-top:10px}summary{cursor:pointer}
   </div>
   <div class="row">
     <label>Buildings <select id="bmode"><option value="solid">solid</option><option value="ghost">ghost</option><option value="off">off</option></select></label>
-    <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label><label><input type="checkbox" id="showFloors"> Floors (Canary Wharf)</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label>
+    <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground detail</label><label><input type="checkbox" id="showFloors"> Floors (Canary Wharf)</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label>
   </div>
   <div class="row">
     <span class="ctl"><label for="cut">Cut away above</label><input id="cut" type="range" min="-40" max="250" step="1" value="250"><output id="cutO">off</output></span>
@@ -67,7 +67,7 @@ details{margin-top:10px}summary{cursor:pointer}
     <span><i class="sw" style="background:var(--bld)"></i>Building, LiDAR height</span><span><i class="sw" style="background:var(--bldlv)"></i>Building, OSM levels or newer than LiDAR</span>
     <span><i class="sw" style="background:var(--base)"></i>Basement (storeys × height)</span><span><i class="sw" style="background:var(--corr)"></i>Indoor corridor / steps</span><span><i class="sw" style="background:var(--room)"></i>Shops, rooms, points with a level</span>
     <span><i class="sw" style="background:var(--plat)"></i>Platform</span><span><i class="sw" style="background:var(--jub)"></i>Jubilee</span><span><i class="sw" style="background:var(--eliz)"></i>Elizabeth line</span><span><i class="sw" style="background:var(--dlr)"></i>DLR</span>
-    <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:#f9c75a"></i>Published slab levels (Crossrail Place)</span><span><i class="sw" style="background:var(--water)"></i>Water</span><span><i class="sw" style="background:#e07a3f"></i>Tidal flood walls to their crest level (EA)</span>
+    <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:#f9c75a"></i>Published slab levels (Crossrail Place)</span><span><i class="sw" style="background:var(--water)"></i>Water</span><span><i class="sw" style="background:#e07a3f"></i>Tidal flood walls to their crest level (EA)</span><span><i class="sw" style="background:#2a4a6b"></i>Thames riverbed, UKHO soundings in m OD (seen with the cut-away or through the river)</span>
   </div>
   <div id="info" aria-live="polite"></div>
   <details id="liveBox"><summary>Live data</summary>
@@ -208,6 +208,12 @@ buildTidal();
       for (let r = 0; r < starts.length - 1; r++) for (let i = starts[r]; i < starts[r + 1]; i++) { const j = i + 1 < starts[r + 1] ? i + 1 : starts[r]; beam(M, [f[2 * i], y, f[2 * i + 1]], [f[2 * j], y, f[2 * j + 1]], .5, .35, FC); } }
   }
   L.floors = M.upload(); }
+// Thames riverbed (UKHO soundings converted to ODN): one square per sounding, coloured from shallow (light) to deep (dark)
+{ const M = new Mesh();
+  for (const r of A.riverbed || []) { const q = dec(r.q, 3), h = r.spacing / 2;
+    for (let i = 0; i < q.length; i += 3) { const y = q[i + 2], t = Math.max(0, Math.min(1, (y + 16) / 20)), col = [.10 + .45 * t, .22 + .40 * t, .38 + .30 * t];
+      const a = M.v(q[i] - h, y, q[i + 1] - h, col), b = M.v(q[i] + h, y, q[i + 1] - h, col), c = M.v(q[i] + h, y, q[i + 1] + h, col), d = M.v(q[i] - h, y, q[i + 1] + h, col); M.tri(a, b, c); M.tri(a, c, d); } }
+  L.riverbed = M.upload(); }
 // EA flood defences: a 0.8 m slab from the LiDAR ground to the surveyed crest level of each segment
 { const M = new Mesh(), WC = [.88, .48, .25];
   for (const d of A.defences || []) { const q = dec(d.q, 3); for (let i = 3; i < q.length; i += 3) { const g = Math.min(q[i - 1], q[i + 2], d.c - .3), h = d.c - g; beam(M, [q[i - 3], g + h / 2, q[i - 2]], [q[i], g + h / 2, q[i + 1]], .8, h, WC); } }
@@ -314,7 +320,7 @@ function render() {
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY);
   gl.disable(gl.BLEND); gl.depthMask(true);
-  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if (!cutOn) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }
+  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }
   if ($('showUnder').checked) drawMesh(L.under, 1);
   if ($('showRoads').checked) drawMesh(L.roads, 1);
   if ($('showFloors').checked) drawMesh(L.floors, 1);
@@ -347,7 +353,7 @@ const end = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
 cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .001)); unview(); draw(); }, { passive: false });
 ['bmode', 'showLabels', 'showRoads', 'showUnder'].forEach(id => $(id).onchange = draw);
-$('showWalls').onchange = draw;
+$('showWalls').onchange = draw; $('showBed').onchange = draw;
 $('showFloors').onchange = () => { if ($('showFloors').checked && $('bmode').value === 'solid') $('bmode').value = 'ghost'; draw(); };
 const FMT = { cut: v => +v >= 250 ? 'off' : v + ' m OD', vz: v => v + '×', storey: v => v + ' m', dmax: v => v + ' m', grad: v => v, ddeep: v => v + ' m' };
 function outs() { for (const k of ids) $(k + 'O').value = FMT[k](inp[k].value); }

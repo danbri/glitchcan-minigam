@@ -71,6 +71,8 @@ Geofabrik and Overpass were unreachable from the build container, so the OSM dat
 
 - Flood defences: 995 EA segments (942 walls, 30 bridge abutments, 11 embankments, 8 engineered high ground, 4 flood gates), drawn from the LiDAR ground up to the surveyed crest level (`actual_ucl`, else `actual_dcl`, else the design level). Crests in the box run from 5.07 to 8.75 m AOD, median 5.62 m; most design levels are 5.23 or 5.28 m AOD. With the live data loaded, the page compares the Tower Pier tide with the lowest crest.
 
+- Thames riverbed: UKHO INSPIRE bathymetry (Open Government Licence; not for navigation). It comes from the PLA multibeam survey of 2013–2017, as 6,028 soundings in the box, with point spacing measured at about 25 m (19 m at the HMS Belfast berth). The soundings are heights above Admiralty Chart Datum. They are converted to ODN with the PLA Tide Booklet 2025 values: chart datum is 3.20 m below ODN at London Bridge and 3.35 m at North Woolwich, interpolated by longitude. That interpolation is an approximation. Each sounding is drawn as one square, with no surface between soundings. Seen with the cut-away, or through the river. Files: `../registry/sources/pla/`.
+
 ## Known gaps
 
 From `FACTS.md`, not found in any source fetched:
