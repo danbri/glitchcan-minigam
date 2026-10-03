@@ -144,7 +144,9 @@ pid=$!
 echo "$pid" > "$PIDF"
 trap 'kill "$pid" 2>/dev/null' TERM INT
 
-last_step=0; last_t=$t0
+cputime() { awk '{print $14+$15}' "/proc/$1/stat" 2>/dev/null || echo 0; }  # utime+stime, clock ticks
+TCK=$(getconf CLK_TCK)
+last_step=0; last_t=$t0; last_c=$(cputime "$pid")
 while kill -0 "$pid" 2>/dev/null; do
   sleep 30
   kill -0 "$pid" 2>/dev/null || break
@@ -154,14 +156,16 @@ while kill -0 "$pid" 2>/dev/null; do
   rss=$(awk '/VmRSS/{printf "%.1f", $2/1048576}' "/proc/$pid/status" 2>/dev/null)
   hwm=$(awk '/VmHWM/{printf "%.1f", $2/1048576}' "/proc/$pid/status" 2>/dev/null)
   el=$(( (now - t0) / 1000000 ))
+  c=$(cputime "$pid")
   if [ "$step" -gt "$last_step" ]; then
     sps=$(awk -v d=$((now - last_t)) -v s=$((step - last_step)) 'BEGIN{printf "%.2f", d/1e6/s}')
+    cps=$(awk -v d=$((c - last_c)) -v s=$((step - last_step)) -v t="$TCK" 'BEGIN{printf "%.2f", d/t/s}')
     eta=$(awk -v r="$sps" -v left=$((ITERS - step)) 'BEGIN{t=r*left; printf "%dh%02dm", t/3600, (t%3600)/60}')
-    last_step=$step; last_t=$now
+    last_step=$step; last_t=$now; last_c=$c
   else
-    sps="?"; eta="?"
+    sps="?"; cps="?"; eta="?"
   fi
-  line="PROGRESS $(date +%H:%M:%S) step $step/$ITERS elapsed ${el}s ${sps}s/step eta $eta rss ${rss:-?}GB peak ${hwm:-?}GB gaussians ${gs:-initial}"
+  line="PROGRESS $(date +%H:%M:%S) step $step/$ITERS elapsed ${el}s ${sps}s/step (${cps} cpu-s/step, load $(cut -d' ' -f1 /proc/loadavg)) eta $eta rss ${rss:-?}GB peak ${hwm:-?}GB gaussians ${gs:-initial}"
   echo "$line" > "$PROG"
   echo "$line"
 done
