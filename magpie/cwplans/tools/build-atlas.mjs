@@ -9,7 +9,7 @@
 //      docklands/data/area.js (published levels with their LiDAR ground), data/sourced-levels.json
 // out: atlas/data/atlas.json
 // Detail records (occupants, facts, feeds, heritage records) stay in their own files; the page loads them on demand.
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { TOOLS, joinRings, bngProjector, pointIn } from './lib.mjs';
@@ -48,6 +48,9 @@ const model = A.buildings.map((m, i) => {
 });
 
 const reg = json('registry/buildings.json');
+// occupant categories (tools/build-categories.mjs): counts per building for the 3D glow outlines and the atlas
+const CATS = existsSync(join(CW, 'registry/categories.json')) ? json('registry/categories.json').buildings : {};
+const catOf = id => { const c = CATS[id]; if (!c) return undefined; return Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v.length])); };
 const num = v => { const n = parseFloat(String(v ?? '').replace(/[^\d.\-]/g, '')); return Number.isFinite(n) ? n : null; };
 const buildings = reg.buildings.map(b => {
   const rs = rings(byKey.get(b.osm[0])) || [];
@@ -61,7 +64,7 @@ const buildings = reg.buildings.map(b => {
     id: b.id, n: b.name, lat: r6(b.lat), lon: r6(b.lon), x: b.x, z: b.z,
     h: b.height ?? null, wh: wdh, mh: top ? top.h : null, ms: top ? top.s : null, mi: inMe.map(m => m.i),   // indices into docklands/data/area.js buildings
     lv: b.levels ?? wdf ?? null, lu: b.levels_underground ?? wdb ?? null,
-    t: b.building, a: b.area_m2, o: b.occupants.length, roles,
+    t: b.building, a: b.area_m2, o: b.occupants.length, roles, cat: catOf(b.id),
     hm: typeof b.homes?.count === 'number' ? b.homes.count : b.homes ? -1 : 0,   // -1: "fewer than 5"
     co: Array.isArray(b.companies) ? b.companies.length : b.companies?.count ?? 0, own: b.owners.map(o => o.name),
     wd: b.wikidata || null, pc: b.postcodes, sl: b.sales ? 1 : 0,

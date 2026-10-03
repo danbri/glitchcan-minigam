@@ -83,6 +83,7 @@ select,input[list]{font:inherit;font-size:16px;background:#293038;color:var(--fg
 table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
 .tw{overflow-x:auto;max-width:100%}
 details{margin-top:10px}summary{cursor:pointer}
+body.capture #top,body.capture #gauge,body.capture #tabs,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine{display:none!important}
 </style>
 </head>
 <body>
@@ -133,8 +134,13 @@ details{margin-top:10px}summary{cursor:pointer}
       <div id="rampKey" class="small"></div>
       <h3>Show</h3>
       <div class="chips">
-        <label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground</label><label><input type="checkbox" id="showFloors"> Floors</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label>
+        <label><input type="checkbox" id="showWindows" checked> Windows</label><label><input type="checkbox" id="showLabels" checked> Labels</label><label><input type="checkbox" id="showRoads" checked> Roads</label><label><input type="checkbox" id="showUnder" checked> Underground</label><label><input type="checkbox" id="showFloors"> Floors</label><label><input type="checkbox" id="showWalls" checked> Flood walls</label><label><input type="checkbox" id="showBed" checked> Riverbed</label>
       </div>
+      <h3>Glow: who is inside</h3>
+      <div class="chips" id="glowChips">
+        <label><input type="checkbox" data-glow="finance"> <i class="sw" style="background:#ff3030"></i>Banks and finance</label><label><input type="checkbox" data-glow="shop"> <i class="sw" style="background:#33d6ff"></i>Shops</label><label><input type="checkbox" data-glow="catering"> <i class="sw" style="background:#ffa040"></i>Food and drink</label><label><input type="checkbox" data-glow="leisure"> <i class="sw" style="background:#5dff7a"></i>Leisure</label><label><input type="checkbox" data-glow="entertainment"> <i class="sw" style="background:#ff4fd8"></i>Entertainment</label>
+      </div>
+      <p class="small" id="glowNote">Buildings glow when a source states that such an occupant is inside: OSM tags, Wikidata classes, the FSA business type or the Canary Wharf Group directory. Registered offices are not counted. Wikidata occupant links have no dates, so some are former tenants.</p>
       <h3>Data on the model</h3>
       <div class="chips">
         <label><input type="checkbox" id="showHeritage"> Heritage records</label><label><input type="checkbox" id="showQuality"> Quality issues</label><label><input type="checkbox" id="showCrime"> Crime, latest month (live)</label>
@@ -228,12 +234,29 @@ if (!gl || !gl.getExtension('OES_element_index_uint')) { hud.textContent = 'WebG
 // one program for everything. The terrain alone may sample a ground image (useTex): texture coordinates come from x, z and the
 // image box (docklands/data/tex/textures.json); the vertex colour then carries only the hill shading. dim darkens the rest at night.
 const vs = 'attribute vec3 p;attribute vec4 c;uniform mat4 m;uniform float vz;uniform vec4 box;varying vec4 v;varying float wy;varying vec2 uv;void main(){v=c;wy=p.y;uv=(p.xz-box.xy)/box.zw;gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
-const fs = 'precision mediump float;varying vec4 v;varying float wy;varying vec2 uv;uniform float a;uniform float cut;uniform float mono;uniform float useTex;uniform float dim;uniform sampler2D tx;void main(){if(wy>cut)discard;if(mono>.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}vec3 col=useTex>.5?min(vec3(1.),texture2D(tx,uv).rgb*v.rgb*1.35):v.rgb*dim;gl_FragColor=vec4(col,v.a*a);}';
+const fs = 'precision mediump float;varying vec4 v;varying float wy;varying vec2 uv;uniform float a;uniform float cut;uniform float mono;uniform float useTex;uniform float dim;uniform float glow;uniform float time;uniform sampler2D tx;void main(){if(wy>cut)discard;if(mono>.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}vec3 col=useTex>.5?min(vec3(1.),texture2D(tx,uv).rgb*v.rgb*1.35):v.rgb*dim;float k=1.;if(glow>.5){k=.55+.45*sin(time*3.3+wy*.09+v.a*40.);col=col*(1.+.6*k);}gl_FragColor=vec4(col,(glow>.5?k:v.a)*a);}';
 const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
-const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono'), uTex = U_('useTex'), uDim = U_('dim'), uBox = U_('box');
-gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.uniform4f(uBox, 0, 0, 1, 1); gl.uniform1i(U_('tx'), 0);
+const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono'), uTex = U_('useTex'), uDim = U_('dim'), uBox = U_('box'), uGlow = U_('glow'), uTime = U_('time');
+gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.uniform1f(uGlow, 0); gl.uniform4f(uBox, 0, 0, 1, 1); gl.uniform1i(U_('tx'), 0);
 gl.enableVertexAttribArray(aP); gl.enableVertexAttribArray(aC);
+// facade program (buildings only): 20-byte vertices [x y z u] + rgba. Walls get a window grid from the storey height
+// (3.6 m) and u, the distance along the wall; at night some windows are lit. Roofs of low buildings take the ground image.
+const fvs = 'attribute vec3 p;attribute float u;attribute vec4 c;uniform mat4 m;uniform float vz;uniform vec4 box;uniform vec3 eye;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;void main(){v=c;wy=p.y;uu=u;uv=(p.xz-box.xy)/box.zw;dist=distance(vec3(p.x,p.y*vz,p.z),eye);gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
+const ffs = 'precision mediump float;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform float night;uniform float roofTex;uniform float win;uniform sampler2D tx;' +
+  'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
+  'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
+  'if(uu>=0.&&win>.5){vec2 g=vec2(uu/1.8,wy/3.6),cell=floor(g),f=fract(g);float w=step(.14,f.x)*step(f.x,.86)*step(.2,f.y)*step(f.y,.84)*clamp(1.4-dist/900.,.15,1.);' +
+  'vec3 gl=mix(vec3(.13,.18,.25),vec3(.42,.52,.62),clamp(wy/300.,0.,1.)+h(cell)*.12)*(.55+.7*lum);' +
+  'if(night>.5){float lit=step(.58,h(cell+7.3));col=mix(col*.22,vec3(1.,.8,.48)*(.55+.45*h(cell+1.7)),w*lit);col=mix(col,gl*.25,w*(1.-lit));}else col=mix(col,gl,w*.8);}' +
+  'else if(uu<0.&&uu>-41.&&roofTex>.5){col=min(vec3(1.),texture2D(tx,uv).rgb*(.6+.9*lum));}' +
+  'else if(night>.5)col*=.3;' +
+  'gl_FragColor=vec4(col,v.a*a);}';
+const prF = gl.createProgram(); gl.attachShader(prF, sh(gl.VERTEX_SHADER, fvs)); gl.attachShader(prF, sh(gl.FRAGMENT_SHADER, ffs));
+gl.bindAttribLocation(prF, aP, 'p'); gl.bindAttribLocation(prF, aC, 'c'); gl.bindAttribLocation(prF, [0, 1, 2].find(i => i !== aP && i !== aC), 'u'); gl.linkProgram(prF);
+if (!gl.getProgramParameter(prF, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prF));
+const FU = n => gl.getUniformLocation(prF, n), fa = { p: gl.getAttribLocation(prF, 'p'), u: gl.getAttribLocation(prF, 'u'), c: gl.getAttribLocation(prF, 'c') };
+const fu = { eye: FU('eye'), m: FU('m'), vz: FU('vz'), box: FU('box'), a: FU('a'), cut: FU('cut'), night: FU('night'), roofTex: FU('roofTex'), win: FU('win'), tx: FU('tx') };
 const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })();
 const shade = (col, nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1, k = .5 + .5 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / l); return [col[0] * k, col[1] * k, col[2] * k]; };
 
@@ -252,6 +275,33 @@ class Mesh {
     this.count = this.idx.length; this.f = []; this.idx = []; return this;
   }
   free() { if (this.vb) { gl.deleteBuffer(this.vb); gl.deleteBuffer(this.ib); } }
+}
+class MeshF {   // like Mesh with a fourth float per vertex (u); 20 bytes a vertex
+  constructor() { this.f = []; this.idx = []; this.n = 0; }
+  v(x, y, z, u, c, a = 1) { this.f.push(x, y, z, u, ((c[0] * 255) | 0) | (((c[1] * 255) | 0) << 8) | (((c[2] * 255) | 0) << 16) | (((a * 255) | 0) << 24)); return this.n++; }
+  tri(a, b, c) { this.idx.push(a, b, c); }
+  upload() {
+    const buf = new ArrayBuffer(this.f.length * 4), f32 = new Float32Array(buf), u32 = new Uint32Array(buf);
+    for (let i = 0; i < this.f.length; i++) { if (i % 5 === 4) u32[i] = this.f[i] >>> 0; else f32[i] = this.f[i]; }
+    this.vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.vb); gl.bufferData(gl.ARRAY_BUFFER, buf, gl.STATIC_DRAW);
+    this.ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(this.idx), gl.STATIC_DRAW);
+    this.count = this.idx.length; this.f = []; this.idx = []; return this;
+  }
+  free() { if (this.vb) { gl.deleteBuffer(this.vb); gl.deleteBuffer(this.ib); } }
+}
+// building prism for the facade program: u = metres along each ring on walls, -(1 + height) on the roof
+function prismF(M, o, y0, y1, col, bottom) {
+  const f = dec(o.p), holes = o.holes || [], nv = f.length / 2, tris = earcut(f, holes.length ? holes : undefined, 2), top = shade(col.map(c => Math.min(1, c * 1.05)), 0, 1, 0), base = M.n, ru = -(1 + (y1 - y0));
+  for (let i = 0; i < nv; i++) M.v(f[2 * i], y1, f[2 * i + 1], ru, top);
+  for (let k = 0; k < tris.length; k += 3) M.tri(base + tris[k], base + tris[k + 1], base + tris[k + 2]);
+  if (bottom) { const b2 = M.n, bs = shade(col, 0, 1, 0).map(c => c * .6); for (let i = 0; i < nv; i++) M.v(f[2 * i], y0, f[2 * i + 1], -1, bs); for (let k = 0; k < tris.length; k += 3) M.tri(b2 + tris[k], b2 + tris[k + 2], b2 + tris[k + 1]); }
+  const starts = [0, ...holes, nv];
+  for (let r = 0; r < starts.length - 1; r++) { let along = 0;
+    for (let k = starts[r]; k < starts[r + 1]; k++) {
+      const k2 = k + 1 < starts[r + 1] ? k + 1 : starts[r], x0 = f[2 * k], z0 = f[2 * k + 1], x1 = f[2 * k2], z1 = f[2 * k2 + 1], len = Math.hypot(x1 - x0, z1 - z0);
+      const s = shade(col, z1 - z0, 0, -(x1 - x0)).map(c => c * .9);
+      const i = M.v(x0, y0, z0, along, s), j = M.v(x1, y0, z1, along + len, s), kk = M.v(x1, y1, z1, along + len, s), l = M.v(x0, y1, z0, along, s); M.tri(i, j, kk); M.tri(i, kk, l); along += len;
+    } }
 }
 function norm3(a, b, c) { const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]; let n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]; if (n[1] < 0) n = n.map(x => -x); return n; }
 // extruded polygon: rings from enc'd p, walls + top (and bottom when asked)
@@ -304,7 +354,7 @@ buildTidal();
 { const M = new Mesh(); const T = A.terrain; const gh = (x, z) => { const i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
   for (const g of A.greens) { const f = dec(g.p); flat(M, g, gh(f[0], f[1]) + .4, C.green); } L.greens = M.upload(); }
 let buildingColour = (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld;   // replaced by the "Colour buildings by" control
-function buildBld() { if (L.bld) L.bld.free(); const M = new Mesh(); A.buildings.forEach((b, i) => prism(M, b, b.b + (b.mh || 0), b.b + b.h, buildingColour(b, i), !!b.mh)); L.bld = M.upload(); }
+function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(); A.buildings.forEach((b, i) => prismF(M, b, b.b + (b.mh || 0), b.b + b.h, buildingColour(b, i), !!b.mh)); L.bld = M.upload(); }
 buildBld();
 { const M = new Mesh(), R = new Mesh();
   for (const l of A.lines) if (!l.tunnel) {
@@ -375,7 +425,7 @@ function mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++)
 function persp(f, a, n, fa) { const t = 1 / Math.tan(f / 2), o = new Float32Array(16); o[0] = t / a; o[5] = t; o[10] = (fa + n) / (n - fa); o[11] = -1; o[14] = 2 * fa * n / (n - fa); return o; }
 const sub = (a, b) => a.map((v, i) => v - b[i]), dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0), cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], nrm = a => { const l = Math.hypot(...a); return a.map(v => v / l); };
 function look(e, t, u) { const z = nrm(sub(e, t)), x = nrm(cross3(u, z)), y = cross3(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x, e), -dot(y, e), -dot(z, e), 1]); }
-let MVP = null, VZ = 1, satOn = false, ground = 'none', groundTex = null;
+let MVP = null, CAM = null, VZ = 1, satOn = false, ground = 'none', groundTex = null;
 
 // ---------- labels: stations, place names, named towers and docks; greedy overlap culling
 const labelBox = $('labels'), info = $('info');
@@ -419,6 +469,17 @@ function placeLabels() {
 
 // ---------- render
 let queued = false; function draw() { if (!queued) { queued = true; requestAnimationFrame(render); } }
+function drawFacades(M, alpha, P) {
+  if (!M || !M.count) return; gl.useProgram(prF);
+  gl.uniformMatrix4fv(fu.m, false, MVP); gl.uniform3f(fu.eye, CAM.eye[0], CAM.eye[1], CAM.eye[2]); gl.uniform1f(fu.vz, VZ); gl.uniform1f(fu.a, alpha); gl.uniform1f(fu.cut, P.cut < 250 ? P.cut : 1e9);
+  gl.uniform1f(fu.night, ground === 'night2012' ? 1 : 0); gl.uniform1f(fu.win, $('showWindows').checked && $('colourBy').value === 'source' ? 1 : 0);
+  const rt = !!groundTex && ground !== 'night2012' && ground !== 'intensity2020'; gl.uniform1f(fu.roofTex, rt ? 1 : 0);
+  if (TEXIDX) { const B = TEXIDX.box; gl.uniform4f(fu.box, B.x0, B.z0, B.x1 - B.x0, B.z1 - B.z0); } gl.uniform1i(fu.tx, 0); if (rt) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); }
+  gl.enableVertexAttribArray(fa.u);
+  gl.bindBuffer(gl.ARRAY_BUFFER, M.vb); gl.vertexAttribPointer(fa.p, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(fa.u, 1, gl.FLOAT, false, 20, 12); gl.vertexAttribPointer(fa.c, 4, gl.UNSIGNED_BYTE, true, 20, 16);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, M.ib); gl.drawElements(gl.TRIANGLES, M.count, gl.UNSIGNED_INT, 0);
+  gl.disableVertexAttribArray(fa.u); gl.useProgram(pr);
+}
 function drawMesh(M, alpha) {
   if (!M || !M.count) return;
   gl.bindBuffer(gl.ARRAY_BUFFER, M.vb); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 16, 0); gl.vertexAttribPointer(aC, 4, gl.UNSIGNED_BYTE, true, 16, 12);
@@ -427,9 +488,12 @@ function drawMesh(M, alpha) {
 function render() {
   queued = false; const P = par(); VZ = P.vz; buildTunnels(P); buildUnder(P); if (NET) buildWalk();
   const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-  gl.viewport(0, 0, w, h); const night = ground === 'night2012'; gl.clearColor(night ? .02 : .059, night ? .025 : .071, night ? .035 : .082, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
-  const ce = Math.cos(cam.pitch), T = [cam.tx, cam.ty * VZ, cam.tz], eye = [T[0] + cam.dist * Math.sin(cam.yaw) * ce, T[1] + cam.dist * Math.sin(cam.pitch), T[2] + cam.dist * Math.cos(cam.yaw) * ce];
-  MVP = mul(persp(.8, w / h, Math.max(2, cam.dist / 400), cam.dist * 6 + 6000), look(eye, T, [0, 1, 0]));
+  gl.viewport(0, 0, w, h); const night = ground === 'night2012'; if (night) gl.clearColor(.02, .025, .035, 1); else if (satOn) gl.clearColor(.70, .76, .82, 1); else gl.clearColor(.059, .071, .082, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
+  const ce = Math.cos(cam.pitch); let T = [cam.tx, cam.ty * VZ, cam.tz], eye = [T[0] + cam.dist * Math.sin(cam.yaw) * ce, T[1] + cam.dist * Math.sin(cam.pitch), T[2] + cam.dist * Math.cos(cam.yaw) * ce];
+  // free camera (drone flights, setEye): eye and target in model metres, vertical field of view in radians
+  if (cam.eye) { eye = [cam.eye[0], cam.eye[1] * VZ, cam.eye[2]]; T = [cam.target[0], cam.target[1] * VZ, cam.target[2]]; }
+  CAM = { eye, target: T, fovY: cam.fov || .8, aspect: w / h, w, h };
+  MVP = mul(persp(cam.fov || .8, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000), look(eye, T, [0, 1, 0]));
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); gl.uniform1f(uDim, night ? .45 : 1);
   gl.disable(gl.BLEND); gl.depthMask(true);
@@ -439,15 +503,16 @@ function render() {
   if ($('showFloors').checked) drawMesh(L.floors, 1);
   if ($('showWalls').checked) drawMesh(L.walls, 1);
   drawMesh(L.pins, 1); drawMesh(L.walk, 1);
-  if (bm === 'solid') drawMesh(L.bld, 1);
+  if (bm === 'solid') drawFacades(L.bld, 1, P);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-  if (bm === 'ghost') drawMesh(L.bld, .22);
+  if (bm === 'ghost') drawFacades(L.bld, .22, P);
   // the cut removes structures; ground, greens and water stay as faint context so you can see where you are
   gl.uniform1f(uCut, 1e9);
   if (cutOn) { drawMesh(L.water, .35); drawMesh(L.tidal, .35); drawMesh(L.dockVol, .3); }
   if (!satOn) drawMesh(L.greens, cutOn ? .2 : .55);
   if (groundTex) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); gl.uniform1f(uTex, 1); }
   drawMesh(L.terrain, cutOn ? .14 : satOn ? .97 : .5); gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.depthMask(true);
+  drawGlow();
   if (L.hi || L.route) { gl.disable(gl.DEPTH_TEST); drawMesh(L.hi, .9); drawMesh(L.route, .95); gl.enable(gl.DEPTH_TEST); }
   placeLabels();
 }
@@ -470,7 +535,7 @@ const end = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
 cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .001)); unview(); draw(); }, { passive: false });
 ['bmode', 'showLabels', 'showRoads', 'showUnder'].forEach(id => $(id).onchange = draw);
-$('showWalls').onchange = draw; $('showBed').onchange = draw;
+$('showWalls').onchange = draw; $('showBed').onchange = draw; $('showWindows').onchange = draw;
 $('showFloors').onchange = () => { if ($('showFloors').checked && $('bmode').value === 'solid') { $('bmode').value = 'ghost'; syncBmode(); } draw(); };
 const FMT = { cut: v => +v >= 250 ? 'off' : v + ' m OD', vz: v => v + '×', storey: v => v + ' m', dmax: v => v + ' m', grad: v => v, ddeep: v => v + ' m' };
 function outs() { for (const k of ids) $(k + 'O').value = FMT[k](inp[k].value); }
@@ -552,6 +617,7 @@ let AT = null, REG = null, QI = null, selected = -1;
 const regOf = new Int32Array(A.buildings.length).fill(-1);
 const loadJSON = u => fetch(u).then(r => { if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.json(); });
 const getReg = () => REG || (REG = loadJSON('../registry/buildings.json').then(d => new Map(d.buildings.map(b => [b.id, b]))));
+let CATS_ = null; const getCats = () => CATS_ || (CATS_ = loadJSON('../registry/categories.json'));
 const getQI = () => QI || (QI = loadJSON('../quality/issues.json').then(q => { const by = new Map(); for (const i of q.issues) { const k = `${i.ent}/${i.id}`; if (!by.has(k)) by.set(k, []); by.get(k).push(i); } return { q, by }; }));
 const note = t => { $('dataNote').textContent = t; if (t) toast(t); };
 const HT = b => b.wh || b.h || b.mh || 0;
@@ -615,7 +681,7 @@ async function selectBuilding(k) {
   for (const i of ab.mi) { const b = A.buildings[i]; outline(M, b, b.b + (b.mh || 0), b.b + b.h + .5, [1, .25, .65]); }
   L.hi = M.upload(); draw();
   info.innerHTML = `<b>${esc(ab.n || ab.id)}</b> <span class="small">${esc(ab.id)} · loading the record…</span>`; openPane('paneInfo');
-  const [reg, qi] = await Promise.all([getReg(), getQI().catch(() => null)]);
+  const [reg, qi, cats] = await Promise.all([getReg(), getQI().catch(() => null), getCats().catch(() => null)]);
   if (selected !== k) return;
   const b = reg.get(ab.id), base = Math.min(...ab.mi.map(i => A.buildings[i].b)), storey = par().storey;
   const occ = b.occupants.map(o => ({ o, lv: levelOf(o) }));
@@ -633,6 +699,7 @@ async function selectBuilding(k) {
     <div class="small">Homes: ${b.homes ? esc(b.homes.count) : 0} · companies: ${comp} · postcodes: ${b.postcodes.map(esc).join(', ') || '—'}</div>
     ${occ.length ? `<table>${levels.map(lv => `<tr><td>${typeof lv === 'number' ? (lv === 0 ? 'ground' : (lv > 0 ? '+' : '') + lv) : 'no level'}</td><td>${byLv.get(lv).map(o => esc(o.name)).join(' · ')}</td></tr>`).join('')}</table><div class="small">${withLv.length} occupants drawn at their floor (OSM level or CWG mall level × ${storey} m storey height; a level is a floor index, not a measured height).</div>` : '<div class="small">No occupants recorded.</div>'}
     ${issues.length ? `<div class="small" style="margin-top:6px"><b>Data quality (${issues.length})</b><br>${issues.slice(0, 12).map(i => `${esc(i.check)} <span class="tag">${esc(i.sev)}</span> ${esc(i.note)}`).join('<br>')}</div>` : ''}
+    ${cats && cats.buildings[ab.id] ? `<div class="small" style="margin-top:6px"><b>Who is inside, by kind</b> (the glow layers)<br>${Object.entries(cats.buildings[ab.id]).map(([c, l]) => `<span style="color:rgb(${GLOW[c].map(v => Math.round(v * 255)).join(',')})">${esc(c)}</span>: ${l.slice(0, 10).map(o => `${esc(o.name)} <span class="tag">${esc(o.why)}${o.dated === false ? ', undated' : ''}</span>`).join(' · ')}${l.length > 10 ? ' …' : ''}`).join('<br>')}</div>` : ''}
     ${routeBtns(Math.round(ab.x), Math.round(ab.z), b.name || ab.id)}
     <div class="small" style="margin-top:6px"><a href="../atlas/#map/b/${esc(ab.id)}">full record in the atlas</a>${b.osm[0] ? ` · <a href="https://www.openstreetmap.org/${esc(b.osm[0])}">OSM</a>` : ''}${b.wikidata ? ` · <a href="https://www.wikidata.org/wiki/${esc(b.wikidata)}">Wikidata</a>` : ''} · <a href="#" id="unselect">clear</a></div>`;
   $('unselect').onclick = e => { e.preventDefault(); clearSelection(); resetInfo(); draw(); };
@@ -651,6 +718,43 @@ $('colourBy').onchange = async () => {
     $('rampKey').innerHTML = `<span class="ramp" style="background:linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c)"></span>${label} (square-root scale) · light grey: none · dark grey: no registry record (outside the Canary Wharf box)`; }
   buildBld(); draw();
 };
+
+// glow outlines by occupant category (registry/categories.json via the atlas index: AT.buildings[k].cat)
+const GLOW = { finance: [1, .19, .19], shop: [.2, .84, 1], catering: [1, .63, .25], leisure: [.36, 1, .48], entertainment: [1, .31, .85] };
+let glowOn = [], glowLoop = 0;
+function buildGlow() {
+  for (const k of ['glow', 'aura']) if (L[k]) { L[k].free(); L[k] = null; }
+  glowOn = [...document.querySelectorAll('[data-glow]:checked')].map(x => x.dataset.glow); if (!glowOn.length || !AT) return 0;
+  const E = new Mesh(), H = new Mesh(); let n = 0;
+  A.buildings.forEach((b, i) => {
+    const k = regOf[i]; if (k < 0) return; const cat = AT.buildings[k].cat; if (!cat) return;
+    const hit = glowOn.filter(c => cat[c]); if (!hit.length) return; n++;
+    const col = GLOW[hit[0]], seed = ((k * 2654435761) >>> 0) / 4294967296, f = dec(b.p), y0 = b.b + (b.mh || 0), y1 = b.b + b.h, nv = (b.holes && b.holes.length ? b.holes[0] : f.length / 2);
+    let cx = 0, cz = 0; for (let j = 0; j < nv; j++) { cx += f[2 * j]; cz += f[2 * j + 1]; } cx /= nv; cz /= nv;
+    // aura: the outer wall pushed out by 4 m, from the ground to 6 m above the roof
+    const out = j => { const dx = f[2 * j] - cx, dz = f[2 * j + 1] - cz, r = Math.hypot(dx, dz) || 1; return [f[2 * j] + dx / r * 4, f[2 * j + 1] + dz / r * 4]; };
+    for (let j = 0; j < nv; j++) { const a = out(j), c = out((j + 1) % nv), p0 = H.v(a[0], y0, a[1], col, seed), p1 = H.v(c[0], y0, c[1], col, seed), p2 = H.v(c[0], y1 + 6, c[1], col, seed), p3 = H.v(a[0], y1 + 6, a[1], col, seed); H.tri(p0, p1, p2); H.tri(p0, p2, p3); }
+    // edges: roof and base outline, and the corners where the outline turns
+    for (let j = 0; j < nv; j++) { const j2 = (j + 1) % nv, jp = (j + nv - 1) % nv, A0 = [f[2 * j], f[2 * j + 1]], A1 = [f[2 * j2], f[2 * j2 + 1]], Ap = [f[2 * jp], f[2 * jp + 1]];
+      for (const y of [y0 + .5, y1 + .5]) beam(E, [A0[0], y, A0[1]], [A1[0], y, A1[1]], 1.6, 1.6, col);
+      const t1 = Math.atan2(A0[1] - Ap[1], A0[0] - Ap[0]), t2 = Math.atan2(A1[1] - A0[1], A1[0] - A0[0]), turn = Math.abs(((t2 - t1 + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+      if (turn > .35) beam(E, [A0[0], y0, A0[1]], [A0[0] + .01, y1 + .5, A0[1]], 1.6, 1.6, col); }
+  });
+  L.glow = E.n ? E.upload() : null; L.aura = H.n ? H.upload() : null; return n;
+}
+function glowTick() { if (!glowOn.length) { glowLoop = 0; return; } draw(); glowLoop = requestAnimationFrame(glowTick); }
+document.querySelectorAll('[data-glow]').forEach(x => x.onchange = () => {
+  if (!AT) { note('The atlas index is still loading.'); x.checked = false; return; }
+  const n = buildGlow(); cancelAnimationFrame(glowLoop); if (glowOn.length) glowTick(); else draw();
+  if (glowOn.length) toast(`${n} buildings: ${glowOn.join(', ')}`);
+});
+function drawGlow() {
+  if (!L.glow && !L.aura) return;
+  gl.uniform1f(uGlow, 1); gl.uniform1f(uTime, performance.now() / 1000); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false);
+  drawMesh(L.aura, .3); drawMesh(L.glow, 1);          // with the depth test: hidden by nearer buildings, like real light
+  gl.disable(gl.DEPTH_TEST); drawMesh(L.glow, .14); gl.enable(gl.DEPTH_TEST);   // a faint pass through them, so nothing is lost
+  gl.uniform1f(uGlow, 0); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
+}
 
 // pins: heritage places, quality issues, live crime
 let crime = null;
@@ -915,7 +1019,14 @@ async function openPress(px, py) {
 addEventListener('resize', () => { if (sheetH) setSheet(Math.min(sheetH, innerHeight - 120)); });
 syncGauge();
 
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; },
+// capture mode (?capture or __docklands.captureMode(true)): no overlays, no labels; for drone frames and splat training
+function captureMode(on) { document.body.classList.toggle('capture', on); if (on) { $('showLabels').checked = false; closeSheet(); toast(''); } draw(); }
+if (/[?&]capture\b/.test(location.search)) captureMode(true);
+// render one frame now (not on the next animation frame) and resolve when the GPU has finished it
+function renderNow() { queued = false; render(); gl.finish(); }
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, captureMode, renderNow, get CAM() { return CAM; },
+  setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; unview(); draw(); },
+  clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
 outs(); setView('cw');
 // #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)

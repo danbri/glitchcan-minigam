@@ -40,6 +40,7 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `quality/CATALOGUE.md` | 34 kB | notes | examples quote OSM ids, names and tag values |  |  |
 | `quality/README.md` | 12 kB | notes | counts from the audit |  |  |
 | `docklands/data/indoor.js` | 434 kB | derived | walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances | osmfr-greater-london | docklands/index.html |
+| `registry/categories.json` | 66 kB | derived | occupant names and the OSM tags that state their kind (amenity, office, shop, leisure, tourism) | osmfr-greater-london | docklands/index.html |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
 | `docklands/README.md` | 19 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
@@ -143,6 +144,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `feeds/underground/estate-excluded.json` | 4 kB | sources looked at for Canary Wharf estate maps and the indoor-map service and not used, with the reason | written or computed in this project (repository licence) |
 | `feeds/underground/tunnels.json` | 53 kB | catalogue of sources for the underground estate: tunnel alignments, station depths and 3D models (URLs, dates, licence, levels found with short quotes) | short quotations from published pages (Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved); written or computed in this project (repository licence) |
 | `feeds/underground/tunnels-excluded.json` | 5 kB | sources looked at for tunnel alignments, station depths and 3D models and not used, with the reason | written or computed in this project (repository licence) |
+| `registry/categories.json` | 66 kB | occupant categories per registry building (finance, shops, catering, leisure, entertainment) with the stated class behind each; drives the 3D glow layers | OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)); written or computed in this project (repository licence) |
 | `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
 | `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
