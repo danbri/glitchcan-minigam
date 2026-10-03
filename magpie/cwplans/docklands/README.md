@@ -94,6 +94,7 @@ The screen shows only the city, two round buttons at the top left and the attrib
 - Map labels are plain text with a dark halo, not boxes.
 - Two fingers: twist to turn the view (both styles). In pixel art, one finger moves, two fingers pinch to zoom and move up or down to tilt; with a mouse, right or Shift drag turns and tilts. The round arrow buttons at the top right turn by a quarter.
 - A finger that lands on a label still joins the drag, pinch or twist; a tap on a label opens its record.
+- Music in pixel art: the buildings themselves follow the bands (vertex shader: stretch, swirl, noise about each building's centre and base); in the map style the splat towers do.
 - Music: "Play your own file…" is a button (a label for the file input, so phones open their file picker); the file plays only in the browser.
 - On a wide screen the record card docks at the bottom right and the drawer does not dim the map.
 
