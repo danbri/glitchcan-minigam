@@ -8,59 +8,72 @@
 :root{--bg:#0f1215;--panel:#15191df2;--line:#323940;--fg:#e8eaec;--muted:#a9b1b9;--link:#9cc8ff;--warn:#ffd26f;--acc:#5fd17a;
   --ell:#ff8a3d;--eliz:#9b6cff;--jub:#c9ced6;--dlr:#2cc3b5;--rail:#d9544d;--road:#5c636b;--water:#3f8fc0;
   --bld:#b9bec4;--bldlv:#e0b25a;--base:#b05cff;--corr:#3fd0ff;--plat:#ff8a3d;--room:#ff5fa2;--tun:#e6e08a;
-  --tabs:56px;--safe:env(safe-area-inset-bottom,0px)}
+  --tabs:0px;--safe:env(safe-area-inset-bottom,0px)}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,sans-serif;overscroll-behavior:none}
 a{color:var(--link)}
 #wrap{position:fixed;inset:0}
 canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:1px 5px;border-radius:5px;background:#0d1013d9;border:1px solid #39424b;color:var(--fg);pointer-events:auto;cursor:pointer}
-.lb.st{font-size:12px;font-weight:600;border-color:var(--ell)}.lb.pl{border-color:#6b7580;font-style:italic}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border-color:#ffd26f}.lb.src{border-color:#ffd26f;color:#ffe7a8}.lb.occ{border-color:#ff5fa2;color:#ffd1e6;font-size:10px}.lb.her{border-color:#b48cff;color:#e2d4ff}.lb.end{border-color:var(--acc);color:#c9ffd6;font-weight:600}
+.lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:2px 3px;border:0;background:none;color:var(--fg);pointer-events:auto;cursor:pointer;text-shadow:0 0 2px #000,0 0 3px #000,0 1px 4px #000c}
+.lb.st{font-size:12px;font-weight:600;color:#ffd9bf}.lb.pl{font-style:italic;color:#d7dce0}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border:1px solid #ffd26f;border-radius:5px;background:#0d1013d9}.lb.src{border-color:#ffd26f;color:#ffe7a8}.lb.occ{border-color:#ff5fa2;color:#ffd1e6;font-size:10px}.lb.her{border-color:#b48cff;color:#e2d4ff}.lb.end{border-color:var(--acc);color:#c9ffd6;font-weight:600}
 button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px;cursor:pointer}
 button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
-/* top: search and views */
-#top{position:absolute;left:12px;right:12px;top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;pointer-events:none}
+/* top: menu and search buttons; the city fills the screen */
+#top{position:absolute;z-index:3;left:10px;right:10px;top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;pointer-events:none}
 #top>*{pointer-events:auto}
-#searchRow{display:flex;gap:6px;max-width:560px}
+#searchRow{display:flex;gap:6px;max-width:560px;align-items:center}
+.ib{flex:none;width:42px;height:42px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#15191dcc;border-color:#59616a99;box-shadow:0 1px 6px #0006}
+.ib svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 #q{flex:1;min-width:0;font:inherit;font-size:16px;background:#15191de8;color:var(--fg);border:1px solid #59616a;border-radius:22px;padding:9px 14px}
+#q[hidden]{display:none}
 #qres{list-style:none;margin:0;padding:4px;max-width:560px;max-height:46vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:none}
 #qres li button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 10px}
 #qres li button:hover,#qres li button:focus{background:#2a323a}
-#views{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;max-width:100%}
-#views button{flex:none;padding:6px 11px;border-radius:16px;font-size:13px;background:#15191de0}
-#views button[aria-pressed=true]{background:#3d4a57}
 #hud{align-self:flex-start;background:#111c;padding:5px 9px;border-radius:8px;font-size:12px;max-width:100%;pointer-events:none;transition:opacity .6s}
+#hud:empty{display:none}
+#isoBtns{position:absolute;right:10px;top:max(10px,env(safe-area-inset-top));display:flex;gap:6px}
+#isoBtns[hidden]{display:none}
+/* left drawer: views, route, layers, about */
+#drawer{position:absolute;left:0;top:0;bottom:0;width:min(88vw,420px);background:var(--panel);border-right:1px solid var(--line);z-index:6;display:flex;flex-direction:column;transform:translateX(-102%);transition:transform .22s ease;box-shadow:4px 0 18px #0009;padding-top:env(safe-area-inset-top)}
+#drawer.open{transform:none}
+#drawer.drag{transition:none}
+#dHead{flex:none;display:flex;align-items:center;gap:8px;padding:10px 12px 6px}
+#dHead b{flex:1;font-size:15px}
+#dViews{flex:none;padding:0 12px 8px}
+#dViews .chips button{padding:7px 11px;border-radius:18px;font-size:13px;background:#232a31}
+#dViews .chips button[aria-pressed=true]{background:#3d5a48;border-color:var(--acc);color:#fff}
+#dtabs{flex:none;display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#dtabs button{flex:1;border:0;border-radius:0;background:none;font-size:13px;padding:10px 2px;color:var(--muted)}
+#dtabs button[aria-selected=true]{color:var(--fg);background:#20262c;box-shadow:inset 0 -2px 0 var(--acc)}
+#drawerBody{flex:1;overflow:auto;padding:4px 16px calc(14px + var(--safe));overscroll-behavior:contain}
+#scrim{position:absolute;inset:0;background:#0005;z-index:5;display:none}
+#scrim.on{display:block}
 /* depth gauge: drag to cut away everything above a level */
-#digBtn{position:absolute;left:8px;top:150px;font-size:12px;padding:6px 10px;border-radius:16px;background:#15191de0}
-#digBtn[aria-pressed=true]{background:#3d4a57}
 #gauge[hidden]{display:none}
-#gauge{position:absolute;left:6px;top:200px;bottom:calc(var(--tabs) + var(--safe) + 70px);width:46px;touch-action:none;user-select:none}
+#gauge{position:absolute;left:6px;top:110px;bottom:calc(var(--tabs) + var(--safe) + 70px);width:46px;touch-action:none;user-select:none}
 #gauge .track{position:absolute;left:20px;top:0;bottom:0;width:6px;border-radius:3px;background:linear-gradient(#5d7a8f,#5d7a8f 10%,#8a6a4a 48%,#4a3426)}
 #gauge .mk{position:absolute;left:28px;font-size:10px;color:var(--muted);transform:translateY(-50%);white-space:nowrap;text-shadow:0 0 3px #000}
 #gauge .h{position:absolute;left:8px;width:30px;height:30px;margin-top:-15px;border-radius:50%;background:#e8eaec;border:3px solid #15191d;box-shadow:0 1px 4px #000a}
+#gaugeX{position:absolute;left:4px;top:-44px;width:36px;height:36px}
 #gauge output{position:absolute;left:44px;transform:translateY(-50%);font-size:12px;font-weight:600;background:#111d;padding:2px 6px;border-radius:6px;white-space:nowrap}
-/* bottom: tab bar and sheet */
-#tabs{position:absolute;left:0;right:0;bottom:0;height:calc(var(--tabs) + var(--safe));padding-bottom:var(--safe);display:flex;background:#15191d;border-top:1px solid var(--line);z-index:3}
-#tabs button{flex:1;border:0;border-radius:0;background:none;font-size:13px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted)}
-#tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
-#tabs button[aria-selected=true]{color:var(--fg);background:#20262c}
-#sheet{position:absolute;left:0;right:0;bottom:calc(var(--tabs) + var(--safe));height:0;background:var(--panel);border-top:1px solid var(--line);border-radius:14px 14px 0 0;z-index:2;display:flex;flex-direction:column;transition:height .2s ease;box-shadow:0 -4px 16px #0008}
+/* bottom: the record card (only after a tap) */
+#sheetX{position:absolute;right:8px;top:4px;width:34px;height:34px;padding:0;border-radius:50%;z-index:1}
+#sheet{position:absolute;left:0;right:0;z-index:4;bottom:calc(var(--tabs) + var(--safe));height:0;background:var(--panel);border-top:1px solid var(--line);border-radius:14px 14px 0 0;z-index:2;display:flex;flex-direction:column;transition:height .2s ease;box-shadow:0 -4px 16px #0008}
 #sheet.drag{transition:none}
 #grip{flex:none;height:22px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:ns-resize}
 #grip::before{content:"";width:44px;height:5px;border-radius:3px;background:#59616a}
 #sheetBody{flex:1;overflow:auto;padding:0 16px 14px;overscroll-behavior:contain}
-.pane{display:none}.pane.on{display:block}
+.pane{display:none}.pane.on{display:block}#sheet .pane{display:block}
 #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs) + var(--safe) + 22px);width:max-content;max-width:min(calc(100vw - 32px),560px);box-sizing:border-box;background:#1b2128f2;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;z-index:4;display:none}
 #attribLine{position:absolute;right:6px;bottom:calc(var(--tabs) + var(--safe) + 4px);font-size:10px;color:#c9ced6;background:#0d1013b0;padding:1px 6px;border-radius:5px;max-width:70vw;text-align:right}
 #attribLine a{color:#c9ced6}
 #press{position:absolute;z-index:5;display:none;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 4px 14px #000a}
 #press button{text-align:left;padding:10px 14px}
 @media (min-width:900px){
-  #sheet{left:12px;right:auto;width:440px;bottom:calc(var(--tabs) + 10px);border-radius:14px;border:1px solid var(--line)}
-  #tabs{left:12px;right:auto;width:440px;bottom:10px;border-radius:12px;border:1px solid var(--line);height:var(--tabs);padding:0}
-  #attribLine{bottom:6px}
-  #toast{left:470px;transform:none;bottom:14px}
+  #sheet{left:auto;right:12px;width:440px;bottom:10px;border-radius:14px;border:1px solid var(--line)}
+  #toast{bottom:14px}
   #gauge{left:auto;right:64px;top:110px;bottom:120px}
+  #scrim.on{display:none}
 }
 /* panes */
 h2{font-size:15px;margin:4px 0 8px}
@@ -86,30 +99,34 @@ select,input[list]{font:inherit;font-size:16px;background:#293038;color:var(--fg
 table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
 .tw{overflow-x:auto;max-width:100%}
 details{margin-top:10px}summary{cursor:pointer}
-body.capture #top,body.capture #gauge,body.capture #digBtn,body.capture #tabs,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine{display:none!important}
+body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer,body.capture #scrim,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine{display:none!important}
 </style>
 </head>
 <body>
 <div id="wrap"><canvas id="c" role="img" aria-label="3D model of London Docklands from London Bridge to Cody Dock, with Canary Wharf above and below ground, from OpenStreetMap, Environment Agency LiDAR and Wikidata"></canvas><div id="labels"></div>
   <div id="top">
-    <div id="searchRow"><input id="q" type="search" placeholder="Find a building, shop, platform or place" autocomplete="off" aria-label="Find a building, shop, platform or place" aria-controls="qres"></div>
+    <div id="searchRow"><button type="button" class="ib" id="menuBtn" aria-label="Menu" aria-controls="drawer" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><button type="button" class="ib" id="findBtn" aria-label="Find a place"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg></button><input id="q" type="search" hidden placeholder="Find a building, shop, platform or place" autocomplete="off" aria-label="Find a building, shop, platform or place" aria-controls="qres"></div>
     <ul id="qres" aria-label="Search results"></ul>
-    <div id="views" role="group" aria-label="Views">
-      <button type="button" data-view="area" aria-pressed="false">Whole area</button>
-      <button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button>
-      <button type="button" data-view="under" aria-pressed="false">Underground</button>
-      <button type="button" data-view="plan" aria-pressed="false">Plan</button>
-      <button type="button" id="isoL" hidden aria-label="Turn the view left">⟲</button><button type="button" id="isoR" hidden aria-label="Turn the view right">⟳</button>
-    </div>
     <div id="hud">Loading 1.9 MB of data…</div>
   </div>
-  <button type="button" id="digBtn" aria-pressed="false" aria-controls="gauge">Below ground</button>
-  <div id="gauge" hidden role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
+  <div id="isoBtns" hidden><button type="button" class="ib" id="isoL" aria-label="Turn the view left">⟲</button><button type="button" class="ib" id="isoR" aria-label="Turn the view right">⟳</button></div>
+  <div id="gauge" hidden role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><button type="button" class="ib" id="gaugeX" aria-label="Close the depth gauge"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
   <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span></div>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="press" role="menu"></div>
-  <section id="sheet" aria-label="Details"><div id="grip" aria-hidden="true"></div><div id="sheetBody">
+  <section id="sheet" aria-label="Record"><div id="grip" aria-hidden="true"></div><button type="button" id="sheetX" aria-label="Close the record">×</button><div id="sheetBody">
     <div class="pane" id="paneInfo"><div id="info" aria-live="polite"><p class="small">Tap a building, a label or a pin for its record. Press and hold anywhere to start or end a route there.</p></div></div>
+  </div></section>
+  <div id="scrim"></div>
+  <aside id="drawer" aria-label="Menu" aria-hidden="true">
+    <div id="dHead"><b>Docklands 3D</b><button type="button" class="ib" id="drawerX" aria-label="Close the menu"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div id="dViews"><div class="chips" role="group" aria-label="Views">
+      <button type="button" data-view="area" aria-pressed="false">Whole area</button><button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button><button type="button" data-view="under" aria-pressed="false">Underground</button><button type="button" data-view="plan" aria-pressed="false">Plan</button><button type="button" id="digBtn" aria-pressed="false" aria-controls="gauge">Below ground</button>
+    </div></div>
+    <nav id="dtabs" role="tablist" aria-label="Panels">
+      <button type="button" role="tab" data-pane="paneLayers" aria-selected="false">Layers</button><button type="button" role="tab" data-pane="paneRoute" aria-selected="false">Route</button><button type="button" role="tab" data-pane="paneAbout" aria-selected="false">About</button>
+    </nav>
+    <div id="drawerBody">
     <div class="pane" id="paneRoute">
       <h2>Route on foot, above and below ground</h2>
       <div class="ends"><label for="rFrom">From</label><input id="rFrom" type="text" list="placeList" placeholder="shop, platform, exit…" autocomplete="off"><button type="button" id="rSwap" aria-label="Swap start and end">⇅</button>
@@ -117,7 +134,7 @@ body.capture #top,body.capture #gauge,body.capture #digBtn,body.capture #tabs,bo
       <datalist id="placeList"></datalist>
       <div class="row chips"><label><input type="checkbox" id="stepFree"> Step-free (lifts and ramps only)</label><label><input type="checkbox" id="showWalk"> Show the walking network</label></div>
       <div class="row"><button type="button" id="rGo">Find route</button></div>
-      <p class="small">Or press and hold on the model: "route from here" and "route to here" pick the nearest mapped walkway or platform. Use the depth gauge on the left first to look below ground.</p>
+      <p class="small">Or press and hold on the model: "route from here" and "route to here" pick the nearest mapped walkway or platform. To look below ground first, open the depth gauge with "Below ground" at the top of this menu.</p>
       <div id="routeOut" class="small"></div>
     </div>
     <div class="pane" id="paneLayers">
@@ -193,8 +210,8 @@ body.capture #top,body.capture #gauge,body.capture #digBtn,body.capture #tabs,bo
     <div class="pane" id="paneAbout">
       <h2>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</h2>
       <p class="small"><a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · map data <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA LiDAR, aerial photography and flood defences (OGL), UKHO (OGL), Wikidata (CC0), Copernicus Sentinel-2 · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data licences</a></p>
-      <p class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). The depth gauge on the left removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height setting. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</p>
-      <p class="small">One finger: rotate. Two fingers: move and zoom. Tap: record. Press and hold: route from or to that point.</p>
+      <p class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). The depth gauge ("Below ground" in the menu) removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height setting. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</p>
+      <h3>How to use it</h3><p class="small">One finger: rotate. Two fingers: move and zoom. Tap a building or label: its record. Press and hold: route from or to that point. The menu (top left) has the views, the layers, the route finder and this page. "Below ground" in the menu shows the depth gauge on the left: drag it down to cut away everything above that level.</p><p class="small">Isometric pixel art (Layers, Style): drag to move, pinch or wheel to zoom, the arrows at the top right turn the view.</p>
       <details id="liveBox"><summary>Live data</summary>
         <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of checked sources is at <a href="../feeds/">feeds</a>.</p>
         <div class="row"><button type="button" id="liveGo">Load live data</button></div>
@@ -204,13 +221,8 @@ body.capture #top,body.capture #gauge,body.capture #digBtn,body.capture #tabs,bo
       <details><summary>Canary Wharf below ground (text)</summary><div id="ugText" class="small tw"></div></details>
       <p class="small" id="attrib"></p>
     </div>
-  </div></section>
-  <nav id="tabs" role="tablist" aria-label="Panels">
-    <button type="button" role="tab" data-pane="paneInfo" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Record</button>
-    <button type="button" role="tab" data-pane="paneRoute" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Route</button>
-    <button type="button" role="tab" data-pane="paneLayers" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>Layers</button>
-    <button type="button" role="tab" data-pane="paneAbout" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>About</button>
-  </nav>
+    </div>
+  </aside>
 </div>
 <script src="vendor/earcut.min.js"></script>
 <script src="data/area.js"></script>
@@ -459,7 +471,7 @@ function setView(k) {
   const v = VIEWS[k]; Object.assign(cam, v); inp.cut.value = v.cut; $('bmode').value = v.b; outs(); if (typeof syncGauge === 'function') { syncGauge(); syncBmode(); $('gauge').hidden = v.cut >= 250; $('digBtn').setAttribute('aria-pressed', String(v.cut < 250)); }
   viewBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === k))); draw();
 }
-viewBtns.forEach(b => b.onclick = () => setView(b.dataset.view));
+viewBtns.forEach(b => b.onclick = () => { setView(b.dataset.view); if (!wide()) openDrawer(false); });
 const unview = () => viewBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
 function mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) for (let k = 0; k < 4; k++) o[c * 4 + r] += a[k * 4 + r] * b[c * 4 + k]; return o; }
 function ortho(hw, hh, n, f) { const o = new Float32Array(16); o[0] = 1 / hw; o[5] = 1 / hh; o[10] = -2 / (f - n); o[14] = -(f + n) / (f - n); o[15] = 1; return o; }
@@ -675,7 +687,7 @@ const HT = b => b.wh || b.h || b.mh || 0;
 const rampCol = t => { const S = [[44, 123, 182], [171, 217, 233], [255, 255, 191], [253, 174, 97], [215, 25, 28]]; t = Math.max(0, Math.min(1, t)) * 4; const i = Math.min(3, Math.floor(t)), f = t - i; return [0, 1, 2].map(c => (S[i][c] + (S[i + 1][c] - S[i][c]) * f) / 255); };
 loadJSON('../atlas/data/atlas.json').then(d => {
   AT = d; d.buildings.forEach((b, k) => (b.mi || []).forEach(i => { regOf[i] = k; }));
-  buildPick(); note(`Tap a building at Canary Wharf for its record (${d.buildings.length.toLocaleString('en-GB')} buildings with registry ids).`);
+  buildPick(); $('dataNote').textContent = (`Tap a building at Canary Wharf for its record (${d.buildings.length.toLocaleString('en-GB')} buildings with registry ids).`);
 }).catch(e => note('The atlas index did not load: ' + e.message));
 
 // picking: every building drawn in a colour that encodes its registry ordinal + 1, rendered off screen
@@ -1246,15 +1258,14 @@ async function setStyle(mode) {
     for (const id of ['showLabels', 'showUnder', 'showWalls', 'showBed']) $(id).checked = false;
     buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); const nt = buildTrees();
     PIX.on = true; PIX.actors = makeActors(); Object.assign(cam, { pitch: .5236, yaw: Math.PI / 4, dist: Math.min(cam.dist, 520) }); unview();
-    $('isoL').hidden = $('isoR').hidden = false; $('pixNote').hidden = false; $('gauge').hidden = true; $('digBtn').hidden = true;
-    hud.textContent = 'Drag: move · pinch or wheel: zoom · arrows at the top: turn'; hud.style.opacity = 1; setTimeout(() => { hud.style.opacity = 0; }, 5000);
+    $('isoBtns').hidden = false; $('pixNote').hidden = false; $('gauge').hidden = true; $('digBtn').hidden = true;
     toast(`Pixel art: ${nt.toLocaleString('en-GB')} trees, ${PIX.actors.length} moving figures, boats and birds`); cancelAnimationFrame(PIX.loop); PIX.loop = requestAnimationFrame(pixTick);
   } else {
     PIX.on = false; cancelAnimationFrame(PIX.loop); const S = PIX.saved; PIXSTYLE = null; Object.assign(C, S.C); buildingColour = S.bc;
     $('showLabels').checked = S.labels; $('showUnder').checked = S.under; $('showWalls').checked = S.walls; $('showBed').checked = S.bed;
     buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); Object.assign(cam, S.cam);
     if (S.ground !== 'none') { document.querySelector(`input[name=ground][value=${S.ground}]`).checked = true; await setGround(S.ground); }
-    $('isoL').hidden = $('isoR').hidden = true; $('pixNote').hidden = true; $('digBtn').hidden = false; draw();
+    $('isoBtns').hidden = true; $('pixNote').hidden = true; $('digBtn').hidden = false; draw();
   }
 }
 document.querySelectorAll('input[name=style]').forEach(r => r.onchange = () => r.checked && setStyle(r.value).catch(e => toast('Style did not load: ' + e.message)));
@@ -1276,16 +1287,31 @@ $('skyPlay').onclick = () => { if (skyTimer) { clearInterval(skyTimer); skyTimer
   skyTimer = setInterval(() => { k++; setSkyYear(k); if (k >= SKY.years.length) { clearInterval(skyTimer); skyTimer = 0; $('skyPlay').textContent = '▶'; } }, 1400); };
 
 // ---------- touch-first controls: sheet with tabs, toast, views, depth gauge, search, press-and-hold routes
-const sheet = $('sheet'), body = $('sheetBody'), tabs = [...document.querySelectorAll('#tabs [data-pane]')];
-const SNAP = () => { const H = innerHeight - 56; return innerWidth >= 900 ? [0, H - 150] : [0, Math.round(H * .42), Math.round(H * .86)]; };
-let sheetH = 0, pane = null;
+const sheet = $('sheet'), drawer = $('drawer'), tabs = [...document.querySelectorAll('#dtabs [data-pane]')];
+const SNAP = () => { const H = innerHeight; return innerWidth >= 900 ? [0, H - 150] : [0, Math.round(H * .38), Math.round(H * .8)]; };
+let sheetH = 0, pane = null, menuPane = 'paneLayers';
+const wide = () => innerWidth >= 900;
 function setSheet(h) { sheetH = h; sheet.style.height = h + 'px'; }
+// the record card at the bottom; everything else is in the drawer on the left
+function openDrawer(on) { drawer.classList.toggle('open', on); drawer.setAttribute('aria-hidden', String(!on)); $('menuBtn').setAttribute('aria-expanded', String(on)); $('scrim').classList.toggle('on', on); }
 function openPane(id, keep) {
-  pane = id; tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.pane === id))); document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === id));
-  if (!sheetH || !keep) setSheet(Math.max(sheetH, SNAP()[1])); if (id === 'paneRoute') loadNet().catch(e => note(e.message));
+  if (id === 'paneInfo') { pane = id; if (!wide()) openDrawer(false); if (!sheetH || !keep) setSheet(Math.max(sheetH, SNAP()[1])); return; }
+  menuPane = id; tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.pane === id))); document.querySelectorAll('#drawer .pane').forEach(p => p.classList.toggle('on', p.id === id));
+  openDrawer(true); if (id === 'paneRoute') loadNet().catch(e => note(e.message));
 }
-function closeSheet() { setSheet(0); pane = null; tabs.forEach(t => t.setAttribute('aria-selected', 'false')); }
-tabs.forEach(t => t.onclick = () => pane === t.dataset.pane && sheetH ? closeSheet() : openPane(t.dataset.pane));
+function closeSheet() { setSheet(0); if (pane === 'paneInfo') pane = null; }
+tabs.forEach(t => t.onclick = () => openPane(t.dataset.pane));
+$('menuBtn').onclick = () => drawer.classList.contains('open') ? openDrawer(false) : openPane(menuPane);
+$('drawerX').onclick = $('scrim').onclick = () => openDrawer(false);
+$('sheetX').onclick = () => closeSheet();
+addEventListener('keydown', e => { if (e.key === 'Escape' && drawer.classList.contains('open')) openDrawer(false); });
+// swipe the drawer to the left to close it
+{ let x0 = null, y0 = 0, dx = 0;
+  drawer.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' || e.target.closest('input,select,textarea')) return; x0 = e.clientX; y0 = e.clientY; dx = 0; });
+  drawer.addEventListener('pointermove', e => { if (x0 == null) return; dx = Math.min(0, e.clientX - x0); if (Math.abs(e.clientY - y0) > 30 && dx > -20) { x0 = null; return; } if (dx < -12) { drawer.classList.add('drag'); drawer.style.transform = `translateX(${dx}px)`; } });
+  const up = () => { if (x0 == null) return; x0 = null; drawer.classList.remove('drag'); drawer.style.transform = ''; if (dx < -70) openDrawer(false); };
+  drawer.addEventListener('pointerup', up); drawer.addEventListener('pointercancel', up); }
+openPane('paneLayers'); openDrawer(false);
 function resetInfo() { info.innerHTML = '<p class="small">Tap a building, a label or a pin for its record. Press and hold anywhere to start or end a route there.</p>'; }
 { let y0 = null, h0 = 0; const g = $('grip');
   g.addEventListener('pointerdown', e => { y0 = e.clientY; h0 = sheetH; sheet.classList.add('drag'); g.setPointerCapture(e.pointerId); });
@@ -1310,7 +1336,9 @@ gauge.addEventListener('pointerdown', e => { gauge.setPointerCapture(e.pointerId
 gauge.addEventListener('pointermove', e => { if (gauge.hasPointerCapture(e.pointerId)) gaugeTo(e); });
 gauge.addEventListener('keydown', e => { const d = { ArrowUp: 2, ArrowDown: -2, PageUp: 10, PageDown: -10 }[e.key]; if (d == null) return; e.preventDefault(); let v = +inp.cut.value; v = v >= 250 ? (d < 0 ? G_TOP : 250) : v + d; inp.cut.value = v > G_TOP ? 250 : Math.max(G_BOT, v); outs(); syncGauge(); draw(); });
 function showGauge(on) { $('gauge').hidden = !on; $('digBtn').setAttribute('aria-pressed', String(on)); if (!on && +inp.cut.value < 250) { inp.cut.value = 250; outs(); syncGauge(); draw(); } }
-$('digBtn').onclick = () => showGauge($('gauge').hidden);
+$('digBtn').onclick = () => { showGauge($('gauge').hidden); if (!wide() && !$('gauge').hidden) openDrawer(false); };
+$('gaugeX').onclick = e => { e.stopPropagation(); showGauge(false); };
+$('gaugeX').addEventListener('pointerdown', e => e.stopPropagation());
 // camera flights
 function flyTo(x, z, dist, ms = 700) {
   const s0 = { tx: cam.tx, tz: cam.tz, dist: cam.dist }, t0 = performance.now(); unview();
@@ -1331,6 +1359,8 @@ function runSearch() {
   const items = searchItems(qIn.value); qRes.innerHTML = ''; qRes.style.display = items.length ? 'block' : 'none';
   for (const it of items) { const li = document.createElement('li'), b = document.createElement('button'); b.type = 'button'; b.innerHTML = `${esc(it.t)} <span class="tag">${esc(it.k)}</span>`; b.onclick = () => { qRes.style.display = 'none'; qIn.blur(); it.go(); }; li.appendChild(b); qRes.appendChild(li); }
 }
+$('findBtn').onclick = () => { const on = qIn.hidden; qIn.hidden = !on; if (on) qIn.focus(); else { qRes.style.display = 'none'; qIn.value = ''; } };
+qIn.addEventListener('blur', () => setTimeout(() => { if (!qIn.value && document.activeElement !== qIn) qIn.hidden = true; }, 200));
 qIn.addEventListener('input', runSearch); qIn.addEventListener('focus', () => { loadNet().then(runSearch).catch(() => {}); });
 qIn.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = qRes.querySelector('button'); if (b) b.click(); } if (e.key === 'Escape') { qRes.style.display = 'none'; qIn.blur(); } });
 cv.addEventListener('pointerdown', () => { qRes.style.display = 'none'; if (document.activeElement === qIn) qIn.blur(); });
@@ -1413,7 +1443,7 @@ outs(); setView('cw');
 // #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)
 const atM = /(?:^#|&)at=(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?/.exec(location.hash);
 if (atM) { Object.assign(cam, { tx: +atM[1], tz: +atM[2], ty: 0, dist: +(atM[3] || 600) }); unview(); draw(); }
-hud.textContent = 'One finger: rotate · two: move and zoom · tap: record · press and hold: route'; setTimeout(() => { hud.style.opacity = 0; }, 6000);
+hud.textContent = '';
 })();
 </script>
 </body>

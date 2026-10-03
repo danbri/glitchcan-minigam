@@ -85,12 +85,15 @@ Geofabrik and Overpass were unreachable from the build container, so the OSM dat
 ## Using the page on a phone (redesigned 2026-10-03)
 
 The model fills the screen; nothing important sits below it.
-- Top: one search box for buildings (registry), labelled places and every routable place in the walking network (shops, platforms, exits). A result flies the camera there; a place below ground also cuts the model away just above its level.
-- Left edge: the depth gauge. Drag the handle down to remove everything above that level (m OD), so the malls, platforms and tunnels show; the top of the track is "off".
-- Bottom: four tabs (Record, Route, Layers, About) open a sheet. Drag its handle to resize it or tap the handle to step through the sizes.
-- Tap a building or a label for its record. Records have "Route from here" and "Route to here".
+The screen shows only the city, two round buttons at the top left and the attribution line (owner, 2026-10-03: "The city is the star not our endless word buttons").
+- Menu button (top left): a drawer slides in from the left with the views (Whole area, Canary Wharf, Underground, Plan, Below ground) and three tabs: Layers, Route and About. The help text is in About. Close it with the cross, a tap outside it, Escape or a swipe to the left. On a phone, a view closes the drawer so you see the result.
+- Search button: opens one search box for buildings (registry), labelled places and every routable place in the walking network (shops, platforms, exits). A result flies the camera there; a place below ground also cuts the model away just above its level.
+- "Below ground" (in the menu) shows the depth gauge at the left edge. Drag the handle down to remove everything above that level (m OD), so the malls, platforms and tunnels show; the cross on the gauge closes it.
+- Tap a building or a label: its record opens in a card at the bottom. Drag the card's handle to resize it, tap the handle to step through the sizes, or close it with its cross. Records have "Route from here" and "Route to here".
 - Press and hold anywhere on the model: a menu offers "Route from here" and "Route to here" at the nearest mapped walkway or platform on screen (among the points not cut away). When both ends are set, the route is found at once.
-- On a wide screen the sheet docks on the left.
+- Map labels are plain text with a dark halo, not boxes.
+- In the pixel-art style, two round arrow buttons at the top right turn the view.
+- On a wide screen the record card docks at the bottom right and the drawer does not dim the map.
 
 ## Ground images (added 2026-10-03)
 
