@@ -177,3 +177,11 @@ As in Steeple Wyke, one rare panel shows a small yellow bird once in a reading. 
    answer gives the `thin` ending.
 2. How much Clive says: "Enough to seed ideas for other episodes/chapters but no llm waffle!"
 3. Sam's scene on page 6: "For now."
+
+## Media (October 2026)
+
+Pictures, the ten page beds, 32 of 40 panel sounds and the canary are done. Eight panels have no sound of their
+own (`"noSound"` in `pages.json`): the page bed plays there. The canary is on page 4, on the gatepost by Annette's rain gauge. The
+voices (195 lines) and five short loops (the lock, the Wren, the pub fire, the office window, the car at dusk) were
+not made: the ElevenLabs workspace reached its usage-based billing threshold. Their prompts are in `voices.json` and
+in `pages.json` (`tiny`). Until the voices exist the page plays sound only.

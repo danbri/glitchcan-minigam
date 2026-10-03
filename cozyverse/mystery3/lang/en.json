@@ -1,0 +1,27 @@
+{
+ "about": "Words on the page around the story, in English. The page titles and picture descriptions come from pages.json.",
+ "name": "English",
+ "title": "Lock Fourteen",
+ "intro": "A death on the Wyke Arm, in ten pages. You are Ros Kettering, the coroner's officer. Tap a panel to go into it; tap again or swipe to come out. Headphones help.",
+ "pageLabel": "Lock Fourteen: a page of four panels",
+ "pageOf": "Page {n} of {total}, {title}: four panels",
+ "loading": "Loading…",
+ "beginSound": "Begin, with sound",
+ "beginQuiet": "Begin, no sound",
+ "notLoaded": "The story did not load",
+ "forget": "Make the village forget you",
+ "soundOff": "Sound off",
+ "soundOn": "Sound on",
+ "textLanguage": "Subtitles",
+ "villageIntro": "The village remembers you.",
+ "villageIs": "{who} is {word}",
+ "standing": {
+  "2": "a friend",
+  "1": "warm",
+  "-1": "wary",
+  "-2": "cold"
+ },
+ "people": {
+  "quaile": "Quaile"
+ }
+}

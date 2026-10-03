@@ -1,155 +1,554 @@
 {
- "about": "Lock Fourteen, gate 2 draft: page and panel map only (ids and ink knots), so tools/walk.mjs can make taps. Layouts, pictures, beds and sounds come at gate 3.",
+ "about": "Lock Fourteen: ten pages of four panels on the Steeple Wyke layouts; pictures are media/p<n>-<knot>.jpg, sounds media/sfx/. Cast ids are in ../steeplewyke/bible/characters.json. 'tiny' is a short ambient loop (tools/tiny-loop.sh from a kling clip, start frame only); 'peek' is the canary (the photo-novel skill's Peek panels).",
+ "place": "The Wyke Arm, a restored canal branch in a Cotswold valley below the village of Steeple Wyke, in October: a flight of old brick and stone locks with black-and-white balance beams, a towpath, willows.",
+ "canary": {
+  "mode": "rare",
+  "after": [
+   20,
+   45
+  ]
+ },
+ "layouts": {
+  "L1": {
+   "a": "26,26 1054,26 1054,520 26,562",
+   "b": "26,592 556,570 516,1146 26,1166",
+   "c": "586,569 1054,550 1054,1186 546,1147",
+   "d": "26,1196 1054,1216 1054,1494 26,1494"
+  },
+  "L2": {
+   "a": "26,26 1054,26 1054,318 26,298",
+   "b": "26,328 534,348 514,930 26,950",
+   "c": "564,348 1054,328 1054,950 544,930",
+   "d": "26,980 1054,960 1054,1494 26,1494"
+  },
+  "L3": {
+   "a": "26,26 512,26 492,1100 26,1100",
+   "b": "542,26 1054,26 1054,540 522,560",
+   "c": "522,590 1054,570 1054,1100 502,1100",
+   "d": "26,1130 1054,1130 1054,1494 26,1494"
+  }
+ },
  "pages": [
   {
    "n": 1,
    "title": "Lock fourteen",
+   "layout": "L1",
+   "bed": "a canal lock in a quiet Cotswold valley on an October morning: water trickling through lock gates, a moorhen calling, distant rooks, a light wind in willows, no traffic",
    "panels": [
     {
-     "id": "clive",
-     "ink": "p1_clive"
+     "knot": "lock",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "Lock fourteen, full to the top of its gates, with police tape across the balance beam and mist on the water.",
+     "prompt": "A narrow canal lock of old brick and stone, full of still dark water right up to the top of its black-and-white wooden gates, on an October morning with low mist on the water. Blue-and-white police tape runs from a black-and-white balance beam to a wooden fence post. Willows and a towpath. Below the lock, far off, a green narrowboat moored.",
+     "sound": "water lapping softly against lock gates, police tape fluttering in a light wind, a moorhen",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the low mist drifts very slowly over the still water and the police tape stirs slightly. No camera movement."
+     }
     },
     {
-     "id": "fifteen",
-     "ink": "p1_fifteen"
+     "knot": "bag",
+     "ink": "p1_bag",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A police exhibit bag on the lockside holding a windlass with a plastic hire-company tag.",
+     "prompt": "Close-up on wet stone coping at the edge of a canal lock: a clear plastic police evidence bag with a printed label, lying on the stone. Inside the bag, an old iron canal windlass, an L-shaped handle with a square socket, with a small green plastic tag tied to it.",
+     "sound": "a plastic evidence bag rustling, a police radio murmuring at a distance"
     },
     {
-     "id": "bag",
-     "ink": "p1_bag"
+     "knot": "clive",
+     "ink": "p1_clive",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "clive"
+     ],
+     "alt": "Clive Amory by the top gate of the lock, holding two paper cups of coffee.",
+     "prompt": "CLIVE stands by the top gate of a canal lock on a misty October morning, holding two paper cups of takeaway coffee, one held out towards the viewer, a kind careful smile. A canal windlass sticks out of his fleece pocket. Behind him the black-and-white balance beam of the lock gate.",
+     "sound": "a man's footsteps on gravel, steam from coffee, water trickling through a gate"
+    },
+    {
+     "knot": "fifteen",
+     "ink": "p1_fifteen",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "Lock fifteen empty; the stretch of canal below it low, with a strip of wet brick showing and a work boat aground on the mud.",
+     "prompt": "A wide view along a canal towpath to the next lock up the hill, which stands empty with both pairs of gates shut. The stretch of canal in front of it is low: a strip of dark wet brickwork a foot high shows along the bank above the waterline, and a small blue steel work boat sits tilted on the mud, its mooring ropes taut.",
+     "sound": "an empty lock dripping, water trickling over a weir, a crow"
     }
    ]
   },
   {
    "n": 2,
    "title": "The flight and the lock cottage",
+   "layout": "L2",
+   "bed": "a canal towpath beside a flight of locks with a small cottage: wind, water running over weirs, a door creaking, a kettle somewhere inside, birdsong",
    "panels": [
     {
-     "id": "coat",
-     "ink": "p2_coat"
+     "knot": "flight",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The towpath climbing beside the flight of locks, each paddle post wrapped in a chain, and the lock cottage below.",
+     "prompt": "A canal towpath climbing a gentle hill beside a flight of three restored locks with black-and-white balance beams. On each lock, the iron paddle gear posts are wrapped in a heavy chain with a brass padlock. At the foot, a small whitewashed lock-keeper's cottage with a slate roof and a small plain painted wooden sign with no words. October afternoon light.",
+     "sound": "wind across a canal, water running over weirs, a chain clinking against an iron post"
     },
     {
-     "id": "minutes",
-     "ink": "p2_minutes"
+     "knot": "coat",
+     "ink": "p2_coat",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [],
+     "alt": "A dark coat hung on a hook in a clear plastic bag, two brass keys on a ring, and a typed list on the wall.",
+     "prompt": "Inside a small canal office: a dark waxed coat hangs on a wall hook inside a clear plastic police property bag. On a table below it lies a ring with two small brass padlock keys, one with a paper label tied on. A torch and a brown leather wallet beside them.",
+     "sound": "a plastic bag rustling, keys jingling on a ring, a wall clock ticking"
     },
     {
-     "id": "kit",
-     "ink": "p2_kit"
+     "knot": "kit",
+     "ink": "p2_kit",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "kit"
+     ],
+     "alt": "Kit Rowe at the door of the flat above the lock cottage, a mug in her hand and a windlass in her belt.",
+     "prompt": "KIT stands in the open doorway at the top of an outside wooden stair of a small canal cottage, a mug of tea in one hand, guarded and tired, looking down at the viewer.",
+     "sound": "a wooden door opening, a mug set down, a young woman sighing"
+    },
+    {
+     "knot": "minutes",
+     "ink": "p2_minutes",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "A minutes book open on a table, in round handwriting, with a small pencil drawing of a lock gate with a face.",
+     "prompt": "Close-up of an open hardback minutes book on an office table, pages of neat round blue handwriting, too small to read, and at the bottom of the page a small pencil doodle of a canal lock gate with a cartoon face. A biro and a mug ring.",
+     "sound": "pages turning, a biro on a table, rain starting on a window"
     }
    ]
   },
   {
    "n": 3,
    "title": "Wren",
+   "layout": "L3",
+   "bed": "a narrowboat moored on a quiet canal: water slapping a steel hull, a rope creaking, ducks, a breeze, a radio very low inside the boat",
    "panels": [
     {
-     "id": "joost",
-     "ink": "p3_joost"
+     "knot": "maaike",
+     "ink": "p3_maaike",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [
+      "maaike"
+     ],
+     "alt": "Maaike van Dam at the side hatch of the boat, holding out her phone.",
+     "prompt": "MAAIKE leans out of the open side hatch of a green narrowboat, holding her phone out towards the viewer with the screen showing, direct and serious. Geraniums in a tin on the roof above her.",
+     "sound": "a hatch sliding open, a phone tapped, water against a hull"
     },
     {
-     "id": "maaike",
-     "ink": "p3_maaike"
+     "knot": "joost",
+     "ink": "p3_joost",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [
+      "joost"
+     ],
+     "alt": "Joost van Dam on the roof of the boat, coiling a rope.",
+     "prompt": "JOOST stands on the roof of a green narrowboat, coiling a mooring rope, not looking at the viewer, his jaw set.",
+     "sound": "a rope being coiled on a steel roof, a man breathing out"
+    },
+    {
+     "knot": "photo",
+     "ink": "p3_maaike",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A phone screen showing a night photograph of an empty lock, and on the lockside a small figure with a torch.",
+     "prompt": "Close-up of a smartphone screen held in a woman's hand, showing a dark night photograph taken by headlamp: an empty canal lock chamber, a narrowboat leaving through open bottom gates, and on the lockside above a small distant figure of a man in a dark coat holding a torch, pointing.",
+     "sound": "a phone screen tapped, a swipe, a woman's quiet voice off"
+    },
+    {
+     "knot": "wren",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The green hire boat Wren moored by a NO MOORING sign, with geraniums in a tin on the roof.",
+     "prompt": "A long green hire narrowboat moored at a canal lock landing beside a small white sign on a post that reads NO MOORING, with red geraniums in a tin on its roof and a bicycle on the roof. Morning light, willows, a lock beyond.",
+     "sound": "water slapping a steel hull, a mooring rope creaking, ducks",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only small ripples move on the water and the geraniums stir slightly in a breeze. No camera movement."
+     }
     }
    ]
   },
   {
    "n": 4,
    "title": "Mill Lane",
+   "layout": "L2",
+   "bed": "a quiet village lane and the inside of a small house: a clock ticking, rain on a window, a kettle going cold, a car passing slowly outside",
    "panels": [
     {
-     "id": "annette",
-     "ink": "p4_annette"
+     "knot": "lane",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "A stone semi on a village lane, with a rain gauge on a post in the front garden.",
+     "prompt": "A honey-coloured stone semi-detached house on a quiet Cotswold village lane on a grey October morning, with a tidy front garden and a small plastic rain gauge on a wooden post by the gate. Wet leaves on the path.",
+     "sound": "rain dripping, a garden gate clicking, a distant car",
+     "peek": {
+      "src": "media/p4-lane-canary",
+      "every": 8,
+      "first": 3,
+      "at": [
+       70,
+       28
+      ]
+     },
+     "note": "peek: kling-2.5-turbo from the still; the bird lands on the gatepost at 0.75 s; 0.6-2.5 s forward then back (it flies on to the gate rail after 4 s)"
     },
     {
-     "id": "notebook",
-     "ink": "p4_notebook"
+     "knot": "annette",
+     "ink": "p4_annette",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "annette"
+     ],
+     "alt": "Annette Strand at her kitchen table, a full cup of tea in front of her.",
+     "prompt": "ANNETTE sits very upright at a small kitchen table, hands folded, a full cup of tea untouched in front of her, looking straight at the viewer, composed and exact. A laptop closed beside her. Grey window light.",
+     "sound": "a teaspoon set on a saucer, a kitchen clock ticking, a fridge hum"
+    },
+    {
+     "knot": "box",
+     "ink": "p4_annette",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [],
+     "alt": "A box file marked GATES open on a desk: a bank statement with two lines ringed in pencil.",
+     "prompt": "Close-up on a study desk: an open grey box file with a handwritten label, papers inside, on top a printed bank statement with two lines ringed in pencil and a pencil note in the margin, too small to read. A sharpened pencil and reading glasses beside it.",
+     "sound": "papers shuffled, a box file lid, a pencil on paper"
+    },
+    {
+     "knot": "notebook",
+     "ink": "p4_notebook",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "A small notebook on a hall table, open at columns of pencil numbers, a pencil in its spine.",
+     "prompt": "Close-up of a small worn pocket notebook open on a polished hall table, pages filled with neat columns of numbers in pencil, a short pencil tucked into the spine, beside a bowl of keys.",
+     "sound": "a hall clock ticking, a page turned slowly"
     }
    ]
   },
   {
    "n": 5,
    "title": "The Navigation Inn",
+   "layout": "L3",
+   "bed": "a small country canal pub on a quiet evening: a log fire crackling, low talk, glasses, a darts board, a door opening onto the towpath",
    "panels": [
     {
-     "id": "pete",
-     "ink": "p5_pete"
+     "knot": "pete",
+     "ink": "p5_pete",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [
+      "pete"
+     ],
+     "alt": "Pete Garrow behind the bar, drying a glass.",
+     "prompt": "PETE stands behind the wooden bar of a small country pub, drying a pint glass with a tea towel, looking at the viewer without hurry. Beer pumps with hand-pulls in front of him, brass and low beams behind.",
+     "sound": "a glass being dried, a beer pump pulled, a fire crackling"
+    },
+    {
+     "knot": "fire",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A log fire in an old pub fireplace.",
+     "prompt": "A log fire burning in a wide old stone pub fireplace, horse brasses on the beam above, a dog asleep on the rug.",
+     "sound": "a log fire crackling, a dog sighing",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the flames of the log fire move. No camera movement."
+     }
+    },
+    {
+     "knot": "bins",
+     "ink": "p5_pete",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "Night: a lane rising to a small car park by a lock, where a green estate car stands with its lights off.",
+     "prompt": "Night, from the back door of a pub: wheelie bins in the foreground, a narrow lane rising to a small gravel car park beside a canal lock cottage, where a dark green estate car stands with its lights off. A single street lamp. Mist.",
+     "sound": "wheelie bins rolled over gravel, a night breeze, an owl"
+    },
+    {
+     "knot": "inn",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The Navigation Inn by the bottom lock, at dusk.",
+     "prompt": "A small whitewashed canal pub with a painted sign reading THE NAVIGATION beside the bottom lock of a flight, at dusk, warm light in the windows, a bench and a chalkboard outside.",
+     "sound": "a pub door opening and closing, voices inside, a canal at dusk"
     }
    ]
   },
   {
    "n": 6,
    "title": "The coroner's office",
+   "layout": "L1",
+   "bed": "a small office in a market town: a kettle, rain on a window, a phone ringing, traffic below, a radiator ticking",
    "panels": [
     {
-     "id": "phone",
-     "ink": "p6_shah"
+     "knot": "office",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "A small coroner's office above a solicitor's: a desk, files, a kettle, a window.",
+     "prompt": "A small cluttered coroner's office upstairs in an old market-town building: a desk with stacked buff folders, a desk phone, a kettle and mugs on a filing cabinet, a window onto a wet car park.",
+     "sound": "a radiator ticking, a kettle coming to the boil, rain on a window",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only rain runs down the window and steam rises slowly from the kettle spout. No camera movement."
+     }
     },
     {
-     "id": "sam",
-     "ink": "p6_sam"
+     "knot": "phone",
+     "ink": "p6_shah",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "A desk phone on speaker beside a notepad of handwritten notes.",
+     "prompt": "Close-up of an old office desk phone with its speaker light on, beside a lined notepad with a few lines of handwritten notes, too small to read, and a biro.",
+     "sound": "a desk phone ringing, a speakerphone click, a station announcement faint on the line"
+    },
+    {
+     "knot": "sam",
+     "ink": "p6_sam",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "sam"
+     ],
+     "alt": "DS Sam Adeyemi at the office door with a box of pastries.",
+     "prompt": "SAM stands in an office doorway holding a white cardboard box of pastries, polite and a little awkward, kind.",
+     "sound": "a door opening, a cardboard box set down, a man clearing his throat"
+    },
+    {
+     "knot": "window",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "Rain on the office window, and the wet roofs of the market town.",
+     "prompt": "Through a rain-streaked sash window: the wet slate roofs and church tower of a Cotswold market town under a grey sky.",
+     "sound": "rain on a window, traffic on a wet street, a church clock striking"
     }
    ]
   },
   {
    "n": 7,
    "title": "The top gate",
+   "layout": "L2",
+   "bed": "beside a canal lock: water seeping through gates, a light wind, a wren singing, the creak of a balance beam",
    "panels": [
     {
-     "id": "plate",
-     "ink": "p7_plate"
+     "knot": "gate",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The top gate of lock fourteen, with new black paint on its balance beam.",
+     "prompt": "The top gate of a canal lock seen from the lockside: a heavy oak gate with a long balance beam freshly painted glossy black and white, the lock full of still water. Autumn leaves on the coping stones.",
+     "sound": "water seeping through lock gates, a balance beam creaking, a wren",
+     "noSound": true
     },
     {
-     "id": "post",
-     "ink": "p7_post"
+     "knot": "plate",
+     "ink": "p7_plate",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [],
+     "alt": "Under scraped black paint, an old cast iron maker's plate reading HOLLINS 1987, and two plugged bolt holes below.",
+     "prompt": "Extreme close-up of the end of an oak lock-gate beam where glossy new black paint has been scraped back with a blade in a rough square, showing an old cast iron maker's plate with raised letters reading HOLLINS 1987. Below it, two round wooden plugs in the timber, painted over.",
+     "sound": "a blade scraping paint, a fingertip on iron"
     },
     {
-     "id": "pound",
-     "ink": "p7_pound"
+     "knot": "post",
+     "ink": "p7_post",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [],
+     "alt": "The paddle post of the lock, wrapped in a chain with a brass padlock, its spindle bright with new grease.",
+     "prompt": "Close-up of an iron canal lock paddle post: a heavy chain wrapped round it and locked with a brass padlock, the square spindle at the top bright with fresh black grease, and a smear of the same grease on the chain.",
+     "sound": "a chain shifting on iron, a padlock tapping",
+     "noSound": true
+    },
+    {
+     "knot": "pound",
+     "ink": "p7_pound",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "The stretch of canal up to lock fifteen, the work boat by the bank.",
+     "prompt": "A stretch of canal between two locks seen along the towpath, the next lock up the hill in the distance, a small blue steel work boat moored by the bank. Willows, fallen leaves on the water, October.",
+     "sound": "water trickling over a weir, leaves on water, a coot"
     }
    ]
   },
   {
    "n": 8,
    "title": "The case board",
+   "layout": "L3",
+   "bed": "inside a parked car by a canal: rain on the roof, a heater fan, a pen on paper, a distant moorhen",
    "panels": [
     {
-     "id": "board",
-     "ink": "p8_board"
+     "knot": "car",
+     "ink": "p8_notes",
+     "slot": "a",
+     "ratio": "9:16",
+     "cast": [
+      "ros"
+     ],
+     "alt": "Ros Kettering in her car, a notebook open on the steering wheel.",
+     "prompt": "ROS sits in the driver's seat of a small parked hatchback, a notebook open on the steering wheel, writing, reading glasses on, rain on the windscreen.",
+     "sound": "a pen on paper, rain on a car roof, a heater fan"
     },
     {
-     "id": "notes",
-     "ink": "p8_notes"
+     "knot": "board",
+     "ink": "p8_board",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "Index cards taped to the back of a car seat, with handwritten notes.",
+     "prompt": "Close-up of the back of a car seat with white index cards taped to it in rows, each with a few words of handwriting too small to read, a roll of tape on the seat, a pen.",
+     "sound": "tape pulled from a roll, a card pressed down"
+    },
+    {
+     "knot": "notes",
+     "ink": "p8_notes",
+     "slot": "c",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "An open notebook of handwritten notes on a car seat.",
+     "prompt": "An open spiral notebook on a car passenger seat, pages of quick handwritten notes too small to read, a pen in the spiral, a takeaway coffee cup in the holder.",
+     "sound": "pages turning, a pen clicked"
+    },
+    {
+     "knot": "dusk",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The flight of locks at dusk, seen from the car park.",
+     "prompt": "A flight of canal locks climbing a valley at dusk, seen from a small gravel car park through a car windscreen with raindrops, lights in a lock cottage window, mist on the water.",
+     "sound": "rain on a windscreen, a car engine ticking as it cools, a distant owl",
+     "tiny": {
+      "prompt": "Locked-off camera, almost a still photograph. Only the raindrops on the windscreen run slowly down and the lit cottage window glows. No camera movement."
+     },
+     "noSound": true
     }
    ]
   },
   {
    "n": 9,
    "title": "Wyke Hill",
+   "layout": "L1",
+   "bed": "a quiet hillside house: a clock, a garden in wind, a car door, distant sheep",
    "panels": [
     {
-     "id": "clive",
-     "ink": "p9_clive"
+     "knot": "house",
+     "slot": "a",
+     "ratio": "16:9",
+     "cast": [],
+     "alt": "The last house on Wyke Hill, a green estate car on the drive, the flight of locks below in the valley.",
+     "prompt": "A neat stone house at the end of a hillside lane, a dark green estate car with a small sticker in its rear window on the gravel drive, and far below in the valley a flight of canal locks. October afternoon.",
+     "sound": "wind in a hedge, sheep in the distance, gravel underfoot",
+     "noSound": true
     },
     {
-     "id": "car",
-     "ink": "p9_car"
+     "knot": "accounts",
+     "ink": "p9_clive",
+     "slot": "b",
+     "ratio": "1:1",
+     "cast": [],
+     "alt": "Accounts laid out on a dining table, every column neat, a pair of reading glasses on top.",
+     "prompt": "Close-up of a polished dining table with ledgers and printed accounts laid out neatly in a row, columns of figures too small to read, a pair of rimless reading glasses folded on top, a fountain pen.",
+     "sound": "a clock ticking, pages straightened on a table",
+     "noSound": true
+    },
+    {
+     "knot": "clive",
+     "ink": "p9_clive",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [
+      "clive"
+     ],
+     "alt": "Clive Amory at his door in a cardigan, reading glasses pushed up.",
+     "prompt": "CLIVE stands in the doorway of his house wearing a grey cardigan instead of his fleece, reading glasses pushed up on his forehead, polite and welcoming, one hand on the door.",
+     "sound": "a front door opening, a man's polite greeting breath",
+     "noSound": true
+    },
+    {
+     "knot": "car",
+     "ink": "p9_car",
+     "slot": "d",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "An open car boot: a fleece, a first-aid box, wellingtons and a windlass with a worn wooden grip.",
+     "prompt": "The open boot of a green estate car: a folded navy fleece, a green first-aid box, a pair of muddy wellington boots, and an iron canal windlass with a worn wooden grip, its square socket packed with fresh black grease.",
+     "sound": "a car boot opening, a windlass clinking on metal",
+     "noSound": true
     }
    ]
   },
   {
    "n": 10,
    "title": "Monday",
+   "layout": "L2",
+   "bed": "a small office early on a Monday: a kettle, papers, a wall clock, traffic starting below, a knock at the door",
    "panels": [
     {
-     "id": "report",
-     "ink": "p10_conclusion"
+     "knot": "office10",
+     "slot": "a",
+     "ratio": "21:9",
+     "cast": [],
+     "alt": "The coroner's office on Monday morning, a card folder on the desk.",
+     "prompt": "The same small coroner's office early on a Monday morning: a buff card folder on the desk with three typed sheets and white index cards clipped to the back, a mug of tea, low sun through the window.",
+     "sound": "a wall clock ticking, a folder set down, a knock at a door"
     },
     {
-     "id": "quaile",
-     "ink": "p10_quaile"
+     "knot": "quaile",
+     "ink": "p10_quaile",
+     "slot": "b",
+     "ratio": "4:5",
+     "cast": [
+      "quaile"
+     ],
+     "alt": "DCI Quaile reading the file in silence, in her raincoat.",
+     "prompt": "QUAILE sits on the visitor's chair of a small office still in her raincoat, reading a typed report in a buff folder in silence, one index card turned over in her other hand.",
+     "sound": "a page turned, a card turned over, a long silence with a clock",
+     "noSound": true
     },
     {
-     "id": "clive",
-     "ink": "p10_clive"
+     "knot": "report",
+     "ink": "p10_conclusion",
+     "slot": "c",
+     "ratio": "4:5",
+     "cast": [],
+     "alt": "A typed report in three parts, a pen, and a hand ready to sign.",
+     "prompt": "Close-up of a typed report on a desk with three short numbered headings, the text too small to read, a woman's hand holding a fountain pen above the signature line.",
+     "sound": "a pen on paper, a page squared on a desk"
+    },
+    {
+     "knot": "clive",
+     "ink": "p10_clive",
+     "slot": "d",
+     "ratio": "16:9",
+     "cast": [
+      "clive"
+     ],
+     "alt": "Clive Amory in an interview room, reading glasses on, a solicitor beside him who has stopped writing.",
+     "prompt": "CLIVE sits at a table in a plain police interview room, reading glasses on, hands folded, speaking quietly, a solicitor in a suit beside him with a pen held still over a legal pad. Grey light.",
+     "sound": "a recording machine hum, a chair creaking, a quiet room"
     }
    ]
   }
