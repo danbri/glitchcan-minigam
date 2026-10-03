@@ -197,6 +197,14 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 - Register: a check failure was committed once because the check output went through `tail`, which hid its exit
   status; fixed in the next commit. Run the check on its own and read its exit code.
 
+## 2026-10-03: gestures, music, pixel materials, photo facades
+
+- Two-finger twist turns the view in both styles; pixel art tilts with two fingers. Pinches that started on a label
+  did nothing before; fixed.
+- Music: starts inside the tap; a now-playing bar with stop; the own-file button opens the phone's picker.
+- Pixel art: materials instead of a height ramp; measured facade colours on the towers.
+- Photo facades: 16 tower tiles from CC BY photos (atlas 243 kB), credited in About.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

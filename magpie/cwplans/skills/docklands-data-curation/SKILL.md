@@ -161,6 +161,24 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
   one exists (One Canada Square: 19.9 bays measured, 19.8 known). Most recent Commons photos of the new towers are
   CC BY-SA: look only. Commons and Flickr rate-limit the container (429, retry after 600 s).
 
+## Page rendering lessons (docklands/index.html)
+
+- Photo facades: `tools/build-facade-atlas.py` cuts whole floors by whole bays from each rectified patch so the tile
+  repeats; the shader repeats it by its size in metres. Without mipmaps the far towers speckle. `fract()` on the tile
+  coordinate makes the implicit mip level jump at every seam, so the level comes from `dFdx`/`dFdy` of the unwrapped
+  coordinate (`EXT_shader_texture_lod` + `OES_standard_derivatives`). 256 px tiles aligned in a power-of-two atlas
+  keep every mip level inside its tile (level 8 is the tile's mean colour); inset by half a texel of the level.
+- The facade vertex alpha byte is not opacity: 255 plain, 100 + slot a photo tile, 200 + 8 x material (pixel art).
+  Opacity is the `a` uniform only.
+- Pixel art colours must not follow height alone: it reads as a heat map (owner, 2026-10-03). Materials (brick,
+  render, glass, ribbon windows, metal) carry the variety; measured facade colours snap to the palette's building
+  colours, never to a tree green.
+- Phones play sound only as the direct result of a tap: create and resume the AudioContext and call `play()` in the
+  tap handler before any `await`. A file chosen in the picker arrives outside the tap, so the file button unlocks the
+  audio element when it is tapped. iOS: `navigator.audioSession.type = 'playback'` or the silent switch mutes Web Audio.
+- A finger that lands on a label must still join a pinch or twist: the label box feeds the same gesture code, and a
+  moved pointer suppresses the label's click.
+
 ## Measured lessons (the reasons behind the rules)
 
 - **OSM tags can hold lists.** Split on ";" for every tag on ingest (F2).
