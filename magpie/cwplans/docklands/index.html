@@ -274,7 +274,8 @@ const ffs = 'precision mediump float;varying vec4 v;varying float wy;varying flo
   'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
   'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
   'if(pxm>0.)col=min(vec3(1.),col*1.3);' +   // pixel art: brighter walls, windows on the art-pixel grid
-  'if(uu>=0.&&win>.5){float bw=pxm>0.?max(1.8,pxm*2.):1.8,fh=pxm>0.?max(3.6,pxm*3.):3.6;vec2 g=vec2(uu/bw,wy/fh),cell=floor(g),f=fract(g);float w=step(.14,f.x)*step(f.x,.86)*step(.2,f.y)*step(f.y,.84)*(pxm>0.?1.:clamp(1.4-dist/900.,.15,1.));' +
+  'if(uu>=0.&&win>.5&&pxm>0.){float fl=wy/(pxm*4.),fy=fract(fl);float w=step(mod(floor(gl_FragCoord.x),3.),1.)*step(.26,fy);col=mix(col,col*(lum<.45?1.4:.84),w);}' +   // pixel art: regular windows on the art-pixel grid, low contrast so the outline pass leaves them alone
+  'else if(uu>=0.&&win>.5){float bw=1.8,fh=3.6;vec2 g=vec2(uu/bw,wy/fh),cell=floor(g),f=fract(g);float w=step(.14,f.x)*step(f.x,.86)*step(.2,f.y)*step(f.y,.84)*clamp(1.4-dist/900.,.15,1.);' +
   'vec3 gl=pxm>0.?(lum<.45?vec3(.50,.58,.64):vec3(.30,.35,.45))+vec3(.18,.18,.18)*step(.92,h(vec2(cell.x,0.))):mix(vec3(.13,.18,.25),vec3(.42,.52,.62),clamp(wy/300.,0.,1.)+h(cell)*.12)*(.55+.7*lum);' +
   'if(night>.5){float lit=step(.58,h(cell+7.3));col=mix(col*.22,vec3(1.,.8,.48)*(.55+.45*h(cell+1.7)),w*lit);col=mix(col,gl*.25,w*(1.-lit));}else col=mix(col,gl,w*.8);}' +
   'else if(uu<0.&&uu>-41.&&roofTex>.5){col=min(vec3(1.),texture2D(tx,uv).rgb*(.6+.9*lum));}' +
@@ -1099,14 +1100,14 @@ $('showWalk').onchange = async () => { if ($('showWalk').checked) { try { await 
 // pixel per PIX.px screen pixels, then mapped to a 33-colour palette (data/pixel-palette.json, extracted from the owner's
 // reference picture) with dark outlines where brightness steps. Stylised trees; illustrative animated people, cyclists,
 // traffic, gulls, river traffic and swimmers (not live data). River centreline: data/river.json (tools/build-river.mjs).
-const PIX = { on: false, px: 3, fbo: null, tex: null, depth: null, fw: 0, fh: 0, pal: null, k: 0, river: null, ents: null, loop: 0, last: 0, saved: null, actors: null };
+const PIX = { on: false, px: 2, fbo: null, tex: null, depth: null, fw: 0, fh: 0, pal: null, k: 0, river: null, ents: null, loop: 0, last: 0, saved: null, actors: null };
 const hexc = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 const ppr = gl.createProgram(); gl.attachShader(ppr, sh(gl.VERTEX_SHADER, 'attribute vec2 q;varying vec2 uv;void main(){uv=q*.5+.5;gl_Position=vec4(q,0.,1.);}'));
 gl.attachShader(ppr, sh(gl.FRAGMENT_SHADER, 'precision mediump float;varying vec2 uv;uniform sampler2D t;uniform vec2 px;uniform vec3 pal[33];' +
   'vec3 near(vec3 c){float bd=1e9;vec3 b=c;for(int i=0;i<33;i++){vec3 d=c-pal[i];float e=dot(d*d,vec3(.3,.59,.11));if(e<bd){bd=e;b=pal[i];}}return b;}' +
   'float lum(vec3 c){return dot(c,vec3(.3,.59,.11));}' +
   'void main(){vec3 c=texture2D(t,uv).rgb,r=texture2D(t,uv+vec2(px.x,0.)).rgb,u=texture2D(t,uv+vec2(0.,px.y)).rgb;' +
-  'float e=max(abs(lum(c)-lum(r)),abs(lum(c)-lum(u)));gl_FragColor=vec4(near(e>.14?c*.5:c),1.);}'));
+  'float e=max(abs(lum(c)-lum(r)),abs(lum(c)-lum(u)));gl_FragColor=vec4(near(e>.2?c*.55:c),1.);}'));
 gl.bindAttribLocation(ppr, aP, 'q'); gl.linkProgram(ppr);
 const PU = { t: gl.getUniformLocation(ppr, 't'), px: gl.getUniformLocation(ppr, 'px'), pal: gl.getUniformLocation(ppr, 'pal') };
 const quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -1242,14 +1243,15 @@ async function setStyle(mode) {
     for (const id of ['showLabels', 'showUnder', 'showWalls', 'showBed']) $(id).checked = false;
     buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); const nt = buildTrees();
     PIX.on = true; PIX.actors = makeActors(); Object.assign(cam, { pitch: .5236, yaw: Math.PI / 4, dist: Math.min(cam.dist, 520) }); unview();
-    $('isoL').hidden = $('isoR').hidden = false; $('pixNote').hidden = false; $('gauge').hidden = true;
+    $('isoL').hidden = $('isoR').hidden = false; $('pixNote').hidden = false; $('gauge').hidden = true; $('digBtn').hidden = true;
+    hud.textContent = 'Drag: move · pinch or wheel: zoom · arrows at the top: turn'; hud.style.opacity = 1; setTimeout(() => { hud.style.opacity = 0; }, 5000);
     toast(`Pixel art: ${nt.toLocaleString('en-GB')} trees, ${PIX.actors.length} moving figures, boats and birds`); cancelAnimationFrame(PIX.loop); PIX.loop = requestAnimationFrame(pixTick);
   } else {
     PIX.on = false; cancelAnimationFrame(PIX.loop); const S = PIX.saved; PIXSTYLE = null; Object.assign(C, S.C); buildingColour = S.bc;
     $('showLabels').checked = S.labels; $('showUnder').checked = S.under; $('showWalls').checked = S.walls; $('showBed').checked = S.bed;
     buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); Object.assign(cam, S.cam);
     if (S.ground !== 'none') { document.querySelector(`input[name=ground][value=${S.ground}]`).checked = true; await setGround(S.ground); }
-    $('isoL').hidden = $('isoR').hidden = true; $('pixNote').hidden = true; draw();
+    $('isoL').hidden = $('isoR').hidden = true; $('pixNote').hidden = true; $('digBtn').hidden = false; draw();
   }
 }
 document.querySelectorAll('input[name=style]').forEach(r => r.onchange = () => r.checked && setStyle(r.value).catch(e => toast('Style did not load: ' + e.message)));
