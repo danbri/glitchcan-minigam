@@ -2424,6 +2424,33 @@
    "cwp:after": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure-patch",
+   "@type": "prov:Activity",
+   "rdfs:label": "facade-measure-patch",
+   "dct:description": "Periods and colours of a patch cut by hand from a photo, with no rectification (for faces seen square on).",
+   "prov:used": [
+    {
+     "cwp:pathPattern": "data/raw/facades/<cwb-id>/src-<id>.jpg"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/work/meas.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/tools/measure.py"
+   },
+   "cwp:command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/measure.py <img> x0 y0 x1 y1 <out.jpg> [k]",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Same measure and colour functions as facade.py."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": []
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-metric",
    "@type": "prov:Activity",
    "rdfs:label": "facade-metric",
@@ -4816,6 +4843,23 @@
    "cwp:osmUse": "derived"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "method, licence rule, counts, gaps and tool list of the facade work",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/photos.json",
    "@type": [
     "prov:Entity",
@@ -4894,7 +4938,7 @@
     }
    ],
    "prov:wasGeneratedBy": {
-    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure"
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-measure-patch"
    },
    "cwp:osmUse": "none"
   },

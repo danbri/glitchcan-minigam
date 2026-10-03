@@ -2110,6 +2110,30 @@
       "note": "Also tools/measure.py for a patch cut by hand. The outputs were collected into meas.json by hand."
     },
     {
+      "id": "facade-measure-patch",
+      "tool": "registry/sources/facades/tools/measure.py",
+      "command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/measure.py <img> x0 y0 x1 y1 <out.jpg> [k]",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/facades/<cwb-id>/src-<id>.jpg"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/facades/work/meas.json"
+        }
+      ],
+      "method": "Periods and colours of a patch cut by hand from a photo, with no rectification (for faces seen square on).",
+      "rules": [
+        "Same measure and colour functions as facade.py."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [],
+      "note": "Outputs collected into meas.json by hand."
+    },
+    {
       "id": "facade-metric",
       "tool": "registry/sources/facades/tools/metric.py",
       "command": "cd magpie/cwplans/registry/sources/facades/work && python3 ../tools/metric.py",
