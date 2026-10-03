@@ -112,7 +112,8 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
   const c = { id: 'SP-2', cls: 'position', dim: 'accuracy', title: 'Occupant placed by proximity, not containment', sources: ['osm', 'fsa'],
     method: 'Occupants with placed = "near" (point outside the outline but within 12 m), against all placed occupants.', rule: 'Store placement method and distance with each link; treat proximity links as lower confidence in joins.' };
   const add = check(c); let pop = 0;
-  for (const b of REG.buildings) for (const o of b.occupants) { if (!o.placed) continue; pop++; if (o.placed !== 'inside') add({ ent: 'b', id: b.id, sev: 'low', note: `${o.name}: ${o.placed}` }); }
+  // occupants placed by a key (CWG mall, street address, postcode: they carry placed_confidence) are SP-7, not here
+  for (const b of REG.buildings) for (const o of b.occupants) { if (!o.placed || o.placed_confidence) continue; pop++; if (o.placed !== 'inside') add({ ent: 'b', id: b.id, sev: 'low', note: `${o.name}: ${o.placed}` }); }
   c.population = pop;
 }
 {
@@ -151,12 +152,12 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
 
 {
   const c = { id: 'SP-6', cls: 'position', dim: 'accuracy', title: 'Mall or below-ground occupant placed by a 2D footprint', sources: ['osm', 'fsa', 'cwg'],
-    method: 'Occupants in a mall (CWG) or below ground (OSM level under 0, or a CWG "Mall Level -1"/"Lower Mall" level) that the registry placed in an outline which is not that mall and has no recorded floor below ground. The Canary Wharf malls run under several building footprints, so a point-in-outline test assigns their shops to whichever building is above.', rule: 'Place mall and below-ground occupants in the mall (a 3D volume or a named complex) by its own key (CWG mall, OSM indoor and level), not by the 2D outline above them; keep the footprint building only as "above".' };
+    method: 'Occupants in a mall (CWG) or below ground (OSM level under 0, or a CWG "Mall Level -1"/"Lower Mall" level) that the registry placed in an outline which is not that mall (by its name, OSM name or OSM addr:housename) and has no recorded floor below ground. The Canary Wharf malls run under several building footprints, so a point-in-outline test assigns their shops to whichever building is above.', rule: 'Place mall and below-ground occupants in the mall (a 3D volume or a named complex) by its own key (CWG mall, OSM indoor and level), not by the 2D outline above them; keep the footprint building only as "above".' };
   const add = check(c), rows = [], kinds = { 'mall names another complex': 0, 'below ground, building has no basement record': 0 }; let pop = 0;
   for (const b of REG.buildings) for (const o of b.occupants) {
     const below = (levelNum(o.level) ?? 0) < 0 || (cwgLevel(o.level_cwg) ?? 0) < 0 || /lower mall/i.test(o.level_cwg || '');
     if (!o.mall && !below) continue; pop++;
-    const names = [b.name, b.osm_name].filter(Boolean).map(norm), m = o.mall && norm(o.mall);
+    const names = [b.name, b.osm_name, b.housename].filter(Boolean).map(norm), m = o.mall && norm(o.mall);
     const where = `${o.mall || 'below ground'}${o.level_cwg ? ', ' + o.level_cwg : o.level != null ? ', level ' + o.level : ''}`;
     if (m && !names.some(x => x.includes(m) || m.includes(x))) { kinds['mall names another complex']++; rows.push({ building: b.id, building_name: b.name, occupant: o.name, mall: o.mall, level: o.level ?? o.level_cwg, placed: o.placed }); add({ ent: 'b', id: b.id, sev: 'medium', note: `${o.name} (${where}) placed in ${b.name || b.id} (${o.placed})` }); }
     else if (!m && below && !(b.levels_underground > 0)) { kinds['below ground, building has no basement record']++; add({ ent: 'b', id: b.id, sev: 'low', note: `${o.name} (${where}) in ${b.name || b.id}, which has no recorded floor below ground` }); }
@@ -381,9 +382,29 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
 }
 {
   const c = { id: 'CV-2', cls: 'coverage', dim: 'completeness', title: 'Which sources see each branch or directory entry', sources: ['osm', 'fsa', 'cwg', 'wikidata', 'store locators'],
-    method: 'Source combinations for the 271 chain-store branches, and the CWG directory entries that no other source has.', rule: 'No single source is complete: a composite occupant layer needs every source, a match key per pair, and a record of which sources saw each occupant and when.' };
-  const add = check(c); c.population = BR.branches.length; c.breakdown = BR.meta.by_sources; c.stats = { cwg_entries: CWG.directory.length, cwg_not_matched_to_osm_or_fsa: BR.cwg_not_matched.length };
-  for (const d of BR.cwg_not_matched) add({ ent: 'cwg', id: d.slug, sev: 'low', note: `${d.title} (${d.kind}) only in the CWG directory` });
+    method: 'Source combinations for the 271 chain-store branches; and the CWG directory entries that no other source has: no registry occupant from another source (OSM, FSA, Wikidata, a store page) carries the entry\'s URL after the branch join and the registry\'s CWG join (name and place).', rule: 'No single source is complete: a composite occupant layer needs every source, a match key per pair, and a record of which sources saw each occupant and when.' };
+  const add = check(c); c.population = BR.branches.length; c.breakdown = BR.meta.by_sources;
+  const seen = new Map(); for (const b of REG.buildings) for (const o of b.occupants) for (const u of [o.cwg_url, ...(o.cwg_also || [])].filter(Boolean)) { const s = String(o.source).split('+').filter(x => x !== 'cwg'); seen.set(u, [...(seen.get(u) || []), ...s]); }
+  const only = CWG.directory.filter(d => !(seen.get(d.cwg_url) || []).length);
+  c.stats = { cwg_entries: CWG.directory.length, cwg_not_matched_by_the_branch_join: BR.cwg_not_matched.length, cwg_only_after_the_registry_join: only.length };
+  for (const d of only) add({ ent: 'cwg', id: d.slug, sev: 'low', note: `${d.title || d.slug} (${d.kind}) only in the CWG directory` });
+}
+
+{
+  const c = { id: 'CV-3', cls: 'coverage', dim: 'completeness', title: 'Canary Wharf Group directory entries with no building', sources: ['cwg'],
+    method: 'Every CWG directory entry after the registry join (tools/build-registry.mjs): linked by the branch join, joined to an occupant by name and place, added as a new occupant, or not placed, with the reason. Also: entries whose joined records (OSM, FSA) sit in different buildings, and entries that match two records of one source in two buildings.', rule: 'Join on name only with a place key (same mall, postcode or building), never across two malls. An entry with no mall host, street address or single building for its postcode stays unplaced with its class; fix the class (a mall container, a postcode-to-building table), not the entry.' };
+  const add = check(c), j = REG.summary.joins.cwg || {};
+  c.population = CWG.directory.length; c.breakdown = { linked_by_branch: j.linked_by_branch, joined_by_name_and_place: j.joined, added_as_new_occupant: j.added, ...Object.fromEntries(Object.entries(j.unplaced_by || {}).map(([k, v]) => ['unplaced: ' + k, v])) };
+  c.stats = { joined_by: j.joined_by, added_by: j.added_by, added_confidence: j.added_confidence, joined_records_in_different_buildings: j.joined_records_in_different_buildings || 0, mall_hosts: j.mall_hosts };
+  for (const u of REG.cwg_unplaced || []) add({ ent: 'cwg', id: u.slug, sev: 'low', note: `${u.title || u.slug} (${u.kind}): ${u.why}`, kind: u.why });
+  ex(c, (REG.cwg_unplaced || []).filter(u => u.title).map(u => ({ entry: u.title, mall: u.mall, postcode: u.postcode, why: u.why })), 10);
+}
+{
+  const c = { id: 'SP-7', cls: 'position', dim: 'accuracy', title: 'Occupant placed by a key, not a position', sources: ['cwg'],
+    method: 'Occupants that only the CWG directory gives, placed by the building its street address names (high with the postcode, medium without), its mall\'s host outline (medium: a 2D outline for a mall that runs under several buildings, see SP-6), or the one building (or the one retail building) with its postcode (low).', rule: 'Keep the placement rule and confidence with each link; a low-confidence placement places the occupant in a postcode, not a building, until a second source confirms it.' };
+  const add = check(c); let pop = 0; const by = {};
+  for (const b of REG.buildings) for (const o of b.occupants) { if (!o.placed_confidence) continue; pop++; by[o.placed_confidence] = (by[o.placed_confidence] || 0) + 1; if (o.placed_confidence === 'low') add({ ent: 'b', id: b.id, sev: 'low', note: `${o.name}: ${o.placed}` }); }
+  c.population = pop; c.breakdown = by;
 }
 
 // ===== G. meaning

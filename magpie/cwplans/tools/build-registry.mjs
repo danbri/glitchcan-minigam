@@ -79,7 +79,7 @@ for (const b of [...outlines].sort((a, z) => Math.floor(a.xz[1] / 100) - Math.fl
 const rec = new Map(outlines.map(b => {
   const t = b.f.tags, lr = b.rs[0].map(([lon, lat]) => local(lon, lat));
   return [b.id, {
-    id: b.id, name: t.name || null, osm_name: t.name || null, osm: [key(b)], wikidata: t.wikidata || null, wikipedia: t.wikipedia || null,
+    id: b.id, name: t.name || null, osm_name: t.name || null, ...(t['addr:housename'] ? { housename: t['addr:housename'] } : {}), osm: [key(b)], wikidata: t.wikidata || null, wikipedia: t.wikipedia || null,
     address: [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ') || null, postcodes: new Set(osmList(t['addr:postcode']).map(normPc)),
     building: t.building, levels: t['building:levels'] ? +t['building:levels'] : null, levels_underground: t['building:levels:underground'] ? +t['building:levels:underground'] : null, height: t.height ? parseFloat(t.height) : null,
     lat: +b.c[1].toFixed(6), lon: +b.c[0].toFixed(6), x: r1(b.xz[0]), z: r1(b.xz[1]), area_m2: Math.round(Math.abs(polyArea(lr))),
