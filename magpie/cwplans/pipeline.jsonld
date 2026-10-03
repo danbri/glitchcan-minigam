@@ -2820,6 +2820,63 @@
    ]
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/publish-trained-splat",
+   "@type": "prov:Activity",
+   "rdfs:label": "publish-trained-splat",
+   "dct:description": "Puts a trained splat set on the 3D page: crops it to the area the drone frames cover, drops floaters and oversized splats, and gives each splat its model building for the music visualiser.",
+   "prov:used": [
+    {
+     "cwp:pathPattern": "data/raw/drone/<run>/<name>.splat"
+    },
+    {
+     "cwp:pathPattern": "data/raw/drone/<run>/transforms.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-synth.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-trained.splat.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-trained.groups.bin.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-trained.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/index.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/publish-trained-splat.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/publish-trained-splat.mjs data/raw/drone/<run>/<name>.splat <set-name> \"<title>\"",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Keep splats within the box of the frame positions plus 150 m, between -30 and 260 m OD, with no axis over 25 m.",
+    "A splat belongs to a building when it lies inside the footprint (2 m grace) between the base - 2 m and the top + 6 m; else 65535.",
+    "Positions are not changed: train-splat.sh keeps the model frame (no --center)."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/train-splat"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/ply-to-splat"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats"
+    }
+   ]
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/audit-quality",
    "@type": "prov:Activity",
    "rdfs:label": "audit-quality",
@@ -4437,7 +4494,7 @@
     }
    ],
    "prov:wasGeneratedBy": {
-    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats"
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/publish-trained-splat"
    },
    "cwp:osmUse": "none"
   },
@@ -4523,6 +4580,66 @@
    ],
    "prov:wasGeneratedBy": {
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-splats"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-trained.splat.gz",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Gaussian splats trained with OpenSplat (CPU, 3,000 steps) from 480 synthetic drone frames of the 3D model over the Canary Wharf estate, cropped to the flown area (167,073 splats)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-lidar"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-survey-imagery"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/publish-trained-splat"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-trained.groups.bin.gz",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the model building of each trained splat (uint16 a splat, 65535 = none), for the music visualiser",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/publish-trained-splat"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/splats/cw-trained.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "metadata of the trained splat set: box, count, method, building groups",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/publish-trained-splat"
    },
    "cwp:osmUse": "none"
   },

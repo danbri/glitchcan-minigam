@@ -2463,6 +2463,54 @@
       "note": "Called by train-splat.sh; also runs alone."
     },
     {
+      "id": "publish-trained-splat",
+      "tool": "tools/publish-trained-splat.mjs",
+      "command": "node magpie/cwplans/tools/publish-trained-splat.mjs data/raw/drone/<run>/<name>.splat <set-name> \"<title>\"",
+      "kind": "derive",
+      "used": [
+        {
+          "local": "data/raw/drone/<run>/<name>.splat"
+        },
+        {
+          "local": "data/raw/drone/<run>/transforms.json"
+        },
+        {
+          "file": "docklands/data/splats/cw-synth.json"
+        },
+        {
+          "file": "docklands/data/area.js"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/splats/cw-trained.splat.gz"
+        },
+        {
+          "file": "docklands/data/splats/cw-trained.groups.bin.gz"
+        },
+        {
+          "file": "docklands/data/splats/cw-trained.json"
+        },
+        {
+          "file": "docklands/data/splats/index.json"
+        }
+      ],
+      "method": "Puts a trained splat set on the 3D page: crops it to the area the drone frames cover, drops floaters and oversized splats, and gives each splat its model building for the music visualiser.",
+      "rules": [
+        "Keep splats within the box of the frame positions plus 150 m, between -30 and 260 m OD, with no axis over 25 m.",
+        "A splat belongs to a building when it lies inside the footprint (2 m grace) between the base - 2 m and the top + 6 m; else 65535.",
+        "Positions are not changed: train-splat.sh keeps the model frame (no --center)."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "train-splat",
+        "ply-to-splat",
+        "build-splats"
+      ],
+      "note": "Run for the set cw-trained with data/raw/drone/cw-photo-480/first-n3000-d2.splat; another run adds its own set files."
+    },
+    {
       "id": "audit-quality",
       "tool": "tools/audit-quality.mjs",
       "command": "node magpie/cwplans/tools/audit-quality.mjs",
