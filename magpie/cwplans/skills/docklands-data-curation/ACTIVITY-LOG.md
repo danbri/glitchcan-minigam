@@ -95,6 +95,12 @@ Fault ids (F1…) refer to the fault register in [SKILL.md](SKILL.md); check ids
 - New audit checks NET-1 to NET-4 (fault F12); audit now 32 checks.
 - Three research agents collecting estate maps (Internet Archive), station layouts (TfL API, Crossrail papers) and planning drawings: results to be catalogued.
 
+## 2026-10-03: TfL step-free topology and live lifts in routing
+
+- Station agent: TfL publishes step-free station topology (GTFS pathways, 2026-08-03: station points with a level index, lifts with the points they join; no stairs or escalators) and a live lift fault feed (`/Disruptions/Lifts/v2`, CORS open). Today lift LU 2 (ticket hall to Jubilee platforms, Canary Wharf) is out of service.
+- `build-indoor.mjs` adds 68 TfL station points, 51 lift links and 29 paths. First version joined TfL points to OSM wherever the level numbers matched; a test route then reached the Jubilee platforms around the faulty lift through a false join (TfL -2 is the Jubilee platforms, OSM -2 the concourse above). Now joined at street level (0) only. New audit check NET-5 (22 of 68 TfL points differ from the nearest OSM level).
+- 3D routes skip lifts that TfL reports out of service and list the faults; the network layer draws them red.
+
 ## Open, in the order proposed
 
 1. Fix F2 and F3 in the parsers, with fixture tests; expect PL-1 and PL-2 to fall to 0.

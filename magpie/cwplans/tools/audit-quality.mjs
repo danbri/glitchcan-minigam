@@ -290,6 +290,11 @@ const ex = (c, rows, n = 8) => { c.examples = rows.slice(0, n); };
   const c4 = { id: 'NET-4', cls: 'routing network', dim: 'completeness', title: 'Places with no mapped corridor on their own level', sources: ['osm'],
     method: 'Named shops, food and drink, services and platforms attached to the network on a different level from their own, because no path on their level lies within 40 m.', rule: 'Map the mall corridors per level (indoor=corridor with level), or attach the place to its mall level from the estate plan; mark such routes as approximate.' };
   check(c4); c4.population = m.counts.places; c4.issues = m.islands.places_on_another_level; c4.count_only = 'places';
+  const c5 = { id: 'NET-5', cls: 'routing network', dim: 'consistency', title: 'TfL and OSM number station levels differently', sources: ['tfl', 'osm'],
+    method: 'Each TfL step-free station point (GTFS pathways, level index counted from the street) against the level of the nearest OSM network point within 35 m. Pairs that differ show where the two schemes disagree or where OSM lacks the level (the Elizabeth line platforms at Canary Wharf are TfL -4, but the nearest OSM points are at 0).', rule: 'Keep each scheme; join TfL and OSM only at street level; build a per-station level table from published levels (m OD) before mixing schemes.' };
+  const schemes = m.tfl_level_schemes || {}; let pairs = 0, differ = 0; const br = {};
+  for (const [st, o] of Object.entries(schemes)) for (const [k, n] of Object.entries(o)) { pairs += n; const [, a, b] = /TfL (-?[\d.]+) -> OSM (-?[\d.]+)/.exec(k) || []; if (a !== b) { differ += n; br[`${st}: ${k}`] = n; } }
+  check(c5); c5.population = pairs; c5.issues = differ; c5.breakdown = br; c5.count_only = 'station points';
 }
 
 // ===== E. currency

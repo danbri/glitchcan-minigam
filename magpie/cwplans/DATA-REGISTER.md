@@ -39,7 +39,7 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `quality/issues.json` | 253 kB | derived | OSM ids, names, tag values (level, addr:postcode, addr:unit) and positions of features with issues | osmfr-greater-london | atlas/index.html |
 | `quality/CATALOGUE.md` | 31 kB | notes | examples quote OSM ids, names and tag values |  |  |
 | `quality/README.md` | 11 kB | notes | counts from the audit |  |  |
-| `docklands/data/indoor.js` | 422 kB | derived | walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances | osmfr-greater-london | docklands/index.html |
+| `docklands/data/indoor.js` | 434 kB | derived | walkable ways and nodes with level tags, lifts, escalators, platforms, named shops and entrances | osmfr-greater-london | docklands/index.html |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
 | `docklands/README.md` | 15 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
@@ -125,7 +125,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `quality/issues.json` | 253 kB | data-quality audit: 27 checks with counts, breakdowns, examples and one record per issue | OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Wikidata (CC0 1.0); ONS Postcode Directory, August 2026 (OGL v3.0); Companies House Basic Company Data (free reuse (OGL terms for Companies House public data)); Canary Wharf Group directory pages (none stated (all rights reserved by default)); OSM name-suggestion-index 8.0.20260918 (BSD-3-Clause); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Historic England open data hub (OGL v3.0); written or computed in this project (repository licence) |
 | `quality/CATALOGUE.md` | 31 kB | the audit as tables (generated) | written or computed in this project (repository licence); OpenStreetMap (ODbL 1.0); FSA Food Hygiene Rating data, Tower Hamlets (OGL v3.0); Canary Wharf Group directory pages (none stated (all rights reserved by default)) |
 | `quality/README.md` | 11 kB | analysis of the error classes and the proposed compositing layers | written or computed in this project (repository licence) |
-| `docklands/data/indoor.js` | 422 kB | walking network in 3D: footways, corridors, stairs, escalators, lifts, platforms and walkable areas by level, with 789 named places, for routing | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0) |
+| `docklands/data/indoor.js` | 434 kB | walking network in 3D: footways, corridors, stairs, escalators, lifts, platforms and walkable areas by level, TfL station points and lifts, and named places, for routing | OpenStreetMap (ODbL 1.0); Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Transport for London open data: step-free station topology (TfL open data terms (Powered by TfL Open Data; OGL-based); the terms page was not readable from the container: re-check before production) |
 | `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
 | `feeds/feeds.json` | 737 kB | 541 checked data sources and APIs (catalogue; 341 added by the 2026-10-03 survey, with an area field) | written or computed in this project (repository licence) |
@@ -165,6 +165,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | cwg-site | Canary Wharf Group directory pages (canarywharf.com), read from Internet Archive copies | none stated (all rights reserved by default) | see the review note on cwg-directory.json |
 | brand-sites | brand store-locator pages | none stated | only URLs and a yes/no check are kept, no page content |
 | copernicus-sentinel | Copernicus Sentinel-2 L2A (via Earth Search / Element 84) | Copernicus Sentinel data: free, full and open (attribution) | Contains modified Copernicus Sentinel data |
+| tfl-open-data | Transport for London open data: step-free station topology (GTFS pathways, 2026-08-03) and the live lift disruption feed | TfL open data terms (Powered by TfL Open Data; OGL-based); the terms page was not readable from the container: re-check before production | Powered by TfL Open Data |
 | web-quotes | short quotations from published pages (Wikipedia 169 of 360 in facts.json, also Crossrail Learning Legacy, Tideway, Canal & River Trust, trade press and others) | Wikipedia text is CC BY-SA 4.0 (share-alike); the other pages are all rights reserved | each quote is one sentence or less, kept with its URL to cite a number |
 | own | written or computed in this project (method, decisions, URLs, search templates) | repository licence |  |
 | owner-supplied | supplied by the repository owner | owner's |  |

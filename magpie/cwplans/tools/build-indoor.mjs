@@ -4,17 +4,19 @@
 //
 //   node magpie/cwplans/tools/build-indoor.mjs        # about 1 minute (streams the Greater London PBF)
 //
-// in:  data/raw/docklands/greater_london-latest.osm.pbf (fetch-docklands.mjs osm), docklands/data/area.js (ground)
+// in:  data/raw/docklands/greater_london-latest.osm.pbf (fetch-docklands.mjs osm), docklands/data/area.js (ground),
+//      data/raw/docklands/tfl-stationdata-gtfs.zip (TfL step-free station topology, GTFS pathways; fetched when absent)
 // out: docklands/data/indoor.js  globalThis.DOCKLANDS_INDOOR = { meta, nodes, edges, places }
 //      nodes: flat [x, z, level, ground] per node (local metres, level as OSM gives it, ground in m OD)
 //      edges: flat [a, b, kind] (kind index into meta.kinds); places: [name, kind, level, node, osm, metres to node, 1 if the node is on the place's level]
 // Heights are drawn at ground + level × storey height in the page: an OSM level is a floor index, not a height.
 // Measured faults (unresolved stair ends, level jumps at shared nodes, islands) go to meta.faults for the audit.
-import { createReadStream, readFileSync, writeFileSync } from 'node:fs';
+import { createReadStream, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { Writable } from 'node:stream';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { TOOLS, bngProjector } from './lib.mjs';
+import { TOOLS, bngProjector, get } from './lib.mjs';
 import { ORIGIN } from './fetch-docklands.mjs';
 
 const CW = join(TOOLS, '..');
@@ -110,6 +112,33 @@ for (const [id, list] of copies) { const whole = list.filter(i => Number.isInteg
   const linked = new Set(E.filter(e => list.includes(e[0]) && list.includes(e[1])).flat());
   for (let i = 1; i < whole.length; i++) if (!linked.has(whole[i])) { edge(whole[0], whole[i], 'ramp'); faults.level_jumps.push(`node/${id}: levels ${V[whole[0]].lv} and ${V[whole[i]].lv}`); } }
 
+// ---- TfL step-free topology (GTFS pathways): station points with a TfL level index, lifts and level paths. Each TfL
+// street-level point (TfL level 0) joins the nearest OSM level-0 vertex within 35 m; points below or above the street
+// connect only through TfL's own lifts and paths. TfL and OSM number levels differently (TfL counts step-free levels
+// from the street), so the nearest-vertex level pairs are recorded per station for the audit.
+const GZ = join(CW, 'data/raw/docklands/tfl-stationdata-gtfs.zip');
+if (!existsSync(GZ)) writeFileSync(GZ, await get('https://api.tfl.gov.uk/stationdata/tfl-stationdata-gtfs.zip'));
+const csv = f => { const [h, ...rows] = execFileSync('unzip', ['-p', GZ, f], { maxBuffer: 1 << 28 }).toString('utf8').split(/\r?\n/).filter(Boolean);
+  const cols = h.split(','); return rows.map(r => { const out = []; let cur = '', q = false; for (const ch of r) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur); cur = ''; } else cur += ch; } out.push(cur); return Object.fromEntries(cols.map((c, i) => [c, out[i]])); }); };
+const tStops = csv('stops.txt'), tPaths = csv('pathways.txt'), tStations = new Map(tStops.filter(s => s.location_type === '1').map(s => [s.stop_id, s.stop_name]));
+const tNodes = tStops.filter(s => s.location_type === '3' && s.stop_lat && inB(+s.stop_lon, +s.stop_lat));
+const tfl = { points: 0, joined: 0, lifts: 0, paths: 0, schemes: {} }, tV = new Map(), liftEdges = [];
+const osmIx = V.map((_, i) => i).filter(i => typeof V[i].id !== 'string');
+for (const s of tNodes) {
+  const idx = +String(s.level_id).replace('L#', ''), [x, z] = local(+s.stop_lon, +s.stop_lat); let best = -1, bc = Infinity;
+  // nearest OSM vertex (any level) for the scheme comparison; the join itself only where both give the same level, so a
+  // route never jumps levels without a TfL lift or path. Inside its stations TfL's level is used.
+  let same = -1, sd = 35;
+  for (const i of osmIx) { const v = V[i], d = Math.hypot(v.x - x, v.z - z); if (d > 35) continue; const c = d + 10 * Math.abs(v.lv - idx); if (c < bc) { bc = c; best = i; } if (v.lv === idx && d < sd) { sd = d; same = i; } }
+  const me = V.length; V.push({ x, z, lv: idx, g: ground(x, z), id: 'tfl:' + s.stop_id }); tV.set(s.stop_id, me); tfl.points++;
+  // joined at street level only: both schemes call the street 0, but below or above it the same number can name
+  // different floors (TfL -2 is the Jubilee platforms at Canary Wharf, OSM -2 the concourse above them)
+  if (same >= 0 && idx === 0) { edge(me, same, 'indoor'); tfl.joined++; }
+  if (best >= 0) { const st = tStations.get(s.parent_station) || s.parent_station, k = `TfL ${idx} -> OSM ${V[best].lv}`; tfl.schemes[st] ||= {}; tfl.schemes[st][k] = (tfl.schemes[st][k] || 0) + 1; }
+}
+for (const p of tPaths) { const a = tV.get(p.from_stop_id), b = tV.get(p.to_stop_id); if (a === undefined || b === undefined) continue;
+  if (p.pathway_mode === '5') { liftEdges.push([E.length, (/-lift-(.+)$/.exec(p.pathway_id) || [])[1] || null]); edge(a, b, 'lift'); tfl.lifts++; } else { edge(a, b, V[a].lv === V[b].lv ? 'indoor' : 'ramp'); tfl.paths++; } }
+
 // ---- places: named shops, amenities, platforms, entrances and stations, attached to the nearest vertex on their level
 const PLACE = t => t.railway === 'subway_entrance' ? 'station entrance' : (t.public_transport === 'platform' || t.railway === 'platform') ? 'platform' : t.public_transport === 'station' || t.railway === 'station' ? 'station'
   : t.shop ? 'shop' : /^(restaurant|cafe|fast_food|bar|pub|food_court|ice_cream)$/.test(t.amenity || '') ? 'food and drink' : /^(cinema|theatre|arts_centre|nightclub|events_venue)$/.test(t.amenity || '') || t.leisure ? 'entertainment'
@@ -120,6 +149,9 @@ const nearIn = (cand, x, z, max) => { let best = -1, bd = max; for (const i of c
 const nearest = (x, z, lv) => { const s = nearIn(byLevel.get(Math.round(lv)) || [], x, z, 40); if (s[0] >= 0) return [...s, 1]; const a = nearIn(V.map((_, i) => i), x, z, 40); return [...a, 0]; };
 const centre = w => { const ps = w.refs.map(r => nodes.get(r)); return [ps.reduce((s, p) => s + p.lon, 0) / ps.length, ps.reduce((s, p) => s + p.lat, 0) / ps.length]; };
 const seenP = new Set();
+// TfL station points as places: the code names the point (EL EB = Elizabeth line eastbound platforms, BookJ = Jubilee ticket hall)
+const TCODE = { 'EL EB': 'Elizabeth line eastbound platform', 'EL WB': 'Elizabeth line westbound platform', JubiE: 'Jubilee line eastbound platform', JubiW: 'Jubilee line westbound platform', BookJ: 'Jubilee line ticket hall', BH: 'Elizabeth line ticket hall', 'DLR-N': 'DLR northbound platform', 'DLR-S': 'DLR southbound platform', DLR_S: 'DLR southbound platform', CONC: 'DLR concourse', 'J Mez': 'Jubilee line mezzanine' };
+for (const s of tNodes) { const st = tStations.get(s.parent_station) || s.parent_station, me = tV.get(s.stop_id); places.push([`${st}: ${TCODE[s.stop_name] || 'TfL point ' + s.stop_name}`, 'station point', V[me].lv, me, 'tfl:' + s.stop_id, 0, 1]); }
 const addPlace = (osm, t, lon, lat) => {
   const kind = PLACE(t), name = t.name || (kind === 'platform' && (t.ref || t['local_ref']) ? `Platform ${t.ref || t.local_ref}` : null); if (!kind || !name) return;
   const L = parseLevels(t.level) || [0], [x, z] = local(lon, lat), [v, d, same] = nearest(x, z, L[0]); if (v < 0) return;
@@ -138,11 +170,12 @@ const placesOff = places.filter(p => find(p[3]) !== main).length, placesApprox =
 
 const r1 = v => Math.round(v * 10) / 10;
 const out = {
-  meta: { built: new Date().toISOString().slice(0, 10), box: BOX, kinds: KINDS, source: 'OpenStreetMap (ODbL), Greater London extract; ground from EA LiDAR', counts: { vertices: V.length, edges: E.length, places: places.length, lifts, area_hubs: hubs, area_links: hubLinks, levels: [...new Set(V.map(v => v.lv).filter(Number.isInteger))].sort((a, b) => a - b), by_kind: Object.fromEntries(KINDS.map((k, i) => [k, E.filter(e => e[2] === i).length])) },
+  meta: { built: new Date().toISOString().slice(0, 10), box: BOX, kinds: KINDS, source: 'OpenStreetMap (ODbL), Greater London extract; ground from EA LiDAR', counts: { vertices: V.length, edges: E.length, places: places.length, lifts, area_hubs: hubs, area_links: hubLinks, tfl: { points: tfl.points, joined: tfl.joined, lifts: tfl.lifts, paths: tfl.paths }, levels: [...new Set(V.map(v => v.lv).filter(Number.isInteger))].sort((a, b) => a - b), by_kind: Object.fromEntries(KINDS.map((k, i) => [k, E.filter(e => e[2] === i).length])) },
+    tfl_level_schemes: tfl.schemes, attribution: ['© OpenStreetMap contributors (ODbL)', 'Station step-free topology: Transport for London open data (Powered by TfL Open Data)'],
     islands: { count: sizes.length, largest: sizes[0], next: sizes.slice(1, 6), below_ground_vertices: below.length, below_ground_in_largest: belowMain, places_not_in_largest: placesOff, places_on_another_level: placesApprox },
     faults: { ...faults, unresolved_connector_ends: faults.unresolved_connector_ends.length, level_jumps: faults.level_jumps.length, examples: { unresolved: faults.unresolved_connector_ends.slice(0, 10), level_jumps: faults.level_jumps.slice(0, 10) } } },
   nodes: V.flatMap(v => [r1(v.x), r1(v.z), v.lv, r1(v.g)]), comp: V.map((_, i) => find(i) === main ? 1 : 0),
-  edges: E.flat(), places,
+  edges: E.flat(), places, tfl_lifts: liftEdges,
 };
 writeFileSync(join(CW, 'docklands/data/indoor.js'), `// Generated by magpie/cwplans/tools/build-indoor.mjs on ${out.meta.built}. Do not edit by hand.\n// OpenStreetMap data © OpenStreetMap contributors, ODbL 1.0.\nglobalThis.DOCKLANDS_INDOOR = ${JSON.stringify(out)};\n`);
 console.log(JSON.stringify(out.meta, null, 1));
