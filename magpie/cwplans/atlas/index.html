@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Canary Wharf atlas</title>
 <meta name="description" content="Canary Wharf and the Isle of Dogs from open data: buildings, occupants, postcodes, levels below ground, heritage records, the river, live feeds and sources.">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
@@ -25,6 +25,14 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 a { color: var(--link); }
+html{overscroll-behavior:none;touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+img,a{-webkit-user-drag:none}
+button,select,label,nav,.tabs{-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#mapwrap { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+#mapwrap.attr-folded .leaflet-control-attribution { display: none; }
+#attrI { position: absolute; z-index: 800; right: 6px; bottom: 6px; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font: italic 600 14px/1 Georgia, serif; cursor: pointer; }
+#attrI[hidden] { display: none; }
 button, select, input { font: inherit; color: inherit; }
 .small { font-size: .85em; color: var(--muted); }
 .num { font-variant-numeric: tabular-nums; }
@@ -164,6 +172,7 @@ svg .muted { fill: var(--muted); }
 <section class="view" id="v-map">
   <div id="mapwrap">
     <div id="map" role="application" aria-label="Map of Canary Wharf and the Docklands"></div>
+    <button type="button" id="attrI" hidden aria-label="Map credits: © OpenStreetMap contributors and others" title="Map credits">i</button>
     <details id="layers" open>
       <summary>Layers</summary>
       <div id="layerList"></div>
@@ -285,6 +294,7 @@ svg .muted { fill: var(--muted); }
   <p class="lede">Every committed data file, its sources and licences, and how it uses OpenStreetMap. Generated from <code>data-register.json</code>; the readable version is <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">DATA-REGISTER.md</a>.</p>
   <h2>Attribution</h2>
   <ul id="attrib" class="small"></ul>
+  <p class="small">Map: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL; basemap tiles from tile.openstreetmap.org and building outlines); EA, UKHO, ONS, HM Land Registry, FSA, Historic England (OGL v3.0); Wikidata (CC0); map software <a href="https://leafletjs.com/">Leaflet</a> (BSD-2-Clause). The map corner shows the OpenStreetMap credit when the map opens and folds it to an (i) button after 5 seconds or at the first move.</p>
   <h2>Files</h2>
   <div class="tablewrap"><table id="files"></table></div>
   <h2>Method notes</h2>
@@ -304,6 +314,17 @@ svg .muted { fill: var(--muted); }
 <aside id="dossier" aria-live="polite" aria-label="Selected record"><div class="head"><h2 id="dTitle"></h2><button class="close" type="button" id="dClose" aria-label="Close">✕</button></div><div class="body" id="dBody"></div></aside>
 
 <script src="vendor/leaflet/leaflet.js"></script>
+<script>
+// window lock (skill docklands-3d-page, "Window lock"): no browser zoom, pull-to-refresh, drag-out or file drop on the page
+(() => { const no = e => e.preventDefault(), field = e => e.target instanceof Element && e.target.closest('input,textarea,select');
+  addEventListener('wheel', e => { if (e.ctrlKey || e.metaKey) e.preventDefault(); }, { passive: false, capture: true });
+  addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && ['+', '=', '-', '_', '0'].includes(e.key)) e.preventDefault(); });
+  for (const t of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(t, no, { passive: false });
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1 && !(e.target instanceof Element && e.target.closest('.leaflet-container'))) e.preventDefault(); }, { passive: false });
+  document.addEventListener('dragstart', e => { if (!field(e)) e.preventDefault(); }, true);
+  addEventListener('dragover', e => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'; });
+  addEventListener('drop', no); })();
+</script>
 <script src="../docklands/opening-hours.js"></script>
 <script>
 'use strict';
@@ -872,7 +893,11 @@ INIT.map = () => {
   map = L.map('map', { preferCanvas: true, zoomControl: true, minZoom: 12, maxZoom: 20 }).setView([51.5045, -0.0185], 16);
   $('map').classList.toggle('dark-tiles', isDark());
   const base = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, maxNativeZoom: 19, attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>' }).addTo(map);
-  map.attributionControl.addAttribution('EA, UKHO, ONS, HMLR, FSA, Historic England (OGL) · Wikidata (CC0) · <a href="#data">all sources</a>');
+  map.attributionControl.setPrefix(false);   // Leaflet (BSD-2-Clause) is credited in Data and licences
+  { const wrap = $('mapwrap'), btn = $('attrI'); let t = 0;
+    const fold = () => { clearTimeout(t); wrap.classList.add('attr-folded'); btn.hidden = false; };
+    const show = () => { wrap.classList.remove('attr-folded'); btn.hidden = true; clearTimeout(t); t = setTimeout(fold, 5000); };
+    btn.onclick = e => { e.stopPropagation(); show(); }; map.on('movestart zoomstart click', fold); show(); }
   const canvas = L.canvas({ padding: .3 });
   const pop = (html, ll) => L.popup({ maxWidth: 320 }).setLatLng(ll).setContent(html).openOn(map);
 
