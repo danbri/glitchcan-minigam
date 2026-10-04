@@ -2,12 +2,14 @@
 name: docklands-data-curation
 description: >-
   Curate the Canary Wharf, Isle of Dogs and Docklands open data in magpie/cwplans — the building registry
-  (cwb- ids), occupants, postcodes, chain-store branches, heritage, river, feeds, the atlas, the 3D models,
-  the data register and the data-quality audit. Use this when rebuilding or adding a source, joining two
-  sources, changing a tool in magpie/cwplans/tools/, judging why two sources disagree, or about to correct
-  a wrong value. READ "CATALOGUE FIRST" BEFORE PATCHING ANYTHING: the owner's direction (October 2026) is to
-  catalogue and analyse error classes, not to fix records one at a time, because the classes drive the
-  compositing layers. Append what you did to ACTIVITY-LOG.md in this directory before you finish.
+  (cwb- ids), occupants, postcodes, chain-store branches, heritage, river, feeds, the atlas, the 3D model data,
+  the data register, pipeline.json and METHODS.md, and the data-quality audit. Use this when rebuilding or adding a
+  source, joining two sources, changing a tool in magpie/cwplans/tools/, judging why two sources disagree, or about
+  to correct a wrong value. READ "CATALOGUE FIRST" BEFORE PATCHING ANYTHING: the owner's direction (October 2026) is
+  to catalogue and analyse error classes, not to fix records one at a time, because the classes drive the
+  compositing layers. Holds the fault register (F1...) and the rebuild order. The 3D page itself, web crawls and the
+  public registers have their own skills (docklands-3d-page, cwplans-web-harvest, cwplans-public-registers). Append
+  what you did to ACTIVITY-LOG.md in this directory before you finish.
 ---
 
 # Docklands data curation
@@ -16,25 +18,32 @@ Pages: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/ (everyth
 `#quality`), https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/ (3D).
 Policy for this directory: the repo `CLAUDE.md`, Data ethics, "EXCEPTION — magpie/cwplans/" (personal,
 organisation and address data allowed during prototyping; no proprietary or restricted-licence data; OSM
-under ODbL allowed and tracked; website crawls allowed for scoping and recorded).
-Store finders (owner, 2026-10-03: "we are permitted per industry convention to submit storefinder forms with
-UK postcodes"): a crawl may type a UK postcode into a brand's store-finder or store-locator search and follow the
-result to the branch page. Nothing else: no other forms, no names, emails, accounts or bookings, no login; robots.txt
-and the per-host gap still apply; record how each page was reached (storefinder search, postcode, finder URL).
+under ODbL allowed and tracked; website crawls allowed for scoping and recorded). The owner's rules with their dates
+are in `methods-intro.md` (top of METHODS.md).
+Store finders (owner, 2026-10-03: "we are permitted per industry convention to submit storefinder forms with UK
+postcodes"): a UK postcode in a brand's store-finder search, nothing else; limits and method in `cwplans-web-harvest`.
 
 **Activity log:** [ACTIVITY-LOG.md](ACTIVITY-LOG.md), dated, newest last. Add an entry for every session
 that changes data, tools, checks or policy: what changed, the commit, the measured effect (audit counts
-before and after), and what is still open.
+before and after), and what is still open. The other cwplans skills write their entries here too.
+
+## Skills for this project
+
+| skill | home | reach for it when |
+|---|---|---|
+| `docklands-data-curation` (this one) | `magpie/cwplans/skills/` | policy, catalogue first, the fault register, joins, rebuild order, methods, provenance, the data register |
+| `docklands-3d-page` | `magpie/cwplans/docklands/skills/` | editing `docklands/index.html`: programs and vertex formats, interface, styles, splats, Night mode and its calibration, the fp16 lesson, headless testing, shipping |
+| `cwplans-web-harvest` | `magpie/cwplans/skills/` | crawling entity websites, the headless render, store finders, JSON-LD repair, Factoidal and N-Quads, branch scopes, opening hours, the Chromium proxy CA fix |
+| `cwplans-public-registers` | `magpie/cwplans/skills/` | GIAS, CQC, ODS, charities, Ofsted, gambling, Active Places, FSA pubs: licences, fields dropped, the join and its traps (F17 to F20), rejected sources |
+| sky, time, weather and tide (pending) | not written yet | another agent is building it (`docklands/sky*.js`, `docklands/data/sky/`, `tools/fetch-sky.mjs`, README section "Sky, time, weather and tide"); write the skill from that code when it is committed |
 
 ## Ship at once
 
 Owner, 2026-10-03: "shipping immediately to live site is fine and urgent. Don't batch things up, as live site is my only
 way to see progress." Commit and push each working change to master as soon as it passes its check (syntax, a headless
-load with no page errors), then confirm the live file matches the commit
+load with no page errors, `check-data-register.mjs`), then confirm the live file matches the commit
 (https://danbri.github.io/glitchcan-minigam/ + path). Do not hold finished work back to bundle it with other work.
-Lesson from the same day: a comment inserted in the middle of a line commented out `gl.colorMask(true)` and left the
-3D page black after "Splats only"; render() now resets that state every frame. After editing a long one-line
-statement, re-read the whole line.
+The page-side recipe and the lesson behind "re-read the whole line" are in `docklands-3d-page`.
 
 ## Catalogue first
 
@@ -108,42 +117,21 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 - **Coverage is uneven:** the 2008 colour tiles west of Limehouse come from another flight and are bluer; the
   north-west corner has no 2008 tile; the night survey stops near Whitechapel Road. Say so where the image is
   shown, do not colour-match.
-- WebGL: draw the texture through the terrain's own x, z (uv from the box in `textures.json`); resample to
-  2048 × 2048 on a canvas so the GPU can mipmap it.
+- The page side (drawing the image through the terrain's x, z, resampling to 2048 px for mipmaps): `docklands-3d-page`, "Styles".
 
 ## Splats and drone frames
 
-- Two ways to get Gaussian splats of the estate: **synthesis** (`tools/build-splats.mjs`: discs sampled straight from
-  the model surfaces, colours from the aerial photo and the facade rule; seconds, exact geometry) and **training**
-  (drone frames from the page, `tools/drone-capture.mjs`, then a 3DGS trainer on CPU). Training on renders of our own
-  model can only learn what the renders show: it gives a standard splat scene, not new information.
-- Format: standard 32-byte `.splat` in model metres and axes (x east, y up, z south), gzipped for the page. A
-  rotation built from three axis vectors must have determinant +1: a frame (t, up, n) with n = t × up flipped is a
-  reflection and gives a wrong quaternion. Pick the normal sign for the frame, and the outward side separately.
-- Counts: the first synthesis (3 m ground, a disc per window) made 1.6 million splats, 49 MB; 4 m ground and one glass
-  band per 7.2 m wall cell made 669,306 (20 MB, 4.5 MB gzipped). SwiftShader needs about 30 s a frame for that: test
-  splat views with `renderNow()` and `canvas.toDataURL`, not `page.screenshot` (it re-renders and times out).
-- Depth compositing: "Splats only" draws the model into the depth buffer with the colour mask off and a polygon
-  offset (splats lie on the walls and the ground), then the splats with the depth test and no depth write, then the
-  glow. Without the offset, wall splats flicker against their own wall.
-- Categories for the glow come only from stated classes (`tools/build-categories.mjs`).
-- **Wikidata: pace ourselves and ask once.** The first version called wbgetentities in batches and got "too many
+Moved to `docklands-3d-page` ("Styles", Gaussian splats): synthesis (`tools/build-splats.mjs`), the `.splat` format
+and the determinant rule, depth compositing, drone frames, OpenSplat training and `tools/publish-trained-splat.mjs`.
+
+## Wikidata through QLever
+
+**Pace ourselves and ask once.** The first version called wbgetentities in batches and got "too many
   requests" (owner, 2026-10-03: "maybe the rate limiting should come from us? Or a more carefully posed efficient
   query? QLever is very good"). Now `tools/lib.mjs` `qlever()` runs one query at a time, at least 1.5 s apart, with
   backoff on 429 and 5xx; and the tool asks two questions in total: the classes of all 65 occupant items (VALUES over
   the ids) and all occupant and headquarters links of the 86 building items with their qualifiers. 2.9 s, no
   retries. Cached in `data/raw/registry/wikidata-occupant-classes.json`; delete it to refresh.
-
-- **Training (measured 2026-10-03).** OpenSplat 1.2.2 on libtorch CPU (`tools/train-splat.sh`). Poses go in as the
-  nerfstudio camera-to-world matrices with no change; a wrong convention fails loudly ("No cameras see any sparse
-  points"). Do not pass `--center`: without it the output stays in model metres. 480 frames at 480 x 270, 3,000 steps:
-  33 min on a shared 4-core machine, 1.1 GB. With 2,000 steps or fewer, set `--refine-every 250` or nothing densifies.
-  `--val-render` leaks about 40 MB a render: the OOM killer stopped one run. Do not edit `train-splat.sh` while a run
-  is going: bash reads the file as it goes, and the first run's conversion step died with a syntax error that the
-  finished file does not have.
-- Trained output has floaters out to 2 km (OpenSplat trains on a black background; sky becomes splats at random
-  depths). `tools/publish-trained-splat.mjs` keeps the flown box plus 150 m, -30 to 260 m OD and axes up to 25 m
-  (21,222 of 188,295 removed) and gives each splat its building, so the music visualiser works on it too.
 
 ## Towers
 
@@ -168,40 +156,15 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
   source and record id are kept (the Bristol rule applies here too). GLA canopy and green cover 2024 are all rights
   reserved, Curio Canopy is CC BY-SA: not used. 20 TOW "lone trees" are over 35 m (cranes or structures): the page
   leaves out trees over 35 m; they are not corrected in the file.
-- The page loads trees.json only when trees are shown (pixel art or the Trees switch) and draws the 18,516 within
-  900 m of the estate; the whole file as boxes would be about 30 MB of vertices on a phone.
 - `registry/sources/facades/`: measured bays and colours from CC BY and PD photos. Check against a known count where
   one exists (One Canada Square: 19.9 bays measured, 19.8 known). Most recent Commons photos of the new towers are
   CC BY-SA: look only. Commons and Flickr rate-limit the container (429, retry after 600 s).
+- How the page loads and draws trees and photo facade tiles: `docklands-3d-page`, "Styles".
 
 ## Page rendering lessons (docklands/index.html)
 
-- Photo facades: `tools/build-facade-atlas.py` cuts whole floors by whole bays from each rectified patch so the tile
-  repeats; the shader repeats it by its size in metres. Without mipmaps the far towers speckle. `fract()` on the tile
-  coordinate makes the implicit mip level jump at every seam, so the level comes from `dFdx`/`dFdy` of the unwrapped
-  coordinate (`EXT_shader_texture_lod` + `OES_standard_derivatives`). 256 px tiles aligned in a power-of-two atlas
-  keep every mip level inside its tile (level 8 is the tile's mean colour); inset by half a texel of the level.
-- The facade vertex alpha byte is not opacity: 255 plain, 100 + slot a photo tile, 200 + 8 x material (pixel art).
-  Opacity is the `a` uniform only.
-- Pixel art colours must not follow height alone: it reads as a heat map (owner, 2026-10-03). Materials (brick,
-  render, glass, ribbon windows, metal) carry the variety; measured facade colours snap to the palette's building
-  colours, never to a tree green.
-- Phones play sound only as the direct result of a tap: create and resume the AudioContext and call `play()` in the
-  tap handler before any `await`. A file chosen in the picker arrives outside the tap, so the file button unlocks the
-  audio element when it is tapped. iOS: `navigator.audioSession.type = 'playback'` or the silent switch mutes Web Audio.
-- Phones run `mediump` as 16-bit floats. A hash such as fract(sin(dot(q, k)) * 43758.5) collapses there: in the first
-  night build it gave 0 for 3,550 of 3,600 window cells, so towers were dark on the owner's phone and fine in
-  SwiftShader (which runs mediump as 32-bit). Use `highp` in any shader that hashes world positions, and test the
-  maths with fp16 rounding in Node, because the headless renderer cannot show this fault.
-- Test a visual change at two sizes (1600x900, 390x844) and two pixel ratios (1, 3), from the views of the
-  reference photos (`?view=rotherhithe|greenland|pier`), and compare by numbers (luma, counts of light points), not
-  by one view by eye: the first night build passed one 800x600 low view and failed on the owner's device.
-- Night mode (?night): method and the tones measured from the owner's night photos are in docklands/README.md,
-  "Night" (the photos are the owner's and are not in the repo). Building use reaches the shader as g.w (use x 1000 +
-  roof top), not through the alpha byte. Red aviation lights follow the Air Navigation Order 2016 art. 222 rule (roof corners from 100 m;
-  intermediate levels at most 52 m apart from 150 m), calibrated against the reference photos.
-- A finger that lands on a label must still join a pinch or twist: the label box feeds the same gesture code, and a
-  moved pointer suppresses the label's click.
+Moved to `docklands-3d-page`: photo facade mip levels, the vertex alpha byte, pixel-art materials, phone audio, the
+fp16 / highp fault, the test sizes and photo views, Night mode, aviation lights and label gestures.
 
 ## Measured lessons (the reasons behind the rules)
 
@@ -219,7 +182,7 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 - **A register address has a role.** Correspondence, registered-office, care-of and charity contact addresses are
   not places (F18). A UPRN is a key only when it is unique to one place and agrees with the register's own point
   (F17). The postcode alone needs one building at the postcode centre, not one building that carries the postcode
-  (F19). Keep the key, its precision and a confidence on every link.
+  (F19). Keep the key, its precision and a confidence on every link. Register traps in full: `cwplans-public-registers`.
 - **Levels are labels.** OSM `level` is a mapper's index; CWG names levels per mall; measure the offset
   per mall (F9). Convert to metres only through published slab levels (`data/sourced-levels.json`).
 - **A position has a precision and a meaning.** Postcode-centre points place a postcode, not a building
@@ -235,54 +198,21 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 
 ## Structured data from rendered pages
 
-`tools/render-structured-data.mjs` renders every entity URL in headless Chromium and keeps the schema.org blocks
-(JSON-LD raw, microdata as JSON, RDFa as N-Triples) in `third_party/cwplans-structured-data/` (README there: method,
-date, rebuild). `tools/extract-structured-data.mjs` cleans the JSON-LD (`tools/jsonld-clean.mjs`, every repair counted
-by class), loads one named graph per page into Factoidal (`@factoidal/core`, npm), writes `all.nq`, runs SPARQL and
-writes `registry/sources/web/structured-facts.json`. Measured 2026-10-03:
-
-- **Chromium needs the proxy CA.** The NSS store in `/root/.pki/nssdb` was empty: every HTTPS page failed with
-  `ERR_CERT_AUTHORITY_INVALID`. Fix: `certutil -d sql:/root/.pki/nssdb -A -t "C,," -n ccr-agent-proxy -i
-  /root/.ccr/agent-proxy-ca.crt` (`apt-get install libnss3-tools`). Chromium takes the proxy from the environment.
-- **A browser finds little that the plain crawl missed.** Of 363 pages the plain crawl got no structured data from,
-  222 rendered and 78 had data; only 22 pages have JSON-LD that exists only after scripts (53 of 932 blocks), and
-  some of those are server blocks that scripts rewrote (Pret: Next.js replaces the server WebSite block). The
-  failures are the same sites: bot challenges (63), dead domains (33 dns), TLS (10), 404 (21).
-- **Store-finder searches are the real gain, and they lie easily.** 247 searches (201 brands): 29 branch pages
-  that name the branch, 96 runs reached a finder. First drafts matched the wrong branch: a card of 500 characters
-  held several stores; the branch name ("Pret A Manger", "Barclays") was used as a place phrase and matched every
-  page; Wikidata's first website was a foreign site (jomalone.ru, pret.com/en-US). Rules now: the link's own text
-  and URL count fully, its card only when it is 300 characters or less; brand names are not place phrases; with two
-  or more branches here, "Canary Wharf" alone picks none; the UK site first; and every result page is checked
-  again (`names_branch`), so a page that does not name the branch is reported as such.
-- **Attribution needs a place on the node.** A node is the branch when its postcode equals the entity's or its geo
-  is within 300 m (high), when it has no address on the branch's own page (medium: store_url, store-finder result,
-  URL path naming the place), or when it has another E14/E20 postcode (low: a sibling branch is possible). No
-  address on a general page: "chain" for chain branches, "organisation" for single sites. 224 nodes with an
-  address elsewhere were not attributed. Bank and head-office pages carry the head office address in Canary Wharf:
-  a postcode match there is the head office, not a branch.
-- **Real-world JSON-LD classes** (932 blocks): remote schema.org context 929 (inlined as `{"@vocab":
-  "https://schema.org/"}`; Factoidal has no document loader), `@graph` beside other keys 508 (unwrapped, or the
-  nodes land in a named graph inside the page graph), HTML entities in strings 411, top-level arrays 24,
-  `http://schema.org/` IRIs 12, no context 7, raw control characters 2, missing commas 2 (bigeasy.co.uk). After
-  cleaning, Factoidal loaded all 932.
-- **Opening hours come in many shapes:** `openingHours` text ("Mo-Fr 09:00-17:00", "Monday,Tuesday 09:00-17:00",
-  "Friday06:30-20:00", empty strings, ", , , ,"), specifications with "13:00 PM", "9:30am", "6pm", days with no
-  times, and special hours dated "26 Nov 2026". All 54 distinct OSM strings made parse in the `opening_hours`
-  library (a one-off check outside the repo). Empty or comma-only text is no hours.
-- **RDFa is almost all OpenGraph** (798 pages; schema.org RDFa on 1). Microdata on 72 pages, mostly old themes.
-- Time: main render 43 min for 1,016 URLs (369 Internet Archive copies read from cache in seconds), retries 4 min,
-  store finders 50 min for the first pass and 25 min for three corrected re-runs; extraction about 2 min (SPARQL over 65,566 quads: 62 s).
+Moved to `cwplans-web-harvest`: the plain crawl, the headless render, store finders, the JSON-LD repair classes,
+Factoidal and the N-Quads dataset, branch / chain / organisation attribution, opening hours, the Chromium proxy CA fix.
+Registers (GIAS, CQC, ODS and the rest): `cwplans-public-registers`.
 
 ## Rebuild order
 
     node magpie/cwplans/tools/build-registry.mjs        # registry/buildings.json (needs data/raw/registry/*)
+    node magpie/cwplans/tools/join-web-facts.mjs        # occupants[].web from registry/sources/web/structured-facts.json
     node magpie/cwplans/tools/build-categories.mjs      # registry/categories.json (QLever only when its cache lacks an item)
     node magpie/cwplans/tools/build-atlas.mjs           # atlas/data/atlas.json (reads the registry and docklands/data/area.js)
     node magpie/cwplans/tools/audit-quality.mjs         # quality/issues.json, quality/CATALOGUE.md (reads the atlas)
     node magpie/cwplans/tools/check-data-register.mjs --write   # every committed data file registered?
 
-The fetch and 3D steps are in `magpie/cwplans/docklands/README.md` and `registry/README.md`. Raw extracts
+The fetch and 3D steps are in `magpie/cwplans/docklands/README.md` and `registry/README.md`; the web and register
+fetches in their skills. The order of every tool is the `after` list of its activity in `pipeline.json`. Raw extracts
 over a few MB stay local (gitignored); `data-register.json` says what is committed and why.
 
 ## Methods
@@ -319,13 +249,16 @@ Every committed data file has an entry in `data-register.json`: sources (keys in
 licence and attribution), `osm.use` (raw, derived, counts, ids, notes, none), the OSM extract, and
 `shown_on` pages. The check fails on an unregistered file and on a page that shows OSM data without the
 visible "© OpenStreetMap contributors" link to https://www.openstreetmap.org/copyright. Add the entry in the
-same commit as the file. `skills/` and `vendor/` are not data and are not registered.
+same commit as the file. `skills/` directories (at any depth, so `docklands/skills/`
+too) and `vendor/` are not data and are not registered.
 
 ## Pages and tests
 
 - The atlas (`atlas/index.html`) loads `atlas/data/atlas.json` first and the detail files on demand. Hash
   routes: `#view`, `#view/b/cwb-0413`, `#view/pc/E14-5AB`, `#quality/q/SP-6`; `#cwb-NNNN` also works.
   `window.__atlas.open(kind, id)` opens a record. Building and postcode records list their quality issues.
-- The 3D page accepts `#at=x,z,dist` in local metres (x = E − 537550, z = −(N − 180300)).
-- Test headless with Playwright from a local `python3 -m http.server` (fetch needs http). This container
-  cannot reach tile.openstreetmap.org, so the basemap is missing from captures; say so when you report.
+- The 3D page: `docklands-3d-page` (URL switches, `window.__docklands`, the headless recipe).
+- Test headless with Playwright from a local `python3 -m http.server` (fetch needs http). The atlas basemap comes from
+  tile.openstreetmap.org: an October 2026 session could not reach it from the container, and on 2026-10-04 `curl`
+  through the proxy got HTTP 200. Check before you report a missing basemap, and say which it was.
+- `node --test magpie/cwplans/tools/test/*.test.mjs`: parser fixtures (15 tests on 2026-10-04).

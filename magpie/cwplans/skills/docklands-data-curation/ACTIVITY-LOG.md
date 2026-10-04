@@ -343,6 +343,32 @@ Owner instruction, 2026-10-03: "record ALL our data methods in skills or other c
   items, 3 memorials dropped, 17 headquarters); `fetch-dsm.sh` sends the project User-Agent; the two feed checkers
   send at most one request at a time to a host, 1 s apart.
 
+## 2026-10-04: skills split ("Wrap it all up into skills")
+
+Owner instruction, 2026-10-04: "Wrap it all up into skills". Three new skills, each checked against the code:
+- `docklands/skills/docklands-3d-page/` (the 3D page: programs, vertex formats, interface, styles, splats, Night, fp16,
+  testing, shipping); `skills/cwplans-web-harvest/` (crawl, render, store finders, JSON-LD repair, Factoidal, scopes,
+  join-web-facts, opening hours, proxy CA); `skills/cwplans-public-registers/` (licences, fields dropped, join keys,
+  F17 to F20, rejected sources). Symlinked in `.claude/skills/`; `npm run skills:check`: 23 of 23 discoverable, 0
+  problems. Rows added to the skills table in the repo `CLAUDE.md`.
+- This skill slimmed from 331 to 264 lines: "Page rendering lessons", "Splats and drone frames" and "Structured data
+  from rendered pages" moved out (headings kept as pointers, because tool headers name them); the Wikidata / QLever
+  lesson has its own section; `join-web-facts.mjs` added to the rebuild order; a skill index with the pending sky,
+  time, weather and tide skill (another agent is building that code). Every removed line was checked against the new
+  skills.
+- `tools/check-data-register.mjs`: `skills/` directories are skipped at any depth (`docklands/skills/` was counted as
+  an unregistered data file). Fault table unchanged, METHODS.md not regenerated.
+- Measured while verifying (headless SwiftShader, `?view=rotherhithe`, working tree with the sky agent's uncommitted
+  sky.js): no page errors at 1600 x 900 DPR 1 and 390 x 844 DPR 3 (canvas 780 x 1688: DPR is capped at 2);
+  `NIGHT.n` 84 roofs, 587 red lights, 1,449 lamps, 160 columns, 1,769 reflections, 12 signs; `renderNow()` returns in
+  2 ms and the frame is drawn in the next `readPixels` (about 2.2 s at 1600 x 900); the fp16 emulation in Node gives 0
+  for 3,554 of 3,600 window cells; `opening-hours.js` reads all 156 distinct opening_hours strings in the registry;
+  `node --test tools/test/*.test.mjs` 15 of 15.
+- Stale statements found: README "Isometric pixel art" says one art pixel per 3 screen pixels (the code uses 2 CSS px,
+  1 when zoomed out); README "Night" says the photos are not in the repo (they are in `docklands/reference/night-2026-10-03/`
+  since 2d76be0); the atlas tile host answered curl through the proxy on 2026-10-04. README not edited (another agent's
+  file today).
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

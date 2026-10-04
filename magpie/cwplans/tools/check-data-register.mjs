@@ -13,7 +13,8 @@
 // Checks: every committed or staged data file in magpie/cwplans has an entry; every entry's file exists;
 // every source and OSM extract named is defined; every page that loads OSM-derived data shows the
 // "© OpenStreetMap contributors" notice with a link to https://www.openstreetmap.org/copyright.
-// Data file = any tracked file except code (.mjs, .py, .c, .html), .gitignore, vendor/ directories (third-party code) and skills/.
+// Data file = any tracked file except code (.mjs, .py, .c, .html), .gitignore, vendor/ directories (third-party code) and
+// skills/ directories (at any depth: docklands/skills/ too).
 // Why the register exists: CLAUDE.md, Data ethics, the magpie/cwplans exception.
 import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -26,7 +27,7 @@ const problems = [];
 
 const tracked = execFileSync('git', ['ls-files', '--cached', '--', '.'], { cwd: CW, encoding: 'utf8' })
   .split('\n').filter(Boolean);
-const isData = p => !/\.(mjs|py|c|sh|html)$/.test(p) && !p.endsWith('.gitignore') && !p.includes('vendor/') && !p.startsWith('skills/')
+const isData = p => !/\.(mjs|py|c|sh|html)$/.test(p) && !p.endsWith('.gitignore') && !p.includes('vendor/') && !/(^|\/)skills\//.test(p)
   && !['data-register.json', 'DATA-REGISTER.md'].includes(p);
 const byPath = new Map(reg.files.map(f => [f.path, f]));
 

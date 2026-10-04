@@ -1,0 +1,209 @@
+---
+name: cwplans-web-harvest
+description: >-
+  Crawl the web pages that the Canary Wharf / Docklands registry links to (occupant websites, chain store pages, the
+  Canary Wharf Group directory, charity sites) and turn their schema.org structured data into facts: the plain crawl
+  (tools/crawl-sites.mjs), the headless Chromium render (render-structured-data.mjs with the in-page extractor
+  structured-dom.mjs), store-finder searches with a UK postcode (the owner's exception and its limits), robots.txt
+  and politeness, the JSON-LD repair classes (jsonld-clean.mjs), Factoidal (@factoidal/core: what it parses, and why
+  microdata and RDFa are converted to N-Triples first), the N-Quads dataset with one named graph per page, what may be
+  committed in third_party/cwplans-structured-data (no full pages), the branch / chain / organisation scopes of
+  extract-structured-data.mjs, the keys of join-web-facts.mjs, and the OSM opening_hours subset that
+  docklands/opening-hours.js reads. Reach for it before you crawl or render any site for magpie/cwplans, add a store
+  finder, change how a page fact is attributed to a branch, or read opening hours or phone numbers from the web. Also
+  has the fix for Chromium failing every HTTPS page behind the agent proxy (ERR_CERT_AUTHORITY_INVALID).
+---
+
+# Web harvest for magpie/cwplans
+
+Policy, the fault register and the activity log are in the hub skill `docklands-data-curation`
+(`magpie/cwplans/skills/docklands-data-curation/`). Append what you did to its `ACTIVITY-LOG.md`.
+Checked against the code and the committed outputs on 2026-10-04; counts are from the runs of 2026-10-03 unless
+marked otherwise.
+
+## What is allowed
+
+- **Crawls** (owner, 2026-10-03, repo `CLAUDE.md`): "Website crawls - direct and via IA or CommonCrawl etc are fair use
+  for our scoping purposes." Pages fetched directly, from the Internet Archive or from Common Crawl, and data taken
+  from them. Record each crawl in `data-register.json` with its method and date. Re-check before anything leaves the
+  prototyping phase.
+- **Store finders** (owner, 2026-10-03: "we are permitted per industry convention to submit storefinder forms with UK
+  postcodes"): type a UK postcode into a brand's store-finder or store-locator search box and follow the result to the
+  branch page. Nothing else: no other form, no names, emails, accounts or bookings, no login. robots.txt and the
+  per-host gap still apply. Record how each page was reached (`via`: method, postcode, finder URL).
+- **Kept**: structured data (JSON-LD, microdata, RDFa), page title, OpenGraph title, type and description (cut to 200
+  characters), `lang`, links (tel:, booking, menu, events), feeds. No other page text. Rendered pages stay local.
+- **Skipped by rule**: FSA ratings pages, OSM, Wikidata, Companies House and Land Registry pages (their data comes
+  from APIs and bulk files), Wikipedia (CC BY-SA, share-alike), register pages, social networks, and the live
+  canarywharf.com (Imperva challenge to scripts; its pages are read as Internet Archive `id_` copies that
+  `registry/sources/brands/tools/fetch-cwg.mjs` saved).
+
+## Order and commands
+
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/crawl-sites.mjs                  # plain fetch; --list, --no-fetch, --retry-failed, --refresh, --host=h
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/render-structured-data.mjs       # headless render, resumable
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/render-structured-data.mjs --retry-failed
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/render-structured-data.mjs --storefinder-only   # (--storefinder: after the render)
+    node magpie/cwplans/tools/render-structured-data.mjs --build-only              # third_party copy, no network
+    node magpie/cwplans/tools/extract-structured-data.mjs                          # all.nq(.gz) + registry/sources/web/structured-facts.json
+    node magpie/cwplans/tools/join-web-facts.mjs                                   # after build-registry, before build-categories and build-atlas
+
+Also: `--list` and `--list-missing` (render, no network), `--limit=N --host=h` (test runs). Without
+`NODE_USE_ENV_PROXY=1`, Node `fetch` ignores `HTTPS_PROXY` here. Activities in `pipeline.json`: `crawl-sites` (area
+crawl), `render-structured-data`, `extract-structured-data`, `join-web-facts` (area structured).
+
+## The plain crawl (`tools/crawl-sites.mjs`)
+
+- URLs from `registry/buildings.json` occupants (`website`, `store_url`, `cwg_archived`), `branches.json`,
+  `storelocator.json` and `cwg-directory.json`: 859 URLs on 393 hosts (2026-10-03).
+- Node fetch, redirects followed by hand (at most 8), final URL recorded; User-Agent
+  `glitchcan-cwplans/0.1 (https://github.com/danbri/glitchcan-minigam)`; one request at a time per host, 1.5 s apart,
+  4 hosts at once, 20 s timeout, up to 4 tries with backoff (Retry-After, else 4, 12, 36 s) on 429, 5xx, timeouts and
+  resets. Raw: `data/raw/crawl/<host>/<sha1(url)[0:16]>.html.gz` + `.json`, `robots.json` per host (gitignored).
+- Out: `registry/sources/web/site-facts.json`, `discovered-feeds.json` (61 feed URLs, **not verified**: check each with
+  `feeds/check-events.mjs` before it joins the catalogue). README: `registry/sources/web/README.md`.
+- `names_branch`: does the page name the entry's place? Postcodes and address phrases (street, mall, branch name;
+  numbers, unit and level words and "Canary Wharf" or "London" removed) are searched in the visible text and the
+  structured data. `true` for a postcode, or a phrase on a page that is not the home page; `"home page lists the
+  place"`; `"scripts only"`; `false`. `mentions_canary_wharf` is reported separately and is **not evidence**: a chain's
+  home page says nothing about the branch. A postcode shared by many buildings (E14 5AB) can match a page about another
+  branch: evidence, not proof.
+
+## The headless render (`tools/render-structured-data.mjs`, `tools/structured-dom.mjs`)
+
+- Same URL fields plus `occupants[].cwg_website` and the `website` of registered charities
+  (`registry/sources/registers/charities.json`): 1,025 URLs on 559 hosts. Order: store pages first, then pages the plain
+  crawl got no structured data from, then the rest.
+- Playwright Chromium (`/opt/pw-browsers/chromium-1194/...`), User-Agent a desktop Chrome string plus
+  ` glitchcan-cwplans/0.1 (+https://github.com/danbri/glitchcan-minigam)`; images, media and fonts not loaded.
+  `PARALLEL = 3` pages, one page at a time per host, `HOST_GAP_MS = 2000` between page loads on a host, wait for load
+  and network idle (`CAP_MS = 20000`), then `LATE_MS = 1500` for late JSON-LD; blocks over 200 kB dropped and counted.
+- robots.txt is checked for **every document navigation, redirects included** (a route handler aborts a disallowed
+  navigation); the crawl's cached `robots.json` is reused. An unreachable robots.txt means no visit.
+- A cookie banner is accepted only when the page shows no structured data and one of a fixed list of consent buttons is
+  present (41 pages). No logins.
+- Internet Archive copies of canarywharf.com pages are read from the local cache with scripts off and no network.
+- `structured-dom.mjs` runs inside the page through `page.evaluate`, so it must stay self-contained (no imports, no
+  closures). JSON-LD: the raw text of each block, as found. Microdata: the WHATWG algorithm (`itemref` followed; a
+  `content` attribute on any itemprop element is used, as search engines do), as JSON items. RDFa: RDFa 1.1 Core with
+  the HTML+RDFa rules (initial context prefixes such as `og:` and `schema:`; HTML link types in `rel` ignored when
+  `property` is present), as N-Triples with the document base. Each block is marked `server` or `script` by
+  comparing with the server HTML.
+- **RDFa is almost all OpenGraph** (798 pages; schema.org RDFa on 1). Microdata is on 72 pages, mostly old themes.
+  JSON-LD is where the facts are (695 pages, 932 blocks).
+- **A browser finds little that the plain crawl missed.** Of 363 pages the plain crawl got nothing from, 222 rendered
+  and 78 had data; only 22 pages have JSON-LD that exists only after scripts (53 of 932 blocks), and some of those are
+  server blocks that scripts rewrote (Pret: Next.js replaces the server WebSite block). The failures are the same
+  sites: bot challenges 63, DNS 33, 404/410 21, TLS 10 (901 of 1,067 attempts rendered).
+- Time: main render 43 min for 1,016 URLs (369 archive copies from cache in seconds), retries 4 min, store finders
+  50 min first pass and 25 min for three corrected re-runs; extraction about 2 min.
+
+### Store finders (the real gain, and easy to get wrong)
+
+For chain branches with no store page that gave data: find a store-finder link on the brand site (Wikidata P856, else
+the branch website), **UK site first** (a `.uk` host or a `/uk`, `/en-gb` path, then `.com`, then other countries:
+Wikidata's first website was jomalone.ru and pret.com/en-US). A finder page that already lists the branch is followed
+with no form; else the branch's postcode (E14 4QT when it has none) goes in the search box, one search per brand and
+postcode. 2026-10-03: 247 searches for 201 brands; 96 runs reached a finder (71 search, 25 list); 29 branch pages name
+the branch; 100 brands had no finder link and 50 finders had no postcode box.
+
+First drafts matched the wrong branch. The rules now:
+- a result link counts by its own text and URL; its card only when the card is 300 characters or less (a 500-character
+  card held several stores);
+- brand names are not place phrases ("Pret A Manger", "Barclays" matched every page);
+- with two or more branches here, "Canary Wharf" alone picks none;
+- every result page is checked again (`names_branch`), and a page that does not name the branch is reported as such,
+  not dropped silently.
+
+## JSON-LD cleanup (`tools/jsonld-clean.mjs`)
+
+`cleanJsonLd(text)` returns `{ docs, repairs, error }`; every change is counted by class. Classes in the code:
+`html_comment_wrapper`, `cdata_wrapper`, `byte_order_mark`, `empty_block`, `js_comment`, `trailing_comma`,
+`missing_comma`, `concatenated_values`, `control_char_in_string`, `invalid_escape`, `stray_semicolon`,
+`unclosed_brackets`, `unterminated`, `html_entities_in_markup`, `html_entity_in_string`, `top_level_array_split`,
+`graph_unwrapped`, `missing_context_added`, `remote_context_schema_org_inlined`, `remote_context_other_dropped`,
+`http_schema_org_iri`, `context_schema_org_iri_normalised`.
+
+Measured on 932 real blocks: remote schema.org context 929 (inlined as `{"@vocab": "https://schema.org/"}`),
+`@graph` beside other keys 508 (unwrapped, or the nodes land in a named graph inside the page graph), HTML entities in
+strings 411, top-level arrays 24, `http://schema.org/` IRIs 12, no context 7, raw control characters 2, missing
+commas 2 (bigeasy.co.uk). After cleaning, Factoidal loaded all 932. Tests: `tools/test/jsonld-clean.test.mjs`
+(`node --test magpie/cwplans/tools/test/*.test.mjs`: 15 of 15 pass, 2026-10-04). Add a class with a test, never a
+silent fix.
+
+## Factoidal and the N-Quads dataset
+
+- `@factoidal/core` 0.7.1 (Apache-2.0, root `devDependencies`). The tool uses `jsonldToRdf`, `parse` and `query`.
+- `parse` reads turtle, ntriples, nquads, trig, rdfxml and jsonld. It has **no microdata or RDFa reader**: microdata
+  JSON is turned into N-Triples by `extract-structured-data.mjs` (schema.org vocabulary; URL-valued properties become
+  IRIs), and RDFa arrives as N-Triples from `structured-dom.mjs`; both are then parsed.
+- Remote `@context` URLs need a `documentLoader`, which Factoidal does not register (it fails honestly). So the cleaner
+  inlines the schema.org context and drops other remote contexts (counted).
+- One named graph per page (graph IRI = page URL). Blank nodes are relabelled per page and block, so graphs merged into
+  one file never share a node. `http://schema.org/` is normalised to `https://schema.org/`.
+- `third_party/cwplans-structured-data/all.nq` (12 MB, gitignored) and `all.nq.gz` (committed): 65,566 quads from 901
+  pages; SPARQL over it took 62 s.
+
+## What is committed (`third_party/cwplans-structured-data/`)
+
+**No full pages.** `pages/<host>.jsonl` (one line per rendered page: URL, final URL, status, method, title, lang,
+`html_sha256`, entity keys, source fields, `jsonld_raw` and origin, `microdata`, `rdfa_ntriples`, `via`,
+`consent_clicked`), `index.json` (every URL with its outcome, counts, store-finder runs), `all.nq.gz`, README. The
+rendered DOMs stay in `magpie/cwplans/data/raw/rendered/` (gitignored). It is the site owners' data published for search
+engines, kept for scoping under the crawl rule.
+
+## Attribution: branch, chain, organisation (`tools/extract-structured-data.mjs`)
+
+A node is attributed to the Canary Wharf entity:
+
+| scope, confidence | when |
+|---|---|
+| branch, high | the node's postcode equals the entity's, or its geo is within 300 m of the building |
+| branch, low | another E14/E20 postcode (and within 1.5 km when it has a geo): a sibling branch is possible |
+| elsewhere | an address or geo anywhere else: not attributed (224 nodes on 2026-10-03) |
+| branch, medium | no address, on the branch's own page (a `store_url`, a store-finder result, a URL path naming the place) |
+| chain | no address, on a general page of a chain |
+| organisation | no address, on a single-site organisation's own site |
+
+Bank and head-office pages carry the head-office address in Canary Wharf: a postcode match there is the head office,
+not a branch. Out: `registry/sources/web/structured-facts.json`: 232 records for 210 keys; branch 185 (high 143,
+medium 19, low 23), chain 22, organisation 25; opening hours for 109 keys at branch scope (95 high), phone for 126.
+
+## Joining facts to occupants (`tools/join-web-facts.mjs`)
+
+Keys: `cwb-NNNN|<occupant name>` (normalised), `branch:<brand QID>@<element>` (the occupant's OSM element, the
+building's OSM way, `fhrs/<FSA id>` or a bare FSA id, `cwg/<slug>`), `charity:<number>`, `cwg:<directory slug>`.
+Rank: branch beats organisation beats chain, then high > medium > low. Writes `occupants[].web` (page, fetch date,
+scope, confidence, match, opening_hours in OSM syntax, phone, price range, cuisine, menu, up to 20 events) and
+`summary.joins.web_facts`. On 2026-10-04 the registry holds 93 occupants with web facts: hours 70 (64 at branch scope),
+phone 75, events 1; 14 fact records match no occupant.
+
+## Opening hours
+
+- In the wild: `openingHours` text ("Mo-Fr 09:00-17:00", "Monday,Tuesday 09:00-17:00", "Friday06:30-20:00", empty
+  strings, ", , , ,"), specifications with "13:00 PM", "9:30am", "6pm", days with no times, special hours dated
+  "26 Nov 2026". Empty or comma-only text is no hours. The extractor writes OSM `opening_hours` syntax; all 54
+  distinct strings it made parsed in the `opening_hours` library (a one-off check outside the repo, 2026-10-03).
+- `docklands/opening-hours.js` (used by the 3D page and the atlas) reads a subset: day lists and ranges, times and time
+  lists, `off`/`closed`, `24/7`, times past midnight, rules joined by `,` or `;` (a later rule for a day replaces an
+  earlier one; `,` starts a new rule only after a time or `off` and before a day or date), and dated rules
+  (`2026 Nov 26 16:00-02:00`). `PH` is read and not applied (no UK holiday table). Times are London local time,
+  whatever the viewer's zone. `openState(text, date)` returns `{ open, until | from }`, or `null` for a form it does
+  not know: show nothing then, never a guess. Checked 2026-10-04: it reads all 156 distinct strings in
+  `registry/buildings.json` (OSM tags and web facts).
+
+## Chromium behind the agent proxy
+
+The NSS store `/root/.pki/nssdb` started empty, and every HTTPS page failed with `ERR_CERT_AUTHORITY_INVALID`.
+Fix (`apt-get install -y libnss3-tools` if `certutil` is missing):
+
+    certutil -d sql:/root/.pki/nssdb -A -t "C,," -n ccr-agent-proxy -i /root/.ccr/agent-proxy-ca.crt
+    certutil -d sql:/root/.pki/nssdb -L        # check; on 2026-10-04 it listed ccr-agent-proxy and ccr-agent-proxy-2
+
+A new container can bring a new CA file: add it again under a new nickname. Chromium takes the proxy from the
+environment.
+
+## Open (2026-10-04)
+
+A check for web hours that disagree with OSM `opening_hours`; store finders for the 100 brands with no finder link
+and the 50 finders with no postcode box; verify the 61 discovered feeds.
