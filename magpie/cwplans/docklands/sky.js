@@ -231,14 +231,38 @@ function nextIss(from) {   // first ISS pass after `from` that is above 10 degre
   return pass;
 }
 
+// cloud mask: EUMETSAT Meteosat Cloud Mask (CLM) through EUMETView (CC BY 4.0, Core data), a box 50.5-52.5 N, 1.6 W-1.6 E.
+// The committed image is the 15-minute slot nearest the photo time; other times are fetched only with "Fetch" ticked.
+// The mask places the cloud: each layer's cover (Open-Meteo) is raised where the satellite sees cloud and lowered where it
+// sees clear sky, keeping the layer's mean; the pattern moves with the wind for up to 90 minutes from the image time.
+const CLM = { box: [50.5, -1.6, 52.5, 1.6], snap: { t: Date.parse('2026-10-03T23:00Z'), url: 'data/sky/clm-20261003T2300Z.png' }, cache: {} };
+const clmUrl = t => `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=msg_fes:clm&styles=&crs=EPSG:4326&bbox=${CLM.box.join(',')}&width=256&height=256&format=image/png&time=${new Date(t).toISOString()}`;
+function clmFor(t) {   // { t, url, src } of the image to use for time t, or null
+  if (Math.abs(t - CLM.snap.t) <= 90 * 60e3) return { ...CLM.snap, src: 'snapshot' };
+  if (!S.fetch || t < Date.parse('2020-09-01T00:00Z')) return null;
+  const slot = Math.floor(Math.min(t, Date.now() - 30 * 60e3) / 900e3) * 900e3; if (t - slot > 90 * 60e3) return null;   // the mask appears about 25 minutes after the slot
+  return { t: slot, url: clmUrl(slot), src: 'EUMETView live' };
+}
+function clmLoad(gl, c) {   // decode the colours (white = cloud) to a luminance texture; the mean cloud within 60 km
+  if (CLM.cache[c.url]) return CLM.cache[c.url]; const rec = CLM.cache[c.url] = { ...c, ready: false };
+  const im = new Image(); im.crossOrigin = 'anonymous';
+  im.onload = () => { try { const k = document.createElement('canvas'); k.width = 256; k.height = 256; const g = k.getContext('2d'); g.drawImage(im, 0, 0, 256, 256); const px = g.getImageData(0, 0, 256, 256).data, a = new Uint8Array(256 * 256); let n = 0, m = 0;
+      for (let i = 0; i < a.length; i++) { const r = px[4 * i], gg = px[4 * i + 1], b = px[4 * i + 2]; a[i] = r > 200 && gg > 200 && b > 200 ? 255 : 0; const x = i % 256 - 128, y = (i >> 8) - 128; if (x * x + y * y < 70 * 70) { n++; m += a[i] / 255; } }
+      rec.tex = gl.createTexture(); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, rec.tex); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 256, 256, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, a);
+      for (const [k2, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k2, v);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); rec.mean = m / n; rec.ready = true; redraw(); panel(); } catch (e) { rec.err = e.message; } };
+  im.onerror = () => { rec.err = 'did not load'; panel(); }; im.src = c.url; return rec;
+}
+
 // ---------- WebGL: a full-screen sky (background pass; moon and cloud pass) and points/lines for stars and the rest
 const PRE = '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n';
 const NOISE = 'float hs(vec2 p){p=mod(p,289.);vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}' +
   'float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1.,0.)),f.x),mix(hs(i+vec2(0.,1.)),hs(i+1.),f.x),f.y);}' +
   'float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*vn(p);p=p*2.03+vec2(17.1,9.2);a*=.5;}return s/.97;}';
-const SKY_FS = PRE + 'varying vec2 n;uniform vec3 cr;uniform vec3 cu;uniform vec3 cf;uniform vec2 tn;uniform vec3 sd;uniform vec3 md;uniform vec3 mx;uniform vec4 mp;uniform vec4 sk;uniform vec3 cv;uniform vec4 ck;uniform vec4 wd;uniform mat3 gm;uniform float mw;uniform float ps;uniform float px;' + NOISE +
+const SKY_FS = PRE + 'varying vec2 n;uniform vec3 cr;uniform vec3 cu;uniform vec3 cf;uniform vec2 tn;uniform vec3 sd;uniform vec3 md;uniform vec3 mx;uniform vec4 mp;uniform vec4 sk;uniform vec3 cv;uniform vec4 ck;uniform vec4 wd;uniform mat3 gm;uniform float mw;uniform float ps;uniform float px;uniform sampler2D cm;uniform vec4 cmb;uniform vec4 cmk;' + NOISE +
   // one cloud layer at height H km (eye at ck.xy km), feature scale sc km; far away the cover tends to its mean
-  'float layer(vec3 d,float H,float sc,float cov,vec2 dr){if(cov<.01||ck.z>H)return 0.;float t=(H-ck.z)/max(d.y,.004);vec2 p=(ck.xy+d.xz*t+dr)/sc;float f=fbm(p),th=1.-cov;float a=smoothstep(th-.13,th+.13,f*1.08-.04);return mix(a,cov,smoothstep(.12,.015,d.y));}' +
+  'float sat(vec2 q){vec2 u=(q-cmk.zw-cmb.xy)/cmb.zw;if(u.x<0.||u.y<0.||u.x>1.||u.y>1.)return cmk.y;return texture2D(cm,u).r;}' +
+  'float layer(vec3 d,float H,float sc,float cov,vec2 dr){float t=(H-ck.z)/max(d.y,.004);if(cmk.x>.5)cov=clamp(cov+.9*(sat(ck.xy+d.xz*t)-cmk.y),0.,1.);if(cov<.01||ck.z>H)return 0.;vec2 p=(ck.xy+d.xz*t+dr)/sc;float f=fbm(p),th=1.-cov;float a=smoothstep(th-.13,th+.13,f*1.08-.04);return mix(a,cov,smoothstep(.12,.015,d.y));}' +
   'void main(){vec3 d=normalize(cf+n.x*tn.x*cr+n.y*tn.y*cu);float e=d.y,ee=max(e,0.),h=sk.x,cs=dot(d,sd),dk=sk.z;' +
   'if(ps<.5){' +
   // night: the city's sky glow, measured from the owner's photos (README Night)
@@ -328,6 +352,11 @@ function draw(ctx) {
   gl.uniform4f(U.mp, Math.cos(A.moon.phase * D2R), mR, A.moon.frac, A.moon.alt > -1 ? 1 : 0);
   gl.uniform4f(U.sk, h, nm ? 1 : 0, dk, haze); gl.uniform3f(U.cv, cov[0], cov[1], cov[2]);
   gl.uniform4f(U.ck, (CAM.eye[0]) / 1000, CAM.eye[2] / 1000, Math.max(0, CAM.eye[1] / (S.vz || 1)) / 1000, 0); gl.uniform4f(U.wd, drift[0], drift[1], 0, lpe);
+  const cl = clmFor(S.t), cr = cl && clmLoad(gl, cl); S.clm = cr || null;
+  if (cr && cr.ready && w) { const here = S.here, la = here.lat, kx = 111.32 * Math.cos(la * D2R), b = CLM.box, x0 = here.x / 1000 + (b[1] - here.lon) * kx, z0 = here.z / 1000 - (b[2] - here.lat) * 110.57, dts = (S.t - cr.t) / 1000;
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, cr.tex); gl.uniform1i(U.cm, 2); gl.activeTexture(gl.TEXTURE0);
+    gl.uniform4f(U.cmb, x0, z0, (b[3] - b[1]) * kx, (b[2] - b[0]) * 110.57); gl.uniform4f(U.cmk, 1, cr.mean, -Math.sin(wa) * ws * dts, Math.cos(wa) * ws * dts); }
+  else gl.uniform4f(U.cmk, 0, 0, 0, 0);
   gl.uniformMatrix3fv(U.gm, false, A.GM); gl.uniform1f(U.mw, S.mw ? Math.max(0, Math.min(1, (nelm() - 4.6) / 1.5)) : 0); gl.uniform1f(U.px, pxr); gl.uniform1f(U.ps, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, S.quad); gl.disableVertexAttribArray(ctx.aC); gl.vertexAttribPointer(ctx.aP, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   // stars, constellation lines, planets, Jupiter's moons, satellites: additive points on the sky
@@ -482,11 +511,12 @@ function panel() {
     ['Names on the sky', !S.names ? 'off' : S.labelled ? `${S.labelled.stars.length ? 'stars: ' + S.labelled.stars.map(esc).join(', ') : 'no named star bright enough and in view'}; ${S.labelled.messier.length ? 'Messier: ' + S.labelled.messier.map(m => 'M ' + m).join(', ') : 'no Messier object bright enough for this sky and in view'} (only what the star limit shows, not behind buildings)` : 'shown with the night sky'],
     ['Satellites', S.satSet ? `${S.satPts.length} sunlit above the horizon now (${S.satSet.recs.length} bright satellites, ${esc(S.satSet.src)})` : S.fetch ? (S.satErr ? esc(S.satErr) : 'orbit data older than 10 days from that time') : 'tick "Fetch" for times away from 3 October'],
     ['Next ISS pass', S.iss ? `${dayL(S.iss.t0)} ${hm(S.iss.t0)}–${hm(S.iss.t1)}: from ${compass(S.iss.az0)} to ${compass(S.iss.az1)}, highest ${f1(S.iss.max)}° at ${hm(S.iss.tmax)} in the ${compass(S.iss.azmax)}` : S.issDone ? 'none above 10° in a dark sky in the next 3 days' : S.satSet ? 'searching…' : '—'],
+    ['Cloud from the satellite', S.clm ? (S.clm.ready ? `EUMETSAT Meteosat cloud mask at ${hm(S.clm.t)} ${tz(S.clm.t)} (${esc(S.clm.src)}): ${Math.round(S.clm.mean * 100)}% cloud within 60 km; it places the cloud of each layer, moved with the wind` : S.clm.err ? 'cloud mask ' + esc(S.clm.err) : 'loading…') : S.fetch ? 'no cloud mask for that time (none before September 2020, none in the future)' : 'tick "Fetch" for the satellite cloud at times away from the photo evening'],
     ['Weather', w ? `cloud ${Math.round(w.cloud_cover)}% (low ${Math.round(w.cloud_cover_low)}%, mid ${Math.round(w.cloud_cover_mid)}%, high ${Math.round(w.cloud_cover_high)}%), visibility ${w.visibility != null ? (w.visibility / 1000).toFixed(0) + ' km' : 'not given'}, humidity ${Math.round(w.relative_humidity_2m)}%, ${f1(w.temperature_2m)} °C, rain ${f1(w.precipitation)} mm/h, wind ${Math.round(w.wind_speed_10m)} km/h from ${Math.round(w.wind_direction_10m)}° (Open-Meteo, ${esc(w.src)})` : S.wxRec && S.wxRec.why ? esc(S.wxRec.why) : S.wxRec && S.wxRec.err ? 'did not load: ' + esc(S.wxRec.err) : S.fetch ? 'loading…' : 'clear sky assumed (no data: tick "Fetch")'],
     ['Thames level', td && td.v != null ? `${td.v.toFixed(2)} m above Ordnance Datum at ${esc(VPS[S.vp].name)}, ${td.trend > .05 ? 'rising' : td.trend < -.05 ? 'falling' : 'near the turn'} (${td.trend > 0 ? '+' : ''}${td.trend.toFixed(2)} m/h); ${td.pts.map(p => `${esc(p.name)} ${p.v.toFixed(2)} m${p.dropped ? ` (${p.dropped} faulty readings left out)` : ''}`).join(', ')}, linear along the river between the gauges; the model's Thames runs from ${td.ends[0].toFixed(2)} m at its west end to ${td.ends[1].toFixed(2)} m at its east end (EA, ${esc(td.src)})` : td && td.why ? esc(td.why) + ' — no prediction shown' : 'no reading (tick "Fetch")'],
   ];
   out.innerHTML = `<p>${esc(VPS[S.vp].name)} · ${dayL(S.t)} ${hm(S.t)} ${tz(S.t)}${S.live ? ' (now)' : ''}${Math.abs(S.t - fromLondon(PHOTO.iso)) < 30 * 60e3 ? ` · ${esc(PHOTO.note)}` : ''}</p><div class="tw"><table>${rows.map(([a, b]) => `<tr><th>${esc(a)}</th><td>${b}</td></tr>`).join('')}</table></div>`;
-  $('skyCredit').innerHTML = 'Positions: <a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a> (Don Cross, MIT). Stars: <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50">Yale Bright Star Catalogue 5th ed.</a> (Hoffleit &amp; Warren 1991, NASA ADC / CDS; public domain) to magnitude 5.5. Constellation lines: <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a> (Olaf Frohn, BSD-3-Clause). Star names: <a href="https://www.iau.org/public/themes/naming_stars/">IAU Working Group on Star Names</a> (IAU Catalog of Star Names, CC BY). Messier objects: <a href="https://heasarc.gsfc.nasa.gov/W3Browse/all/messier.html">NASA HEASARC MESSIER table</a> (public domain). Milky Way: a band computed from galactic coordinates. Satellites: <a href="https://celestrak.org/">CelesTrak</a> GP data, <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (MIT). Weather: <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Tide: Environment Agency flood-monitoring API, this uses Environment Agency flood and river level data from the real-time data API (Beta) (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>); the EA publishes readings only, and published tide predictions (PLA, UKHO) are not under an open licence, so future times show no level.';
+  $('skyCredit').innerHTML = 'Positions: <a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a> (Don Cross, MIT). Stars: <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50">Yale Bright Star Catalogue 5th ed.</a> (Hoffleit &amp; Warren 1991, NASA ADC / CDS; public domain) to magnitude 5.5. Constellation lines: <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a> (Olaf Frohn, BSD-3-Clause). Star names: <a href="https://www.iau.org/public/themes/naming_stars/">IAU Working Group on Star Names</a> (IAU Catalog of Star Names, CC BY). Messier objects: <a href="https://heasarc.gsfc.nasa.gov/W3Browse/all/messier.html">NASA HEASARC MESSIER table</a> (public domain). Milky Way: a band computed from galactic coordinates. Satellites: <a href="https://celestrak.org/">CelesTrak</a> GP data, <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (MIT). Cloud mask: <a href="https://view.eumetsat.int/">contains modified EUMETSAT Meteosat data 2026</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Weather: <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Tide: Environment Agency flood-monitoring API, this uses Environment Agency flood and river level data from the real-time data API (Beta) (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>); the EA publishes readings only, and published tide predictions (PLA, UKHO) are not under an open licence, so future times show no level.';
 }
 // a "Sky" tab in the menu (the main script owns the tabs; ours opens like the others)
 function hookUi() {
@@ -494,7 +524,7 @@ function hookUi() {
   const nmEl = $('nightMode'); if (nmEl) nmEl.addEventListener('change', () => { if (!S.selfNight && S.drive) { S.drive = false; if ($('skyDrive')) $('skyDrive').checked = false; restoreLight(); } });
   const al = $('attribLine'); if (al && !$('attribSky')) { const s = document.createElement('span'); s.id = 'attribSky'; al.appendChild(s); }
 }
-setInterval(() => { const s = $('attribSky'); if (!s) return; const t = S.wxNow ? ' · weather Open-Meteo (CC BY 4.0)' : ''; const k = S.tide && S.tide.v != null && S.tideOn ? ' · tide EA (OGL)' : ''; const c = S.satPts.length ? ' · CelesTrak' : ''; const v = t + k + c; if (s.textContent !== v) s.textContent = v; }, 2000);
+setInterval(() => { const s = $('attribSky'); if (!s) return; const t = S.wxNow ? ' · weather Open-Meteo (CC BY 4.0)' : ''; const k = S.tide && S.tide.v != null && S.tideOn ? ' · tide EA (OGL)' : ''; const c = S.satPts.length ? ' · CelesTrak' : '', m = S.clm && S.clm.ready ? ' · contains modified EUMETSAT Meteosat data 2026 (CC BY 4.0)' : ''; const v = t + k + c + m; if (s.textContent !== v) s.textContent = v; }, 2000);
 
 // public: the main script's hooks, and a test surface
 function sunMoon(date) {   // the old night code's shape: directions in model axes, the moon's phase angle (radians), lit fraction

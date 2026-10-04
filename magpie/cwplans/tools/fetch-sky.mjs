@@ -2,9 +2,9 @@
 // docklands/data/sky/. Method and rules: pipeline.json activity "fetch-sky"; lessons: docklands/README.md
 // "Sky, time, weather and tide".
 //
-//   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [--date 2026-10-03]
+//   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [--date 2026-10-03]
 //
-// With no part named, all seven run. --date picks the evening of the weather and tide snapshots (London date; the
+// With no part named, all eight run. --date picks the evening of the weather and tide snapshots (London date; the
 // snapshot covers that day and the next, so the hours after midnight are in it). Satellites are always the current
 // CelesTrak elements (CelesTrak keeps no history), so run "sats" within a day or two of the date.
 import { writeFileSync, mkdirSync } from 'fs';
@@ -113,4 +113,16 @@ if (want('messier')) {
   objs.sort((a, b) => a[0] - b[0]);
   save('messier.json', { source: 'HEASARC MESSIER table (NASA GSFC), compiled from Sky Catalog 2000.0 vol. 2 (Hirshfeld & Sinnott 1985)', url: 'https://heasarc.gsfc.nasa.gov/W3Browse/all/messier.html', request: u, fetched: today,
     licence: 'NASA HEASARC service, US Government work: no copyright claimed (public domain); positions and magnitudes are facts', fields: ['m', 'ngc', 'ra_deg_j2000', 'dec_deg_j2000', 'vmag', 'size_arcmin', 'type (OC open cluster, GB globular, DI diffuse nebula, PL planetary, S spiral, E elliptical, IR irregular)', 'name'], count: objs.length, objects: objs });
+}
+
+// 8. Cloud mask: EUMETSAT Meteosat (MSG, 0 degree) Cloud Mask (CLM), a Derived Product, so "Core" data under CC BY 4.0
+// (EUMETSAT Data Policy, Articles 4 to 6). Rendered by EUMETView (WMS 1.3.0, colours: white cloud, green clear land,
+// blue clear water) for a box 50.5-52.5 N, 1.6 W-1.6 E (about 220 x 220 km round London), 256 x 256 px, at the
+// 15-minute slot nearest the owner's photo time (22:56 UTC on DATE: 23:00Z). Kept as the PNG the server sends.
+// Attribution: "Contains modified EUMETSAT Meteosat data 2026". The page fetches other times itself (sky.js).
+if (want('clouds')) {
+  const slot = (args.find(a => /^\d{4}-\d\d-\d\dT\d\d:\d\dZ$/.test(a)) || `${DATE}T23:00Z`), box = [50.5, -1.6, 52.5, 1.6];
+  const u = `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=msg_fes:clm&styles=&crs=EPSG:4326&bbox=${box.join(',')}&width=256&height=256&format=image/png&time=${slot.replace('Z', ':00.000Z')}`;
+  const png = await fetchRetry(u), f = `clm-${slot.replace(/[-:]/g, '')}.png`;
+  writeFileSync(join(OUT, f), png); console.log(`wrote docklands/data/sky/${f} (${(png.length / 1024).toFixed(1)} KB) from ${u}`);
 }
