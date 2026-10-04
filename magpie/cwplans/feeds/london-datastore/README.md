@@ -209,6 +209,32 @@ decision -> deferred (F3c), unreadable -> deferred (F10b). Rules, hand rules and
   rescues 2ogkn (incident records at addresses), and the Assembly Member gifts register e68wz.
 - Also re-tried with the new readers: the deferred datasets that the probe could not read (over the size caps).
 
+**Result (harvest-log.json, 223 datasets run, 2026-10-04):** harvested 183 (143.6 MB of zone rows and features), no zone
+rows 26, documents only 3, not readable 1 (em83m, system files only), deferred by hand 6 (2r401 AQMesh time series
+42 MB; 2ry01 LAEI 2008 20 m concentration grids, over a 12 GB heap; emxjy 2001 commissioned tables; epr1g Code-Point
+Open 2014, the ONSPD August 2026 positions are held; exynl AMR 14 and v8o0m AMR 13, their LDD extracts repeat the 2020
+extract), held for the owner 4. Harvested by theme (index.json): people, housing and census 63; buildings, land and
+planning 41; environment, air and energy 34; occupants and organisations 19; transport 14; events and works 7;
+heritage and views 1; other 4.
+
+**Final state of all 1,305 datasets after the third walk:**
+
+| state | datasets | rule |
+|---|---|---|
+| harvested | 219 | F2 |
+| listed-for-harvest | 4 | F6: the LFB incident, mobilisation, animal rescue and lift entrapment records, held for the owner |
+| not-relevant | 565 | F8 498; F8b no zone rows when read 26; F9 37; F3c by hand 4 |
+| not-open (licence) | 346 | F3 |
+| deferred | 147 | F10 66; F10b 1; F4 58; F7 14; F3c by hand 7 (the 6 above and e68wz, the Assembly Member gifts register, held for the owner); F3b 1 |
+| unavailable | 16 | F4 |
+| sensitive | 8 | F1 |
+| **sum** | **1,305** | |
+
+Joins to the building registry (`tools/join-lds.mjs`, `registry/sources/lds/building-links.json`): heat demand 1,308
+links on 808 buildings by TOID (1,229 high, 79 medium); solar potential 1,266 links on 763 buildings by TOID (1,205
+high, 61 medium); venues 13 (11 by UPRN, high; 2 by position, low); other point records 73 on 35 buildings (position in
+the outline, medium); brownfield 1 (low); Census LSOA context for 1,129 buildings (position, high; 25 LSOAs).
+
 Browse: the atlas view "London Datastore" (https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#lds), with
 a map layer per dataset or per theme, and the building records (heat demand, solar potential, Census context of the
 LSOA, venues and other records placed in the building) in the atlas and on the 3D page

@@ -110,7 +110,8 @@ open, not sensitive dataset whose metadata relevance is unknown, london-borough 
   link failed the QA check); F5 unavailable; F6 listed-for-harvest (with size); F7 deferred, documents only; F8
   not-relevant by the data; F9 not-relevant, other area; F10 deferred, not readable; F11 not probed. The triage prints
   the counts and checks that they sum to the catalogue (1,305 on 2026-10-04: harvested 35, listed 219, not-relevant
-  539, not-open 346, deferred 142, unavailable 16, sensitive 8).
+  539, not-open 346, deferred 142, unavailable 16, sensitive 8; after the rule-driven harvest, same day: harvested 219,
+  listed 4 (held for the owner), not-relevant 565 (F8b 26), not-open 346, deferred 147, unavailable 16, sensitive 8).
 
 ## Harvest
 

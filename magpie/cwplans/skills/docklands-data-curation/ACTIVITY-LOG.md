@@ -776,6 +776,12 @@ central tower - do we have an index of these?"
   "London Datastore" (#lds) with final-state counts, datasets by theme, a map layer per dataset or per theme. Faults
   F36-F41 catalogued. Tests: atlas #lds, map layer and dossier at 1600x900 DPR 1 and 390x844 DPR 3; 3D rotherhithe,
   greenland, pier at both sizes: no console error, screenshots looked at.
+- Batches 1-9 done (223 datasets run): harvested 183 (143.6 MB), no zone rows 26, documents only 3, not readable 1,
+  deferred by hand 6 (2r401, 2ry01, emxjy, epr1g, exynl, v8o0m; reasons in harvest-log.json), held for the owner 4
+  (2g980, em8xy, 24r65, 2ogkn; e68wz stays deferred F3c). Final states of the 1,305: harvested 219, listed 4,
+  not-relevant 565, not-open 346, deferred 147, unavailable 16, sensitive 8. Joins rerun on the final index: other
+  point records 73 links on 35 buildings (was 31). Trap: a local `.git/info/exclude` rule hid `registry/sources/` from
+  `git add`; use `git add -f` for the join outputs and check `git status --ignored`.
 
 ## 2026-10-04 — Open-data portals walk, batch 2: borough portals, Nomis, ONS Open Geography, national sources
 - Adapters `tools/portals/{boroughs,nomis,onsgeo,national}.mjs`; skill `cwplans-open-portals` extended; faults F42-F44.
