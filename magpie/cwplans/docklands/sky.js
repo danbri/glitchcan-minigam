@@ -13,7 +13,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 // committed snapshots for the owner's photo evening (3 October 2026), London time 3 Oct 00:00 to 5 Oct 00:00
 const SNAP = { date: '2026-10-03', t0: Date.parse('2026-10-02T23:00Z'), t1: Date.parse('2026-10-04T23:00Z') };
 // the photo time solved from the moon in the owner's photos (reference/night-2026-10-03/README.md)
-const PHOTO = { iso: '2026-10-03T23:56', note: 'photo time: 3 October 2026, 23:56 BST (± 3 min), solved from the moon in the owner\'s photos' };
+const PHOTO = { iso: '2026-10-03T23:56', note: 'photo time: 3 October 2026, 23:56 BST (± 4 min), solved from the moon in the owner\'s photos' };
 
 // ---------- London time
 const LDN = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
@@ -219,7 +219,7 @@ const NOISE = 'float hs(vec2 p){p=mod(p,289.);vec3 q=fract(vec3(p.xyx)*.1031);q+
   'float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*vn(p);p=p*2.03+vec2(17.1,9.2);a*=.5;}return s/.97;}';
 const SKY_FS = PRE + 'varying vec2 n;uniform vec3 cr;uniform vec3 cu;uniform vec3 cf;uniform vec2 tn;uniform vec3 sd;uniform vec3 md;uniform vec3 mx;uniform vec4 mp;uniform vec4 sk;uniform vec3 cv;uniform vec4 ck;uniform vec4 wd;uniform mat3 gm;uniform float mw;uniform float ps;uniform float px;' + NOISE +
   // one cloud layer at height H km (eye at ck.xy km), feature scale sc km; far away the cover tends to its mean
-  'float layer(vec3 d,float H,float sc,float cov,vec2 dr){if(cov<.01)return 0.;float t=(H-ck.z)/max(d.y,.004);vec2 p=(ck.xy+d.xz*t+dr)/sc;float f=fbm(p),th=1.-cov;float a=smoothstep(th-.13,th+.13,f*1.08-.04);return mix(a,cov,smoothstep(.12,.015,d.y));}' +
+  'float layer(vec3 d,float H,float sc,float cov,vec2 dr){if(cov<.01||ck.z>H)return 0.;float t=(H-ck.z)/max(d.y,.004);vec2 p=(ck.xy+d.xz*t+dr)/sc;float f=fbm(p),th=1.-cov;float a=smoothstep(th-.13,th+.13,f*1.08-.04);return mix(a,cov,smoothstep(.12,.015,d.y));}' +
   'void main(){vec3 d=normalize(cf+n.x*tn.x*cr+n.y*tn.y*cu);float e=d.y,ee=max(e,0.),h=sk.x,cs=dot(d,sd),dk=sk.z;' +
   'if(ps<.5){' +
   // night: the city's sky glow, measured from the owner's photos (README Night)
@@ -229,6 +229,7 @@ const SKY_FS = PRE + 'varying vec2 n;uniform vec3 cr;uniform vec3 cu;uniform vec
   'vec3 twc=mix(vec3(.10,.10,.24),vec3(1.,.46,.16),.5+.5*az)*exp(-ee*5.)*(.2+.8*smoothstep(-8.,0.,h))*tw*(.35+.65*az*az);' +
   'vec3 c=mix(ni,dy,dk)+twc*(1.-.6*sk.y);' +
   'c=mix(c,mix(ni*1.15,vec3(.78,.80,.82),dk),sk.w*exp(-ee*7.));' +   // haze from the visibility
+  'c=mix(c,mix(vec3(.09,.08,.07),vec3(.50,.55,.60),dk),smoothstep(0.,-.12,e)*.7);' +   // below the horizon (beyond the model's edge): distant ground in haze
   // the Milky Way band from galactic coordinates (no outline catalogue: README Sky)
   'if(mw>0.&&e>0.){vec3 g=gm*d;float b=asin(clamp(g.z,-1.,1.)),l=atan(g.y,g.x);float bd=exp(-b*b/.03)*(.3+.7*exp(-l*l/1.4))+.9*exp(-(l*l+b*b*4.)/.045);' +
   'bd*=1.-.6*exp(-b*b/.0011)*smoothstep(1.7,.6,abs(l));bd*=.6+.8*fbm(vec2(l*7.,b*9.)+3.);c+=vec3(.55,.6,.72)*bd*mw*.075*smoothstep(0.,.12,e);}' +
@@ -239,7 +240,7 @@ const SKY_FS = PRE + 'varying vec2 n;uniform vec3 cr;uniform vec3 cu;uniform vec
   'o.rgb+=vec3(.35,.33,.30)*mp.z*exp(-a*a/(R*R*10.))*.35;' +   // a faint halo
   'if(a<R*1.15){float u=dot(q,mx)/R,v=dot(q,ya)/R,s=sqrt(max(0.,1.-v*v)),lit=smoothstep(-.05,.05,u+mp.x*s),al=smoothstep(1.07,.93,a/R);' +
   'float ma=.82+.22*fbm(vec2(u,v)*2.2+5.)-.18*smoothstep(.55,.75,fbm(vec2(u,v)*1.3+11.));vec3 lc=vec3(1.,.95,.84)*ma*mix(vec3(1.,.72,.45),vec3(1.),smoothstep(.0,.25,md.y));' +
-  'o=vec4(mix(vec3(.035,.035,.04),lc,lit)*al,al);}}' +
+  'o=vec4(lc*lit*al+vec3(.012,.013,.016)*al,al*lit);}}' +
   'if(e>.004){float lo=layer(d,1.0,1.7,cv.x,wd.xy),mi=layer(d,3.5,4.5,cv.y,wd.xy*1.6),hi=layer(d,8.,10.,cv.z,wd.xy*2.4)*.55;' +
   'float day=dk,mo=mp.w*mp.z*smoothstep(-.02,.1,md.y);vec3 mg=vec3(.7,.75,.85)*mo*(.05+.45*exp(-(1.-ca)*60.));' +
   'vec3 sunl=vec3(1.,.97,.92)*(.55+.45*max(cs,0.));vec3 tws=mix(vec3(1.,.5,.25),vec3(1.),smoothstep(2.,15.,h));' +
@@ -338,7 +339,8 @@ function after(ctx) {
     const c = $('c'); c.parentNode.insertBefore(ov, c.nextSibling); const st = document.createElement('style'); st.textContent = 'body.capture #skyOv{display:none}'; document.head.appendChild(st); }
   const W = ctx.cssW, H = ctx.cssH, dpr = Math.min(2, devicePixelRatio || 1); if (ov.width !== Math.round(W * dpr) || ov.height !== Math.round(H * dpr)) { ov.width = Math.round(W * dpr); ov.height = Math.round(H * dpr); }
   const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-  if (!S.azl || ctx.pix || S.vp === 'camera' || !ctx.MVP) return;
+  if (!S.azl || ctx.pix || S.vp === 'camera' || !ctx.MVP || !S.ctx.CAM) return;
+  const E = S.ctx.CAM.eye; if (Math.hypot(E[0] - S.here.x, E[2] - S.here.z) < 500) return;   // from the viewpoint itself the lines on the ground only confuse
   const M = ctx.MVP, vz = ctx.VZ || 1, here = S.here, pr = (x, y, z) => { const c = [0, 1, 2, 3].map(i => M[i] * x + M[4 + i] * y * vz + M[8 + i] * z + M[12 + i]); return c[3] > 1 ? [(c[0] / c[3] * .5 + .5) * W, (1 - (c[1] / c[3] * .5 + .5)) * H] : null; };
   const line = (az, col, label, dash) => {
     const d = dirOf(0, az), pts = []; for (let k = 0; k <= 48; k++) { const s = 6000 * (k / 48) ** 1.6; pts.push(pr(here.x + d[0] * s, here.y, here.z + d[2] * s)); }
