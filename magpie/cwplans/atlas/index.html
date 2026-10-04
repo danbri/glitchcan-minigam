@@ -33,6 +33,15 @@ button,select,label,nav,.tabs{-webkit-user-select:none;user-select:none;touch-ac
 #mapwrap.attr-folded .leaflet-control-attribution { display: none; }
 #attrI { position: absolute; z-index: 800; right: 6px; bottom: 6px; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font: italic 600 14px/1 Georgia, serif; cursor: pointer; }
 #attrI[hidden] { display: none; }
+/* locate button (Leaflet control, bottom right above the credit): outline = off, blue = located, filled = centred */
+.loc-ctl.leaflet-bar { margin-bottom: 38px; border-radius: 50%; }
+.loc-ctl button { width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--panel); color: #8a929c; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
+.loc-ctl button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.loc-ctl button .f { fill: currentColor; stroke: none; }
+.loc-ctl button[data-s=located], .loc-ctl button[data-s=centred] { color: #1a73e8; }
+.loc-ctl button[data-s=waiting] svg { animation: locPulse 1s ease-in-out infinite; } @keyframes locPulse { 50% { opacity: .35; } }
+#locMsg { position: absolute; z-index: 900; left: 50%; transform: translateX(-50%); top: 10px; width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; box-shadow: 0 2px 8px #0006; }
+#locMsg[hidden] { display: none; }
 button, select, input { font: inherit; color: inherit; }
 .small { font-size: .85em; color: var(--muted); }
 .num { font-variant-numeric: tabular-nums; }
@@ -179,6 +188,7 @@ svg .muted { fill: var(--muted); }
     </details>
   </div>
   <p class="small">Tap a feature for its record. Basemap and building outlines: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL). Other layers: see <a href="#data">Data and licences</a>.</p>
+  <p class="small">Your location: the round button at the bottom right of the map asks for it only when you tap it, then centres the map on a blue dot (a drag stops following; hold the button to turn it off). The page sends your position nowhere, stores it nowhere and does not put it in the address. As with any place you look at, the map tiles around it come from tile.openstreetmap.org.</p>
 </section>
 
 <section class="view" id="v-buildings">
@@ -898,6 +908,44 @@ INIT.map = () => {
     const fold = () => { clearTimeout(t); wrap.classList.add('attr-folded'); btn.hidden = false; };
     const show = () => { wrap.classList.remove('attr-folded'); btn.hidden = true; clearTimeout(t); t = setTimeout(fold, 5000); };
     btn.onclick = e => { e.stopPropagation(); show(); }; map.on('movestart zoomstart click', fold); show(); }
+  // locate (Google Maps convention): tap = ask (only now) and centre on a blue dot with its accuracy circle; a drag stops
+  // following and keeps the dot; tap again to centre; hold to turn off. The position is not sent, stored or put in the URL.
+  { const IC = { off: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>', centred: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/><circle class="f" cx="12" cy="12" r="3.6"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>' };
+    IC.waiting = IC.located = IC.off;
+    const TXT = { off: 'Show my location', waiting: 'Finding your location', located: 'Centre the map on my location', centred: 'Centred on my location (hold to turn off)' };
+    const S = { mode: 'off', ll: null, acc: 0, dot: null, ring: null, err: null }, msg = document.createElement('div'); msg.id = 'locMsg'; msg.hidden = true; msg.setAttribute('role', 'status'); $('mapwrap').appendChild(msg);
+    const say = t => { msg.textContent = t || ''; msg.hidden = !t; clearTimeout(say.t); if (t) say.t = setTimeout(() => { msg.hidden = true; }, 9000); };
+    let b; const set = m => { S.mode = m; b.dataset.s = m; b.innerHTML = IC[m]; b.setAttribute('aria-label', TXT[m]); b.title = TXT[m]; b.setAttribute('aria-pressed', String(m === 'centred')); };
+    const C = L.Control.extend({ options: { position: 'bottomright' }, onAdd() { const d = L.DomUtil.create('div', 'leaflet-bar loc-ctl'); b = L.DomUtil.create('button', '', d); b.type = 'button'; L.DomEvent.disableClickPropagation(d); return d; } });
+    map.addControl(new C()); set('off');
+    const start = () => map.locate({ watch: true, setView: false, enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
+    const off = () => { map.stopLocate(); for (const k of ['dot', 'ring']) if (S[k]) { map.removeLayer(S[k]); S[k] = null; } S.ll = null; set('off'); };
+    let following = false;
+    map.on('locationfound', e => {
+      S.err = null; const first = !S.ll; let ll = e.latlng;
+      if (S.ll && S.ll.distanceTo(ll) < Math.max(30, 2 * e.accuracy + S.acc)) { const k = Math.min(.8, Math.max(.25, S.acc / (S.acc + e.accuracy))); ll = L.latLng(S.ll.lat + (ll.lat - S.ll.lat) * k, S.ll.lng + (ll.lng - S.ll.lng) * k); }   // jitter smoothing
+      S.ll = ll; S.acc = e.accuracy;
+      if (!S.ring) { S.ring = L.circle(ll, { radius: S.acc, color: '#1a73e8', weight: 1, opacity: .55, fillColor: '#1a73e8', fillOpacity: .15, interactive: false }).addTo(map); S.dot = L.circleMarker(ll, { radius: 8, color: '#fff', weight: 2.5, fillColor: '#1a73e8', fillOpacity: 1, interactive: false }).addTo(map); }
+      else { S.ring.setLatLng(ll).setRadius(S.acc); S.dot.setLatLng(ll); }
+      if (S.mode === 'waiting') { set('centred'); following = true; map.setView(ll, Math.max(map.getZoom(), 17)); following = false; }
+      else if (S.mode === 'centred') { following = true; map.panTo(ll, { animate: !first }); following = false; }
+    });
+    map.on('locationerror', e => {
+      S.err = e.code; if (S.ll && e.code !== 1) return;   // a later timeout while we have a fix: keep the dot
+      off();
+      say(e.code === 1 ? 'Location is blocked for this page. To allow it, open the site settings (the icon left of the address) and set Location to Allow; on an iPhone also Settings > Privacy & Security > Location Services > Safari Websites.' : e.code === 3 ? 'Finding your location took too long. Tap the button to try again.' : 'Your location is not available now. Check that location is on, then tap the button to try again.');
+    });
+    map.on('dragstart', () => { if (S.mode === 'centred' && !following) set('located'); });
+    b.onclick = () => {
+      if (b.dataset.lp) { delete b.dataset.lp; return; }
+      if (S.mode === 'off') { if (!window.isSecureContext) return say('Location works only on a secure (https) page.'); if (!navigator.geolocation) return say('This browser does not give a location.'); say(''); set('waiting'); start(); }
+      else if (S.mode === 'waiting') off();
+      else { set('centred'); if (S.ll) map.setView(S.ll, Math.max(map.getZoom(), 16)); }
+    };
+    { let t = 0; b.addEventListener('pointerdown', () => { delete b.dataset.lp; clearTimeout(t); t = setTimeout(() => { if (S.mode !== 'off') { off(); b.dataset.lp = '1'; say('Location off'); } }, 800); });
+      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => clearTimeout(t)); }
+    document.addEventListener('visibilitychange', () => { if (S.mode === 'off') return; if (document.hidden) map.stopLocate(); else start(); });
+    window.__atlasLocate = { get state() { return { mode: S.mode, ll: S.ll && [+S.ll.lat.toFixed(6), +S.ll.lng.toFixed(6)], acc: S.acc, err: S.err, msg: msg.hidden ? '' : msg.textContent }; } }; }
   const canvas = L.canvas({ padding: .3 });
   const pop = (html, ll) => L.popup({ maxWidth: 320 }).setLatLng(ll).setContent(html).openOn(map);
 

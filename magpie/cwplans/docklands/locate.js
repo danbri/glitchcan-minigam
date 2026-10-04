@@ -205,7 +205,7 @@ btn.onclick = () => {
   else if (m === 'eye') { S.set = null; free(); orbitAt(S.fix); setMode('centred'); }
 };
 // long press on the button: turn location off (and on a phone, the usual way to stop is the same button)
-{ let t = 0; btn.addEventListener('pointerdown', () => { clearTimeout(t); t = setTimeout(() => { if (S.mode !== 'off') { off(); toast('Location off'); btn.dataset.lp = '1'; } }, 800); });
+{ let t = 0; btn.addEventListener('pointerdown', () => { delete btn.dataset.lp; clearTimeout(t); t = setTimeout(() => { if (S.mode !== 'off') { off(); toast('Location off'); btn.dataset.lp = '1'; } }, 800); });
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) btn.addEventListener(ev, () => clearTimeout(t));
   btn.addEventListener('click', e => { if (btn.dataset.lp) { delete btn.dataset.lp; e.stopImmediatePropagation(); } }, true); }
 eyeBtn.onclick = () => {
