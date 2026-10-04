@@ -185,7 +185,37 @@ Choices made by hand from the ranked list (also in the tool's `HARVEST` table):
   Flood Map for Planning, which is the better source.
 - Southwark's own Conservation Areas (2rjn1, ranked first) is not taken: the London-wide set (emqwg) has them.
 
-## Ranked backlog (open, relevant, not harvested: 219 listed for harvest)
+## Third walk: the listed datasets harvested by rules (2026-10-04)
+
+Owner, 2026-10-04: "Keep working thru datasets". The 219 datasets listed for harvest were run through
+`tools/lds-harvest-auto.mjs` (https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/lds-harvest-auto.mjs):
+written rules choose the resources, every row and feature is read, and only the zone's rows and features are kept.
+The outcome of every dataset is in `harvest-log.json`
+(https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/london-datastore/harvest-log.json) and triage reads it:
+no zone rows -> not-relevant (rule F8b, with the counts read as evidence), documents only -> deferred (F7), a hand
+decision -> deferred (F3c), unreadable -> deferred (F10b). Rules, hand rules and traps: skill `cwplans-london-datastore`,
+"Rule-driven harvest". Faults found: F36 to F41.
+
+- Zone row keys: zone OA/LSOA/MSOA/ward codes of every vintage, the old 00BGGG ward codes and the 2011 merged wards
+  (both added to `zone-codes.json` by `refs-old-wards`), postcodes and postcode sectors in profiled columns, UPRNs, TOIDs,
+  coordinates in the box, and for tables keyed by names only the zone's station, town centre and Opportunity Area names
+  (`zone-names.json`). Each kept row carries the key that matched (`zone_keys`).
+- Readers: CSV streamed and not stored, ExcelJS for large workbooks (the 75-82 MB housing-led projection workbooks),
+  SheetJS for xls/ods, zips entry by entry, GeoPackages, GeoJSON, shapefiles; a big zip of documents is listed by HTTP
+  Range and not downloaded.
+- Size: polygons over 1,000 vertices cut to the zone plus 500 m; LAEI 20 m grids thinned to 100 m; the noise bands and
+  local plan layers rounded and thinned; tables where points would be larger. Sizes per dataset are in the log.
+- Held for the owner (not run): lift entrapments 2g980, LFB incident records em8xy, LFB mobilisations 24r65, LFB animal
+  rescues 2ogkn (incident records at addresses), and the Assembly Member gifts register e68wz.
+- Also re-tried with the new readers: the deferred datasets that the probe could not read (over the size caps).
+
+Browse: the atlas view "London Datastore" (https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#lds), with
+a map layer per dataset or per theme, and the building records (heat demand, solar potential, Census context of the
+LSOA, venues and other records placed in the building) in the atlas and on the 3D page
+(https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/). Index:
+https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/london-datastore/index.json
+
+## Ranked backlog before the third walk (219 listed for harvest; now run through the rules above)
 
 `triage.json`: `state` = `listed-for-harvest`, ranked by `score`; `state_reason` gives the rule and the size. The head,
 by hand:
