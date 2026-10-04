@@ -114,6 +114,31 @@ is a small server (or a scheduled fetch) that subscribes with the zone bounding 
 names and MMSI of commercial vessels are public broadcasts, but small private craft can identify their owners: treat
 those like personal data under the cwplans exception and do not show them outside scoping.
 
+## Priority list: AIS sources named by the owner (2026-10-04)
+
+The owner asked for these on the priority list. The notes are the owner's summary plus how each fits this project;
+verify the terms and the coverage at the source before any fetch, and record the result here.
+
+1. **Open Waters AIS** (https://openwaters.io/ais/). First to check. Real-time stream (WebSocket, SSE, NMEA) and
+   GeoJSON snapshots for a bounding box; code MIT; data re-served under each source's own terms, with the source named
+   on every event. To check: (a) coverage of the zone bounding box (the Thames needs UK receivers, so probably the
+   volunteer network or AISHub/aisstream, not the Norwegian or Finnish sources); (b) the terms page and the free-tier
+   rate and area limits; (c) whether the per-event source field lets us keep only events whose own terms are open.
+   Licence fit: volunteer receptions CC0 (allowed); the volunteer aggregate ODbL (share-alike: OSM is the only
+   share-alike source allowed without the owner's agreement, so ask first, as for adsb.lol); events from AISHub or
+   aisstream (no formal open terms: not kept). Small private craft can identify their owners: treat as personal data
+   under the cwplans exception, scoping only.
+2. **Kystverket / BarentsWatch** (Norwegian Coastal Administration). NLOD 2.0, open, attribution, no registration for
+   the open tier; raw TCP stream, APIs, history in Kystdatahuset. Licence fit: allowed. Coverage: Norwegian waters only,
+   so no Thames positions. Use: a test stream for the AIS pipeline (decode, filter by box, write facts), and the
+   Norwegian legs of ships that also call at London (match by MMSI), if that is wanted.
+3. **US Marine Cadastre / NOAA** (https://marinecadastre.gov/ais/). US government work, public domain in the US;
+   historical bulk files (GeoParquet) and AccessAIS extracts. Licence fit: allowed. Coverage: US waters only. Use: a
+   reference for file formats, vessel-type codes and track cleaning methods; no zone data.
+4. **Global Fishing Watch APIs**. Processed AIS products (fishing effort, presence, vessel identity); free for
+   non-commercial use (CC BY-NC style), key required. Licence fit: non-commercial is a restricted licence, which the
+   cwplans licence limit excludes; needs the owner's decision before any use. Coverage: global, but aimed at fishing.
+
 ## Proposed use on the 3D page (not built)
 
 - River buses as moving markers between piers, driven by the timetable and corrected by live TfL arrivals (CORS, no

@@ -663,3 +663,8 @@ central tower - do we have an index of these?"
     `registry-wikidata.mjs` through `tools/lib.mjs` `qlever()`.
 15. London Datastore: (backlog head harvested: town centres, Opportunity Areas, high streets, BIDs, census, heat,
     solar) next: Areas of Intensification, Biodiversity Hotspots, LGIF hex results; join heat and solar rows by TOID; join cultural venues by UPRN from the amended copy (high and medium; not `uprn_suspect`, F22) and brownfield sites by address into the registry.
+
+## 2026-10-04 — AIS priority list (coordinator)
+- Owner named four AIS sources for the priority list: Open Waters AIS, Kystverket/BarentsWatch, US Marine Cadastre/NOAA,
+  Global Fishing Watch. Added a "Priority list" section with licence fit and coverage to the cwplans-river-and-water skill
+  and to feeds/river/README.md. Nothing fetched yet. Open Waters first: check UK coverage, terms, per-event source filter.
