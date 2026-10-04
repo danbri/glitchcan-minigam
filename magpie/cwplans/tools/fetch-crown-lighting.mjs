@@ -7,6 +7,7 @@
 //   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-crown-lighting.mjs              # all steps
 //   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-crown-lighting.mjs --press      # CWG sitemaps + archived press pages
 //   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-crown-lighting.mjs --commons    # Commons night photos + thumbnails
+//   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-crown-lighting.mjs --thumbs     # only the missing thumbnails
 //   node magpie/cwplans/tools/fetch-crown-lighting.mjs --no-fetch                         # rebuild outputs from the cache
 //
 // Out (committed): registry/sources/lighting/press-pages.json, registry/sources/lighting/commons-photos.json.
@@ -21,8 +22,9 @@ const CACHE = join(RAW, 'registry', 'lighting');
 for (const d of [OUT, CACHE, join(CACHE, 'press'), join(CACHE, 'thumbs')]) mkdirSync(d, { recursive: true });
 const args = new Set(process.argv.slice(2));
 const NOFETCH = args.has('--no-fetch');
-const doPress = args.has('--press') || !args.has('--commons');
-const doCommons = args.has('--commons') || !args.has('--press');
+const THUMBS_ONLY = args.has('--thumbs'); // reuse the cached API answers, fetch only missing thumbnails
+const doPress = args.has('--press') || !(args.has('--commons') || args.has('--thumbs'));
+const doCommons = args.has('--commons') || args.has('--thumbs') || !args.has('--press');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const today = new Date().toISOString().slice(0, 10);
 const log = [];
@@ -42,7 +44,7 @@ async function fetchText(url, { tries = 4, binary = false } = {}) {
       if (r.ok) return { status: r.status, body: binary ? Buffer.from(await r.arrayBuffer()) : await r.text(), url: r.url };
       const ra = Number(r.headers.get('retry-after')) || 0;
       log.push(`${r.status} ${url}`);
-      if (r.status !== 429 && r.status < 500) return { status: r.status };
+      if ((r.status !== 429 && r.status < 500) || i === tries - 1) return { status: r.status };
       await sleep(Math.min(600, ra || 10 * 3 ** i) * 1000);
     } catch (e) {
       log.push(`error ${e.cause?.code || e.message} ${url}`);
@@ -126,7 +128,7 @@ async function press() {
         rec.tried.push({ variant: v, availability: a.status, snapshot: snap?.timestamp || null });
         if (!snap?.available) continue;
         const id = `https://web.archive.org/web/${snap.timestamp}id_/${v}`;
-        const p = await fetchText(id);
+        const p = await fetchText(id, { tries: 2 });
         if (p.body) {
           writeFileSync(cacheHtml, p.body);
           Object.assign(rec, { status: 'archived', archive_url: `https://web.archive.org/web/${snap.timestamp}/${v}`, archive_timestamp: snap.timestamp, fetched: today });
@@ -166,6 +168,7 @@ async function press() {
 const CATEGORIES = ['Category:One Canada Square at night', 'Category:Canary Wharf at night'];
 const SEARCHES = ['One Canada Square night', 'Canary Wharf night skyline', 'Canary Wharf illuminated', 'Isle of Dogs skyline night'];
 const API = 'https://commons.wikimedia.org/w/api.php';
+const PLACE = /canary wharf|canada square|docklands|isle of dogs|west india|millwall|blackwall|cabot square|poplar/i;
 const II = 'prop=imageinfo&iiprop=extmetadata|url&iiurlwidth=960&iiextmetadatafilter=DateTimeOriginal|LicenseShortName|Artist|ImageDescription';
 const strip = s => (s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 // The API gives imageinfo with thumbnails for at most 50 files per request: follow "continue" and merge by page id.
@@ -189,7 +192,7 @@ async function commonsQuery(q) {
 async function commons() {
   const f = join(CACHE, 'commons-pages.json');
   let all = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {};
-  if (!NOFETCH) {
+  if (!NOFETCH && !THUMBS_ONLY) {
     for (const c of CATEGORIES) {
       const p = await commonsQuery(`generator=categorymembers&gcmtype=file&gcmlimit=200&gcmtitle=${encodeURIComponent(c)}`);
       if (p) for (const x of p) all[x.title] = { ...all[x.title], ...x, found_by: c }; else log.push(`commons category failed ${c}`);
@@ -201,9 +204,15 @@ async function commons() {
     writeFileSync(f, JSON.stringify(all));
   }
   const photos = [];
-  for (const x of Object.values(all)) {
+  let thumbsStopped = false;
+  // thumbnails most likely to show One Canada Square's top first
+  const open = x => !/BY-SA|GFDL/i.test(x.imageinfo?.[0]?.extmetadata?.LicenseShortName?.value || 'BY-SA');
+  const rank = x => (open(x) ? 0 : 4) + (x.found_by === CATEGORIES[0] ? 0 : 2) + (/canada square|skyline|pyramid/i.test(x.title) ? 0 : 1);
+  for (const x of Object.values(all).sort((a, b) => rank(a) - rank(b))) {
     const ii = x.imageinfo?.[0]; if (!ii) continue;
     const em = ii.extmetadata || {};
+    // a search hit must be about the place: "Canada Square" alone matched Toronto and Mississauga
+    if (!x.found_by.startsWith('Category:') && !PLACE.test(`${x.title} ${strip(em.ImageDescription?.value)}`)) continue;
     const dt = strip(em.DateTimeOriginal?.value);
     const lic = strip(em.LicenseShortName?.value);
     const rec = {
@@ -213,9 +222,12 @@ async function commons() {
         : /^(CC0|Public domain|PDM|CC BY \d|CC BY$)/i.test(lic) ? 'fact; image may be used with attribution' : 'fact only',
     };
     const thumb = join(CACHE, 'thumbs', `${sha(x.title)}.jpg`);
-    if (!NOFETCH && ii.thumburl && !existsSync(thumb)) {
-      const t = await fetchText(ii.thumburl, { binary: true });
+    // upload.wikimedia.org answers 429 after a few dozen thumbnails from this container (2026-10-04: 31, then
+    // nothing for 20 minutes): stop at the first refusal and leave the rest for a later run.
+    if (!NOFETCH && !thumbsStopped && ii.thumburl && !existsSync(thumb)) {
+      const t = await fetchText(ii.thumburl, { binary: true, tries: 1 });
       if (t.body) writeFileSync(thumb, t.body);
+      else { thumbsStopped = true; log.push(`thumbnails stopped at ${t.status} (${x.title}); run again later`); }
     }
     rec.thumb_cached = existsSync(thumb) ? `data/raw/registry/lighting/thumbs/${sha(x.title)}.jpg` : null;
     photos.push(rec);

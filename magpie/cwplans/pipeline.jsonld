@@ -3872,6 +3872,63 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-crown-lighting",
+   "@type": "prov:Activity",
+   "rdfs:label": "fetch-crown-lighting",
+   "dct:description": "Finds the press pages and dated open photos that can say which colour a Canary Wharf crown (One Canada Square's halo first) showed on a given night: CWG sitemaps filtered by slug, archived copies of those pages, and Wikimedia Commons night photos with capture date and licence. The colour itself is judged by hand (activity crown-lighting-judgement).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-press",
+     "dcat:accessURL": "https://cwg.com/press-release-sitemap.xml, https://cwg.com/community_news-sitemap.xml (direct); https://web.archive.org/web/2026id_/https://canarywharf.com/news-sitemap.xml",
+     "dct:description": "Yoast sitemaps; every <loc> outside /wp-content/"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-press",
+     "dcat:accessURL": "https://archive.org/wayback/available?url=… then https://web.archive.org/web/{timestamp}id_/{url}",
+     "dct:description": "the closest archived copy of each candidate page, under group.canarywharf.com and cwg.com"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-meta",
+     "dcat:accessURL": "https://commons.wikimedia.org/w/api.php",
+     "dct:description": "generator=categorymembers (Category:One Canada Square at night, Category:Canary Wharf at night) and generator=search in the File namespace (4 searches, filetype:bitmap); prop=imageinfo, extmetadata DateTimeOriginal|LicenseShortName|Artist|ImageDescription, iiurlwidth=960; continue followed"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-meta",
+     "dcat:accessURL": "https://upload.wikimedia.org/ (thumburl)",
+     "dct:description": "960 px thumbnails, kept locally only"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/press-pages.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/commons-photos.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/registry/lighting/%20(sitemaps,%20archived%20pages,%20colour%20sentences,%20Commons%20API%20answers,%20thumbnails,%20request%20log)"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/fetch-crown-lighting.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-crown-lighting.mjs [--press] [--commons] [--thumbs] [--no-fetch]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Slug rule: lit, illuminated, halo, pyramid, turns-<colour>, lights-up-<colour>, light-it-, goes-<colour> (the regex is written into press-pages.json); plus a hand list of 5 pages found by search.",
+    "Pages are read only as Internet Archive id_ copies (cwg.com and canarywharf.com answer scripts with an Imperva challenge; their sitemaps are served and robots.txt allows them). Kept in the committed file: URL, slug date (ddmmyy code at the end of the slug), archive URL, title, published time, the colour words that occur in sentences naming One Canada Square, a pyramid, halo, crown or tower. Page text stays in the local cache.",
+    "Commons: a search hit is kept only if its title or description names the place (Canary Wharf, Canada Square, Docklands, Isle of Dogs, West India, Millwall, Blackwall, Cabot Square, Poplar); category members are kept. Use = fact only for CC BY-SA or GFDL; no image is committed.",
+    "Politeness: one request at a time; at least 3 s per host for cwg.com and web.archive.org, 2 s for archive.org and the Commons API, 3 s for upload.wikimedia.org; up to 4 tries with backoff (Retry-After, else 10, 30, 90 s, at most 600 s) on 429, 5xx and resets; 2 tries for an archive copy; thumbnails stop at the first refusal (2026-10-04: 429 after 31). Failures are written to data/raw/registry/lighting/log-<date>.txt and to the page status.",
+    "User-Agent glitchcan-cwplans/0.1 (https://github.com/danbri/glitchcan-minigam)."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [],
+   "cwp:area": "lighting",
+   "cwp:fault": [],
+   "cwp:judgement": "Which pages to add to the hand list (KNOWN in the tool) after a web search; recorded in press-pages.json meta.known_pages."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-trees",
    "@type": "prov:Activity",
    "rdfs:label": "fetch-trees",
@@ -5126,6 +5183,57 @@
     "skills/docklands-data-curation/SKILL.md (Fault register)",
     "skills/docklands-data-curation/ACTIVITY-LOG.md"
    ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/crown-lighting-judgement",
+   "@type": "prov:Activity",
+   "rdfs:label": "Crown lighting policy, campaigns and dated colour observations",
+   "dct:description": "Web searches for how the colour of One Canada Square's top is chosen, its lighting systems, campaigns and contractors; each fact written in our own words with its URL, date and how it was read. Commons thumbnails and the owner's photos of 3 October 2026 looked at by eye: what is lit (pyramid faces, halo band, facade wash, nothing) and its colour; an approximate hex from the mean of the brightest 20% of pixels in the lit area (30% for dim pyramids).",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/press-pages.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/commons-photos.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/promenade-skyline-bollard.jpg"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/promenade-skyline-railing.jpg"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lighting-refs"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/social-posts"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/crown-lighting.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/README.md"
+    }
+   ],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "No text or image copied: facts only from all-rights-reserved pages and Wikipedia (CC BY-SA); CC BY-SA photos give URL, capture date and the colour seen.",
+    "A campaign needs a press, council, partner or designer source with a date; an observation needs a dated photo, post or report of the night itself.",
+    "A colour seen with no campaign source stays an observation with the reason unknown (3 October 2026); gaps between dates are never filled.",
+    "The apex aviation light (white, flashing) is never a campaign colour.",
+    "Confidence low when the pyramid is small, dim or in cloud; EXIF capture time is the photographer's local clock."
+   ],
+   "cwp:area": "lighting",
+   "cwp:fault": [],
+   "cwp:by": "hand (crown lighting agent)",
+   "cwp:date": "2026-10-04",
+   "cwp:decisionsRecordedIn": [
+    "registry/sources/lighting/crown-lighting.json (read, confidence, hex_kind per record)",
+    "skills/cwplans-crown-lighting/SKILL.md"
+   ],
+   "cwp:gap": "The pixel measurements were run from the session scratchpad (a 10-line Pillow script: crop, sort by brightness, mean of the top fraction); the boxes are in no committed file."
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data/cwplans-data.js",
@@ -6956,6 +7064,108 @@
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/facade-photos"
    },
    "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "how the colours at the tops of the Canary Wharf towers are chosen, whether a history is recorded, method, licences and gaps",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-press"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lighting-refs"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-meta"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/social-posts"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/crown-lighting-judgement"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/crown-lighting.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "crown lighting of One Canada Square and other towers: 15 policy sources, 9 campaigns with dates and colours, 14 dated observations (press, social post, CC BY-SA photos as facts, the owner's photos), pattern notes and gaps",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-press"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lighting-refs"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-meta"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/social-posts"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/crown-lighting-judgement"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "facts only from all-rights-reserved pages and CC BY-SA photos (URL, date, colour seen); colours of CC BY-SA photos are our judgement, not their content. Re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/press-pages.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "CWG press and news pages whose slug says a building was lit (sitemap slug rule plus pages found by search): URL, slug date, archive status, title and colour words when the archive copy was read",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-press"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-crown-lighting"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/commons-photos.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "217 Wikimedia Commons night photos of Canary Wharf: title, page, capture date, licence, author, use (fact only for share-alike), whether a thumbnail was cached",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-meta"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-crown-lighting"
+   },
+   "cwp:osmUse": "none"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.jpg",
@@ -9177,6 +9387,44 @@
    ],
    "dct:title": "open photos of the Canary Wharf towers on Flickr and Wikimedia Commons (mostly Matt Brown, \"Matt From London\")",
    "dct:license": "per photo: CC BY 2.0, CC BY 4.0 or Public Domain Mark (attribution in registry/sources/facades/photos.json); CC BY-SA photos looked at only"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-press",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Canary Wharf Group press releases and community news (cwg.com, formerly group.canarywharf.com) and canarywharf.com news: sitemaps fetched directly (robots.txt allows them), pages from Internet Archive copies or, when unreachable, search-engine summaries and republished copies",
+   "dct:license": "none stated (all rights reserved by default); titles, dates and facts only",
+   "dcat:landingPage": "https://cwg.com/press-release-sitemap.xml"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lighting-refs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "pages about the lighting of the Canary Wharf towers (Tower Hamlets Council, London Post, LondonWorld, Pager Power, Delta Obstruction Lighting, buildings.com, Simon Corder, a 2016 blog, Isle of Dogs Life, English Wikipedia)",
+   "dct:license": "all rights reserved, or CC BY-SA 4.0 for Wikipedia text: facts in our own words and URLs only, no text copied"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/commons-meta",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Wikimedia Commons file metadata (title, capture date, licence, author) of night photos of Canary Wharf, from the MediaWiki API",
+   "dct:license": "metadata CC0 (structured data) / facts; each photo under its own licence (mostly CC BY-SA: colour judged by eye, image not copied)",
+   "dcat:landingPage": "https://commons.wikimedia.org/w/api.php"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/social-posts",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "public social media posts (Tower Hamlets Council on X)",
+   "dct:license": "platform terms; link and fact only, no text or image copied"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/youtube-refs",

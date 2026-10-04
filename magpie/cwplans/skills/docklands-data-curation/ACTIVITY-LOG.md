@@ -457,6 +457,25 @@ Owner instruction, 2026-10-04: "Wrap it all up into skills". Three new skills, e
 - Open: the ranked backlog in `feeds/live/README.md` (TfL arrivals, Tower Bridge lifts, AIS, EV charger OCPI feeds, flood
   warnings, air quality); the 3D page layers proposed in the skill; ask the owner about ODbL for adsb.lol.
 
+## 2026-10-04 crown lighting (crown lighting agent)
+
+Owner's questions: how the colours at the top of One Canada Square are chosen, and whether past colours are recorded.
+- Found: CWG lights the top ("the halo", CWG press release of 2 December 2024) for campaigns with a partner, in the
+  campaign's colour (NHS blue Jan 2021, Elizabeth line purple May 2022, World AIDS Day red with Positive East Dec 2024,
+  NSPCC green Jun 2025, UN orange with Tower Hamlets Nov 2025). No request form, criteria or calendar found. The apex
+  light is a separate white flashing aviation light (London City Airport study, CAP 168; LED since Nov 2012).
+- No complete history exists in public: `registry/sources/lighting/crown-lighting.json` holds 15 policy sources,
+  9 campaigns (1991 to 2025) and 14 dated observations (2010 to 2026: 9 CC BY-SA photos as facts, 2 owner photos,
+  2 press, 1 social post). Open photos 2012 to 2018 show white pyramid faces before 23:00; the owner's 3 October 2026
+  photos (23:56 BST) show dark faces and a red halo (measured #9d3f3c); no campaign found for that date.
+- Tool `tools/fetch-crown-lighting.mjs` (activity `fetch-crown-lighting`, new area "lighting"; hand step
+  `crown-lighting-judgement`); outputs `press-pages.json`, `commons-photos.json` (217 photos); README; skill
+  `cwplans-crown-lighting`; four sources and four files registered.
+- Network: web.archive.org reset every connection from the container all session (archive.org availability API
+  answered), so CWG pages were read through search summaries and republished copies; upload.wikimedia.org gave 429
+  after 31 thumbnails. Re-run `--press` and `--thumbs` later; 186 photos (27 CC BY or public domain) not yet judged.
+- Not done (another agent owns the files): Night mode colour by date in `docklands/index.html`.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

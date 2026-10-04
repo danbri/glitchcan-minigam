@@ -83,6 +83,10 @@
       "title": "Sky, time, weather and tide"
     },
     {
+      "id": "lighting",
+      "title": "Crown lighting"
+    },
+    {
       "id": "feeds",
       "title": "Feeds and events"
     },
@@ -3505,6 +3509,58 @@
       "faults": []
     },
     {
+      "id": "fetch-crown-lighting",
+      "tool": "tools/fetch-crown-lighting.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-crown-lighting.mjs [--press] [--commons] [--thumbs] [--no-fetch]",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "cwg-press",
+          "endpoint": "https://cwg.com/press-release-sitemap.xml, https://cwg.com/community_news-sitemap.xml (direct); https://web.archive.org/web/2026id_/https://canarywharf.com/news-sitemap.xml",
+          "request": "Yoast sitemaps; every <loc> outside /wp-content/"
+        },
+        {
+          "source": "cwg-press",
+          "endpoint": "https://archive.org/wayback/available?url=… then https://web.archive.org/web/{timestamp}id_/{url}",
+          "request": "the closest archived copy of each candidate page, under group.canarywharf.com and cwg.com"
+        },
+        {
+          "source": "commons-meta",
+          "endpoint": "https://commons.wikimedia.org/w/api.php",
+          "request": "generator=categorymembers (Category:One Canada Square at night, Category:Canary Wharf at night) and generator=search in the File namespace (4 searches, filetype:bitmap); prop=imageinfo, extmetadata DateTimeOriginal|LicenseShortName|Artist|ImageDescription, iiurlwidth=960; continue followed"
+        },
+        {
+          "source": "commons-meta",
+          "endpoint": "https://upload.wikimedia.org/ (thumburl)",
+          "request": "960 px thumbnails, kept locally only"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/lighting/press-pages.json"
+        },
+        {
+          "file": "registry/sources/lighting/commons-photos.json"
+        },
+        {
+          "local": "data/raw/registry/lighting/ (sitemaps, archived pages, colour sentences, Commons API answers, thumbnails, request log)"
+        }
+      ],
+      "method": "Finds the press pages and dated open photos that can say which colour a Canary Wharf crown (One Canada Square's halo first) showed on a given night: CWG sitemaps filtered by slug, archived copies of those pages, and Wikimedia Commons night photos with capture date and licence. The colour itself is judged by hand (activity crown-lighting-judgement).",
+      "rules": [
+        "Slug rule: lit, illuminated, halo, pyramid, turns-<colour>, lights-up-<colour>, light-it-, goes-<colour> (the regex is written into press-pages.json); plus a hand list of 5 pages found by search.",
+        "Pages are read only as Internet Archive id_ copies (cwg.com and canarywharf.com answer scripts with an Imperva challenge; their sitemaps are served and robots.txt allows them). Kept in the committed file: URL, slug date (ddmmyy code at the end of the slug), archive URL, title, published time, the colour words that occur in sentences naming One Canada Square, a pyramid, halo, crown or tower. Page text stays in the local cache.",
+        "Commons: a search hit is kept only if its title or description names the place (Canary Wharf, Canada Square, Docklands, Isle of Dogs, West India, Millwall, Blackwall, Cabot Square, Poplar); category members are kept. Use = fact only for CC BY-SA or GFDL; no image is committed.",
+        "Politeness: one request at a time; at least 3 s per host for cwg.com and web.archive.org, 2 s for archive.org and the Commons API, 3 s for upload.wikimedia.org; up to 4 tries with backoff (Retry-After, else 10, 30, 90 s, at most 600 s) on 429, 5xx and resets; 2 tries for an archive copy; thumbnails stop at the first refusal (2026-10-04: 429 after 31). Failures are written to data/raw/registry/lighting/log-<date>.txt and to the page status.",
+        "User-Agent glitchcan-cwplans/0.1 (https://github.com/danbri/glitchcan-minigam)."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "area": "lighting",
+      "judgement": "Which pages to add to the hand list (KNOWN in the tool) after a web search; recorded in press-pages.json meta.known_pages."
+    },
+    {
       "id": "fetch-trees",
       "tool": "tools/build-trees.mjs",
       "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-trees.mjs fetch [gla|osgs|tpo|tow ...]",
@@ -4628,6 +4684,54 @@
         "skills/docklands-data-curation/SKILL.md (Fault register)",
         "skills/docklands-data-curation/ACTIVITY-LOG.md"
       ]
+    },
+    {
+      "id": "crown-lighting-judgement",
+      "area": "lighting",
+      "what": "Crown lighting policy, campaigns and dated colour observations",
+      "by": "hand (crown lighting agent)",
+      "date": "2026-10-04",
+      "method": "Web searches for how the colour of One Canada Square's top is chosen, its lighting systems, campaigns and contractors; each fact written in our own words with its URL, date and how it was read. Commons thumbnails and the owner's photos of 3 October 2026 looked at by eye: what is lit (pyramid faces, halo band, facade wash, nothing) and its colour; an approximate hex from the mean of the brightest 20% of pixels in the lit area (30% for dim pyramids).",
+      "rules": [
+        "No text or image copied: facts only from all-rights-reserved pages and Wikipedia (CC BY-SA); CC BY-SA photos give URL, capture date and the colour seen.",
+        "A campaign needs a press, council, partner or designer source with a date; an observation needs a dated photo, post or report of the night itself.",
+        "A colour seen with no campaign source stays an observation with the reason unknown (3 October 2026); gaps between dates are never filled.",
+        "The apex aviation light (white, flashing) is never a campaign colour.",
+        "Confidence low when the pyramid is small, dim or in cloud; EXIF capture time is the photographer's local clock."
+      ],
+      "used": [
+        {
+          "file": "registry/sources/lighting/press-pages.json"
+        },
+        {
+          "file": "registry/sources/lighting/commons-photos.json"
+        },
+        {
+          "file": "docklands/reference/night-2026-10-03/promenade-skyline-bollard.jpg"
+        },
+        {
+          "file": "docklands/reference/night-2026-10-03/promenade-skyline-railing.jpg"
+        },
+        {
+          "source": "lighting-refs"
+        },
+        {
+          "source": "social-posts"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/lighting/crown-lighting.json"
+        },
+        {
+          "file": "registry/sources/lighting/README.md"
+        }
+      ],
+      "decisions_recorded_in": [
+        "registry/sources/lighting/crown-lighting.json (read, confidence, hex_kind per record)",
+        "skills/cwplans-crown-lighting/SKILL.md"
+      ],
+      "gap": "The pixel measurements were run from the session scratchpad (a 10-line Pillow script: crop, sort by brightness, mean of the top fraction); the boxes are in no committed file."
     }
   ],
   "libraries": [
