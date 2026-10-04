@@ -476,6 +476,29 @@ Owner's questions: how the colours at the top of One Canada Square are chosen, a
   after 31 thumbnails. Re-run `--press` and `--thumbs` later; 186 photos (27 CC BY or public domain) not yet judged.
 - Not done (another agent owns the files): Night mode colour by date in `docklands/index.html`.
 
+## 2026-10-04 open issues of the 3D page (moon, names, clouds, tide, apex, phones)
+
+- Tide along the river: per-vertex Thames levels by chainage between the EA gauges; F21 (Tower Pier faulty readings
+  around low water, 5 of 119 left out by a gauge-difference rule). The page also hid any tide below the LiDAR water
+  surface (2.8 m OD): the river ground now sinks under a measured tide (photo view: dark ground before, water and
+  reflections after). Commit aa90987 and 3a92f8c.
+- Moonlight (Night, sun down; strength from magnitude, airmass, cloud; cool tint; Lambert on face normals from screen
+  derivatives) and the moon's glitter path (+8 to 11 mean luma under the moon at the photo time). The pick buffer was
+  never cleared (`gl.clear` inside a comment): fixed. 3a92f8c.
+- Star names (IAU WGSN, CC BY, 324) and Messier objects (NASA HEASARC, public domain, 109; OpenNGC refused: CC BY-SA),
+  only what the star limit shows, not behind buildings (`__docklands.horizon`). a2f0d48. That commit also carried another
+  agent's staged London Datastore deletion and pipeline entries (their work, consistent with their tree).
+- Clouds: EUMETSAT Meteosat cloud mask (CC BY 4.0, Core data) places the Open-Meteo layer cover; snapshot 23:00 UTC 3 Oct,
+  live with Fetch through EUMETView (CORS). dae0a56; dae0a56 also dropped the works agent's register and pipeline entries
+  (built on an older copy): restored in 3364c30.
+- Phone GPUs: tools/check-fp16-shaders.mjs; the glow pulse failed in fp16 after 10 minutes: fixed. dc90c84.
+- Aircraft: no source allows live use on a public page (OpenSky, adsb.fi, ADS-B Exchange, adsb.lol ODbL, airplanes.live
+  unreadable); London City Airport approach paths (OSM thresholds, 5.5 degrees) as the stub. c03e167.
+- One Canada Square apex 0.87 degrees high in the photo fit: not the tower, curvature, eye or radial distortion; no single
+  pinhole camera fits the landmarks better than about 0.5 degree; numbers in docklands/README.md. No model change.
+- Open: cloud heights; tide predictions (no open source); moonlight calibration against a moonlit photo; a phone test of
+  the list in the 3D-page skill; the apex question needs a photo with EXIF.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

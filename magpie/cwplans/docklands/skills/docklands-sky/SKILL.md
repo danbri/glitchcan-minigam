@@ -33,6 +33,10 @@ is `docklands-data-curation`.
 | CelesTrak GP elements (OMM): ISS, Tiangong, "visual" group | `docklands/data/sky/sats-2026-10-03.json` | no licence stated; US Government data; credit CelesTrak; at most one download per 2 hours | panel and attribution line |
 | Open-Meteo hourly weather | `docklands/data/sky/weather-2026-10-03.json` | CC BY 4.0 ("Weather data by Open-Meteo.com") | panel and attribution line |
 | EA flood-monitoring tidal readings (Tower Pier 0007, Charlton 0003, Silvertown 0001) | `docklands/data/sky/tide-2026-10-03.json` | OGL v3.0 | panel and attribution line |
+| IAU Catalog of Star Names (WGSN), 324 names joined by HR | `docklands/data/sky/star-names.json` | CC BY (IAU products); names are facts | Sky panel |
+| NASA HEASARC MESSIER table, 109 objects (not OpenNGC: CC BY-SA) | `docklands/data/sky/messier.json` | US Government, no copyright | Sky panel |
+| EUMETSAT Meteosat cloud mask (CLM) via EUMETView WMS, 23:00 UTC 3 Oct 2026 | `docklands/data/sky/clm-20261003T2300Z.png` | CC BY 4.0 (Core data, EUMETSAT Data Policy arts. 4-6); "Contains modified EUMETSAT Meteosat data 2026" | panel and attribution line |
+| London City Airport runway 09/27 thresholds (OSM way 340355375) | `docklands/data/sky/lcy-approach.json` | ODbL (OSM, tracked) | Sky panel |
 
 Refused: d3-celestial's `mw.json` (Milky Way outlines from J. R. Vieira's catalogue, no licence stated), so the band is
 computed; PLA tide tables (UKHO predictions, not open), so future tides show "no prediction". All sources are keys in
@@ -71,7 +75,7 @@ entry is marked for review. `vendor/` is not registered (the check skips it); `s
   `nextIss(from)`: 20 s steps over 3 days, above 10°, sunlit, sun below −6°.
 - Weather and tide: snapshot for 3 and 4 October 2026; other dates only with "Fetch" (no request before the visitor
   asks, the live panel's rule). Tide: linear in time between 15-minute readings (no value over a 30-min gap), linear by
-  chainage along `data/river.json`'s centreline between Tower Pier and Charlton, at the viewpoint.
+  chainage along `data/river.json`'s centreline between the gauges, for every vertex of the river ("Second pass").
 - Map lines: `#skyOv` 2D overlay, from the viewpoint to the sun and moon azimuths (solid) and their rise/set azimuths
   (dashed); hidden within 500 m of the viewpoint and in capture mode.
 
@@ -87,7 +91,7 @@ eye on the wall, measure the moon by limb and cusps, and report the azimuth-time
 
 ## Refresh the snapshots
 
-    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [--date 2026-10-03]
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [lcy] [--date 2026-10-03]
 
 Method and rules: `pipeline.json` activity `fetch-sky` (area "sky"). CelesTrak keeps no history: fetch satellites within
 a day or two of the date. A new date's files need new names in `sky.js` (`SNAP`) and register entries; then run
@@ -107,7 +111,41 @@ now and then (`UND_ERR_CONNECT_TIMEOUT` while curl works): the tool retries thre
   Measured: 1306 ms with the sky, 1117 without (800 x 600, night photo view).
 - In map views the top of the screen is usually below the horizon: judge the sky and clouds from an eye-level view.
 
+## Second pass (2026-10-04): what was added, how, and what failed
+
+- **Tide along the river.** `tideAt` returns `field(x, z)`: linear in chainage (`data/river.json` centreline) between
+  every gauge with a reading, flat beyond the end gauges; `__docklands.setTidal(v, field)` gives each vertex of the tidal
+  water its own height; reflections use the level under the camera. `cleanGauges` drops a reading whose difference from
+  the nearest other gauge departs more than 0.45 m from the median of that difference over 2 h either side (F21: Tower
+  Pier, 4 Oct 00:00-01:15 UTC). No EA tidal gauge lies between Tower Pier and Charlton. Gradient in the snapshot: Tower
+  Pier minus Charlton +0.36 to -0.53 m; about 0.3 m across the model at most.
+- **A low tide was invisible** (fault in the page, found here): the LiDAR ground over the river is the survey's water
+  surface (2.8 m OD), so any tide below it hid under the ground and the photo view showed a dark river with no
+  reflections. While a tide is set, the ground more than one 20 m cell inside the tidal water sinks to the tide - 0.8 m
+  (`terrainSink`, `tidalMask()` in index.html).
+- **Moonlight and the moon's glitter path** are in index.html (`MOON`, `moonNow`, `moonGlitter`; the 3D-page skill). They
+  read `DocklandsSky.A.moon` (dir, alt, mag) and `A.sun.alt` and `S.wxNow` (cloud).
+- **Names on the sky** (`labels()` in `after()`): IAU names when V <= min(star limit - 0.5, 2.5); Messier when V <= star
+  limit - 1.5; above 1 degree; not behind buildings (`__docklands.horizon(x, y, z)`, the skyline per half degree); 30
+  names at most; no overlaps. `S.labelled` lists what was drawn (tests read it).
+- **Clouds**: `clmFor(t)` picks the committed mask within 90 minutes of 23:00 UTC 3 Oct, else (with Fetch) the EUMETView
+  slot (`msg_fes:clm`, 15 min, 25 min latency, from 2020-09-01); `clmLoad` turns white pixels into a luminance texture on
+  unit 2 and the mean within 60 km; the sky shader's `layer()` adds 0.9 x (mask - mean) to the layer's cover, the mask
+  displaced by the wind since its slot. Licence research: EUMETSAT Data Policy (2026-01 PDF) Article 4 puts all SEVIRI/FCI
+  Derived Products and all hourly Level 1 data in "Core" (CC BY 4.0, Article 5; redistribution, Article 6; attribution
+  string, Article 6.3); sub-hourly Level 1 (the 15 or 10 minute infrared images) is "Recommended" (licensed): use the
+  mask, or hourly images only. NASA GIBS has no night geostationary layer over Europe. Parallax and cloud height: not handled.
+- **Aircraft**: none, by licence (OpenSky: written agreement for any live product; adsb.fi: personal non-commercial;
+  ADS-B Exchange: commercial; adsb.lol: ODbL; airplanes.live: terms behind a bot challenge). The `cwplans-live-state`
+  skill came to the same answer for helicopters. Stub: "London City Airport approach paths" (`approaches()`): OSM
+  thresholds, 5.5 degree glide path, 15 m crossing height, 12 km, a dot per km.
+
+Lessons: an EA gauge can go bad for hours near low water while its neighbours stay smooth: compare gauges, not one series
+with itself (a jump test kept two of the five bad readings). A WMS that answers with CORS is usable live from the page;
+check the data policy category (Core or Recommended) per product and per time step, not per provider.
+
 ## Not done
 
-Deep-sky objects, star names, aircraft; moonlight on the scene and the moon's glitter path; real cloud fields (cover by
-layer only); one river level for the whole Thames.
+Cloud heights and small clouds (the mask has neither); live aircraft (licence); tide predictions for future times (no
+open source); the moonlight strength is drawn, not calibrated against a moonlit photo; One Canada Square's 0.9 degree
+misfit in the photo fit is explained only as "not the model" (docklands/README.md, second pass).

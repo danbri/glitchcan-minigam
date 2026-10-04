@@ -168,8 +168,8 @@ script; the main script calls `DocklandsSky.draw()` behind the scene and `Dockla
 | constellation lines | `data/sky/constellation-lines.json`, faint, only when stars to magnitude 1.5 or fainter show | d3-celestial (Olaf Frohn) | BSD-3-Clause |
 | Milky Way | a band computed in the sky shader from galactic coordinates (`Rotation_EQJ_GAL`): Gaussian in latitude, brighter towards the centre, a dust lane, noise. Not an outline catalogue: d3-celestial's `mw.json` comes from J. R. Vieira's Milky Way Outline Catalog, which states no licence, so it is not used. Visible only when the star limit is fainter than 4.6 (a dark site) | own | — |
 | satellites | OMM elements → `json2satrec`, SGP4 `propagate`, `ecfToLookAngles`; a point when above the horizon, sunlit (cylindrical Earth shadow, sun vector from astronomy-engine) and the sun 6° or more down; magnitude from range (ISS −1.3, Tiangong 0, others 4.0 at 1,000 km). Next ISS pass: 20 s steps over 3 days, above 10°, sunlit, dark sky | CelesTrak GP data (`data/sky/sats-2026-10-03.json`, live on request); satellite.js 7.1.0 subset bundled with esbuild (`vendor/satellite.min.js`) | CelesTrak: no licence stated, credit CelesTrak, at most one download per 2 hours (the page caches 2 h in localStorage); satellite.js MIT |
-| weather | hourly, linear between hours: cloud low/mid/high drive three noise cloud layers at 1, 3.5 and 8 km (far away each tends to its mean cover); visibility and humidity drive the haze and the star limit; wind moves the cloud with the clock | Open-Meteo (`data/sky/weather-2026-10-03.json`; live: forecast API for −85 to +15 days, archive API, without visibility, before that) | CC BY 4.0 |
-| tide | Tower Pier (0007) and Charlton (0003) 15-minute readings, linear in time (gaps over 30 min: no value), then linear by distance along the Thames centreline (`data/river.json`) to the viewpoint; the tidal Thames is redrawn at that level (`__docklands.setTidal`, the live panel's code path) and the night reflections move with it | EA flood-monitoring API (`data/sky/tide-2026-10-03.json`; live on request) | OGL v3.0 |
+| weather | hourly, linear between hours: cloud low/mid/high drive three noise cloud layers at 1, 3.5 and 8 km (far away each tends to its mean cover; the EUMETSAT cloud mask places the cloud, below); visibility and humidity drive the haze and the star limit; wind moves the cloud with the clock | Open-Meteo (`data/sky/weather-2026-10-03.json`; live: forecast API for −85 to +15 days, archive API, without visibility, before that) | CC BY 4.0 |
+| tide | Tower Pier (0007), Charlton (0003) and Silvertown (0001) 15-minute readings, faulty readings left out (F21), linear in time (gaps over 30 min: no value), then linear by distance along the Thames centreline (`data/river.json`) between the gauges; every vertex of the tidal Thames gets its own level (below) (`__docklands.setTidal`, the live panel's code path) and the night reflections move with it | EA flood-monitoring API (`data/sky/tide-2026-10-03.json`; live on request) | OGL v3.0 |
 
 Rules and choices:
 - Nothing is fetched until the visitor ticks "Fetch weather, tide and satellites for other times" (the same rule as the live panel). Without it the committed snapshots cover 3 and 4 October 2026; other times get a clear sky and no tide.
@@ -198,14 +198,96 @@ Lessons:
 - Fit a moon in a phone photo by the limb and the cusps, not by the bright blob: the blob's centroid sits 0.4 radius towards
   the lit side, and bloom inflates it; a circle through the cusps and the limb fitted within 1.4 px.
 - One Canada Square's apex in the model projects about 50 px (0.9°) above the photo's apex in both photos while the other
-  tops agree within 10 px: its vertical was left out of the camera fit (horizontal kept). The cause (model top or the
-  photographed point) is not found.
+  tops agree within 10 px: its vertical was left out of the camera fit (horizontal kept). Investigated below ("One Canada
+  Square's apex"): not the tower, the curvature, the eye or a lens distortion; no single pinhole camera fits the photo's
+  landmarks better than about 0.5 degree.
 - Node fetches through the agent proxy time out now and then (`UND_ERR_CONNECT_TIMEOUT` while curl works): the fetch tool
   retries three times.
 
-Not done: no deep-sky objects, no star names or labels; aircraft are not shown; moonlight does not light the scene and the
-moon has no glitter path on the water; clouds are statistical (cover by layer), not the real cloud field; the tide is one
-level for the whole river (the gradient between gauges is up to about 0.1 m).
+Second pass (2026-10-04, the open issues):
+
+- **Tide along the river.** The level is linear in chainage along `data/river.json` between the gauges with a reading at
+  the time (Tower Pier 0007, Charlton 0003, Silvertown 0001), held flat beyond the end gauges; `__docklands.setTidal(v,
+  field)` gives every vertex of the tidal water its own height (`field(x, z)`), and the night reflections use the level
+  under the camera. The EA has no tidal gauge between Tower Pier and Charlton (station search, 15 km round the estate,
+  2026-10-04: Westminster, Tower Pier, Charlton, Silvertown, the Barrier gauges, Barking): Greenland and Deptford are
+  interpolated. Measured in the 3-4 October snapshot: Tower Pier minus Charlton from +0.36 m (ebb) to -0.53 m (flood);
+  over the model's own river (west end held at Tower Pier) the level differs by up to about 0.3 m (21:00 BST on 3
+  October: 1.73 m OD at the west end, 1.40 m at the east end; at the photo time -1.15 m and -1.26 m).
+  Gauge faults: a reading is left out when its difference from the nearest other gauge departs by more than 0.45 m from
+  the median of that difference over 2 h either side (fault F21: five Tower Pier readings, 4 October 00:00 to 01:15 UTC,
+  0.4 to 0.9 m off). The LiDAR ground over the river is the survey's water surface (2.8 m OD); while a tide is set, the
+  ground inside the tidal water (more than one 20 m cell from its edge) sinks to 0.8 m below the tide, so a low tide shows
+  (before this, at the photo time the river was drawn as dark ground, with no reflections).
+- **Moonlight** (Night only, sun below the horizon: full at -6 degrees, none above -0.8): strength = the moon's
+  brightness relative to a full moon (10^(-0.4 (mag + 12.7)), astronomy-engine magnitude) x the light left after the
+  airmass (0.25 mag per airmass) x up to 0.95 for low and mid cloud (Open-Meteo); a cool tint (0.62, 0.72, 0.95). Walls
+  take it by the angle between their face and the moon (the face normal from the screen derivatives of the position,
+  `OES_standard_derivatives`; without it roofs get the altitude term and walls a mean), roofs and the ground by the
+  moon's altitude. The scale K = 0.16 is drawn, not measured: a full moon at 57 degrees (26 October 2026, 23:30) lifts the
+  moonlit foreground from mean luma 12 to 19 (0-255) and the skyline rows by 1 to 3. At the photo time (moon 7 degrees up,
+  46% lit) the strength is 0.017 of a high full moon: nothing shows, as in the photos.
+- **The moon's glitter path**: one sprite through the lights' glitter-path shader, placed along the moon's azimuth so that
+  the path starts where the depression below the horizon is tan(altitude) - 0.32 (at most 5 km away) and its brightest
+  point is the mirror image at the moon's altitude; it ends 0.16 (tangent) below that, as for the lamps. Brightness
+  3.2 x sqrt(relative brightness) x (0.4 + 0.6 x extinction) x cloud, at most 1; silver-white. At the photo time it adds
+  8 to 11 (0-255) to the mean of the column under the moon (render, Rotherhithe view, 1600 x 900); the photos show a
+  faint broad silvery column under the moon (railing photo: about +20 luma against the water beside it). Wave slopes
+  are not modelled beyond the 0.16 rule; cloud only dims the path, it does not break it.
+- **Star names and Messier objects** (Menu > Sky, on by default): 324 IAU-approved names (IAU WGSN catalogue, CC BY; joined
+  by HR number to our 2,887 stars) and the 109 Messier objects of the NASA HEASARC table (US Government, no copyright;
+  OpenNGC was not used: CC BY-SA). A star is named when its magnitude is within the star limit less 0.5 and no fainter
+  than 2.5; a Messier object is shown when its integrated magnitude is 1.5 brighter than the star limit (an extended
+  object needs a darker sky). From London at the photo time that leaves the brightest few stars and M 45; from "a dark
+  site" about 40 names and the bright clusters. Labels are left out above 30, when they overlap, below 1 degree, and
+  behind buildings: `__docklands.horizon(x, y, z)` gives the skyline from the eye (largest tangent of a roof edge per half
+  degree of azimuth, from the outlines and roof heights; about 0.1 s, cached by 5 m of eye movement, at most every 0.4 s).
+- **Clouds from the satellite**: the EUMETSAT Meteosat cloud mask (CLM, MSG 0 degree, every 15 minutes since September
+  2020) through EUMETView WMS (CORS open). A Meteosat Derived Product is "Core" data: CC BY 4.0, free and unrestricted,
+  redistribution allowed (EUMETSAT Data Policy, Articles 4 to 6); attribution "Contains modified EUMETSAT Meteosat data
+  2026". The committed image is 23:00 UTC on 3 October (the slot nearest the photo time), 50.5-52.5 N, 1.6 W-1.6 E,
+  256 px (about 0.9 km a pixel; the satellite pixel is about 3 x 5 km here). The page reads white pixels as cloud and
+  raises each layer's Open-Meteo cover by 0.9 x (local mask - mean of the mask within 60 km), so the satellite places
+  the cloud and Open-Meteo keeps the amount; the pattern moves with 2.2 x the 10 m wind for up to 90 minutes. Other
+  times only with "Fetch" ticked (the mask appears about 25 minutes after its slot). At the photo time the mask shows
+  6.8% cloud within 60 km (Open-Meteo: 15% low cloud). Not used: NASA GIBS (polar passes once or twice a day, no
+  geostationary layer over Europe at night), Met Office DataHub imagery (account and DataHub terms), the Meteosat
+  infrared images (only the hourly ones are Core; the mask is Core at every slot). Parallax (about 1.6 km north for cloud
+  at 1 km) and the cloud height (the mask has none) are not handled; small cumulus under 3 km are missed.
+- **Aircraft**: not shown, by licence. OpenSky Network: "Use of the REST API in any operational capacity - including
+  integration into a live product, service, or automated system ... requires a previous written agreement"; adsb.fi:
+  "personal, non-commercial use only"; ADS-B Exchange: commercial data products; adsb.lol: ODbL (share-alike: allowed
+  for OSM only); airplanes.live: the terms page is behind a bot challenge and could not be read (checked 2026-10-04).
+  The stub: Menu > Sky, "London City Airport approach paths": the extended centreline from each landing threshold (OSM way
+  340355375, ODbL) rising at the published 5.5 degree glide path from 15 m over the threshold, a dot every kilometre,
+  out to 12 km. Runway 09 approaches pass about 1 km south of One Canada Square at about 400 m.
+- **One Canada Square's apex** (railing photo, 2576 x 1932, eye x -896, z 1150, 6.9 m OD; fit script in the session
+  scratchpad, numbers here): with the four tower tops the pinhole fit (heading 43.35, tilt -1.35, roll -1.23 degrees,
+  f 3319 px, rms 6.3 px) puts the model apex 50 px (0.87 degrees) above the photo's. The cause is not in the tower:
+  (1) the pink band at the foot of the pyramid (213.8 m OD in the model, two corners read in the photo) is 40 to 46 px
+  high too, so it is not the extrapolated apex; the pyramid itself is 65 px tall in the model and about 56 px in the photo
+  (about 4 m, 0.17 degrees); (2) Earth curvature over 1.46 km is 0.17 m (0.007 degrees), less with refraction; (3) a 0.87
+  degree error at 1,462 m would need the apex 22 m lower (Wikidata, OSM and the LiDAR top give 235 m above ground);
+  (4) moving the eye: a free search over 800 x 800 m and 3 to 15 m OD gives at best rms 13 px, still Newfoundland +31 px
+  and One Canada Square -17 px; (5) radial lens distortion: a free k1 gives an unphysical +0.39 and rms 14 px; (6) roll:
+  the fit that leaves out One Park Drive puts Newfoundland, Landmark Pinnacle and both One Canada Square points within
+  3.3 px rms but needs a roll of -4.8 degrees, and the railing posts near the image centre lean 1.0 to 1.9 degrees,
+  which agrees with the four-tower fit (-1.2 to -1.5), not with -4.8. So the photo is not a single pinhole image of the
+  model from one eye at the 0.5 degree level: Newfoundland and One Park Drive are about 0.5 degrees high and One Canada
+  Square about 0.5 degrees low against a common camera. Candidates outside the model: the landmark points (One Park
+  Drive's lit roof is below a darker, taller block; Newfoundland's lit crown may rise above the LiDAR roof), and the
+  phone's processing (multi-frame night mode, crop; the files have no EXIF). Nothing in the model or the page view was
+  changed. To settle it: a photo with EXIF (focal length, crop) or more landmarks of known height near the frame centre.
+- **Phone GPUs**: `node magpie/cwplans/tools/check-fp16-shaders.mjs` captures every shader the page compiles (headless
+  Chromium), counts uniform rows, varyings, samplers and attributes per program against the WebGL 1 minimums, and re-runs
+  the risky maths in fp16. It found the glow pulse of the ground program (`mediump`, `time` = seconds since load) off by
+  0.19 after 10 minutes and 0.37 after an hour on an fp16 GPU; `time` is now wrapped to 10 periods (largest error 0.018).
+  Three programs declare more than 16 fragment uniform rows (the WebGL 1 minimum): buildings 25, the pixel-art pass 35,
+  the sky 20 (counted without packing); phones offer far more (the minimum matters only for very old GPUs), but it is not
+  checked on a phone. The skill lists what only a real phone can confirm.
+
+Not done: real cloud heights and small clouds; aircraft (licence); a tide prediction for future times (no open source);
+the moonlight's strength is drawn, not calibrated against a moonlit photo; the cause of the One Canada Square misfit.
 
 ## Drone flight and splat training frames (added 2026-10-03)
 

@@ -34,6 +34,13 @@ then confirm that the live file is the commit:
     curl -s https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/index.html | sha1sum
     git show HEAD:magpie/cwplans/docklands/index.html | sha1sum      # equal once Pages has deployed
 
+Other agents commit in the same working tree, often with files staged. Commit only your own content: build a temporary
+index from HEAD (`GIT_INDEX_FILE=... git read-tree HEAD`), add your blobs, `git commit-tree`, move HEAD with
+`git update-ref HEAD <new> <old>` (it refuses if HEAD moved), then `git reset -q HEAD -- <your paths>`. For a shared file
+(data-register.json, pipeline.json, ACTIVITY-LOG.md) apply your insertion to HEAD's copy at commit time, never to a copy
+read earlier: on 2026-10-04 a copy read a few minutes before the commit undid another agent's register entries (repaired
+in the next commit).
+
 Most of the page is long one-line statements. On 2026-10-03 a comment inserted in the middle of a line commented out
 `gl.colorMask(true, ...)` and left the page black after "Splats only". `render()` now resets blend, depth mask,
 colour mask and polygon offset at the start of every frame. After you edit a long line, read the whole line again.
@@ -209,6 +216,21 @@ The reference is the owner's six photos of 3 October 2026 in `docklands/referenc
   made confetti over the docks and a smeared band at the foot of the skyline.
 - **Lit signs**: a short cool-white bar on the two longest faces of each office tower of 150 m or more (measured 12).
   No names or logos: the real signs are trademarks, and which face carries one is not in our data.
+- **Moonlight** (`MOON`, `moonNow(nm)` once per frame before the sky): Night only and only while the sun is below the
+  horizon (full at -6 degrees). Strength k = relative brightness (10^(-0.4 (mag + 12.7))) x extinction (0.25 mag per
+  airmass) x altitude ramp x sun-down ramp x (1 - 0.7 low - 0.25 mid cloud). The ground program gets `ml` = tint x K x k x
+  sin(altitude) added to `dim` (0 in the pick pass); the facade program gets `mlc` and `md` and adds base x `mlc` x
+  max(N . moon, 0) inside `nightCol`, N from `cross(dFdx(wq), dFdy(wq))` (two new varyings `wq`, `ev`). K = 0.16 is a
+  drawn choice. `__docklands.MOON` exposes the numbers.
+- **The moon's glitter path** (`moonGlitter`): one sprite through the lights' reflection shader (refl = 1), placed along the
+  moon's azimuth at D = min(5 km, he / (tan alt - 0.32)) and height so that the mirror image falls at the moon's altitude;
+  width 0.03 rad; cached by position. `MOON.noGlitter = true` turns it off (A/B tests); `NIGHT.n.moonGlitter` is its
+  intensity. Measured: +8 to +11 mean luma in the column under the moon at the photo time.
+- **The river at a measured tide** (`terrainSink`, `tidalMask`): see the sky skill, second pass. `buildTerrain` remembers
+  its argument (`terrainLast`) so the tide can rebuild it the same way.
+- **Pick buffer was never cleared** (found 2026-10-04): the `gl.clear` of `pickAt` sat inside a `//` comment in the middle
+  of its line, so every pick read a buffer holding the previous pick's colours and depth. Fixed; the lesson is the one at
+  the top: re-read the whole line.
 - **Bloom**: `copyTexSubImage2D` of the frame, a bright pass to a quarter of the width and height, a 9-tap Gaussian
   across then down, added back at 1.2 x. `__docklands.BL.on = false` turns it off (cost in the README: about 9% of a
   SwiftShader frame).
@@ -239,6 +261,28 @@ round the float32 mantissa to 10 bits instead (exponent range not modelled; enou
       let z=0;for(let i=0;i<60;i++)for(let j=0;j<60;j++)if(h(i+7.3,j+7.3)===0)z++;console.log(z,'of 3600 cells hash to 0')"
 
 Measured 2026-10-04: 3,554 of 3,600 cells hash to 0 in fp16 (README: 3,550 on its own grid), 0 in fp32.
+
+### fp16 and WebGL 1 limits, checked without a phone (2026-10-04)
+
+`node magpie/cwplans/tools/check-fp16-shaders.mjs` (about 40 s; `--no-browser` for the maths only) captures every shader
+the page compiles in headless Chromium, prints per program its precision and its uniform rows, varyings, samplers and
+attributes (counted without packing) against the WebGL 1 minimums, and re-runs the risky maths with every intermediate
+rounded to binary16 (with exponent range, subnormals and overflow). It fails on a `mediump` case that goes wrong and on a
+stale case (the quoted shader text is gone). SwiftShader reports `mediump` as 10 bits but computes in 32: its numbers say
+nothing about phones.
+
+Results 2026-10-04: the ground program's glow pulse (`mediump`, `time` unbounded) was off by 0.19 after 10 minutes and
+0.37 after an hour: fixed by wrapping `time` to 10 periods of sin(3.3 t). Under the `HIP`/`PRE` fallback (a GPU with no
+highp in fragment shaders) the window hash, the sky cloud noise (37 distinct values of 4,096), the ripples, far cloud
+coordinates and the moonlight face normal (positions near 5 km step by 4 m) would all fail: every OpenGL ES 3 GPU has
+highp, so this matters only for old GPUs. Fragment uniform rows above the WebGL 1 minimum of 16: buildings (prF) 25,
+pixel-art pass (ppr) 35, sky 20; varyings: buildings 8 of 8 (the moonlight added 2 vec3).
+
+Only a real phone can confirm: the frame time and the bloom cost on a phone GPU; that the derivative normal
+(`OES_standard_derivatives`) gives clean moonlit faces; that `MAX_FRAGMENT_UNIFORM_VECTORS` and `MAX_VARYING_VECTORS` are
+above what the programs use (read them with `gl.getParameter` on the phone); that `highp` is really used where `HIP`
+asks for it (`getShaderPrecisionFormat`); the look of the glitter paths and the bloom on a small bright screen; memory
+with the splats, trees and facade atlas loaded; audio and touch (separate rules above).
 
 ## Testing
 

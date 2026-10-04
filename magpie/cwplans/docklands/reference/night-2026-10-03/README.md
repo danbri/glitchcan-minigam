@@ -59,3 +59,10 @@ fraction then is 46% (last quarter was about 9 hours earlier, so the terminator 
 moonrise was 22:47 BST at azimuth 45°, so the moon was 7° up and 58° east of north. The time agrees with the owner's account (the upload at 00:43 BST, after the Clipper landed at Greenland Pier).
 Weather then (Open-Meteo): 15% low cloud, visibility 14 km, humidity 87%; the bollard photo shows small low clouds near the
 moon. Thames at Greenland Pier: −1.20 m OD and falling (EA Tower Pier and Charlton readings, interpolated).
+
+One Canada Square's apex, investigated (2026-10-04): not the tower (the pink band under the pyramid is also 40 to 46 px
+high; a 0.87 degree error would need the apex 22 m lower), not curvature (0.17 m over 1.46 km), not the eye (best free
+eye rms 13 px), not a radial lens distortion (k1 +0.39, rms 14 px). The railing posts give a roll of about 1.5 degrees,
+which rules out the one fit (roll -4.8 degrees, without One Park Drive) that fits the other points within 3.3 px. The
+photo is not a single pinhole image of the model at the 0.5 degree level; the numbers are in docklands/README.md, "Sky,
+time, weather and tide", second pass. The photo time above rests on azimuths, which this does not change.
