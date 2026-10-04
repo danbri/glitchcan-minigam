@@ -61,6 +61,11 @@ restrictions on personal org and address data while in the scoping, planning and
   Internet Archive or from Common Crawl, and data extracted from them (e.g. the Canary Wharf Group
   directory, short quotes in `docklands/facts.json`). Record each crawl in the data register with its
   method and date. Re-check these before anything leaves the prototyping phase.
+- AIS from AISHub and aisstream.io (via Open Waters AIS) is accepted for scoping (owner, 2026-10-04: "Accept
+  AISHub (and perhaps aisstream) events for scoping. Sounds fine. Flag it somewhere for review as we scale. Add to live
+  by default now."). Review before scaling or any commercial use: the Open Waters hosted service is free for personal
+  use only; the AISHub permission is a private letter reported by Open Waters ("revocable at will"); aisstream.io has
+  no published terms. Small private craft stay as counts only. The data register marks these sources "review".
 - Every committed data file in `magpie/cwplans/` has an entry in `magpie/cwplans/data-register.json`
   (sources, licence, how it uses OSM, the OSM extract and its date). Add the entry in the same commit
   as the file, then run `node magpie/cwplans/tools/check-data-register.mjs --write`; it fails on an
