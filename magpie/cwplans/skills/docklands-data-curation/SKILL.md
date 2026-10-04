@@ -189,6 +189,10 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 - Phones play sound only as the direct result of a tap: create and resume the AudioContext and call `play()` in the
   tap handler before any `await`. A file chosen in the picker arrives outside the tap, so the file button unlocks the
   audio element when it is tapped. iOS: `navigator.audioSession.type = 'playback'` or the silent switch mutes Web Audio.
+- Night mode (?night): method and the tones measured from the owner's night photos are in docklands/README.md,
+  "Night" (the photos are the owner's and are not in the repo). Building use reaches the shader as g.w (use x 1000 +
+  roof top), not through the alpha byte. Red aviation lights go on every building over 45 m, which is more than the
+  photos show: tune from evidence (CAA obstacle lighting rules, photos), not by eye alone.
 - A finger that lands on a label must still join a pinch or twist: the label box feeds the same gesture code, and a
   moved pointer suppresses the label's click.
 
