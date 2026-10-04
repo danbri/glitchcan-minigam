@@ -546,6 +546,26 @@ Owner's questions: how the colours at the top of One Canada Square are chosen, a
   as manual amendments with evidence; join the cultural venues to the registry from the amended copy (high and
   medium only); a position correction for F25 layers, after the owner agrees.
 
+## 2026-10-04 London feed discovery (feed discovery agent)
+
+- Owner asked for "a huge stash of London-related rss/Atom feeds". New tool `tools/discover-feeds.mjs` (pipeline
+  activity `discover-feeds`, area feeds; stages seed, cc, autodiscover, verify, build) and skill
+  `cwplans-feed-discovery`. Output `feeds/discovery/`: `candidates.json` (945 candidates from 18 methods),
+  `london-feeds.opml` (414 live feeds), README. 179 verified zone feeds added to `feeds/events.json` as `disc-*`
+  (124 -> 313 sources), with `harvest: false` except 2 event feeds, so `fetch-works.mjs` does not read news as programmes.
+- The 61 feeds of the registry crawl: 38 verified, 17 live (newest item within a year); the rest empty, blocked or gone.
+- Verified 594 of 945: news 303, business 183, council and public bodies 71, social 25, community forum 5, events 4,
+  transport 3. Only 9 live feeds send CORS headers.
+- Common Crawl CC-MAIN-2026-39 through the columnar index (the CDX server failed): 2,592 .london hosts and 8,157 .uk
+  hosts with a London place in the name; 942 sampled; 755 pages about London; 277 feed URLs; 1,177 requests, 458 MB.
+  First run: parallel column reads got 403 from CloudFront; now one request at a time with retries.
+- Excluded with reasons: Facebook, Nextdoor, WhatsApp, X, Google Groups (no feeds, terms); Reddit and groups.io feeds
+  (robots.txt; one exploratory Reddit request before robots.txt was read, recorded); JISCMail (Cloudflare challenge).
+- Corrections found (F11 class, not changed in events.json): Time Out London has a feed (`/london/blog/feed.rss`);
+  Southwark's ModernGov `mgRss.aspx`, listed as verified, is disallowed by its robots.txt, like six other boroughs'.
+- Open: more Feedspot and ooh.directory categories; a larger Common Crawl sample or a second crawl; per-feed licence
+  review before production; dedupe FeedBurner copies by final URL.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

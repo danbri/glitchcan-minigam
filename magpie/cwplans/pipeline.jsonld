@@ -4624,6 +4624,88 @@
    ]
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/discover-feeds",
+   "@type": "prov:Activity",
+   "rdfs:label": "discover-feeds",
+   "dct:description": "Finds London RSS, Atom, JSON Feed and iCalendar feeds by 18 methods (directories, GitHub lists, Wikipedia/Wikidata, the ICNN map, hand lists, ModernGov, council and public-body pages, the GLA feed list, Mastodon, Bluesky, Lemmy, groups.io search, Meetup, the earlier site crawl, Common Crawl), autodiscovers feeds on home pages, fetches and parses every feed, counts items, the newest date, CORS and zone-place mentions, and writes the candidate list, an OPML of live feeds, and the verified zone feeds into feeds/events.json.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/web/discovered-feeds.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/events.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/feeds.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/feed-discovery/"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/feed-directories",
+     "dcat:accessURL": "https://ooh.directory/feeds/cats/<id>/opml/<name>.xml; https://rss.feedspot.com/<slug>/; https://raw.githubusercontent.com/<repo>/HEAD/<path>; https://www.google.com/maps/d/kml?mid=<ICNN map>&forcekml=1; https://en.wikipedia.org/w/api.php (categorymembers, links, pageprops); QLever or WDQS (P856, P576)",
+     "dct:description": "one GET per list page; 22 Feedspot slugs tried (13 exist); one SPARQL query with VALUES over the QIDs"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/common-crawl-index",
+     "dcat:accessURL": "https://data.commoncrawl.org/crawl-data/CC-MAIN-2026-39/cc-index-table.paths.gz, cc-index/table/cc-main/warc/crawl=CC-MAIN-2026-39/subset=warc/*.parquet, crawl-data/.../*.warc.gz",
+     "dct:description": "HTTP range requests, one at a time, >= 1 s apart, up to 4 tries on 403/429/5xx (15, 45, 135 s)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/social-feeds",
+     "dcat:accessURL": "https://<instance>/tags/<tag>.rss; https://public.api.bsky.app/xrpc/app.bsky.actor.searchActors; https://bsky.app/profile/<handle>/rss; https://feddit.uk/api/v3/search, /feeds/c/<name>.xml; https://groups.io/search?q=<term>",
+     "dct:description": "GET; groups.io and Reddit feeds never fetched"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/feed-providers",
+     "dcat:accessURL": "every candidate feed URL and every hand-listed or discovered home page",
+     "dct:description": "robots.txt (RFC 9309) on every host and redirect; one request at a time per host >= 1 s apart; 8 hosts at once; 30 s timeout; up to 3 tries on 429/503; a second request with Origin https://danbri.github.io for CORS"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/discovery/candidates.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/discovery/london-feeds.opml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/events.json"
+    },
+    {
+     "cwp:pathPattern": "data/raw/feed-discovery/{seeds,cc-feeds,cc-footers-<crawl>,autodiscover,verify,robots}.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/discover-feeds.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/discover-feeds.mjs [seed|cc|autodiscover|verify|build] [--refresh] [--no-merge] (cc needs CC_LIBS=<dir with hyparquet>)",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Autodiscovery: <link rel=\"alternate\"> RSS, Atom and JSON Feed links (comment feeds dropped) and up to three .ics/webcal links; a hand-listed page with none is tried at /feed/, /rss.xml, /feed.xml, /rss, /news/rss/ until one parses; at most three feeds per page.",
+    "Status: verified (parses with at least one item), empty, not a feed, http error, network error, blocked (Cloudflare, SiteGround, Imperva, Azure WAF pages), robots disallowed, robots unreachable (5xx or no answer = disallow), not fetched (terms). live = verified with an item dated within 365 days.",
+    "Relevance, counts only: zone_items = items whose title, summary, content or categories name a zone place (Canary Wharf, Isle of Dogs, Docklands, Millwall, Cubitt Town, Blackwall, Poplar, Limehouse, Wapping, Shadwell, Rotherhithe, Surrey Quays, Canada Water, Deptford, Greenwich, Silvertown, Royal Docks and others) or district E14, SE16, SE10, SE8, E16, E1W; recent = dated within 120 days; score = 3 x zone_recent + zone + 5 x share. No item text stored; at most two titles cut to 80 characters, none for social, forum and mailing-list feeds.",
+    "Duplicates: key = host without www + path without trailing slash + query; Blogger /atom.xml, /rss.xml and /feeds/posts/default are one feed; utm_ parameters dropped.",
+    "Bluesky: a handle is kept only when it is a registrable domain under .gov.uk, .nhs.uk, .police.uk, .ac.uk, .sch.uk or .london, or the domain of a publisher already found (private people excluded). groups.io: London groups only (name or description places them in London); feeds not fetched (robots.txt). Reddit: not fetched (robots.txt Disallow: /).",
+    "Common Crawl CC-MAIN-2026-39: hosts ending .london (all) and .uk hosts whose name holds a London place; sample by sha1(host): .london 200, zone places all (cap 500), boroughs 100, \"london\" 200; first capture with HTTP 200 and HTML; feeds kept when the page says London or has a London postcode (.london always).",
+    "events.json merge: re-read before writing, append only, ids disc-<slug>, layout kept (2 spaces); a live candidate not already in events.json or feeds.json, with a zone item, a zone publisher, or a council or transport body; social only with zone items; harvest: false unless kind is events (tools/fetch-works.mjs harvests verified event feeds).",
+    "Wikipedia: MediaWiki Action API used per its etiquette (descriptive User-Agent, one call at a time); its robots.txt Disallow: /w/ is for page crawlers and is not applied to API calls. Titles only (text is CC BY-SA).",
+    "Excluded, never fetched: Facebook, Nextdoor, WhatsApp, X, Instagram, TikTok (no feed, terms forbid scraping), Google Groups (feeds removed), JISCMail (Cloudflare challenge), Meetup RSS (robots.txt), Eventbrite (token), Google News RSS (terms)."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/crawl-sites"
+    }
+   ],
+   "cwp:area": "feeds",
+   "cwp:fault": [
+    "F11"
+   ],
+   "cwp:judgement": "The hand lists (local news, community, councils, public bodies, hashtags, subreddits), the Feedspot slugs, the Common Crawl sample sizes, the kind of each seed and the events.json merge rule are hand decisions written in the tool; recorded in skills/cwplans-feed-discovery/SKILL.md."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live",
    "@type": "prov:Activity",
    "rdfs:label": "fetch-live",
@@ -8340,15 +8422,94 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "124 event, calendar, news and openings sources (catalogue)",
+   "dct:title": "event, calendar, news and openings sources (catalogue; 179 disc- sources added 2026-10-04 by tools/discover-feeds.mjs)",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
    "prov:wasGeneratedBy": {
-    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/feeds-catalogue"
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/discover-feeds"
    },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/discovery/candidates.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "945 candidate London feeds from 18 discovery methods, each verified 2026-10-04: URL, methods, source list, kind, status, items, newest, CORS, zone-relevance counts, terms; exclusions and method log in meta (no item text; at most two titles, none for social feeds)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/feed-providers"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/feed-directories"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/common-crawl-index"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/social-feeds"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-crawl"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/discover-feeds"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "feed URLs and titles from directories and crawls: facts only; re-check terms before production"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/discovery/london-feeds.opml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "OPML export of the 414 live London feeds (verified, an item in the last 365 days), grouped by kind",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/feed-providers"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/feed-directories"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/common-crawl-index"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/social-feeds"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/discover-feeds"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/discovery/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the London feed discovery: methods, counts by method and kind, the best 20 for the zone, exclusions, re-run",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
    "cwp:osmUse": "none"
   },
   {
@@ -10137,6 +10298,36 @@
    ],
    "dct:title": "web pages linked from the registry: occupant and brand websites, brand store pages, and the Canary Wharf Group directory pages as Internet Archive copies",
    "dct:license": "none stated (all rights reserved by default)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/feed-directories",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "feed directories and lists read for London feed URLs: ooh.directory OPML exports (London, Areas of London), Feedspot London list pages (13), GitHub files nate-parrott/feeeed-db (ooh.directory mirror) and potemkin666/AlbertAlert data/sources/london/context.json, the ICNN member map (Google My Maps KML export), Wikipedia category and list titles (Category:London newspapers, List of newspapers in London) with Wikidata P856",
+   "dct:license": "facts only: feed URLs, names and websites; Feedspot pages are copyright Feedspot, the GitHub files have no licence file, Wikipedia text is CC BY-SA (titles only kept), Wikidata is CC0",
+   "dcat:landingPage": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/discovery/README.md"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/common-crawl-index",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Common Crawl CC-MAIN-2026-39: columnar URL index (Parquet, data.commoncrawl.org) and WARC records of 934 sampled London home pages",
+   "dct:license": "Common Crawl terms of use; pages remain their publishers' copyright: only feed URLs, page URLs and counts kept",
+   "dcat:landingPage": "https://commoncrawl.org/terms-of-use"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/social-feeds",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "public social and forum feeds: Mastodon hashtag RSS (mastodon.social, mastodon.london), Bluesky public API search and profile RSS (organisation handles only), feddit.uk Lemmy community feeds, the groups.io public search page (group names and URLs; feeds not fetched)",
+   "dct:license": "posts belong to their authors under each platform's terms: only feed URLs, item counts and zone-mention counts kept, no post text or titles",
+   "dcat:landingPage": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/cwplans-feed-discovery/SKILL.md"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data",

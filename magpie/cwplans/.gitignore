@@ -39,3 +39,6 @@ data/raw/river/
 
 # reference downloads and the OS Open UPRN clip for tools/amend-uprns.mjs
 data/raw/uprn-amend/
+
+# feed discovery stage caches (tools/discover-feeds.mjs)
+data/raw/feed-discovery/

@@ -4181,6 +4181,82 @@
       ]
     },
     {
+      "id": "discover-feeds",
+      "tool": "tools/discover-feeds.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/discover-feeds.mjs [seed|cc|autodiscover|verify|build] [--refresh] [--no-merge] (cc needs CC_LIBS=<dir with hyparquet>)",
+      "kind": "fetch",
+      "used": [
+        {
+          "file": "registry/sources/web/discovered-feeds.json"
+        },
+        {
+          "file": "feeds/events.json"
+        },
+        {
+          "file": "feeds/feeds.json"
+        },
+        {
+          "local": "data/raw/feed-discovery/"
+        },
+        {
+          "source": "feed-directories",
+          "endpoint": "https://ooh.directory/feeds/cats/<id>/opml/<name>.xml; https://rss.feedspot.com/<slug>/; https://raw.githubusercontent.com/<repo>/HEAD/<path>; https://www.google.com/maps/d/kml?mid=<ICNN map>&forcekml=1; https://en.wikipedia.org/w/api.php (categorymembers, links, pageprops); QLever or WDQS (P856, P576)",
+          "request": "one GET per list page; 22 Feedspot slugs tried (13 exist); one SPARQL query with VALUES over the QIDs"
+        },
+        {
+          "source": "common-crawl-index",
+          "endpoint": "https://data.commoncrawl.org/crawl-data/CC-MAIN-2026-39/cc-index-table.paths.gz, cc-index/table/cc-main/warc/crawl=CC-MAIN-2026-39/subset=warc/*.parquet, crawl-data/.../*.warc.gz",
+          "request": "HTTP range requests, one at a time, >= 1 s apart, up to 4 tries on 403/429/5xx (15, 45, 135 s)"
+        },
+        {
+          "source": "social-feeds",
+          "endpoint": "https://<instance>/tags/<tag>.rss; https://public.api.bsky.app/xrpc/app.bsky.actor.searchActors; https://bsky.app/profile/<handle>/rss; https://feddit.uk/api/v3/search, /feeds/c/<name>.xml; https://groups.io/search?q=<term>",
+          "request": "GET; groups.io and Reddit feeds never fetched"
+        },
+        {
+          "source": "feed-providers",
+          "endpoint": "every candidate feed URL and every hand-listed or discovered home page",
+          "request": "robots.txt (RFC 9309) on every host and redirect; one request at a time per host >= 1 s apart; 8 hosts at once; 30 s timeout; up to 3 tries on 429/503; a second request with Origin https://danbri.github.io for CORS"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/discovery/candidates.json"
+        },
+        {
+          "file": "feeds/discovery/london-feeds.opml"
+        },
+        {
+          "file": "feeds/events.json"
+        },
+        {
+          "local": "data/raw/feed-discovery/{seeds,cc-feeds,cc-footers-<crawl>,autodiscover,verify,robots}.json"
+        }
+      ],
+      "method": "Finds London RSS, Atom, JSON Feed and iCalendar feeds by 18 methods (directories, GitHub lists, Wikipedia/Wikidata, the ICNN map, hand lists, ModernGov, council and public-body pages, the GLA feed list, Mastodon, Bluesky, Lemmy, groups.io search, Meetup, the earlier site crawl, Common Crawl), autodiscovers feeds on home pages, fetches and parses every feed, counts items, the newest date, CORS and zone-place mentions, and writes the candidate list, an OPML of live feeds, and the verified zone feeds into feeds/events.json.",
+      "rules": [
+        "Autodiscovery: <link rel=\"alternate\"> RSS, Atom and JSON Feed links (comment feeds dropped) and up to three .ics/webcal links; a hand-listed page with none is tried at /feed/, /rss.xml, /feed.xml, /rss, /news/rss/ until one parses; at most three feeds per page.",
+        "Status: verified (parses with at least one item), empty, not a feed, http error, network error, blocked (Cloudflare, SiteGround, Imperva, Azure WAF pages), robots disallowed, robots unreachable (5xx or no answer = disallow), not fetched (terms). live = verified with an item dated within 365 days.",
+        "Relevance, counts only: zone_items = items whose title, summary, content or categories name a zone place (Canary Wharf, Isle of Dogs, Docklands, Millwall, Cubitt Town, Blackwall, Poplar, Limehouse, Wapping, Shadwell, Rotherhithe, Surrey Quays, Canada Water, Deptford, Greenwich, Silvertown, Royal Docks and others) or district E14, SE16, SE10, SE8, E16, E1W; recent = dated within 120 days; score = 3 x zone_recent + zone + 5 x share. No item text stored; at most two titles cut to 80 characters, none for social, forum and mailing-list feeds.",
+        "Duplicates: key = host without www + path without trailing slash + query; Blogger /atom.xml, /rss.xml and /feeds/posts/default are one feed; utm_ parameters dropped.",
+        "Bluesky: a handle is kept only when it is a registrable domain under .gov.uk, .nhs.uk, .police.uk, .ac.uk, .sch.uk or .london, or the domain of a publisher already found (private people excluded). groups.io: London groups only (name or description places them in London); feeds not fetched (robots.txt). Reddit: not fetched (robots.txt Disallow: /).",
+        "Common Crawl CC-MAIN-2026-39: hosts ending .london (all) and .uk hosts whose name holds a London place; sample by sha1(host): .london 200, zone places all (cap 500), boroughs 100, \"london\" 200; first capture with HTTP 200 and HTML; feeds kept when the page says London or has a London postcode (.london always).",
+        "events.json merge: re-read before writing, append only, ids disc-<slug>, layout kept (2 spaces); a live candidate not already in events.json or feeds.json, with a zone item, a zone publisher, or a council or transport body; social only with zone items; harvest: false unless kind is events (tools/fetch-works.mjs harvests verified event feeds).",
+        "Wikipedia: MediaWiki Action API used per its etiquette (descriptive User-Agent, one call at a time); its robots.txt Disallow: /w/ is for page crawlers and is not applied to API calls. Titles only (text is CC BY-SA).",
+        "Excluded, never fetched: Facebook, Nextdoor, WhatsApp, X, Instagram, TikTok (no feed, terms forbid scraping), Google Groups (feeds removed), JISCMail (Cloudflare challenge), Meetup RSS (robots.txt), Eventbrite (token), Google News RSS (terms)."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "crawl-sites"
+      ],
+      "area": "feeds",
+      "faults": [
+        "F11"
+      ],
+      "judgement": "The hand lists (local news, community, councils, public bodies, hashtags, subreddits), the Feedspot slugs, the Common Crawl sample sizes, the kind of each seed and the events.json merge rule are hand decisions written in the tool; recorded in skills/cwplans-feed-discovery/SKILL.md."
+    },
+    {
       "id": "fetch-live",
       "tool": "tools/fetch-live.mjs",
       "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-live.mjs [bikes lifts crowding jamcams ukpn overflows notams helicopters] [--no-fetch]",
