@@ -587,6 +587,16 @@ Open Waters" and "Review before scaling" (AISHub and aisstream.io shown for scop
 - **Positions are now**, not the page clock (`?t=`): the card and the note say so. A track replay for the clock would need
   `/v1/vessels/{mmsi}/track` (48 h anonymous) per vessel: not built.
 
+## London Datastore facts on the building card (2026-10-04)
+
+`feeds/london-datastore/lds-building.js` (shared with the atlas dossier) and two lines in `selectBuilding`: a
+`<div id="ldsB">` in the card and, after the card is written, `LdsBuilding.load('../')` then
+`LdsBuilding.html(ab.id, esc)` (heat demand, solar potential, the LSOA and its 2021 Census figures, venues and other
+records placed in the building, each with key and confidence; data `registry/sources/lds/`, made by
+`tools/join-lds.mjs`, skill `cwplans-london-datastore`). Nothing is drawn in the city. Credit in Menu > About >
+Credits, "London Datastore". Tested headless (SwiftShader): rotherhithe, greenland, pier x 1600x900 DPR 1 and 390x844
+DPR 3, no console error; the card of cwb-0413 shows heat, solar and the LSOA context.
+
 ## Testing
 
 Headless Chromium with SwiftShader (repo `CLAUDE.md`, "Headless browser"), from a local server (fetch needs http):

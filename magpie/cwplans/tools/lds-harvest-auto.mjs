@@ -567,7 +567,7 @@ function register(cat) {
   writeFileSync(pipeFile, JSON.stringify(pipe, null, 2) + '\n');
   console.log(`register: ${nSrc} sources, ${nFile} files, activity lds-harvest-auto (${used.length} used, ${generated.length} generated)`);
 }
-const FAULTS_SEEN = ['F22', 'F27'];
+const FAULTS_SEEN = ['F22', 'F27', 'F36', 'F37', 'F38', 'F39', 'F40', 'F41'];
 
 // ---- zone names: the town centres that meet the box (town-centres harvest) and the stations in the box (TfL StopPoint)
 async function zoneNames() {

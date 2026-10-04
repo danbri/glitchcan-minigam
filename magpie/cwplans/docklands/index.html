@@ -293,6 +293,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
         <li>Cranes: Source: UK AIS (NATS), facts only; helicopter route H4 and restricted area EGR159: Source: UK AIP, NATS, facts only</li>
         <li>Crime: <a href="https://data.police.uk/">police.uk</a>, <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>; air quality: London Air Quality Network (Environmental Research Group, Imperial College London); storm overflows: Thames Water (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)</li></ul>
       <h3>London Datastore</h3><ul class="small">
+        <li>Building record facts: heat demand (London Heat Map 2024), roof solar potential (London Solar Opportunity Map 2025), 2021 Census by LSOA (GLA summary tables), statistical boundaries (ONS, via the Datastore), cultural venues and other records placed in a building: contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a> (Greater London Authority and the publishers named on each card). Join keys and confidence on each card. The GLA cannot warrant the quality or accuracy of the data.</li>
         <li>Conservation areas, designated open space, safeguarded wharves (GLA Planning Constraints Map; boundaries belong to the planning authorities) and the Cultural Infrastructure Map 2023: contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a> (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data.</li></ul>
       <h3>Works in progress</h3><ul class="small">
         <li>Planning status and dates: Planning London Datahub (Greater London Authority and the London boroughs, with the London Development Database), facts and links only</li>
@@ -316,6 +317,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
 <script src="sky.js"></script>
 <script src="river-layer.js"></script>
 <script src="ships-layer.js"></script>
+<script src="../feeds/london-datastore/lds-building.js"></script>
 <script>
 (() => {
 'use strict';
@@ -1007,9 +1009,11 @@ async function selectBuilding(k) {
     ${occ.length ? `<table>${levels.map(lv => `<tr><td>${typeof lv === 'number' ? (lv === 0 ? 'ground' : (lv > 0 ? '+' : '') + lv) : 'no level'}</td><td>${byLv.get(lv).map(o => esc(o.name) + ohMark(o)).join(' · ')}</td></tr>`).join('')}</table>${ohList(b.occupants)}<div class="small">${withLv.length} occupants drawn at their floor (OSM level or CWG mall level × ${storey} m storey height; a level is a floor index, not a measured height).</div>` : '<div class="small">No occupants recorded.</div>'}
     ${issues.length ? `<div class="small" style="margin-top:6px"><b>Data quality (${issues.length})</b><br>${issues.slice(0, 12).map(i => `${esc(i.check)} <span class="tag">${esc(i.sev)}</span> ${esc(i.note)}`).join('<br>')}</div>` : ''}
     ${cats && cats.buildings[ab.id] ? `<div class="small" style="margin-top:6px"><b>Who is inside, by kind</b> (the glow layers)<br>${Object.entries(cats.buildings[ab.id]).map(([c, l]) => `<span style="color:rgb(${(GLOW[c] || GLOW[Object.keys(GLOW_ALSO).find(k => GLOW_ALSO[k].includes(c))] || [.8, .8, .8]).map(v => Math.round(v * 255)).join(',')})">${esc(c)}</span>: ${l.slice(0, 10).map(o => `${esc(o.name)} <span class="tag">${esc(o.why)}${o.link ? ', ' + o.link + (o.start ? ' since ' + o.start.slice(0, 4) : '') : ''}</span>`).join(' · ')}${l.length > 10 ? ' …' : ''}`).join('<br>')}</div>` : ''}
+    <div class="small" id="ldsB" style="margin-top:6px"></div>
     ${routeBtns(Math.round(ab.x), Math.round(ab.z), b.name || ab.id)}
     <div class="small" style="margin-top:6px"><a href="../atlas/#map/b/${esc(ab.id)}">full record in the atlas</a>${b.osm[0] ? ` · <a href="https://www.openstreetmap.org/${esc(b.osm[0])}">OSM</a>` : ''}${b.wikidata ? ` · <a href="https://www.wikidata.org/wiki/${esc(b.wikidata)}">Wikidata</a>` : ''} · <a href="#" id="unselect">clear</a></div>`;
   $('unselect').onclick = e => { e.preventDefault(); clearSelection(); resetInfo(); draw(); };
+  if (globalThis.LdsBuilding) LdsBuilding.load('../').then(() => { const el = $('ldsB'); if (el && selected === k) el.innerHTML = LdsBuilding.html(ab.id, esc); }).catch(() => {});   // London Datastore facts (tools/join-lds.mjs)
   draw();
 }
 

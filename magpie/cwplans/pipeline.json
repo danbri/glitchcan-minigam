@@ -4433,6 +4433,81 @@
       "judgement": "The hand rules (HAND in the tool) choose resources where the general rules would read too much or the wrong file (per-link emission workbooks, variant zips, superseded releases) and thin the LAEI 20 m concentration grids to 100 m; each has its reason. Datasets of incident records at addresses (LFB incidents, mobilisations, animal rescues) are held with the lift entrapments for the owner. Outputs were read by hand after each batch (counts, zone keys, sizes)."
     },
     {
+      "id": "join-lds",
+      "tool": "tools/join-lds.mjs",
+      "command": "node magpie/cwplans/tools/join-lds.mjs",
+      "kind": "join",
+      "used": [
+        {
+          "file": "registry/buildings.json"
+        },
+        {
+          "file": "registry/ids.json"
+        },
+        {
+          "file": "data/raw/registry/osm-cw.json.gz"
+        },
+        {
+          "local": "data/raw/registry/osopenuprn_*.zip (OS Open UPRN, raw cache)"
+        },
+        {
+          "file": "feeds/london-datastore/index.json"
+        },
+        {
+          "file": "feeds/london-datastore/heat-demand/heat-demand.json"
+        },
+        {
+          "file": "feeds/london-datastore/solar-opportunity/solar-opportunity.json"
+        },
+        {
+          "file": "feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amended.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amendments.json"
+        },
+        {
+          "file": "feeds/london-datastore/statistical-boundaries/statistical-boundaries.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-lsoa-demography-migration/census2021-lsoa-demography-migration.json"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-lsoa-housing/census2021-lsoa-housing.json"
+        },
+        {
+          "file": "feeds/london-datastore/brownfield-register/brownfield-register.geojson"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/lds/building-links.json"
+        },
+        {
+          "file": "registry/sources/lds/area-context.json"
+        }
+      ],
+      "method": "Links the London Datastore harvests to the registry buildings with a key, a precision and a confidence on every link, as build-registry.mjs does for the registers: heat demand and solar potential by TOID, cultural venues by UPRN (the F22 amended copy) or position, point records by position in the outline, the area of the building by its centre; writes the Census headline figures of the LSOAs that hold a building.",
+      "rules": [
+        "TOID: the registry building's TOIDs (OS Open Linked Identifiers through its UPRNs); one building: high; a TOID on 2+ buildings: medium. Solar links rated from LiDAR of 2012 or earlier carry fault F30.",
+        "UPRN: the OS Open UPRN point of the venue's UPRN inside the outline (smallest outline first); an amended F22 value only at high or medium confidence, with that confidence; rounded or unresolved values never.",
+        "Position: the record point inside the outline (medium), a venue within 12 m (low), venue layers with the F25 offset low, brownfield site points low (a site holds several buildings). Point sets that are grids, sensors, area markers or boundaries are not joined.",
+        "Area: the building centre in the LSOA 2021, MSOA 2021 and ward 2018 polygons (high). Census context: the 2021 sheets of the GLA LSOA tables (residents, change since 2011, tenure, cars, country of birth, household deprivation)."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "lds-harvest-auto",
+        "build-registry"
+      ],
+      "area": "registry",
+      "faults": [
+        "F22",
+        "F25",
+        "F30"
+      ],
+      "judgement": "Which point sets are places (joined) and which are grids or area markers (not joined) is a written list (NOT_PLACES in the tool)."
+    },
+    {
       "id": "amend-uprns",
       "tool": "tools/amend-uprns.mjs",
       "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/amend-uprns.mjs cultural-infrastructure [--refresh]; generic: node magpie/cwplans/tools/amend-uprns.mjs --in <file> --uprn-field <f> --id-field <f[,f]> [--ref a:<file>]... [--ref c:<file>]... [--open-uprn <zip|csv>] [--footprints <osm-clip.json.gz>] --out <copy> --amendments <json>",

@@ -13,7 +13,10 @@ description: >-
   streets, BIDs, LSOA/MSOA/ward boundaries, 2021 Census by ward and LSOA as zone rows, heat demand and solar potential
   per building, green roofs, urban heat island, air quality, cultural venues, LVMF views) clipped to the 3D model box,
   metadata that understates the area (F27), geometry-only and file-format traps (F28, F29), stale LiDAR (F30),
-  mislabelled WGS84 columns (F31), and
+  mislabelled WGS84 columns (F31), the rule-driven harvest of the 219 listed datasets (tools/lds-harvest-auto.mjs:
+  resource rules, streamed readers, zone keys incl. old ward codes, profiled postcode columns, station and town-centre
+  names, transposed sheets, outcome per dataset in harvest-log.json, F36-F41), the joins to the building registry
+  (tools/join-lds.mjs: heat and solar by TOID, venues by UPRN, records by position, Census context by LSOA), and
   the traps: GLA Planning Constraints Map GeoPackages with geometry only and a brownfield OBJECTID that is not the
   CSV's (F23), spreadsheet-rounded UPRNs in the cultural infrastructure map (F22) and the method that amends them in a copy
   (tools/amend-uprns.mjs: detection classes, recovery routes, confidence, amendments file), a constant position offset
@@ -35,7 +38,6 @@ Checked against the tool and the files on 2026-10-04.
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk          # catalogue.json (2 requests)
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk --details   # + 1,305 detail records (~35 min)
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs          # zone-codes.json (ONSPD, 20od9; ~3 min)
-    npm install --no-save xlsx@0.18.5                                                      # SheetJS, for probe and table harvests
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs probe [id ...] [--rescan]   # probe.json (~30 min)
     node magpie/cwplans/tools/walk-london-datastore.mjs triage                             # triage.json (no network)
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...]   # feeds/london-datastore/<key>/
@@ -235,6 +237,100 @@ checked; match on latitude and longitude, not on eastings).
 | F30 | Solar Opportunity Map 2025-12 rates 97% of zone roofs from LiDAR of 2012 | keep `lidar_date`; check the building's completion year |
 | F31 | Air quality summary statistics: `LatitudeWGS84`/`LongitudeWGS84` hold Web Mercator metres | read `Latitude`/`Longitude`; judge coordinates by value, not by column name |
 | | Old slugs without ids (`dataset/recorded_crime_summary`) do not resolve | listed in `triage.json` `meta.unmatched_references` |
+
+## Rule-driven harvest (tools/lds-harvest-auto.mjs, 2026-10-04)
+
+Owner, 2026-10-04: "Keep working thru datasets". The hand table `HARVEST` of the walk tool does not scale to 219 listed
+datasets, so a second tool harvests by written rules and records the outcome of every dataset it runs.
+
+    node magpie/cwplans/tools/lds-harvest-auto.mjs plan [id ...] [--rank a-b]          # the resources the rules pick (no network)
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/lds-harvest-auto.mjs zone-names     # zone-names.json (stations, town centres, OAs)
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/lds-harvest-auto.mjs run [id ...] [--rank a-b] [--again]
+    node magpie/cwplans/tools/lds-harvest-auto.mjs register                            # data-register.json lines, pipeline.json activity
+    node magpie/cwplans/tools/walk-london-datastore.mjs triage                          # harvest-log.json outcomes -> final states
+    node magpie/cwplans/tools/lds-harvest-auto.mjs index                               # index.json for the atlas and the 3D page
+    node magpie/cwplans/tools/join-lds.mjs                                             # joins to the registry (below)
+
+The tool imports the walk tool (its polite queue, readers and `harvestGeo`), so it runs on its own: importing it from
+the walk tool deadlocked (two modules waiting on each other's top-level await). `LDS_HARVEST_LOG=<file>` writes the
+log elsewhere during a long run, so batches can be committed with a log of only the committed datasets.
+SheetJS (0.20.3 from cdn.sheetjs.com) and ExcelJS are devDependencies now; nothing is installed `--no-save`.
+
+**Rules** (in the tool, `AUTO_RULES`; `harvest-log.json` `meta.rules` repeats them):
+
+- **Resources**: readable formats gpkg, geojson, zip, csv, tsv, xlsx, xlsm, xls, ods (json and txt only when nothing else).
+  One per file stem (lower case, separators to "-", without the extension, the format words shp/gpkg/geojson/csv/xlsx/gis/
+  data and the layout words long/wide): gpkg > geojson > zip > csv > xlsx > xlsm > xls > ods; a `_wide` file before its
+  `_long` twin; same md5 = one. Caps: a resource over 1,200 MB is not read; over 40 stems or 2,500 MB the newest 12.
+  A zip over 200 MB is listed first from its central directory (the last 256 kB by HTTP Range): a zip of documents only is
+  not downloaded (Bishopsgate Goodsyard daylight study: 68 PDFs, 424 MB).
+- **Readers**: CSV over 20 MB streamed from the network line by line and never stored (quoted newlines joined); xlsx and
+  xlsm over 20 MB streamed with ExcelJS (`styles: 'cache'`, or dates come as serial numbers, F37); xls, ods and small
+  workbooks with SheetJS (`cellDates`); zips entry by entry (shapefiles, GeoPackages, GeoJSON, sheets, CSV through
+  `unzip -p`). Raw files over 20 MB are deleted after reading (disk: about 3 GB free in this container).
+- **Zone row** (first key that matches, recorded per row in `zone_keys`): coordinates in the box (lat/lon or
+  easting/northing columns by name, the CRS by value); a zone UPRN in a UPRN column; a zone TOID in a TOID column; a zone
+  OA/LSOA/MSOA/ward code of any vintage, an old ward code (00BGGG, `ward2003`) or a 2011 Census merged ward (E36,
+  `cmwd2011`); the City of London row (E09000001) in a ward table; a zone postcode, only in a postcode column (half or
+  more of the first 300 non-empty cells are postcodes, or the header says postcode: F36); a zone postcode sector, only in a
+  sector column ("E14 9" or "E149"); for datasets about town centres or stations only, a cell that is a zone town centre,
+  Opportunity Area or station name (`zone-names.json`; borough names such as Greenwich left out; a weak key).
+- **Layouts**: header rows = up to 4 rows above the first data row (CSV: the first line). A sheet with 3 or more distinct
+  area codes across a row and numbers below them is transposed (GLA ward tools, F40): the label columns and the zone code
+  columns are kept, every row. A table whose one header row names coordinate columns becomes points in the `.geojson`
+  (rows kept by another key stay a table).
+- **Geometry**: as `harvestGeo` (meets the box; whole geometries), but a polygon of over 1,000 vertices that reaches
+  beyond the zone (a London-wide ULEZ or LEZ boundary) is cut to the box plus 500 m and marked `clipped_to_zone`
+  (ULEZ 2023: 445 kB to 3 kB).
+- **Numbers**: kept as numbers, non-integers to 6 significant digits; identifiers (leading zero, codes, TOIDs) stay text.
+- **Outcome** per dataset in `harvest-log.json`: harvested (files, counts, zone keys, bytes), no-zone-rows (every row and
+  feature read, none in the zone: triage F8b, not-relevant, with the counts as evidence), documents-only (F7),
+  deferred-by-hand (F3c), not-readable (F10b), held-for-owner (not run; state unchanged).
+
+**Hand rules** (`HAND` in the tool, each with its reason; the pipeline activity lists them): the resource choice where the
+general rules read too much or the wrong file (LAEI per-link workbooks, housing-led variant zips, superseded releases,
+unit-level LDD files, RM long census tables, Noise LAeq/Lnight layers), sheet filters (housing-led projections: persons
+and components of change), thinning the LAEI 20 m concentration grids to 100 m (1 cell in 25, by the BNG cell index),
+the LAEI 2006 value files read by their GRID_ID (gla + easting + northing, F41), postcode tables with coordinates kept as
+tables (Ofcom broadband: 1.5 MB as rows, 11.8 MB as points), 5-decimal coordinates for the noise bands.
+
+**Held for the owner** (not run; incident records at addresses, the class of 2g980): lift entrapments 2g980, LFB incident
+records em8xy, LFB mobilisations 24r65, LFB animal rescues 2ogkn; the Assembly Member gifts register e68wz (named people).
+
+**What went wrong first** (and the rule now in the tool):
+
+- A postcode test on every cell read spending-category codes as postcodes: `RM66LE` (sector RM6 6 + category LE) is a
+  real postcode, so 50 rows of the consumer expenditure workbooks were "zone postcodes" (F36). Postcode and sector
+  columns are now profiled.
+- The ExcelJS stream without styles wrote LDD permission dates as serial numbers (37004) (F37).
+- Ward tables of the 2000s and the 2011 Census use ward codes that zone-codes.json lacked (00BGGG, E36): land use by ward
+  and country of birth by ward read as no zone rows (F39); `refs-old-wards` adds them.
+- The transposed-sheet test first fired on any row with three codes (a ward row with its own, its borough's and its
+  merged ward's code) and dropped the tree canopy table: it now needs 3 distinct codes with numbers below them.
+- `Array.push(...features)` with 100,000+ features overflowed the stack (noise contours, biodiversity hotspots): loops.
+- Importing the auto tool from the walk tool deadlocked (top-level await on both sides): the auto tool is the entry point.
+- `pkill -f` with the tool's name also killed the shell that ran it: kill by PID.
+- Several datasets hold the same records in several resources (LDD permission and unit files; AMR 13, 14, 15 LDD extracts
+  repeating older snapshots; wide and long census files; house prices as wide xls and long csv) (F38): the stem rule and
+  hand rules take one level; the AMR LDD extracts are superseded by the 2020 LDD extract and the Planning London Datahub.
+
+## Joins to the building registry (tools/join-lds.mjs)
+
+Out: `registry/sources/lds/building-links.json` (per cwb- building: heat, solar, area, venues, brownfield, points; each
+link with key, precision, confidence and, where it applies, a fault) and `registry/sources/lds/area-context.json`
+(headline 2021 Census figures of the LSOAs that hold a registry building). Shown by `feeds/london-datastore/lds-building.js`
+in the atlas dossier and the 3D page record card.
+
+| link | key | confidence | rule |
+|---|---|---|---|
+| heat demand (London Heat Map 2024) | TOID | high; medium when the TOID is on 2+ registry buildings | the registry's TOIDs come from OS Open Linked Identifiers through the UPRNs in the outline |
+| solar potential (LSOM 2025) | TOID | as heat; `fault: F30` when rated from LiDAR of 2012 or earlier | sum over the building's TOIDs; units as published |
+| cultural venues | UPRN, else position | UPRN high (amended F22 values only at high or medium, as their confidence); position inside medium, within 12 m low; F25 layers low | OS Open UPRN point inside the outline (smallest outline first) |
+| brownfield sites | position | low | the site point inside the outline (a site can hold several buildings) |
+| other point records (EV charging sites, LDD permissions, schools...) | position | medium | the record point inside the outline |
+| area (LSOA 2021, MSOA 2021, ward 2018) | position | high | the building centre in the polygon |
+
+Rounded UPRNs (`uprn_suspect` without an amendment, `uprn_unresolved`) are never a key.
 
 ## Open (2026-10-04)
 

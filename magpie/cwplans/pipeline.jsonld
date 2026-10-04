@@ -4792,6 +4792,89 @@
    "cwp:judgement": "The hand rules (HAND in the tool) choose resources where the general rules would read too much or the wrong file (per-link emission workbooks, variant zips, superseded releases) and thin the LAEI 20 m concentration grids to 100 m; each has its reason. Datasets of incident records at addresses (LFB incidents, mobilisations, animal rescues) are held with the lift entrapments for the owner. Outputs were read by hand after each batch (counts, zone keys, sizes)."
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/join-lds",
+   "@type": "prov:Activity",
+   "rdfs:label": "join-lds",
+   "dct:description": "Links the London Datastore harvests to the registry buildings with a key, a precision and a confidence on every link, as build-registry.mjs does for the registers: heat demand and solar potential by TOID, cultural venues by UPRN (the F22 amended copy) or position, point records by position in the outline, the area of the building by its centre; writes the Census headline figures of the LSOAs that hold a building.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/ids.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data/raw/registry/osm-cw.json.gz"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/registry/osopenuprn_*.zip%20(OS%20Open%20UPRN,%20raw%20cache)"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/index.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/heat-demand/heat-demand.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/solar-opportunity/solar-opportunity.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amended.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amendments.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/statistical-boundaries/statistical-boundaries.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-lsoa-demography-migration/census2021-lsoa-demography-migration.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-lsoa-housing/census2021-lsoa-housing.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/brownfield-register/brownfield-register.geojson"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lds/building-links.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lds/area-context.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/join-lds.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/join-lds.mjs",
+   "cwp:kind": "join",
+   "cwp:rule": [
+    "TOID: the registry building's TOIDs (OS Open Linked Identifiers through its UPRNs); one building: high; a TOID on 2+ buildings: medium. Solar links rated from LiDAR of 2012 or earlier carry fault F30.",
+    "UPRN: the OS Open UPRN point of the venue's UPRN inside the outline (smallest outline first); an amended F22 value only at high or medium confidence, with that confidence; rounded or unresolved values never.",
+    "Position: the record point inside the outline (medium), a venue within 12 m (low), venue layers with the F25 offset low, brownfield site points low (a site holds several buildings). Point sets that are grids, sensors, area markers or boundaries are not joined.",
+    "Area: the building centre in the LSOA 2021, MSOA 2021 and ward 2018 polygons (high). Census context: the 2021 sheets of the GLA LSOA tables (residents, change since 2011, tenure, cars, country of birth, household deprivation)."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry"
+    }
+   ],
+   "cwp:area": "registry",
+   "cwp:fault": [
+    "F22",
+    "F25",
+    "F30"
+   ],
+   "cwp:judgement": "Which point sets are places (joined) and which are grids or area markers (not joined) is a written list (NOT_PLACES in the tool)."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/amend-uprns",
    "@type": "prov:Activity",
    "rdfs:label": "amend-uprns",
@@ -11733,6 +11816,111 @@
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
    },
    "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/lds-building.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: renders the London Datastore facts of a building (building-links.json, area-context.json) in the atlas dossier and the 3D page record card, with keys, confidence and credits",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lds/area-context.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "headline 2021 Census figures (residents and change since 2011, households and tenure, cars, born in the UK, household deprivation) of the LSOAs that hold a registry building, for the record cards",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gj6n"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emxpl"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/join-lds"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lds/building-links.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Datastore facts linked to registry buildings (cwb- ids): heat demand and solar potential by TOID, cultural venues by UPRN or position, brownfield sites and other point records by position in the outline, the LSOA/MSOA/ward of the building centre; every link with key and confidence, precision texts in meta (heat 1308 links on 808 buildings, solar 1266 links on 763 buildings, venues 13 links on 11 buildings, points 31 links on 22 buildings, brownfield 1 links on 1 buildings, area 1129 links on 1129 buildings)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ogw5"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdxyl"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23697"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-248xz"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gyrw"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2og9g"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2lzpg"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-em875"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24rpx"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-29j4y"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jkzj"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e6w0w"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g1p1"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e6wp0"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gj6n"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emxpl"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-uprn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/join-lds"
+   },
+   "cwp:osmUse": "derived"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/areas-that-qualify-for-carbon-saving-community/areas-that-qualify-for-carbon-saving-community.json",

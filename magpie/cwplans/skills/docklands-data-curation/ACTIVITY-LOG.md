@@ -770,3 +770,9 @@ central tower - do we have an index of these?"
   `feeds/london-datastore/harvest-log.json`, which triage reads (F8b no zone rows, F10b unreadable, F7 documents).
 - Batch 1 (ranks 1-30): see the commit; sizes and outcomes in harvest-log.json. Big outputs cut by hand rules (housing-led
   projections: persons and components sheets; noise: Lden only).
+- Joins and pages: `tools/join-lds.mjs` -> `registry/sources/lds/building-links.json` (heat 1,308 and solar 1,266 links
+  by TOID, venues by UPRN 11 high + position, records by position, area of all 1,129 buildings) and `area-context.json`;
+  `feeds/london-datastore/lds-building.js` renders them in the atlas dossier and the 3D page card. Atlas: new view
+  "London Datastore" (#lds) with final-state counts, datasets by theme, a map layer per dataset or per theme. Faults
+  F36-F41 catalogued. Tests: atlas #lds, map layer and dossier at 1600x900 DPR 1 and 390x844 DPR 3; 3D rotherhithe,
+  greenland, pier at both sizes: no console error, screenshots looked at.

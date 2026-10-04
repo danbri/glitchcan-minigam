@@ -163,7 +163,7 @@ svg .muted { fill: var(--muted); }
   </div>
   <nav aria-label="Atlas sections">
     <a href="#overview">Overview</a><a href="#map">Map</a><a href="#buildings">Buildings</a><a href="#business">Businesses</a>
-    <a href="#postcodes">Postcodes</a><a href="#under">Below ground</a><a href="#heritage">Heritage</a><a href="#river">River</a>
+    <a href="#postcodes">Postcodes</a><a href="#under">Below ground</a><a href="#heritage">Heritage</a><a href="#river">River</a><a href="#lds">London Datastore</a>
     <a href="#sources">Live and sources</a><a href="#quality">Data quality</a><a href="#data">Data and licences</a>
   </nav>
 </header>
@@ -277,6 +277,15 @@ svg .muted { fill: var(--muted); }
   <div id="rivSnap"><p class="small">Loading…</p></div>
 </section>
 
+<section class="view" id="v-lds">
+  <h1>London Datastore, clipped to the zone</h1>
+  <p class="lede">Every dataset of the London Datastore (data.london.gov.uk) was triaged by written rules; the open ones that hold data for the Docklands model box were harvested here, zone rows and features only. Tap "map" for a layer on the <a href="#map">map</a>; each layer's records name their source, dates and licence. Building facts (heat demand, solar potential, Census context of the LSOA, venues) are in each building's record. Method: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/README.md">README</a>.</p>
+  <div class="cards" id="ldsCards"></div>
+  <div class="tools"><div class="chips" id="ldsTheme"></div><input type="search" id="ldsq" placeholder="Filter datasets" aria-label="Filter datasets"><span class="small" id="ldscount"></span></div>
+  <div id="ldsList"></div>
+  <p class="small" id="ldsFoot"></p>
+</section>
+
 <section class="view" id="v-sources">
   <h1>Live data and sources</h1>
   <div class="panel live" id="srcLive"><b>Now</b> <span class="small">(EA tide gauges, Open-Meteo, London Air Quality Network, TfL, Thames Water storm overflows)</span><br><button class="btn primary" type="button" data-live>Load live data</button><div data-liveout></div></div>
@@ -339,6 +348,7 @@ svg .muted { fill: var(--muted); }
   addEventListener('drop', no); })();
 </script>
 <script src="../docklands/opening-hours.js"></script>
+<script src="../feeds/london-datastore/lds-building.js"></script>
 <script>
 'use strict';
 (() => {
@@ -364,6 +374,7 @@ const P = {
   records: '../registry/sources/museums/records-open.json', apa: '../registry/sources/museums/apa_greater_london.geojson',
   companies: '../registry/companies-by-postcode.json', homes: '../registry/homes-by-postcode.json', queries: '../postcodes/queries.json',
   register: '../data-register.json', levels: '../data/sourced-levels.json', quality: '../quality/issues.json',
+  lds: '../feeds/london-datastore/index.json',
 };
 let A = null, REG = null, regById = new Map();
 const B = new Map(); // atlas building index by id
@@ -392,7 +403,7 @@ themeBtn.onclick = () => {
 };
 
 // ---------- router: #view or #view/kind/id (kind: b building, pc postcode, h heritage place)
-const VIEWS = ['overview', 'map', 'buildings', 'business', 'postcodes', 'under', 'heritage', 'river', 'sources', 'quality', 'data'];
+const VIEWS = ['overview', 'map', 'buildings', 'business', 'postcodes', 'under', 'heritage', 'river', 'lds', 'sources', 'quality', 'data'];
 let current = null; const shown = new Set();
 function route() {
   let h = decodeURIComponent(location.hash.slice(1));
@@ -505,10 +516,14 @@ async function openBuilding(id) {
     ${b.features?.length ? `<h3>Features</h3><p class="small">${b.features.map(f => `${esc(f.name)} (${esc(f.kind)})`).join(', ')}</p>` : ''}
     ${facts ? `<h3>Wikidata</h3><table>${facts}</table>` : ''}
     ${homes}${sales}${comp}
+    <div id="ldsDos"></div>
     ${pcs ? `<h3>Postcodes</h3><p>${pcs}</p>` : ''}
     ${qn}
     <h3>Identifiers</h3><p class="small">${b.toids?.length ? `OS TOID ${b.toids.map(esc).join(', ')}<br>` : ''}${b.usrns?.length ? `USRN ${b.usrns.map(esc).join(', ')}<br>` : ''}${b.inspire?.length ? `HM Land Registry INSPIRE ${b.inspire.map(esc).join(', ')} (index polygons, not title numbers)<br>` : ''}${(L.companies_house_by_postcode || []).map(u => a(u, 'Companies House search')).join(' ')} ${(L.land_registry_price_paid_by_postcode || []).map(u => a(u, 'price paid search')).join(' ')}</p>`);
+  ldsDossier(id);
 }
+// London Datastore facts of the building (heat, solar, Census context, venues; tools/join-lds.mjs), filled when loaded
+function ldsDossier(id) { if (!window.LdsBuilding) return; LdsBuilding.load('../').then(() => { const el = $('ldsDos'); if (el && regById.has(id)) { const h = LdsBuilding.html(id, esc); el.innerHTML = h ? '<h3>London Datastore</h3>' + h : ''; } }).catch(() => {}); }
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-flyto]'); if (!t) return; e.preventDefault();
   const [la, lo] = t.dataset.flyto.split(',').map(Number); location.hash = 'map'; show('map');
@@ -1044,6 +1059,58 @@ INIT.map = () => {
   for (const [k, , on] of DEF) if (on) toggle(k, true);
   if (matchMedia('(max-width: 700px)').matches) $('layers').open = false;
   const m = /\/b\/(cwb-\d+)/.exec(location.hash); if (m) { const b = B.get(m[1]); if (b) map.setView([b.lat, b.lon], 18); hilite(m[1]); }
+};
+
+// ---------- London Datastore (feeds/london-datastore/index.json, tools/lds-harvest-auto.mjs index; skill cwplans-london-datastore)
+const LDSC = { 'buildings-places': '#c2410c', 'people-housing': '#7c3aed', environment: '#15803d', transport: '#2563eb', 'occupants-organisations': '#db2777', 'events-works': '#ca8a04', heritage: '#0f766e' };
+const ldsLayers = new Map();
+let LDSI = null; const getLds = async () => LDSI ||= await load(P.lds);
+function ldsPopup(x, f) {
+  const P2 = f.properties || {}, skip = /^(in_cw|whole_in_zone|layer|fid|objectid|shape_(length|area)|globalid)$/i;
+  const kv = Object.entries(P2).filter(([k, v]) => v != null && v !== '' && !skip.test(k)).slice(0, 14).map(([k, v]) => `<tr><th style="position:static">${esc(k)}</th><td>${esc(String(typeof v === 'object' ? JSON.stringify(v) : v).slice(0, 160))}</td></tr>`).join('');
+  return `<b>${esc(x.title)}</b>${P2.layer ? `<div class="small">${esc(P2.layer)}</div>` : ''}<table class="small">${kv}</table><div class="small">Dataset updated ${esc(x.dataset_modified || '?')}${x.resource_dates ? `; files ${esc(x.resource_dates[0])} to ${esc(x.resource_dates[1])}` : ''}; fetched ${esc(x.fetched || '?')}. ${a(x.page, 'London Datastore page')} · ${esc(x.licence || '')}. ${esc(x.attribution || '')}</div>`;
+}
+async function ldsMap(path, on = true) {
+  const I = await getLds(), x = I.datasets.find(d => d.files.some(f => f.path === path)); if (!x) return;
+  if (!map) { location.hash = 'map'; show('map'); await new Promise(r => setTimeout(r, 120)); }
+  let Lr = ldsLayers.get(path);
+  if (on && !Lr) {
+    const gj = await load('../' + path), col = LDSC[x.theme] || '#475569', canvas = L.canvas({ padding: .3 });
+    Lr = L.geoJSON(gj, { renderer: canvas, style: () => ({ color: col, weight: 1.2, fillOpacity: .08 }), pointToLayer: (f, ll) => L.circleMarker(ll, { renderer: canvas, radius: 4, color: '#222', weight: .5, fillColor: col, fillOpacity: .85 }),
+      onEachFeature: (f, l) => l.on('click', e => L.popup({ maxWidth: 340 }).setLatLng(e.latlng).setContent(ldsPopup(x, f)).openOn(map)) });
+    ldsLayers.set(path, Lr);
+    $('layerList').insertAdjacentHTML('beforeend', `<label><input type="checkbox" data-ldsl="${esc(path)}" checked> <span style="color:${col}">■</span> ${esc(x.title)}</label>`);
+  }
+  if (!Lr) return;
+  if (on) Lr.addTo(map); else map.removeLayer(Lr);
+  const cb = document.querySelector(`[data-ldsl="${CSS.escape(path)}"]`); if (cb) cb.checked = on;
+}
+document.addEventListener('change', e => { const p = e.target.dataset && e.target.dataset.ldsl; if (p) ldsMap(p, e.target.checked); });
+document.addEventListener('click', e => { const t = e.target.closest('[data-ldsmap]'); if (!t) return; e.preventDefault(); ldsMap(t.dataset.ldsmap, true); location.hash = 'map'; show('map'); });
+// a theme's layers at once: every GeoJSON of the theme up to 2 MB (bigger ones one by one from the list)
+document.addEventListener('click', async e => { const t = e.target.closest('[data-ldstheme]'); if (!t) return; e.preventDefault(); const I = await getLds();
+  const paths = I.datasets.filter(d => d.theme_name === t.dataset.ldstheme).flatMap(d => d.files.filter(f => f.kind === 'geojson' && f.bytes <= 2e6).map(f => f.path));
+  location.hash = 'map'; show('map'); for (const p of paths) await ldsMap(p, true); });
+INIT.lds = async () => {
+  const I = await getLds(), st = I.meta.final_states, sum = Object.values(st).reduce((p, q) => p + q, 0);
+  $('ldsCards').innerHTML = [['harvested', 'datasets held (harvested or registered)'], ['listed-for-harvest', 'listed for harvest, not yet taken'], ['not-relevant', 'no data in the zone (by the data or the metadata)'], ['not-open', 'no open licence: metadata only'], ['deferred', 'deferred (documents, links only, by hand, unreadable)'], ['unavailable', 'unavailable'], ['sensitive', 'sensitive titles: never harvested']]
+    .map(([k, t]) => `<div class="card"><div class="k">${esc(k)}</div><div class="big">${N(st[k] || 0)}</div><p>${esc(t)}</p></div>`).join('') + `<div class="card"><div class="k">catalogue</div><div class="big">${N(sum)}</div><p>datasets, each with one final state</p></div>`;
+  const themes = [...new Set(I.datasets.map(d => d.theme_name))].sort();
+  let th = 'all';
+  $('ldsTheme').innerHTML = ['all', ...themes].map(t => `<button class="chip" type="button" data-t="${esc(t)}" aria-pressed="${t === th}">${esc(t)}</button>`).join('');
+  const kb = b => b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' kB';
+  const draw = () => {
+    const q = $('ldsq').value.toLowerCase(), rows = I.datasets.filter(d => (th === 'all' || d.theme_name === th) && (!q || (d.title + ' ' + d.dataset + ' ' + (d.publisher || '')).toLowerCase().includes(q)));
+    $('ldscount').textContent = `${rows.length} of ${I.datasets.length}`;
+    const by = {}; for (const d of rows) (by[d.theme_name] ||= []).push(d);
+    $('ldsList').innerHTML = Object.entries(by).sort().map(([t, ds]) => `<h2>${esc(t)} (${ds.length}) <a href="#" class="small" data-ldstheme="${esc(t)}">map this theme</a></h2><div class="cards">${ds.map(d => `<div class="card"><div class="k"><span style="color:${LDSC[d.theme] || '#475569'}">■</span> ${esc(d.dataset)} · ${esc(d.licence || '')}</div><p><b>${esc(d.title)}</b></p>
+      <p class="small">${esc(d.publisher || '')}${d.geo ? ' · ' + esc(d.geo) : ''} · updated ${esc(d.dataset_modified || '?')}${d.resource_dates ? ` · files ${esc(d.resource_dates[0])}${d.resource_dates[1] !== d.resource_dates[0] ? ' to ' + esc(d.resource_dates[1]) : ''}` : ''} · fetched ${esc(d.fetched || '?')}</p>
+      <p class="small">${d.files.map(f => `${f.kind === 'geojson' ? `${N(f.features)} features${f.in_cw ? ` (${N(f.in_cw)} at Canary Wharf)` : ''}` : `${N(f.rows)} zone rows in ${N(f.tables)} tables`} <span class="tag">${kb(f.bytes)}</span>${f.note ? ` <span class="tag">${esc(f.note)}</span>` : ''} ${a('../' + f.path, 'file')}${f.kind === 'geojson' ? ` <a href="#" data-ldsmap="${esc(f.path)}">map</a>` : ''}`).join('<br>')}</p>
+      <div class="links small">${a(d.page, 'Datastore page')}</div></div>`).join('')}</div>`).join('');
+  };
+  $('ldsTheme').onclick = e => { const c = e.target.closest('[data-t]'); if (!c) return; th = c.dataset.t; $('ldsTheme').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c))); draw(); };
+  $('ldsq').oninput = draw; draw();
+  $('ldsFoot').innerHTML = `Index built ${esc(I.meta.made)}. ${esc(I.meta.credit)} ${a('https://data.london.gov.uk/about/terms-and-conditions', 'Datastore terms')}.`;
 };
 
 // ---------- boot
