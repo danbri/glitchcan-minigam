@@ -3148,6 +3148,183 @@
       "judgement": "Source choice and licence decisions (BSC5 as public domain, d3-celestial lines as BSD-3, CelesTrak with no stated licence and flagged for review, Vieira Milky Way outlines refused) are recorded in data-register.json sources and docklands/README.md \"Sky, time, weather and tide\"."
     },
     {
+      "id": "walk-london-datastore",
+      "tool": "tools/walk-london-datastore.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "lds-catalogue",
+          "endpoint": "https://data.london.gov.uk/api/v3/datasets/export.json",
+          "request": "GET, every public dataset in one response (11 MB on 2026-10-04)"
+        },
+        {
+          "source": "lds-catalogue",
+          "endpoint": "https://data.london.gov.uk/api/action/package_search",
+          "request": "GET, no parameters (q, rows and start are ignored): all datasets with the CKAN organisation and maintainer"
+        },
+        {
+          "source": "lds-catalogue",
+          "endpoint": "https://data.london.gov.uk/api/v3/dataset/<id>",
+          "request": "only with --details: one GET per dataset (186 of 1,305 fetched on 2026-10-04; they added only a generic format and no archivedAt)"
+        },
+        {
+          "source": "lds-23n41",
+          "endpoint": "https://data.london.gov.uk/download/23n41/<resource id>/<file>",
+          "request": "harvest air-quality-monitoring-sites: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2gy3r",
+          "endpoint": "https://data.london.gov.uk/download/2gy3r/<resource id>/<file>",
+          "request": "harvest article4-office-residential: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2og9g",
+          "endpoint": "https://data.london.gov.uk/download/2og9g/<resource id>/<file>",
+          "request": "harvest brownfield-register: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-23jxk",
+          "endpoint": "https://data.london.gov.uk/download/23jxk/<resource id>/<file>",
+          "request": "harvest central-activities-zone: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-emqwg",
+          "endpoint": "https://data.london.gov.uk/download/emqwg/<resource id>/<file>",
+          "request": "harvest conservation-areas: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-23697",
+          "endpoint": "https://data.london.gov.uk/download/23697/<resource id>/<file>",
+          "request": "harvest cultural-infrastructure: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-e195k",
+          "endpoint": "https://data.london.gov.uk/download/e195k/<resource id>/<file>",
+          "request": "harvest designated-open-space: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-29z31",
+          "endpoint": "https://data.london.gov.uk/download/29z31/<resource id>/<file>",
+          "request": "harvest locally-significant-industrial-sites: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2gqpn",
+          "endpoint": "https://data.london.gov.uk/download/2gqpn/<resource id>/<file>",
+          "request": "harvest lvmf-2026-consultation: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2g90r",
+          "endpoint": "https://data.london.gov.uk/download/2g90r/<resource id>/<file>",
+          "request": "harvest safeguarded-wharves: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2jxpm",
+          "endpoint": "https://data.london.gov.uk/download/2jxpm/<resource id>/<file>",
+          "request": "harvest site-allocations: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-e1r5k",
+          "endpoint": "https://data.london.gov.uk/download/e1r5k/<resource id>/<file>",
+          "request": "harvest southwark-local-list: the resource named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2y5xy",
+          "endpoint": "https://data.london.gov.uk/download/2y5xy/<resource id>/<file>",
+          "request": "harvest strategic-industrial-land: the resource named in HARVEST (GET)"
+        },
+        {
+          "file": "data-register.json",
+          "note": "triage: dataset ids and slugs already referenced (held)"
+        },
+        {
+          "file": "pipeline.json",
+          "note": "triage: references (held)"
+        },
+        {
+          "file": "feeds/feeds.json",
+          "note": "triage: references (listed, or excluded when in the excluded list)"
+        },
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif",
+          "note": "OSTN15 grid for BNG <-> WGS84 (lib.mjs bngProjector)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/london-datastore/catalogue.json"
+        },
+        {
+          "file": "feeds/london-datastore/triage.json"
+        },
+        {
+          "file": "feeds/london-datastore/air-quality-monitoring-sites/air-quality-monitoring-sites.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/article4-office-residential/article4-office-residential.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/brownfield-register/brownfield-register.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/central-activities-zone/central-activities-zone.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/conservation-areas/conservation-areas.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/designated-open-space/designated-open-space.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/locally-significant-industrial-sites/locally-significant-industrial-sites.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/lvmf-2026-consultation/lvmf-2026-consultation.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/safeguarded-wharves/safeguarded-wharves.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/site-allocations/site-allocations.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/southwark-local-list/southwark-local-list.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/strategic-industrial-land/strategic-industrial-land.geojson"
+        },
+        {
+          "local": "data/raw/london-datastore/",
+          "note": "export.json, package_search.json, details/<id>.json, <dataset id>/<file> downloads (gitignored; reused unless --refresh)"
+        }
+      ],
+      "method": "Walks the London Datastore (a DataPress site with a CKAN-compatible API): reads the whole catalogue from the v3 export, writes it compact (one dataset per line); triages every dataset by written rules (licence class, relevance to the zone, kind, whether the project already holds or lists it, value themes, join keys, sensitivity, score); harvests the shortlisted open datasets and keeps the features that meet the 3D model box, as GeoJSON in WGS84 with a meta member (source, URLs, fetch date, licence, attribution, method, counts).",
+      "rules": [
+        "Catalogue: publisher = organisation (logo title), else CKAN maintainer, else custom.author; geo = custom.geo (spatial granularity); update_frequency = custom.update_frequency; resource format = file extension; resource URL = https://data.london.gov.uk/download/{dataset}/{id}/{file}. Not kept: descriptions, contact names and emails, logos.",
+        "Licence class: OGL v2/v3 -> ogl; Creative Commons Attribution -> cc-by; ODC Attribution -> odc-by; Public Domain, PDDL -> public-domain (these four are open); CC BY-SA and ODbL -> share-alike (never harvested, CLAUDE.md); CC Non-Commercial and All Rights Reserved -> restricted; TfL Transport Data Service Licence -> other; empty -> none (never harvested).",
+        "Relevance, first match: zone-place (title or tag names a place in the 3D model box; \"upon Thames\", \"Thames Estuary\", \"Thames Gateway\", \"Thamesmead\" removed first); zone-borough (names only Tower Hamlets, Southwark, Lewisham, Greenwich, Newham, City of London); other-area (names 1-3 places, none in the zone); london-fine (geo finer than a borough, or with no geo a ward/LSOA/MSOA/OA/postcode/UPRN/TOID word or a spatial format); london-borough; london-coarse; unknown.",
+        "Have: a dataset id or slug in a committed file of magpie/cwplans: data-register.json, pipeline.json, tools, data files -> held; a .md note, feeds catalogues, the 2026-10-03 survey -> listed; an \"excluded\" list or a survey \"left out\" line -> excluded-before; else new. feeds/london-datastore/ and the generated docs are not read.",
+        "Sensitive (catalogued, score 0, never harvested): title names homicide, victims, strip or intimate searches, suicide, custody, stop and search, hate crime, domestic abuse, sexual offences, safeguarding, missing persons, rough sleeping (CHAIN), bariatric incidents.",
+        "Score = relevance weight (zone-place 5, zone-borough 4, london-fine 3, london-borough 1.5, unknown 1, london-coarse 0.3, other-area 0) x max(theme value, 0.5) x recency (newest resource year >= 2024: 1, >= 2021: 0.8, >= 2016: 0.5, else 0.3) x (machine-readable format ? 1 : 0.4) x (a join key finer than a borough ? 1.3 : 1) x (open ? 1 : 0) x (held 0, listed 0.8, new 1).",
+        "Harvest zone: a feature is kept when its geometry meets the 3D model box (BNG E 532400-539900, N 176700-182300): a vertex inside, an edge crossing (Liang-Barsky) or the box centre inside a polygon. Whole geometries kept, not cut; whole_in_zone and in_cw (meets the Canary Wharf registry box -0.03, 51.498, -0.005, 51.51) are added.",
+        "Coordinates: GeoPackage SRS 27700, or a custom definition on Airy 1830 with the BNG projection (srs_id 100000) -> BNG; output WGS84 to 6 decimal places through OSTN15. CSV points: a row is WGS84 when |x| <= 180 and |y| <= 90, else BNG; empty or zero coordinates -> no_geometry.",
+        "Dropped fields: names matching e-mail, phone, contact, fax, mobile, owner name, person (none matched in the 13 harvested files). uprn_suspect: a UPRN field with an exponent or 9+ digits ending in 5+ zeros (F22). The Brownfield Register is read from its CSV, not the GPKG (F23).",
+        "Network: one request at a time over the whole tool, at least 1.1 s apart; up to 6 tries with Retry-After or a doubling pause on 429, 5xx and network errors; User-Agent glitchcan-cwplans/0.1. robots.txt disallows only /debug, /manage/, /login, /logout."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "area": "feeds",
+      "faults": [
+        "F22",
+        "F23"
+      ],
+      "judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md."
+    },
+    {
       "id": "fetch-trees",
       "tool": "tools/build-trees.mjs",
       "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-trees.mjs fetch [gla|osgs|tpo|tow ...]",

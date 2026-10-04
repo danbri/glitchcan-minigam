@@ -1166,6 +1166,21 @@ function moonNow(nm) {
 // moon's azimuth so that the water under it is where the path begins (depression tan(alt) - 0.32, at most 5 km away: wave
 // slopes up to about 9 degrees, as for the lamps) and its mirror image lies at the moon's altitude below the horizon.
 // Brightness: sqrt of the moon's brightness relative to full (the photos' exposure lifts a faint moon), its extinction and cloud.
+// the skyline seen from an eye (model metres): for each half degree of model azimuth (atan2(dx, -dz), from grid north)
+// the largest tangent of elevation of a building roof edge, so sky.js can leave out the names of stars behind buildings.
+// From the outer rings and roof heights (prisms; the fitted towers are within a few metres); cached for the eye.
+let HZ = null;
+function horizon(x, y, z) {
+  const key = [x, y, z].map(v => Math.round(v / 5)).join(); if (HZ && HZ.key === key) return HZ.p;
+  const p = new Float32Array(720).fill(-1), D = 180 / Math.PI;
+  A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (!(h > 0)) return; const top = b.b + h; if (top <= y) return; const r = ringOf(b); let pa = null, pt = 0;
+    for (let k = 0; k <= r.length; k++) { const q = r[k % r.length], dx = q[0] - x, dz = q[1] - z, d = Math.hypot(dx, dz); if (d < 3) { pa = null; continue; }
+      const a = ((Math.atan2(dx, -dz) * D + 360) % 360) * 2, t = (top - y) / d;
+      if (pa != null) { let a0 = pa, a1 = a; if (Math.abs(a1 - a0) > 360) { if (a0 < a1) a0 += 720; else a1 += 720; } const lo = Math.floor(Math.min(a0, a1)), hi = Math.ceil(Math.max(a0, a1)), tm = Math.min(t, pt);
+        for (let j = lo; j <= hi; j++) { const jj = ((j % 720) + 720) % 720; if (tm > p[jj]) p[jj] = tm; } }
+      pa = a; pt = t; } });
+  HZ = { key, p }; return p;
+}
 function moonGlitter() {
   if (!MOON.on || MOON.alt < .3 || MOON.noGlitter) return null;
   const wl = tidalField && tidalLevel != null ? tidalField(CAM.eye[0], CAM.eye[2]) + .1 : NIGHT.wl, d = MOON.dir, hl = Math.hypot(d[0], d[2]) || 1, ta = Math.tan(MOON.alt * Math.PI / 180), he = CAM.eye[1] - wl * VZ;
@@ -1861,7 +1876,7 @@ if (/[?&]night\b/.test(location.search)) setNight(true);
 function renderNow() { queued = false; render(); gl.finish(); }
 window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); },
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
-  setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; },
+  setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,
   relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; delete cam.hfov; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
