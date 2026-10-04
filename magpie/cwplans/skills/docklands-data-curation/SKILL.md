@@ -189,10 +189,17 @@ polygon), then GET each result `uri` (a ZIP; HEAD returns 405). Products over th
 - Phones play sound only as the direct result of a tap: create and resume the AudioContext and call `play()` in the
   tap handler before any `await`. A file chosen in the picker arrives outside the tap, so the file button unlocks the
   audio element when it is tapped. iOS: `navigator.audioSession.type = 'playback'` or the silent switch mutes Web Audio.
+- Phones run `mediump` as 16-bit floats. A hash such as fract(sin(dot(q, k)) * 43758.5) collapses there: in the first
+  night build it gave 0 for 3,550 of 3,600 window cells, so towers were dark on the owner's phone and fine in
+  SwiftShader (which runs mediump as 32-bit). Use `highp` in any shader that hashes world positions, and test the
+  maths with fp16 rounding in Node, because the headless renderer cannot show this fault.
+- Test a visual change at two sizes (1600x900, 390x844) and two pixel ratios (1, 3), from the views of the
+  reference photos (`?view=rotherhithe|greenland|pier`), and compare by numbers (luma, counts of light points), not
+  by one view by eye: the first night build passed one 800x600 low view and failed on the owner's device.
 - Night mode (?night): method and the tones measured from the owner's night photos are in docklands/README.md,
   "Night" (the photos are the owner's and are not in the repo). Building use reaches the shader as g.w (use x 1000 +
-  roof top), not through the alpha byte. Red aviation lights go on every building over 45 m, which is more than the
-  photos show: tune from evidence (CAA obstacle lighting rules, photos), not by eye alone.
+  roof top), not through the alpha byte. Red aviation lights follow the Air Navigation Order 2016 art. 222 rule (roof corners from 100 m;
+  intermediate levels at most 52 m apart from 150 m), calibrated against the reference photos.
 - A finger that lands on a label must still join a pinch or twist: the label box feeds the same gesture code, and a
   moved pointer suppresses the label's click.
 
