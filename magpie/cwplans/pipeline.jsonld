@@ -8,6 +8,140 @@
  },
  "@graph": [
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works",
+   "@type": "prov:Activity",
+   "rdfs:label": "fetch-works",
+   "dct:description": "Fetches public permits, works, closures, planned events and markets for the Docklands zone (the 3D model box plus the Royal Docks margin) from TfL, DfT Street Manager, The Gazette, Tower Hamlets, the Planning London Datahub and OSM, and harvests venue and council event programmes from the event feeds in feeds/events.json; writes one dated snapshot per source ({meta, items}) and works.json, every item in one normalised shape, for feeds/whatson.html.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api",
+     "dcat:accessURL": "https://api.tfl.gov.uk/Line/{ids}/Status/{from}/to/{to}?detail=true",
+     "dct:description": "every line of modes tube, dlr, elizabeth-line, overground, river-bus, cable-car (Line/Mode/...) plus c2c, southeastern, southern, thameslink, greater-anglia; 12 ids per request; from = fetch date 00:00, to = +90 days"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api",
+     "dcat:accessURL": "https://api.tfl.gov.uk/Line/Mode/bus/Status?detail=true",
+     "dct:description": "all bus routes with disruptions (13 MB)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api",
+     "dcat:accessURL": "https://api.tfl.gov.uk/StopPoint/Mode/bus/Disruption?includeRouteBlockedStops=true",
+     "dct:description": "all bus stop disruptions"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api",
+     "dcat:accessURL": "https://api.tfl.gov.uk/Road/all/Disruption and /Road/all/Street/Disruption",
+     "dct:description": "stripContent=true, startDate = fetch date, endDate = +90 days"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/naptan",
+     "dcat:accessURL": "https://naptan.api.dft.gov.uk/v1/access-nodes",
+     "dct:description": "atcoAreaCodes=490 (bus) and 910,930,940 (stations), dataFormat=csv; cached"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dft-street-manager",
+     "dcat:accessURL": "https://opendata.manage-roadworks.service.gov.uk/{permit,activity}/YYYY/MM.zip",
+     "dct:description": "the last full month (default); about 1 GB and 13 MB; cached"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/the-gazette",
+     "dcat:accessURL": "https://www.thegazette.co.uk/all-notices/notice/data.json and https://www.thegazette.co.uk/notice/{id}",
+     "dct:description": "noticetypes 1501 and 1503 x text = each zone authority, start-publish-date = fetch date - 120 days, 100 per page; then each notice page (cached)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/th-licensing-notices",
+     "dcat:accessURL": "https://www.towerhamlets.gov.uk/lgnl/business/licences/alcohol_and_entertainment/Licence_applications_received_this_week.aspx and .../markets/markets_in_tower_hamlets.aspx",
+     "dct:description": "HTML GET"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/postcodes-io",
+     "dcat:accessURL": "https://api.postcodes.io/postcodes",
+     "dct:description": "bulk POST, 100 postcodes per request"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-london-datahub",
+     "dcat:accessURL": "https://planningdata.london.gov.uk/api-guest/applications/_search",
+     "dct:description": "POST Elasticsearch query: \"temporary\" + an event word + geo_bounding_box of the zone, 300 newest by last_updated"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/events.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/venue-event-feeds",
+     "dcat:accessURL": "the feed URL of every verified event feed in feeds/events.json, read at run time",
+     "dct:description": "HTTP GET (POST with the entry request_body when it has one); ICS, RSS/Atom or WordPress REST JSON"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm",
+     "dcat:accessURL": "data/raw/docklands/greater_london-latest.osm.pbf (local)",
+     "dct:description": "amenity=marketplace nodes and ways; named highways for council-page markets"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/tfl-lines.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/tfl-bus.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/tfl-road.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/street-manager.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/street-manager-activities.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/gazette.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/th-licences.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/planning.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/markets.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/venue-events.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/works.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/fetch-works.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-works.mjs [tfl-lines tfl-bus tfl-road street-manager gazette th-licences planning markets venue-events] [--no-fetch] [--refresh] [--days=90] [--month=YYYY-MM]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Zone: \"model\" = WGS84 -0.095, 51.474 to 0.015, 51.522 (BOX_WGS84 of fetch-docklands.mjs; the tool prints the BNG box from docklands/data/area.js meta.extent: E 532400-539900, N 176700-182300); \"east\" = 0.015, 51.495 to 0.085, 51.522 (Royal Docks, ExCeL, City Airport). Items outside both are dropped and counted.",
+    "TfL lines: a status is kept when an affected stop lies in the zone; TfL sends lat/lon 0, so stops are placed through NaPTAN (stop-area id 940G/910G/930G -> station entry 9400/9100/9300, else by station name); a status naming no stops is kept only for a line that serves the zone (line-wide). Validity periods kept; start = first from, end = last to.",
+    "TfL buses: route disruptions grouped by identical text; kept when the text names a stop that lies in the zone on one of its routes, else when its opening \"STREET, DISTRICT:\" is a district wholly in the zone (E1, E1W, E14, E16, EC3*, SE8, SE10, SE16); a borough name alone does not place a diversion. Stop closures placed by the NaPTAN position of their ATCO code, grouped by text and dates.",
+    "TfL roads: disruptions active in the 90-day window whose TfL point lies in the zone; closed street segments of the same disruption id attached (at most 12).",
+    "Street Manager: unzip -p of the monthly archive split on }{\"event_reference\": (record count must equal the zip file count); BNG prefilter on the first coordinate, then OSTN15 to WGS84 and the zone test; the latest event per permit or activity reference. Permits kept when not cancelled, refused, revoked or closed and the end (actual, else proposed) is on or after the fetch date. Activities: skips and scaffolding counted, not kept; cancelled and ended dropped.",
+    "Gazette: robots.txt Crawl-delay 10 s between requests; only data.json searches and /notice/{id} pages (data.jsonld/.ttl/.rdf/.xml and ?view=linked-data are disallowed). The search geo point is the publisher office, so a notice is kept by issuing authority (zone councils, or Transport for London naming a zone borough). TTRO = text says temporary, section 14, 16A or experimental. Dates = day-month-year phrases on or after publication. Submitter (f:name, f:familyName) and signatory names dropped.",
+    "Tower Hamlets licences: the weekly table; premises-name column dropped (it sometimes holds a private licence holder name); placed at the postcode centre (postcodes.io, ONSPD). One week per snapshot; history is the git history of the snapshot.",
+    "Planning London Datahub: description has \"temporary\" and an event word (event, marquee, festival, stage, market, fair, funfair, ice rink, pop-up, filming, concert, exhibition); centroid in the zone; applications validated more than two years before the fetch dropped; description cut to 220 characters; facts and link only (GLA terms not confirmed as OGL).",
+    "Markets: OSM amenity=marketplace in the zone from the local extract (ways at the mean of their nodes); Tower Hamlets markets page parsed for name, days, place and times and joined by name, else placed on the OSM street it names.",
+    "Venue events: the feeds are read from feeds/events.json at run time (category ical, rss-atom, rest-api or whats-on-page; verified; a feed URL; ics, rss, atom or json; id, name or subject about events or what is on; not news, press releases, consultations, meetings, warnings, closures, works or notices; harvest: true/false on an entry overrides), so feeds added there join automatically. Kept per event: title (cut to 160), dates, venue, position, link; no description text. Date from the feed event fields (ICS DTSTART, RSS ev:startdate, WordPress ACF dates), a date in the title or link, or the Atom published day where checked by hand (Royal Docks, midnight entries only); events from today to 180 days ahead; undated items only from single-venue programmes. Position: postcode in the item, else the venue of the feed host (VENUES table, through its postcode). The Royal Docks feed mixes articles with events: only /whats-on/ links.",
+    "Gazette office postcodes (SE18 6HQ, SE6 4RU, E16 2QU, SE1 2QH, SE1 8NJ, SE1P 5LX, EC2V 7HH, EC2P 2EJ, E1 0HJ, E1 1BJ) are removed before postcode districts are read.",
+    "Network: User-Agent glitchcan-cwplans/0.1; one request at a time per host, at least 1 s apart (10 s for www.thegazette.co.uk); up to 5 tries with Retry-After or a doubling pause on 429, 5xx, timeouts and resets. Raw responses in data/raw/works/ (gitignored); NaPTAN, Street Manager archives and Gazette notice pages reused unless --refresh; --no-fetch rebuilds from the raw files."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [],
+   "cwp:area": "feeds",
+   "cwp:fault": [],
+   "cwp:judgement": "Zone margins, the rail lines treated as serving the zone, the postcode districts treated as wholly in the zone, the event words of the planning query and the dropped fields (premises names, submitter names, skips and scaffolding) are choices recorded in skills/cwplans-permits-and-works/SKILL.md and feeds/works/README.md."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-raw-grid",
    "@type": "prov:Activity",
    "rdfs:label": "fetch-raw-grid",
@@ -3464,6 +3598,16 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/heasarc-messier",
      "dcat:accessURL": "https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3query.pl",
      "dct:description": "tablehead=name=heasarc_messier, Action=Query, ResultMax=0, displaymode=BatchDisplay, Fields=All, Coordinates=Equatorial, Equinox=2000 (pipe-separated text)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/eumetsat-clm",
+     "dcat:accessURL": "https://view.eumetsat.int/geoserver/wms",
+     "dct:description": "WMS 1.3.0 GetMap, layers=msg_fes:clm, crs=EPSG:4326, bbox=50.5,-1.6,52.5,1.6, 256 x 256, image/png, time=the 15-minute slot (default DATE 23:00Z)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm",
+     "dcat:accessURL": "data/raw/docklands/greater_london-latest.osm.pbf (local, extract osmfr-greater-london)",
+     "dct:description": "osmium extract -b 0.03,51.495,0.08,51.51, tags-filter w/aeroway=runway, export geojson; the way with ref 09/27"
     }
    ],
    "prov:generated": [
@@ -3487,12 +3631,18 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/messier.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/clm-20261003T2300Z.png"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/lcy-approach.json"
     }
    ],
    "cwp:tool": {
     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/fetch-sky.mjs"
    },
-   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [--date 2026-10-03]",
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [lcy] [--date 2026-10-03]",
    "cwp:kind": "fetch",
    "cwp:rule": [
     "Stars: Bright Star Catalogue rows with a J2000 position and V <= 5.5 (2,887); columns from the CDS ReadMe: HR 1-4, RA 76-83, Dec 84-90, Vmag 103-107, B-V 110-114; RA and Dec to 0.001 degree, V and B-V to 0.01; a missing B-V becomes 0.6; sorted by V.",
@@ -3501,6 +3651,8 @@
     "Weather: the forecast API's past hours (best_match model, UK Met Office UKV first for London; it has visibility, which the ERA5 archive lacks); values as published, hourly, London time.",
     "Tide: 15-minute instantaneous readings in m AOD, UTC times, sorted; no gap filling; EA gives readings only, no predictions. The page (sky.js cleanGauges) leaves out a reading whose difference from the nearest other gauge departs more than 0.45 m from the median of that difference over 2 h either side (fault F21), then interpolates linearly by chainage along data/river.json between the gauges. The EA has no tidal gauge between Tower Pier and Charlton (station search of 2026-10-04, 15 km round the estate).",
     "Star names: rows of IAU-CSN whose designation is an HR number present in stars.json (324 of 451 names); columns found by the positions of the header titles (Name/Diacritics, Designation, Con), because names can hold spaces; the diacritic form is kept.",
+    "Clouds: the EUMETSAT cloud mask PNG kept as sent. The page (sky.js) reads white pixels (R, G, B > 200) as cloud, takes the mean over 60 km round the box centre, and raises each layer's Open-Meteo cover by 0.9 x (local mask - mean), clamped to 0..1, so the mask places the cloud and Open-Meteo keeps the amount; the mask moves with 2.2 x the 10 m wind for up to 90 minutes from its slot. Other times only with Fetch ticked (EUMETView sends CORS headers; the mask appears about 25 minutes after the slot; none before 2020-09-01). Parallax (about 1.6 km north for cloud at 1 km over London) is not corrected.",
+    "London City Airport: the landing thresholds are the two ends of the main runway way (ref 09/27; its displaced-threshold ways are left out); the page draws each approach as the extended centreline rising at 5.5 degrees (the published glide path) from 15 m over the threshold (50 ft assumed) out to 12 km. No live aircraft: OpenSky (written licence for any live product), adsb.fi (personal non-commercial), ADS-B Exchange (commercial), adsb.lol (ODbL share-alike) and airplanes.live (terms behind a bot challenge) were checked on 2026-10-04.",
     "Messier: all 109 rows of the HEASARC table (M 102 is not in it); RA and Dec from sexagesimal J2000 to degrees (0.001); size = the larger dimension in arcmin; the notes column title-cased as the common name. OpenNGC was not used (CC BY-SA).",
     "Network: User-Agent glitchcan-cwplans/0.1; three retries 3, 6 and 9 s apart on timeouts and 5xx (the agent proxy drops connections now and then); 4xx is not retried; files overwritten on every run."
    ],
@@ -3510,6 +3662,214 @@
    "cwp:area": "sky",
    "cwp:fault": [],
    "cwp:judgement": "Source choice and licence decisions (BSC5 as public domain, d3-celestial lines as BSD-3, CelesTrak with no stated licence and flagged for review, Vieira Milky Way outlines refused) are recorded in data-register.json sources and docklands/README.md \"Sky, time, weather and tide\"."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore",
+   "@type": "prov:Activity",
+   "rdfs:label": "walk-london-datastore",
+   "dct:description": "Walks the London Datastore (a DataPress site with a CKAN-compatible API): reads the whole catalogue from the v3 export, writes it compact (one dataset per line); triages every dataset by written rules (licence class, relevance to the zone, kind, whether the project already holds or lists it, value themes, join keys, sensitivity, score); harvests the shortlisted open datasets and keeps the features that meet the 3D model box, as GeoJSON in WGS84 with a meta member (source, URLs, fetch date, licence, attribution, method, counts).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue",
+     "dcat:accessURL": "https://data.london.gov.uk/api/v3/datasets/export.json",
+     "dct:description": "GET, every public dataset in one response (11 MB on 2026-10-04)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue",
+     "dcat:accessURL": "https://data.london.gov.uk/api/action/package_search",
+     "dct:description": "GET, no parameters (q, rows and start are ignored): all datasets with the CKAN organisation and maintainer"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue",
+     "dcat:accessURL": "https://data.london.gov.uk/api/v3/dataset/<id>",
+     "dct:description": "only with --details: one GET per dataset (186 of 1,305 fetched on 2026-10-04; they added only a generic format and no archivedAt)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23n41",
+     "dcat:accessURL": "https://data.london.gov.uk/download/23n41/<resource id>/<file>",
+     "dct:description": "harvest air-quality-monitoring-sites: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gy3r",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2gy3r/<resource id>/<file>",
+     "dct:description": "harvest article4-office-residential: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2og9g",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2og9g/<resource id>/<file>",
+     "dct:description": "harvest brownfield-register: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23jxk",
+     "dcat:accessURL": "https://data.london.gov.uk/download/23jxk/<resource id>/<file>",
+     "dct:description": "harvest central-activities-zone: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqwg",
+     "dcat:accessURL": "https://data.london.gov.uk/download/emqwg/<resource id>/<file>",
+     "dct:description": "harvest conservation-areas: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23697",
+     "dcat:accessURL": "https://data.london.gov.uk/download/23697/<resource id>/<file>",
+     "dct:description": "harvest cultural-infrastructure: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e195k",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e195k/<resource id>/<file>",
+     "dct:description": "harvest designated-open-space: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-29z31",
+     "dcat:accessURL": "https://data.london.gov.uk/download/29z31/<resource id>/<file>",
+     "dct:description": "harvest locally-significant-industrial-sites: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gqpn",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2gqpn/<resource id>/<file>",
+     "dct:description": "harvest lvmf-2026-consultation: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g90r",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2g90r/<resource id>/<file>",
+     "dct:description": "harvest safeguarded-wharves: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jxpm",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2jxpm/<resource id>/<file>",
+     "dct:description": "harvest site-allocations: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e1r5k",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e1r5k/<resource id>/<file>",
+     "dct:description": "harvest southwark-local-list: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2y5xy",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2y5xy/<resource id>/<file>",
+     "dct:description": "harvest strategic-industrial-land: the resource named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data-register.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/feeds.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/catalogue.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/triage.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/air-quality-monitoring-sites/air-quality-monitoring-sites.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/article4-office-residential/article4-office-residential.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/brownfield-register/brownfield-register.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/central-activities-zone/central-activities-zone.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/conservation-areas/conservation-areas.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/designated-open-space/designated-open-space.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/locally-significant-industrial-sites/locally-significant-industrial-sites.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/lvmf-2026-consultation/lvmf-2026-consultation.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/safeguarded-wharves/safeguarded-wharves.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/site-allocations/site-allocations.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/southwark-local-list/southwark-local-list.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/strategic-industrial-land/strategic-industrial-land.geojson"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/london-datastore/"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/walk-london-datastore.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Catalogue: publisher = organisation (logo title), else CKAN maintainer, else custom.author; geo = custom.geo (spatial granularity); update_frequency = custom.update_frequency; resource format = file extension; resource URL = https://data.london.gov.uk/download/{dataset}/{id}/{file}. Not kept: descriptions, contact names and emails, logos.",
+    "Licence class: OGL v2/v3 -> ogl; Creative Commons Attribution -> cc-by; ODC Attribution -> odc-by; Public Domain, PDDL -> public-domain (these four are open); CC BY-SA and ODbL -> share-alike (never harvested, CLAUDE.md); CC Non-Commercial and All Rights Reserved -> restricted; TfL Transport Data Service Licence -> other; empty -> none (never harvested).",
+    "Relevance, first match: zone-place (title or tag names a place in the 3D model box; \"upon Thames\", \"Thames Estuary\", \"Thames Gateway\", \"Thamesmead\" removed first); zone-borough (names only Tower Hamlets, Southwark, Lewisham, Greenwich, Newham, City of London); other-area (names 1-3 places, none in the zone); london-fine (geo finer than a borough, or with no geo a ward/LSOA/MSOA/OA/postcode/UPRN/TOID word or a spatial format); london-borough; london-coarse; unknown.",
+    "Have: a dataset id or slug in a committed file of magpie/cwplans: data-register.json, pipeline.json, tools, data files -> held; a .md note, feeds catalogues, the 2026-10-03 survey -> listed; an \"excluded\" list or a survey \"left out\" line -> excluded-before; else new. feeds/london-datastore/ and the generated docs are not read.",
+    "Sensitive (catalogued, score 0, never harvested): title names homicide, victims, strip or intimate searches, suicide, custody, stop and search, hate crime, domestic abuse, sexual offences, safeguarding, missing persons, rough sleeping (CHAIN), bariatric incidents.",
+    "Score = relevance weight (zone-place 5, zone-borough 4, london-fine 3, london-borough 1.5, unknown 1, london-coarse 0.3, other-area 0) x max(theme value, 0.5) x recency (newest resource year >= 2024: 1, >= 2021: 0.8, >= 2016: 0.5, else 0.3) x (machine-readable format ? 1 : 0.4) x (a join key finer than a borough ? 1.3 : 1) x (open ? 1 : 0) x (held 0, listed 0.8, new 1).",
+    "Harvest zone: a feature is kept when its geometry meets the 3D model box (BNG E 532400-539900, N 176700-182300): a vertex inside, an edge crossing (Liang-Barsky) or the box centre inside a polygon. Whole geometries kept, not cut; whole_in_zone and in_cw (meets the Canary Wharf registry box -0.03, 51.498, -0.005, 51.51) are added.",
+    "Coordinates: GeoPackage SRS 27700, or a custom definition on Airy 1830 with the BNG projection (srs_id 100000) -> BNG; output WGS84 to 6 decimal places through OSTN15. CSV points: a row is WGS84 when |x| <= 180 and |y| <= 90, else BNG; empty or zero coordinates -> no_geometry.",
+    "Dropped fields: names matching e-mail, phone, contact, fax, mobile, owner name, person (none matched in the 13 harvested files). uprn_suspect: a UPRN field with an exponent or 9+ digits ending in 5+ zeros (F22). The Brownfield Register is read from its CSV, not the GPKG (F23).",
+    "Network: one request at a time over the whole tool, at least 1.1 s apart; up to 6 tries with Retry-After or a doubling pause on 429, 5xx and network errors; User-Agent glitchcan-cwplans/0.1. robots.txt disallows only /debug, /manage/, /login, /logout."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [],
+   "cwp:area": "feeds",
+   "cwp:fault": [
+    "F22",
+    "F23"
+   ],
+   "cwp:judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-fp16-shaders",
+   "@type": "prov:Activity",
+   "rdfs:label": "check-fp16-shaders",
+   "dct:description": "Checks the 3D page's shaders for what a phone GPU would do differently from the headless SwiftShader renderer: opens the page in headless Chromium, captures every compiled shader source, and counts each program's uniform rows, varyings, samplers and attributes against the WebGL 1 minimums; then re-runs the shaders' risky maths (hashes, time arguments, far positions, derivatives) in Node with every intermediate rounded to IEEE binary16, beside fp32.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/index.html"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/sky.js"
+    }
+   ],
+   "prov:generated": [],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/check-fp16-shaders.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/check-fp16-shaders.mjs [--no-browser]",
+   "cwp:kind": "check",
+   "cwp:rule": [
+    "fp16: round to nearest, ties to even, 10-bit mantissa, exponents -14 to 15 with subnormals, overflow to infinity (Node 22 has no Math.f16round).",
+    "A case fails only for a shader declared mediump (on a phone mediump may be fp16); cases for shaders that ask for highp where present (HIP, PRE) are reported as notes, because every OpenGL ES 3 GPU has highp in fragment shaders.",
+    "Each case quotes the shader text it mirrors; when that text is gone from the page the case is reported STALE and the tool fails.",
+    "Uniform rows are counted without packing (every float, vec2 and vec3 a whole row), so a real count is at most the one shown; minimums: 128 vertex and 16 fragment uniform vectors, 8 varyings, 8 texture units, 8 attributes.",
+    "Writes nothing; exit 1 on a failing or stale case."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [],
+   "cwp:area": "imagery",
+   "cwp:fault": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-trees",
@@ -4111,6 +4471,111 @@
    "cwp:fault": [
     "F11"
    ]
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live",
+   "@type": "prov:Activity",
+   "rdfs:label": "fetch-live",
+   "dct:description": "Fetches live and fast-changing state for the Docklands zone (the model box plus the east margin of fetch-works) and writes one dated snapshot per source with a common item shape {id, kind, name, zone, time, position, values, url}: Santander Cycles docks, TfL lift outages, live station busyness, JamCam cameras, UKPN power cuts, Thames Water storm overflows, NOTAMs (cranes and temporary areas) and the UK AIP helicopter structure (H4 and restricted areas).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",
+     "dcat:accessURL": "https://api.tfl.gov.uk/BikePoint",
+     "dct:description": "every dock, one request"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",
+     "dcat:accessURL": "https://api.tfl.gov.uk/Disruptions/Lifts/v2/",
+     "dct:description": "every current lift outage, one request"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",
+     "dcat:accessURL": "https://api.tfl.gov.uk/StopPoint/Mode/tube,dlr,elizabeth-line,overground",
+     "dct:description": "station positions, naptan and hub codes; cached (reused when present)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",
+     "dcat:accessURL": "https://api.tfl.gov.uk/crowding/{naptan}/Live",
+     "dct:description": "one request per Tube, DLR, Elizabeth line and Overground station naptan in the zone (65 on 2026-10-04)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",
+     "dcat:accessURL": "https://api.tfl.gov.uk/Place/Type/JamCam",
+     "dct:description": "every camera, one request"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ukpn-live-faults",
+     "dcat:accessURL": "https://ukpowernetworks.opendatasoft.com/api/explore/v2.1/catalog/datasets/ukpn-live-faults/exports/json",
+     "dct:description": "the whole dataset"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/thames-water-storm-overflows",
+     "dcat:accessURL": "https://services2.arcgis.com/g6o32ZDQ33GpCIu3/arcgis/rest/services/Thames_Water_Storm_Overflow_Activity_(Production)_view/FeatureServer/0/query",
+     "dct:description": "envelope -0.095,51.474,0.085,51.522 (inSR 4326), outFields=*, returnGeometry=false"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-pib",
+     "dcat:accessURL": "https://pibs.nats.co.uk/operational/pibs/PIB.xml",
+     "dct:description": "the full UK PIB, one request"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-uk-aip",
+     "dcat:accessURL": "https://www.aurora.nats.co.uk/htmlAIP/Publications/2024-03-21-AIRAC/html/eAIP/EG-AD-2.EGLL-en-GB.html and EG-ENR-5.1-en-GB.html",
+     "dct:description": "two pages; cached (reused when present)"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/live/%20(raw%20responses;%20--no-fetch%20reads%20them)"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/bikes.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/lifts.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/crowding.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/jamcams.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/ukpn.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/overflows.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/notams.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/helicopters.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/fetch-live.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-live.mjs [bikes lifts crowding jamcams ukpn overflows notams helicopters] [--no-fetch]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Zone: BOX_WGS84 of fetch-docklands.mjs (-0.095, 51.474, 0.015, 51.522) = 'model'; 0.015 to 0.085 E, 51.495 to 51.522 N = 'east'; items outside are dropped, except context items in helicopters.json (zone null).",
+    "Bikes: values as published (NbBikes, NbStandardBikes, NbEBikes, NbEmptyDocks, NbDocks; Installed, Locked, Temporary); unavailable_docks = NbDocks - NbBikes - NbEmptyDocks; time = the newest property 'modified'.",
+    "Lifts: stationUniqueId matched to StopPoint naptanId, then hubNaptanCode; kept when the station is in the zone; message kept as published.",
+    "Crowding: Tube and DLR (940GZZLU, 940GZZDL) then 910G station naptans in the zone, one at a time; percentageOfBaseline rounded to 0.001; dataAvailable false and 404 counted, not listed.",
+    "JamCams: position, view, available, imageUrl and videoUrl recorded; no image fetched or stored.",
+    "UKPN: kept when geopoint is in the zone; fullpostcodedata, mainmessage, plannedincidentreason and incidentcategorycustomerfriendlydescription dropped.",
+    "Storm overflows: Status 1 discharging (indicated, not confirmed), 0 not, -1 monitor offline; epoch milliseconds to UTC ISO.",
+    "NOTAMs: kept when a position stated in item E (DDMMSS(.s)N DDDMMSS(.s)E/W) lies in the zone, or item E states none and the Q-line centre does with a radius of at most 5 NM; deduplicated by series/number/year; kept: Q-code, FIR, item A, validity (PERM kept as text), lower/upper FL, Q radius, item E positions and 'n FT AGL / m FT AMSL' heights, area vertices for 'BOUNDED BY', the first bracketed place label; dropped: item E text, phone numbers, contacts.",
+    "Helicopters: H4 rows of EGLL AD 2.22 para 12 (the table anchored on 'Isle-of-Dogs'): reporting type (compulsory or on request), name, OS grid reference, position, description cut to 120 characters; the H4 vertical profile as printed; ENR 5.1 EGR158, EGR159, EGR160: vertices, arc centres and radii, upper limit, permitted users, SI; an area is in the zone when its vertex centroid or a vertex is.",
+    "Network: User-Agent glitchcan-cwplans/0.1; one request at a time per host, at least 1.5 s apart; up to 5 tries with Retry-After or a doubling pause on 429, 5xx, timeouts and resets; 404 returned without retry; files overwritten on every run."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [],
+   "cwp:area": "feeds",
+   "cwp:fault": [],
+   "cwp:judgement": "Which sources are open enough to commit (TfL terms, CC BY 4.0) and which only as facts (NATS PIB, UK AIP) or not at all (CAA CAP 1455; OpenSky, adsb.fi, airplanes.live, ADS-B Exchange; adsb.lol as ODbL without the owner's agreement) is recorded in data-register.json sources, feeds/live/README.md and the skill cwplans-live-state."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-data-register",
@@ -6998,6 +7463,40 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/clm-20261003T2300Z.png",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Meteosat cloud mask at 23:00 UTC on 3 October 2026 (the slot nearest the owner's photo time) for 50.5-52.5 N, 1.6 W-1.6 E, 256 x 256 px, as rendered by EUMETView (white cloud, green clear land, blue clear water); places the cloud layers of the 3D page's sky",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/eumetsat-clm"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/lcy-approach.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London City Airport runway 09/27 landing thresholds (WGS84, the ends of OSM way 340355375) with the published 5.5 degree glide path, for the approach paths on the 3D page's sky (Menu > Sky)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/star-names.json",
    "@type": [
     "prov:Entity",
@@ -7430,6 +7929,255 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/tfl-lines.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "TfL planned and current line closures and service changes for the next 90 days on lines serving the zone (tube, DLR, Elizabeth line, Overground, river bus, cable car, national rail), placed by affected stop",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/naptan"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/tfl-bus.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "TfL bus route diversions and bus stop closures in the zone, placed by NaPTAN stop position or postcode district",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/naptan"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/tfl-road.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "TfL road disruptions in the zone for the next 90 days: works, planned events, incidents, with closed street segments",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/street-manager.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "DfT Street Manager works permits in the zone still open at the fetch date (latest event per permit in the monthly archive): promoter, street, traffic management, dates",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dft-street-manager"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/street-manager-activities.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "DfT Street Manager highway-authority activities in the zone (street events, cranes, hoardings, section 50, other) still open at the fetch date; skips and scaffolding counted only",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dft-street-manager"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/gazette.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Gazette Road Traffic Acts and Highways notices of the zone authorities (traffic orders, TTROs) published in the last 120 days: order heading, dates in the text, link",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/the-gazette"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/th-licences.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Tower Hamlets licence applications and Temporary Event Notices of the current week in the zone (type, address, dates; premises name not kept), placed by postcode",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/th-licensing-notices"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/postcodes-io"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/planning.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning applications for temporary events and structures in the zone validated in the last two years (reference, site, short description, dates, decision, link)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-london-datahub"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/markets.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "markets in the zone: OSM marketplaces with opening hours, joined to the Tower Hamlets markets page (days, times)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/th-licensing-notices"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "raw"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/venue-events.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "event programmes of venues and councils in the zone harvested from every verified event feed in feeds/events.json: title, dates, venue, position and link only",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/venue-event-feeds"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/postcodes-io"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/works.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "every item of the feeds/works snapshots in one normalised list (kind, title, dates, place, borough, position, zone, link) for whatson.html",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/naptan"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dft-street-manager"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/the-gazette"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/th-licensing-notices"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/postcodes-io"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-london-datahub"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/venue-event-feeds"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "permits, works and closures: sources, licences, counts, what each says about ad-hoc events, gaps and rejected sources",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "notes"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/EVENTS.md",
    "@type": [
     "prov:Entity",
@@ -7557,6 +8305,491 @@
     }
    ],
    "cwp:osmUse": "notes"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/catalogue.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the whole London Datastore catalogue, 2026-10-04: 1,305 datasets, one per line (id, title, publisher, licence, topics, tags, geo granularity, update frequency, dates, 11,348 resources with format, size and download path, 312 links)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/triage.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "triage of every catalogue dataset by written rules: licence class, relevance to the zone, kind, held/listed by the project, value themes, join keys, sensitivity, score and reasons; the ranked list",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the London Datastore walk: method, counts per class, harvested datasets, ranked backlog",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/air-quality-monitoring-sites/air-quality-monitoring-sites.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Air quality monitoring sites (GLA, borough and Breathe London networks): id, name, network, pollutants, coordinates (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23n41"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/article4-office-residential/article4-office-residential.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Article 4 direction areas removing office-to-residential permitted development, by borough (2019 file) (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gy3r"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/brownfield-register/brownfield-register.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "brownfield land register sites as points: site reference, address or name, hectares, ownership and planning status, permission, net dwellings, organisation URI (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2og9g"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/central-activities-zone/central-activities-zone.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the London Plan 2021 Central Activities Zone boundary (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23jxk"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/conservation-areas/conservation-areas.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "conservation area boundaries with name, borough, hectares and the GLA layer reference (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqwg"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "cultural venues by type (26 layers: archives, cinemas, music venues, nightclubs, libraries, museums, workspaces...): name, address, website, UPRN, borough and ward codes, coordinates; uprn_suspect flags rounded UPRNs (F22) (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23697"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/designated-open-space/designated-open-space.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "designated open space polygons (Metropolitan Open Land, other open space) by borough, 2019 file (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e195k"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/locally-significant-industrial-sites/locally-significant-industrial-sites.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "LSIS outlines (geometry only in the source, F23) (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-29z31"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/lvmf-2026-consultation/lvmf-2026-consultation.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "LVMF 2026 consultation: kinetic paths, protected vistas and representative viewpoints that meet the zone (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gqpn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/safeguarded-wharves/safeguarded-wharves.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "safeguarded wharf outlines on the Thames with the direction text, borough and site name (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g90r"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/site-allocations/site-allocations.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "local plan site allocation outlines (geometry only in the source, F23) (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jxpm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/southwark-local-list/southwark-local-list.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Southwark locally listed buildings: id, street, postcode, ward group, link to the council PDF, policy (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e1r5k"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/strategic-industrial-land/strategic-industrial-land.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "SIL outlines (geometry only in the source, F23) (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2y5xy"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/bikes.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Santander Cycles docks in the zone with bikes, e-bikes, empty docks, docks, locked and temporary flags at the fetch time (TfL BikePoint)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/lifts.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "TfL lift outages at stations in the zone at the fetch time, placed by StopPoint naptan or hub code",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/crowding.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "TfL live station busyness (fraction of the typical level for the hour) for stations in the zone that report it",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/jamcams.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "TfL JamCam traffic cameras in the zone: position, view, available flag, still and video URLs (no image stored)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/ukpn.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "UK Power Networks power cuts in the zone at the fetch time: type, status, customers, postcode sectors, restoration times",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ukpn-live-faults"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/overflows.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Thames Water storm overflow monitors in the zone: status (discharging, not, offline), latest event start and end, receiving water",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/thames-water-storm-overflows"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/notams.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "NOTAMs with a stated position in the zone: crane positions and heights (AGL, AMSL), temporary danger and reserved areas with vertices and times; facts only",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-pib"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "facts from a NATS publication with no open licence; no NOTAM text kept. Re-check before production"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/helicopters.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "helicopter route H4 reporting points (Isle of Dogs to the London Heliport) with altitudes, and restricted areas EGR158, EGR159 and EGR160 with vertices and limits, from the UK AIP; facts only",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-uk-aip"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "facts from the UK AIP (Crown copyright / NATS); issue 2024-03-21, newer issues not reachable from the container. Re-check before production"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "live-state snapshots: sources, licences, what each tells us, helicopters (what is and is not knowable), hire bikes and micromobility, the ranked backlog",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ukpn-live-faults"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/thames-water-storm-overflows"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-pib"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-uk-aip"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/caa-cap1455"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "quotes four sums from CAA CAP 1455 as facts (no reproduction of the file)"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm",
@@ -8071,6 +9304,17 @@
    "cwp:attribution": "Yale Bright Star Catalogue, 5th ed. (Hoffleit & Warren 1991), via CDS"
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/eumetsat-clm",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "EUMETSAT Meteosat (MSG 0 degree) Cloud Mask (CLM), rendered by EUMETView WMS 1.3.0 (layer msg_fes:clm)",
+   "dct:license": "CC BY 4.0: a Meteosat Derived Product is Core data (EUMETSAT Data Policy, last amended 2024-2026, Articles 4 to 6: free and unrestricted, redistribution allowed)",
+   "dcat:landingPage": "https://view.eumetsat.int/geoserver/wms",
+   "cwp:attribution": "Contains modified EUMETSAT Meteosat data 2026"
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/iau-wgsn",
    "@type": [
     "prov:Entity",
@@ -8135,6 +9379,309 @@
    "dct:license": "OGL v3.0",
    "dcat:landingPage": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
    "cwp:attribution": "This uses Environment Agency flood and river level data from the real-time data API (Beta)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore catalogue (data.london.gov.uk, DataPress API: /api/v3/datasets/export.json and the CKAN-compatible /api/action/package_search)",
+   "dct:license": "site terms (https://data.london.gov.uk/about/terms-and-conditions, read 2026-10-04): data may be used for any purpose; each dataset has its own licence (recorded per record); a re-user states that the GLA cannot warrant the quality or accuracy of the data",
+   "dcat:landingPage": "https://data.london.gov.uk/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23n41",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 23n41: Air Quality Monitoring Sites (Greater London Authority)",
+   "dct:license": "CC BY 4.0 (London Datastore: \"Creative Commons Attribution\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/air-quality-monitoring-sites-23n41",
+   "cwp:attribution": "Greater London Authority, CC BY 4.0. The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gy3r",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2gy3r: Article 4 directions: office to residential (GLA Planning Constraints Map (from the planning authorities))",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/article-4-directions-office-to-residential-2gy3r",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map (from the planning authorities)). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2og9g",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2og9g: Brownfield Register (GLA Planning Constraints Map (the London planning authorities' brownfield land registers))",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/brownfield-register-2og9g",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map (the London planning authorities' brownfield land registers)). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23jxk",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 23jxk: Central Activities Zone (GLA Planning Constraints Map)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/central-activities-zone-23jxk",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqwg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore emqwg: Conservation Areas (GLA Planning Constraints Map (boundaries belong to the planning authorities))",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/conservation-areas-emqwg",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map (boundaries belong to the planning authorities)). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23697",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 23697: Cultural Infrastructure Map 2023 (cultural_venues_in_GIS_format.gpkg) (Greater London Authority)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/cultural-infrastructure-map-2023-23697",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e195k",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e195k: Designated Open Space (GLA Planning Constraints Map (from the planning authorities))",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/designated-open-space-e195k",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map (from the planning authorities)). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-29z31",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 29z31: Locally Significant Industrial Sites (GLA Planning Constraints Map)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/locally-significant-industrial-sites-29z31",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gqpn",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2gqpn: London View Management Framework (LVMF) 2026 consultation GIS files (Greater London Authority)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-view-management-framework-lvmf-2026-consultation-gis-files-2gqpn",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g90r",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2g90r: Safeguarded Wharves (GLA Planning Constraints Map)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/safeguarded-wharves-2g90r",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jxpm",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2jxpm: Site Allocations (GLA Planning Constraints Map (local plan site allocations of the boroughs))",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/site-allocations-2jxpm",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map (local plan site allocations of the boroughs)). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e1r5k",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e1r5k: Southwark Council Local List Listed Buildings (London Borough of Southwark)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/southwark-council-local-list-listed-buildings-e1r5k",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (London Borough of Southwark). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2y5xy",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2y5xy: Strategic Industrial Land (SIL) (GLA Planning Constraints Map)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/strategic-industrial-land-sil-2y5xy",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Transport for London Unified API live feeds: BikePoint (Santander Cycles docks), lift disruptions v2, live crowding by naptan, JamCam cameras, StopPoint by mode (api.tfl.gov.uk)",
+   "dct:license": "TfL open data terms (Transport Data Service; OGL-based, attribution required); the terms page refuses scripted requests: re-check before production",
+   "dcat:landingPage": "https://api-portal.tfl.gov.uk/",
+   "cwp:attribution": "Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights [2019]"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ukpn-live-faults",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "UK Power Networks Open Data Portal, dataset ukpn-live-faults (live power cuts, planned and unplanned)",
+   "dct:license": "CC BY 4.0 (dataset metadata, read 2026-10-04)",
+   "dcat:landingPage": "https://ukpowernetworks.opendatasoft.com/explore/dataset/ukpn-live-faults/",
+   "cwp:attribution": "Contains UK Power Networks data licensed under CC BY 4.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/thames-water-storm-overflows",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Thames Water Storm Overflow Activity (Event Duration Monitoring), National Storm Overflow Hub / Stream, ArcGIS item 216f455c4435450693cf1d0d0ecf6023",
+   "dct:license": "CC BY 4.0 (item licenceInfo, read 2026-10-04)",
+   "dcat:landingPage": "https://www.streamwaterdata.co.uk/",
+   "cwp:attribution": "Contains Thames Water storm overflow data licensed under CC BY 4.0, via Stream"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-pib",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "NATS UK AIS contingency full UK PIB (all UK NOTAMs valid now and in the next 7 days, XML, hourly, no login)",
+   "dct:license": "© NATS Limited; no open licence stated. Facts only (NOTAM id, Q-line code, positions, heights, validity, area vertices, short place label); no NOTAM text, contacts or phone numbers kept. Re-check before production",
+   "dcat:landingPage": "https://nats-uk.ead-it.com/cms-nats/opencms/en/Briefing/contingency-pibs/",
+   "cwp:attribution": "Source: UK AIS (NATS)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-uk-aip",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "UK AIP (eAIP, aurora.nats.co.uk), issue 2024-03-21: EGLL AD 2.22 para 12 helicopter routes (H4) and ENR 5.1 restricted areas EGR158, EGR159, EGR160; AIC Y 079/2020",
+   "dct:license": "Crown copyright / NATS; no open licence stated. Facts only (names, grid references, positions, altitudes, limits); no tables, charts or text copied. Re-check against the current issue before production",
+   "dcat:landingPage": "https://www.aurora.nats.co.uk/htmlAIP/Publications/history-en-GB.html",
+   "cwp:attribution": "Source: UK AIP, NATS"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/caa-cap1455",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "CAA CAP 1455 London helicopter operations data 2007-2026 (daily helicopter counts in the London and London City CTRs)",
+   "dct:license": "© UK Civil Aviation Authority: download for own use, no reproduction for publication. Not committed; a few sums quoted as facts in feeds/live/README.md",
+   "dcat:landingPage": "https://www.caa.co.uk/data-and-analysis/airspace-and-environment/airspace/london-helicopter-operations/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-unified-api",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Transport for London Unified API: line status by date range, bus route and stop disruptions, road disruptions and closed street segments (api.tfl.gov.uk)",
+   "dct:license": "TfL open data terms (Transport Data Service; OGL-based, attribution required); the terms page refuses scripted requests: re-check before production",
+   "dcat:landingPage": "https://api-portal.tfl.gov.uk/",
+   "cwp:attribution": "Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights [2019]"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dft-street-manager",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "DfT Street Manager open data: monthly archive of permit and highway-activity notifications (opendata.manage-roadworks.service.gov.uk)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://department-for-transport-streetmanager.github.io/street-manager-docs/open-data/",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/the-gazette",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "The Gazette: Road Traffic Acts (1501) and Highways (1503) notices, data.json search and notice pages",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://www.thegazette.co.uk/data",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/th-licensing-notices",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Borough of Tower Hamlets: licence applications received this week (Licensing Act 2003 notices) and the Markets in Tower Hamlets page",
+   "dct:license": "council website terms (no open licence stated): facts (type, address, dates, market days and times) and links only",
+   "dcat:landingPage": "https://www.towerhamlets.gov.uk/lgnl/business/licences/alcohol_and_entertainment/Licence_applications_received_this_week.aspx"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-london-datahub",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Planning London Datahub (GLA): planning application metadata, guest Elasticsearch endpoint",
+   "dct:license": "GLA Planning London Datahub terms (not confirmed as OGL): application metadata and links only",
+   "dcat:landingPage": "https://www.london.gov.uk/programmes-strategies/planning/digital-planning/planning-london-datahub"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/naptan",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "NaPTAN access nodes (DfT): London bus stops (area 490) and rail, pier and metro stations (910, 930, 940)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://beta-naptan.dft.gov.uk/",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/venue-event-feeds",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "venue and council event feeds listed in feeds/events.json (The O2 RSS, Royal Docks Atom, Tower Hamlets events RSS, The Space, Wilton's Music Hall and Greenwich Theatre WordPress REST, and any verified event feed added later)",
+   "dct:license": "each venue or council website terms (no open licence stated): event titles, dates, venue and links as facts only, no description text",
+   "dcat:landingPage": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/EVENTS.md"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/postcodes-io",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "postcodes.io bulk postcode lookup (ONS Postcode Directory and OS data)",
+   "dct:license": "OGL v3.0 (data); service MIT",
+   "dcat:landingPage": "https://postcodes.io/",
+   "cwp:attribution": "Contains OS data © Crown copyright and database right; Contains Royal Mail data © Royal Mail copyright and database right; Source: Office for National Statistics licensed under the Open Government Licence v3.0"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own",
