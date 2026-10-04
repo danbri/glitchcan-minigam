@@ -290,22 +290,22 @@ if (!gl || !gl.getExtension('OES_element_index_uint')) { hud.textContent = 'WebG
 // one program for everything. The terrain alone may sample a ground image (useTex): texture coordinates come from x, z and the
 // image box (docklands/data/tex/textures.json); the vertex colour then carries only the hill shading. dim darkens the rest at night.
 const vs = 'attribute vec3 p;attribute vec4 c;uniform mat4 m;uniform float vz;uniform vec4 box;varying vec4 v;varying float wy;varying vec2 uv;void main(){v=c;wy=p.y;uv=(p.xz-box.xy)/box.zw;gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
-const fs = 'precision mediump float;varying vec4 v;varying float wy;varying vec2 uv;uniform float a;uniform float cut;uniform float mono;uniform float useTex;uniform float dim;uniform float glow;uniform float time;uniform vec4 ov;uniform sampler2D tx;void main(){if(wy>cut)discard;if(mono>.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}vec3 col=useTex>.5?min(vec3(1.),texture2D(tx,uv).rgb*v.rgb*1.35)*dim:v.rgb*dim;col=mix(col,ov.rgb,ov.a);float k=1.;if(glow>.5){k=.55+.45*sin(time*3.3+wy*.09+v.a*40.);col=col*(1.+.6*k);}gl_FragColor=vec4(col,(glow>.5?k:v.a)*a);}';
+const fs = 'precision mediump float;varying vec4 v;varying float wy;varying vec2 uv;uniform float a;uniform float cut;uniform float mono;uniform float useTex;uniform float dim;uniform float glow;uniform float time;uniform vec4 ov;uniform vec3 ml;uniform sampler2D tx;void main(){if(wy>cut)discard;if(mono>.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}vec3 col=(useTex>.5?min(vec3(1.),texture2D(tx,uv).rgb*v.rgb*1.35):v.rgb)*(vec3(dim)+ml);col=mix(col,ov.rgb,ov.a);float k=1.;if(glow>.5){k=.55+.45*sin(time*3.3+wy*.09+v.a*40.);col=col*(1.+.6*k);}gl_FragColor=vec4(col,(glow>.5?k:v.a)*a);}';
 const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
-const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono'), uTex = U_('useTex'), uDim = U_('dim'), uBox = U_('box'), uGlow = U_('glow'), uTime = U_('time'), uOv = U_('ov');
-gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.uniform1f(uGlow, 0); gl.uniform4f(uOv, 0, 0, 0, 0); gl.uniform4f(uBox, 0, 0, 1, 1); gl.uniform1i(U_('tx'), 0);
+const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono'), uTex = U_('useTex'), uDim = U_('dim'), uBox = U_('box'), uGlow = U_('glow'), uTime = U_('time'), uOv = U_('ov'), uMl = U_('ml');
+gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.uniform1f(uGlow, 0); gl.uniform4f(uOv, 0, 0, 0, 0); gl.uniform3f(uMl, 0, 0, 0); gl.uniform4f(uBox, 0, 0, 1, 1); gl.uniform1i(U_('tx'), 0);
 gl.enableVertexAttribArray(aP); gl.enableVertexAttribArray(aC);
 // facade program (buildings only): 20-byte vertices [x y z u] + rgba. Walls get a window grid from the storey height
 // (3.6 m) and u, the distance along the wall; at night some windows are lit. Roofs of low buildings take the ground image.
 // With music in pixel art (viz), each building follows the frequency band of its centre (west bass, east treble):
 // g = [centre x, centre z, base m OD, night kind] per vertex; stretch scales its height, swirl twists it, noise sways it.
 // Night kind (g.w) = window use * 1000 + roof top in m OD: 0 unknown, 1 homes, 2 offices, 3 hotel, 4 Newfoundland, 5 One Canada Square.
-const fvs = 'attribute vec3 p;attribute float u;attribute vec4 c;attribute vec4 g;uniform mat4 m;uniform float vz;uniform vec4 box;uniform vec3 eye;uniform float viz;uniform float bands[24];uniform vec4 vbox;uniform vec3 vk;uniform float time;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;varying vec4 gk;' +
+const fvs = 'attribute vec3 p;attribute float u;attribute vec4 c;attribute vec4 g;uniform mat4 m;uniform float vz;uniform vec4 box;uniform vec3 eye;uniform float viz;uniform float bands[24];uniform vec4 vbox;uniform vec3 vk;uniform float time;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;varying vec4 gk;varying vec3 wq;varying vec3 ev;' +
   'void main(){v=c;gk=g;vec3 q=p;if(viz>.5){int bi=int(clamp((g.x-vbox.x)/(vbox.y-vbox.x),0.,.9999)*24.);float b=0.;for(int i=0;i<24;i++)if(i==bi)b=bands[i];' +
   'float o=max(max(vbox.x-g.x,g.x-vbox.y),max(vbox.z-g.y,g.y-vbox.w));b*=1.-smoothstep(150.,700.,o);float h=max(0.,p.y-g.z),k=1.+1.6*vk.x*b;q.y=g.z+h*k;' +
   'float an=vk.z*b*h/140.,cs=cos(an),sn=sin(an);vec2 d=p.xz-g.xy;d=vec2(cs*d.x-sn*d.y,sn*d.x+cs*d.y);float w=vk.y*b*h*.03*sin(time*3.+g.x*.05+h*.06);q.xz=g.xy+d+vec2(w,w*.6);}' +
-  'wy=q.y;uu=u;uv=(q.xz-box.xy)/box.zw;dist=distance(vec3(q.x,q.y*vz,q.z),eye);gl_Position=m*vec4(q.x,q.y*vz,q.z,1.);}';
+  'wy=q.y;uu=u;uv=(q.xz-box.xy)/box.zw;wq=vec3(q.x,q.y*vz,q.z);ev=eye-wq;dist=length(ev);gl_Position=m*vec4(wq,1.);}';
 // photo facade tiles: mip level from the derivatives of the unwrapped tile coordinate (fract() would make it jump at
 // every seam). Tiles are 256 px and aligned, so each mip level of the atlas averages within one tile.
 const FLOD = !!(gl.getExtension('EXT_shader_texture_lod') && gl.getExtension('OES_standard_derivatives'));
@@ -313,12 +313,12 @@ const FLOD = !!(gl.getExtension('EXT_shader_texture_lod') && gl.getExtension('OE
 // (Apple's at least) run mediump as fp16, so no window lit there (README "Night", 2026-10-04)
 const HIP = '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n';
 const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension GL_OES_standard_derivatives : enable\n#define TEXL(s,u,l) texture2DLodEXT(s,u,l)\n#define LODOF(t) clamp(log2(max(max(length(dFdx(t)),length(dFdy(t))),1e-4)),0.,8.)\n#define FWID(t) max(fwidth(t).x,fwidth(t).y)\n#define FW2(t) fwidth(t)\n'
-  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n#define FWID(t) (dist/700.)\n#define FW2(t) vec2(dist/700.)\n') + HIP + 'varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform float night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec2 fslot[16];uniform float ftex;varying vec4 gk;' +
+  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n#define FWID(t) (dist/700.)\n#define FW2(t) vec2(dist/700.)\n') + HIP + 'varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform float night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec2 fslot[16];uniform float ftex;varying vec4 gk;varying vec3 wq;varying vec3 ev;uniform vec3 md;uniform vec3 mlc;' +
   'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
   'float vn(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+1.),f.x),f.y);}' +
   // night (map style): dark walls; lit windows by the building's use (registry homes and occupant types): homes warm
   // (2700-3200 K) in clusters of flats, offices cool white by floors and floor bands, a few blue-white; lit crowns; haze
-  'vec3 nightCol(vec3 base,float photo){float ty=floor(gk.w/1000.+.001),top=gk.w-ty*1000.,ht=max(1.,top-gk.z),sd=h(gk.xy*.0137+.31);' +
+  'vec3 nightCol(vec3 base,float photo,float mk){float ty=floor(gk.w/1000.+.001),top=gk.w-ty*1000.,ht=max(1.,top-gk.z),sd=h(gk.xy*.0137+.31);' +
   'vec3 col;if(uu<0.){col=base*.035+vec3(.006);if(ty>4.5&&wy>top+.5)col=mix(vec3(.30,.13,.16),vec3(.10,.07,.09),clamp((wy-top)/14.,0.,1.));}' +   // roofs; One Canada Square: the pyramid lit from its base
   'else{col=base*(.045+.02*photo)+vec3(.008,.008,.01);' +
   'if(win>.5){float off=step(1.5,ty)*step(ty,2.5);vec2 gg=vec2(uu/1.8,(wy-gk.z)/3.6),cell=floor(gg),f=fract(gg);' +
@@ -333,12 +333,14 @@ const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension G
   'float tb=top-wy;if(ty>3.5&&ty<4.5&&tb<13.){float tri=abs(fract(uu/9.)*2.-1.),yy=1.-tb/13.,ln=min(abs(tri-yy),abs(tri-(1.-yy)));col=mix(vec3(.10,.08,.06),vec3(1.,.90,.70),smoothstep(.04,.12,ln));}' +   // Newfoundland: the lit diagrid crown
   'else if(ty>4.5&&tb<7.)col=mix(col,vec3(.95,.30,.40),.85);' +   // One Canada Square: pink-red band under the pyramid
   'else if(ht>90.&&tb<3.5)col+=vec3(.32,.30,.27)*smoothstep(3.5,.5,tb);}' +   // other towers: a soft band at the top
+  'col+=base*mlc*mk;' +   // moonlight (README "Night": strength from the moon's magnitude and altitude, cool tint)
   'if(win<-.5)col=base*.6;' +   // a data colour mode: keep its colours readable
   'return mix(col,vec3(.085,.07,.058),(1.-exp(-dist/5200.))*.6);}' +   // haze in the colour of the sky glow
   'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
   'if(night>.5&&pxm==0.){float ab=v.a*255.,ph=0.;vec3 b=col;if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tile, dark
   'vec2 tc=vec2(uu/S.x,wy/S.y),q=fract(tc),st=vec2(mod(sl,8.),floor(sl/8.));float lod=LODOF(tc*256.),e=.5*exp2(floor(lod)+1.);b=TEXL(ftx,vec2(st.x*256.+e+q.x*(256.-2.*e),st.y*256.+e+(1.-q.y)*(256.-2.*e))/vec2(2048.,1024.),lod).rgb;ph=1.;}' +
-  'gl_FragColor=vec4(nightCol(b,ph),a);return;}' +
+  'float mk=0.;if(mlc.b>0.){' + (FLOD ? 'vec3 N=normalize(cross(dFdx(wq),dFdy(wq)));if(dot(N,ev)<0.)N=-N;mk=max(dot(N,md),0.);' : 'mk=uu<0.?max(md.y,0.):.32*sqrt(max(0.,1.-md.y*md.y));') + '}' +
+  'gl_FragColor=vec4(nightCol(b,ph,mk),a);return;}' +
   'if(pxm>0.)col=min(vec3(1.),col*1.3);' +   // pixel art: brighter walls, windows on the art-pixel grid
   'float ab=v.a*255.;' +
   'if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tower's tile, repeated by its size in metres
@@ -360,7 +362,7 @@ const prF = gl.createProgram(); gl.attachShader(prF, sh(gl.VERTEX_SHADER, fvs));
 gl.bindAttribLocation(prF, aP, 'p'); gl.bindAttribLocation(prF, aC, 'c'); gl.bindAttribLocation(prF, [0, 1, 2].find(i => i !== aP && i !== aC), 'u'); gl.bindAttribLocation(prF, 3, 'g'); gl.linkProgram(prF);
 if (!gl.getProgramParameter(prF, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prF));
 const FU = n => gl.getUniformLocation(prF, n), fa = { p: gl.getAttribLocation(prF, 'p'), u: gl.getAttribLocation(prF, 'u'), c: gl.getAttribLocation(prF, 'c') };
-const fu = { pxm: FU('pxm'), eye: FU('eye'), m: FU('m'), vz: FU('vz'), box: FU('box'), a: FU('a'), cut: FU('cut'), night: FU('night'), roofTex: FU('roofTex'), win: FU('win'), tx: FU('tx'), ftx: FU('ftx'), fslot: FU('fslot'), ftex: FU('ftex'), viz: FU('viz'), bands: FU('bands'), vbox: FU('vbox'), vk: FU('vk'), time: FU('time') };
+const fu = { pxm: FU('pxm'), eye: FU('eye'), m: FU('m'), vz: FU('vz'), box: FU('box'), a: FU('a'), cut: FU('cut'), night: FU('night'), roofTex: FU('roofTex'), win: FU('win'), tx: FU('tx'), ftx: FU('ftx'), fslot: FU('fslot'), ftex: FU('ftex'), viz: FU('viz'), bands: FU('bands'), vbox: FU('vbox'), vk: FU('vk'), time: FU('time'), md: FU('md'), mlc: FU('mlc') };
 const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })(), LIGHT0 = LIGHT.slice();
 const shade = (col, nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1, k = .5 + .5 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / l); return [col[0] * k, col[1] * k, col[2] * k]; };
 
@@ -439,10 +441,23 @@ const cube = (M, x, y, z, s, col) => { const h = s / 2; prism(M, { p: [Math.roun
 // ---------- static layers
 const L = {};
 // terrain grid; colours from the ground colour, or per vertex from imagery (rgb: Uint8Array, 3 bytes per vertex)
+// The LiDAR ground over the river is the water surface of the survey (about 2.8 m OD). A measured tide below it (sky.js,
+// setTidal) would hide under that ground, so while a tide is set the ground inside the tidal water (more than one 20 m cell
+// from its edge) sinks below the water (terrainSink, m OD); the edge cells stay, a strip of foreshore at low water.
+let terrainSink = null, terrainLast = null, TMASK = null;
+function tidalMask() {   // terrain vertices inside the tidal water (scanline over the water rings), then eroded by one cell
+  if (TMASK) return TMASK; const T = A.terrain, m = new Uint8Array(T.nx * T.nz), out = new Uint8Array(T.nx * T.nz);
+  for (const w of A.water) { if (!w.tidal) continue; const f = dec(w.p), st = [0, ...(w.holes || []), f.length / 2], rows = new Map();
+    for (let r = 0; r < st.length - 1; r++) for (let i = st[r]; i < st[r + 1]; i++) { const j = i + 1 < st[r + 1] ? i + 1 : st[r], x0 = f[2 * i], z0 = f[2 * i + 1], x1 = f[2 * j], z1 = f[2 * j + 1];
+      for (let jj = Math.max(0, Math.ceil((Math.min(z0, z1) - T.z0) / T.cell)); jj <= Math.min(T.nz - 1, Math.floor((Math.max(z0, z1) - T.z0) / T.cell)); jj++) { const zc = T.z0 + jj * T.cell; if ((z0 > zc) === (z1 > zc)) continue; if (!rows.has(jj)) rows.set(jj, []); rows.get(jj).push(x0 + (zc - z0) / (z1 - z0) * (x1 - x0)); } }
+    for (const [jj, xs] of rows) { xs.sort((a, b) => a - b); for (let k = 0; k + 1 < xs.length; k += 2) for (let ii = Math.max(0, Math.ceil((xs[k] - T.x0) / T.cell)); ii <= Math.min(T.nx - 1, Math.floor((xs[k + 1] - T.x0) / T.cell)); ii++) m[jj * T.nx + ii] = 1; } }
+  for (let j = 1; j < T.nz - 1; j++) for (let i = 1; i < T.nx - 1; i++) { const k = j * T.nx + i; out[k] = m[k] & m[k - 1] & m[k + 1] & m[k - T.nx] & m[k + T.nx]; }
+  return (TMASK = out);
+}
 function buildTerrain(rgb) {   // rgb: per-vertex colours, 'tex' (shading only, the image comes from the texture) or null
-  if (L.terrain) L.terrain.free();
+  if (L.terrain) L.terrain.free(); terrainLast = rgb;
   const white = rgb === 'tex'; if (white) rgb = null;
-  const T = A.terrain, h = (i, j) => T.dm[j * T.nx + i] / 10, M = new Mesh();
+  const T = A.terrain, TM = terrainSink != null ? tidalMask() : null, h = (i, j) => TM && TM[j * T.nx + i] ? Math.min(T.dm[j * T.nx + i] / 10, terrainSink) : T.dm[j * T.nx + i] / 10, M = new Mesh();
   for (let j = 0; j < T.nz; j++) for (let i = 0; i < T.nx; i++) {
     const nx = h(Math.max(0, i - 1), j) - h(Math.min(T.nx - 1, i + 1), j), nz = h(i, Math.max(0, j - 1)) - h(i, Math.min(T.nz - 1, j + 1)), k = 3 * (j * T.nx + i);
     const col = white ? [1, 1, 1] : rgb ? [rgb[k] / 255, rgb[k + 1] / 255, rgb[k + 2] / 255] : C.ground;
@@ -640,7 +655,7 @@ let queued = false; function draw() { if (!queued) { queued = true; requestAnima
 function drawFacades(M, alpha, P) {
   if (!M || !M.count) return; gl.useProgram(prF);
   gl.uniformMatrix4fv(fu.m, false, MVP); gl.uniform3f(fu.eye, CAM.eye[0], CAM.eye[1], CAM.eye[2]); gl.uniform1f(fu.vz, VZ); gl.uniform1f(fu.a, alpha); gl.uniform1f(fu.cut, P.cut < 250 ? P.cut : 1e9);
-  gl.uniform1f(fu.pxm, PIX.on ? cam.dist * .84 / PIX.fh : 0); gl.uniform1f(fu.night, nightOn() || ground === 'night2012' ? 1 : 0); gl.uniform1f(fu.win, $('colourBy').value !== 'source' ? -1 : $('showWindows').checked ? 1 : 0);
+  gl.uniform1f(fu.pxm, PIX.on ? cam.dist * .84 / PIX.fh : 0); gl.uniform1f(fu.night, nightOn() || ground === 'night2012' ? 1 : 0); const ML = MOON.on ? MOON.c : [0, 0, 0]; gl.uniform3fv(fu.mlc, ML); gl.uniform3fv(fu.md, MOON.dir); gl.uniform1f(fu.win, $('colourBy').value !== 'source' ? -1 : $('showWindows').checked ? 1 : 0);
   const rt = !!groundTex && ground !== 'night2012' && ground !== 'intensity2020'; gl.uniform1f(fu.roofTex, rt ? 1 : 0);
   if (TEXIDX) { const B = TEXIDX.box; gl.uniform4f(fu.box, B.x0, B.z0, B.x1 - B.x0, B.z1 - B.z0); } gl.uniform1i(fu.tx, 0); if (rt) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); }
   gl.uniform1f(fu.ftex, FTX ? 1 : 0); if (FTX) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FTX); gl.uniform1i(fu.ftx, 1); gl.uniform2fv(fu.fslot, FT.slots); gl.activeTexture(gl.TEXTURE0); }
@@ -668,6 +683,7 @@ function render() {
   CAM = { eye, target: T, fovY, aspect: w / h, w, h };
   PROJ = PIX.on ? ortho(cam.dist * .42 * w / h, cam.dist * .42, 10, 14000) : persp(fovY, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000); VIEW = look(eye, T, [0, 1, 0]); MVP = mul(PROJ, VIEW);
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
+  moonNow(nm); gl.uniform3fv(uMl, MOON.on ? MOON.g : [0, 0, 0]);
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); const nDim = nm ? (cutOn ? .6 : .12) : night ? .45 : 1; gl.uniform1f(uDim, nDim);
   gl.disable(gl.BLEND); gl.depthMask(true); gl.colorMask(true, true, true, true); gl.disable(gl.POLYGON_OFFSET_FILL);   // a fresh state every frame
   if (nm || (!PIX.on && globalThis.DocklandsSky && DocklandsSky.day)) drawSky(nm);   // night (or the clock's day sky): the sky behind everything
@@ -850,10 +866,10 @@ function pickAt(cx, cy) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fboTex, 0); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, fboDepth);
     fboW = w; fboH = h;
   }
-  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.viewport(0, 0, w, h); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null); gl.clearColor(0, 0, 0, 1);   // no feedback loop with fboTex gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.viewport(0, 0, w, h); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // texture unbound: no feedback loop with fboTex
   gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.STENCIL_TEST); gl.depthMask(true);
   const P = par(); gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, P.cut < 250 ? P.cut : 1e9);
-  gl.uniform1f(uDim, 1); gl.uniform1f(uTex, 0); gl.uniform1f(uMono, 1); drawMesh(L.terrain, 1); gl.uniform1f(uMono, 0);
+  gl.uniform1f(uDim, 1); gl.uniform3f(uMl, 0, 0, 0); gl.uniform1f(uTex, 0); gl.uniform1f(uMono, 1); drawMesh(L.terrain, 1); gl.uniform1f(uMono, 0);
   if ($('bmode').value !== 'off') drawMesh(L.pick, 1);
   const px = new Uint8Array(4), s = w / cv.clientWidth;
   gl.readPixels(Math.round(cx * s), Math.round(h - cy * s), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
@@ -1132,6 +1148,33 @@ function drawGlow() {
 // there. Lights are additive soft sprites with a halo, which also stands in for bloom. README "Night".
 const NIGHT = { on: false, built: false, lights: null, refl: null, loop: 0, wl: 2.5, moon: null, moonAt: 0, n: {} };
 const nightOn = () => NIGHT.on && !PIX.on;
+// moonlight (Night only, and only while the sun is below the horizon): strength = the moon's brightness relative to a full
+// moon (from its magnitude, astronomy-engine) x the light left after the airmass at its altitude (0.25 mag per airmass)
+// x the share of the sky not under low and mid cloud; a cool tint. Walls take it by their angle to the moon (Lambert, the
+// normal from the screen derivatives), roofs and the ground by its altitude. K is drawn, not measured: a full moon at 40
+// degrees lifts a wall facing it about three times above the unlit night wall. README "Night", moonlight.
+const MOON = { on: false, dir: [0, 1, 0], c: [0, 0, 0], g: [0, 0, 0], tint: [.62, .72, .95], K: .16, k: 0, alt: -90, rel: 0, ext: 0 };
+function moonNow(nm) {
+  MOON.on = false; const S = globalThis.DocklandsSky, A = S && S.A; if (!nm || !A || !A.moon || !A.sun) return MOON;
+  const m = A.moon, r = Math.PI / 180, sa = Math.sin(Math.max(m.alt, 0) * r), X = 1 / (sa + .025 * Math.exp(-11 * sa)), w = S.S && S.S.wxNow;
+  const rel = Math.min(1.2, 10 ** (-.4 * (m.mag + 12.7))), ext = 10 ** (-.1 * (X - 1)), up = Math.max(0, Math.min(1, (m.alt + 1) / 3)), sunDown = Math.max(0, Math.min(1, (-.8 - A.sun.alt) / 5.2));
+  const cloud = w ? 1 - .7 * (w.cloud_cover_low || 0) / 100 - .25 * (w.cloud_cover_mid || 0) / 100 : 1, k = rel * ext * up * sunDown * Math.max(.05, cloud);
+  Object.assign(MOON, { dir: m.dir, alt: m.alt, rel, ext, k, cloud }); if (k < 1e-4) return MOON;
+  MOON.on = true; MOON.c = MOON.tint.map(v => v * MOON.K * k); MOON.g = MOON.c.map(v => v * Math.max(0, m.dir[1])); return MOON;
+}
+// the moon's glitter path: one reflection sprite (the lights' glitter-path shader, refl = 1) for a light placed along the
+// moon's azimuth so that the water under it is where the path begins (depression tan(alt) - 0.32, at most 5 km away: wave
+// slopes up to about 9 degrees, as for the lamps) and its mirror image lies at the moon's altitude below the horizon.
+// Brightness: sqrt of the moon's brightness relative to full (the photos' exposure lifts a faint moon), its extinction and cloud.
+function moonGlitter() {
+  if (!MOON.on || MOON.alt < .3 || MOON.noGlitter) return null;
+  const wl = tidalField && tidalLevel != null ? tidalField(CAM.eye[0], CAM.eye[2]) + .1 : NIGHT.wl, d = MOON.dir, hl = Math.hypot(d[0], d[2]) || 1, ta = Math.tan(MOON.alt * Math.PI / 180), he = CAM.eye[1] - wl * VZ;
+  if (he < .3) return null; const D = Math.min(5000, he / Math.max(.002, ta - .32));
+  const x = CAM.eye[0] + d[0] / hl * D, z = CAM.eye[2] + d[2] / hl * D, y = wl + (D * ta - he) / VZ;
+  const i = Math.min(1, 3.2 * Math.sqrt(MOON.rel) * (.4 + .6 * MOON.ext) * Math.min(1, MOON.alt / 2) * Math.max(.05, MOON.cloud));
+  const key = [x, y, z, i * 100].map(v => Math.round(v)).join(); if (NIGHT.mg && NIGHT.mgKey === key) return NIGHT.mg;
+  if (NIGHT.mg) NIGHT.mg.free(); NIGHT.mgKey = key; NIGHT.mg = spriteBuf([{ x, y, z, c: [.86, .9, 1], i, s: .03 * D / 1.3, px: pxr(2, 60), h: 3, sd: .37 }]); NIGHT.n.moonGlitter = +i.toFixed(3); return NIGHT.mg;
+}
 // the sky (sun, moon, stars, planets, satellites, cloud) is drawn by sky.js for the page clock (Menu > Sky; README "Sky, time,
 // weather and tide"); this calls it and restores the state the scene expects
 const sunMoon = d => globalThis.DocklandsSky ? DocklandsSky.sunMoon(d) : { sun: [0, -1, 0], moon: [0, -1, 0], phase: 0, lit: 0 };
@@ -1279,7 +1322,7 @@ function drawNight(P) {   // after the scene: lights with the depth test, then t
   if (!NIGHT.built) return;
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
   gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.stencilFunc(gl.ALWAYS, 0, 255); drawLights(NIGHT.lights, false, P);
-  gl.disable(gl.DEPTH_TEST); gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.EQUAL, 1, 255); drawLights(NIGHT.refl, true, P);
+  gl.disable(gl.DEPTH_TEST); gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.EQUAL, 1, 255); drawLights(NIGHT.refl, true, P); const mg = moonGlitter(); if (mg) drawLights(mg, true, P);
   gl.enable(gl.DEPTH_TEST); gl.disable(gl.STENCIL_TEST); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
 }
 // night bloom: the frame so far is copied to a texture, its bright parts (lit windows, lamps, red lights, crowns) are
@@ -1818,7 +1861,7 @@ if (/[?&]night\b/.test(location.search)) setNight(true);
 function renderNow() { queued = false; render(); gl.finish(); }
 window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); },
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
-  setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; },
+  setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; },
   relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; delete cam.hfov; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
