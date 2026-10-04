@@ -628,6 +628,17 @@ central tower - do we have an index of these?"
    README with place, conditions, the CC0 dedication quoted, what each shows. New source `owner-photos-cc0`. Photo time from
    bitt shadows with `tools/solve-photo-sun.mjs` (new; camera fitted to four tower tops, rms 3.8 px, horizontal field 99.8°):
    about 11:30 BST, 11:05 to 12:10 BST (sun 150° to 168° true). Method in the docklands-sky skill.
+2. **Index of works in progress** (`registry/sources/construction/`, `tools/build-construction-index.mjs`, skill
+   `cwplans-construction`): 436 sites from 5,127 major Planning London Datahub records in 3,395 groups: on site 98 (S1 65,
+   S1b 2, S2b 27, S4b 4), approved not started 112, completed recently 31, proposed 64, commenced long ago 131. By source:
+   NOTAM cranes 7 sites (11 of 12 cranes), Street Manager 21, OSM construction 103 (57 OSM areas unmatched), brownfield 51,
+   site allocations 107, Wikidata 241 (129 high), developer pages 2, owner photos 2. The photos: the "TIDE" core is
+   **30 Marsh Wall** (Tide Construction for Vita Group, 48 storeys, PA/20/02588/A1, commenced 2025-10-03; core about 115 m OD
+   in the photo), the "25 CUBA" wrap is **25 Cuba Street** (Ballymore with Penta, 52 floors, PA/20/02128/A1 + PA/24/00733/S,
+   commenced 2025-09-01; about 80 m OD): two schemes, one line of sight (33.05° and 33.17° from the pier). Crawls (facts
+   only) recorded in `facts.json`; the Tower Hamlets Idox register disallows crawling and was not fetched. New faults F32
+   (commencements never closed), F33 (commencement lag, computed lapse dates), F34 (stale Wikidata "under construction"),
+   F35 (point-marker polygons).
 
 ## Open, in the order proposed
 

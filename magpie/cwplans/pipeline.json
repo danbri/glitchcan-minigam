@@ -91,6 +91,10 @@
       "title": "Feeds and events"
     },
     {
+      "id": "construction",
+      "title": "Construction sites (works in progress)"
+    },
+    {
       "id": "quality",
       "title": "Quality audit"
     },
@@ -4819,6 +4823,85 @@
       ],
       "judgement": "The pixel positions in points.json are read by eye from 2x and 4x enlargements (which point is the foot of a post is a judgement: the base plate hides it); recorded in points.json and the README.",
       "area": "sky"
+    },
+    {
+      "id": "build-construction-index",
+      "tool": "tools/build-construction-index.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-construction-index.mjs [--no-fetch] [--refresh]",
+      "kind": "derive",
+      "used": [
+        {
+          "source": "planning-london-datahub",
+          "endpoint": "https://planningdata.london.gov.uk/api-guest/applications/_search",
+          "request": "one POST: size 10000, centroid in the zone box (model box plus the Royal Docks margin) AND (proposed residential units >= 10 OR non-residential GIA gained >= 1000 m2); fields listed in PLD_FIELDS; cached in data/raw/construction/pld-major.json"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "one query (lib.mjs qlever, paced): items with P625 in the zone box that are buildings (P31/P279* Q41176), construction projects (Q811430) or under construction (P5817 Q12377751), with label, P5817, P571, P1619, P2048, P1101, P193, P127, P88, P84 and their labels; cached in data/raw/construction/wikidata-buildings.json"
+        },
+        {
+          "source": "osm",
+          "endpoint": "data/raw/docklands/greater_london-latest.osm.pbf (local)",
+          "request": "landuse=construction, building=construction, building:part=construction, construction=* (not highway or railway), disused:building=construction: nodes, ways, relation outer rings; cached in data/raw/construction/osm-construction.json"
+        },
+        {
+          "file": "feeds/live/notams.json"
+        },
+        {
+          "file": "feeds/works/street-manager-activities.json"
+        },
+        {
+          "file": "feeds/london-datastore/brownfield-register/brownfield-register.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/site-allocations/site-allocations.geojson"
+        },
+        {
+          "file": "registry/sources/construction/facts.json"
+        },
+        {
+          "file": "data-register.json"
+        },
+        {
+          "local": "data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/construction/sites.json"
+        },
+        {
+          "local": "data/raw/construction/"
+        }
+      ],
+      "method": "Builds the index of works in progress: PLD records grouped into sites, a status per site from the LDD commencement and completion dates and the decision, and joins by position to NOTAM cranes, Street Manager highway activities, OSM construction areas, the brownfield register, site allocations and Wikidata, each with a confidence; hand-written facts (developer pages, the owner's photos) joined by planning reference.",
+      "rules": [
+        "Zone: model box WGS84 -0.095, 51.474 to 0.015, 51.522 plus the east margin 0.015 to 0.085, 51.495 to 51.522 (as fetch-works.mjs); the PLD centroid decides.",
+        "Grouping (union-find): same reference base (suffixes /A1, /S, /NC, /P1 ... removed), a description or relied-on permission that cites another record's reference within 300 m, or centroids within 10 m.",
+        "Status per group: S1 LDD commencement within 7 years, no completion (high); S1b status Commenced without a date, decided within 7 years (medium); S2 commenced more than 7 years ago, never completed (low, F32); S2b S2 with an overlapping OSM construction area, a NOTAM crane within 60 m or a Street Manager crane, hoarding or compound within 50 m -> on site (medium); S3 completion within 2 years and not before the latest commencement (high); S4 approved within 5 years, not lapsed (lapsed_date in the past) or superseded, no commencement (medium); S4b S4 with a NOTAM crane within 60 m or an overlapping OSM building=construction -> on site (medium, F33); S5 undecided application or appeal (high). Completed more than 2 years ago, refused, withdrawn, lapsed: counted, not listed. A commenced record is never dropped for a past lapsed_date (F33).",
+        "Footprint: PLD wgs84_polygon of 50 m2 or more (smaller = point marker, F35); else the smallest overlapping OSM building=construction outline, else landuse=construction; else a circle of the stated site area; else 25 m round the centroid. footprint.from says which.",
+        "Matches: M1 NOTAM crane to the nearest on-site, approved or stale site within 150 m (high within 60 m); M2 Street Manager activity within 120 m (high within 50 m); M3 OSM construction feature within 30 m (high when overlapping); M4 brownfield point within 40 m (geox/geoy WGS84 or BNG per row, F23); M5 site centre in a site allocation polygon; M6 Wikidata item within 40 m (high within 15 m with a shared label word, medium with the word, low without).",
+        "Kept per source: ids as published (PLD id and lpa_app_no, NOTAM id, Street Manager activity id and USRN, OSM type/id, brownfield site reference, allocation OBJECTID, QID), dates, and the snapshot or fetch date. PLD descriptions cut to 300 characters; no NOTAM text; OSM tags limited to name, landuse, building, construction, dates, operator, developer, levels, height, description, website, ref, address.",
+        "Heights: PLD building_details max_height as entered (m AOD where the description says so); storeys max of the lead record's buildings, else of the group; developer and CTBUH figures only in approved.web from facts.json.",
+        "Output: one site per line; borough names without \"London Borough of\"."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "fetch-live",
+        "fetch-works",
+        "walk-london-datastore"
+      ],
+      "judgement": "The status windows (7, 5 and 2 years), the \"major\" filter and the match distances are judgements, recorded in the tool header, meta.status_rules and meta.match_rules and the cwplans-construction skill. facts.json is hand-written from crawled pages and the owner's photos (crawl list inside it).",
+      "faults": [
+        "F23",
+        "F32",
+        "F33",
+        "F34",
+        "F35"
+      ],
+      "area": "construction"
     }
   ],
   "manual_activities": [

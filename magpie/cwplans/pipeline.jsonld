@@ -5293,6 +5293,95 @@
    "cwp:judgement": "The pixel positions in points.json are read by eye from 2x and 4x enlargements (which point is the foot of a post is a judgement: the base plate hides it); recorded in points.json and the README."
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-construction-index",
+   "@type": "prov:Activity",
+   "rdfs:label": "build-construction-index",
+   "dct:description": "Builds the index of works in progress: PLD records grouped into sites, a status per site from the LDD commencement and completion dates and the decision, and joins by position to NOTAM cranes, Street Manager highway activities, OSM construction areas, the brownfield register, site allocations and Wikidata, each with a confidence; hand-written facts (developer pages, the owner's photos) joined by planning reference.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-london-datahub",
+     "dcat:accessURL": "https://planningdata.london.gov.uk/api-guest/applications/_search",
+     "dct:description": "one POST: size 10000, centroid in the zone box (model box plus the Royal Docks margin) AND (proposed residential units >= 10 OR non-residential GIA gained >= 1000 m2); fields listed in PLD_FIELDS; cached in data/raw/construction/pld-major.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata",
+     "dcat:accessURL": "https://qlever.dev/api/wikidata",
+     "dct:description": "one query (lib.mjs qlever, paced): items with P625 in the zone box that are buildings (P31/P279* Q41176), construction projects (Q811430) or under construction (P5817 Q12377751), with label, P5817, P571, P1619, P2048, P1101, P193, P127, P88, P84 and their labels; cached in data/raw/construction/wikidata-buildings.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm",
+     "dcat:accessURL": "data/raw/docklands/greater_london-latest.osm.pbf (local)",
+     "dct:description": "landuse=construction, building=construction, building:part=construction, construction=* (not highway or railway), disused:building=construction: nodes, ways, relation outer rings; cached in data/raw/construction/osm-construction.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/notams.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/street-manager-activities.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/brownfield-register/brownfield-register.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/site-allocations/site-allocations.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/construction/facts.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data-register.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/construction/sites.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/construction/"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/build-construction-index.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-construction-index.mjs [--no-fetch] [--refresh]",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Zone: model box WGS84 -0.095, 51.474 to 0.015, 51.522 plus the east margin 0.015 to 0.085, 51.495 to 51.522 (as fetch-works.mjs); the PLD centroid decides.",
+    "Grouping (union-find): same reference base (suffixes /A1, /S, /NC, /P1 ... removed), a description or relied-on permission that cites another record's reference within 300 m, or centroids within 10 m.",
+    "Status per group: S1 LDD commencement within 7 years, no completion (high); S1b status Commenced without a date, decided within 7 years (medium); S2 commenced more than 7 years ago, never completed (low, F32); S2b S2 with an overlapping OSM construction area, a NOTAM crane within 60 m or a Street Manager crane, hoarding or compound within 50 m -> on site (medium); S3 completion within 2 years and not before the latest commencement (high); S4 approved within 5 years, not lapsed (lapsed_date in the past) or superseded, no commencement (medium); S4b S4 with a NOTAM crane within 60 m or an overlapping OSM building=construction -> on site (medium, F33); S5 undecided application or appeal (high). Completed more than 2 years ago, refused, withdrawn, lapsed: counted, not listed. A commenced record is never dropped for a past lapsed_date (F33).",
+    "Footprint: PLD wgs84_polygon of 50 m2 or more (smaller = point marker, F35); else the smallest overlapping OSM building=construction outline, else landuse=construction; else a circle of the stated site area; else 25 m round the centroid. footprint.from says which.",
+    "Matches: M1 NOTAM crane to the nearest on-site, approved or stale site within 150 m (high within 60 m); M2 Street Manager activity within 120 m (high within 50 m); M3 OSM construction feature within 30 m (high when overlapping); M4 brownfield point within 40 m (geox/geoy WGS84 or BNG per row, F23); M5 site centre in a site allocation polygon; M6 Wikidata item within 40 m (high within 15 m with a shared label word, medium with the word, low without).",
+    "Kept per source: ids as published (PLD id and lpa_app_no, NOTAM id, Street Manager activity id and USRN, OSM type/id, brownfield site reference, allocation OBJECTID, QID), dates, and the snapshot or fetch date. PLD descriptions cut to 300 characters; no NOTAM text; OSM tags limited to name, landuse, building, construction, dates, operator, developer, levels, height, description, website, ref, address.",
+    "Heights: PLD building_details max_height as entered (m AOD where the description says so); storeys max of the lead record's buildings, else of the group; developer and CTBUH figures only in approved.web from facts.json.",
+    "Output: one site per line; borough names without \"London Borough of\"."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-live"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+    }
+   ],
+   "cwp:area": "construction",
+   "cwp:fault": [
+    "F23",
+    "F32",
+    "F33",
+    "F34",
+    "F35"
+   ],
+   "cwp:judgement": "The status windows (7, 5 and 2 years), the \"major\" filter and the match distances are judgements, recorded in the tool header, meta.status_rules and meta.match_rules and the cwplans-construction skill. facts.json is hand-written from crawled pages and the owner's photos (crawl list inside it)."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
    "@type": "prov:Activity",
    "rdfs:label": "Published levels used as tunnel and structure controls",
@@ -10559,6 +10648,91 @@
    "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/construction/sites.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "index of works in progress: one record per construction site in the zone (436 on 2026-10-04: on site, approved not started, completed recently, proposed, commenced long ago) with planning references and LDD dates, status rule and confidence, footprint, approved storeys and heights, NOTAM cranes, Street Manager activities, OSM construction areas, brownfield and site allocation links, Wikidata items, developer and photo facts; unmatched cranes, activities and OSM areas",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/planning-london-datahub"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-pib"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dft-street-manager"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2og9g"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jxpm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/wikidata"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/construction-web"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-construction-index"
+   },
+   "cwp:osmUse": "derived",
+   "cwp:review": "PLD terms not confirmed as OGL (metadata and links only, descriptions cut to 300 characters); NOTAM facts only; developer pages facts only. Re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/construction/facts.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "hand-written facts about named schemes (30 Marsh Wall, 25 Cuba Street): developer, contractor, approved storeys and height from crawled pages, current built height measured in the owner's photos; the crawl list with URLs, dates and robots.txt results",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/construction-web"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/construction/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "what the construction index is, the answer about the sites in the owner's photos of 4 October 2026, counts by status and by source, sources, licences and gaps",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "cwp:osmUse": "counts"
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm",
    "@type": [
     "prov:Entity",
@@ -11776,6 +11950,15 @@
    ],
    "dct:title": "supplied by the repository owner",
    "dct:license": "owner's"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/construction-web",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "developer, project and press pages of named construction schemes (30marshwall.co.uk, ballymoregroup.com, 25cuba.com, constructionenquirer.com, skyscrapercenter.com)",
+   "dct:license": "each site's terms, no open licence: facts only (URL, date, numbers, names), no text or images; crawls allowed for scoping (owner, 2026-10-03)"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0",

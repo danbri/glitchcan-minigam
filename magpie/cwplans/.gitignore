@@ -42,3 +42,5 @@ data/raw/uprn-amend/
 
 # feed discovery stage caches (tools/discover-feeds.mjs)
 data/raw/feed-discovery/
+# construction index caches (tools/build-construction-index.mjs)
+data/raw/construction/
