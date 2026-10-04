@@ -520,6 +520,32 @@ Owner's questions: how the colours at the top of One Canada Square are chosen, a
 - Open: lock state from the tide (needs high-water times: ADMIRALTY key), St Katharine and Royal Docks lock rules, an
   AIS decision for the owner, the 3D page layers proposed in the skill.
 
+## 2026-10-04 rounded UPRNs amended in a copy (UPRN amendment agent)
+
+- Owner, 2026-10-04: "Can we record a methodology for fixing this by copying and amending the spreadsheet?" Method
+  written in `cwplans-london-datastore`, "Amending rounded UPRNs": keep the source untouched; copy; amend only cells in
+  a rounded class; record every change and every unknown in a separate amendments file; never choose between two
+  candidates; measure each route blind before trusting it. F22 row updated; new fault F25.
+- New tool `tools/amend-uprns.mjs` (generic flags, recipe `cultural-infrastructure`). Out:
+  `feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amended.geojson` and
+  `cultural-infrastructure.uprn-amendments.json`. Raw references in `data/raw/uprn-amend/` (gitignored, new line in
+  `.gitignore`). Register: 2 files, 3 sources (lds-2ko88, lds-2zj1y, gla-cim-arcgis); pipeline activity `amend-uprns`.
+- Route a (other releases): 116 files, 82,223 rows from 23697, 2ko88, 2zj1y and the GLA ArcGIS service. The rounding
+  is in every release (2018-2020 CSVs already show 1.00E+11; the ArcGIS field is text and rounded). The editable GLA
+  FeatureServers need a token; the 2025 list has no licence (not used).
+- Counts (F22): 56 rounded rows, 49 venues. Fixed 12 rows: route a 6 (high), route b OS Open UPRN in the building
+  outline 6 (medium), route c registers 0 (they cover E14; no rounded venue is in E14). Unknown 44 rows: 3 low (not
+  applied), 41 with no single candidate (28 venues with 2 to 74 points in range, 7 with none).
+- Measured on 160 valid 12-digit UPRNs rounded blind: route a (older releases) 61 of 61 and 63 of 63 correct; route b
+  "only point in range in the building" 38 right and 9 wrong (k = 3), so route b alone is low; route b medium rule
+  (point within 1 m, outline of 25 points or fewer) 9 of 9.
+- Catalogued (not changed): 18 duplicate values (4 rounded), 14 values not in OS Open UPRN, 14 more than 150 m from
+  their point, 3 out of range, 31 text, 18 padded; F25: 114 venues in 10 layers a constant (-112, +54) m from their
+  own UPRN point (theatres the opposite way), consistent with a missing OSGB36 / WGS84 datum change.
+- Open: ask the GLA for the source .xlsx (the stored numbers keep every digit); hand checks of the 35 unknown venues
+  as manual amendments with evidence; join the cultural venues to the registry from the amended copy (high and
+  medium only); a position correction for F25 layers, after the owner agrees.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
@@ -542,4 +568,4 @@ Owner's questions: how the colours at the top of One Canada Square are chosen, a
     FACTS.md, feeds/underground README, feeds README and EVENTS.md, pixel palette) when next run; pace
     `registry-wikidata.mjs` through `tools/lib.mjs` `qlever()`.
 15. London Datastore: harvest the backlog head (Town Centre Boundaries, Opportunity Areas, High Street Boundaries,
-    BIDs); join cultural venues by UPRN (not `uprn_suspect`, F22) and brownfield sites by address into the registry.
+    BIDs); join cultural venues by UPRN from the amended copy (high and medium; not `uprn_suspect`, F22) and brownfield sites by address into the registry.

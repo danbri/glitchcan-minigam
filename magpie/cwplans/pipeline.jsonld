@@ -3840,6 +3840,100 @@
    "cwp:judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md."
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/amend-uprns",
+   "@type": "prov:Activity",
+   "rdfs:label": "amend-uprns",
+   "dct:description": "Copies a spreadsheet-sourced file and amends only the UPRN cells that a spreadsheet rounded (F22). Every cell is classified (rounded: scientific notation, or 9+ digits ending in 5+ zeros; catalogued only: empty, text, decimal, out of range, padded, duplicate across venues, not in OS Open UPRN, over 150 m from its OS Open UPRN point, and per-layer constant position offsets, F25). Each rounded venue is recovered by the first route that gives exactly one candidate inside the range the rounded value allows: (a) the same dataset in other formats, layers and releases, (b) OS Open UPRN points in the venue's OSM building outline, (c) registers with UPRNs; else (d) unknown with the reason. Writes the amended copy beside the source and an amendments file with one entry per changed cell, every unknown, the catalogue, the rules and the measured precision of routes a and b (each valid 12-digit UPRN rounded to 3 and 6 digits and recovered blind).",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/catalogue.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23697",
+     "dcat:accessURL": "https://data.london.gov.uk/download/23697/<resource id>/<file>",
+     "dct:description": "GET every CSV, zip and venue GeoPackage of the dataset (all revisions; CEZ files skipped)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ko88",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2ko88/<resource id>/<file>",
+     "dct:description": "GET every CSV, zip and venue GeoPackage (the 2018-2020 releases)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2zj1y",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2zj1y/<resource id>/<file>",
+     "dct:description": "GET the 2024 LGBTQ+ venues CSV"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gla-cim-arcgis",
+     "dcat:accessURL": "https://gis.london.gov.uk/arcgis/rest/services/apps/Cultural_infrastructure_2023_for_webapp_verified/MapServer/<layer>/query",
+     "dct:description": "GET each of 37 layers, zone envelope in EPSG:27700, outFields=*, outSR=4326, f=geojson, pages of 1,000"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/registry/osopenuprn_202609_csv.zip"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/docklands/osm-clip.json.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/gias.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/ods.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/registers/active-places.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amended.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amendments.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/uprn-amend/"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/amend-uprns.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/amend-uprns.mjs cultural-infrastructure [--refresh]; generic: node magpie/cwplans/tools/amend-uprns.mjs --in <file> --uprn-field <f> --id-field <f[,f]> [--ref a:<file>]... [--ref c:<file>]... [--open-uprn <zip|csv>] [--footprints <osm-clip.json.gz>] --out <copy> --amendments <json>",
+   "cwp:kind": "transform",
+   "cwp:rule": [
+    "The source file is read, never written; a value that is not in a rounded class is never changed.",
+    "Range: Excel rounds to k significant digits; the true value lies within half a unit of the last kept digit (1.00023E+11 -> [100022500000, 100023500000); plain 200000000000 -> k = non-zero prefix -> [150000000000, 250000000000)); rounded forms of the same venue in other releases narrow it by intersection.",
+    "Venue: rows with the same normalised name within 50 m are one venue; candidates are pooled and every row gets the same answer.",
+    "Route a: same normalised name (or one contains the other, 8+ characters) and point within 50 m (or the same address1 without a point); exactly one distinct full UPRN in range.",
+    "Route b: the smallest OSM building outline containing the venue point (none: OS Open UPRN points within 10 m); in a layer with a measured constant offset the moved point is tried too; exactly one OS Open UPRN point in range.",
+    "Route c: as route a over GIAS, ODS and Active Places rows with UPRNs.",
+    "Confidence: high = route a, exact name, OS Open UPRN point of the candidate within 150 m of the venue (or of the venue moved by its layer offset); medium = other route a, route c, route b with the candidate within 1 m of the venue's own point in an outline of at most 25 UPRN points; low = other route b. High and medium applied; low recorded, not applied.",
+    "Two or more candidates: never chosen between; the venue stays unknown with the candidates listed."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+    }
+   ],
+   "cwp:area": "feeds",
+   "cwp:fault": [
+    "F22",
+    "F25"
+   ],
+   "cwp:judgement": "The thresholds (50 m, 150 m, 10 m, 1 m, 25 UPRN points) and the confidence levels are hand choices, recorded in the tool header constants and in skills/cwplans-london-datastore/SKILL.md \"Amending rounded UPRNs\"; the measured precision that supports them is in the amendments file meta.validation. The 2025 Cultural Infrastructure Map (2rj5o, no licence on the Datastore) was left out by decision."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-fp16-shaders",
    "@type": "prov:Activity",
    "rdfs:label": "check-fp16-shaders",
@@ -8847,6 +8941,79 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amended.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "a copy of cultural-infrastructure.geojson in which only the rounded os_addressbase_uprn cells that could be recovered are changed (12 of 56; F22); uprn_amended on each changed feature (old value, route, confidence, amendment number); uprn_suspect and uprn_unresolved where the value is still rounded",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23697"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ko88"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-uprn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/amend-uprns"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amendments.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the amendments file of the copy: one entry per changed cell (row id, column, old value, new value, route, evidence, confidence, applied, date), every value left unknown with its reason, the detection catalogue of all 662 cells (classes, duplicates, reference check, per-layer position offsets, F25), the written rules and the measured precision of each route",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23697"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ko88"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2zj1y"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gla-cim-arcgis"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-uprn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/dfe-gias"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nhs-ods"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/sport-england-active-places"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/amend-uprns"
+   },
+   "cwp:osmUse": "ids"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/designated-open-space/designated-open-space.geojson",
    "@type": [
     "prov:Entity",
@@ -10152,6 +10319,39 @@
    "dct:license": "OGL v3.0",
    "dcat:landingPage": "https://data.london.gov.uk/dataset/cultural-infrastructure-map-2023-23697",
    "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ko88",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2ko88: Cultural Infrastructure Map (2018-2020 releases: CulturalInfrastructureMap.gpkg, site_by_borough.zip, per-type CSVs) (Greater London Authority)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/cultural-infrastructure-map-2ko88",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2zj1y",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2zj1y: Cultural Infrastructure Map 2024 (LGBTQ+ venues CSV) (Greater London Authority)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/cultural-infrastructure-map-2024-2zj1y",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/gla-cim-arcgis",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "GLA ArcGIS map service behind the public Cultural Infrastructure Map app (Cultural_infrastructure_2023_for_webapp_verified/MapServer, gis.london.gov.uk)",
+   "dct:license": "not stated on the service; it serves the 2023 Cultural Infrastructure Map that the London Datastore publishes under OGL v3.0 (lds-23697)",
+   "dcat:landingPage": "https://gis.london.gov.uk/arcgis/rest/services/apps/Cultural_infrastructure_2023_for_webapp_verified/MapServer",
+   "cwp:attribution": "Greater London Authority"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e195k",

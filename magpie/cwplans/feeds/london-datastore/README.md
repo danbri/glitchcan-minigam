@@ -80,7 +80,7 @@ Zone = the 3D model box (WGS84 -0.095, 51.474 to 0.015, 51.522). Whole geometrie
 
 | folder | dataset | licence | source features | in zone | in CW box | joins |
 |---|---|---|---|---|---|---|
-| `cultural-infrastructure/` | 23697 Cultural Infrastructure Map 2023 (26 venue layers) | OGL v3 | 5,256 | 662 | 13 | UPRN (599; 56 rounded, F22), ward and borough codes, address, website |
+| `cultural-infrastructure/` | 23697 Cultural Infrastructure Map 2023 (26 venue layers) | OGL v3 | 5,256 | 662 | 13 | UPRN (599; 56 rounded, F22: 12 recovered in the amended copy, 44 still unknown), ward and borough codes, address, website |
 | `brownfield-register/` | 2og9g Brownfield Register (CSV points) | OGL v3 | 3,066 (167 without a point) | 229 | 6 | site reference, organisation URI, address text |
 | `conservation-areas/` | emqwg Conservation Areas | OGL v3 | 1,095 | 112 | 6 | GLA layer reference, borough |
 | `southwark-local-list/` | e1r5k Southwark Local List | OGL v3 | 1,242 | 599 | 0 | postcode, street, council PDF link |
@@ -93,6 +93,17 @@ Zone = the 3D model box (WGS84 -0.095, 51.474 to 0.015, 51.522). Whole geometrie
 | `central-activities-zone/` | 23jxk Central Activities Zone (London Plan 2021) | OGL v3 | 1 | 1 | 0 | — |
 | `air-quality-monitoring-sites/` | 23n41 Air Quality Monitoring Sites | CC BY 4.0 | 239 | 28 | 0 | site id, network |
 | `lvmf-2026-consultation/` | 2gqpn LVMF 2026 consultation (paths, vistas, viewpoints) | OGL v3 | 114 | 35 | 0 | view ids |
+
+**Rounded UPRNs (F22): the amended copy.** `cultural-infrastructure/cultural-infrastructure.uprn-amended.geojson` is a
+copy of the harvested file in which only recovered UPRN cells differ; every change, every value left unknown, the
+detection catalogue and the measured precision are in `cultural-infrastructure.uprn-amendments.json`. Made by
+`tools/amend-uprns.mjs cultural-infrastructure` (https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/amend-uprns.mjs).
+2026-10-04: 56 rounded rows (49 venues); fixed 12 rows (12 venues): 6 from other releases of the same map (high
+confidence), 6 from OS Open UPRN points in the venue's building (medium); 44 rows still unknown (3 with only a
+low-confidence candidate, not applied; 41 with two or more candidates or none). Join on the amended copy, high and
+medium values only. Also found: in 10 of the 26 layers the venue points sit a constant (-112, +54) m from their own
+UPRN's point (F25). Method: skill `cwplans-london-datastore`, "Amending rounded UPRNs".
+Live: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amendments.json
 
 Attribution for every file: "Contains public sector information licensed under the Open Government Licence v3.0"
 (CC BY for the air quality sites) with the publisher named in `meta.attribution`, and "The GLA cannot warrant the
