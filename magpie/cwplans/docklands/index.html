@@ -1242,7 +1242,7 @@ function buildNightLights() {
     cand.push({ ringAt: tierAt, base, top, ...centre(tierAt(top - 1)) }); }
   cand.sort((a, b) => b.top - a.top); const kept = [], redAt = [];
   for (const c of cand) { if (kept.some(k => Math.hypot(k.cx - c.cx, k.cz - c.cz) < Math.max(20, k.rad * .8))) continue; kept.push(c); }
-  const red = (x, y, z, i) => { if (redAt.some(q => Math.abs(q[0] - x) < 5 && Math.abs(q[2] - z) < 5 && Math.abs(q[1] - y) < 5)) return null; redAt.push([x, y, z]); nRed++; const o = { x, y, z, c: RED, i, s: .9, px: pxr(.8, 2.2), h: 3.2, sd: rnd1() }; direct.push(o); return o; };
+  const red = (x, y, z, i) => { if (redAt.some(q => Math.abs(q[0] - x) < 5 && Math.abs(q[2] - z) < 5 && Math.abs(q[1] - y) < 5)) return null; redAt.push([x, y, z]); nRed++; const o = { x, y, z, c: RED, i, s: .6, px: pxr(.8, 1.4), h: 3.2, sd: rnd1() }; direct.push(o); return o; };
   for (const c of kept) { nTall++; const h = c.top - c.base, dw = W.dist(c.cx, c.cz);
     for (const [x, z] of corners(c.ringAt(c.top - .5))) { const o = red(x, c.top + .8, z, 1); if (o && dw < 150) R({ ...o, s: 1.4, px: pxr(.8, 2.2), i: .45 * Math.exp(-dw / 80) }); }
     if (h >= AVL.mid) { const n = Math.ceil(h / AVL.step) - 1; for (let k = 1; k <= n; k++) { const y = c.base + h * k / (n + 1); for (const [x, z] of opposite(corners(c.ringAt(y)))) red(x, y, z, .9); } } }
@@ -1262,7 +1262,7 @@ function buildNightLights() {
     for (let s = 6; s < pl.len; s += 16 + 10 * rnd1()) { const p0 = along(pl, s), side = W.at(p0.x - p0.hz * 6, p0.z + p0.hx * 6) ? -1 : 1, p = { ...p0, x: p0.x - p0.hz * off * side, z: p0.z + p0.hx * off * side }; if (W.at(p.x, p.z) || W.dist(p.x, p.z, true) > reach) continue;
       let close = false; for (let a = -1; a <= 1 && !close; a++) for (let c = -1; c <= 1; c++) { const v = lampAt.get((Math.floor(p.x / 12) + a) + ',' + (Math.floor(p.z / 12) + c)); if (v && Math.hypot(v[0] - p.x, v[1] - p.z) < 13) { close = true; break; } }
       if (close) continue; lampAt.set(key(p.x, p.z), [p.x, p.z]); nLamp++; lamps.push([p.x, p.z]);
-      const led = rnd1() < .35, o = { x: p.x, y: p.y + 4.5, z: p.z, c: led ? [1, .86, .62] : [1, .6, .24], i: .75 + .25 * rnd1(), s: .6, px: pxr(1.4, 2.6), h: 3, sd: rnd1() }; direct.push(o); R({ ...o, s: .6, i: .35 + .4 * rnd1() }); } }
+      const led = rnd1() < .35, o = { x: p.x, y: p.y + 4.5, z: p.z, c: led ? [1, .86, .62] : [1, .6, .24], i: .75 + .25 * rnd1(), s: .6, px: pxr(1.4, 2.6), h: 3, sd: rnd1() }; direct.push(o); R({ ...o, s: .6, i: .5 + .4 * rnd1() }); } }
   // lit windows reflected: one column for each building of 30 m or more within 40 m of the water, coloured by use, as
   // bright as the mean light of its windows (lit share x brightness)
   A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (!(h >= 40)) return; const r = ringOf(b), { cx, cz, rad } = centre(r), dw = W.dist(cx, cz); if (dw > 15 + rad) return;
