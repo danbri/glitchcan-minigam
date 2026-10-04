@@ -50,7 +50,7 @@ const VPS = {
 };
 
 const S = {
-  t: Date.now(), live: true, drive: false, dark: false, lines: true, mw: true, fetch: false, tideOn: true, azl: true, names: true, vp: 'greenland',
+  t: Date.now(), live: true, drive: false, dark: false, lines: true, mw: true, fetch: false, tideOn: true, azl: true, names: true, lcy: false, vp: 'greenland',
   obs: null, F: null, A: null, at: 0, ready: false, gl: null, P: {}, stars: null, lines_: null, wx: null, tide: null, sats: null, satPts: [], satAt: 0,
 };
 
@@ -389,6 +389,7 @@ function after(ctx) {
   const W = ctx.cssW, H = ctx.cssH, dpr = Math.min(2, devicePixelRatio || 1); if (ov.width !== Math.round(W * dpr) || ov.height !== Math.round(H * dpr)) { ov.width = Math.round(W * dpr); ov.height = Math.round(H * dpr); }
   const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
   const sky = S.skyThisFrame; S.skyThisFrame = false; if (sky && S.names && !ctx.pix && ctx.MVP && S.ctx.CAM) labels(g, ctx, W, H); else S.labelled = null;
+  if (S.lcy && !ctx.pix && ctx.MVP) approaches(g, ctx, W, H);
   if (!S.azl || ctx.pix || S.vp === 'camera' || !ctx.MVP || !S.ctx.CAM) return;
   const E = S.ctx.CAM.eye; if (Math.hypot(E[0] - S.here.x, E[2] - S.here.z) < 500) return;   // from the viewpoint itself the lines on the ground only confuse
   const M = ctx.MVP, vz = ctx.VZ || 1, here = S.here, pr = (x, y, z) => { const c = [0, 1, 2, 3].map(i => M[i] * x + M[4 + i] * y * vz + M[8 + i] * z + M[12 + i]); return c[3] > 1 ? [(c[0] / c[3] * .5 + .5) * W, (1 - (c[1] / c[3] * .5 + .5)) * H] : null; };
@@ -426,6 +427,22 @@ function labels(g, ctx, W, H) {
   for (const m of D.m.objects) { if (!(m[4] <= N - 1.5)) continue; const o = dirOfEq(m[2], m[3]); if (!seen(o.d, o.alt)) continue; const p = pr(o.d), nm = m[7] && m[7].length < 34 && !/Id With|Asterism|Double Star|Localized/.test(m[7]) ? ` ${m[7].replace(/ = .*/, '')}` : '';
     if (p && put(`M ${m[0]}${nm}`, p, 'rgba(226,196,255,.85)', Math.max(3, Math.min(14, (m[5] || 10) / 60 * D2R / (2 * Math.tan(S.ctx.CAM.fovY / 2)) * H / 2)))) out.messier.push(m[0]); }
   g.shadowBlur = 0; S.labelled = out;
+}
+
+// London City Airport approach paths: the extended runway centreline from each landing threshold (OpenStreetMap, ODbL)
+// rising at the published 5.5 degree glide path from 15 m over the threshold, out to 12 km; a dot every kilometre.
+// No live aircraft: no ADS-B source allows its use on a public page (README "Sky, time, weather and tide", aircraft).
+function approaches(g, ctx, W, H) {
+  if (!S.lcyData) { if (!once.lcy) load('lcy', 'data/sky/lcy-approach.json').then(d => { S.lcyData = d; redraw(); }).catch(e => console.warn('lcy', e)); return; }
+  const D = S.lcyData, M = ctx.MVP, vz = ctx.VZ || 1, pr = (x, y, z) => { const c = [0, 1, 2, 3].map(i => M[i] * x + M[4 + i] * y * vz + M[8 + i] * z + M[12 + i]); return c[3] > 1 ? [(c[0] / c[3] * .5 + .5) * W, (1 - (c[1] / c[3] * .5 + .5)) * H] : null; };
+  const T = D.thresholds.map(t => geo(t.lon, t.lat)), L = Math.hypot(T[1][0] - T[0][0], T[1][1] - T[0][1]), u = [(T[1][0] - T[0][0]) / L, (T[1][1] - T[0][1]) / L], tg = Math.tan(D.glide_path_deg * D2R), y0 = D.aerodrome_elevation_m + D.threshold_crossing_height_m;
+  g.font = '600 11px system-ui,sans-serif'; g.shadowColor = '#000'; g.shadowBlur = 3;
+  D.thresholds.forEach((t, k) => { const s = k === 0 ? -1 : 1, P = d => pr(T[k][0] + s * u[0] * d, y0 + d * tg, T[k][1] + s * u[1] * d); let on = false, last = null;
+    g.strokeStyle = 'rgba(255,190,90,.75)'; g.lineWidth = 1.5; g.setLineDash([6, 5]); g.beginPath();
+    for (let d = 0; d <= 12000; d += 100) { const p = P(d); if (!p) { on = false; continue; } if (on) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); on = true; if (d === 6000) last = p; } g.stroke(); g.setLineDash([]);
+    g.fillStyle = 'rgba(255,190,90,.9)'; for (let d = 1000; d <= 12000; d += 1000) { const p = P(d); if (p && p[0] > 0 && p[0] < W && p[1] > 0 && p[1] < H) { g.beginPath(); g.arc(p[0], p[1], 2, 0, 7); g.fill(); } }
+    if (last && last[0] > 4 && last[0] < W - 120 && last[1] > 14 && last[1] < H - 4) g.fillText(`London City runway ${t.rwy} approach, ${D.glide_path_deg}°`, last[0] + 5, last[1] - 5); });
+  g.shadowBlur = 0;
 }
 
 // ---------- the clock, weather, tide and satellites for the time shown; the scene follows when asked
@@ -472,7 +489,7 @@ function buildPanel() {
   <p class="small">Showing <b id="skyLive"></b>. The page address keeps the time (<code>?t=2026-10-03T22:30</code>, London time).</p>
   <div class="row"><label>Viewpoint <select id="skyVp">${Object.entries(VPS).map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('')}</select></label></div>
   <div class="chips row"><label><input type="checkbox" id="skyDrive"> Light and night follow the clock</label><label><input type="checkbox" id="skyTide" checked> Thames at the measured level</label><label><input type="checkbox" id="skyAz" checked> Sun and moon lines on the map</label>
-  <label><input type="checkbox" id="skyLines" checked> Constellation lines</label><label><input type="checkbox" id="skyNames" checked> Star names and Messier objects (those the sky shows)</label><label><input type="checkbox" id="skyMw" checked> Milky Way</label><label><input type="checkbox" id="skyDark"> Sky as from a dark site</label><label><input type="checkbox" id="skyFetch"> Fetch weather, tide and satellites for other times</label></div>
+  <label><input type="checkbox" id="skyLines" checked> Constellation lines</label><label><input type="checkbox" id="skyNames" checked> Star names and Messier objects (those the sky shows)</label><label><input type="checkbox" id="skyLcy"> London City Airport approach paths</label><label><input type="checkbox" id="skyMw" checked> Milky Way</label><label><input type="checkbox" id="skyDark"> Sky as from a dark site</label><label><input type="checkbox" id="skyFetch"> Fetch weather, tide and satellites for other times</label></div>
   <div class="acts"><button type="button" id="skyLookMoon">Look at the moon</button><button type="button" id="skyLookSun">Look at the sun</button></div>
   <div id="skyOut" class="small" aria-live="polite"></div>
   <p class="small" id="skyCredit"></p>`;
@@ -481,7 +498,7 @@ function buildPanel() {
   $('skyPhoto').onclick = () => photoTime();
   $('skyVp').onchange = () => { S.vp = $('skyVp').value; setObserver(); compute(); refreshAsync(); redraw(); };
   const ck = (id, k, fn) => { $(id).checked = S[k]; $(id).onchange = () => { S[k] = $(id).checked; if (fn) fn(); redraw(); panel(); }; };
-  ck('skyDrive', 'drive', () => { if (S.drive) applyStyle(); else restoreLight(); }); ck('skyTide', 'tideOn', applyTide); ck('skyAz', 'azl'); ck('skyLines', 'lines'); ck('skyNames', 'names'); ck('skyMw', 'mw'); ck('skyDark', 'dark');
+  ck('skyDrive', 'drive', () => { if (S.drive) applyStyle(); else restoreLight(); }); ck('skyTide', 'tideOn', applyTide); ck('skyAz', 'azl'); ck('skyLines', 'lines'); ck('skyNames', 'names'); ck('skyLcy', 'lcy'); ck('skyMw', 'mw'); ck('skyDark', 'dark');
   ck('skyFetch', 'fetch', () => { WX.days = {}; TIDE.days = {}; refreshAsync(); });
   const look = b => { const D = globalThis.__docklands, A = S.A; if (!D || !A) return; const d = A[b].dir, e = [S.here.x, S.here.y + 1.6, S.here.z], T = e.map((v, i) => v + d[i] * 1000); D.setEye(e, T, (b === 'moon' ? 12 : 40) * D2R); if (D.NIGHT && !D.NIGHT.on && A.sun.alt < -6) D.setNight(true); };
   $('skyLookMoon').onclick = () => look('moon'); $('skyLookSun').onclick = () => look('sun');
@@ -509,6 +526,7 @@ function panel() {
     ['Milky Way core', `${f1(A.gc.alt)}° ${A.gc.alt > 0 ? 'up' : 'below the horizon'} now${T.gcBest ? `; highest in full darkness ${f1(T.gcBest.alt)}° at ${hm(T.gcBest.t)}` : '; no astronomical darkness this night'} (from London it never rises more than 9.5°)`],
     ['Stars drawn', S.drawn ? `to magnitude ${f1(S.drawn.nelm)} (${S.dark ? 'dark site' : 'London sky glow, Bortle 8 to 9'}, with twilight, moonlight and haze)` : '—'],
     ['Names on the sky', !S.names ? 'off' : S.labelled ? `${S.labelled.stars.length ? 'stars: ' + S.labelled.stars.map(esc).join(', ') : 'no named star bright enough and in view'}; ${S.labelled.messier.length ? 'Messier: ' + S.labelled.messier.map(m => 'M ' + m).join(', ') : 'no Messier object bright enough for this sky and in view'} (only what the star limit shows, not behind buildings)` : 'shown with the night sky'],
+    ['Aircraft', 'no live positions: OpenSky needs a written licence for live use, adsb.fi is for personal non-commercial use, ADS-B Exchange is commercial, adsb.lol is ODbL (share-alike), airplanes.live terms could not be read (bot challenge). The London City Airport approach paths can be shown (above).'],
     ['Satellites', S.satSet ? `${S.satPts.length} sunlit above the horizon now (${S.satSet.recs.length} bright satellites, ${esc(S.satSet.src)})` : S.fetch ? (S.satErr ? esc(S.satErr) : 'orbit data older than 10 days from that time') : 'tick "Fetch" for times away from 3 October'],
     ['Next ISS pass', S.iss ? `${dayL(S.iss.t0)} ${hm(S.iss.t0)}–${hm(S.iss.t1)}: from ${compass(S.iss.az0)} to ${compass(S.iss.az1)}, highest ${f1(S.iss.max)}° at ${hm(S.iss.tmax)} in the ${compass(S.iss.azmax)}` : S.issDone ? 'none above 10° in a dark sky in the next 3 days' : S.satSet ? 'searching…' : '—'],
     ['Cloud from the satellite', S.clm ? (S.clm.ready ? `EUMETSAT Meteosat cloud mask at ${hm(S.clm.t)} ${tz(S.clm.t)} (${esc(S.clm.src)}): ${Math.round(S.clm.mean * 100)}% cloud within 60 km; it places the cloud of each layer, moved with the wind` : S.clm.err ? 'cloud mask ' + esc(S.clm.err) : 'loading…') : S.fetch ? 'no cloud mask for that time (none before September 2020, none in the future)' : 'tick "Fetch" for the satellite cloud at times away from the photo evening'],
@@ -516,7 +534,7 @@ function panel() {
     ['Thames level', td && td.v != null ? `${td.v.toFixed(2)} m above Ordnance Datum at ${esc(VPS[S.vp].name)}, ${td.trend > .05 ? 'rising' : td.trend < -.05 ? 'falling' : 'near the turn'} (${td.trend > 0 ? '+' : ''}${td.trend.toFixed(2)} m/h); ${td.pts.map(p => `${esc(p.name)} ${p.v.toFixed(2)} m${p.dropped ? ` (${p.dropped} faulty readings left out)` : ''}`).join(', ')}, linear along the river between the gauges; the model's Thames runs from ${td.ends[0].toFixed(2)} m at its west end to ${td.ends[1].toFixed(2)} m at its east end (EA, ${esc(td.src)})` : td && td.why ? esc(td.why) + ' — no prediction shown' : 'no reading (tick "Fetch")'],
   ];
   out.innerHTML = `<p>${esc(VPS[S.vp].name)} · ${dayL(S.t)} ${hm(S.t)} ${tz(S.t)}${S.live ? ' (now)' : ''}${Math.abs(S.t - fromLondon(PHOTO.iso)) < 30 * 60e3 ? ` · ${esc(PHOTO.note)}` : ''}</p><div class="tw"><table>${rows.map(([a, b]) => `<tr><th>${esc(a)}</th><td>${b}</td></tr>`).join('')}</table></div>`;
-  $('skyCredit').innerHTML = 'Positions: <a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a> (Don Cross, MIT). Stars: <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50">Yale Bright Star Catalogue 5th ed.</a> (Hoffleit &amp; Warren 1991, NASA ADC / CDS; public domain) to magnitude 5.5. Constellation lines: <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a> (Olaf Frohn, BSD-3-Clause). Star names: <a href="https://www.iau.org/public/themes/naming_stars/">IAU Working Group on Star Names</a> (IAU Catalog of Star Names, CC BY). Messier objects: <a href="https://heasarc.gsfc.nasa.gov/W3Browse/all/messier.html">NASA HEASARC MESSIER table</a> (public domain). Milky Way: a band computed from galactic coordinates. Satellites: <a href="https://celestrak.org/">CelesTrak</a> GP data, <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (MIT). Cloud mask: <a href="https://view.eumetsat.int/">contains modified EUMETSAT Meteosat data 2026</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Weather: <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Tide: Environment Agency flood-monitoring API, this uses Environment Agency flood and river level data from the real-time data API (Beta) (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>); the EA publishes readings only, and published tide predictions (PLA, UKHO) are not under an open licence, so future times show no level.';
+  $('skyCredit').innerHTML = 'Positions: <a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a> (Don Cross, MIT). Stars: <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50">Yale Bright Star Catalogue 5th ed.</a> (Hoffleit &amp; Warren 1991, NASA ADC / CDS; public domain) to magnitude 5.5. Constellation lines: <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a> (Olaf Frohn, BSD-3-Clause). Star names: <a href="https://www.iau.org/public/themes/naming_stars/">IAU Working Group on Star Names</a> (IAU Catalog of Star Names, CC BY). Messier objects: <a href="https://heasarc.gsfc.nasa.gov/W3Browse/all/messier.html">NASA HEASARC MESSIER table</a> (public domain). Runway thresholds: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> (ODbL). Milky Way: a band computed from galactic coordinates. Satellites: <a href="https://celestrak.org/">CelesTrak</a> GP data, <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (MIT). Cloud mask: <a href="https://view.eumetsat.int/">contains modified EUMETSAT Meteosat data 2026</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Weather: <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Tide: Environment Agency flood-monitoring API, this uses Environment Agency flood and river level data from the real-time data API (Beta) (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>); the EA publishes readings only, and published tide predictions (PLA, UKHO) are not under an open licence, so future times show no level.';
 }
 // a "Sky" tab in the menu (the main script owns the tabs; ours opens like the others)
 function hookUi() {

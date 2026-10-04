@@ -2,9 +2,9 @@
 // docklands/data/sky/. Method and rules: pipeline.json activity "fetch-sky"; lessons: docklands/README.md
 // "Sky, time, weather and tide".
 //
-//   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [--date 2026-10-03]
+//   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [lcy] [--date 2026-10-03]
 //
-// With no part named, all eight run. --date picks the evening of the weather and tide snapshots (London date; the
+// With no part named, all nine run. --date picks the evening of the weather and tide snapshots (London date; the
 // snapshot covers that day and the next, so the hours after midnight are in it). Satellites are always the current
 // CelesTrak elements (CelesTrak keeps no history), so run "sats" within a day or two of the date.
 import { writeFileSync, mkdirSync } from 'fs';
@@ -125,4 +125,21 @@ if (want('clouds')) {
   const u = `https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.3.0&request=GetMap&layers=msg_fes:clm&styles=&crs=EPSG:4326&bbox=${box.join(',')}&width=256&height=256&format=image/png&time=${slot.replace('Z', ':00.000Z')}`;
   const png = await fetchRetry(u), f = `clm-${slot.replace(/[-:]/g, '')}.png`;
   writeFileSync(join(OUT, f), png); console.log(`wrote docklands/data/sky/${f} (${(png.length / 1024).toFixed(1)} KB) from ${u}`);
+}
+
+// 9. London City Airport runway 09/27 thresholds from OpenStreetMap (ODbL, tracked: way 340355375 and its two
+// displaced-threshold ways), read from the local Greater London extract with osmium (no network), for the approach
+// paths drawn on the 3D page. The 5.5 degree glide path is a published fact (UK AIP EGLC AD 2.24 charts; the AIP itself
+// is not copied); 15 m threshold crossing height assumed (50 ft, the usual figure).
+if (want('lcy')) {
+  const { execFileSync } = await import('child_process'), { tmpdir } = await import('os'), T = join(tmpdir(), 'lcy-' + process.pid), PBF = join(TOOLS, '..', 'data', 'raw', 'docklands', 'greater_london-latest.osm.pbf');
+  execFileSync('osmium', ['extract', '-b', '0.03,51.495,0.08,51.51', PBF, '-o', T + '.pbf', '--overwrite']);
+  execFileSync('osmium', ['tags-filter', T + '.pbf', 'w/aeroway=runway', '-o', T + '-rw.pbf', '--overwrite']);
+  execFileSync('osmium', ['export', T + '-rw.pbf', '-f', 'geojson', '-o', T + '.geojson', '--overwrite', '--add-unique-id=type_id']);
+  const g = JSON.parse((await import('fs')).readFileSync(T + '.geojson', 'utf8')), rw = g.features.find(f => f.properties.ref === '09/27' && f.geometry.type === 'LineString');
+  const c = rw.geometry.coordinates, w = c[0][0] < c[c.length - 1][0] ? c[0] : c[c.length - 1], e = c[0][0] < c[c.length - 1][0] ? c[c.length - 1] : c[0];
+  save('lcy-approach.json', { source: 'OpenStreetMap, Greater London extract (openstreetmap.fr), runway way ' + rw.id, licence: 'ODbL 1.0, © OpenStreetMap contributors', fetched: today,
+    note: 'landing thresholds = the ends of the main runway way (the displaced-threshold ways are left out); glide path and crossing height are published figures, not OSM',
+    runway: { ref: '09/27', osm: rw.id, length_m: +rw.properties.length || null, heading_tag: rw.properties.heading || null },
+    thresholds: [{ rwy: '09', lon: w[0], lat: w[1], approach_from: 'west' }, { rwy: '27', lon: e[0], lat: e[1], approach_from: 'east' }], aerodrome_elevation_m: 6, glide_path_deg: 5.5, threshold_crossing_height_m: 15 });
 }

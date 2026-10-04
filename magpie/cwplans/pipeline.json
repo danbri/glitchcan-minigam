@@ -3068,7 +3068,7 @@
     {
       "id": "fetch-sky",
       "tool": "tools/fetch-sky.mjs",
-      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [--date 2026-10-03]",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [lcy] [--date 2026-10-03]",
       "kind": "fetch",
       "used": [
         {
@@ -3110,6 +3110,11 @@
           "source": "eumetsat-clm",
           "endpoint": "https://view.eumetsat.int/geoserver/wms",
           "request": "WMS 1.3.0 GetMap, layers=msg_fes:clm, crs=EPSG:4326, bbox=50.5,-1.6,52.5,1.6, 256 x 256, image/png, time=the 15-minute slot (default DATE 23:00Z)"
+        },
+        {
+          "source": "osm",
+          "endpoint": "data/raw/docklands/greater_london-latest.osm.pbf (local, extract osmfr-greater-london)",
+          "request": "osmium extract -b 0.03,51.495,0.08,51.51, tags-filter w/aeroway=runway, export geojson; the way with ref 09/27"
         }
       ],
       "generated": [
@@ -3136,6 +3141,9 @@
         },
         {
           "file": "docklands/data/sky/clm-20261003T2300Z.png"
+        },
+        {
+          "file": "docklands/data/sky/lcy-approach.json"
         }
       ],
       "method": "Fetches the star catalogue, the constellation lines, satellite orbital elements, hourly weather and tide-gauge readings for the Sky panel of the 3D page (docklands/sky.js) and writes small JSON snapshots; the weather and tide files cover the London date given and the next day (the owner's photo evening, 3 October 2026).",
@@ -3147,6 +3155,7 @@
         "Tide: 15-minute instantaneous readings in m AOD, UTC times, sorted; no gap filling; EA gives readings only, no predictions. The page (sky.js cleanGauges) leaves out a reading whose difference from the nearest other gauge departs more than 0.45 m from the median of that difference over 2 h either side (fault F21), then interpolates linearly by chainage along data/river.json between the gauges. The EA has no tidal gauge between Tower Pier and Charlton (station search of 2026-10-04, 15 km round the estate).",
         "Star names: rows of IAU-CSN whose designation is an HR number present in stars.json (324 of 451 names); columns found by the positions of the header titles (Name/Diacritics, Designation, Con), because names can hold spaces; the diacritic form is kept.",
         "Clouds: the EUMETSAT cloud mask PNG kept as sent. The page (sky.js) reads white pixels (R, G, B > 200) as cloud, takes the mean over 60 km round the box centre, and raises each layer's Open-Meteo cover by 0.9 x (local mask - mean), clamped to 0..1, so the mask places the cloud and Open-Meteo keeps the amount; the mask moves with 2.2 x the 10 m wind for up to 90 minutes from its slot. Other times only with Fetch ticked (EUMETView sends CORS headers; the mask appears about 25 minutes after the slot; none before 2020-09-01). Parallax (about 1.6 km north for cloud at 1 km over London) is not corrected.",
+        "London City Airport: the landing thresholds are the two ends of the main runway way (ref 09/27; its displaced-threshold ways are left out); the page draws each approach as the extended centreline rising at 5.5 degrees (the published glide path) from 15 m over the threshold (50 ft assumed) out to 12 km. No live aircraft: OpenSky (written licence for any live product), adsb.fi (personal non-commercial), ADS-B Exchange (commercial), adsb.lol (ODbL share-alike) and airplanes.live (terms behind a bot challenge) were checked on 2026-10-04.",
         "Messier: all 109 rows of the HEASARC table (M 102 is not in it); RA and Dec from sexagesimal J2000 to degrees (0.001); size = the larger dimension in arcmin; the notes column title-cased as the common name. OpenNGC was not used (CC BY-SA).",
         "Network: User-Agent glitchcan-cwplans/0.1; three retries 3, 6 and 9 s apart on timeouts and 5xx (the agent proxy drops connections now and then); 4xx is not retried; files overwritten on every run."
       ],
