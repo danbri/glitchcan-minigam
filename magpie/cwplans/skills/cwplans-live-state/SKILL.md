@@ -27,6 +27,9 @@ skill `docklands-data-curation` and the cwplans exception in the repo CLAUDE.md.
     node magpie/cwplans/tools/fetch-live.mjs --no-fetch                           # rebuild from data/raw/live/ (gitignored)
     node magpie/cwplans/tools/check-data-register.mjs --write                     # then
 
+Tower Bridge lifts: the site's terms forbid scraping and reuse (checked 2026-10-04); not fetched. Details: skill
+`cwplans-river-and-water`, "Tower Bridge lift times: not fetched".
+
 ## Method
 
 - **Zone**: `BOX_WGS84` from `tools/fetch-docklands.mjs` (the model box) plus the east margin of `fetch-works.mjs`

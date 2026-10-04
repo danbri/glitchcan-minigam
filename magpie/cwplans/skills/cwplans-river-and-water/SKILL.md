@@ -139,6 +139,20 @@ verify the terms and the coverage at the source before any fetch, and record the
    non-commercial use (CC BY-NC style), key required. Licence fit: non-commercial is a restricted licence, which the
    cwplans licence limit excludes; needs the owner's decision before any use. Coverage: global, but aimed at fishing.
 
+## Tower Bridge lift times: not fetched (terms, 2026-10-04)
+
+https://www.towerbridge.org.uk/lift-times redirects to https://www.towerbridge.org.uk/bridge-lifts (date, time,
+vessel name, vessel type, direction; about 6 to 10 days ahead, past lifts removed). robots.txt answers 404 (no rules).
+The site's Legal statement (https://www.towerbridge.org.uk/legal/legal-statement, City Bridge Foundation) forbids it:
+clause 2.5 "You shall not conduct, facilitate, authorise or permit any text or data mining or web scraping" (any robot,
+bot, spider or scraper "to access, obtain, copy, monitor or republish any portion of the site or any data"), and clause
+5.3 forbids copying, publishing or making derivative works from data on the site. That is an explicit contract term,
+stronger than "no licence stated", so the crawl-for-scoping rule (owner, 2026-10-03) was not applied on our own
+decision: no source in `tools/fetch-river.mjs`, no `tower-bridge-lifts.json`, no history file. The owner decides. If the
+owner says yes: one page a day, facts only (date, time, direction, vessel name, vessel type, fetch time), appended to a
+dated history file, vessel names matched to `wikidata-vessels.json` and OSM ships by name only. Other routes checked:
+none open (the X account is excluded; PLA notices do not list lifts). The 3D page's Tower Bridge card links to the page.
+
 ## Proposed use on the 3D page (not built)
 
 - River buses as moving markers between piers, driven by the timetable and corrected by live TfL arrivals (CORS, no

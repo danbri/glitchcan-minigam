@@ -4656,12 +4656,12 @@
       "name": "Tower Bridge lift times",
       "category": "events",
       "provider": "City of London Corporation (Tower Bridge)",
-      "url": "https://www.towerbridge.org.uk/lift-times",
+      "url": "https://www.towerbridge.org.uk/bridge-lifts",
       "api": null,
       "sample": null,
       "format": "HTML",
       "auth": "none",
-      "licence": "site terms",
+      "licence": "site terms forbid automated access (Legal statement, Terms and Conditions of Use clause 2.5: no bot, spider or scraper, no text or data mining; clause 5.3: no copying or republishing of data). Not fetched; owner decision needed",
       "cors": null,
       "update": "daily",
       "coverage": "Tower Bridge",
@@ -4673,7 +4673,7 @@
         "status": "verified"
       },
       "sample_result": null,
-      "notes": "Scheduled bascule lifts with vessel names; ships then pass down to the Pool and Docklands."
+      "notes": "Scheduled bascule lifts with vessel names; ships then pass down to the Pool and Docklands. 2026-10-04: /lift-times redirects to /bridge-lifts; robots.txt answers 404 (no rules), but the Legal statement (https://www.towerbridge.org.uk/legal/legal-statement) forbids scraping and reuse, so tools/fetch-river.mjs has no source for it. The 3D page links to the page from the Tower Bridge card."
     },
     {
       "id": "royal-docks-whats-on",

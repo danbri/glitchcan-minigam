@@ -668,3 +668,8 @@ central tower - do we have an index of these?"
 - Owner named four AIS sources for the priority list: Open Waters AIS, Kystverket/BarentsWatch, US Marine Cadastre/NOAA,
   Global Fishing Watch. Added a "Priority list" section with licence fit and coverage to the cwplans-river-and-water skill
   and to feeds/river/README.md. Nothing fetched yet. Open Waters first: check UK coverage, terms, per-event source filter.
+
+## 2026-10-04 — Tower Bridge lift times: terms checked (river layer agent)
+- towerbridge.org.uk: /lift-times redirects to /bridge-lifts; robots.txt 404. Legal statement clause 2.5 forbids scraping
+  and text or data mining; clause 5.3 forbids reuse of data. Not fetched; recorded in feeds/feeds.json
+  (tower-bridge-lifts), feeds/live/README.md backlog, the river and live-state skills. Waiting on the owner.

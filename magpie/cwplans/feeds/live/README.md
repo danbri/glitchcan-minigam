@@ -110,7 +110,7 @@ Ranked by value to the 3D page and openness. "Page" = a page on GitHub Pages can
 | # | thing | source | licence | update | page | why |
 |---|---|---|---|---|---|---|
 | 1 | Trains, boats and cable car moving | TfL arrivals (StopPoint/{id}/Arrivals), line status | TfL open data | 30 s | yes | moving vehicles on the DLR viaducts, Jubilee, river buses |
-| 2 | Tower Bridge lifts | towerbridge.org.uk/bridge-lifts (date, time, vessel, direction) | site terms; facts only | daily, 6-10 days ahead | no | ~800 lifts a year; the ship then passes the zone |
+| 2 | Tower Bridge lifts | towerbridge.org.uk/bridge-lifts (date, time, vessel, direction) | **terms forbid it** (2026-10-04: Legal statement clauses 2.5 no scraping or data mining, 5.3 no reuse); not fetched, owner decision | daily, 6-10 days ahead | no | ~800 lifts a year; the ship then passes the zone |
 | 3 | Thames vessels | aisstream.io (free key), PLA | aisstream terms | seconds | no (key) | ships, clippers and tugs on the river |
 | 4 | EV charger availability | operator OCPI feeds (Public Charge Point Regulations 2023); Open Charge Map (CC BY 4.0 mostly; key required since this check) | per operator | minutes | some | the NCR closed on 28 Nov 2024; no free aggregate |
 | 5 | Flood warnings | EA flood-monitoring /floods | OGL | 15 min | yes | the Isle of Dogs flood areas; usually none |
