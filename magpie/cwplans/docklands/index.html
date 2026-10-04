@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Docklands 3D</title>
 <style>
 :root{--bg:#0f1215;--panel:#15191df2;--line:#323940;--fg:#e8eaec;--muted:#a9b1b9;--link:#9cc8ff;--warn:#ffd26f;--acc:#5fd17a;
@@ -10,6 +10,13 @@
   --bld:#b9bec4;--bldlv:#e0b25a;--base:#b05cff;--corr:#3fd0ff;--plat:#ff8a3d;--room:#ff5fa2;--tun:#e6e08a;
   --tabs:0px;--safe:env(safe-area-inset-bottom,0px)}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,sans-serif;overscroll-behavior:none}
+/* the containing window never zooms, scrolls, bounces, selects or drags (skill docklands-3d-page, "Window lock") */
+html{position:fixed;inset:0;width:100%;height:100%;height:100dvh}
+body{position:fixed;inset:0;width:100%;height:100%;height:100dvh;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+img,a,canvas{-webkit-user-drag:none}
+button,label,#top,#mini,#isoBtns,#toast,#press,#scrim,#attribLine,#attribI{touch-action:manipulation}
+#drawer,#drawerBody,#sheetBody,#qres{touch-action:pan-y}
 a{color:var(--link)}
 #wrap{position:fixed;inset:0}
 canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -26,7 +33,7 @@ button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
 .ib svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 #q{flex:1;min-width:0;font:inherit;font-size:16px;background:#15191de8;color:var(--fg);border:1px solid #59616a;border-radius:22px;padding:9px 14px}
 #q[hidden]{display:none}
-#qres{list-style:none;margin:0;padding:4px;max-width:560px;max-height:46vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:none}
+#qres{list-style:none;margin:0;padding:4px;max-width:560px;max-height:46vh;overflow:auto;overscroll-behavior:contain;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:none}
 #qres li button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 10px}
 #qres li button:hover,#qres li button:focus{background:#2a323a}
 #hud{align-self:flex-start;background:#111c;padding:5px 9px;border-radius:8px;font-size:12px;max-width:100%;pointer-events:none;transition:opacity .6s}
@@ -69,8 +76,12 @@ button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
 #sheetBody{flex:1;overflow:auto;padding:0 16px 14px;overscroll-behavior:contain}
 .pane{display:none}.pane.on{display:block}#sheet .pane{display:block}
 #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs) + var(--safe) + 22px);width:max-content;max-width:min(calc(100vw - 32px),560px);box-sizing:border-box;background:#1b2128f2;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;z-index:4;display:none}
-#attribLine{position:absolute;right:6px;bottom:calc(var(--tabs) + var(--safe) + 4px);font-size:10px;color:#c9ced6;background:#0d1013b0;padding:1px 6px;border-radius:5px;max-width:70vw;text-align:right}
-#attribLine a{color:#c9ced6}
+#attribLine{position:absolute;right:6px;bottom:calc(var(--tabs) + var(--safe) + 4px);font-size:11px;color:#e8eaec;background:#0d1013d9;padding:2px 7px;border-radius:5px;max-width:70vw;text-align:right;transition:opacity .4s}
+#attribLine a{color:#e8eaec}
+#attribLine.off{opacity:0;pointer-events:none}
+#attribI{position:absolute;right:6px;bottom:calc(var(--tabs) + var(--safe) + 4px);width:26px;height:26px;padding:0;border-radius:50%;font:italic 600 14px/1 Georgia,serif;background:#15191dcc;border-color:#59616a99;color:#c9ced6}
+#attribI[hidden]{display:none}
+#credits li{margin:3px 0}#credits ul{margin:4px 0 8px;padding-left:18px}
 #press{position:absolute;z-index:5;display:none;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 4px 14px #000a}
 #press button{text-align:left;padding:10px 14px}
 @media (min-width:900px){
@@ -106,7 +117,7 @@ select,input[list]{font:inherit;font-size:16px;background:#293038;color:var(--fg
 table{border-collapse:collapse;font-size:13px;margin-top:6px}td,th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;vertical-align:top}td.n{text-align:right}
 .tw{overflow-x:auto;max-width:100%}
 details{margin-top:10px}summary{cursor:pointer}
-body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer,body.capture #scrim,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine{display:none!important}
+body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,body.capture #drawer,body.capture #scrim,body.capture #sheet,body.capture #toast,body.capture #press,body.capture #labels,body.capture #attribLine,body.capture #attribI{display:none!important}
 </style>
 </head>
 <body>
@@ -119,7 +130,8 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
   <div id="mini" hidden role="status"><span id="miniT"></span><button type="button" class="ib" id="miniBtn" aria-label="Stop the music">■</button></div>
   <div id="isoBtns" hidden><button type="button" class="ib" id="isoL" aria-label="Turn the view left">⟲</button><button type="button" class="ib" id="isoR" aria-label="Turn the view right">⟳</button></div>
   <div id="gauge" hidden role="slider" tabindex="0" aria-label="Cut away everything above this level, metres above Ordnance Datum" aria-valuemin="-40" aria-valuemax="250"><button type="button" class="ib" id="gaugeX" aria-label="Close the depth gauge"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="track"></div><div class="h"></div><output id="gaugeO">off</output></div>
-  <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · EA, UKHO, Wikidata<span id="attribImg"></span><span id="attribTrees"></span><span id="attribFac"></span></div>
+  <div id="attribLine"><a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> · <a href="#credits" id="attribMore">credits</a></div>
+  <button type="button" id="attribI" hidden aria-label="Credits and data licences (© OpenStreetMap contributors and others)" title="Credits and data licences">i</button>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="press" role="menu"></div>
   <section id="sheet" aria-label="Record"><div id="grip" aria-hidden="true"></div><button type="button" id="sheetX" aria-label="Close the record">×</button><div id="sheetBody">
@@ -232,7 +244,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
     <div class="pane" id="paneSky"><p class="small">Loading the sky…</p></div>
     <div class="pane" id="paneAbout">
       <h2>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</h2>
-      <p class="small"><a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · map data <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA LiDAR, aerial photography and flood defences (OGL), UKHO (OGL), Wikidata (CC0), Copernicus Sentinel-2 · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data licences</a></p>
+      <p class="small"><a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · <a href="#credits" data-credits>credits and data licences</a></p>
       <p class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). The depth gauge ("Below ground" in the menu) removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height setting. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</p>
       <h3>How to use it</h3><p class="small">One finger: rotate. Two fingers: move, zoom, and twist to turn. Tap a building or label: its record. Press and hold: route from or to that point. The menu (top left) has the views, the layers, the route finder and this page. "Below ground" in the menu shows the depth gauge on the left: drag it down to cut away everything above that level.</p><p class="small">Isometric pixel art (Layers, Style): drag to move, pinch or wheel to zoom, twist two fingers to turn, move two fingers up or down to tilt. With a mouse: right or Shift drag turns and tilts. The arrows at the top right turn the view by a quarter.</p>
       <details id="liveBox"><summary>Live data</summary>
@@ -242,8 +254,45 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
         <div id="liveOut" class="small" aria-live="polite"></div>
       </details>
       <details><summary>Canary Wharf below ground (text)</summary><div id="ugText" class="small tw"></div></details>
-      <p class="small" id="facCredit"></p>
+      <section id="credits" aria-labelledby="creditsH">
+      <h3 id="creditsH">Credits and data licences</h3>
+      <p class="small">Shown now: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA, UKHO, Wikidata<span id="attribImg"></span><span id="attribTrees"></span><span id="attribFac"></span><span id="attribSky"></span>. Every committed file with its sources and licence: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data register</a>.</p>
+      <h3>Map data</h3><ul class="small">
+        <li>Streets, buildings, rail, stations, walkways, indoor levels, runway thresholds: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>, <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a></li>
+        <li>Names, heights and floors: <a href="https://www.wikidata.org/">Wikidata</a>, CC0</li>
+        <li>Grid conversion: <a href="https://www.ordnancesurvey.co.uk/business-government/tools-support/os-net/for-developers">OSTN15</a>, © Ordnance Survey (free to use)</li></ul>
+      <h3>Ground, heights and river</h3><ul class="small">
+        <li>Environment Agency LiDAR DTM and DSM 1 m, and survey tiles 1999 to 2022: © Environment Agency copyright and/or database right, <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a></li>
+        <li>Aerial photography 2008, night photography 2012, LiDAR intensity 2020: © Environment Agency copyright and/or database right, <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a></li>
+        <li>Spatial Flood Defences: Environment Agency, <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a></li>
+        <li>Riverbed: contains public sector information, licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>, from the UK Hydrographic Office (INSPIRE bathymetry, PLA survey 2013 to 2017; not for navigation); chart datum to ODN from the PLA Tide Booklet 2025 (two published numbers)</li>
+        <li>Satellite 2026: contains modified Copernicus Sentinel data (Sentinel-2 L2A via Earth Search)</li></ul>
+      <h3>Buildings, occupants and registers</h3><ul class="small">
+        <li>GLA London Building Stock Model 2; ONS Postcode Directory (contains OS data © Crown copyright and database right 2026; contains Royal Mail data © Royal Mail copyright and database right 2026; source: Office for National Statistics); OS Open UPRN (contains OS data © Crown copyright and database right 2026); HM Land Registry (contains HM Land Registry data © Crown copyright and database right 2026); Historic England; FSA food hygiene ratings; Companies House: all <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a></li>
+        <li>DfE GIAS, Care Quality Commission, NHS Organisation Data Service, Charity Commission, Ofsted, Gambling Commission: contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a></li>
+        <li>Sport England Active Places: contains Data © Sport England, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></li>
+        <li>Canary Wharf Group directory: facts only (names, units), from Internet Archive copies; <a href="https://github.com/osmlab/name-suggestion-index">name-suggestion-index</a> (BSD-3-Clause)</li>
+        <li>Crown lighting: facts from Canary Wharf Group press pages and other published pages, in our own words</li></ul>
+      <h3>Trees and facade photos</h3><ul class="small">
+        <li>Trees: GLA London Public Realm Trees (GLA, GiGL); Forest Research Trees Outside Woodland (© Forestry Commission copyright and/or database right 2025); OS Open Greenspace (contains OS data © Crown copyright and database right 2026); planning.data.gov.uk Tree Preservation Orders: all <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a></li>
+        <li id="facCredit">Facade photos: open photos on Flickr and Wikimedia Commons, each under its own licence (CC BY 2.0, CC BY 4.0 or Public Domain Mark).</li></ul>
+      <h3>Sky, weather and tide</h3><ul class="small">
+        <li>Sun, moon and planets: <a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a> (Don Cross, MIT); stars: <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50">Yale Bright Star Catalogue 5th ed.</a> (Hoffleit &amp; Warren 1991, public domain); constellation lines: <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a> (Olaf Frohn, BSD-3-Clause); star names: IAU Working Group on Star Names (CC BY); Messier objects: NASA HEASARC (public domain)</li>
+        <li>Satellites: <a href="https://celestrak.org/">CelesTrak</a> GP data, <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (MIT); cloud mask: contains modified EUMETSAT Meteosat data 2026 (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)</li>
+        <li>Weather: <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)</li>
+        <li>Tide: this uses Environment Agency flood and river level data from the real-time data API (Beta), <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a></li>
+        <li>The Sky tab lists each of these again next to what it draws.</li></ul>
+      <h3>Live state and live data</h3><ul class="small">
+        <li>Hire bike docks, lift outages, line status, traffic cameras, step-free routes: Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights [2019]</li>
+        <li>Cranes: Source: UK AIS (NATS), facts only; helicopter route H4 and restricted area EGR159: Source: UK AIP, NATS, facts only</li>
+        <li>Crime: <a href="https://data.police.uk/">police.uk</a>, <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>; air quality: London Air Quality Network (Environmental Research Group, Imperial College London); storm overflows: Thames Water (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)</li></ul>
+      <h3>London Datastore</h3><ul class="small">
+        <li>Conservation areas, designated open space, safeguarded wharves (GLA Planning Constraints Map; boundaries belong to the planning authorities) and the Cultural Infrastructure Map 2023: contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a> (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data.</li></ul>
+      <h3>Music and software</h3><ul class="small">
+        <li>Music: Kevin MacLeod (<a href="https://incompetech.com/">incompetech.com</a>), <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, streamed from Wikimedia Commons</li>
+        <li><a href="https://github.com/mapbox/earcut">earcut</a> (ISC)</li></ul>
       <p class="small" id="attrib"></p>
+      </section>
     </div>
     </div>
   </aside>
@@ -738,7 +787,7 @@ function render() {
 
 // ---------- input: drag rotates, right/shift/two-finger drag pans, wheel/pinch zooms, two-finger twist turns.
 // Pixel art: drag pans, right/shift drag turns and tilts, two-finger twist turns, two fingers up or down tilt.
-const ptrs = new Map(); let pinch = null;
+const ptrs = new Map(); let pinch = null; const ATTR = { start: () => {} };
 const mid = () => { const v = [...ptrs.values()]; return [(v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2, Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]), Math.atan2(v[1][1] - v[0][1], v[1][0] - v[0][0])]; };
 function pan(dx, dy) { const k = cam.dist * .0012, c = Math.cos(cam.yaw), s = Math.sin(cam.yaw); cam.tx -= (c * dx + s * dy) * k; cam.tz -= (-s * dx + c * dy) * k; }
 const zoom = f => { cam.dist = Math.max(80, Math.min(16000, cam.dist * f)); };
@@ -848,7 +897,7 @@ const loadJSON = u => fetch(u).then(r => { if (!r.ok) throw new Error(`${u}: HTT
 const getReg = () => REG || (REG = loadJSON('../registry/buildings.json').then(d => new Map(d.buildings.map(b => [b.id, b]))));
 let CATS_ = null; const getCats = () => CATS_ || (CATS_ = loadJSON('../registry/categories.json'));
 const getQI = () => QI || (QI = loadJSON('../quality/issues.json').then(q => { const by = new Map(); for (const i of q.issues) { const k = `${i.ent}/${i.id}`; if (!by.has(k)) by.set(k, []); by.get(k).push(i); } return { q, by }; }));
-const note = t => { $('dataNote').textContent = t; if (t) toast(t); };
+const note = t => { $('dataNote').textContent = t; if (t) toast(t.replace(/ \((?:police\.uk, )?Open Government Licence\)/, '')); };
 const HT = b => b.wh || b.h || b.mh || 0;
 const rampCol = t => { const S = [[44, 123, 182], [171, 217, 233], [255, 255, 191], [253, 174, 97], [215, 25, 28]]; t = Math.max(0, Math.min(1, t)) * 4; const i = Math.min(3, Math.floor(t)), f = t - i; return [0, 1, 2].map(c => (S[i][c] + (S[i + 1][c] - S[i][c]) * f) / 255); };
 loadJSON('../atlas/data/atlas.json').then(d => {
@@ -1626,7 +1675,7 @@ async function setGround(kind) {
       const I = globalThis.DOCKLANDS_IMAGERY; buildTerrain(Uint8Array.from(atob(I.rgb), c => c.charCodeAt(0))); groundTex = null; satOn = true; $('attribImg').textContent = ' · Sentinel-2 ' + I.date; $('groundNote').textContent = I.attribution + '. One colour per 20 m terrain point.'; toast('Satellite colours, ' + I.date); }
     else { toast('Loading the ground image…'); const { tex, meta } = await loadTexture(kind), B = TEXIDX.box;
       gl.uniform4f(uBox, B.x0, B.z0, B.x1 - B.x0, B.z1 - B.z0); buildTerrain('tex'); groundTex = tex; satOn = true; $('attribImg').textContent = ' · ' + meta.attribution.replace(/ ©.*/, '') + ' © EA (OGL)';
-      $('groundNote').textContent = `${meta.what}; ${B.res} m a pixel in this view. ${meta.attribution}. Gaps are areas the survey did not fly.`; toast(meta.attribution.replace(/ ©.*/, '')); }
+      $('groundNote').textContent = `${meta.what}; ${B.res} m a pixel in this view. ${meta.attribution}. Gaps are areas the survey did not fly.`; toast(meta.what || 'Ground image loaded'); }
     ground = kind; draw();
   } catch (e) { toast('The ground image did not load: ' + e.message); document.querySelector('input[name=ground][value=none]').checked = true; }
 }
@@ -1779,7 +1828,7 @@ function buildTreesN() {   // normal style: a trunk and a box crown per tree wit
     obox(M, x, g, z, .8, .8, h * .4, 1, 0, TR); obox(M, x, g + h * .35, z, c, c, h * .65, 1, 0, k % 3 ? G1 : G2); n++; });
   L.treesN = M.upload(); return n; }
 $('showTrees').onchange = () => { if (!$('showTrees').checked) { draw(); return; } toast('Loading the trees…');
-  loadTrees().then(() => { const n = L.treesN ? null : buildTreesN(); if (NIGHT.built) buildTreesLit(); if (n != null) toast(`${n.toLocaleString('en-GB')} trees within 900 m of the estate (GLA, Forest Research, OS and OSM open data)`); draw(); }).catch(e => { toast('Trees did not load: ' + e.message); $('showTrees').checked = false; }); };
+  loadTrees().then(() => { const n = L.treesN ? null : buildTreesN(); if (NIGHT.built) buildTreesLit(); if (n != null) toast(`${n.toLocaleString('en-GB')} trees within 900 m of the estate`); draw(); }).catch(e => { toast('Trees did not load: ' + e.message); $('showTrees').checked = false; }); };
 let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
 function buildTrees() {
   if (L.trees) L.trees.free(); const F = A.meta.focus, B = [F.x0 - 900, F.x1 + 900, F.z0 - 900, F.z1 + 900], inB = (x, z) => x > B[0] && x < B[1] && z > B[2] && z < B[3];
@@ -1946,7 +1995,7 @@ $('sheetX').onclick = () => closeSheet();
 addEventListener('keydown', e => { if (e.key === 'Escape' && drawer.classList.contains('open')) openDrawer(false); });
 // swipe the drawer to the left to close it
 { let x0 = null, y0 = 0, dx = 0;
-  drawer.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' || e.target.closest('input,select,textarea')) return; x0 = e.clientX; y0 = e.clientY; dx = 0; });
+  drawer.addEventListener('pointerdown', e => { if (!e.isPrimary) { x0 = null; return; } if (e.pointerType === 'mouse' || e.target.closest('input,select,textarea')) return; x0 = e.clientX; y0 = e.clientY; dx = 0; });
   drawer.addEventListener('pointermove', e => { if (x0 == null) return; dx = Math.min(0, e.clientX - x0); if (Math.abs(e.clientY - y0) > 30 && dx > -20) { x0 = null; return; } if (dx < -12) { drawer.classList.add('drag'); drawer.style.transform = `translateX(${dx}px)`; } });
   const up = () => { if (x0 == null) return; x0 = null; drawer.classList.remove('drag'); drawer.style.transform = ''; if (dx < -70) openDrawer(false); };
   drawer.addEventListener('pointerup', up); drawer.addEventListener('pointercancel', up); }
@@ -1960,6 +2009,32 @@ function resetInfo() { info.innerHTML = '<p class="small">Tap a building, a labe
     const near = S.reduce((a, b) => Math.abs(b - sheetH) < Math.abs(a - sheetH) ? b : a); near ? setSheet(near) : closeSheet(); };
   g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up); }
 let toastT = 0;
+// ---------- the corner credit (OSMF Attribution Guidelines, "Interactive maps"; skill docklands-3d-page, "Credits"):
+// shown when the model first draws, collapsed to the (i) button after 5 s or at the first map interaction
+function openCredits() { openPane('paneAbout'); requestAnimationFrame(() => $('credits').scrollIntoView({ block: 'start' })); }
+{ const line = $('attribLine'), btn = $('attribI'); let t = 0;
+  const fold = () => { if (line.classList.contains('off')) return; clearTimeout(t); line.classList.add('off'); line.setAttribute('aria-hidden', 'true'); btn.hidden = false; };
+  ATTR.start = () => { clearTimeout(t); t = setTimeout(fold, 5000); };
+  for (const el of [cv, labelBox]) el.addEventListener('pointerdown', fold);
+  cv.addEventListener('wheel', fold, { passive: true });
+  btn.onclick = openCredits; $('attribMore').onclick = e => { e.preventDefault(); openCredits(); };
+  document.querySelectorAll('[data-credits]').forEach(a => a.onclick = e => { e.preventDefault(); openCredits(); }); }
+// ---------- window lock: no browser zoom, scroll, pull-to-refresh, selection, callout or drag and drop
+// (skill docklands-3d-page, "Window lock"); the page's own gestures are pointer events on the canvas and labels
+{ const no = e => e.preventDefault(), field = e => e.target instanceof Element && e.target.closest('input,textarea,select');
+  addEventListener('wheel', e => { if (e.ctrlKey || e.metaKey) e.preventDefault(); }, { passive: false, capture: true });   // ctrl+wheel, trackpad pinch
+  addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && ['+', '=', '-', '_', '0'].includes(e.key)) e.preventDefault(); });
+  for (const t of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(t, no, { passive: false });   // Safari pinch
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1 || !(e.target instanceof Element && e.target.closest('#drawerBody,#sheetBody,#qres'))) e.preventDefault(); }, { passive: false });
+  document.addEventListener('dblclick', e => { if (!field(e)) e.preventDefault(); });
+  document.addEventListener('contextmenu', e => { if (!field(e)) e.preventDefault(); });
+  document.addEventListener('selectstart', e => { if (!field(e)) e.preventDefault(); });
+  document.addEventListener('dragstart', e => { if (!field(e)) e.preventDefault(); }, true);
+  document.querySelectorAll('img,a').forEach(el => el.setAttribute('draggable', 'false'));
+  // a dropped file never replaces the page; a dropped audio file plays like "Play your own file"
+  addEventListener('dragover', e => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = [...(e.dataTransfer.items || [])].some(i => i.kind === 'file' && /^audio\//.test(i.type)) ? 'copy' : 'none'; });
+  addEventListener('drop', e => { e.preventDefault(); const f = [...(e.dataTransfer?.files || [])].find(f => /^audio\//.test(f.type) || /\.(mp3|m4a|aac|wav|ogg|flac)$/i.test(f.name)); if (!f) return;
+    audioCtx(); vizStartFile(f).catch(err => { toast('Your file did not play: ' + err.message); vizStop(); }); }); }
 function toast(t) { const el = $('toast'); el.textContent = t; el.style.display = t ? 'block' : 'none'; clearTimeout(toastT); if (t) toastT = setTimeout(() => { el.style.display = 'none'; }, Math.max(4000, t.length * 70)); }
 $('toast').onclick = () => toast('');
 // building display: chips drive the hidden select the renderer reads
@@ -2088,14 +2163,14 @@ loadJSON('data/tex/facades.json').then(T => new Promise((ok, no) => { const im =
   FT = T; FT.slots = new Float32Array(32); for (const f of Object.values(T.buildings)) { FT.slots[2 * f.slot] = f.w_m; FT.slots[2 * f.slot + 1] = f.h_m; }
   const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
   for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-  gl.generateMipmap(gl.TEXTURE_2D); gl.activeTexture(gl.TEXTURE0); FTX = t; $('facCredit').textContent = 'Facade photos (tiles cut from them): ' + T.attribution + '.'; $('attribFac').textContent = ' · facade photos CC BY (About)';
+  gl.generateMipmap(gl.TEXTURE_2D); gl.activeTexture(gl.TEXTURE0); FTX = t; $('facCredit').textContent = 'Facade photos (tiles cut from them): ' + T.attribution + '.'; $('attribFac').textContent = ' · facade photos (CC BY)';
   const go = () => { if (!AT) return setTimeout(go, 400); buildBld(); draw(); }; go();
 }).catch(e => console.warn('facade textures', e));
 loadJSON('data/towers.json').then(T => { TOWERS = Object.values(T.buildings).filter(t => t.tiers && t.tiers.length && t.status === 'fitted'); for (const t of TOWERS) for (const mi of t.model_buildings) towerOf.set(mi, t); buildBld(); if (NIGHT.built) buildNightLights(); draw(); }).catch(e => console.warn('towers.json', e));
 // #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)
 const atM = /(?:^#|&)at=(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?/.exec(location.hash);
 if (atM) { Object.assign(cam, { tx: +atM[1], tz: +atM[2], ty: 0, dist: +(atM[3] || 600) }); unview(); draw(); }
-hud.textContent = '';
+hud.textContent = ''; ATTR.start();
 })();
 </script>
 </body>
