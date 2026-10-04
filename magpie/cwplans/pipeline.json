@@ -3695,6 +3695,11 @@
           "request": "zone-names: lat/lon of 6 centres, stopTypes NaptanMetroStation,NaptanRailStation, radius 2000"
         },
         {
+          "source": "lds-204q6",
+          "endpoint": "https://data.london.gov.uk/download/204q6/<resource id>/<file>",
+          "request": "run 204q6: 2 resources chosen by the rules (AMR 15 Chapter Two Tables .xlsx, AMR 15 Chapter Three Tables.xlsx)"
+        },
+        {
           "source": "lds-206m8",
           "endpoint": "https://data.london.gov.uk/download/206m8/<resource id>/<file>",
           "request": "run 206m8: 1 resources chosen by the rules (digital_exclusion_older_people_data.gpkg)"
@@ -3815,6 +3820,16 @@
           "request": "run 2964y: 4 resources chosen by the rules (Unpaid care.xlsx, Disability.xlsx, General health.xlsx, Qualifications.xlsx)"
         },
         {
+          "source": "lds-296do",
+          "endpoint": "https://data.london.gov.uk/download/296do/<resource id>/<file>",
+          "request": "run 296do: 28 resources chosen by the rules (migration_wide.zip, households_wide.zip, demography_wide.zip, passports_held_lsoa_wide.csv, year_arrival_uk_wide.csv, second_address_wide.csv, schoolchildren_students_wide.csv, sex_wide.csv, usual_resident_population_wide.csv, living_arrangements_wide.csv, length_of_residence_uk_wide.csv, household_)"
+        },
+        {
+          "source": "lds-298jq",
+          "endpoint": "https://data.london.gov.uk/download/298jq/<resource id>/<file>",
+          "request": "run 298jq: 1 resources chosen by the rules (laei-2006-modelled-pm10e-20m-2006-values.zip)"
+        },
+        {
           "source": "lds-298zq",
           "endpoint": "https://data.london.gov.uk/download/298zq/<resource id>/<file>",
           "request": "run 298zq: 2 resources chosen by the rules (lp-falp-2006-areas-for-intensification-points-shp.zip, lp-falp-2006-areas-for-intensification-points-tab.zip)"
@@ -3823,6 +3838,11 @@
           "source": "lds-29j4y",
           "endpoint": "https://data.london.gov.uk/download/29j4y/<resource id>/<file>",
           "request": "run 29j4y: 12 resources chosen by the rules (Catchments_LSOAtoPriSchool_2016_LDS.xlsx, Catchments_PriSchooltoLSOA_2016_LDS.xlsx, Catchments_LSOAtoSecSchool_2016_LDS.xlsx, Catchments_SecSchootoLSOA_2016_LDS.xlsx, Distance_Travelled_stats_2010-16_LDS.xlsx, LSOA_FreeSchoolMeals_2016_LDS.xlsx, Feeder_Pri2Sec_2016_LDS.xlsx, Feeder_Sec2Pri_2016_LDS.)"
+        },
+        {
+          "source": "lds-29jwj",
+          "endpoint": "https://data.london.gov.uk/download/29jwj/<resource id>/<file>",
+          "request": "run 29jwj: 1 resources chosen by the rules (2011_london_boundaries.zip)"
         },
         {
           "source": "lds-29z1y",
@@ -3903,6 +3923,11 @@
           "source": "lds-2jr8m",
           "endpoint": "https://data.london.gov.uk/download/2jr8m/<resource id>/<file>",
           "request": "run 2jr8m: 1 resources chosen by the rules (2001-oa-classification-london.csv)"
+        },
+        {
+          "source": "lds-2jrkd",
+          "endpoint": "https://data.london.gov.uk/download/2jrkd/<resource id>/<file>",
+          "request": "run 2jrkd: 1 resources chosen by the rules (laei-2006-modelled-pm10a-20m-2006-values.zip)"
         },
         {
           "source": "lds-2jrxd",
@@ -4013,6 +4038,11 @@
           "source": "lds-2nln8",
           "endpoint": "https://data.london.gov.uk/download/2nln8/<resource id>/<file>",
           "request": "run 2nln8: 9 resources chosen by the rules (summary.csv, bbox.csv, modelled_OA_rents.csv, MyLondon_fare_zone_OA.csv, MyLondon_LOAC_area_description_text_v3.csv, MyLondon_postcode_OA.csv, MyLondon_traveltime_to_Bank_station_OA.csv, MyLondonSchoolsCatchmentv2.csv, bbox-lsoa.csv)"
+        },
+        {
+          "source": "lds-2np13",
+          "endpoint": "https://data.london.gov.uk/download/2np13/<resource id>/<file>",
+          "request": "run 2np13: 1 resources chosen by the rules (laei-2006-modelled-pm10e-20m-2010-values.zip)"
         },
         {
           "source": "lds-2nplx",
@@ -4155,6 +4185,11 @@
           "request": "run 2z0yn: 2 resources chosen by the rules (msoa-data.csv, msoa-data-old-boundaries.csv)"
         },
         {
+          "source": "lds-2zj4k",
+          "endpoint": "https://data.london.gov.uk/download/2zj4k/<resource id>/<file>",
+          "request": "run 2zj4k: 2 resources chosen by the rules (ROYAL DOCKS APRIL TO JUNE 2023.xlsx, Q2-Q3 2022-23 Dataset for Royal Docks .xlsx)"
+        },
+        {
           "source": "lds-2zjmn",
           "endpoint": "https://data.london.gov.uk/download/2zjmn/<resource id>/<file>",
           "request": "run 2zjmn: 34 resources chosen by the rules (planning_local_plan_data_01.gpkg, planning_local_plan_data_02.gpkg, planning_local_plan_data_03.gpkg, planning_local_plan_data_05.gpkg, planning_local_plan_data_06.gpkg, planning_local_plan_data_07.gpkg, planning_local_plan_data_08.gpkg, planning_local_plan_data_09.gpkg, planning_local_plan_data_10.)"
@@ -4260,6 +4295,11 @@
           "request": "run e5mp7: 9 resources chosen by the rules (visualisation-data-labour.zip, ns-sec-in-london-data.xlsx, hours-worked-data.xlsx, cycling-to-work-data.xlsx, visualisation-data-qualifications.zip, cis-economic-activity-dashboard.xlsx, qualifications-data.xlsx, homeworking-data.xlsx, EconomicActivityRateDashboard.xlsx)"
         },
         {
+          "source": "lds-e6410",
+          "endpoint": "https://data.london.gov.uk/download/e6410/<resource id>/<file>",
+          "request": "run e6410: 1 resources chosen by the rules (1-Summary-Emissions.zip)"
+        },
+        {
           "source": "lds-e647w",
           "endpoint": "https://data.london.gov.uk/download/e647w/<resource id>/<file>",
           "request": "run e647w: 3 resources chosen by the rules (local-elections-summary-2014.xls, london_council_election_2014_ward.xls, borough-elections-2014-report-data.xls)"
@@ -4348,6 +4388,16 @@
           "source": "lds-em8qy",
           "endpoint": "https://data.london.gov.uk/download/em8qy/<resource id>/<file>",
           "request": "run em8qy: 3 resources chosen by the rules (tfl-tube-performance.xlsx, multi-year-station-entry-and-exit-figures.xls, lu-performance-data.xlsx)"
+        },
+        {
+          "source": "lds-em95y",
+          "endpoint": "https://data.london.gov.uk/download/em95y/<resource id>/<file>",
+          "request": "run em95y: 1 resources chosen by the rules (laei-2006-20m-points.zip)"
+        },
+        {
+          "source": "lds-em9mg",
+          "endpoint": "https://data.london.gov.uk/download/em9mg/<resource id>/<file>",
+          "request": "run em9mg: 1 resources chosen by the rules (laei-2008-folders.zip)"
         },
         {
           "source": "lds-em9qy",
@@ -4571,6 +4621,9 @@
           "file": "feeds/london-datastore/index.json"
         },
         {
+          "file": "feeds/london-datastore/london-plan-amr-15-tables-and-data/london-plan-amr-15-tables-and-data.json"
+        },
+        {
           "file": "feeds/london-datastore/mapping-digital-exclusion-supporting-data/mapping-digital-exclusion-supporting-data.geojson"
         },
         {
@@ -4649,6 +4702,12 @@
           "file": "feeds/london-datastore/2021-lsoa-qualifications-health-disability-and/2021-lsoa-qualifications-health-disability-and.json"
         },
         {
+          "file": "feeds/london-datastore/2011-census-new-wards-demography-and-migration/2011-census-new-wards-demography-and-migration.json"
+        },
+        {
+          "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-298jq/london-atmospheric-emissions-inventory-laei-298jq.json"
+        },
+        {
           "file": "feeds/london-datastore/areas-for-intensification-points-london-plan-298zq/areas-for-intensification-points-london-plan-298zq.geojson"
         },
         {
@@ -4656,6 +4715,9 @@
         },
         {
           "file": "feeds/london-datastore/london-schools-atlas/london-schools-atlas.json"
+        },
+        {
+          "file": "feeds/london-datastore/2011-census-geography-boundary-files/2011-census-geography-boundary-files.geojson"
         },
         {
           "file": "feeds/london-datastore/pm25-map-and-exposure-data/pm25-map-and-exposure-data.json"
@@ -4713,6 +4775,9 @@
         },
         {
           "file": "feeds/london-datastore/census-2001-output-area-classification/census-2001-output-area-classification.json"
+        },
+        {
+          "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2jrkd/london-atmospheric-emissions-inventory-laei-2jrkd.json"
         },
         {
           "file": "feeds/london-datastore/inner-and-outer-london-boundaries-london-plan-2jrxd/inner-and-outer-london-boundaries-london-plan-2jrxd.geojson"
@@ -4787,6 +4852,9 @@
           "file": "feeds/london-datastore/mylondon/mylondon.json"
         },
         {
+          "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2np13/london-atmospheric-emissions-inventory-laei-2np13.json"
+        },
+        {
           "file": "feeds/london-datastore/london-elections-results-2008-borough/london-elections-results-2008-borough.json"
         },
         {
@@ -4806,6 +4874,9 @@
         },
         {
           "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2016/london-atmospheric-emissions-inventory-laei-2016.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2016/london-atmospheric-emissions-inventory-laei-2016.json"
         },
         {
           "file": "feeds/london-datastore/london-views-management-framework-lvmf-extended/london-views-management-framework-lvmf-extended.geojson"
@@ -4869,6 +4940,9 @@
         },
         {
           "file": "feeds/london-datastore/msoa-atlas/msoa-atlas.json"
+        },
+        {
+          "file": "feeds/london-datastore/royal-docks-grant-data/royal-docks-grant-data.json"
         },
         {
           "file": "feeds/london-datastore/planning-local-plan-data/planning-local-plan-data.geojson"
@@ -4937,6 +5011,9 @@
           "file": "feeds/london-datastore/2011-census-labour-market-and-qualifications/2011-census-labour-market-and-qualifications.json"
         },
         {
+          "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2010/london-atmospheric-emissions-inventory-laei-2010.json"
+        },
+        {
           "file": "feeds/london-datastore/borough-council-election-results-2014/borough-council-election-results-2014.json"
         },
         {
@@ -4995,6 +5072,15 @@
         },
         {
           "file": "feeds/london-datastore/london-underground-performance-reports/london-underground-performance-reports.json"
+        },
+        {
+          "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-em95y/london-atmospheric-emissions-inventory-laei-em95y.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2008/london-atmospheric-emissions-inventory-laei-2008.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2008/london-atmospheric-emissions-inventory-laei-2008.json"
         },
         {
           "file": "feeds/london-datastore/strategic-industrial-location-points-london-em9qy/strategic-industrial-location-points-london-em9qy.geojson"
