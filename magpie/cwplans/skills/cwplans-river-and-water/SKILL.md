@@ -212,7 +212,7 @@ udp.ais.openwaters.io:10110) makes its receptions CC0 events with source `statio
 messages a day gives the contributor tier (any area, raw NMEA). A dongle and a VHF antenna with a river view near the
 zone would do it. The token is a secret: keep it in the environment settings, never in the repo or the chat.
 
-**Page layer:** built after the owner's decision (see the 3D-page skill, "Ships (AIS)"). Design: call `/v1/vessels` only after a
+**Page layer:** built after the owner's decision, on by default (`docklands/ships-layer.js`; the 3D-page skill, "Ships (AIS)"). Design as first proposed: call `/v1/vessels` only after a
 tap (CORS, no key), filter by `source`/`license` in the page, markers with a heading arrow, card with name, type, speed,
 destination, time and source, and the per-source attribution in Credits.
 

@@ -556,6 +556,37 @@ near steel towers; GPS accuracy among the towers (multipath often gives 30 to 10
 the eye mode feel with real sensor noise; that `deviceorientationabsolute` fires on the owner's Android browser; that the
 watch restarts after the phone sleeps; battery use with high accuracy on.
 
+## Ships (AIS) (2026-10-04)
+
+Live: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/#at=-4330,-90,500 (the Pool of London: HANSEATIC
+SPIRIT alongside HMS Belfast on 4 October 2026). Data, licences and the review flag: skill `cwplans-river-and-water`, "AIS:
+Open Waters" and "Review before scaling" (AISHub and aisstream.io shown for scoping by the owner's decision of 2026-10-04).
+
+- **File** `docklands/ships-layer.js` (like `river-layer.js`): `DocklandsShips.init(ctx)` gets the same helpers as the river
+  layer; index.html draws `OV.ships` right after `OV.rclock` at full brightness. Layers > River > "Ships (AIS), live", **on by
+  default** (owner: "Add to live by default now").
+- **Data path.** On load: the committed `../feeds/river/ais.json` at once, then `GET https://ais.openwaters.io/v1/vessels?bbox=
+  51.474,-0.095,51.528,0.085` from the browser (anonymous, `access-control-allow-origin: *`, no key), again every 60 s while
+  the tab is visible and the layer is on; `visibilitychange` stops and restarts it; an error or 429 doubles the pause up to
+  16 min. One request a minute is far under the 120-a-minute limit.
+- **Private craft** are filtered in the page with the tool's rule (`DocklandsShips.isPrivate`): ITU 36/37, class B (from
+  `msg_type`) without a commercial type, or no class and no commercial type. The live snapshot has no `class` field: class A
+  is inferred from `PositionReport`/`ShipStaticData`. Counted in the note under the checkbox, never drawn.
+- **Marker**: a white hull along the heading (else the course), length and beam from AIS (minimum 14 m x 4 m so small
+  boats stay visible), a plate and a mast coloured by type (passenger orange, high-speed cyan, tug yellow, cargo green,
+  tanker red, aids to navigation violet), and an arrow ahead of the bow, longer with speed, only when under way (not moored,
+  at anchor or aground, and over 0.5 kn). Ships of 60 m or more get a label. Heading 0 = north = -z, east = +x.
+- **Taps**: `OV.hits` entries with `ais: true`. `buildOverlays()` replaces `OV.hits`, so a 1 s timer puts the ship hits
+  back when they are missing (the river layer's clock does the same through `rebuildClock`). The card: name, type, length,
+  speed, course, heading, status, destination, last heard (London time), MMSI, IMO, call sign, flag, the event's source and
+  its attribution, a scoping/review line for AISHub and aisstream.io, the Open Waters record link, "not for navigation".
+- **Credits**: Menu > About > Credits, "Ships (AIS)" (Open Waters AIS; AISHub; aisstream.io; private craft not shown).
+- **Measured** (2026-10-04, mocked live snapshot of 108 features): 87 in the list after the filter, 21 private craft not
+  shown, 27 outside the model box (Royal Docks margin), 60 drawn; HANSEATIC SPIRIT 71 m from HMS Belfast's OSM point,
+  moored, source aishub. Matrix and the real-fetch run: see the activity log of 2026-10-04.
+- **Positions are now**, not the page clock (`?t=`): the card and the note say so. A track replay for the clock would need
+  `/v1/vessels/{mmsi}/track` (48 h anonymous) per vessel: not built.
+
 ## Testing
 
 Headless Chromium with SwiftShader (repo `CLAUDE.md`, "Headless browser"), from a local server (fetch needs http):

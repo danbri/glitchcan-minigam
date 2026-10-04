@@ -315,6 +315,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
 <script src="vendor/satellite.min.js"></script>
 <script src="sky.js"></script>
 <script src="river-layer.js"></script>
+<script src="ships-layer.js"></script>
 <script>
 (() => {
 'use strict';
@@ -780,7 +781,8 @@ function render() {
   if ($('showWalls').checked) drawMesh(L.walls, 1);
   if ($('showTrees').checked && !PIX.on && L.treesN && !sOnly) { drawMesh(L.treesN, 1); if (nm && L.treesLit) { gl.uniform1f(uDim, .75); drawMesh(L.treesLit, 1); gl.uniform1f(uDim, nDim); } }   // night: trees by the lamps, up-lit
   gl.uniform1f(uDim, 1); drawMesh(L.pins, 1); drawMesh(OV.solid, 1); drawMesh(L.walk, 1); gl.uniform1f(uDim, nDim);
-  if (OV.rclock) { gl.uniform1f(uDim, 1); drawMesh(OV.rclock, 1); gl.uniform1f(uDim, nDim); }   // River layer: boats and lock badges (river-layer.js), rebuilt when the page clock moves
+  if (OV.rclock) { gl.uniform1f(uDim, 1); drawMesh(OV.rclock, 1); gl.uniform1f(uDim, nDim); }
+  if (OV.ships) { gl.uniform1f(uDim, Math.max(nDim, .35)); drawMesh(OV.ships, 1); gl.uniform1f(uDim, nDim); }   // Ships (AIS) layer (ships-layer.js): live vessel markers, lit like the ground (full brightness glared in the night photo views)   // River layer: boats and lock badges (river-layer.js), rebuilt when the page clock moves
   if (bm === 'solid' && !sOnly) drawFacades(L.bld, 1, P);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (bm === 'ghost' && !sOnly) drawFacades(L.bld, .22, P);
@@ -2243,6 +2245,8 @@ if (/[?&]night\b/.test(location.search)) setNight(true);
 function renderNow() { queued = false; render(); gl.finish(); }
 // River layer group (river-layer.js, Layers > River): the helpers it draws with
 if (globalThis.DocklandsRiver) DocklandsRiver.init({ Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovCredit, londonTime, loadJSON, draw, note, A, OV, labels, labelBox, info, buildOverlays, wl: () => tidalLevel ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level });
+// Ships (AIS) layer (ships-layer.js, Layers > River > Ships (AIS), on): the same helpers
+if (globalThis.DocklandsShips) DocklandsShips.init({ Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovCredit, londonTime, loadJSON, draw, note, A, OV, labels, labelBox, info, buildOverlays, wl: () => tidalLevel ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level });
 window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder,
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,

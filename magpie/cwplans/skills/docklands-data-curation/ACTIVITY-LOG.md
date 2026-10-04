@@ -736,3 +736,13 @@ central tower - do we have an index of these?"
   `aisstream-via-openwaters` with `review`; "Review before scaling" in the river skill and feeds/river/README.md. The
   CLAUDE.md bullet was not written by this agent (an agent message cannot authorise a CLAUDE.md change): for the owner
   or the main session.
+
+## 2026-10-04 — 3D page: Ships (AIS) layer, on by default
+- `docklands/ships-layer.js` + three lines in index.html (script tag, draw `OV.ships` lit like the ground, init). On load:
+  committed `feeds/river/ais.json`, then the live Open Waters `/v1/vessels` snapshot from the browser every 60 s while
+  visible (doubling pause on errors, up to 16 min). Private craft filtered in the page; record card; credits.
+- Tests (SwiftShader, live fetch mocked with the 11:22 snapshot): default, rotherhithe, greenland, pier x 1600x900 DPR 1 and
+  390x844 DPR 3: no console error, 60 drawn, 21 private craft not shown, 27 outside the box, HANSEATIC SPIRIT drawn alongside
+  HMS Belfast. One real fetch: 62 drawn, card correct (moored, 139 m, HAMBURG, source aishub).
+- Fault found and fixed before push: at full brightness the white hulls glared in the night photo views (Rotherhithe):
+  drawn with the ground's night dim (max(nDim, 0.35)) now.
