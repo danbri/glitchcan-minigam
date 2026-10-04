@@ -712,3 +712,17 @@ central tower - do we have an index of these?"
   0.080/0.080; red share unchanged within 0.005 points. Cards, lock states for 4, 11 and 15 October, banner and live
   correction (TfL response fixture) checked. No shader changed.
 - data-register.json: river-layer.js entry; shown_on and page loads for the river snapshots.
+
+## 2026-10-04 — Locate button on the 3D page and the atlas (locate agent)
+- 3D page (https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/): `docklands/locate.js`, round button at
+  the bottom right: tap = permission (only on the tap) and centre on a blue dot with its accuracy circle; tap = turn with
+  the compass (beam on the dot); tap = stop turning; a drag or any other camera move = located, dot kept; hold = off. Eye
+  button in heading mode: camera at ground + 1.6 m, yaw and pitch from the phone. Outside the model box: distance and
+  direction, "Show where I am" (nearest edge, looking towards the person). Commit cc1ebabc.
+- Atlas (https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#map): the same button as a Leaflet control
+  (dot, accuracy circle, centre, follow, hold = off). Commit e78a8671, which also fixed a tap swallowed after a hold.
+- Transform: the page's `geo()`; checked against proj4 BNG within 2 m. Grid convergence -1.55 degrees applied to headings.
+- Privacy: the position is not sent, stored or put in the URL (About > Your location; under the atlas map).
+- Tests: 3D page 29 + 28 checks (1600x900, 390x844 DPR 3), atlas 9 x 2, all pass; method and what needs a real phone: skill
+  docklands-3d-page, "Location and heading". No data file, no shader, no new fault. Register entry for locate.js was
+  added by the construction agent.

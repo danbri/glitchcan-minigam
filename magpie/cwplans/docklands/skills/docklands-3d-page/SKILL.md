@@ -12,7 +12,7 @@ description: >-
   toDataURL, two sizes x two pixel ratios x the photo views, numbers not one look). Reach for it before you edit
   docklands/index.html, add a layer or a style, change a shader, judge a render, or push a page change. The sky,
   clock, weather and tide have their own skill (pending). Also the crown halo by date and the overlays (live state,
-  London Datastore: OV). Append to the curation skill's ACTIVITY-LOG.md.
+  London Datastore: OV), and the locate button (blue dot, follow, compass heading, look through the phone; locate.js). Append to the curation skill's ACTIVITY-LOG.md.
 ---
 
 # The Docklands 3D page
@@ -477,6 +477,84 @@ Layers > Works in progress > Construction sites). Data and rules: skill `cwplans
   wide photo's. The bearings agree: the four landmarks' bearings from the two eyes differ by at most 0.3°. Not changed.
 - What the model lacks in this view: buildings finished after the LiDAR (the red-brick tower in front of One Canada Square and
   others) and every crane; the 30 Marsh Wall core and 25 Cuba Street are drawn only through this layer.
+
+## Location and heading: the locate button (2026-10-04)
+
+Owner, 2026-10-04: "Add a geopositioning position that takes permissioned device location/orientation via webplatform
+APi and positions map/view accordingly, following conventions familiar from mainstream apps." Commits cc1ebabc (3D page)
+and e78a8671 (atlas, and the hold fix on both).
+
+- **Code**: `docklands/locate.js`, loaded after the inline script. It reaches the page only through `__docklands`
+  (`geo`, `groundAt`, `toast`, `cam`, `draw`, `PIX`) and `DocklandsLocate.after(ctx)`, one line at the end of `render()`
+  beside `DocklandsSky.after`. Its CSS and DOM are injected (`#locBtns`, `#locSvg`, `#locMsg`), hidden in `?capture`.
+  Test hook: `DocklandsLocate.state` (mode, smoothed fix in model metres, grid heading, source, pitch, watching, orient,
+  outside, message, last error code, grid convergence), `DocklandsLocate.off()`, `showEdge()`.
+- **The button cycle** (Google Maps / Apple Maps): `off` (grey crosshair) -> tap: permission asked now, never on load ->
+  `waiting` (pulsing) -> `centred` (blue crosshair, filled centre) -> tap: `heading` (filled arrow; the view turns with the
+  compass) -> tap: `centred`. A drag, twist, view button, search or anything else that moves `cam.tx/tz/yaw` drops to
+  `located` (blue outline; the dot stays); a tap centres again. Zoom (wheel, pinch without pan) and tilt keep following.
+  Hold 0.8 s: off. The follow loop notices another mover by comparing the camera with what it last set (`S.set`): no
+  hook in the gesture code was needed.
+- **The eye button** (shown in `heading` and `eye`): "look through the phone". `cam.eye` at the fix, ground (`groundAt`,
+  the LiDAR DTM, so the deck or the water on a pier) + 1.6 m; yaw from the heading, pitch from the elevation of the
+  back camera, clamped to +/-63 degrees; vertical field 1.05 rad; no roll. Tap it again (or the locate button) to leave;
+  a drag leaves it to `located`. Chosen over a long press because a long press is not discoverable.
+- **Position**: `watchPosition` with `enableHighAccuracy`, timeout 20 s, `maximumAge` 5 s; stopped on `visibilitychange`
+  hidden and restarted on visible. `geo(lon, lat)` is the page's own transform (`A.meta.geo`, a quadratic fit, max error
+  0.03 m against its own source): checked against proj4 BNG (7-parameter Helmert): Canary Wharf DLR 51.5051,-0.0209 ->
+  (-97.9, -19.4), proj4 (-96.0, -19.5); 51.4953,-0.0329 -> (-901.3, 1092.9), proj4 (-899.5, 1092.7). Note: 51.4953,-0.0329
+  is the Greenland lock entrance; the pier pontoon is 51.4947,-0.0319 -> (-830.1, 1157.7), the places list's pier.
+  Jitter: a jump over max(30 m, 2 x accuracy + current accuracy) or a fix older than 15 s snaps; else the dot moves by a
+  share k = 0.25..0.8 that grows when the new fix is more accurate. A later timeout while a fix exists is ignored.
+- **Heading**: grid bearing = true heading + grid convergence (`trueToGrid`: the grid bearing of true north from `geo` at
+  the fix; -1.55 degrees at Canary Wharf). Magnetic declination (about 1 degree in London) is not applied: below compass
+  error. Android/Chrome: `deviceorientationabsolute`, full W3C rotation R = Rz(alpha) Rx(beta) Ry(gamma); heading of the
+  horizontal part of (screen-up + back-camera direction): the first serves a flat phone, the second an upright one, and
+  for a tilt about the device x axis they agree, so the sum never vanishes. Screen-up in device axes is
+  (sin a, cos a) for `screen.orientation.angle` a. iOS: `webkitCompassHeading` + screen angle, and
+  `DeviceOrientationEvent.requestPermission()` called inside the tap (tap 2 or the eye button) before any await; Android
+  needs no prompt, so the compass starts with tap 1 and the beam shows at once. No absolute heading: GPS `coords.heading`
+  when `speed` > 1 m/s; else no beam, and a toast says so after 2.5 s.
+- **Smoothing that failed first**: averaging unit vectors (v += (v' - v) k) stalls when a reading is opposite the mean:
+  v(1 - 2k) keeps the old direction for ever (the headless test turned 270 -> 90 degrees and stayed at 62). Now: step
+  along the shorter arc, r = c + angDiff(r, c) k. Camera easing is by time (k = 1 - exp(-dt / 0.25 s)), not per frame:
+  SwiftShader draws a frame in about 2 s and per-frame easing took 20 s to settle.
+- **A tap after the hold was swallowed**: the hold replaces the button's icon, so the pointerup lands on a removed node and
+  no click follows; the "this click ends a hold" flag stayed set and ate the next tap. The flag is cleared on pointerdown.
+- **Drawing**: an SVG overlay under the labels, from `MVP` each frame: the accuracy circle as 48 ground points projected
+  (perspective-correct), the dot 8 px, the beam a 60-degree 56 px gradient wedge along the projected heading. Always on
+  top of the buildings (as the apps). No shader code, so `check-fp16-shaders.mjs` is not affected.
+- **Outside the model box** (`A.meta.extent`): `#locMsg` "You are outside the model area: 2.4 km west of it" (distance to
+  the box, direction by grid bearing less convergence) and "Show where I am": camera at the nearest edge (60 m in),
+  yaw towards the person, pitch 0.3, distance 900 m; mode `located`.
+- **Errors**: code 1 -> how to allow it in the site settings (and iOS Location Services); 3 -> "took too long" with Try
+  again; 2 -> "not available, check location is on" with Try again; `!isSecureContext` -> needs https; no
+  `navigator.geolocation` -> said. Without permission the page works as before.
+- **Privacy**: no request carries the position, nothing is stored, the URL does not change (About > "Your location"; the
+  atlas says the same under the map and adds that map tiles around any place viewed come from tile.openstreetmap.org).
+- **Atlas** (https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#map): a Leaflet control at the bottom right
+  (38 px above the corner so the (i) stays clear), `map.locate({ watch: true, enableHighAccuracy: true })`, `L.circle` with
+  the accuracy and an `L.circleMarker` dot; tap = ask and centre (zoom 17 or closer), `dragstart` -> located, tap = centre,
+  hold = off; no heading (the map does not rotate). Hook `__atlasLocate.state`.
+
+Test (headless Chromium, SwiftShader WebGL; Playwright `permissions: ['geolocation']`, `setGeolocation`, compass by
+`dispatchEvent(new DeviceOrientationEvent('deviceorientationabsolute', { alpha, beta, gamma, absolute: true }))`): 3D page
+29 checks at 1600 x 900 DPR 1 and 28 at 390 x 844 DPR 3 touch (no wheel there), all pass on 2026-10-04 (after the Works in progress
+layer landed): no geolocation call on load; denied message (the denial is stubbed: headless Chromium leaves the prompt
+open and the mode stays `waiting`; CDP `Browser.setPermission` from a page session did not deny); first fix in under
+60 ms and view centred in 3.3 to 7.7 s (SwiftShader frames); alpha 0/270/180/45 -> heading 358.45/88.38/178.38/313.35
+grid, camera yaw error under 0.6 degrees once settled; tap 3 stops turning; touch drag (CDP touch events) and mouse drag
+-> `located` with the dot; wheel keeps `centred`; eye mode east at 88.3 degrees grid with a level horizon, beta 120 ->
+pitch 30; visibility hidden stops the watch and the compass; outside (Trafalgar Square) "2.4 km west" and the edge view at
+x -5090 looking west; hold -> off and the next tap works; no request with the position; URL unchanged; no console error.
+Atlas: 9 checks x 2 sizes pass. Wait for convergence by polling in tests, never a fixed sleep: SwiftShader frame times
+change whenever another layer lands.
+
+Only a real phone can confirm: the iOS motion permission prompt and the location prompt; that `webkitCompassHeading` is
+right when the phone is upright (Apple documents it for the device top); compass calibration and magnetic interference
+near steel towers; GPS accuracy among the towers (multipath often gives 30 to 100 m) and under the DLR; how the beam and
+the eye mode feel with real sensor noise; that `deviceorientationabsolute` fires on the owner's Android browser; that the
+watch restarts after the phone sleeps; battery use with high accuracy on.
 
 ## Testing
 
