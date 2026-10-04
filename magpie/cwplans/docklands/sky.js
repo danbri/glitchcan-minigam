@@ -364,7 +364,7 @@ async function refreshAsync() {
     if (k !== busy) return; S.wxRec = w; S.wxNow = w && !w.err ? wxAt(w, t) : null;
     const td = await tideAt(t).catch(e => ({ why: e.message })); if (k !== busy) return; S.tide = td; applyTide();
     S.satSet = await satRecs().catch(e => { S.satErr = e.message; return null; }); if (k !== busy) return; S.satAt = 0;
-    S.days = dayTimes(); S.iss = undefined;
+    S.days = dayTimes(); S.iss = undefined; S.issDone = false;
     redraw(); panel();
   } catch (e) { console.warn('sky refresh', e); }
 }
@@ -419,7 +419,7 @@ const f1 = v => v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1), deg = 
 function panel() {
   const out = $('skyOut'); if (!out || !S.A || !$('paneSky').classList.contains('on') && !S.forcePanel) return; syncInputs();
   const A = S.A, T = S.days || {}, w = S.wxNow, td = S.tide, rng = (a, b) => `${hm(a)}–${hm(b)}`;
-  if (S.iss === undefined && S.satSet) { S.iss = null; setTimeout(() => { S.iss = nextIss(S.t); panel(); }, 30); }
+  if (S.iss === undefined && S.satSet) { S.iss = null; setTimeout(() => { S.iss = nextIss(S.t); S.issDone = true; panel(); }, 30); }
   const up = A.planets.filter(p => p.alt > 0).map(p => `${p.name} ${deg(p.az)} ${compass(p.az)}, ${f1(p.alt)}° up, mag ${f1(p.mag)}`);
   const jm = A.planets[3].alt > 0 ? ` Jupiter's moons (mag 4.6 to 5.7, only from a dark site or with binoculars): ${A.jmoons.map(m => `${m.name} ${f1(m.sep)}′`).join(', ')} from Jupiter.` : '';
   const rows = [
@@ -436,7 +436,7 @@ function panel() {
     ['Milky Way core', `${f1(A.gc.alt)}° ${A.gc.alt > 0 ? 'up' : 'below the horizon'} now${T.gcBest ? `; highest in full darkness ${f1(T.gcBest.alt)}° at ${hm(T.gcBest.t)}` : '; no astronomical darkness this night'} (from London it never rises more than 9.5°)`],
     ['Stars drawn', S.drawn ? `to magnitude ${f1(S.drawn.nelm)} (${S.dark ? 'dark site' : 'London sky glow, Bortle 8 to 9'}, with twilight, moonlight and haze)` : '—'],
     ['Satellites', S.satSet ? `${S.satPts.length} sunlit above the horizon now (${S.satSet.recs.length} bright satellites, ${esc(S.satSet.src)})` : S.fetch ? (S.satErr ? esc(S.satErr) : 'orbit data older than 10 days from that time') : 'tick "Fetch" for times away from 3 October'],
-    ['Next ISS pass', S.iss ? `${dayL(S.iss.t0)} ${hm(S.iss.t0)}–${hm(S.iss.t1)}: from ${compass(S.iss.az0)} to ${compass(S.iss.az1)}, highest ${f1(S.iss.max)}° at ${hm(S.iss.tmax)} in the ${compass(S.iss.azmax)}` : S.iss === null && S.satSet ? 'searching… (or none visible in the next 3 days)' : '—'],
+    ['Next ISS pass', S.iss ? `${dayL(S.iss.t0)} ${hm(S.iss.t0)}–${hm(S.iss.t1)}: from ${compass(S.iss.az0)} to ${compass(S.iss.az1)}, highest ${f1(S.iss.max)}° at ${hm(S.iss.tmax)} in the ${compass(S.iss.azmax)}` : S.issDone ? 'none above 10° in a dark sky in the next 3 days' : S.satSet ? 'searching…' : '—'],
     ['Weather', w ? `cloud ${Math.round(w.cloud_cover)}% (low ${Math.round(w.cloud_cover_low)}%, mid ${Math.round(w.cloud_cover_mid)}%, high ${Math.round(w.cloud_cover_high)}%), visibility ${w.visibility != null ? (w.visibility / 1000).toFixed(0) + ' km' : 'not given'}, humidity ${Math.round(w.relative_humidity_2m)}%, ${f1(w.temperature_2m)} °C, rain ${f1(w.precipitation)} mm/h, wind ${Math.round(w.wind_speed_10m)} km/h from ${Math.round(w.wind_direction_10m)}° (Open-Meteo, ${esc(w.src)})` : S.wxRec && S.wxRec.why ? esc(S.wxRec.why) : S.wxRec && S.wxRec.err ? 'did not load: ' + esc(S.wxRec.err) : S.fetch ? 'loading…' : 'clear sky assumed (no data: tick "Fetch")'],
     ['Thames level', td && td.v != null ? `${td.v.toFixed(2)} m above Ordnance Datum at ${esc(VPS[S.vp].name)}, ${td.trend > .05 ? 'rising' : td.trend < -.05 ? 'falling' : 'near the turn'} (${td.trend > 0 ? '+' : ''}${td.trend.toFixed(2)} m/h); ${td.pts.map(p => `${esc(p.name)} ${p.v.toFixed(2)} m`).join(', ')}, interpolated along the river (EA, ${esc(td.src)})` : td && td.why ? esc(td.why) + ' — no prediction shown' : 'no reading (tick "Fetch")'],
   ];
