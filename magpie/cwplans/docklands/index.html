@@ -427,7 +427,7 @@ function prism(M, o, y0, y1, col, bottom) {
     const i = M.v(x0, y0, z0, s), j = M.v(x1, y0, z1, s), kk = M.v(x1, y1, z1, s), l = M.v(x0, y1, z0, s); M.tri(i, j, kk); M.tri(i, kk, l);
   }
 }
-function flat(M, o, y, col, a = 1) { const f = dec(o.p), holes = o.holes || [], tris = earcut(f, holes.length ? holes : undefined, 2), s = shade(col, 0, 1, 0), base = M.n; for (let i = 0; i < f.length / 2; i++) M.v(f[2 * i], y, f[2 * i + 1], s, a); for (let k = 0; k < tris.length; k += 3) M.tri(base + tris[k], base + tris[k + 1], base + tris[k + 2]); }
+function flat(M, o, y, col, a = 1) { const f = dec(o.p), holes = o.holes || [], tris = earcut(f, holes.length ? holes : undefined, 2), s = shade(col, 0, 1, 0), base = M.n; for (let i = 0; i < f.length / 2; i++) M.v(f[2 * i], typeof y === 'function' ? y(f[2 * i], f[2 * i + 1]) : y, f[2 * i + 1], s, a); for (let k = 0; k < tris.length; k += 3) M.tri(base + tris[k], base + tris[k + 1], base + tris[k + 2]); }
 function beam(M, a, b, w, h, col) {
   const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1, ox = -dz / l * w / 2, oz = dx / l * w / 2, H = h / 2;
   const P = (q, sx, sy) => [q[0] + ox * sx, q[1] + H * sy, q[2] + oz * sx];
@@ -459,8 +459,9 @@ buildWater();
 // tidal water (the Thames, creeks): at its LiDAR level, or at a live gauge level when the visitor asks
 // docks with a published bed level: the water as a volume from bed to surface
 { const M = new Mesh(); for (const st of U.structures || []) if (st.bed != null) prism(M, st, st.bed, st.water, C.water.map(c => c * .8), true); L.dockVol = M.upload(); }
-let tidalLevel = null;
-function buildTidal() { if (L.tidal) L.tidal.free(); const M = new Mesh(); for (const w of A.water) if (w.tidal) flat(M, w, (tidalLevel ?? w.level) + (PIXSTYLE ? 1.2 : .1), C.water.map(c => tidalLevel == null ? c : c * 1.15)); L.tidal = M.upload(); }
+// tidalField(x, z): the measured level along the river (sky.js, EA gauges by chainage); else one level for the whole river
+let tidalLevel = null, tidalField = null;
+function buildTidal() { if (L.tidal) L.tidal.free(); const M = new Mesh(), dy = PIXSTYLE ? 1.2 : .1; for (const w of A.water) if (w.tidal) flat(M, w, tidalLevel != null && tidalField ? (x, z) => tidalField(x, z) + dy : (tidalLevel ?? w.level) + dy, C.water.map(c => tidalLevel == null ? c : c * 1.15)); L.tidal = M.upload(); }
 buildTidal();
 function buildGreens() { if (L.greens) L.greens.free(); const M = new Mesh(); const T = A.terrain; const gh = (x, z) => { const i = Math.max(0, Math.min(T.nx - 1, Math.round((x - T.x0) / T.cell))), j = Math.max(0, Math.min(T.nz - 1, Math.round((z - T.z0) / T.cell))); return T.dm[j * T.nx + i] / 10; };
   for (const g of A.greens) { const f = dec(g.p); flat(M, g, gh(f[0], f[1]) + .4, C.green); } L.greens = M.upload(); }
@@ -770,7 +771,7 @@ async function loadLive() {
     job('tide', async () => {
       const g = async id => (await getJSON(`https://environment.data.gov.uk/flood-monitoring/id/stations/${id}/readings?latest`)).items[0];
       const [tp, sv] = await Promise.all([g('0007'), g('0001')]);
-      tidalLevel = tp.value; $('liveTide').disabled = false;
+      tidalLevel = tp.value; tidalField = null; $('liveTide').disabled = false;
       const crests = (A.defences || []).map(d => d.c).sort((a, b) => a - b), lo = crests[0], med = crests[crests.length >> 1];
       return `<b>Thames level</b> (Environment Agency tide gauges, m above Ordnance Datum): Tower Pier ${tp.value.toFixed(2)} m at ${when(tp.dateTime)}, Silvertown ${sv.value.toFixed(2)} m at ${when(sv.dateTime)}. The model's river is the LiDAR pass, about ${A.water.filter(w => w.tidal && !w.n).map(w => w.level)[0] ?? '2'} m. ${crests.length ? `The EA tidal flood walls in the box have surveyed crests from ${lo.toFixed(2)} m (median ${med.toFixed(2)} m), so the water is ${(lo - tp.value).toFixed(2)} m below the lowest crest.` : ''} <a href="https://environment.data.gov.uk/flood-monitoring/id/stations/0007">Tower Pier station record</a>`;
     }),
@@ -1268,7 +1269,7 @@ function buildTreesLit() {
 function drawLights(buf, refl, P) {
   if (!buf || !buf.count) return; gl.useProgram(lpr); const dpr = Math.min(2, devicePixelRatio || 1);   // the canvas is drawn at up to 2 device px per CSS px
   gl.uniformMatrix4fv(LU.m, false, MVP); gl.uniform1f(LU.vz, VZ); gl.uniform2f(LU.vp, CAM.w, CAM.h); gl.uniform1f(LU.fy, CAM.h / 2 / Math.tan(CAM.fovY / 2)); gl.uniform1f(LU.dpr, dpr); gl.uniform1f(LU.fdpr, dpr); gl.uniform3fv(LU.eye, CAM.eye);
-  gl.uniform1f(LU.refl, refl ? 1 : 0); gl.uniform1f(LU.wl, NIGHT.wl); gl.uniform1f(LU.cut, P.cut < 250 ? P.cut : 1e9); gl.uniform1f(LU.time, performance.now() / 1000 % 1000);
+  gl.uniform1f(LU.refl, refl ? 1 : 0); gl.uniform1f(LU.wl, tidalField && tidalLevel != null ? tidalField(CAM.eye[0], CAM.eye[2]) + .1 : NIGHT.wl); gl.uniform1f(LU.cut, P.cut < 250 ? P.cut : 1e9); gl.uniform1f(LU.time, performance.now() / 1000 % 1000);
   gl.enableVertexAttribArray(aQ); gl.enableVertexAttribArray(aK); gl.bindBuffer(gl.ARRAY_BUFFER, buf.vb);
   gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 40, 0); gl.vertexAttribPointer(aQ, 2, gl.FLOAT, false, 40, 12); gl.vertexAttribPointer(aC, 4, gl.UNSIGNED_BYTE, true, 40, 20); gl.vertexAttribPointer(aK, 4, gl.FLOAT, false, 40, 24);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf.ib); gl.drawElements(gl.TRIANGLES, buf.count, gl.UNSIGNED_INT, 0);
@@ -1817,7 +1818,7 @@ if (/[?&]night\b/.test(location.search)) setNight(true);
 function renderNow() { queued = false; render(); gl.finish(); }
 window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); },
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
-  setTidal(v) { tidalLevel = v; buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; },
+  setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; },
   relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; delete cam.hfov; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },

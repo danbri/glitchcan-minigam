@@ -146,7 +146,7 @@ async function chainage() {
   if (TIDE.chain) return TIDE.chain; const r = await load('river', 'data/river.json'), P = r.thames, s = [0];
   for (let i = 1; i < P.length; i++) s.push(s[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
   const at = (x, z) => { let b = 0, bd = 1e18; for (let i = 0; i < P.length; i++) { const d = (P[i][0] - x) ** 2 + (P[i][1] - z) ** 2; if (d < bd) { bd = d; b = i; } } return s[b] + (b === P.length - 1 || b === 0 ? Math.sqrt(bd) * (b === 0 ? -1 : 1) : 0); };
-  return (TIDE.chain = { at });
+  return (TIDE.chain = { at, len: s[s.length - 1] });
 }
 async function tideDay(day) {
   if (TIDE.days[day]) return TIDE.days[day];
@@ -154,7 +154,7 @@ async function tideDay(day) {
   if (!S.fetch) return null;
   const t0 = Date.parse(day + 'T00:00Z'); if (t0 > Date.now()) return (TIDE.days[day] = { src: 'none', why: 'the EA publishes readings, not predictions' });
   const nx = d => new Date(Date.parse(d + 'T12:00Z') + 864e5).toISOString().slice(0, 10), st = {};
-  for (const [id, name] of [['0007', 'Tower Pier'], ['0003', 'Charlton']]) {
+  for (const [id, name] of [['0007', 'Tower Pier'], ['0003', 'Charlton'], ['0001', 'Silvertown']]) {
     const s = (await getJSON(`https://environment.data.gov.uk/flood-monitoring/id/stations/${id}`)).items;
     const u = `https://environment.data.gov.uk/flood-monitoring/id/measures/${id}-level-tidal_level-i-15_min-mAOD/readings?startdate=${day}&enddate=${nx(nx(day))}&_sorted&_limit=1000`;
     st[id] = { name, lat: s.lat, lon: s.long, url: u, readings: (await getJSON(u)).items.map(x => [x.dateTime, x.value]).sort((a, b) => a[0] < b[0] ? -1 : 1) };
@@ -165,13 +165,32 @@ function levelAt(R, t) {   // linear between readings no more than 30 min apart;
   let lo = null, hi = null; for (const r of R) { const tt = Date.parse(r[0]); if (tt <= t) lo = [tt, r[1]]; else { hi = [tt, r[1]]; break; } }
   if (!lo || !hi || hi[0] - lo[0] > 1800e3) return null; const v = lo[1] + (hi[1] - lo[1]) * (t - lo[0]) / (hi[0] - lo[0]); return { v, trend: (hi[1] - lo[1]) / ((hi[0] - lo[0]) / 3600e3) };
 }
+// gauge faults: a reading is dropped when its difference from the nearest other gauge departs by more than 0.45 m from
+// the median of that difference over the 2 hours either side (the difference between neighbouring gauges changes
+// slowly; a dry or faulty gauge jumps). Example: Tower Pier, 4 Oct 2026 00:00 to 01:15 UTC, five readings 0.4 to 0.9 m
+// off (README "Sky, time, weather and tide", fault F21).
+function cleanGauges(st) {
+  const ids = Object.keys(st), out = {}; if (ids.length < 2) return st;
+  const D = (a, b) => (st[a].lat - st[b].lat) ** 2 + ((st[a].lon - st[b].lon) * .62) ** 2;
+  for (const id of ids) {
+    const ref = ids.filter(k => k !== id).sort((a, b) => D(id, a) - D(id, b))[0], R = new Map(st[ref].readings), d = st[id].readings.map(([t, v]) => [Date.parse(t), R.has(t) ? v - R.get(t) : null]);
+    const keep = st[id].readings.filter((r, i) => { if (d[i][1] == null) return true; const w = d.filter(q => q[1] != null && Math.abs(q[0] - d[i][0]) <= 2 * 3600e3).map(q => q[1]).sort((a, b) => a - b); return Math.abs(d[i][1] - w[w.length >> 1]) <= .45; });
+    out[id] = { ...st[id], readings: keep, dropped: st[id].readings.length - keep.length };
+  }
+  return out;
+}
+// the level along the river: linear in chainage between the gauges (Tower Pier, Charlton, Silvertown; the EA has no tidal
+// gauge between Tower Pier and Charlton), held flat beyond the end gauges. field(x, z) gives the level anywhere in the model.
 async function tideAt(t) {
   const rec = await tideDay(isoL(t).slice(0, 10)); if (!rec) return null; if (!rec.st) return { why: rec.why };
+  if (!rec.clean) { rec.clean = cleanGauges(rec.st); }
   const C = await chainage(), here = C.at(S.here.x, S.here.z), pts = [];
-  for (const [id, s] of Object.entries(rec.st)) { if (id === '0001') continue; const [x, z] = geo(s.lon, s.lat), L = levelAt(s.readings, t); if (L) pts.push({ id, name: s.name, ch: C.at(x, z), ...L }); }
+  for (const [id, s] of Object.entries(rec.clean)) { const [x, z] = geo(s.lon, s.lat), L = levelAt(s.readings, t); if (L) pts.push({ id, name: s.name, ch: C.at(x, z), dropped: s.dropped, ...L }); }
   if (!pts.length) return { why: 'no gauge reading at that time' };
-  pts.sort((a, b) => a.ch - b.ch); const a = pts[0], b = pts[pts.length - 1], f = b.ch > a.ch ? Math.max(0, Math.min(1, (here - a.ch) / (b.ch - a.ch))) : 0;
-  return { v: a.v + (b.v - a.v) * f, trend: a.trend + (b.trend - a.trend) * f, f, here, pts, src: rec.src };
+  pts.sort((a, b) => a.ch - b.ch);
+  const along = (ch, k) => { if (ch <= pts[0].ch) return pts[0][k]; for (let i = 1; i < pts.length; i++) if (ch <= pts[i].ch) { const a = pts[i - 1], b = pts[i], f = (ch - a.ch) / (b.ch - a.ch); return a[k] + (b[k] - a[k]) * f; } return pts[pts.length - 1][k]; };
+  const field = (x, z) => along(C.at(x, z), 'v');
+  return { v: along(here, 'v'), trend: along(here, 'trend'), here, pts, field, ends: [along(0, 'v'), along(C.len, 'v')], src: rec.src };
 }
 
 // satellites: CelesTrak GP data (OMM) propagated with SGP4 (satellite.js); a point when above the horizon, in sunlight
@@ -372,7 +391,7 @@ let tideSet = false;
 function applyTide() {
   const D = globalThis.__docklands; if (!D || !D.setTidal) return;
   const v = S.tideOn && S.tide && S.tide.v != null ? Math.round(S.tide.v * 100) / 100 : null;
-  if (v != null) { D.setTidal(v); tideSet = true; } else if (tideSet) { D.setTidal(null); tideSet = false; }
+  if (v != null) { D.setTidal(v, S.tide.field); tideSet = true; } else if (tideSet) { D.setTidal(null); tideSet = false; }
 }
 let lightAt = null;
 function applyStyle() {   // the clock drives Night (sun below -6 degrees) and the direction of the light
@@ -438,7 +457,7 @@ function panel() {
     ['Satellites', S.satSet ? `${S.satPts.length} sunlit above the horizon now (${S.satSet.recs.length} bright satellites, ${esc(S.satSet.src)})` : S.fetch ? (S.satErr ? esc(S.satErr) : 'orbit data older than 10 days from that time') : 'tick "Fetch" for times away from 3 October'],
     ['Next ISS pass', S.iss ? `${dayL(S.iss.t0)} ${hm(S.iss.t0)}–${hm(S.iss.t1)}: from ${compass(S.iss.az0)} to ${compass(S.iss.az1)}, highest ${f1(S.iss.max)}° at ${hm(S.iss.tmax)} in the ${compass(S.iss.azmax)}` : S.issDone ? 'none above 10° in a dark sky in the next 3 days' : S.satSet ? 'searching…' : '—'],
     ['Weather', w ? `cloud ${Math.round(w.cloud_cover)}% (low ${Math.round(w.cloud_cover_low)}%, mid ${Math.round(w.cloud_cover_mid)}%, high ${Math.round(w.cloud_cover_high)}%), visibility ${w.visibility != null ? (w.visibility / 1000).toFixed(0) + ' km' : 'not given'}, humidity ${Math.round(w.relative_humidity_2m)}%, ${f1(w.temperature_2m)} °C, rain ${f1(w.precipitation)} mm/h, wind ${Math.round(w.wind_speed_10m)} km/h from ${Math.round(w.wind_direction_10m)}° (Open-Meteo, ${esc(w.src)})` : S.wxRec && S.wxRec.why ? esc(S.wxRec.why) : S.wxRec && S.wxRec.err ? 'did not load: ' + esc(S.wxRec.err) : S.fetch ? 'loading…' : 'clear sky assumed (no data: tick "Fetch")'],
-    ['Thames level', td && td.v != null ? `${td.v.toFixed(2)} m above Ordnance Datum at ${esc(VPS[S.vp].name)}, ${td.trend > .05 ? 'rising' : td.trend < -.05 ? 'falling' : 'near the turn'} (${td.trend > 0 ? '+' : ''}${td.trend.toFixed(2)} m/h); ${td.pts.map(p => `${esc(p.name)} ${p.v.toFixed(2)} m`).join(', ')}, interpolated along the river (EA, ${esc(td.src)})` : td && td.why ? esc(td.why) + ' — no prediction shown' : 'no reading (tick "Fetch")'],
+    ['Thames level', td && td.v != null ? `${td.v.toFixed(2)} m above Ordnance Datum at ${esc(VPS[S.vp].name)}, ${td.trend > .05 ? 'rising' : td.trend < -.05 ? 'falling' : 'near the turn'} (${td.trend > 0 ? '+' : ''}${td.trend.toFixed(2)} m/h); ${td.pts.map(p => `${esc(p.name)} ${p.v.toFixed(2)} m${p.dropped ? ` (${p.dropped} faulty readings left out)` : ''}`).join(', ')}, linear along the river between the gauges; the model's Thames runs from ${td.ends[0].toFixed(2)} m at its west end to ${td.ends[1].toFixed(2)} m at its east end (EA, ${esc(td.src)})` : td && td.why ? esc(td.why) + ' — no prediction shown' : 'no reading (tick "Fetch")'],
   ];
   out.innerHTML = `<p>${esc(VPS[S.vp].name)} · ${dayL(S.t)} ${hm(S.t)} ${tz(S.t)}${S.live ? ' (now)' : ''}${Math.abs(S.t - fromLondon(PHOTO.iso)) < 30 * 60e3 ? ` · ${esc(PHOTO.note)}` : ''}</p><div class="tw"><table>${rows.map(([a, b]) => `<tr><th>${esc(a)}</th><td>${b}</td></tr>`).join('')}</table></div>`;
   $('skyCredit').innerHTML = 'Positions: <a href="https://github.com/cosinekitty/astronomy">astronomy-engine</a> (Don Cross, MIT). Stars: <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50">Yale Bright Star Catalogue 5th ed.</a> (Hoffleit &amp; Warren 1991, NASA ADC / CDS; public domain) to magnitude 5.5. Constellation lines: <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a> (Olaf Frohn, BSD-3-Clause). Milky Way: a band computed from galactic coordinates. Satellites: <a href="https://celestrak.org/">CelesTrak</a> GP data, <a href="https://github.com/shashwatak/satellite-js">satellite.js</a> (MIT). Weather: <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Tide: Environment Agency flood-monitoring API, this uses Environment Agency flood and river level data from the real-time data API (Beta) (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>); the EA publishes readings only, and published tide predictions (PLA, UKHO) are not under an open licence, so future times show no level.';
