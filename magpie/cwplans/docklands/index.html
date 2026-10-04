@@ -247,6 +247,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
       <p class="small"><a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · <a href="#credits" data-credits>credits and data licences</a></p>
       <p class="small">Ground, building heights and open track are measured (EA LiDAR 1 m). The depth gauge ("Below ground" in the menu) removes everything higher than the level you set, so you can look into the ground; the ground and water stay as faint context. Basement depths and indoor levels use OSM and Wikidata storey counts × the storey height setting. Tunnel levels are modelled between known levels: portals and open cuts the LiDAR can see, and published station levels (yellow labels, with sources).</p>
       <h3>How to use it</h3><p class="small">One finger: rotate. Two fingers: move, zoom, and twist to turn. Tap a building or label: its record. Press and hold: route from or to that point. The menu (top left) has the views, the layers, the route finder and this page. "Below ground" in the menu shows the depth gauge on the left: drag it down to cut away everything above that level.</p><p class="small">Isometric pixel art (Layers, Style): drag to move, pinch or wheel to zoom, twist two fingers to turn, move two fingers up or down to tilt. With a mouse: right or Shift drag turns and tilts. The arrows at the top right turn the view by a quarter.</p>
+      <h3>Your location</h3><p class="small">The round button at the bottom right shows where you are, as in a phone's map app. Tap it once to centre the view on you (the browser asks first), again to turn the view with your phone's compass, again to stop turning; drag the map and it stops following. The eye button that then shows puts the view at your eye height, and you look round by turning the phone. Hold the button to turn location off. <b>Your position and heading stay on this device</b>: the page sends them nowhere, stores them nowhere and does not put them in the address.</p>
       <details id="liveBox"><summary>Live data</summary>
         <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of checked sources is at <a href="../feeds/">feeds</a>.</p>
         <div class="row"><button type="button" id="liveGo">Load live data</button></div>
@@ -783,6 +784,7 @@ function render() {
   if (L.hi || L.route) { gl.disable(gl.DEPTH_TEST); drawMesh(L.hi, .9); drawMesh(L.route, .95); gl.enable(gl.DEPTH_TEST); }
   if (PIX.on) pixEnd(w, h);
   placeLabels(); if (globalThis.DocklandsSky) DocklandsSky.after({ MVP, VZ, cssW: cv.clientWidth, cssH: cv.clientHeight, pix: PIX.on });
+  if (globalThis.DocklandsLocate) DocklandsLocate.after({ MVP, VZ, cssW: cv.clientWidth, cssH: cv.clientHeight, pix: PIX.on });   // locate.js: the blue dot
 }
 
 // ---------- input: drag rotates, right/shift/two-finger drag pans, wheel/pinch zooms, two-finger twist turns.
@@ -2150,7 +2152,7 @@ if (/[?&]capture\b/.test(location.search)) captureMode(true);
 if (/[?&]night\b/.test(location.search)) setNight(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder,
+window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder,
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,
   relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
@@ -2173,5 +2175,6 @@ if (atM) { Object.assign(cam, { tx: +atM[1], tz: +atM[2], ty: 0, dist: +(atM[3] 
 hud.textContent = ''; ATTR.start();
 })();
 </script>
+<script src="locate.js"></script>
 </body>
 </html>
