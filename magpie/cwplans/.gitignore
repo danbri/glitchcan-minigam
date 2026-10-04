@@ -27,3 +27,6 @@ data/raw/rendered/
 
 # permits, works and closures downloads (tools/fetch-works.mjs)
 data/raw/works/
+
+# London Datastore raw downloads (tools/walk-london-datastore.mjs)
+data/raw/london-datastore/

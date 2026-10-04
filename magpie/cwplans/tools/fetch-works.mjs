@@ -105,7 +105,7 @@ function parseCsv(text) {
 }
 const htmlText = s => s.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr|h\d)>/gi, '\n')
   .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#39;|&rsquo;|&#8217;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-  .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
+  .replace(/&[lr]squo;/g, "'").replace(/&[lr]dquo;/g, '"').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n\n+/g, '\n').trim();
 const dmy = s => { const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : null; };
 
 const LICENCES = {
@@ -510,7 +510,8 @@ async function markets() {
   // OSM: amenity=marketplace nodes and ways in the zone, from the local Greater London extract (ODbL)
   const PBF = join(RAW, 'docklands', 'greater_london-latest.osm.pbf');
   const osm = [], counts = { th_markets_on_page: th.length, osm_marketplaces: 0, th_matched_osm: 0, th_placed_by_street: 0, th_outside_zone: 0 };
-  const streetsWanted = new Set(th.map(x => x.place.split(',')[0].trim().toLowerCase()));
+  const streetOf = place => place.split(',')[0].replace(/\*$/, '').replace(/\s+(EC|E|SE)\d.*$/, '').trim();
+  const streetsWanted = new Set(th.map(x => streetOf(x.place).toLowerCase()));
   const streetPt = new Map();
   if (existsSync(PBF)) {
     const parseOSM = createRequire(import.meta.url)('osm-pbf-parser');
@@ -545,12 +546,12 @@ async function markets() {
     });
   }
   for (const x of th.filter(x => !x.osm)) {
-    const p = streetPt.get(x.place.split(',')[0].trim().toLowerCase());
+    const p = streetPt.get(streetOf(x.place).toLowerCase());
     const z = p ? zoneOf(p[1], p[0]) : null;
     if (!z) { counts.th_outside_zone++; continue; }
     counts.th_placed_by_street++;
     items.push({ id: `th-market:${key(x.name).replace(/ /g, '-')}`, kind: 'market', title: `${x.name}: ${x.days}, ${x.times}`, start: null, end: null, recurring: `${x.days}, ${x.times}`,
-      location: x.place, street: x.place.split(',')[0].trim(), borough: 'Tower Hamlets', lat: r6(p[1]), lon: r6(p[0]), zone: z, placed_by: 'street named on the council page, OSM street position', url: thUrl, sources: ['th-markets-page', 'osm'] });
+      location: x.place, street: streetOf(x.place), borough: 'Tower Hamlets', lat: r6(p[1]), lon: r6(p[0]), zone: z, placed_by: 'street named on the council page, OSM street position', url: thUrl, sources: ['th-markets-page', 'osm'] });
   }
   write('markets', { url: `${thUrl}; OSM amenity=marketplace`, licence: 'OSM: ODbL 1.0 (© OpenStreetMap contributors); Tower Hamlets page: council website terms, days and times as facts with the link',
     attribution: '© OpenStreetMap contributors (https://www.openstreetmap.org/copyright); Tower Hamlets Council, Markets in Tower Hamlets',
