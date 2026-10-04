@@ -5,7 +5,7 @@
 // skills/cwplans-open-portals/SKILL.md, "Borough portals".
 import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import { getJson, politeFetch, rawFile, RAWP, OUT, today, ZONE, ZONE_TEXT, CW_BOX, meets, wholeIn, roundGeom, DROP_FIELD, writeLines, writeGeojson, licenceClass, OPEN_CLASSES, readLines } from '../walk-portals.mjs';
+import { getJson, politeFetch, rawFile, RAWP, OUT, today, ZONE, ZONE_TEXT, CW_BOX, meets, wholeIn, roundGeom, DROP_FIELD, writeLines, writeGeojson, licenceClass, OPEN_CLASSES, readLines , outExists, writeOut } from '../walk-portals.mjs';
 
 const CITY = 'https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer';
 const TH_HUB = 'https://planning-datasets-towerhamlets.hub.arcgis.com';
@@ -149,7 +149,7 @@ export async function triage() {
   const rows = cat.datasets.map(d => {
     let state, rule, why;
     const H = HARVEST[d.id], file = H && join(OUT, 'boroughs', H.key, `${H.key}.geojson`);
-    if (H && existsSync(file)) { state = 'harvested'; rule = 'B1'; why = `feeds/portals/boroughs/${H.key}/`; }
+    if (H && outExists(file)) { state = 'harvested'; rule = 'B1'; why = `feeds/portals/boroughs/${H.key}/`; }
     else if (JUDGED[d.id]) { [state, why] = JUDGED[d.id]; rule = 'B0'; }
     else if (d.borough === 'City of London' && SENSITIVE.test(d.title)) { state = 'deferred'; rule = 'B2'; why = `layer about people or their sites (${SENSITIVE.exec(d.title)[0]}): judge before harvest`; }
     else if (d.publisher != null || d.portal.includes('InstantAtlas')) {

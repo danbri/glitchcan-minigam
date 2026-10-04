@@ -12,9 +12,9 @@
 // Raw downloads: data/raw/portals/<portal>/ (gitignored). Network: one request at a time, >= 1.1 s apart, robots.txt
 // read per host, backoff on 429 and 5xx, the project User-Agent.
 // Method, rules, licences and the reasons: skills/cwplans-open-portals/SKILL.md; results: feeds/portals/README.md.
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync, createReadStream } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync, createReadStream, rmSync } from 'fs';
 import { join, dirname } from 'path';
-import { createGunzip } from 'zlib';
+import { createGunzip, gzipSync, gunzipSync } from 'zlib';
 import { createInterface } from 'readline';
 import { RAW, UA, TOOLS } from './lib.mjs';
 import { loadRefs, ZONE_WGS, ZONE_BNG, ZONE_PLACE_NAMES } from './lds-probe.mjs';
@@ -194,15 +194,25 @@ export function roundGeom(g, d = 6) {
 export const DROP_FIELD = /e-?mail|phone|tel(ephone)?$|^tel|contact|^fax|mobile|^owner_?name|person|officer|case_?officer|agent_?name|applicant/i;
 
 // ---------------------------------------------------------------- output
-export function writeLines(file, meta, key, rows) {
+// size rule (coordinator, 2026-10-04: the repository and the Pages site are near their limits): a harvest file over
+// 1 MB is written gzipped (<file>.gz; pages read it with DecompressionStream) and the plain file removed. Returns the
+// bytes written to disk.
+export const GZ_OVER = 1e6;
+export function writeOut(file, text) {
   mkdirSync(dirname(file), { recursive: true });
-  const out = `{"meta":${JSON.stringify(meta, null, 1)},\n"${key}":[\n${rows.map(r => JSON.stringify(r)).join(',\n')}\n]}\n`;
-  writeFileSync(file, out); return out.length;
+  if (text.length > GZ_OVER && !/\/index\.json$/.test(file) || /\.gz$/.test(file)) {
+    const gz = gzipSync(Buffer.from(text)), f = /\.gz$/.test(file) ? file : file + '.gz';
+    writeFileSync(f, gz); try { rmSync(file.replace(/\.gz$/, '')); } catch { /* none */ } return gz.length;
+  }
+  writeFileSync(file, text); try { rmSync(file + '.gz'); } catch { /* none */ } return text.length;
+}
+export const outExists = f => existsSync(f) || existsSync(f + '.gz');
+export const readOut = f => JSON.parse(existsSync(f) ? readFileSync(f, 'utf8') : gunzipSync(readFileSync(f + '.gz')).toString('utf8'));
+export function writeLines(file, meta, key, rows) {
+  return writeOut(file, `{"meta":${JSON.stringify(meta, null, 1)},\n"${key}":[\n${rows.map(r => JSON.stringify(r)).join(',\n')}\n]}\n`);
 }
 export function writeGeojson(file, meta, features) {
-  mkdirSync(dirname(file), { recursive: true });
-  const out = `{"type":"FeatureCollection","meta":${JSON.stringify(meta, null, 1)},\n"features":[\n${features.map(f => JSON.stringify(f)).join(',\n')}\n]}\n`;
-  writeFileSync(file, out); return out.length;
+  return writeOut(file, `{"type":"FeatureCollection","meta":${JSON.stringify(meta, null, 1)},\n"features":[\n${features.map(f => JSON.stringify(f)).join(',\n')}\n]}\n`);
 }
 export async function* readLines(file) {
   const s = file.endsWith('.gz') ? createReadStream(file).pipe(createGunzip()) : createReadStream(file);

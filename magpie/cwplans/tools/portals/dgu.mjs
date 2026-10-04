@@ -3,7 +3,7 @@
 import { writeFileSync, existsSync, mkdirSync, createWriteStream } from 'fs';
 import { join } from 'path';
 import { createGzip } from 'zlib';
-import { getJson, politeFetch, RAWP, OUT, today, readLines, licenceClass, OPEN_CLASSES, ZONE, LONDON, ZONE_TEXT, CW_BOX, zonePlace, ZONE_BOROUGHS, OTHER_LONDON, projectText, writeLines, writeGeojson, meets, wholeIn, roundGeom, DROP_FIELD } from '../walk-portals.mjs';
+import { getJson, politeFetch, RAWP, OUT, today, readLines, licenceClass, OPEN_CLASSES, ZONE, LONDON, ZONE_TEXT, CW_BOX, zonePlace, ZONE_BOROUGHS, OTHER_LONDON, projectText, writeLines, writeGeojson, meets, wholeIn, roundGeom, DROP_FIELD , outExists, writeOut, readOut } from '../walk-portals.mjs';
 import { clipRing } from '../lib.mjs';
 
 const API = 'https://www.data.gov.uk/api/action/package_search';
@@ -87,7 +87,12 @@ const THEMES = {
   'people-housing': /census|population|deprivation|imd|income|employment|benefit|household|health|school|pupil|crime|fuel poverty|broadband|connectivity/i,
 };
 // by hand (with the reason); applied before the automatic rules
-const JUDGED = {};
+const JUDGED = {
+  'flood-map-for-planning-flood-zones1': ['held', 'harvested from planning.data.gov.uk (feeds/portals/pdg/flood-risk-zone/)'],
+  'aims-spatial-flood-defences-inc-standardised-attributes': ['held', 'EA spatial flood defences are held (source ea-defences)'],
+  'lidar-composite-dtm-2017-1m': ['held', 'EA LiDAR composite is held (source ea-lidar)'], 'lidar-composite-dsm-2017-1m': ['held', 'EA LiDAR composite is held (source ea-lidar)'],
+  'lidar-dsm-time-stamped-tiles': ['held', 'EA LiDAR DSM survey tiles are held (source ea-dsm-history)'], 'vertical-aerial-photography': ['held', 'EA survey imagery is held (source ea-survey-imagery)'],
+};
 // records with no licence whose resources all sit on a site whose terms license its content under OGL v3.0 (read
 // 2026-10-04): GOV.UK ("All content is available under the Open Government Licence v3.0, except where otherwise
 // stated"), ONS and Nomis, NHS Digital statistics, DfT road traffic, data.police.uk
@@ -152,7 +157,7 @@ export async function triage() {
     else if (!OPEN_CLASSES.includes(lic) && licUse !== 'ogl-site-terms') { state = 'not-open'; rule = 'T6'; why = `licence class ${lic}${d.licence_title ? ` (${d.licence_title})` : ''}${d.licence_text ? `: ${d.licence_text.slice(0, 120)}` : ''}`; }
     else if (rel === 'other-area') { state = 'not-relevant'; rule = 'T7'; why = relWhy; }
     else if (kind === 'document') { state = 'deferred'; rule = 'T8'; why = `documents or web pages only (${fmts.join(', ') || 'no format'})`; }
-    else if (ex(join(OUT, 'dgu', d.name.replace(/\d+$/, ''), `${d.name.replace(/\d+$/, '')}.geojson`))) { state = 'harvested'; rule = 'T9a'; why = `feeds/portals/dgu/${d.name.replace(/\d+$/, '')}/ (${PROBE[d.name]?.zone ?? '?'} zone features in the probe)`; }
+    else if (outExists(join(OUT, 'dgu', d.name, `${d.name}.geojson`))) { state = 'harvested'; rule = 'T9a'; why = `feeds/portals/dgu/${d.name}/ (${PROBE[d.name]?.zone ?? '?'} zone features in the probe)`; }
     else if (['zone-place', 'zone-borough', 'london-fine', 'national-fine'].includes(rel) && PROBE[d.name] && PROBE[d.name].zone === 0 && !PROBE[d.name].error && PROBE[d.name].layers.every(x => !x.error)) { state = 'not-relevant'; rule = 'T7b'; why = `the probe found no feature in the zone (${PROBE[d.name].layers.length} layers of ${PROBE[d.name].service})`; }
     else if (['zone-place', 'zone-borough', 'london-fine', 'national-fine'].includes(rel)) { state = 'listed-for-harvest'; rule = 'T9'; why = `${rel}: ${relWhy}${PROBE[d.name]?.zone ? `; probe: ${PROBE[d.name].zone} features in the zone` : PROBE[d.name] ? '; probe: no count (service error)' : ''}`; }
     else if (rel === 'national-coarse') { state = 'not-relevant'; rule = 'T10'; why = `coarser than a borough for the zone (${relWhy})`; }
@@ -195,13 +200,13 @@ export async function triage() {
   meta.bulk_note = 'states not listed one by one: every dataset name is in exactly one by_state list, keyed "state | rule | reason"; the full CKAN record is in the raw cache (walk) and on https://www.data.gov.uk/dataset/<name>';
   meta.dataset_page = 'https://www.data.gov.uk/dataset/<name>';
   const out = `{"meta":${JSON.stringify(meta, null, 1)},\n"datasets":[\n${detail.map(r => JSON.stringify((({ id, ...x }) => x)(r))).join(',\n')}\n],\n"by_state":{\n${Object.entries(groups).sort().map(([k, v]) => `${JSON.stringify(k)}:${JSON.stringify(v.sort())}`).join(',\n')}\n}}\n`;
-  writeFileSync(join(OUT, 'dgu', 'triage.json'), out);
+  writeOut(join(OUT, 'dgu', 'triage.json'), out);
   console.log(counts, perScope, `${(out.length / 1e6).toFixed(2)} MB`);
   return rows;
 }
 // the committed catalogue: the compact CKAN record of every dataset triage left listed, harvested, held, deferred or sensitive
 export async function catalogue() {
-  const t = JSON.parse((await import('fs')).readFileSync(join(OUT, 'dgu', 'triage.json'), 'utf8')), keep = new Set(t.datasets.map(r => r.name));
+  const t = readOut(join(OUT, 'dgu', 'triage.json')), keep = new Set(t.datasets.map(r => r.name));
   const rows = [];
   for await (const l of readLines(ALL)) { if (!l) continue; const d = JSON.parse(l); const sc = scopeOf(d); if (!keep.has(d.name)) continue; const { notes_len, tags, zone_place, org_title, ...k } = d; k.resources = k.resources.slice(0, 5).map(r => ({ f: r.f || undefined, u: r.u.slice(0, 180) })); rows.push({ scope: sc, ...k }); }
   writeLines(join(OUT, 'dgu', 'catalogue.json'), { portal: 'data.gov.uk', api: API, walked: today, rule: 'the datasets listed one by one in triage.json (listed for harvest, harvested, held, deferred, sensitive, judged); the rest are name lists in triage.json by_state. CKAN fields kept: id, name, title, organisation, licence id, title and INSPIRE licence text, dates, bounding box, area words of the description (not the text), up to 5 resources (format, URL to 180 characters)', count: rows.length }, 'datasets', rows);
@@ -225,7 +230,7 @@ async function arcCount(url) {
 }
 export async function probe(keys) {
   const { readFileSync, existsSync: ex } = await import('fs');
-  const t = JSON.parse(readFileSync(join(OUT, 'dgu', 'triage.json'), 'utf8'));
+  const t = readOut(join(OUT, 'dgu', 'triage.json'));
   const want = new Set(t.datasets.filter(d => d.state === 'listed-for-harvest' && (!keys.length || keys.includes(d.name))).map(d => d.name));
   const P = join(OUT, 'dgu', 'probe.json'); const old = ex(P) ? JSON.parse(readFileSync(P, 'utf8')).datasets : {};
   const out = { ...old }, capsCache = new Map(); let n = 0;
@@ -261,8 +266,14 @@ export async function probe(keys) {
 
 // ---- harvest: datasets the probe found in the zone, read from the same service with the box; polygons that cross
 // the box edge are cut at the box (most of these national layers run far beyond it). Size caps below.
-const CAP = { features: 6000, bytes: 3e6 };
+const CAP = { features: 6000, bytes: 1.5e6 };          // bytes on disk (gzipped over 1 MB)
 function clipGeom(g) {
+  if (/LineString/.test(g.type) && !wholeIn(g)) {        // keep the runs of vertices inside the box (plus one vertex either side)
+    const lines = g.type === 'LineString' ? [g.coordinates] : g.coordinates, out = [];
+    const inb = c => c[0] >= ZONE[0] && c[0] <= ZONE[2] && c[1] >= ZONE[1] && c[1] <= ZONE[3];
+    for (const l of lines) { let run = []; l.forEach((c, i) => { const keep = inb(c) || (l[i - 1] && inb(l[i - 1])) || (l[i + 1] && inb(l[i + 1])); if (keep) run.push(c); else if (run.length) { if (run.length > 1) out.push(run); run = []; } }); if (run.length > 1) out.push(run); }
+    return out.length ? [{ type: 'MultiLineString', coordinates: out }, true] : [null, true];
+  }
   if (!/Polygon/.test(g.type) || wholeIn(g)) return [g, false];
   const B = { x0: ZONE[0], x1: ZONE[2], z0: ZONE[1], z1: ZONE[3] }, polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
   const out = polys.map(pl => pl.map(r => clipRing(r.slice(0, -1), B)).filter(Boolean).map(r => [...r, r[0]])).filter(pl => pl.length);
@@ -299,9 +310,9 @@ export async function harvest(keys) {
     const meta = { source: `data.gov.uk: ${d.title} (${d.org_title})`, dgu_dataset: d.name, page: `https://www.data.gov.uk/dataset/${d.id}/${d.name}`, api: p.service, layers: layersUsed, fetched: today,
       licence: lic === 'ogl' ? 'Open Government Licence v3.0' : lic, licence_evidence: `${d.licence_title || d.licence_id || ''} ${d.licence_text || ''}`.trim().slice(0, 300),
       attribution: `Contains public sector information licensed under the Open Government Licence v3.0 (${d.org_title})`, zone: ZONE_TEXT,
-      method: `walk-portals.mjs dgu harvest ${name}: the service the probe counted, read with the zone box (WFS 2.0 GetFeature in EPSG:4326, or ArcGIS query with the envelope); polygons that cross the box edge are cut at the box (clipped_to_zone: for display, not for area sums); coordinates rounded to 6 decimals; empty fields, shape measures and fields matching ${DROP_FIELD} left out`,
+      method: `walk-portals.mjs dgu harvest ${name}: the service the probe counted, read with the zone box (WFS 2.0 GetFeature in EPSG:4326, or ArcGIS query with the envelope); polygons that cross the box edge are cut at the box, lines keep only their runs of vertices inside it plus one either side (clipped_to_zone: for display, not for area or length sums); coordinates rounded to 6 decimals; empty fields, shape measures and fields matching ${DROP_FIELD} left out`,
       counts: { features: feats.length, probe_zone_count: p.zone, clipped: feats.filter(f => f.properties.clipped_to_zone).length } };
-    const key = name.replace(/\d+$/, '');
+    const key = name;
     const file = join(OUT, 'dgu', key, `${key}.geojson`); mkdirSync(join(OUT, 'dgu', key), { recursive: true });
     const n = writeGeojson(file, meta, feats);
     if (n > CAP.bytes) { (await import('fs')).rmSync(join(OUT, 'dgu', key), { recursive: true }); console.log(`${name}: ${(n / 1e6).toFixed(1)} MB, over the size cap: not kept`); continue; }

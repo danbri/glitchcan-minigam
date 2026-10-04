@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { clipRing } from '../lib.mjs';
-import { getJson, rawJson, RAWP, OUT, today, ZONE, ZONE_TEXT, CW_BOX, meets, wholeIn, roundGeom, DROP_FIELD, writeLines, writeGeojson, licenceClass } from '../walk-portals.mjs';
+import { getJson, rawJson, RAWP, OUT, today, ZONE, ZONE_TEXT, CW_BOX, meets, wholeIn, roundGeom, DROP_FIELD, writeLines, writeGeojson, licenceClass , outExists, writeOut } from '../walk-portals.mjs';
 
 const BASE = 'https://www.planning.data.gov.uk';
 const WKT = `POLYGON((${ZONE[0]} ${ZONE[1]},${ZONE[2]} ${ZONE[1]},${ZONE[2]} ${ZONE[3]},${ZONE[0]} ${ZONE[3]},${ZONE[0]} ${ZONE[1]}))`;
@@ -68,7 +68,7 @@ export async function triage() {
   const rows = cat.datasets.map(d => {
     const lic = licenceClass(d.licence, d.attribution);
     let state, rule, why;
-    const harvested = H.has(d.dataset) && existsSync(join(OUT, 'pdg', d.dataset, `${d.dataset}.${HARVEST[d.dataset].fmt === 'table' ? 'json' : 'geojson'}`));
+    const harvested = H.has(d.dataset) && outExists(join(OUT, 'pdg', d.dataset, `${d.dataset}.${HARVEST[d.dataset].fmt === 'table' ? 'json' : 'geojson'}`));
     if (harvested) { state = 'harvested'; rule = 'P1'; why = `feeds/portals/pdg/${d.dataset}/`; }
     else if (JUDGED[d.dataset]) { [state, why] = JUDGED[d.dataset]; rule = 'P0'; }
     else if (d.end) { state = 'unavailable'; rule = 'P2'; why = `dataset ended ${d.end}${d.replacement ? `; replaced by ${d.replacement}` : ''}`; }

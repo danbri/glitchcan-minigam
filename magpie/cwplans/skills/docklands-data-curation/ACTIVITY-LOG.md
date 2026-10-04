@@ -807,3 +807,13 @@ central tower - do we have an index of these?"
 - OS Open Names: 4,066 named places, roads, stations, schools and waters in the box (postcode entries left out: held
   from ONSPD), 1.7 MB; OS Open Rivers: 34 features. GB downloads deleted after reading (disk was 1.9 GB free).
 - data.gov.uk service probe running (WFS hits and ArcGIS counts in the box for the 387 listed datasets with a service).
+
+## 2026-10-04 — Open-data portals walk, batch 4: data.gov.uk service probe and harvest; gzip rule
+- `dgu probe`: 384 listed datasets with a map service, 876 requests: 208 with zone features, 110 none (not-relevant
+  T7b), 66 errors. 14 harvested from it (1.9 MB): blue-space access points, Defra noise important areas and rail noise
+  Lden round 3, EA rivers-and-sea flood risk extents, flood warning areas, recorded and historic flood outlines, main
+  rivers, hydrometric points, TE2100 water-level nodes, water recreation, Natural England priority habitats and
+  priority ponds, the Thames Path. Road noise, Living England, surface-water flood risk: available on request (size).
+- National: IMD 2025 (File 7) for the 318 zone LSOAs.
+- Coordinator's size rule applied: files over 1 MB now written gzipped by the tool; six existing files converted
+  (dgu catalogue and triage, DESNZ energy, OS Open Names, EA flood zones, listed building outlines: 9.0 MB to 1.7 MB).

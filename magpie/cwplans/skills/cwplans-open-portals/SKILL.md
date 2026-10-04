@@ -169,8 +169,21 @@ from ONSPD) and OS Open Rivers (GeoPackage read with readGpkg from walk-london-d
 reading; DESNZ electricity and gas workbooks (zone LSOA and MSOA rows, 2011 and 2021 codes; the header row is
 the first short cell naming an LSOA/MSOA code, not the notes above it). Ofcom refuses scripts (403).
 
+## Service probe (data.gov.uk)
+
+`dgu probe` counts the features in the zone box for every listed dataset with a map service (EA spatialdata WFS
+`resultType=hits`; ArcGIS `returnCountOnly`; other WFS); `probe.json` keeps the count per layer. Triage reads it: 0
+everywhere with no error is not-relevant (T7b), a count triples the score. `dgu harvest <name ...>` reads the counted
+layers with the box (WFS GeoJSON in EPSG:4326, ArcGIS f=geojson), cuts polygons and lines at the box, and keeps a file
+only under the size cap (6,000 features, 1.5 MB on disk). 384 probed on 2026-10-04 (876 requests, about 90 minutes).
+
 ## Size rules
 
+Coordinator, 2026-10-04: the repository (531 MB tracked, 1 GB pack) and the Pages site (1 GB limit) are near their
+limits. `writeOut` in walk-portals.mjs writes any output over 1 MB gzipped (`<file>.gz`; pages read it with
+DecompressionStream) and removes the plain file; `outExists` and `readOut` read either. Commit only compact zone
+extracts with rounded coordinates and the fields used; large tables stay raw and are listed as "available on
+request" in the README; stop and report before the walk's committed additions pass 40 MB.
 Commit zone extracts only; national files stay in `data/raw/portals/` (gitignored, `.gitignore` line
 `data/raw/portals`). Round coordinates to 6 decimals; cut very large polygons at the box when only the zone part is
 useful, and say so in the meta. Report the size of each batch in the activity log. Disk in the container is small

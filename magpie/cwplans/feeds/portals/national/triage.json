@@ -2,11 +2,11 @@
  "portal": "national sources of the brief",
  "triaged": "2026-10-04",
  "counts": {
-  "harvested": 6,
+  "harvested": 7,
   "unavailable": 1,
   "not-open": 2,
   "held": 7,
-  "listed-for-harvest": 2,
+  "listed-for-harvest": 1,
   "not-relevant": 1,
   "deferred": 1
  },
@@ -33,6 +33,6 @@
 {"key":"os-open-usrn-roads","name":"OS Open USRN, Open Roads, Built Up Areas","licence":"OGL (OS OpenData)","state":"listed-for-harvest","reason":"GB downloads of 0.3 to 1 GB; the container had about 2 GB of free disk on 2026-10-04: one product at a time, zone extract only, the download deleted after reading"},
 {"key":"coal-authority","name":"Coal Authority mining reporting areas","licence":"Open Government Licence v3.0","state":"not-relevant","reason":"London is outside the coalfield"},
 {"key":"bgs","name":"British Geological Survey datasets","licence":"BGS terms per product (OGL for some, commercial for others)","state":"deferred","reason":"4,128 BGS records on data.gov.uk have no licence field; BGS Geology 625k/50k licences to be read per product before use"},
-{"key":"ons-imd","name":"English Indices of Deprivation 2025 by LSOA","licence":"Open Government Licence v3.0","state":"listed-for-harvest","reason":"GOV.UK statistics (MHCLG); zone LSOA rows"},
+{"key":"mhclg-imd2025","name":"English Indices of Deprivation 2025 by LSOA (MHCLG, File 7)","licence":"Open Government Licence v3.0","state":"harvested","reason":"feeds/portals/national/mhclg-imd2025/mhclg-imd2025.json"},
 {"key":"epc","name":"Energy Performance Certificates (domestic and non-domestic)","licence":"OGL for data, but address data under Royal Mail / OS terms; registration required","state":"not-open","reason":"download needs an account and accepts terms that restrict address data"}
 ]}

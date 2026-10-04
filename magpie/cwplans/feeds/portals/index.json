@@ -227,19 +227,119 @@
    "datasets_seen": 59451,
    "in_scope": 25492,
    "counts": {
-    "listed-for-harvest": 1257,
-    "not-relevant": 9035,
+    "listed-for-harvest": 1126,
+    "not-relevant": 9145,
     "deferred": 1990,
     "not-open": 4809,
     "unavailable": 3199,
-    "walked-elsewhere": 5113,
+    "walked-elsewhere": 5109,
+    "held": 28,
     "sensitive": 72,
-    "held": 17
+    "harvested": 14
    },
-   "harvested_files": 0,
-   "harvested_bytes": 0,
-   "catalogue_bytes": 4240685,
-   "harvested": []
+   "harvested_files": 14,
+   "harvested_bytes": 1862417,
+   "catalogue_bytes": 665933,
+   "harvested": [
+    {
+     "key": "blue-space-access-points-in-england",
+     "file": "dgu/blue-space-access-points-in-england/blue-space-access-points-in-england.geojson",
+     "bytes": 596379,
+     "items": 1193,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "flood-warning-areas3",
+     "file": "dgu/flood-warning-areas3/flood-warning-areas3.geojson",
+     "bytes": 117553,
+     "items": 16,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "historic-flood-map1",
+     "file": "dgu/historic-flood-map1/historic-flood-map1.geojson",
+     "bytes": 30095,
+     "items": 30,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "hydrometric-monitoring-points1",
+     "file": "dgu/hydrometric-monitoring-points1/hydrometric-monitoring-points1.geojson",
+     "bytes": 7455,
+     "items": 13,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "national-trails-england3",
+     "file": "dgu/national-trails-england3/national-trails-england3.geojson",
+     "bytes": 19415,
+     "items": 1,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "noise-action-planning-important-areas-round-3-england",
+     "file": "dgu/noise-action-planning-important-areas-round-3-england/noise-action-planning-important-areas-round-3-england.geojson",
+     "bytes": 326675,
+     "items": 47,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "priority-habitats-inventory-england",
+     "file": "dgu/priority-habitats-inventory-england/priority-habitats-inventory-england.geojson.gz",
+     "bytes": 222806,
+     "items": 429,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "rail-noise-lden-england-round-3",
+     "file": "dgu/rail-noise-lden-england-round-3/rail-noise-lden-england-round-3.geojson.gz",
+     "bytes": 127692,
+     "items": 2350,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "recorded-flood-outlines1",
+     "file": "dgu/recorded-flood-outlines1/recorded-flood-outlines1.geojson",
+     "bytes": 41483,
+     "items": 10,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "rivers-and-sea-3-3-defended-flood-risk-extents-present-day",
+     "file": "dgu/rivers-and-sea-3-3-defended-flood-risk-extents-present-day/rivers-and-sea-3-3-defended-flood-risk-extents-present-day.geojson.gz",
+     "bytes": 242294,
+     "items": 68,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "statutory-main-river-map",
+     "file": "dgu/statutory-main-river-map/statutory-main-river-map.geojson",
+     "bytes": 25912,
+     "items": 54,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "surveyed-priority-ponds-points",
+     "file": "dgu/surveyed-priority-ponds-points/surveyed-priority-ponds-points.geojson",
+     "bytes": 7775,
+     "items": 10,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "thames-estuary-2100-extreme-water-level-nodes",
+     "file": "dgu/thames-estuary-2100-extreme-water-level-nodes/thames-estuary-2100-extreme-water-level-nodes.geojson",
+     "bytes": 7564,
+     "items": 20,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "water-recreation-locations-zones-and-catchment-summaries-england",
+     "file": "dgu/water-recreation-locations-zones-and-catchment-summaries-england/water-recreation-locations-zones-and-catchment-summaries-england.geojson",
+     "bytes": 89319,
+     "items": 11,
+     "licence": "Open Government Licence v3.0"
+    }
+   ]
   },
   "national": {
    "portal": "national sources of the brief",
@@ -247,22 +347,22 @@
    "datasets_seen": null,
    "in_scope": null,
    "counts": {
-    "harvested": 6,
+    "harvested": 7,
     "unavailable": 1,
     "not-open": 2,
     "held": 7,
-    "listed-for-harvest": 2,
+    "listed-for-harvest": 1,
     "not-relevant": 1,
     "deferred": 1
    },
-   "harvested_files": 6,
-   "harvested_bytes": 4285876,
-   "catalogue_bytes": 10580,
+   "harvested_files": 7,
+   "harvested_bytes": 1360068,
+   "catalogue_bytes": 10607,
    "harvested": [
     {
      "key": "desnz-energy",
-     "file": "national/desnz-energy/desnz-energy.json",
-     "bytes": 2044331,
+     "file": "national/desnz-energy/desnz-energy.json.gz",
+     "bytes": 506935,
      "items": 15500,
      "licence": "Open Government Licence v3.0"
     },
@@ -281,9 +381,16 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "mhclg-imd2025",
+     "file": "national/mhclg-imd2025/mhclg-imd2025.json",
+     "bytes": 98856,
+     "items": 318,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "os-open-names",
-     "file": "national/os-open-names/os-open-names.geojson",
-     "bytes": 1662815,
+     "file": "national/os-open-names/os-open-names.geojson.gz",
+     "bytes": 175547,
      "items": 4066,
      "licence": "Open Government Licence v3.0"
     },
@@ -868,7 +975,7 @@
     "held": 11
    },
    "harvested_files": 26,
-   "harvested_bytes": 7070161,
+   "harvested_bytes": 4868618,
    "catalogue_bytes": 137990,
    "harvested": [
     {
@@ -950,8 +1057,8 @@
     },
     {
      "key": "flood-risk-zone",
-     "file": "pdg/flood-risk-zone/flood-risk-zone.geojson",
-     "bytes": 1183504,
+     "file": "pdg/flood-risk-zone/flood-risk-zone.geojson.gz",
+     "bytes": 226861,
      "items": 824,
      "licence": "Open Government Licence v3.0"
     },
@@ -985,8 +1092,8 @@
     },
     {
      "key": "listed-building-outline",
-     "file": "pdg/listed-building-outline/listed-building-outline.geojson",
-     "bytes": 1474809,
+     "file": "pdg/listed-building-outline/listed-building-outline.geojson.gz",
+     "bytes": 229909,
      "items": 1557,
      "licence": "Open Government Licence v3.0"
     },

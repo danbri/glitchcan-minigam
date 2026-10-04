@@ -14,7 +14,11 @@ Portal: https://www.data.gov.uk/ (CKAN API `api/action/package_search`; robots.t
 | S4 | any other publisher whose title or tags name a zone place or borough | 4 |
 | out | other publishers (Scottish, Welsh and NI bodies, other councils, MEDIN...): counted per organisation in `triage.json` meta | 33,959 |
 
-## Final states (25,492 in scope)
+## Final states (25,492 in scope; after the service probe)
+
+`node magpie/cwplans/tools/walk-portals.mjs dgu triage` on 2026-10-04 after the probe: not-relevant 9,145,
+walked-elsewhere 5,109, not-open 4,809, unavailable 3,199, deferred 1,990, listed-for-harvest 1,126, sensitive 72,
+held 28, harvested 14. The counts below are from the first triage, before the probe.
 
 Run `node magpie/cwplans/tools/walk-portals.mjs dgu triage` for the current counts; on 2026-10-04: not-relevant
 9,035, walked-elsewhere 5,113, not-open 4,809, unavailable 3,199, deferred 1,990, listed-for-harvest 1,257,
@@ -41,6 +45,36 @@ Trust 5, Lewisham 4, others 13. Most are national spatial layers whose metadata 
 anything in the zone; the next step is a probe of their services (WFS hits and ArcGIS counts in the box, the "area
 from the data" rule of the London Datastore walk). Datasets of high value for the zone are harvested through the
 national adapters (`../national/`) or through planning.data.gov.uk (`../pdg/`), which re-serves several of them.
+
+## Service probe: the area from the data (`probe.json`)
+
+`walk-portals.mjs dgu probe` asked every listed dataset with a map service how many features meet the zone box: EA
+`environment.data.gov.uk/spatialdata/<name>/wfs` (WFS 2.0 `resultType=hits`, up to 6 feature types), ArcGIS
+FeatureServer/MapServer (`returnCountOnly`, up to 10 layers), other WFS. 384 datasets, 876 requests (about 90
+minutes): 208 with features in the zone, 110 with none (state not-relevant, rule T7b), 66 with no count (service
+errors). A positive probe triples the score. The EA `/geoservices` path is disallowed by robots.txt and not used.
+
+## Harvested from the probe (14 datasets, 1.9 MB; files over 1 MB gzipped)
+
+| dataset | features | size |
+|---|---|---|
+| `blue-space-access-points-in-england` (Defra) | 1,193 | 596 kB |
+| `noise-action-planning-important-areas-round-3-england` (Defra) | 47 | 327 kB |
+| `rivers-and-sea-3-3-defended-flood-risk-extents-present-day` (EA) | 68, cut at the box | 242 kB |
+| `priority-habitats-inventory-england` (Natural England) | 429, cut at the box | 223 kB |
+| `rail-noise-lden-england-round-3` (Defra) | 2,350 | 128 kB (gzipped) |
+| `flood-warning-areas3` (EA) | 16 | 118 kB |
+| `water-recreation-locations-zones-and-catchment-summaries-england` (EA) | 11 | 89 kB |
+| `recorded-flood-outlines1` (EA) | 10 | 41 kB |
+| `historic-flood-map1` (EA) | 30 | 30 kB |
+| `statutory-main-river-map` (EA) | 54 | 26 kB |
+| `national-trails-england3` (Natural England: the Thames Path, cut to the box) | 1 | 19 kB |
+| `hydrometric-monitoring-points1`, `thames-estuary-2100-extreme-water-level-nodes`, `surveyed-priority-ponds-points` | 13, 20, 10 | 23 kB |
+
+Available on request (not committed: size): road noise round 3 (Lden 11,139, LAeq16h 10,420, Lnight 7,981
+polygons in the zone), rail noise LAeq16h and Lnight, the Living England habitat maps (8,811), surface-water flood
+risk (hazard, speed, depth; 1,240 to 1,465 features; flow direction 682,386), rivers-and-sea depths, the crop map,
+overland flow pathways. EA Flood Map for Planning zones are held from planning.data.gov.uk.
 
 ## Traps met
 

@@ -5,7 +5,7 @@ import { readFileSync, existsSync, statSync, rmSync } from 'fs';
 import { join } from 'path';
 import { execFileSync, spawn } from 'child_process';
 import { createInterface } from 'readline';
-import { politeFetch, rawFile, RAWP, OUT, today, ZONE_TEXT, writeLines, zoneRefs } from '../walk-portals.mjs';
+import { politeFetch, rawFile, RAWP, OUT, today, ZONE_TEXT, writeLines, zoneRefs , outExists, writeOut } from '../walk-portals.mjs';
 
 const BASE = 'https://www.nomisweb.co.uk';
 const PAGE = `${BASE}/sources/census_2021_bulk`;
@@ -45,7 +45,7 @@ const JUDGED = {
 export async function triage() {
   const cat = readJson(CAT);
   const rows = cat.tables.map(t => {
-    const keys = ['oa', 'lsoa', 'msoa'].map(l => `census2021-${t.table.toLowerCase()}-${l}`), key = keys.find(k => existsSync(join(OUT, 'nomis', k, `${k}.json`)));
+    const keys = ['oa', 'lsoa', 'msoa'].map(l => `census2021-${t.table.toLowerCase()}-${l}`), key = keys.find(k => outExists(join(OUT, 'nomis', k, `${k}.json`)));
     let state, rule, why;
     if (key) { state = 'harvested'; rule = 'N1'; why = `feeds/portals/nomis/${key}/ (zone ${key.endsWith('-oa') ? 'output areas' : key.endsWith('-lsoa') ? 'LSOAs: no OA file in the zip' : 'MSOAs: no OA or LSOA file in the zip'})`; }
     else if (JUDGED[t.table]) { [state, why] = JUDGED[t.table]; rule = 'N0'; }

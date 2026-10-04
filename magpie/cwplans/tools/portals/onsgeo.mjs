@@ -3,7 +3,7 @@
 // lookups by ArcGIS query. Rules and reasons: skills/cwplans-open-portals/SKILL.md, "ONS Open Geography".
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { getJson, OUT, today, ZONE, ZONE_TEXT, CW_BOX, meets, wholeIn, roundGeom, writeLines, writeGeojson, licenceClass, zoneRefs } from '../walk-portals.mjs';
+import { getJson, OUT, today, ZONE, ZONE_TEXT, CW_BOX, meets, wholeIn, roundGeom, writeLines, writeGeojson, licenceClass, zoneRefs , outExists, writeOut } from '../walk-portals.mjs';
 
 const ORG = 'ESMARspQHYMw9BZ9';
 const SEARCH = 'https://www.arcgis.com/sharing/rest/search';
@@ -46,7 +46,7 @@ export async function triage() {
     const yr = +((/\b(19|20)\d\d\b/.exec(it.title) || [])[0] || 0);
     const H = Object.entries(HARVEST).find(([, h]) => h.id === it.id);
     let state, rule, why;
-    if (H && existsSync(join(OUT, 'onsgeo', H[0], `${H[0]}.${H[1].table ? 'json' : 'geojson'}`))) { state = 'harvested'; rule = 'G1'; why = `feeds/portals/onsgeo/${H[0]}/`; }
+    if (H && outExists(join(OUT, 'onsgeo', H[0], `${H[0]}.${H[1].table ? 'json' : 'geojson'}`))) { state = 'harvested'; rule = 'G1'; why = `feeds/portals/onsgeo/${H[0]}/`; }
     else if (/ONS Postcode Directory \(August 2026\)/i.test(it.title)) { state = 'held'; rule = 'G2'; why = 'ONSPD August 2026 is the zone reference (zone-codes.json, postcodes/)'; }
     else if (/(Lower layer|Middle layer) Super Output Areas \(December 2021\) Boundaries EW BFC/i.test(it.title)) { state = 'held'; rule = 'G2'; why = 'LSOA/MSOA 2021 polygons held from the London Datastore (statistical-boundaries)'; }
     else if (!['ogl', 'cc-by', 'public-domain', 'odc-by'].includes(lic)) { state = 'not-open'; rule = 'G3'; why = `licence: ${it.licence_text || 'none stated'}`; }

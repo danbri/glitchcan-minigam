@@ -6842,6 +6842,76 @@
           "request": "boroughs harvest lewisham-ev-chargepoints"
         },
         {
+          "source": "op-dgu-blue-space-access-points-in-england",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/england-blue-space-access-points/wfs",
+          "request": "dgu harvest blue-space-access-points-in-england"
+        },
+        {
+          "source": "op-dgu-flood-warning-areas3",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/flood-warning-areas/wfs",
+          "request": "dgu harvest flood-warning-areas3"
+        },
+        {
+          "source": "op-dgu-historic-flood-map1",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/historic-flood-map/wfs",
+          "request": "dgu harvest historic-flood-map1"
+        },
+        {
+          "source": "op-dgu-hydrometric-monitoring-points1",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/hydrometric-monitoring-points/wfs",
+          "request": "dgu harvest hydrometric-monitoring-points1"
+        },
+        {
+          "source": "op-dgu-national-trails-england3",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/national-trails-england/wfs",
+          "request": "dgu harvest national-trails-england3"
+        },
+        {
+          "source": "op-dgu-noise-action-planning-important-areas-round-3-england",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/noise-action-planning-important-areas-round-3-england/wfs",
+          "request": "dgu harvest noise-action-planning-important-areas-round-3-england"
+        },
+        {
+          "source": "op-dgu-priority-habitats-inventory-england",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/priority-habitat-inventory-england/wfs",
+          "request": "dgu harvest priority-habitats-inventory-england"
+        },
+        {
+          "source": "op-dgu-rail-noise-lden-england-round-3",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/rail-noise-lden-england-round-3/wfs",
+          "request": "dgu harvest rail-noise-lden-england-round-3"
+        },
+        {
+          "source": "op-dgu-recorded-flood-outlines1",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/recorded-flood-outlines/wfs",
+          "request": "dgu harvest recorded-flood-outlines1"
+        },
+        {
+          "source": "op-dgu-rivers-and-sea-3-3-defended-flood-risk-extents-present-day",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/rivers-and-sea-1in30-defended-flood-risk-extents-present-day/wfs",
+          "request": "dgu harvest rivers-and-sea-3-3-defended-flood-risk-extents-present-day"
+        },
+        {
+          "source": "op-dgu-statutory-main-river-map",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/statutory-main-river-map/wfs",
+          "request": "dgu harvest statutory-main-river-map"
+        },
+        {
+          "source": "op-dgu-surveyed-priority-ponds-points",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/surveyed-priority-ponds-england/wfs",
+          "request": "dgu harvest surveyed-priority-ponds-points"
+        },
+        {
+          "source": "op-dgu-thames-estuary-2100-extreme-water-level-nodes",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/thames-estuary-2100-extreme-water-level-nodes/wfs",
+          "request": "dgu harvest thames-estuary-2100-extreme-water-level-nodes"
+        },
+        {
+          "source": "op-dgu-water-recreation-locations-zones-and-catchment-summaries-england",
+          "endpoint": "https://environment.data.gov.uk/spatialdata/water-recreation-locations-zones-catchment/wfs",
+          "request": "dgu harvest water-recreation-locations-zones-and-catchment-summaries-england"
+        },
+        {
           "source": "op-nat-desnz-energy",
           "endpoint": "https://www.gov.uk/government/statistics/lower-and-middle-super-output-areas-electricity-consumption ; https://www.gov.uk/government/statistics/lower-and-middle-super-output-areas-gas-consumption",
           "request": "national harvest desnz-energy"
@@ -6855,6 +6925,11 @@
           "source": "op-nat-dft-stats19",
           "endpoint": "https://roadtraffic.dft.gov.uk/",
           "request": "national harvest dft-stats19"
+        },
+        {
+          "source": "op-nat-mhclg-imd2025",
+          "endpoint": "https://www.gov.uk/government/statistics/english-indices-of-deprivation-2025",
+          "request": "national harvest mhclg-imd2025"
         },
         {
           "source": "op-nat-os-open-names",
@@ -7480,13 +7555,55 @@
           "file": "feeds/portals/boroughs/triage.json"
         },
         {
-          "file": "feeds/portals/dgu/catalogue.json"
+          "file": "feeds/portals/dgu/blue-space-access-points-in-england/blue-space-access-points-in-england.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/catalogue.json.gz"
+        },
+        {
+          "file": "feeds/portals/dgu/flood-warning-areas3/flood-warning-areas3.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/historic-flood-map1/historic-flood-map1.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/hydrometric-monitoring-points1/hydrometric-monitoring-points1.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/national-trails-england3/national-trails-england3.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/noise-action-planning-important-areas-round-3-england/noise-action-planning-important-areas-round-3-england.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/priority-habitats-inventory-england/priority-habitats-inventory-england.geojson.gz"
         },
         {
           "file": "feeds/portals/dgu/probe.json"
         },
         {
-          "file": "feeds/portals/dgu/triage.json"
+          "file": "feeds/portals/dgu/rail-noise-lden-england-round-3/rail-noise-lden-england-round-3.geojson.gz"
+        },
+        {
+          "file": "feeds/portals/dgu/recorded-flood-outlines1/recorded-flood-outlines1.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/rivers-and-sea-3-3-defended-flood-risk-extents-present-day/rivers-and-sea-3-3-defended-flood-risk-extents-present-day.geojson.gz"
+        },
+        {
+          "file": "feeds/portals/dgu/statutory-main-river-map/statutory-main-river-map.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/surveyed-priority-ponds-points/surveyed-priority-ponds-points.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/thames-estuary-2100-extreme-water-level-nodes/thames-estuary-2100-extreme-water-level-nodes.geojson"
+        },
+        {
+          "file": "feeds/portals/dgu/triage.json.gz"
+        },
+        {
+          "file": "feeds/portals/dgu/water-recreation-locations-zones-and-catchment-summaries-england/water-recreation-locations-zones-and-catchment-summaries-england.geojson"
         },
         {
           "file": "feeds/portals/index.json"
@@ -7495,7 +7612,7 @@
           "file": "feeds/portals/national/catalogue.json"
         },
         {
-          "file": "feeds/portals/national/desnz-energy/desnz-energy.json"
+          "file": "feeds/portals/national/desnz-energy/desnz-energy.json.gz"
         },
         {
           "file": "feeds/portals/national/dft-aadf/dft-aadf.geojson"
@@ -7504,7 +7621,10 @@
           "file": "feeds/portals/national/dft-stats19/dft-stats19.json"
         },
         {
-          "file": "feeds/portals/national/os-open-names/os-open-names.geojson"
+          "file": "feeds/portals/national/mhclg-imd2025/mhclg-imd2025.json"
+        },
+        {
+          "file": "feeds/portals/national/os-open-names/os-open-names.geojson.gz"
         },
         {
           "file": "feeds/portals/national/os-open-rivers/os-open-rivers.geojson"
@@ -7786,7 +7906,7 @@
           "file": "feeds/portals/pdg/developer-agreement-transaction/developer-agreement-transaction.json"
         },
         {
-          "file": "feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson"
+          "file": "feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson.gz"
         },
         {
           "file": "feeds/portals/pdg/heritage-at-risk/heritage-at-risk.geojson"
@@ -7801,7 +7921,7 @@
           "file": "feeds/portals/pdg/listed-building/listed-building.geojson"
         },
         {
-          "file": "feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson"
+          "file": "feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson.gz"
         },
         {
           "file": "feeds/portals/pdg/local-area-requirements/local-area-requirements.json"

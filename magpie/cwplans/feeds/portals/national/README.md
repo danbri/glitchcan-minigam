@@ -16,7 +16,7 @@ sources, with API, licence, robots.txt and state, is written by hand in the adap
 | OS Open Names | harvested | `os-open-names/`: 4,066 named places, roads, stations, schools, waters in the box from the GB CSV (tiles TQ26 and TQ28: the GB file uses 20 km tiles), with DBpedia and GeoNames links; the 11,272 postcode entries are left out (postcode centres are held from ONSPD). 1.7 MB |
 | OS Open Rivers | harvested | `os-open-rivers/`: 19 watercourse links and 15 hydro nodes with a vertex in the box. 15 kB |
 | OS Open USRN, Open Roads, Built Up Areas | listed-for-harvest | GB downloads of 0.3 to 1 GB; the container had about 2 GB of free disk on 2026-10-04 |
-| English Indices of Deprivation 2025 by LSOA | listed-for-harvest | GOV.UK, OGL |
+| English Indices of Deprivation 2025 (MHCLG) | harvested | `mhclg-imd2025/`: File 7, all ranks, scores, deciles and denominators for the 318 zone LSOAs. 99 kB |
 | BGS | deferred | licences differ per product; read each before use |
 | Coal Authority | not-relevant | London is outside the coalfield |
 | EPC register | not-open | account and address-data terms |

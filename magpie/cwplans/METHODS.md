@@ -2708,9 +2708,24 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - **op-bor-city-tower-of-london-whs-local-setting-area** (City of London INSPIRE map service: Tower of London WHS Local Setting Area, Open Government Licence v3.0): https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/131/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>; boroughs harvest city-tower-of-london-whs-local-setting-area
   - **op-bor-city-underground-stations** (City of London INSPIRE map service: Underground Stations, Open Government Licence v3.0): https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/19/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>; boroughs harvest city-underground-stations
   - **op-bor-lewisham-ev-chargepoints** (Open Data Lewisham, Open Government Licence v3.0): https://raw.githubusercontent.com/lb-lewisham/open-data-lewisham/gh-pages/_datasets/data/lewisham_electric_vehicle_charging_locations.geojson; boroughs harvest lewisham-ev-chargepoints
+  - **op-dgu-blue-space-access-points-in-england** (data.gov.uk: Blue space access points in England, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/england-blue-space-access-points/wfs; dgu harvest blue-space-access-points-in-england
+  - **op-dgu-flood-warning-areas3** (data.gov.uk: Flood Warning Areas, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/flood-warning-areas/wfs; dgu harvest flood-warning-areas3
+  - **op-dgu-historic-flood-map1** (data.gov.uk: Historic Flood Map, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/historic-flood-map/wfs; dgu harvest historic-flood-map1
+  - **op-dgu-hydrometric-monitoring-points1** (data.gov.uk: Hydrometric Monitoring Points, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/hydrometric-monitoring-points/wfs; dgu harvest hydrometric-monitoring-points1
+  - **op-dgu-national-trails-england3** (data.gov.uk: National Trails, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/national-trails-england/wfs; dgu harvest national-trails-england3
+  - **op-dgu-noise-action-planning-important-areas-round-3-england** (data.gov.uk: Noise Action Planning Important Areas Round 3 England, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/noise-action-planning-important-areas-round-3-england/wfs; dgu harvest noise-action-planning-important-areas-round-3-england
+  - **op-dgu-priority-habitats-inventory-england** (data.gov.uk: Priority Habitats Inventory, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/priority-habitat-inventory-england/wfs; dgu harvest priority-habitats-inventory-england
+  - **op-dgu-rail-noise-lden-england-round-3** (data.gov.uk: Rail Noise - Lden - England Round 3, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/rail-noise-lden-england-round-3/wfs; dgu harvest rail-noise-lden-england-round-3
+  - **op-dgu-recorded-flood-outlines1** (data.gov.uk: Recorded Flood Outlines, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/recorded-flood-outlines/wfs; dgu harvest recorded-flood-outlines1
+  - **op-dgu-rivers-and-sea-3-3-defended-flood-risk-extents-present-day** (data.gov.uk: Rivers and Sea 3.3% defended flood risk extents - present day, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/rivers-and-sea-1in30-defended-flood-risk-extents-present-day/wfs; dgu harvest rivers-and-sea-3-3-defended-flood-risk-extents-present-day
+  - **op-dgu-statutory-main-river-map** (data.gov.uk: Statutory Main River Map, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/statutory-main-river-map/wfs; dgu harvest statutory-main-river-map
+  - **op-dgu-surveyed-priority-ponds-points** (data.gov.uk: Surveyed Priority Ponds, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/surveyed-priority-ponds-england/wfs; dgu harvest surveyed-priority-ponds-points
+  - **op-dgu-thames-estuary-2100-extreme-water-level-nodes** (data.gov.uk: Thames Estuary 2100 Extreme Water Level nodes, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/thames-estuary-2100-extreme-water-level-nodes/wfs; dgu harvest thames-estuary-2100-extreme-water-level-nodes
+  - **op-dgu-water-recreation-locations-zones-and-catchment-summaries-england** (data.gov.uk: Water recreation locations, zones and catchment summaries, Open Government Licence v3.0): https://environment.data.gov.uk/spatialdata/water-recreation-locations-zones-catchment/wfs; dgu harvest water-recreation-locations-zones-and-catchment-summaries-england
   - **op-nat-desnz-energy** (DESNZ sub-national electricity and gas consumption statistics, LSOA and MSOA, 2010-2024, Open Government Licence v3.0): https://www.gov.uk/government/statistics/lower-and-middle-super-output-areas-electricity-consumption ; https://www.gov.uk/government/statistics/lower-and-middle-super-output-areas-gas-consumption; national harvest desnz-energy
   - **op-nat-dft-aadf** (DfT road traffic statistics: annual average daily flow by count point, Open Government Licence v3.0): https://roadtraffic.dft.gov.uk/; national harvest dft-aadf
   - **op-nat-dft-stats19** (DfT road safety data, Open Government Licence v3.0): https://roadtraffic.dft.gov.uk/; national harvest dft-stats19
+  - **op-nat-mhclg-imd2025** (English Indices of Deprivation 2025, File 7: all ranks, scores, deciles and population denominators by LSOA 2021, Open Government Licence v3.0): https://www.gov.uk/government/statistics/english-indices-of-deprivation-2025; national harvest mhclg-imd2025
   - **op-nat-os-open-names** (OS Open Names, Open Government Licence v3.0): https://api.os.uk/downloads/v1/products/OpenNames/downloads?area=GB&format=CSV&redirect; national harvest os-open-names
   - **op-nat-os-open-rivers** (OS Open Rivers, Open Government Licence v3.0): https://api.os.uk/downloads/v1/products/OpenRivers/downloads?area=GB&format=GeoPackage&redirect; national harvest os-open-rivers
   - **op-nat-police-crime** (police.uk street-level crime, Open Government Licence v3.0): https://data.police.uk/api/crimes-street/all-crime?poly=<6 tiles of the box>&date=<month>; national harvest police-crime
@@ -2849,15 +2864,30 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - [feeds/portals/boroughs/city-underground-stations/city-underground-stations.geojson](feeds/portals/boroughs/city-underground-stations/city-underground-stations.geojson)
   - [feeds/portals/boroughs/lewisham-ev-chargepoints/lewisham-ev-chargepoints.geojson](feeds/portals/boroughs/lewisham-ev-chargepoints/lewisham-ev-chargepoints.geojson)
   - [feeds/portals/boroughs/triage.json](feeds/portals/boroughs/triage.json)
-  - [feeds/portals/dgu/catalogue.json](feeds/portals/dgu/catalogue.json)
+  - [feeds/portals/dgu/blue-space-access-points-in-england/blue-space-access-points-in-england.geojson](feeds/portals/dgu/blue-space-access-points-in-england/blue-space-access-points-in-england.geojson)
+  - [feeds/portals/dgu/catalogue.json.gz](feeds/portals/dgu/catalogue.json.gz)
+  - [feeds/portals/dgu/flood-warning-areas3/flood-warning-areas3.geojson](feeds/portals/dgu/flood-warning-areas3/flood-warning-areas3.geojson)
+  - [feeds/portals/dgu/historic-flood-map1/historic-flood-map1.geojson](feeds/portals/dgu/historic-flood-map1/historic-flood-map1.geojson)
+  - [feeds/portals/dgu/hydrometric-monitoring-points1/hydrometric-monitoring-points1.geojson](feeds/portals/dgu/hydrometric-monitoring-points1/hydrometric-monitoring-points1.geojson)
+  - [feeds/portals/dgu/national-trails-england3/national-trails-england3.geojson](feeds/portals/dgu/national-trails-england3/national-trails-england3.geojson)
+  - [feeds/portals/dgu/noise-action-planning-important-areas-round-3-england/noise-action-planning-important-areas-round-3-england.geojson](feeds/portals/dgu/noise-action-planning-important-areas-round-3-england/noise-action-planning-important-areas-round-3-england.geojson)
+  - [feeds/portals/dgu/priority-habitats-inventory-england/priority-habitats-inventory-england.geojson.gz](feeds/portals/dgu/priority-habitats-inventory-england/priority-habitats-inventory-england.geojson.gz)
   - [feeds/portals/dgu/probe.json](feeds/portals/dgu/probe.json)
-  - [feeds/portals/dgu/triage.json](feeds/portals/dgu/triage.json)
+  - [feeds/portals/dgu/rail-noise-lden-england-round-3/rail-noise-lden-england-round-3.geojson.gz](feeds/portals/dgu/rail-noise-lden-england-round-3/rail-noise-lden-england-round-3.geojson.gz)
+  - [feeds/portals/dgu/recorded-flood-outlines1/recorded-flood-outlines1.geojson](feeds/portals/dgu/recorded-flood-outlines1/recorded-flood-outlines1.geojson)
+  - [feeds/portals/dgu/rivers-and-sea-3-3-defended-flood-risk-extents-present-day/rivers-and-sea-3-3-defended-flood-risk-extents-present-day.geojson.gz](feeds/portals/dgu/rivers-and-sea-3-3-defended-flood-risk-extents-present-day/rivers-and-sea-3-3-defended-flood-risk-extents-present-day.geojson.gz)
+  - [feeds/portals/dgu/statutory-main-river-map/statutory-main-river-map.geojson](feeds/portals/dgu/statutory-main-river-map/statutory-main-river-map.geojson)
+  - [feeds/portals/dgu/surveyed-priority-ponds-points/surveyed-priority-ponds-points.geojson](feeds/portals/dgu/surveyed-priority-ponds-points/surveyed-priority-ponds-points.geojson)
+  - [feeds/portals/dgu/thames-estuary-2100-extreme-water-level-nodes/thames-estuary-2100-extreme-water-level-nodes.geojson](feeds/portals/dgu/thames-estuary-2100-extreme-water-level-nodes/thames-estuary-2100-extreme-water-level-nodes.geojson)
+  - [feeds/portals/dgu/triage.json.gz](feeds/portals/dgu/triage.json.gz)
+  - [feeds/portals/dgu/water-recreation-locations-zones-and-catchment-summaries-england/water-recreation-locations-zones-and-catchment-summaries-england.geojson](feeds/portals/dgu/water-recreation-locations-zones-and-catchment-summaries-england/water-recreation-locations-zones-and-catchment-summaries-england.geojson)
   - [feeds/portals/index.json](feeds/portals/index.json)
   - [feeds/portals/national/catalogue.json](feeds/portals/national/catalogue.json)
-  - [feeds/portals/national/desnz-energy/desnz-energy.json](feeds/portals/national/desnz-energy/desnz-energy.json)
+  - [feeds/portals/national/desnz-energy/desnz-energy.json.gz](feeds/portals/national/desnz-energy/desnz-energy.json.gz)
   - [feeds/portals/national/dft-aadf/dft-aadf.geojson](feeds/portals/national/dft-aadf/dft-aadf.geojson)
   - [feeds/portals/national/dft-stats19/dft-stats19.json](feeds/portals/national/dft-stats19/dft-stats19.json)
-  - [feeds/portals/national/os-open-names/os-open-names.geojson](feeds/portals/national/os-open-names/os-open-names.geojson)
+  - [feeds/portals/national/mhclg-imd2025/mhclg-imd2025.json](feeds/portals/national/mhclg-imd2025/mhclg-imd2025.json)
+  - [feeds/portals/national/os-open-names/os-open-names.geojson.gz](feeds/portals/national/os-open-names/os-open-names.geojson.gz)
   - [feeds/portals/national/os-open-rivers/os-open-rivers.geojson](feeds/portals/national/os-open-rivers/os-open-rivers.geojson)
   - [feeds/portals/national/police-crime/police-crime.json](feeds/portals/national/police-crime/police-crime.json)
   - [feeds/portals/national/triage.json](feeds/portals/national/triage.json)
@@ -2951,12 +2981,12 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - [feeds/portals/pdg/developer-agreement/developer-agreement.json](feeds/portals/pdg/developer-agreement/developer-agreement.json)
   - [feeds/portals/pdg/developer-agreement-contribution/developer-agreement-contribution.json](feeds/portals/pdg/developer-agreement-contribution/developer-agreement-contribution.json)
   - [feeds/portals/pdg/developer-agreement-transaction/developer-agreement-transaction.json](feeds/portals/pdg/developer-agreement-transaction/developer-agreement-transaction.json)
-  - [feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson](feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson)
+  - [feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson.gz](feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson.gz)
   - [feeds/portals/pdg/heritage-at-risk/heritage-at-risk.geojson](feeds/portals/pdg/heritage-at-risk/heritage-at-risk.geojson)
   - [feeds/portals/pdg/infrastructure-funding-statement/infrastructure-funding-statement.json](feeds/portals/pdg/infrastructure-funding-statement/infrastructure-funding-statement.json)
   - [feeds/portals/pdg/infrastructure-project/infrastructure-project.geojson](feeds/portals/pdg/infrastructure-project/infrastructure-project.geojson)
   - [feeds/portals/pdg/listed-building/listed-building.geojson](feeds/portals/pdg/listed-building/listed-building.geojson)
-  - [feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson](feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson)
+  - [feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson.gz](feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson.gz)
   - [feeds/portals/pdg/local-area-requirements/local-area-requirements.json](feeds/portals/pdg/local-area-requirements/local-area-requirements.json)
   - [feeds/portals/pdg/local-nature-reserve/local-nature-reserve.geojson](feeds/portals/pdg/local-nature-reserve/local-nature-reserve.geojson)
   - [feeds/portals/pdg/local-plan/local-plan.json](feeds/portals/pdg/local-plan/local-plan.json)

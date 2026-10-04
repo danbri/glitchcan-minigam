@@ -6,7 +6,7 @@ import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { createInterface } from 'readline';
 import { Readable } from 'stream';
-import { getJson, politeFetch, rawFile, RAWP, OUT, today, ZONE, ZONE_TEXT, CW_BOX, writeLines, writeGeojson, zoneRefs, allowed } from '../walk-portals.mjs';
+import { getJson, politeFetch, rawFile, RAWP, OUT, today, ZONE, ZONE_TEXT, CW_BOX, writeLines, writeGeojson, zoneRefs, allowed , outExists, writeOut } from '../walk-portals.mjs';
 import { UA } from '../lib.mjs';
 
 const OGL = 'Open Government Licence v3.0', OGL_URL = 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/';
@@ -34,7 +34,7 @@ export const SOURCES = [
   { key: 'os-open-usrn-roads', name: 'OS Open USRN, Open Roads, Built Up Areas', api: 'https://api.os.uk/downloads/v1/products', licence: 'OGL (OS OpenData)', state: 'listed-for-harvest', reason: 'GB downloads of 0.3 to 1 GB; the container had about 2 GB of free disk on 2026-10-04: one product at a time, zone extract only, the download deleted after reading' },
   { key: 'coal-authority', name: 'Coal Authority mining reporting areas', licence: OGL, state: 'not-relevant', reason: 'London is outside the coalfield' },
   { key: 'bgs', name: 'British Geological Survey datasets', licence: 'BGS terms per product (OGL for some, commercial for others)', state: 'deferred', reason: '4,128 BGS records on data.gov.uk have no licence field; BGS Geology 625k/50k licences to be read per product before use' },
-  { key: 'ons-imd', name: 'English Indices of Deprivation 2025 by LSOA', licence: OGL, state: 'listed-for-harvest', reason: 'GOV.UK statistics (MHCLG); zone LSOA rows' },
+  { key: 'mhclg-imd2025', name: 'English Indices of Deprivation 2025 by LSOA (MHCLG, File 7)', api: 'https://www.gov.uk/government/statistics/english-indices-of-deprivation-2025', licence: OGL, state: 'harvest' },
   { key: 'epc', name: 'Energy Performance Certificates (domestic and non-domestic)', licence: 'OGL for data, but address data under Royal Mail / OS terms; registration required', state: 'not-open', reason: 'download needs an account and accepts terms that restrict address data' },
 ];
 export async function walk() {
@@ -43,7 +43,7 @@ export async function walk() {
 }
 export async function triage() {
   const rows = SOURCES.map(s => {
-    const f = HARVEST_FILES[s.key], has = f && existsSync(join(OUT, 'national', s.key, f));
+    const f = HARVEST_FILES[s.key], has = f && outExists(join(OUT, 'national', s.key, f));
     const state = has ? 'harvested' : s.state === 'harvest' ? 'listed-for-harvest' : s.state === 'not-used' ? 'not-open' : s.state;
     return { key: s.key, name: s.name, licence: s.licence, state, reason: has ? `feeds/portals/national/${s.key}/${f}` : s.reason || 'open; not yet harvested' };
   });
@@ -51,7 +51,7 @@ export async function triage() {
   writeLines(join(OUT, 'national', 'triage.json'), { portal: 'national sources of the brief', triaged: today, counts, rules: ['state written by hand in SOURCES after checking API, licence and robots.txt; harvested when the zone file exists'] }, 'sources', rows);
   console.log(counts);
 }
-const HARVEST_FILES = { 'os-open-names': 'os-open-names.geojson', 'os-open-rivers': 'os-open-rivers.geojson', 'dft-aadf': 'dft-aadf.geojson', 'dft-stats19': 'dft-stats19.json', 'police-crime': 'police-crime.json', 'desnz-energy': 'desnz-energy.json' };
+const HARVEST_FILES = { 'mhclg-imd2025': 'mhclg-imd2025.json', 'os-open-names': 'os-open-names.geojson', 'os-open-rivers': 'os-open-rivers.geojson', 'dft-aadf': 'dft-aadf.geojson', 'dft-stats19': 'dft-stats19.json', 'police-crime': 'police-crime.json', 'desnz-energy': 'desnz-energy.json' };
 
 // ---------------------------------------------------------------- harvests
 const DFT_LA = { 93: 'Tower Hamlets', 103: 'Southwark', 104: 'Lewisham', 105: 'Greenwich', 167: 'Newham', 174: 'City of London' };
@@ -132,7 +132,7 @@ async function policeCrime() {
     counts: { crimes_read: n, snap_points: points.length, tiles_refused: over } };
   const monthRows = months.map(m => [m, ...cats.map(c => monthCat.get(`${m}|${c}`) || 0)]);
   const out = `{"meta":${JSON.stringify({ ...meta, point_columns: ['street_id', 'lon', 'lat', 'street', ...cats], month_columns: ['month', ...cats] }, null, 1)},\n"by_month":[\n${monthRows.map(r => JSON.stringify(r)).join(',\n')}\n],\n"points":[\n${points.map(r => JSON.stringify(r)).join(',\n')}\n]}\n`;
-  writeFileSync(join(OUT, 'national', 'police-crime', 'police-crime.json'), out); return out.length;
+  return writeOut(join(OUT, 'national', 'police-crime', 'police-crime.json'), out);
 }
 async function desnz() {
   const XLSX = (await import('xlsx')).default; const refs = zoneRefs();
@@ -163,7 +163,7 @@ async function desnz() {
     method: 'walk-portals.mjs national harvest desnz-energy: every sheet of the six workbooks; rows whose LSOA or MSOA code (2011 or 2021) is a zone code; header row as published',
     counts: Object.fromEntries(tables.map(t => [`${t.label} / ${t.sheet}`, t.rows.length])) };
   const out = `{"meta":${JSON.stringify(meta, null, 1)},\n"tables":[\n${tables.map(t => JSON.stringify(t)).join(',\n')}\n]}\n`;
-  writeFileSync(join(OUT, 'national', 'desnz-energy', 'desnz-energy.json'), out); return out.length;
+  return writeOut(join(OUT, 'national', 'desnz-energy', 'desnz-energy.json'), out);
 }
 // OS OpenData: GB downloads, read for the zone and deleted (disk); BNG to WGS84 through the OSTN15 grid
 async function bngInverse() { const { bngProjector } = await import('../lib.mjs'); const proj4 = (await import('proj4')).default; await bngProjector(); const P = proj4('EPSG:4326', 'BNG'); return ([e, n]) => P.inverse([e, n]).map(v => Math.round(v * 1e6) / 1e6); }
@@ -211,7 +211,19 @@ async function osOpenRivers() {
     counts: { features: feats.length, by_layer: feats.reduce((a, f) => (a[f.properties.layer] = (a[f.properties.layer] || 0) + 1, a), {}) } };
   return writeGeojson(join(OUT, 'national', 'os-open-rivers', 'os-open-rivers.geojson'), meta, feats);
 }
-const FN = { 'os-open-names': osOpenNames, 'os-open-rivers': osOpenRivers, 'dft-aadf': dftAadf, 'dft-stats19': stats19, 'police-crime': policeCrime, 'desnz-energy': desnz };
+async function imd2025() {
+  const url = 'https://assets.publishing.service.gov.uk/media/691ded56d140bbbaa59a2a7d/File_7_IoD2025_All_Ranks_Scores_Deciles_Population_Denominators.csv';
+  const { file, fetched } = await rawFile('national/File_7_IoD2025.csv', url);
+  const refs = zoneRefs(); const zone = new Set([...refs.code].filter(([, k]) => k === 'lsoa21').map(([c]) => c));
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean); const header = csvCells(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim());
+  const rows = lines.slice(1).map(csvCells).filter(c => zone.has(c[0])).map(c => c.map((v, i) => i < 4 ? v : v === '' ? null : +v));
+  const meta = { source: 'English Indices of Deprivation 2025, File 7: all ranks, scores, deciles and population denominators by LSOA 2021 (MHCLG)', page: 'https://www.gov.uk/government/statistics/english-indices-of-deprivation-2025', file: url, fetched,
+    licence: OGL, licence_url: OGL_URL, attribution: 'Contains public sector information licensed under the Open Government Licence v3.0 (Ministry of Housing, Communities and Local Government, English Indices of Deprivation 2025)', zone: ZONE_TEXT,
+    method: 'walk-portals.mjs national harvest mhclg-imd2025: the File 7 CSV; rows whose LSOA 2021 code is a zone LSOA (zone-codes.json lsoa21); values as published (rank 1 = most deprived of 33,755)', columns: header,
+    counts: { rows: rows.length, zone_lsoas: zone.size } };
+  return writeLines(join(OUT, 'national', 'mhclg-imd2025', 'mhclg-imd2025.json'), meta, 'rows', rows);
+}
+const FN = { 'mhclg-imd2025': imd2025, 'os-open-names': osOpenNames, 'os-open-rivers': osOpenRivers, 'dft-aadf': dftAadf, 'dft-stats19': stats19, 'police-crime': policeCrime, 'desnz-energy': desnz };
 export async function harvest(keys) {
   for (const k of keys.length ? keys : Object.keys(FN)) {
     (await import('fs')).mkdirSync(join(OUT, 'national', k), { recursive: true });
