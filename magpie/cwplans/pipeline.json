@@ -3854,6 +3854,140 @@
       ]
     },
     {
+      "id": "fetch-works",
+      "tool": "tools/fetch-works.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-works.mjs [tfl-lines tfl-bus tfl-road street-manager gazette th-licences planning markets venue-events] [--no-fetch] [--refresh] [--days=90] [--month=YYYY-MM]",
+      "kind": "fetch",
+      "used": [
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "source": "tfl-unified-api",
+          "endpoint": "https://api.tfl.gov.uk/Line/{ids}/Status/{from}/to/{to}?detail=true",
+          "request": "every line of modes tube, dlr, elizabeth-line, overground, river-bus, cable-car (Line/Mode/...) plus c2c, southeastern, southern, thameslink, greater-anglia; 12 ids per request; from = fetch date 00:00, to = +90 days"
+        },
+        {
+          "source": "tfl-unified-api",
+          "endpoint": "https://api.tfl.gov.uk/Line/Mode/bus/Status?detail=true",
+          "request": "all bus routes with disruptions (13 MB)"
+        },
+        {
+          "source": "tfl-unified-api",
+          "endpoint": "https://api.tfl.gov.uk/StopPoint/Mode/bus/Disruption?includeRouteBlockedStops=true",
+          "request": "all bus stop disruptions"
+        },
+        {
+          "source": "tfl-unified-api",
+          "endpoint": "https://api.tfl.gov.uk/Road/all/Disruption and /Road/all/Street/Disruption",
+          "request": "stripContent=true, startDate = fetch date, endDate = +90 days"
+        },
+        {
+          "source": "naptan",
+          "endpoint": "https://naptan.api.dft.gov.uk/v1/access-nodes",
+          "request": "atcoAreaCodes=490 (bus) and 910,930,940 (stations), dataFormat=csv; cached"
+        },
+        {
+          "source": "dft-street-manager",
+          "endpoint": "https://opendata.manage-roadworks.service.gov.uk/{permit,activity}/YYYY/MM.zip",
+          "request": "the last full month (default); about 1 GB and 13 MB; cached"
+        },
+        {
+          "source": "the-gazette",
+          "endpoint": "https://www.thegazette.co.uk/all-notices/notice/data.json and https://www.thegazette.co.uk/notice/{id}",
+          "request": "noticetypes 1501 and 1503 x text = each zone authority, start-publish-date = fetch date - 120 days, 100 per page; then each notice page (cached)"
+        },
+        {
+          "source": "th-licensing-notices",
+          "endpoint": "https://www.towerhamlets.gov.uk/lgnl/business/licences/alcohol_and_entertainment/Licence_applications_received_this_week.aspx and .../markets/markets_in_tower_hamlets.aspx",
+          "request": "HTML GET"
+        },
+        {
+          "source": "postcodes-io",
+          "endpoint": "https://api.postcodes.io/postcodes",
+          "request": "bulk POST, 100 postcodes per request"
+        },
+        {
+          "source": "planning-london-datahub",
+          "endpoint": "https://planningdata.london.gov.uk/api-guest/applications/_search",
+          "request": "POST Elasticsearch query: \"temporary\" + an event word + geo_bounding_box of the zone, 300 newest by last_updated"
+        },
+        {
+          "file": "feeds/events.json"
+        },
+        {
+          "source": "venue-event-feeds",
+          "endpoint": "the feed URL of every verified event feed in feeds/events.json, read at run time",
+          "request": "HTTP GET (POST with the entry request_body when it has one); ICS, RSS/Atom or WordPress REST JSON"
+        },
+        {
+          "source": "osm",
+          "endpoint": "data/raw/docklands/greater_london-latest.osm.pbf (local)",
+          "request": "amenity=marketplace nodes and ways; named highways for council-page markets"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/works/tfl-lines.json"
+        },
+        {
+          "file": "feeds/works/tfl-bus.json"
+        },
+        {
+          "file": "feeds/works/tfl-road.json"
+        },
+        {
+          "file": "feeds/works/street-manager.json"
+        },
+        {
+          "file": "feeds/works/street-manager-activities.json"
+        },
+        {
+          "file": "feeds/works/gazette.json"
+        },
+        {
+          "file": "feeds/works/th-licences.json"
+        },
+        {
+          "file": "feeds/works/planning.json"
+        },
+        {
+          "file": "feeds/works/markets.json"
+        },
+        {
+          "file": "feeds/works/venue-events.json"
+        },
+        {
+          "file": "feeds/works/works.json"
+        }
+      ],
+      "method": "Fetches public permits, works, closures, planned events and markets for the Docklands zone (the 3D model box plus the Royal Docks margin) from TfL, DfT Street Manager, The Gazette, Tower Hamlets, the Planning London Datahub and OSM, and harvests venue and council event programmes from the event feeds in feeds/events.json; writes one dated snapshot per source ({meta, items}) and works.json, every item in one normalised shape, for feeds/whatson.html.",
+      "rules": [
+        "Zone: \"model\" = WGS84 -0.095, 51.474 to 0.015, 51.522 (BOX_WGS84 of fetch-docklands.mjs; the tool prints the BNG box from docklands/data/area.js meta.extent: E 532400-539900, N 176700-182300); \"east\" = 0.015, 51.495 to 0.085, 51.522 (Royal Docks, ExCeL, City Airport). Items outside both are dropped and counted.",
+        "TfL lines: a status is kept when an affected stop lies in the zone; TfL sends lat/lon 0, so stops are placed through NaPTAN (stop-area id 940G/910G/930G -> station entry 9400/9100/9300, else by station name); a status naming no stops is kept only for a line that serves the zone (line-wide). Validity periods kept; start = first from, end = last to.",
+        "TfL buses: route disruptions grouped by identical text; kept when the text names a stop that lies in the zone on one of its routes, else when its opening \"STREET, DISTRICT:\" is a district wholly in the zone (E1, E1W, E14, E16, EC3*, SE8, SE10, SE16); a borough name alone does not place a diversion. Stop closures placed by the NaPTAN position of their ATCO code, grouped by text and dates.",
+        "TfL roads: disruptions active in the 90-day window whose TfL point lies in the zone; closed street segments of the same disruption id attached (at most 12).",
+        "Street Manager: unzip -p of the monthly archive split on }{\"event_reference\": (record count must equal the zip file count); BNG prefilter on the first coordinate, then OSTN15 to WGS84 and the zone test; the latest event per permit or activity reference. Permits kept when not cancelled, refused, revoked or closed and the end (actual, else proposed) is on or after the fetch date. Activities: skips and scaffolding counted, not kept; cancelled and ended dropped.",
+        "Gazette: robots.txt Crawl-delay 10 s between requests; only data.json searches and /notice/{id} pages (data.jsonld/.ttl/.rdf/.xml and ?view=linked-data are disallowed). The search geo point is the publisher office, so a notice is kept by issuing authority (zone councils, or Transport for London naming a zone borough). TTRO = text says temporary, section 14, 16A or experimental. Dates = day-month-year phrases on or after publication. Submitter (f:name, f:familyName) and signatory names dropped.",
+        "Tower Hamlets licences: the weekly table; premises-name column dropped (it sometimes holds a private licence holder name); placed at the postcode centre (postcodes.io, ONSPD). One week per snapshot; history is the git history of the snapshot.",
+        "Planning London Datahub: description has \"temporary\" and an event word (event, marquee, festival, stage, market, fair, funfair, ice rink, pop-up, filming, concert, exhibition); centroid in the zone; applications validated more than two years before the fetch dropped; description cut to 220 characters; facts and link only (GLA terms not confirmed as OGL).",
+        "Markets: OSM amenity=marketplace in the zone from the local extract (ways at the mean of their nodes); Tower Hamlets markets page parsed for name, days, place and times and joined by name, else placed on the OSM street it names.",
+        "Venue events: the feeds are read from feeds/events.json at run time (category ical, rss-atom, rest-api or whats-on-page; verified; a feed URL; ics, rss, atom or json; id, name or subject about events or what is on; not news, press releases, consultations, meetings, warnings, closures, works or notices; harvest: true/false on an entry overrides), so feeds added there join automatically. Kept per event: title (cut to 160), dates, venue, position, link; no description text. Date from the feed event fields (ICS DTSTART, RSS ev:startdate, WordPress ACF dates), a date in the title or link, or the Atom published day where checked by hand (Royal Docks, midnight entries only); events from today to 180 days ahead; undated items only from single-venue programmes. Position: postcode in the item, else the venue of the feed host (VENUES table, through its postcode). The Royal Docks feed mixes articles with events: only /whats-on/ links.",
+        "Gazette office postcodes (SE18 6HQ, SE6 4RU, E16 2QU, SE1 2QH, SE1 8NJ, SE1P 5LX, EC2V 7HH, EC2P 2EJ, E1 0HJ, E1 1BJ) are removed before postcode districts are read.",
+        "Network: User-Agent glitchcan-cwplans/0.1; one request at a time per host, at least 1 s apart (10 s for www.thegazette.co.uk); up to 5 tries with Retry-After or a doubling pause on 429, 5xx, timeouts and resets. Raw responses in data/raw/works/ (gitignored); NaPTAN, Street Manager archives and Gazette notice pages reused unless --refresh; --no-fetch rebuilds from the raw files."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "area": "feeds",
+      "faults": [],
+      "judgement": "Zone margins, the rail lines treated as serving the zone, the postcode districts treated as wholly in the zone, the event words of the planning query and the dropped fields (premises names, submitter names, skips and scaffolding) are choices recorded in skills/cwplans-permits-and-works/SKILL.md and feeds/works/README.md.",
+      "decisions_recorded_in": [
+        "skills/cwplans-permits-and-works/SKILL.md",
+        "feeds/works/README.md"
+      ]
+    },
+    {
       "id": "check-data-register",
       "tool": "tools/check-data-register.mjs",
       "command": "node magpie/cwplans/tools/check-data-register.mjs",
