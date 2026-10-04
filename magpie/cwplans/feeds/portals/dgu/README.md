@@ -17,8 +17,8 @@ Portal: https://www.data.gov.uk/ (CKAN API `api/action/package_search`; robots.t
 ## Final states (25,492 in scope)
 
 Run `node magpie/cwplans/tools/walk-portals.mjs dgu triage` for the current counts; on 2026-10-04: not-relevant
-9,035, walked-elsewhere 5,121, not-open 4,809, unavailable 3,199, deferred 1,991, listed-for-harvest 1,257,
-sensitive 72, held 8. `triage.json` lists one by one the datasets that need a decision or hold data (listed,
+9,035, walked-elsewhere 5,113, not-open 4,809, unavailable 3,199, deferred 1,990, listed-for-harvest 1,257,
+sensitive 72, held 17 (GLA records that the London Datastore walk has harvested count as held). `triage.json` lists one by one the datasets that need a decision or hold data (listed,
 deferred with area unknown, held, sensitive); the bulk states are name lists in `by_state`, keyed
 "state | rule | reason". `catalogue.json` holds the compact CKAN record of the datasets listed one by one.
 
@@ -27,7 +27,7 @@ terms on each product page, so no BGS record is taken from here; JNCC 117; Defra
 outside the Data Hub), restricted about 170 (BGS 141 commercial products, Natural England 15), open-unclear about
 150 ("no conditions apply" without a licence name; JNCC 145).
 
-**Walked elsewhere** (5,121): ONS Open Geography Portal items (3,497: `../onsgeo/`), the GLA records (1,355), the City
+**Walked elsewhere** (5,113): ONS Open Geography Portal items (3,497: `../onsgeo/`), the GLA records (about 1,350), the City
 of London INSPIRE map service (141: `../boroughs/`) and OS Data Hub products (128: `../national/`).
 
 **Not relevant** (9,035): another area by bounding box or title (Scotland, Wales, other counties and boroughs),

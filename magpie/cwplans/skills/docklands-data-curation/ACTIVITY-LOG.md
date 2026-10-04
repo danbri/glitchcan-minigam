@@ -776,3 +776,21 @@ central tower - do we have an index of these?"
   "London Datastore" (#lds) with final-state counts, datasets by theme, a map layer per dataset or per theme. Faults
   F36-F41 catalogued. Tests: atlas #lds, map layer and dossier at 1600x900 DPR 1 and 390x844 DPR 3; 3D rotherhithe,
   greenland, pier at both sizes: no console error, screenshots looked at.
+
+## 2026-10-04 — Open-data portals walk, batch 2: borough portals, Nomis, ONS Open Geography, national sources
+- Adapters `tools/portals/{boroughs,nomis,onsgeo,national}.mjs`; skill `cwplans-open-portals` extended; faults F42-F44.
+- Boroughs (662 requests): City of London map service 176 layers (licence per layer from its data.gov.uk INSPIRE
+  records: OGL 35, OS INSPIRE end-user 34, none 94; F42), harvested 27 open layers in the zone (St Paul's Heights,
+  Historic Land Use, cultural spaces with geometry withheld F43, cycleways, stations, safeguarding areas...). Tower
+  Hamlets hub: no licence named; same layers held from planning.data.gov.uk. Southwark and Greenwich observatories:
+  one Esri UK InstantAtlas library of 16,897/16,898 national indicators (walked-elsewhere 29,797, not-open 3,968, no
+  council-own open indicator). Lewisham JKAN: EV charge points harvested; FixMyStreet and Commonplace deferred (written
+  by residents). Newham: no portal of its own.
+- Nomis: robots.txt disallows the API (two requests went to it before robots.txt was read; the answer was deleted);
+  20 Census 2021 topic summaries harvested at OA from the bulk zips for the 1,509 zone OAs (1.5 MB); 54 listed.
+- ONS Open Geography: 2,630 items; harvested OA 2021 polygons with rural-urban class, OA and LSOA centroids, the OA
+  lookup, workplace zones 2011, wards May 2026 (1.9 MB); listed 426, not-relevant 2,023.
+- National: DfT AADF 222 count points; STATS19 aggregates (10,363 collisions by LSOA x year x severity; F44: the
+  LSOA column holds 2021 codes); police.uk 80,432 crimes aggregated to 2,782 snap points x 14 categories and by
+  month; DESNZ electricity and gas by LSOA/MSOA 2010-2024 (2.0 MB). Ofcom refuses scripts (403).
+- Size of batch 2: 7.6 MB harvests + 2.1 MB catalogues and triage. feeds/portals/ total about 21 MB.

@@ -4,13 +4,16 @@ description: >-
   The open-data catalogues other than the London Datastore, walked for the magpie/cwplans Docklands zone with one tool,
   tools/walk-portals.mjs, and one adapter per portal in tools/portals/: data.gov.uk (CKAN package_search, all 59,451
   datasets; scope S1-S4, states T0-T11), planning.data.gov.uk (MHCLG, every dataset OGL, zone counts by the platform's
-  spatial query or by zone planning organisation; states P0-P8), the six zone borough portals, Nomis / ONS Census 2021
-  tables, the ONS Open Geography Portal and other national APIs. Covers each portal's API, robots.txt and terms, the
+  spatial query or by zone planning organisation; states P0-P8), the six zone borough portals (City of London map service, Tower Hamlets hub,
+  Southwark and Greenwich InstantAtlas observatories, Open Data Lewisham, Newham none), Nomis Census 2021 bulk zips (the
+  Nomis API is disallowed by robots.txt), the ONS Open Geography Portal and other national sources (DfT AADF and
+  STATS19, police.uk, DESNZ energy, Ofcom refused). Covers each portal's API, robots.txt and terms, the
   written triage rules and the final state of every dataset (harvested, held, listed-for-harvest, deferred,
   not-relevant, not-open, unavailable, sensitive, walked-elsewhere), the licence classes (no licence = metadata only;
   "no restrictions" without a licence name is not open; GOV.UK/ONS site terms), the harvests in feeds/portals/ clipped
   to the 3D model box (listed buildings and outlines, Heritage at Risk, Article 4 areas, area TPOs, EA flood zones,
-  section 106 agreements...), size rules for the repo, and the traps (Poplar is a tree, short slugs match prose,
+  section 106 agreements, City of London layers, Census 2021 OA tables, OA boundaries and lookups, traffic counts,
+  collision and crime aggregates, energy by small area), size rules for the repo, faults F42-F44, and the traps (Poplar is a tree, short slugs match prose,
   safeguarding areas are not safeguarding of people, deleted records keep resources). Reach for it before you walk,
   re-triage or harvest any national or borough portal for cwplans, or answer "is dataset X open and in the zone?".
 ---
@@ -31,6 +34,11 @@ Checked against the tool and the files on 2026-10-04.
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs pdg walk         # 478 requests, ~9 min
     node magpie/cwplans/tools/walk-portals.mjs pdg triage
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs pdg harvest [dataset ...]
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs boroughs walk    # 662 requests, ~20 min (observatory metadata)
+    node magpie/cwplans/tools/walk-portals.mjs boroughs triage; ... boroughs harvest [key ...]
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs nomis walk; ... nomis harvest [TS001 ...]
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs onsgeo walk; ... onsgeo harvest [key ...]
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs national harvest [dft-aadf dft-stats19 police-crime desnz-energy]
     node magpie/cwplans/tools/walk-portals.mjs index                                 # feeds/portals/index.json
     node magpie/cwplans/tools/check-data-register.mjs --write
 
@@ -103,6 +111,60 @@ traffic or data.police.uk is `ogl-site-terms` (those sites state OGL v3.0 for th
 - Section 106 / CIL agreements, contributions and transactions: only the Royal Borough of Greenwich publishes them to
   the platform (370 agreements, 1,398 contributions, 813 transactions on 2026-10-04).
 
+## Borough portals
+
+- **City of London**: the INSPIRE map service `https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer`
+  (176 feature layers, REST query with the box envelope). The service states no licence; each layer's licence is on
+  the City's INSPIRE record on data.gov.uk, matched by normalised title (`cityLicences`): OGL for 35 layers, the OS
+  public-sector INSPIRE end-user licence for 34 (restricted: `inspire-licence`, `mapping-agreements` in the text), none
+  for 94 (not harvested). Layers about people or their sites (toilets, polling places, clinics, pharmacies, contributor
+  businesses, community organisations, residential units, emergency-service parking) are deferred by rule B2.
+  Every other open layer with features in the zone is harvested (27). The Cultural Spaces layer comes back with
+  `geometry: null` in both `f=geojson` and `f=json` while its spatial filter works: kept with null geometry and
+  `meta.geometry_withheld` (fault F43). When `f=geojson` alone loses geometry, `f=json` Esri rings are converted
+  (`esriToGeo`: clockwise rings outer).
+- **Tower Hamlets**: ArcGIS Hub "Planning Datasets" (DCAT feed `/api/feed/dcat-us/1.1.json`, 8 items). No licence named
+  (F42); the same layers are taken under OGL from planning.data.gov.uk.
+- **Southwark and Greenwich**: both "observatories" are Esri UK InstantAtlas sites. The data behind them is one shared
+  indicator library on Esri UK's ArcGIS organisation (`HumUw0sDQHwJuboT`: `<Borough>_MasterTable` with Indicator, Theme
+  and Geo items) plus the metadata service `https://hub.instantatlas.com/data-store-metadata-service` (Publisher,
+  Rights, Spatial). The pages load it with JavaScript; a headless render found the URLs. 16,897 and 16,898 indicators,
+  almost all re-served national statistics: walked-elsewhere (B3) when the publisher is national, not-open when the
+  Rights field is empty, deferred for the 15 Social Mobility Commission indicators. The committed catalogue
+  summarises them by borough, publisher, licence and theme; the full list is in the raw cache.
+  data.southwark.gov.uk has `Crawl-delay: 10` and a Cloudflare challenge; the walk does not need the page.
+- **Lewisham**: JKAN on GitHub Pages: `datasets.json` plus each dataset's source file
+  (`raw.githubusercontent.com/lb-lewisham/open-data-lewisham/gh-pages/_datasets/<slug>.md`) for the licence (OGL) and the
+  resources. The licence words on the rendered pages are the form's options, not the dataset's licence.
+  FixMyStreet and Commonplace records are written by residents: deferred until the owner says.
+- **Newham**: no portal of its own; Newham Info is a London Datastore dataset.
+
+## Nomis
+
+robots.txt disallows `/query/` and `/api/v01/dataset/`, `/codelist/`, `/concept/` for every agent: do not use the Nomis
+API. The Census 2021 bulk zips under `/output/census/2021/` are allowed: one per topic summary (74), each with CSVs
+for OA, LSOA, MSOA, LTLA, UTLA, region and country. `harvest` streams the OA CSV out of the zip (`unzip -p`) and keeps
+the zone OAs (1,509, from zone-codes.json `oa21`); a trailing empty header column is dropped. 20 tables harvested;
+the other 54 are listed. Join through `onsgeo/oa21-lookup`.
+
+## ONS Open Geography
+
+Catalogue: ArcGIS sharing search `orgid:ESMARspQHYMw9BZ9` (2,630 items). Licence: the ONS geography licences page
+(OGL v3.0; OS data attribution). States G1-G8 by product family read from the title (`FAMILIES`): small-area families
+(OA, LSOA, MSOA, workplace zone, ward, postcode, built-up area, UPRN, grid) are listed; coarse families, parishes (none
+in the zone), Scotland/Wales/NI-only items and vintages before 2011 are not relevant. Lookups are read by code list in
+batches of 60 (a GET with 150 codes answered 404). Harvested: OA 2021 polygons with rural-urban class, OA and LSOA
+population-weighted centroids, the OA-LSOA-MSOA-LAD lookup, workplace zones 2011, wards May 2026.
+
+## National
+
+The sources of the brief are a hand-written list in `national.mjs` (`SOURCES`: API, licence, robots, state, reason).
+Harvests: DfT AADF (the CSV per zone local authority, count points in the box, every year); STATS19 collisions
+(streamed, aggregates only: LSOA x year x severity; the LSOA column holds 2021 codes, F44); police.uk (12 months, the box
+in 6 tiles because the API refuses over 10,000 crimes, aggregates by snap point x category and month x category, no
+crime ids); DESNZ electricity and gas workbooks (zone LSOA and MSOA rows, 2011 and 2021 codes; the header row is
+the first short cell naming an LSOA/MSOA code, not the notes above it). Ofcom refuses scripts (403).
+
 ## Size rules
 
 Commit zone extracts only; national files stay in `data/raw/portals/` (gitignored, `.gitignore` line
@@ -120,3 +182,9 @@ useful, and say so in the meta. Report the size of each batch in the activity lo
 | Deleted data.gov.uk records keep resources ("Deleted - moved to other existing datasets"), and their slug, not the title, says "spending" | unavailable by title; the administrative rule reads title and slug |
 | The Tower Hamlets ArcGIS Hub has no named licence | not open; the same layers are taken from planning.data.gov.uk (OGL) |
 | EA `spatialdata/<name>/wfs` answers, but its `next` links and the OGC API live under `/geoservices`, which robots.txt disallows | query through `/spatialdata/` only |
+| F42: one dataset, two licences: the Tower Hamlets hub names none, planning.data.gov.uk serves the same layers under OGL; the City map service states none, its layers' data.gov.uk records give OGL or the OS INSPIRE end-user licence | take the copy with a named open licence; licence per layer, never per service |
+| F43: the City map service withholds geometry for a layer (Cultural Spaces) in every output format, while its spatial filter works | keep the features with null geometry and `meta.geometry_withheld`; place them by address |
+| F44: STATS19 `lsoa_of_accident_location` holds 2021 codes in the 2021-2025 file; with 2011 codes 1,431 of 10,362 zone collisions matched | match 2011 and 2021 codes; read the code vintage from the values, not the column name |
+| Nomis robots.txt disallows its own API | bulk zips only |
+| A data.southwark.gov.uk or dataobservatory page holds no data: the indicators load from Esri UK services by JavaScript | render once headless to find the services, then use them directly |
+| A notes paragraph above a spreadsheet header names "MSOA code" (DESNZ) | a header cell is short (< 40 characters) |

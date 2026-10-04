@@ -33,7 +33,7 @@ const r6 = v => Math.round(v * 1e6) / 1e6;
 // ---------------------------------------------------------------- polite fetch with robots.txt
 let chain = Promise.resolve(), last = 0; export let nReq = 0;
 const robots = new Map();
-async function allowed(url) {
+export async function allowed(url) {
   const u = new URL(url);
   if (!robots.has(u.host)) {
     let rules = [];
@@ -147,7 +147,7 @@ export function licenceClass(id, text = '') {
   if (/cc-zero|cc0|public domain|other-pd|odc-pddl|pddl/.test(s)) return 'public-domain';
   if (/odc-by|open data commons attribution/.test(s)) return 'odc-by';
   if (/cc-by|creative commons attribution|creativecommons\.org\/licenses\/by\//.test(s)) return 'cc-by';
-  if (/other-closed|psma|public sector (geospatial|mapping) agreement|licen[cs]e (is )?required|apply for a licen[cs]e|all rights reserved|commercial licen[cs]e|copyright.*not.*reproduc|restricted|end user licen[cs]e/.test(s)) return 'restricted';
+  if (/other-closed|psma|public sector (geospatial|mapping) agreement|licen[cs]e (is )?required|apply for a licen[cs]e|all rights reserved|commercial licen[cs]e|copyright.*not.*reproduc|restricted|end user licen[cs]e|end use licen[cs]e|inspire-licence|inspire-end-user-licence|mapping-agreements|internal use only/.test(s)) return 'restricted';
   if (/other-open|no limitations|no conditions apply|free to use/.test(s)) return 'open-unclear';
   return 'none';
 }

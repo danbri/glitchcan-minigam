@@ -6247,7 +6247,7 @@
       "tool": "tools/walk-portals.mjs",
       "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs <dgu|pdg|boroughs|nomis|onsgeo|national> walk [--refresh]; node magpie/cwplans/tools/walk-portals.mjs <portal> triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs <portal> harvest [key ...]; node magpie/cwplans/tools/walk-portals.mjs dgu catalogue; node magpie/cwplans/tools/walk-portals.mjs index",
       "kind": "fetch",
-      "method": "Walks the open-data portals other than the London Datastore that cover the zone, one adapter per portal (tools/portals/*.mjs): reads each catalogue whole (data.gov.uk CKAN: all 59,451 datasets; planning.data.gov.uk: all 222 datasets with a count of the entities that meet the zone), triages every dataset in scope by written rules to one final state (harvested, held, listed-for-harvest, deferred, not-relevant, not-open, unavailable, sensitive, walked-elsewhere), and harvests the open, relevant datasets clipped to the 3D model box as GeoJSON (WGS84) or JSON rows with a meta member (source, API, fetch date, licence, attribution, method, counts).",
+      "method": "Walks the open-data portals other than the London Datastore that cover the zone, one adapter per portal (tools/portals/*.mjs): reads each catalogue whole (data.gov.uk CKAN: all 59,451 datasets; planning.data.gov.uk: all 222 datasets with a count of the entities that meet the zone; the six zone borough portals; Nomis Census 2021 bulk tables; the ONS Open Geography Portal; the national sources of the brief), triages every dataset in scope by written rules to one final state (harvested, held, listed-for-harvest, deferred, not-relevant, not-open, unavailable, sensitive, walked-elsewhere), and harvests the open, relevant datasets clipped to the 3D model box as GeoJSON (WGS84) or JSON rows with a meta member (source, API, fetch date, licence, attribution, method, counts).",
       "rules": [
         "Politeness: one request at a time over the run, at least 1.1 s apart, robots.txt read for every host before the first request and obeyed (longest matching rule), backoff on 429 and 5xx with Retry-After, the project User-Agent.",
         "Licence class (licenceClass in walk-portals.mjs): OGL, CC BY, ODC-By, CC0/PDDL/public domain are open; NC or closed is restricted; CC BY-SA and ODbL are share-alike (never harvested; OSM is the only share-alike exception); 'no conditions apply' alone is open-unclear; no licence is none (metadata only). data.gov.uk records with no licence whose resources all sit on GOV.UK, ONS, Nomis, NHS Digital, DfT road traffic or data.police.uk count as ogl-site-terms (those sites' terms give OGL v3.0).",
@@ -6256,13 +6256,21 @@
         "Zone place names (title and tags only, not the description): the London Datastore list plus Thames Barrier, Tideway, Lower Lea, Leamouth; not when the text has tree or crop words (Poplar is also a tree: 'Energy Crops Scheme' and short rotation coppice records matched it).",
         "planning.data.gov.uk: zone = entities whose geometry intersects the box polygon (the platform's spatial query); for documents, agreements and plans the entities of the zone planning organisations (GLA 144, Greenwich 150, Lewisham 198, City 203, Newham 246, Southwark 329, Tower Hamlets 350). States P0 by hand (held from another source), P1 harvested, P2 ended, P3 not-open, P4 empty, P5 code list, P6 nothing in the zone, P7 listed-for-harvest, P8 deferred.",
         "Harvest: whole geometries that meet the box are kept, rounded to 6 decimals, with in_zone, whole_in_zone, in_cw; EA flood zones are simplified (0.5 m) and cut at the box (clipped_to_zone). Fields matching e-mail, phone, contact, owner name, person, officer, agent, applicant are dropped and listed.",
-        "Committed outputs stay small: the data.gov.uk triage lists datasets one by one only for the states that need a decision or hold data; the bulk states are name lists keyed by state, rule and reason. National files stay raw and uncommitted; only zone extracts are committed."
+        "Committed outputs stay small: the data.gov.uk triage lists datasets one by one only for the states that need a decision or hold data; the bulk states are name lists keyed by state, rule and reason. National files stay raw and uncommitted; only zone extracts are committed.",
+        "Borough portals: City of London map service layers with the box envelope count; licence per layer from the City's data.gov.uk INSPIRE record (F42); layers about people or their sites deferred (B2); Southwark and Greenwich observatories read from the Esri UK InstantAtlas master tables and metadata service (indicators of national publishers are walked-elsewhere, B3); Lewisham licence from each JKAN source file; states B0-B8.",
+        "Nomis: robots.txt disallows the API; the Census 2021 bulk zips are read, the OA CSV streamed, zone OAs (zone-codes.json oa21) kept; states N1-N3.",
+        "ONS Open Geography: ArcGIS search catalogue; states G1-G8 by product family from the title; lookups read by code list in batches of 60.",
+        "National: a hand-checked source list (licence, robots, state); STATS19 and police.uk kept as aggregates only (LSOA x year x severity; snap point x category, month x category), no record-level rows; STATS19 LSOA codes matched as 2011 and 2021 (F44); DESNZ workbooks read sheet by sheet, the header row is a short cell naming an LSOA/MSOA code."
       ],
       "network": true,
       "deterministic": false,
       "after": [],
       "area": "feeds",
-      "faults": [],
+      "faults": [
+        "F42",
+        "F43",
+        "F44"
+      ],
       "judgement": "The scope lists, the zone place exceptions, the JUDGED tables (held from another source, coarser than the zone) and the HARVEST tables were set by hand from the first triage; the reasons are in the tables and in feeds/portals/README.md. Licences that read 'no restrictions' without naming a licence (the Tower Hamlets ArcGIS Hub) are not treated as open.",
       "used": [
         {
@@ -6274,6 +6282,316 @@
           "source": "op-pdg-catalogue",
           "endpoint": "https://www.planning.data.gov.uk/dataset.json",
           "request": "walk: GET dataset.json, then one entity.json count per dataset (zone polygon, intersects; or per zone planning organisation)"
+        },
+        {
+          "source": "op-nomis-bulk",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "walk: GET the bulk page; harvest: GET census2021-<table>.zip (the Nomis API is disallowed by robots.txt and not used)"
+        },
+        {
+          "source": "op-onsgeo-catalogue",
+          "endpoint": "https://www.arcgis.com/sharing/rest/search?q=orgid:ESMARspQHYMw9BZ9",
+          "request": "walk: ArcGIS sharing search, 100 items a page (27 pages); harvest: FeatureServer query (envelope or code list)"
+        },
+        {
+          "source": "op-boroughs-catalogue",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer",
+          "request": "walk: City of London map service layers and zone counts; Tower Hamlets ArcGIS Hub DCAT feed; Southwark and Greenwich InstantAtlas master tables and the InstantAtlas metadata service; Open Data Lewisham datasets.json and dataset files"
+        },
+        {
+          "source": "op-national-list",
+          "endpoint": "https://roadtraffic.dft.gov.uk/",
+          "request": "harvest: DfT AADF CSVs per local authority; STATS19 collisions CSV (streamed); police.uk crimes-street API (12 months x 6 tiles); DESNZ LSOA/MSOA workbooks"
+        },
+        {
+          "source": "op-bor-city-airport-safeguarding-area",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/106/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-airport-safeguarding-area"
+        },
+        {
+          "source": "op-bor-city-city-flood-risk-area",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/109/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-city-flood-risk-area"
+        },
+        {
+          "source": "op-bor-city-coal-tax-posts",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/3/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-coal-tax-posts"
+        },
+        {
+          "source": "op-bor-city-crossrail-safeguarding-area",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/110/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-crossrail-safeguarding-area"
+        },
+        {
+          "source": "op-bor-city-cultural-spaces",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/175/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=json (Esri rings converted)&resultOffset=<n>",
+          "request": "boroughs harvest city-cultural-spaces"
+        },
+        {
+          "source": "op-bor-city-cycleways",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/160/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-cycleways"
+        },
+        {
+          "source": "op-bor-city-grit-bins",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/48/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-grit-bins"
+        },
+        {
+          "source": "op-bor-city-highway-authority-subway",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/111/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-highway-authority-subway"
+        },
+        {
+          "source": "op-bor-city-historic-land-use",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/113/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-historic-land-use"
+        },
+        {
+          "source": "op-bor-city-lvmf-protected-vistas",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/116/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-lvmf-protected-vistas"
+        },
+        {
+          "source": "op-bor-city-monument-views-and-setting",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/117/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-monument-views-and-setting"
+        },
+        {
+          "source": "op-bor-city-permissive-subway",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/121/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-permissive-subway"
+        },
+        {
+          "source": "op-bor-city-places-of-interest",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/120/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-places-of-interest"
+        },
+        {
+          "source": "op-bor-city-principal-shopping-centres",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/122/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-principal-shopping-centres"
+        },
+        {
+          "source": "op-bor-city-protected-squares",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/134/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-protected-squares"
+        },
+        {
+          "source": "op-bor-city-rail-stations",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/20/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-rail-stations"
+        },
+        {
+          "source": "op-bor-city-riverside-walk",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/123/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-riverside-walk"
+        },
+        {
+          "source": "op-bor-city-smoke-control-orders",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/126/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-smoke-control-orders"
+        },
+        {
+          "source": "op-bor-city-special-act-land",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/103/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-special-act-land"
+        },
+        {
+          "source": "op-bor-city-st-paul-s-heights-grid",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/95/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-st-paul-s-heights-grid"
+        },
+        {
+          "source": "op-bor-city-st-paul-s-heights-points",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/23/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-st-paul-s-heights-points"
+        },
+        {
+          "source": "op-bor-city-st-paul-s-heights-setback",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/92/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-st-paul-s-heights-setback"
+        },
+        {
+          "source": "op-bor-city-st-pauls-heights-policy-area",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/127/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-st-pauls-heights-policy-area"
+        },
+        {
+          "source": "op-bor-city-thames-policy-area",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/128/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-thames-policy-area"
+        },
+        {
+          "source": "op-bor-city-thames-tideway-tunnel-safeguarding-area",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/129/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-thames-tideway-tunnel-safeguarding-area"
+        },
+        {
+          "source": "op-bor-city-tower-of-london-whs-local-setting-area",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/131/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-tower-of-london-whs-local-setting-area"
+        },
+        {
+          "source": "op-bor-city-underground-stations",
+          "endpoint": "https://www.mapping.cityoflondon.gov.uk/arcgis/rest/services/INSPIRE/MapServer/19/query?where=1=1&geometry=<zone box>&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson&resultOffset=<n>",
+          "request": "boroughs harvest city-underground-stations"
+        },
+        {
+          "source": "op-bor-lewisham-ev-chargepoints",
+          "endpoint": "https://raw.githubusercontent.com/lb-lewisham/open-data-lewisham/gh-pages/_datasets/data/lewisham_electric_vehicle_charging_locations.geojson",
+          "request": "boroughs harvest lewisham-ev-chargepoints"
+        },
+        {
+          "source": "op-nat-desnz-energy",
+          "endpoint": "https://www.gov.uk/government/statistics/lower-and-middle-super-output-areas-electricity-consumption ; https://www.gov.uk/government/statistics/lower-and-middle-super-output-areas-gas-consumption",
+          "request": "national harvest desnz-energy"
+        },
+        {
+          "source": "op-nat-dft-aadf",
+          "endpoint": "https://roadtraffic.dft.gov.uk/",
+          "request": "national harvest dft-aadf"
+        },
+        {
+          "source": "op-nat-dft-stats19",
+          "endpoint": "https://roadtraffic.dft.gov.uk/",
+          "request": "national harvest dft-stats19"
+        },
+        {
+          "source": "op-nat-police-crime",
+          "endpoint": "https://data.police.uk/api/crimes-street/all-crime?poly=<6 tiles of the box>&date=<month>",
+          "request": "national harvest police-crime"
+        },
+        {
+          "source": "op-nomis-census2021-ts001-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts001-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts003-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts003-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts004-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts004-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts007a-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts007a-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts011-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts011-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts017-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts017-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts021-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts021-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts029-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts029-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts030-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts030-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts037-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts037-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts038-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts038-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts044-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts044-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts045-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts045-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts050-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts050-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts054-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts054-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts058-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts058-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts061-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts061-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts062-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts062-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts066-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts066-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts067-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts067-oa"
+        },
+        {
+          "source": "op-onsgeo-lsoa21-centroids",
+          "endpoint": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_PopCentroids_EW_2021_V4/FeatureServer/0/query",
+          "request": "onsgeo harvest lsoa21-centroids"
+        },
+        {
+          "source": "op-onsgeo-oa21-boundaries",
+          "endpoint": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/OA_2021_EW_BGC_V2_RUC/FeatureServer/0/query",
+          "request": "onsgeo harvest oa21-boundaries"
+        },
+        {
+          "source": "op-onsgeo-oa21-centroids",
+          "endpoint": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/OA_December_2021_EW_PWC_V4/FeatureServer/0/query",
+          "request": "onsgeo harvest oa21-centroids"
+        },
+        {
+          "source": "op-onsgeo-oa21-lookup",
+          "endpoint": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/OA_LSOA_MSOA_EW_DEC_2021_LU_v3/FeatureServer/0/query",
+          "request": "onsgeo harvest oa21-lookup"
+        },
+        {
+          "source": "op-onsgeo-wards-latest",
+          "endpoint": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/WD_MAY_2026_UK_BGC/FeatureServer/0/query",
+          "request": "onsgeo harvest wards-latest"
+        },
+        {
+          "source": "op-onsgeo-workplace-zones-2011",
+          "endpoint": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Workplace_Zones_Dec_2011_GCB_in_England_and_Wales_2022/FeatureServer/0/query",
+          "request": "onsgeo harvest workplace-zones-2011"
         },
         {
           "source": "op-pdg-agricultural-land-classification",
@@ -6424,6 +6742,96 @@
       ],
       "generated": [
         {
+          "file": "feeds/portals/boroughs/catalogue.json"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-airport-safeguarding-area/city-airport-safeguarding-area.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-city-flood-risk-area/city-city-flood-risk-area.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-coal-tax-posts/city-coal-tax-posts.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-crossrail-safeguarding-area/city-crossrail-safeguarding-area.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-cultural-spaces/city-cultural-spaces.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-cycleways/city-cycleways.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-grit-bins/city-grit-bins.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-highway-authority-subway/city-highway-authority-subway.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-historic-land-use/city-historic-land-use.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-lvmf-protected-vistas/city-lvmf-protected-vistas.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-monument-views-and-setting/city-monument-views-and-setting.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-permissive-subway/city-permissive-subway.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-places-of-interest/city-places-of-interest.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-principal-shopping-centres/city-principal-shopping-centres.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-protected-squares/city-protected-squares.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-rail-stations/city-rail-stations.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-riverside-walk/city-riverside-walk.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-smoke-control-orders/city-smoke-control-orders.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-special-act-land/city-special-act-land.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-st-paul-s-heights-grid/city-st-paul-s-heights-grid.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-st-paul-s-heights-points/city-st-paul-s-heights-points.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-st-paul-s-heights-setback/city-st-paul-s-heights-setback.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-st-pauls-heights-policy-area/city-st-pauls-heights-policy-area.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-thames-policy-area/city-thames-policy-area.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-thames-tideway-tunnel-safeguarding-area/city-thames-tideway-tunnel-safeguarding-area.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-tower-of-london-whs-local-setting-area/city-tower-of-london-whs-local-setting-area.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/city-underground-stations/city-underground-stations.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/lewisham-ev-chargepoints/lewisham-ev-chargepoints.geojson"
+        },
+        {
+          "file": "feeds/portals/boroughs/triage.json"
+        },
+        {
           "file": "feeds/portals/dgu/catalogue.json"
         },
         {
@@ -6431,6 +6839,114 @@
         },
         {
           "file": "feeds/portals/index.json"
+        },
+        {
+          "file": "feeds/portals/national/catalogue.json"
+        },
+        {
+          "file": "feeds/portals/national/desnz-energy/desnz-energy.json"
+        },
+        {
+          "file": "feeds/portals/national/dft-aadf/dft-aadf.geojson"
+        },
+        {
+          "file": "feeds/portals/national/dft-stats19/dft-stats19.json"
+        },
+        {
+          "file": "feeds/portals/national/police-crime/police-crime.json"
+        },
+        {
+          "file": "feeds/portals/national/triage.json"
+        },
+        {
+          "file": "feeds/portals/nomis/catalogue.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts001-oa/census2021-ts001-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts003-oa/census2021-ts003-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts004-oa/census2021-ts004-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts007a-oa/census2021-ts007a-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts011-oa/census2021-ts011-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts017-oa/census2021-ts017-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts021-oa/census2021-ts021-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts029-oa/census2021-ts029-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts030-oa/census2021-ts030-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts037-oa/census2021-ts037-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts038-oa/census2021-ts038-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts044-oa/census2021-ts044-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts045-oa/census2021-ts045-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts050-oa/census2021-ts050-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts054-oa/census2021-ts054-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts058-oa/census2021-ts058-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts061-oa/census2021-ts061-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts062-oa/census2021-ts062-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts066-oa/census2021-ts066-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts067-oa/census2021-ts067-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/triage.json"
+        },
+        {
+          "file": "feeds/portals/onsgeo/catalogue.json"
+        },
+        {
+          "file": "feeds/portals/onsgeo/lsoa21-centroids/lsoa21-centroids.geojson"
+        },
+        {
+          "file": "feeds/portals/onsgeo/oa21-boundaries/oa21-boundaries.geojson"
+        },
+        {
+          "file": "feeds/portals/onsgeo/oa21-centroids/oa21-centroids.geojson"
+        },
+        {
+          "file": "feeds/portals/onsgeo/oa21-lookup/oa21-lookup.json"
+        },
+        {
+          "file": "feeds/portals/onsgeo/triage.json"
+        },
+        {
+          "file": "feeds/portals/onsgeo/wards-latest/wards-latest.geojson"
+        },
+        {
+          "file": "feeds/portals/onsgeo/workplace-zones-2011/workplace-zones-2011.geojson"
         },
         {
           "file": "feeds/portals/pdg/agricultural-land-classification/agricultural-land-classification.geojson"
@@ -7023,6 +7539,26 @@
     {
       "tool": "tools/portals/pdg.mjs",
       "provides": "walk-portals.mjs adapter for planning.data.gov.uk: dataset list, zone counts by spatial query or by zone planning organisation, triage P0-P8, harvest (GeoJSON by spatial query; tables by organisation; simplify and clip for flood zones)."
+    },
+    {
+      "tool": "tools/portals/nomis.mjs",
+      "provides": "walk-portals.mjs adapter for the Nomis Census 2021 bulk page and zips (the API is disallowed by robots.txt): catalogue of tables, triage N1-N3, harvest of zone output-area rows streamed from the zips."
+    },
+    {
+      "tool": "tools/portals/onsgeo.mjs",
+      "provides": "walk-portals.mjs adapter for the ONS Open Geography Portal: item catalogue by ArcGIS search, triage G1-G8 by product family, harvest of zone boundaries, centroids and the OA lookup by ArcGIS query."
+    },
+    {
+      "tool": "tools/portals/boroughs.mjs",
+      "provides": "walk-portals.mjs adapter for the zone borough portals: City of London map service (licence per layer from its data.gov.uk records), Tower Hamlets ArcGIS Hub, Southwark and Greenwich InstantAtlas indicators, Open Data Lewisham; triage B0-B8; harvest of City layers and Lewisham EV charge points."
+    },
+    {
+      "tool": "tools/portals/national.mjs",
+      "provides": "walk-portals.mjs adapter for the national sources of the brief: the hand-checked list (licence, robots, state) and harvests of DfT AADF, STATS19 aggregates, police.uk aggregates and DESNZ energy by LSOA/MSOA."
+    },
+    {
+      "tool": "tools/portals/index.mjs",
+      "provides": "walk-portals.mjs index: feeds/portals/index.json, counts per portal and harvested file sizes."
     }
   ],
   "tests": [
