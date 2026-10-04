@@ -375,11 +375,12 @@ const HARVEST = {
   'lvmf-2026-consultation':    { id: '2gqpn', fmt: 'shpzip', all: true, theme: 'heritage' },
   // second walk (area from the data), 2026-10-04: the backlog head
   'town-centres':              { id: 'e55z7', file: 'Town_Centres_Boundaries.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
-  'opportunity-areas':         { id: 'epr7z', file: 'Opportunity_Areas.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
+  // the 2025-12-23 GeoPackage has geometry and OBJECTID only (as F23); the 2025-08-27 shapefile zip carries the names
+  'opportunity-areas':         { id: 'epr7z', file: 'Opportunity_Areas.zip', fmt: 'shpzip', theme: 'buildings-places' },
   'high-streets':              { id: '2rq4w', file: 'GLA_High_Street_boundaries_2.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
   // two resources share the name business_improvement_districts.zip on 2025-05-12: the shapefile one by id
   'business-improvement-districts': { id: 'vqmx7', resource: '42dacf04-f4d1-408a-85af-ba17818d2505', fmt: 'shpzip', theme: 'occupants-organisations' },
-  'statistical-boundaries':    { id: '20od9', files: ['LB_LSOA2021_shp.zip', 'LB_MSOA2021_shp.zip', 'London-wards-2018.zip'], fmt: 'shpzip', theme: 'people-housing' },
+  'statistical-boundaries':    { id: '20od9', files: ['LB_LSOA2021_shp.zip', 'LB_MSOA2021_shp.zip', 'London-wards-2018.zip'], fmt: 'shpzip', skipLayers: /CityMerged/i, theme: 'people-housing' },
   // tables: the rows of the zone's areas only (zone-codes.json); the summary workbooks, not the long RM csv tables
   'census2021-ward-labour-market':        { id: '2lw9m', fmt: 'table', formats: ['xlsx'], all: true, codes: ['ward2026', 'ward2018', 'ward2014'], theme: 'people-housing' },
   'census2021-ward-housing':              { id: '2r7gm', fmt: 'table', formats: ['xlsx'], all: true, codes: ['ward2026', 'ward2018', 'ward2014'], theme: 'people-housing' },
@@ -389,6 +390,9 @@ const HARVEST = {
   'census2021-lsoa-housing':              { id: 'emxpl', fmt: 'table', formats: ['xlsx'], all: true, codes: ['lsoa21'], theme: 'people-housing' },
   'census2021-lsoa-demography-migration': { id: '2gj6n', fmt: 'table', formats: ['xlsx'], all: true, codes: ['lsoa21'], theme: 'people-housing' },
   // 264 MB: streamed, rows of zone TOIDs kept, the file not stored
+  // 80 MB zip, one 431 MB CSV of every London building TOID with its own easting/northing: rows in the box only
+  'heat-demand':               { id: '2ogw5', file: 'LHM_2024_08_London.zip', fmt: 'table', zipEntry: 'LHM_London.csv', xy: ['EASTING', 'NORTHING'], theme: 'environment',
+    drop: ['LATITUDE', 'LONGITUDE', 'OA', 'LSOA', 'MSOA', 'WARD_CODE', 'WARD', 'ADMINISTRATIVE_AREA'], dropWhy: 'derivable: WGS84 from EASTING/NORTHING (OSTN15); OA, LSOA, MSOA, ward and borough by point in polygon or from the OA through the ONS lookups (statistical-boundaries, zone-codes.json); dropped to keep the file near 5 MB' },
   'solar-opportunity':         { id: 'vdxyl', file: 'LSOM_by_TOID.csv', fmt: 'table', codes: ['toid'], theme: 'environment' },
 };
 // The zone: the 3D model box (tools/fetch-docklands.mjs BOX_BNG / BOX_WGS84); in_cw: the Canary Wharf registry box.
@@ -484,9 +488,12 @@ function readShpZip(zipFile, { skipBad = false } = {}) {
     const stem = shpName.slice(0, -4), find = e => names.find(n => n.toLowerCase() === (stem + e).toLowerCase());
     const prj = find('.prj') ? get(find('.prj')).toString() : '', cpg = find('.cpg') ? get(find('.cpg')).toString() : '';
     const geoms = readShp(get(shpName)), rows = find('.dbf') ? readDbf(get(find('.dbf')), /utf-?8/i.test(cpg)) : [];
-    const srs = /British_National_Grid|OSGB_1936|27700/i.test(prj) ? 27700 : /WGS_1984|4326/i.test(prj) && !/Mercator/i.test(prj) ? 4326 : null;
+    // Web Mercator (EPSG:3857, e.g. the 2025 BIDs file) is unprojected to WGS84 longitude/latitude on the sphere
+    const merc = /Web_Mercator|Pseudo_Mercator|3857/i.test(prj);
+    const srs = /British_National_Grid|OSGB_1936|27700/i.test(prj) ? 27700 : merc || (/WGS_1984|4326/i.test(prj) && !/Mercator/i.test(prj)) ? 4326 : null;
     if (!srs) { if (skipBad) continue; throw new Error(`${shpName}: unknown projection ${prj.slice(0, 80)}`); }
-    geoms.forEach((g, i) => out.push({ layer: stem.split('/').pop(), srs, geom: g, props: rows[i] || {} }));
+    const R = 6378137, unmerc = ([x, y]) => [x / R * 180 / Math.PI, (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * 180 / Math.PI];
+    geoms.forEach((g, i) => out.push({ layer: stem.split('/').pop(), srs, ...(merc ? { from: 'EPSG:3857' } : {}), geom: merc && g ? mapPts(g, unmerc) : g, props: rows[i] || {} }));
   }
   return { layers: [...new Set(out.map(f => f.layer))].map(l => ({ table: l, srs: out.find(f => f.layer === l).srs })), features: out };
 }
@@ -571,6 +578,7 @@ async function harvest(keys) {
           return { layer: name, srs: wgs ? 4326 : 27700, geom: ok ? { type: 'Point', coordinates: [x, y] } : null, props: p };
         }) };
       }
+      if (H.skipLayers) { got.features = got.features.filter(f => !H.skipLayers.test(f.layer)); got.layers = got.layers.filter(l => !H.skipLayers.test(l.table)); }
       feats.push(...got.features.map(f => ({ ...f, resource: r.id }))); layers.push(...got.layers);
     }
     // to BNG for the zone test, then WGS84 for the output
@@ -771,17 +779,36 @@ function probeMeta(P, res) {
 // the way). H.codes: the code types to match (e.g. ['lsoa21'] or ['ward2026', 'ward2018']).
 async function harvestTable(key, H, d, T, resources) {
   const zc = readJson(join(OUT, 'zone-codes.json'));
+  H.codes ||= [];
   const byToid = H.codes.includes('toid');
-  const zone = byToid ? new Set(readFileSync(join(RAWDIR, 'zone-toids.txt'), 'utf8').split('\n').filter(Boolean)) : new Set(H.codes.flatMap(k => zc.codes[k] || []));
+  // ward tables give the City of London as one row (E09000001), not its 25 wards: that row is a zone row
+  const cityRow = H.codes.some(k => k.startsWith('ward'));
+  const zone = H.xy ? new Set(['box']) : byToid ? new Set(readFileSync(join(RAWDIR, 'zone-toids.txt'), 'utf8').split('\n').filter(Boolean)) : new Set(H.codes.flatMap(k => zc.codes[k] || []));
   if (!zone.size) throw new Error(`${key}: no zone codes of type ${H.codes}`);
-  const KEY_RE = byToid ? /osgb\d{10,16}/ : /E0[0125]\d{6}/;
-  const codeRe = /^E0[0125]\d{6}$/;
+  if (cityRow) zone.add('E09000001');
+  const KEY_RE = byToid ? /osgb\d{10,16}/ : cityRow ? /E0(?:[0125]\d{6}|9000001)/ : /E0[0125]\d{6}/;
+  const codeRe = cityRow ? /^E0[01259]\d{6}$/ : /^E0[0125]\d{6}$/;
   const tables = [], used = []; let nRows = 0, nZone = 0;
   const XLSX = (await import('xlsx')).default;
   for (const r of resources) {
     const url = r.url || `${BASE}/download/${H.id}/${r.id}/${r.file}`, name = decodeURIComponent(url.split('/').pop());
     let rowsets = [];
-    if (r.format === 'csv') {
+    if (r.format === 'zip' && H.zipEntry) {
+      // a CSV inside a zip, rows kept by their own easting/northing in the zone box (H.xy columns)
+      const raw = await rawFile(`${H.id}/${name}`, url);
+      used.push({ resource: r.id, file: name, entry: H.zipEntry, url, size: r.size, resource_date: r.date, fetched: raw.fetched });
+      const { spawn } = await import('child_process'); const { createInterface } = await import('readline');
+      const rl = createInterface({ input: spawn('unzip', ['-p', raw.file, H.zipEntry]).stdout, crlfDelay: Infinity });
+      let header = null, ix, iy; const rows = [];
+      for await (const line of rl) {
+        if (!header) { header = parseCsvLine(line); ix = header.indexOf(H.xy[0]); iy = header.indexOf(H.xy[1]); if (ix < 0 || iy < 0) throw new Error(`${key}: no ${H.xy} in ${header}`); continue; }
+        nRows++; const v = parseCsvLine(line), x = +v[ix], y = +v[iy];
+        if (x >= ZONE_BNG.e0 && x <= ZONE_BNG.e1 && y >= ZONE_BNG.n0 && y <= ZONE_BNG.n1) rows.push(v.map(c => c !== '' && isFinite(c) && !/^0\d/.test(c) && !/^E0|^osgb/.test(c) ? +c : c));
+      }
+      // columns that repeat what another column or a join gives (H.drop) are left out to keep the file small
+      const keep = header.map((h, i) => (H.drop || []).includes(h) ? -1 : i).filter(i => i >= 0);
+      rowsets.push({ name: `${name}/${H.zipEntry}`, header: [keep.map(i => header[i])], rows: rows.map(r => keep.map(i => r[i])) });
+    } else if (r.format === 'csv') {
       // stream: keep the first line (header) and the rows whose first code cell is a zone code
       const f = join(RAWDIR, H.id, name + '.zone.csv'); let lines;
       if (existsSync(f) && !REFRESH) { lines = readFileSync(f, 'utf8').split('\n').filter(Boolean); nRows += +(existsSync(f + '.count') ? readFileSync(f + '.count', 'utf8') : 0); }
@@ -817,7 +844,8 @@ async function harvestTable(key, H, d, T, resources) {
     source: `London Datastore: ${d.title} (${d.publisher})`, dataset: H.id, page: `${BASE}/dataset/${d.slug}`, resources: used, licence: lic, licence_url: licUrl,
     attribution: (T.licence === 'ogl' ? `Contains public sector information licensed under the ${lic} (${d.publisher}).` : `${d.publisher}, ${lic}.`) + (H.extraAttribution ? ' ' + H.extraAttribution : '') + ' The GLA cannot warrant the quality or accuracy of the data (London Datastore terms).',
     dataset_modified: d.modified, geo: d.geo, theme: H.theme,
-    method: `walk-london-datastore.mjs harvest ${key}: ${resources.length} resources (${[...new Set(resources.map(r => r.format))].join(', ')}); ${byToid ? 'a row is kept when its TOID is a zone TOID (the OS MasterMap TopographicArea TOIDs of the OS Open UPRN points in the 3D model box, through OS Open Linked Identifiers; a building with no UPRN is missed)' : `a row is kept when a cell holds a zone code of type ${H.codes.join(' or ')} (feeds/london-datastore/zone-codes.json: areas that meet the 3D model box or hold a zone postcode)`}. Sheets: the up to 3 rows above the first coded row are kept as header_rows. CSV: streamed; the first line is the header; a row is kept by its first ${byToid ? 'TOID (osgb...)' : 'E00/E01/E02/E05 code'}.`,
+    method: `walk-london-datastore.mjs harvest ${key}: ${resources.length} resources (${[...new Set(resources.map(r => r.format))].join(', ')}); ${H.xy ? `a row is kept when its own ${H.xy.join('/')} (BNG metres) lie in the 3D model box (E ${ZONE_BNG.e0}-${ZONE_BNG.e1}, N ${ZONE_BNG.n0}-${ZONE_BNG.n1}); numeric cells are written as numbers` : byToid ? 'a row is kept when its TOID is a zone TOID (the OS MasterMap TopographicArea TOIDs of the OS Open UPRN points in the 3D model box, through OS Open Linked Identifiers; a building with no UPRN is missed)' : `a row is kept when a cell holds a zone code of type ${H.codes.join(' or ')} (feeds/london-datastore/zone-codes.json: areas that meet the 3D model box or hold a zone postcode)`}. ${cityRow ? 'Ward tables give the City of London as one row (E09000001), kept as a zone row. ' : ''}Sheets: the up to 3 rows above the first coded row are kept as header_rows. CSV: streamed; the first line is the header; a row is kept by its first ${byToid ? 'TOID (osgb...)' : 'E00/E01/E02/E05 code'}.`,
+    ...(H.drop ? { columns_dropped: H.drop, columns_dropped_why: H.dropWhy } : {}),
     counts: { source_rows: nRows, zone_rows: nZone, tables: tables.length, zone_codes_of_type: zone.size },
   };
   const dir = join(OUT, key); mkdirSync(dir, { recursive: true });

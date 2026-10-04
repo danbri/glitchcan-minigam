@@ -3781,6 +3781,71 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-datasets",
      "dcat:accessURL": "https://data.london.gov.uk/download/<dataset id>/<resource id>/<file>",
      "dct:description": "probe: up to 3 readable resources per target dataset; text formats with Range bytes=0-1048575 (first 1 MB), sheets up to 20 MB, zips up to 60 MB, GeoPackages up to 100 MB whole; one request at a time, 1.1 s apart"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vqmx7",
+     "dcat:accessURL": "https://data.london.gov.uk/download/vqmx7/<resource id>/<file>",
+     "dct:description": "harvest business-improvement-districts: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gj6n",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2gj6n/<resource id>/<file>",
+     "dct:description": "harvest census2021-lsoa-demography-migration: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emxpl",
+     "dcat:accessURL": "https://data.london.gov.uk/download/emxpl/<resource id>/<file>",
+     "dct:description": "harvest census2021-lsoa-housing: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e76rk",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e76rk/<resource id>/<file>",
+     "dct:description": "harvest census2021-lsoa-labour-market: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vqlx7",
+     "dcat:accessURL": "https://data.london.gov.uk/download/vqlx7/<resource id>/<file>",
+     "dct:description": "harvest census2021-ward-demography-migration: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2r7gm",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2r7gm/<resource id>/<file>",
+     "dct:description": "harvest census2021-ward-housing: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2lw9m",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2lw9m/<resource id>/<file>",
+     "dct:description": "harvest census2021-ward-labour-market: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24636",
+     "dcat:accessURL": "https://data.london.gov.uk/download/24636/<resource id>/<file>",
+     "dct:description": "harvest census2021-ward-qualifications-health: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ogw5",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2ogw5/<resource id>/<file>",
+     "dct:description": "harvest heat-demand: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2rq4w",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2rq4w/<resource id>/<file>",
+     "dct:description": "harvest high-streets: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-epr7z",
+     "dcat:accessURL": "https://data.london.gov.uk/download/epr7z/<resource id>/<file>",
+     "dct:description": "harvest opportunity-areas: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdxyl",
+     "dcat:accessURL": "https://data.london.gov.uk/download/vdxyl/<resource id>/<file>",
+     "dct:description": "harvest solar-opportunity: the resources named in HARVEST (GET, streamed and filtered; the file is not kept)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e55z7",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e55z7/<resource id>/<file>",
+     "dct:description": "harvest town-centres: the resources named in HARVEST (GET)"
     }
    ],
    "prov:generated": [
@@ -3836,6 +3901,48 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/probe.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/business-improvement-districts/business-improvement-districts.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-lsoa-demography-migration/census2021-lsoa-demography-migration.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-lsoa-housing/census2021-lsoa-housing.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-lsoa-labour-market/census2021-lsoa-labour-market.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-ward-demography-migration/census2021-ward-demography-migration.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-ward-housing/census2021-ward-housing.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-ward-labour-market/census2021-ward-labour-market.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-ward-qualifications-health/census2021-ward-qualifications-health.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/heat-demand/heat-demand.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/high-streets/high-streets.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/opportunity-areas/opportunity-areas.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/solar-opportunity/solar-opportunity.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/statistical-boundaries/statistical-boundaries.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/town-centres/town-centres.geojson"
+    },
+    {
      "@id": "urn:cwplans:local:data/raw/london-datastore/"
     }
    ],
@@ -3868,7 +3975,10 @@
    "cwp:fault": [
     "F22",
     "F23",
-    "F27"
+    "F27",
+    "F28",
+    "F29",
+    "F30"
    ],
    "cwp:judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md. The probe rules (caps, thresholds of D2 and D4, the place list) were set by reading the first full run: one cell naming Deptford or one publisher postcode (City Hall) made a zone dataset of a payments list, so D2 needs 3 distinct zone postcodes and D4 2 names in 3 cells; census table ids (QS101EW) read as postcodes until the UK postcode area list was added. Fatal fires (24yo6, incident postcodes) was added to the sensitive titles by hand."
   },
@@ -9348,6 +9458,328 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/town-centres/town-centres.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Plan town centre boundaries with name and class (features that meet the 3D model box; GeoJSON WGS84 with a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e55z7"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/statistical-boundaries/statistical-boundaries.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "LSOA 2021 (318), MSOA 2021 (75) and ward 2018 (64) boundaries that meet the 3D model box, with codes and names (GeoJSON WGS84, meta member); the outlines for the census tables by LSOA and ward",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/solar-opportunity/solar-opportunity.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Solar Opportunity Map (2025-12): roof solar potential per building TOID (viable area, 3D area, total potential, tilt, LiDAR year), the 55,261 rows whose TOID is a zone TOID (TOIDs of the OS Open UPRN points in the 3D model box through OS Open Linked Identifiers); JSON table with a meta member",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdxyl"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-uprn"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/opportunity-areas/opportunity-areas.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Plan Opportunity Area boundaries with name, borough and the GLA site reference (2025-08 shapefile; the 2025-12 GeoPackage has geometry only), the 11 that meet the 3D model box: Isle of Dogs, Canada Water, Greenwich Peninsula, Royal Docks and Beckton Riverside, Deptford Creek/Greenwich Riverside, London Bridge/Bankside, City Fringe, Old Kent Road, Elephant and Castle, New Cross/Lewisham/Catford, Olympic Legacy (GeoJSON WGS84, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-epr7z"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/high-streets/high-streets.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "GLA high street boundaries that meet the 3D model box (GeoJSON WGS84, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2rq4w"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/heat-demand/heat-demand.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Heat Map 2024 building heat demand: one row per building TOID whose own easting/northing lies in the 3D model box (54,181 of 2,080,631): TOID, easting, northing, annual kWh, peak kW, DEC and EPC counts, residential and non-residential counts, estimation method (JSON table with a meta member; derivable area columns dropped)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ogw5"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-ward-qualifications-health/census2021-ward-qualifications-health.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2021 Census qualifications, health, disability and care tables by ward: zone ward rows only (JSON tables, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24636"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-ward-labour-market/census2021-ward-labour-market.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2021 Census labour market tables by ward (economic activity, occupation, NS-SEC, hours, travel to work): the rows of the zone wards only (JSON tables with header rows and a meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2lw9m"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-ward-housing/census2021-ward-housing.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2021 Census housing tables by ward: the rows of the zone wards only (JSON tables, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2r7gm"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-ward-demography-migration/census2021-ward-demography-migration.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2021 Census demography and migration tables by ward: zone ward rows only (JSON tables, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vqlx7"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-lsoa-labour-market/census2021-lsoa-labour-market.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2021 Census labour market tables by LSOA: zone LSOA rows only (JSON tables, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e76rk"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-lsoa-housing/census2021-lsoa-housing.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2021 Census housing tables by LSOA: zone LSOA rows only (JSON tables, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emxpl"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/census2021-lsoa-demography-migration/census2021-lsoa-demography-migration.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2021 Census demography and migration tables by LSOA: zone LSOA rows only (JSON tables, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gj6n"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/business-improvement-districts/business-improvement-districts.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Business Improvement District boundaries (London Plan BIDs, 2025-05 shapefile) that meet the 3D model box (GeoJSON WGS84, meta member)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vqmx7"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/catalogue.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the whole London Datastore catalogue, 2026-10-04: 1,305 datasets, one per line (id, title, publisher, licence, topics, tags, geo granularity, update frequency, dates, 11,348 resources with format, generic kind, md5, size and download path, 312 links; a details member from /api/v3/dataset/<id> for all 1,305: resource count, kinds, archivedAt, next review, the granularity words and zone place names named in the description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/probe.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "area found inside the data of every open dataset whose metadata area is unknown, borough or London-wide: the resources sampled (size caps), the signals (coordinates in the zone, zone UPRNs, postcodes, OA/LSOA/MSOA/ward codes, borough rows, zone place names), the area class and the rule that fired",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-datasets"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-uprn"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-codes.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the zone's area codes and postcodes: OA, LSOA and MSOA codes (2001, 2011, 2021), ward codes (2011, 2014, 2018, 2026, statistical 2005) of the areas that meet the 3D model box or hold a postcode whose ONSPD grid reference lies in it; the zone postcodes; ward and MSOA names",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/catalogue.json",
    "@type": [
     "prov:Entity",
@@ -10746,10 +11178,10 @@
     "prov:Entity",
     "dcat:Dataset"
    ],
-   "dct:title": "London Datastore 20od9: Statistical GIS Boundary Files for London (Greater London Authority; ONS and OS boundaries)",
-   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
-   "dcat:landingPage": "https://data.london.gov.uk/dataset/statistical-gis-boundary-files-london-20od9",
-   "cwp:attribution": "Contains National Statistics data (c) Crown copyright and database right; contains OS data (c) Crown copyright and database right. The GLA cannot warrant the quality or accuracy of the data."
+   "dct:title": "London Datastore 20od9: Statistical GIS Boundary Files for London (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/statistical-gis-boundary-files-for-london-20od9",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-datasets",
@@ -10760,6 +11192,149 @@
    "dct:title": "London Datastore dataset resources opened by the area probe (open-licence datasets only; samples, not kept in the repo)",
    "dct:license": "each dataset's own open licence (OGL, CC BY, ODC-By, public domain), recorded per dataset in feeds/london-datastore/probe.json and catalogue.json",
    "dcat:landingPage": "https://data.london.gov.uk/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vqmx7",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore vqmx7: London Plan Business Improvement Districts (Greater London Authority)",
+   "dct:license": "Creative Commons Attribution (London Datastore)",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-plan-business-improvement-districts-vqmx7",
+   "cwp:attribution": "Greater London Authority, Creative Commons Attribution. The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gj6n",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2gj6n: 2021 census LSOA demography and migration (Census Information Scheme)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2021-census-lsoa-demography-and-migration-2gj6n",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emxpl",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore emxpl: 2021 census lsoa housing (Census Information Scheme)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2021-census-lsoa-housing-emxpl",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e76rk",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e76rk: 2021 census lsoa labour market (Census Information Scheme)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2021-census-lsoa-labour-market-e76rk",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vqlx7",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore vqlx7: 2021 census wards demography and migration (Census Information Scheme)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2021-census-wards-demography-and-migration-vqlx7",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2r7gm",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2r7gm: 2021 census wards housing (Census Information Scheme)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2021-census-wards-housing-2r7gm",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2lw9m",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2lw9m: 2021 census wards labour market (Census Information Scheme)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2021-census-wards-labour-market-2lw9m",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24636",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 24636: 2021 census wards qualifications health disability and care (Census Information Scheme)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2021-census-wards-qualifications-health-disability-and-care-24636",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ogw5",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2ogw5: London Heat Map - Reports and Data (Greater London Authority)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-heat-map-reports-and-data-2ogw5",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2rq4w",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2rq4w: GLA High Street Boundaries (Greater London Authority)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/gla-high-street-boundaries-2rq4w",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-epr7z",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore epr7z: Opportunity Areas (Planning Constraints Map)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/opportunity-areas-epr7z",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Planning Constraints Map). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdxyl",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore vdxyl: London Solar Opportunity Map (LSOM) (Greater London Authority)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-solar-opportunity-map-lsom-vdxyl",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e55z7",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e55z7: Town Centre Boundaries (Planning Constraints Map)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/town-centre-boundaries-e55z7",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Planning Constraints Map). The GLA cannot warrant the quality or accuracy of the data."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",

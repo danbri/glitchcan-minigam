@@ -3427,6 +3427,71 @@
           "source": "lds-datasets",
           "endpoint": "https://data.london.gov.uk/download/<dataset id>/<resource id>/<file>",
           "request": "probe: up to 3 readable resources per target dataset; text formats with Range bytes=0-1048575 (first 1 MB), sheets up to 20 MB, zips up to 60 MB, GeoPackages up to 100 MB whole; one request at a time, 1.1 s apart"
+        },
+        {
+          "source": "lds-vqmx7",
+          "endpoint": "https://data.london.gov.uk/download/vqmx7/<resource id>/<file>",
+          "request": "harvest business-improvement-districts: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2gj6n",
+          "endpoint": "https://data.london.gov.uk/download/2gj6n/<resource id>/<file>",
+          "request": "harvest census2021-lsoa-demography-migration: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-emxpl",
+          "endpoint": "https://data.london.gov.uk/download/emxpl/<resource id>/<file>",
+          "request": "harvest census2021-lsoa-housing: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-e76rk",
+          "endpoint": "https://data.london.gov.uk/download/e76rk/<resource id>/<file>",
+          "request": "harvest census2021-lsoa-labour-market: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-vqlx7",
+          "endpoint": "https://data.london.gov.uk/download/vqlx7/<resource id>/<file>",
+          "request": "harvest census2021-ward-demography-migration: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2r7gm",
+          "endpoint": "https://data.london.gov.uk/download/2r7gm/<resource id>/<file>",
+          "request": "harvest census2021-ward-housing: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2lw9m",
+          "endpoint": "https://data.london.gov.uk/download/2lw9m/<resource id>/<file>",
+          "request": "harvest census2021-ward-labour-market: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-24636",
+          "endpoint": "https://data.london.gov.uk/download/24636/<resource id>/<file>",
+          "request": "harvest census2021-ward-qualifications-health: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2ogw5",
+          "endpoint": "https://data.london.gov.uk/download/2ogw5/<resource id>/<file>",
+          "request": "harvest heat-demand: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2rq4w",
+          "endpoint": "https://data.london.gov.uk/download/2rq4w/<resource id>/<file>",
+          "request": "harvest high-streets: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-epr7z",
+          "endpoint": "https://data.london.gov.uk/download/epr7z/<resource id>/<file>",
+          "request": "harvest opportunity-areas: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-vdxyl",
+          "endpoint": "https://data.london.gov.uk/download/vdxyl/<resource id>/<file>",
+          "request": "harvest solar-opportunity: the resources named in HARVEST (GET, streamed and filtered; the file is not kept)"
+        },
+        {
+          "source": "lds-e55z7",
+          "endpoint": "https://data.london.gov.uk/download/e55z7/<resource id>/<file>",
+          "request": "harvest town-centres: the resources named in HARVEST (GET)"
         }
       ],
       "generated": [
@@ -3482,6 +3547,48 @@
           "file": "feeds/london-datastore/probe.json"
         },
         {
+          "file": "feeds/london-datastore/business-improvement-districts/business-improvement-districts.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-lsoa-demography-migration/census2021-lsoa-demography-migration.json"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-lsoa-housing/census2021-lsoa-housing.json"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-lsoa-labour-market/census2021-lsoa-labour-market.json"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-ward-demography-migration/census2021-ward-demography-migration.json"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-ward-housing/census2021-ward-housing.json"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-ward-labour-market/census2021-ward-labour-market.json"
+        },
+        {
+          "file": "feeds/london-datastore/census2021-ward-qualifications-health/census2021-ward-qualifications-health.json"
+        },
+        {
+          "file": "feeds/london-datastore/heat-demand/heat-demand.json"
+        },
+        {
+          "file": "feeds/london-datastore/high-streets/high-streets.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/opportunity-areas/opportunity-areas.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/solar-opportunity/solar-opportunity.json"
+        },
+        {
+          "file": "feeds/london-datastore/statistical-boundaries/statistical-boundaries.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/town-centres/town-centres.geojson"
+        },
+        {
           "local": "data/raw/london-datastore/",
           "note": "export.json, package_search.json, details/<id>.json, <dataset id>/<file> downloads (gitignored; reused unless --refresh)"
         }
@@ -3511,7 +3618,10 @@
       "faults": [
         "F22",
         "F23",
-        "F27"
+        "F27",
+        "F28",
+        "F29",
+        "F30"
       ],
       "judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md. The probe rules (caps, thresholds of D2 and D4, the place list) were set by reading the first full run: one cell naming Deptford or one publisher postcode (City Hall) made a zone dataset of a payments list, so D2 needs 3 distinct zone postcodes and D4 2 names in 3 cells; census table ids (QS101EW) read as postcodes until the UK postcode area list was added. Fatal fires (24yo6, incident postcodes) was added to the sensitive titles by hand."
     },
