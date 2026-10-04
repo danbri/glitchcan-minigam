@@ -3695,6 +3695,11 @@
           "request": "zone-names: lat/lon of 6 centres, stopTypes NaptanMetroStation,NaptanRailStation, radius 2000"
         },
         {
+          "source": "lds-206m8",
+          "endpoint": "https://data.london.gov.uk/download/206m8/<resource id>/<file>",
+          "request": "run 206m8: 1 resources chosen by the rules (digital_exclusion_older_people_data.gpkg)"
+        },
+        {
           "source": "lds-20o91",
           "endpoint": "https://data.london.gov.uk/download/20o91/<resource id>/<file>",
           "request": "run 20o91: 1 resources chosen by the rules (areas-that-qualify-for-eco_csco-support.xls)"
@@ -3735,11 +3740,6 @@
           "request": "run 248xz: 2 resources chosen by the rules (gla-allotment-locations-shp.zip, gla-allotment-locations-tab.zip)"
         },
         {
-          "source": "lds-248y5",
-          "endpoint": "https://data.london.gov.uk/download/248y5/<resource id>/<file>",
-          "request": "run 248y5: 2 resources chosen by the rules (lp-consultation-oct-2009-areas-for-intensification-points-shp.zip, lp-consultation-oct-2009-areas-for-intensification-points-tab.zip)"
-        },
-        {
           "source": "lds-24rox",
           "endpoint": "https://data.london.gov.uk/download/24rox/<resource id>/<file>",
           "request": "run 24rox: 1 resources chosen by the rules (2013-TCHC-Technical-Annex.xls)"
@@ -3750,14 +3750,19 @@
           "request": "run 24rpx: 12 resources chosen by the rules (Housing in London 2025 - web - 2nd edition.xlsx, Housing in London 2024 - web.xlsx, Housing in London 2023 - web.xlsx, Housing in London 2022 - tables data only.xlsx, Housing in London 2021 - tables data only.xlsx, Housing in London 2020 v2 - tables data only.xlsx, Housing in London 2019 tables - we)"
         },
         {
+          "source": "lds-24rz6",
+          "endpoint": "https://data.london.gov.uk/download/24rz6/<resource id>/<file>",
+          "request": "run 24rz6: 8 resources chosen by the rules (2015  PTALs Grid Values.zip, LSOA2001 AvPTAI2015.csv, LSOA2011 AvPTAI2015.csv, COA2011 AvPTAI2015.csv, WPZone2011 AvPTAI2015.csv, Ward2011 AvPTAI2015.csv, Ward2014 AvPTAI2015.csv, Borough AvPTAI2015.csv)"
+        },
+        {
           "source": "lds-24yxz",
           "endpoint": "https://data.london.gov.uk/download/24yxz/<resource id>/<file>",
           "request": "run 24yxz: 1 resources chosen by the rules (Housing_Zones.gpkg)"
         },
         {
-          "source": "lds-298zq",
-          "endpoint": "https://data.london.gov.uk/download/298zq/<resource id>/<file>",
-          "request": "run 298zq: 2 resources chosen by the rules (lp-falp-2006-areas-for-intensification-points-shp.zip, lp-falp-2006-areas-for-intensification-points-tab.zip)"
+          "source": "lds-2964y",
+          "endpoint": "https://data.london.gov.uk/download/2964y/<resource id>/<file>",
+          "request": "run 2964y: 4 resources chosen by the rules (Unpaid care.xlsx, Disability.xlsx, General health.xlsx, Qualifications.xlsx)"
         },
         {
           "source": "lds-29j4y",
@@ -3780,11 +3785,6 @@
           "request": "run 2gjyq: 6 resources chosen by the rules (AMR 20 Chapter 1 KPIs tables.xlsx, AMR 20 Chapter 2 Housing tables.xlsx, AMR 20 Chapter 2 non-residential tables.xlsx, AMR 20 Chapter 2 Growth patterns and sustainability tables.xlsx, AMR 20 Chapter 3 Opportunity Areas tables.xlsx, AMR 20 Chapter 4 Referable applications tables.xlsx)"
         },
         {
-          "source": "lds-2goy0",
-          "endpoint": "https://data.london.gov.uk/download/2goy0/<resource id>/<file>",
-          "request": "run 2goy0: 2 resources chosen by the rules (lp-consultation-oct-2009-central-activities-zone-shp.zip, lp-consultation-oct-2009-central-activities-zone-tab.zip)"
-        },
-        {
           "source": "lds-2gyg0",
           "endpoint": "https://data.london.gov.uk/download/2gyg0/<resource id>/<file>",
           "request": "run 2gyg0: 1 resources chosen by the rules (Low_Emission_Bus_Zones_line.gpkg)"
@@ -3793,6 +3793,11 @@
           "source": "lds-2gyrw",
           "endpoint": "https://data.london.gov.uk/download/2gyrw/<resource id>/<file>",
           "request": "run 2gyrw: 1 resources chosen by the rules (ListofSchools_LAEI2013.xlsx)"
+        },
+        {
+          "source": "lds-2jk36",
+          "endpoint": "https://data.london.gov.uk/download/2jk36/<resource id>/<file>",
+          "request": "run 2jk36: 1 resources chosen by the rules (station-usage.xlsx)"
         },
         {
           "source": "lds-2jkxd",
@@ -3805,11 +3810,6 @@
           "request": "run 2jkzj: 5 resources chosen by the rules (LFB low carbon generators at fire stations - June 2017.csv, LFEPA low carbon generators - June 2016.csv, gla-low-carbon-generators.csv, mps-low-carbon-generators-2011-05.csv, tfl-low-carbon-generators-2011-05.csv)"
         },
         {
-          "source": "lds-2jrxd",
-          "endpoint": "https://data.london.gov.uk/download/2jrxd/<resource id>/<file>",
-          "request": "run 2jrxd: 2 resources chosen by the rules (lp-falp-2006-inner-outer-london-shp.zip, lp-falp-2006-inner-outer-london-tab.zip)"
-        },
-        {
           "source": "lds-2jxjl",
           "endpoint": "https://data.london.gov.uk/download/2jxjl/<resource id>/<file>",
           "request": "run 2jxjl: 1 resources chosen by the rules (Opportunity_Areas.gpkg)"
@@ -3818,6 +3818,11 @@
           "source": "lds-2k843",
           "endpoint": "https://data.london.gov.uk/download/2k843/<resource id>/<file>",
           "request": "run 2k843: 1 resources chosen by the rules (london-ward-well-being-probability-scores.zip)"
+        },
+        {
+          "source": "lds-2k8nd",
+          "endpoint": "https://data.london.gov.uk/download/2k8nd/<resource id>/<file>",
+          "request": "run 2k8nd: 2 resources chosen by the rules (GLA Population Yield Calculator (v3.2).xlsx, gla-yield-calculator-archived.zip)"
         },
         {
           "source": "lds-2k8pr",
@@ -3890,6 +3895,11 @@
           "request": "run 2r4x4: 1 resources chosen by the rules (White goods fires from 2009.xlsx)"
         },
         {
+          "source": "lds-2r7om",
+          "endpoint": "https://data.london.gov.uk/download/2r7om/<resource id>/<file>",
+          "request": "run 2r7om: 5 resources chosen by the rules (Multiple religions in household.xlsx, Household Language.xlsx, Multiple ethnic groups.xlsx, English Proficiency.xlsx, Ethnic group.xlsx)"
+        },
+        {
           "source": "lds-2r8x4",
           "endpoint": "https://data.london.gov.uk/download/2r8x4/<resource id>/<file>",
           "request": "run 2r8x4: 6 resources chosen by the rules (low-temp-heat-summary.xlsx, secondary-heat.zip, Delivered+heat+2013-msoa.csv, Available+heat+2013-msoa.csv, Delivered+heat+2050-msoa.csv, Available+heat+2050-msoa.csv)"
@@ -3930,11 +3940,6 @@
           "request": "run 2yjmq: 1 resources chosen by the rules (Protected Vistas LVMF.zip)"
         },
         {
-          "source": "lds-2yr5w",
-          "endpoint": "https://data.london.gov.uk/download/2yr5w/<resource id>/<file>",
-          "request": "run 2yr5w: 2 resources chosen by the rules (lp-consultation-oct-2009-inner-outer-london-shp.zip, lp-consultation-oct-2009-inner-outer-london-tab.zip)"
-        },
-        {
           "source": "lds-e1616",
           "endpoint": "https://data.london.gov.uk/download/e1616/<resource id>/<file>",
           "request": "run e1616: 6 resources chosen by the rules (AMR 19 Chapter 1 KPIs tables.xlsx, AMR 19 Chapter 2 Growth patterns and sustainability tables.xlsx, AMR 19 Chapter 2 Housing tables.xlsx, AMR 19 Chapter 2 non-residential tables.xlsx, AMR 19 Chapter 3 Opportunity Areas tables.xlsx, AMR 19 Chapter 4 Referable applications tables.xlsx)"
@@ -3948,11 +3953,6 @@
           "source": "lds-e18rk",
           "endpoint": "https://data.london.gov.uk/download/e18rk/<resource id>/<file>",
           "request": "run e18rk: 1 resources chosen by the rules (polling-stations-2010-election.csv)"
-        },
-        {
-          "source": "lds-e18zj",
-          "endpoint": "https://data.london.gov.uk/download/e18zj/<resource id>/<file>",
-          "request": "run e18zj: 2 resources chosen by the rules (lp-consultation-oct-2009-sil-points-shp.zip, lp-consultation-oct-2009-sil-points-tab.zip)"
         },
         {
           "source": "lds-e1rqd",
@@ -3975,9 +3975,29 @@
           "request": "run e550x: 1 resources chosen by the rules (Newham.zip)"
         },
         {
+          "source": "lds-e55gn",
+          "endpoint": "https://data.london.gov.uk/download/e55gn/<resource id>/<file>",
+          "request": "run e55gn: 1 resources chosen by the rules (fixed-broadband-speeds-postcode-london-2014.xlsx)"
+        },
+        {
           "source": "lds-e55pw",
           "endpoint": "https://data.london.gov.uk/download/e55pw/<resource id>/<file>",
           "request": "run e55pw: 1 resources chosen by the rules (London_Boroughs.gpkg)"
+        },
+        {
+          "source": "lds-e6600",
+          "endpoint": "https://data.london.gov.uk/download/e6600/<resource id>/<file>",
+          "request": "run e6600: 1 resources chosen by the rules (LOAC_lookup.csv)"
+        },
+        {
+          "source": "lds-e68jn",
+          "endpoint": "https://data.london.gov.uk/download/e68jn/<resource id>/<file>",
+          "request": "run e68jn: 18 resources chosen by the rules (tfl-lu-station-accessibility-platforms.xls, tfl-lu-station-accessibility-duty-supervisor-questions.xls, tfl-lu-station-accessibility-object-issues.xls, tfl-lu-station-accessibility-barriers.xls, tfl-lu-station-accessibility-escalators.xls, tfl-lu-station-accessibility-entrances.xls, tfl-lu-station-a)"
+        },
+        {
+          "source": "lds-e68zn",
+          "endpoint": "https://data.london.gov.uk/download/e68zn/<resource id>/<file>",
+          "request": "run e68zn: 1 resources chosen by the rules (bus-stops-10-06-15.csv)"
         },
         {
           "source": "lds-e6w0w",
@@ -3995,6 +4015,11 @@
           "request": "run e710q: 1 resources chosen by the rules (particulate-air-pollution-mortality.csv)"
         },
         {
+          "source": "lds-e79qq",
+          "endpoint": "https://data.london.gov.uk/download/e79qq/<resource id>/<file>",
+          "request": "run e79qq: 8 resources chosen by the rules (ons-mye-custom-age-tool-2020.xlsx, ons-mye-custom-age-tool-new-ward-boundaries.xls, ons-mye-custom-age-tool-ward.xls, ons-mye-custom-age-tool-uk-geogs-2015.xls, ons-mye-custom-age-tool-uk-geogs-2014.xls, ons-mye-custom-age-tool-uk-geogs-2013.xls, ons-mye-custom-age-tool-uk-geogs-2012.xls, ons-mye-cu)"
+        },
+        {
           "source": "lds-em5dl",
           "endpoint": "https://data.london.gov.uk/download/em5dl/<resource id>/<file>",
           "request": "run em5dl: 1 resources chosen by the rules (mobile_data.zip)"
@@ -4003,11 +4028,6 @@
           "source": "lds-em875",
           "endpoint": "https://data.london.gov.uk/download/em875/<resource id>/<file>",
           "request": "run em875: 5 resources chosen by the rules (GLA_assets.csv, LFB_assets.csv, LLDC_assets.csv, Met_assets.csv, TFL_assets.csv)"
-        },
-        {
-          "source": "lds-em9qy",
-          "endpoint": "https://data.london.gov.uk/download/em9qy/<resource id>/<file>",
-          "request": "run em9qy: 2 resources chosen by the rules (lp-falp-2006-sil-points-shp.zip, lp-falp-2006-sil-points-tab.zip)"
         },
         {
           "source": "lds-emqkp",
@@ -4030,11 +4050,6 @@
           "request": "run exgxp: 2 resources chosen by the rules (lda-brownfield-land-2009-10-shp.zip, lda-brownfield-land-2009-10-tab.zip)"
         },
         {
-          "source": "lds-exp0l",
-          "endpoint": "https://data.london.gov.uk/download/exp0l/<resource id>/<file>",
-          "request": "run exp0l: 2 resources chosen by the rules (lp-falp-2006-central-activities-zone-shp.zip, lp-falp-2006-central-activities-zone-tab.zip)"
-        },
-        {
           "source": "lds-exprl",
           "endpoint": "https://data.london.gov.uk/download/exprl/<resource id>/<file>",
           "request": "run exprl: 3 resources chosen by the rules (ward-profiles-excel-version.csv, ward-atlas-data.csv, ward-atlas-2014boundaries.xls)"
@@ -4048,6 +4063,26 @@
           "source": "lds-exyrm",
           "endpoint": "https://data.london.gov.uk/download/exyrm/<resource id>/<file>",
           "request": "run exyrm: 5 resources chosen by the rules (pubs-borough-msoa.xls, licensed-restaurants-cafes-borough.xls, unlicensed-restaurants-cafes-borough.xls, take-away-borough.xls, licensed-clubs-borough.xls)"
+        },
+        {
+          "source": "lds-v864q",
+          "endpoint": "https://data.london.gov.uk/download/v864q/<resource id>/<file>",
+          "request": "run v864q: 5 resources chosen by the rules (birthsbyward20midyear01to20.csv, birthsbylad20midyear01to20.csv, birthsbymsoamidyear01to20.csv, birthsbylad11midyear01to20.csv, birthsbyregionmidyear01to20.csv)"
+        },
+        {
+          "source": "lds-v8651",
+          "endpoint": "https://data.london.gov.uk/download/v8651/<resource id>/<file>",
+          "request": "run v8651: 2 resources chosen by the rules (CST data - Round 3.xlsx, CSI-Postcode-Lookup.xlsx)"
+        },
+        {
+          "source": "lds-v8nj1",
+          "endpoint": "https://data.london.gov.uk/download/v8nj1/<resource id>/<file>",
+          "request": "run v8nj1: 15 resources chosen by the rules (CT 483 unpaid care.xlsx, CT 482 qualifications.xlsx, CT 481 HRP - occ rating.xlsx, CT 480 HRP - HH comp.xlsx, CT 479 HRP - Tenure.xlsx, CT0463 ethnic LA pivot.xlsx, CT0463 ethnic london ward.xlsx, CT0463 ethnic london LSOA.xlsx, CT0462 language ward pivot.xlsx, CT0218 data and pivot.xlsx, CT0219 dat)"
+        },
+        {
+          "source": "lds-v8o11",
+          "endpoint": "https://data.london.gov.uk/download/v8o11/<resource id>/<file>",
+          "request": "run v8o11: 1 resources chosen by the rules (Internet-user-classification.xlsx)"
         },
         {
           "source": "lds-v8onw",
@@ -4065,6 +4100,11 @@
           "request": "run vd455: 1 resources chosen by the rules (LondonWideUltraLowEmissionZone.gpkg)"
         },
         {
+          "source": "lds-vd615",
+          "endpoint": "https://data.london.gov.uk/download/vd615/<resource id>/<file>",
+          "request": "run vd615: 3 resources chosen by the rules (population-estimates-single-year-age.csv, ward-mid-year-estimates-sya-since-2002.csv, ons-mye-population-totals.xls)"
+        },
+        {
           "source": "lds-vdjmm",
           "endpoint": "https://data.london.gov.uk/download/vdjmm/<resource id>/<file>",
           "request": "run vdjmm: 1 resources chosen by the rules (numberofpublichousesandbarsinlondon2001to2016.xls)"
@@ -4078,6 +4118,11 @@
           "source": "lds-vdjz5",
           "endpoint": "https://data.london.gov.uk/download/vdjz5/<resource id>/<file>",
           "request": "run vdjz5: 5 resources chosen by the rules (local-elections-summary-2018.xls, london-council-2018-ward.xls, borough-elections-2018-report-data.xls, ward-party-results.csv, candidate-results.csv)"
+        },
+        {
+          "source": "lds-vq867",
+          "endpoint": "https://data.london.gov.uk/download/vq867/<resource id>/<file>",
+          "request": "run vq867: 1 resources chosen by the rules (poverty_2013_update.xls)"
         },
         {
           "source": "lds-vq8ln",
@@ -4106,6 +4151,9 @@
           "file": "feeds/london-datastore/index.json"
         },
         {
+          "file": "feeds/london-datastore/mapping-digital-exclusion-supporting-data/mapping-digital-exclusion-supporting-data.geojson"
+        },
+        {
           "file": "feeds/london-datastore/areas-that-qualify-for-carbon-saving-community/areas-that-qualify-for-carbon-saving-community.json"
         },
         {
@@ -4130,9 +4178,6 @@
           "file": "feeds/london-datastore/allotment-locations/allotment-locations.geojson"
         },
         {
-          "file": "feeds/london-datastore/areas-for-intensification-points-london-plan/areas-for-intensification-points-london-plan.geojson"
-        },
-        {
           "file": "feeds/london-datastore/2013-london-town-centre-health-check-analysis/2013-london-town-centre-health-check-analysis.json"
         },
         {
@@ -4142,10 +4187,16 @@
           "file": "feeds/london-datastore/housing-in-london-the-evidence-base-for-the/housing-in-london-the-evidence-base-for-the.json"
         },
         {
+          "file": "feeds/london-datastore/public-transport-accessibility-levels/public-transport-accessibility-levels.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/public-transport-accessibility-levels/public-transport-accessibility-levels.json"
+        },
+        {
           "file": "feeds/london-datastore/housing-zones/housing-zones.geojson"
         },
         {
-          "file": "feeds/london-datastore/areas-for-intensification-points-london-plan/areas-for-intensification-points-london-plan.geojson"
+          "file": "feeds/london-datastore/2021-lsoa-qualifications-health-disability-and/2021-lsoa-qualifications-health-disability-and.json"
         },
         {
           "file": "feeds/london-datastore/london-schools-atlas/london-schools-atlas.geojson"
@@ -4166,13 +4217,13 @@
           "file": "feeds/london-datastore/london-plan-amr-20-data-tables/london-plan-amr-20-data-tables.json"
         },
         {
-          "file": "feeds/london-datastore/central-activities-zone-boundary-london-plan/central-activities-zone-boundary-london-plan.geojson"
-        },
-        {
           "file": "feeds/london-datastore/low-emission-bus-zones/low-emission-bus-zones.geojson"
         },
         {
           "file": "feeds/london-datastore/analysing-air-pollution-exposure-in-london/analysing-air-pollution-exposure-in-london.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/train-station-usage/train-station-usage.json"
         },
         {
           "file": "feeds/london-datastore/average-house-prices-by-borough-ward-msoa-and/average-house-prices-by-borough-ward-msoa-and.json"
@@ -4184,13 +4235,13 @@
           "file": "feeds/london-datastore/low-carbon-generators/low-carbon-generators.json"
         },
         {
-          "file": "feeds/london-datastore/inner-and-outer-london-boundaries-london-plan/inner-and-outer-london-boundaries-london-plan.geojson"
-        },
-        {
           "file": "feeds/london-datastore/london-plan-opportunity-areas/london-plan-opportunity-areas.geojson"
         },
         {
           "file": "feeds/london-datastore/london-ward-well-being-scores/london-ward-well-being-scores.json"
+        },
+        {
+          "file": "feeds/london-datastore/gla-population-yield-calculator/gla-population-yield-calculator.json"
         },
         {
           "file": "feeds/london-datastore/languages-spoken-by-pupils-borough-and-msoa/languages-spoken-by-pupils-borough-and-msoa.json"
@@ -4238,6 +4289,9 @@
           "file": "feeds/london-datastore/fires-in-london-cause-of-ignition-is-white-goods/fires-in-london-cause-of-ignition-is-white-goods.json"
         },
         {
+          "file": "feeds/london-datastore/2021-census-lsoa-ethnicity-language-identity/2021-census-lsoa-ethnicity-language-identity.json"
+        },
+        {
           "file": "feeds/london-datastore/londons-zero-carbon-energy-resource-secondary/londons-zero-carbon-energy-resource-secondary.json"
         },
         {
@@ -4262,9 +4316,6 @@
           "file": "feeds/london-datastore/lvmf-protected-vistas-gis-files/lvmf-protected-vistas-gis-files.geojson"
         },
         {
-          "file": "feeds/london-datastore/inner-and-outer-london-boundaries-london-plan/inner-and-outer-london-boundaries-london-plan.geojson"
-        },
-        {
           "file": "feeds/london-datastore/london-plan-amr-19-tables-and-data/london-plan-amr-19-tables-and-data.json"
         },
         {
@@ -4272,9 +4323,6 @@
         },
         {
           "file": "feeds/london-datastore/polling-stations-in-london-for-2010-local-and/polling-stations-in-london-for-2010-local-and.json"
-        },
-        {
-          "file": "feeds/london-datastore/strategic-industrial-location-points-london/strategic-industrial-location-points-london.geojson"
         },
         {
           "file": "feeds/london-datastore/london-plan-town-centres-research-technical/london-plan-town-centres-research-technical.json"
@@ -4289,7 +4337,22 @@
           "file": "feeds/london-datastore/archaeological-priority-areas/archaeological-priority-areas.geojson"
         },
         {
+          "file": "feeds/london-datastore/ofcom-fixed-broadband-speeds/ofcom-fixed-broadband-speeds.json"
+        },
+        {
           "file": "feeds/london-datastore/london-boroughs/london-boroughs.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/london-output-area-classification/london-output-area-classification.json"
+        },
+        {
+          "file": "feeds/london-datastore/accessibility-of-london-underground-stations/accessibility-of-london-underground-stations.json"
+        },
+        {
+          "file": "feeds/london-datastore/tfl-bus-stop-locations-and-routes/tfl-bus-stop-locations-and-routes.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/tfl-bus-stop-locations-and-routes/tfl-bus-stop-locations-and-routes.json"
         },
         {
           "file": "feeds/london-datastore/plot-ratios-in-industrial-developments-april/plot-ratios-in-industrial-developments-april.geojson"
@@ -4301,6 +4364,9 @@
           "file": "feeds/london-datastore/estimation-of-health-impacts-of-particulate/estimation-of-health-impacts-of-particulate.json"
         },
         {
+          "file": "feeds/london-datastore/ons-mid-year-population-estimates-custom-age/ons-mid-year-population-estimates-custom-age.json"
+        },
+        {
           "file": "feeds/london-datastore/breathe-london-mobile-monitoring/breathe-london-mobile-monitoring.geojson"
         },
         {
@@ -4308,9 +4374,6 @@
         },
         {
           "file": "feeds/london-datastore/gla-group-land-assets/gla-group-land-assets.json"
-        },
-        {
-          "file": "feeds/london-datastore/strategic-industrial-location-points-london/strategic-industrial-location-points-london.geojson"
         },
         {
           "file": "feeds/london-datastore/town-centre-locations-london-plan-2016/town-centre-locations-london-plan-2016.geojson"
@@ -4325,9 +4388,6 @@
           "file": "feeds/london-datastore/london-brownfield-sites-review/london-brownfield-sites-review.geojson"
         },
         {
-          "file": "feeds/london-datastore/central-activities-zone-boundary-london-plan/central-activities-zone-boundary-london-plan.geojson"
-        },
-        {
           "file": "feeds/london-datastore/ward-profiles-and-atlas/ward-profiles-and-atlas.json"
         },
         {
@@ -4335,6 +4395,18 @@
         },
         {
           "file": "feeds/london-datastore/number-of-public-houses-licenced-clubs/number-of-public-houses-licenced-clubs.json"
+        },
+        {
+          "file": "feeds/london-datastore/annual-births-by-age-of-mother/annual-births-by-age-of-mother.json"
+        },
+        {
+          "file": "feeds/london-datastore/london-civic-strength-index/london-civic-strength-index.json"
+        },
+        {
+          "file": "feeds/london-datastore/cis-commissioned-2021-census-tables/cis-commissioned-2021-census-tables.json"
+        },
+        {
+          "file": "feeds/london-datastore/2014-internet-user-classification-iuc-lsoa/2014-internet-user-classification-iuc-lsoa.json"
         },
         {
           "file": "feeds/london-datastore/ultra-low-emissions-zone-2019/ultra-low-emissions-zone-2019.geojson"
@@ -4346,6 +4418,9 @@
           "file": "feeds/london-datastore/london-wide-ultra-low-emission-zone-2023/london-wide-ultra-low-emission-zone-2023.geojson"
         },
         {
+          "file": "feeds/london-datastore/office-for-national-statistics-ons-population/office-for-national-statistics-ons-population.json"
+        },
+        {
           "file": "feeds/london-datastore/number-of-public-houses-and-bars-in-london-2001/number-of-public-houses-and-bars-in-london-2001.json"
         },
         {
@@ -4353,6 +4428,9 @@
         },
         {
           "file": "feeds/london-datastore/borough-council-election-results-2018/borough-council-election-results-2018.json"
+        },
+        {
+          "file": "feeds/london-datastore/children-in-poverty-ni116/children-in-poverty-ni116.json"
         },
         {
           "file": "feeds/london-datastore/road-collisions-by-severity/road-collisions-by-severity.json"
@@ -4383,7 +4461,7 @@
         "hand rule 2r48w: LAEI 2016: grid emission summaries, the road traffic links (GIS), the 20 m concentration grid thinned to 100 m, population and schools exceeding; the per-link emission workbooks (217-447 MB) not read",
         "hand rule e550x: one zip per borough; Newham is the only zone borough in the dataset",
         "hand rule 2wwq4: the persons and components-of-change sheets of the three variants; the male and female sheets split the persons rows (13.8 MB with them, single year of age x ward x sex)",
-        "hand rule 2zp76: 2024-based central, low and high at ward and MSOA; the variant zips (0.7-1.5 GB), the borough-level files and the superseded 2022-based workbooks not read",
+        "hand rule 2zp76: 2024-based central projection at ward and MSOA (the low and high variants tripled the output to 10 MB; they stay at the source); the variant zips (0.7-1.5 GB), the borough-level files and the superseded 2022-based workbooks not read",
         "hand rule v8o11: the LSOA table; the GIS zip (214 MB) repeats it with geometry",
         "hand rule 2964y: the summary workbooks (the RM long tables, 18-70 MB each, cross-tabulate the same counts)",
         "hand rule 2r7om: the summary workbooks (the RM long tables, 16-106 MB each, cross-tabulate the same counts)",
@@ -4410,6 +4488,7 @@
         "hand rule 2zjmn: Local Plan layers that only the local plans hold (tall building locations, SINCs, green grid, open space audit, water space, air quality areas, shopping frontages, employment and office locations, Thames Policy Area, Tideway safeguarding, cycle routes...); left out: EA flood and surface water layers (5.4 MB for one polygon; the EA and planning.data.gov.uk flood zones are held), listed buildings, conservation areas, archaeological priority areas, roads, town centres, CAZ and site allocations (held from their own sources); 5 decimals, vertices closer than 1 m dropped",
         "hand rule 29jwj: the 2011 output area outlines only (the LSOA, MSOA and ward layers of 2011 repeat statistical-boundaries and 20od9); 5 decimals",
         "hand rule 2r401: Breathe London AQMesh pods: a time series of sensor readings with the pod position on every row (65 MB CSV; the zone rows came to 42 MB as points); the readings belong to a time-series store, not the repository; the pod positions alone are in the Breathe London network listing",
+        "hand rule e64on: the London-wide postcode files (2010 and later) and the LSOA summaries, kept as tables; the tab-delimited twins and the 33 per-borough files repeat them (13 MB with the duplicates as points)",
         "hand rule e55gn: postcode rows with coordinates kept as a table (8,217 zone postcodes: 1.5 MB as rows, 11.8 MB as GeoJSON points)",
         "hand rule 2jkxd: the workbooks (one row per area, years across); the CSVs (89 MB for LSOA) hold the same figures one row per area and year",
         "hand rule ep8xy: the time series workbook; the five yearly model workbooks (2011-2015, 8.6 MB each) repeat it month by month",
@@ -4428,7 +4507,13 @@
       "area": "feeds",
       "faults": [
         "F22",
-        "F27"
+        "F27",
+        "F36",
+        "F37",
+        "F38",
+        "F39",
+        "F40",
+        "F41"
       ],
       "judgement": "The hand rules (HAND in the tool) choose resources where the general rules would read too much or the wrong file (per-link emission workbooks, variant zips, superseded releases) and thin the LAEI 20 m concentration grids to 100 m; each has its reason. Datasets of incident records at addresses (LFB incidents, mobilisations, animal rescues) are held with the lift entrapments for the owner. Outputs were read by hand after each batch (counts, zone keys, sizes)."
     },

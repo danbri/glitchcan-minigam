@@ -56,7 +56,7 @@ export const HAND = {
   '2r48w': { files: /Emissions_Summary-NOxPMCO2|Emissions_Summary-OtherPollutants|Emissions_Summary_GIS|Concentrations_Data_CSV|RoadTrafficData_GIS|exceeding/i, thin: 20, why: 'LAEI 2016: grid emission summaries, the road traffic links (GIS), the 20 m concentration grid thinned to 100 m, population and schools exceeding; the per-link emission workbooks (217-447 MB) not read' },
   'e550x': { files: /Newham/, why: 'one zip per borough; Newham is the only zone borough in the dataset' },
   '2wwq4': { sheets: /persons|components/i, why: 'the persons and components-of-change sheets of the three variants; the male and female sheets split the persons rows (13.8 MB with them, single year of age x ward x sex)' },
-  '2zp76': { files: /^gla_2024_housing_led_(central|low|high)_(ward|msoa)\.xlsx$/, why: '2024-based central, low and high at ward and MSOA; the variant zips (0.7-1.5 GB), the borough-level files and the superseded 2022-based workbooks not read' },
+  '2zp76': { files: /^gla_2024_housing_led_central_(ward|msoa)\.xlsx$/, why: '2024-based central projection at ward and MSOA (the low and high variants tripled the output to 10 MB; they stay at the source); the variant zips (0.7-1.5 GB), the borough-level files and the superseded 2022-based workbooks not read' },
   'v8o11': { files: /\.xlsx$/, why: 'the LSOA table; the GIS zip (214 MB) repeats it with geometry' },
   '2964y': { files: /\.xlsx$/, why: 'the summary workbooks (the RM long tables, 18-70 MB each, cross-tabulate the same counts)' },
   '2r7om': { files: /\.xlsx$/, why: 'the summary workbooks (the RM long tables, 16-106 MB each, cross-tabulate the same counts)' },
@@ -80,6 +80,7 @@ export const HAND = {
   '2zjmn': { dropLayers: /Surface_Water_Flood_Risk|Flood_Risk_Area|Flood_Zone|Statutory_Listed_Buildings|^Conservation_Areas$|Archaeological_Priority_Areas|Classified_Roads|Highway_Network|Local_Roads|^Town_Centres$|Central_Activities_Zone|^Site_Allocations$/, decimals: 5, simplify: 1, why: 'Local Plan layers that only the local plans hold (tall building locations, SINCs, green grid, open space audit, water space, air quality areas, shopping frontages, employment and office locations, Thames Policy Area, Tideway safeguarding, cycle routes...); left out: EA flood and surface water layers (5.4 MB for one polygon; the EA and planning.data.gov.uk flood zones are held), listed buildings, conservation areas, archaeological priority areas, roads, town centres, CAZ and site allocations (held from their own sources); 5 decimals, vertices closer than 1 m dropped' },
   '29jwj': { dropLayers: /^(?!.*OA_2011)/i, decimals: 5, why: 'the 2011 output area outlines only (the LSOA, MSOA and ward layers of 2011 repeat statistical-boundaries and 20od9); 5 decimals' },
   '2r401': { skip: 'Breathe London AQMesh pods: a time series of sensor readings with the pod position on every row (65 MB CSV; the zone rows came to 42 MB as points); the readings belong to a time-series store, not the repository; the pod positions alone are in the Breathe London network listing', outcome: 'deferred-by-hand' },
+  'e64on': { files: /^financial-capability-(lsoa-summary(-2010)?\.csv|postcode-london(-2010)?\.zip)$/, asTable: true, why: 'the London-wide postcode files (2010 and later) and the LSOA summaries, kept as tables; the tab-delimited twins and the 33 per-borough files repeat them (13 MB with the duplicates as points)' },
   'e55gn': { asTable: true, why: 'postcode rows with coordinates kept as a table (8,217 zone postcodes: 1.5 MB as rows, 11.8 MB as GeoJSON points)' },
   '2jkxd': { files: /\.xls$/, why: 'the workbooks (one row per area, years across); the CSVs (89 MB for LSOA) hold the same figures one row per area and year' },
   'ep8xy': { files: /Time Series/, why: 'the time series workbook; the five yearly model workbooks (2011-2015, 8.6 MB each) repeat it month by month' },
@@ -388,10 +389,13 @@ function saveLog(L) {
   for (const v of Object.values(L.datasets)) L.meta.counts[v.outcome] = (L.meta.counts[v.outcome] || 0) + 1;
   writeFileSync(LOG, '{"meta":' + JSON.stringify(L.meta, null, 1) + ',\n"datasets":{\n' + Object.entries(L.datasets).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => JSON.stringify(k) + ':' + JSON.stringify(v)).join(',\n') + '\n}}\n');
 }
+const baseKey = d => { let s = d.slug.replace(new RegExp('-' + d.id + '$'), '').replace(/^the-/, ''); if (s.length > 48) s = s.slice(0, 48).replace(/-[^-]*$/, ''); return s; };
+let SHARED = null;
+// the folder name: the slug without the id, cut at 48 characters; when two catalogue datasets would share it (the LAEI
+// series, the London Plan 2009 and consolidated point layers), the id is added: they overwrote each other's folder once
 export function keyOf(d) {
-  let s = d.slug.replace(new RegExp('-' + d.id + '$'), '').replace(/^the-/, '');
-  if (s.length > 48) s = s.slice(0, 48).replace(/-[^-]*$/, '');
-  return s;
+  if (!SHARED) { const n = new Map(); for (const x of readJson(join(OUT, 'catalogue.json')).datasets) { const k = baseKey(x); n.set(k, (n.get(k) || 0) + 1); } SHARED = new Set([...n].filter(([, v]) => v > 1).map(([k]) => k)); }
+  const k = baseKey(d); return SHARED.has(k) ? `${k}-${d.id}` : k;
 }
 async function runDataset(d, T, L) {
   if (OWNER_HOLD[d.id]) { L.datasets[d.id] = { title: d.title, outcome: 'held-for-owner', reason: OWNER_HOLD[d.id], date: today }; return; }
@@ -524,6 +528,11 @@ function register(cat) {
     lines.splice(j + 1, 0, line + ',');
     // the last entry of an object or array must not end with a comma: fixed below by JSON.parse check
   };
+  // lines this command wrote before for datasets or files that the log no longer has as harvested are removed
+  const keepFiles = new Set(Object.values(L.datasets).filter(h => h.outcome === 'harvested').flatMap(h => h.files.map(f => `feeds/london-datastore/${f}`)));
+  const autoIds = new Set(Object.keys(L.datasets).filter(id => L.datasets[id].outcome !== 'harvested'));
+  if (process.env.LDS_FULL_LOG) for (const id of Object.keys(readJson(process.env.LDS_FULL_LOG).datasets)) if (L.datasets[id]?.outcome !== 'harvested') autoIds.add(id);
+  lines = lines.filter(l => { const m = /"path":"(feeds\/london-datastore\/[^"]+)".*"produced_by":"tools\/lds-harvest-auto\.mjs run /.exec(l); if (m && !keepFiles.has(m[1])) return false; const s2 = /^\s+"lds-([a-z0-9]{5})": \{"name":"London Datastore /.exec(l); return !(s2 && autoIds.has(s2[1])); });
   const tidy = () => { for (let k = 0; k < lines.length - 1; k++) if (/,\s*$/.test(lines[k]) && /^\s*[\]}]/.test(lines[k + 1])) lines[k] = lines[k].replace(/,\s*$/, ''); };
   const pipeFile = join(CWD, 'pipeline.json'), pipe = readJson(pipeFile);
   const used = [{ file: 'feeds/london-datastore/triage.json' }, { file: 'feeds/london-datastore/catalogue.json' }, { file: 'feeds/london-datastore/zone-codes.json' }, { file: 'feeds/london-datastore/town-centres/town-centres.geojson' }, { file: 'feeds/london-datastore/opportunity-areas/opportunity-areas.geojson' },
