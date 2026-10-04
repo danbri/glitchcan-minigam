@@ -8484,6 +8484,20 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/river-layer.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the 3D page's River layer group (river buses by timetable and live TfL arrivals after a tap, locks by tide window and CRT notices, PLA notice outlines, swim water, moorings, houseboats, named ships, the Thames Barrier test-day banner, the Tower Bridge card)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/promenade-skyline-railing.jpg",
    "@type": [
     "prov:Entity",

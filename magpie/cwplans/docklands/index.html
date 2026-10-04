@@ -314,6 +314,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
 <script src="vendor/astronomy.browser.min.js"></script>
 <script src="vendor/satellite.min.js"></script>
 <script src="sky.js"></script>
+<script src="river-layer.js"></script>
 <script>
 (() => {
 'use strict';
@@ -709,6 +710,7 @@ function showInfo(l) {
   const w = l.wd && wdBy.get(l.wd), facts = w && w.facts ? Object.entries(w.facts).map(([k, v]) => `<div><span class="small">${esc(k)}:</span> ${esc(v.join('; '))}</div>`).join('') : '';
   info.innerHTML = `<b>${esc(l.name)}</b> ${w && w.desc ? `<span class="small">${esc(w.desc)}</span>` : ''}${facts}<div class="small">${l.water ? `Water surface ${l.water.level} m OD in the LiDAR pass${l.water.tidal ? ' (tidal: one tide state)' : ''}` : `Ground ${l.y} m OD (LiDAR)`}${l.mode ? ' · ' + esc(l.mode) : ''}</div>` +
     `<div class="small">${l.wd ? `<a href="https://www.wikidata.org/wiki/${esc(l.wd)}">Wikidata ${esc(l.wd)}</a>` : ''}${w && w.wp ? ` · <a href="${esc(w.wp)}">Wikipedia</a>` : ''}${l.osm ? ` · <a href="https://www.openstreetmap.org/${esc(l.osm)}">OSM</a>` : ''}</div>${routeBtns(Math.round(l.x), Math.round(l.z), l.name)}`;
+  if (globalThis.DocklandsRiver) DocklandsRiver.extendCard(l);   // Tower Bridge: where the lift times are, and why they are not copied
   openPane('paneInfo');
 }
 function placeLabels() {
@@ -778,6 +780,7 @@ function render() {
   if ($('showWalls').checked) drawMesh(L.walls, 1);
   if ($('showTrees').checked && !PIX.on && L.treesN && !sOnly) { drawMesh(L.treesN, 1); if (nm && L.treesLit) { gl.uniform1f(uDim, .75); drawMesh(L.treesLit, 1); gl.uniform1f(uDim, nDim); } }   // night: trees by the lamps, up-lit
   gl.uniform1f(uDim, 1); drawMesh(L.pins, 1); drawMesh(OV.solid, 1); drawMesh(L.walk, 1); gl.uniform1f(uDim, nDim);
+  if (OV.rclock) { gl.uniform1f(uDim, 1); drawMesh(OV.rclock, 1); gl.uniform1f(uDim, nDim); }   // River layer: boats and lock badges (river-layer.js), rebuilt when the page clock moves
   if (bm === 'solid' && !sOnly) drawFacades(L.bld, 1, P);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (bm === 'ghost' && !sOnly) drawFacades(L.bld, .22, P);
@@ -1542,6 +1545,7 @@ const pointIn = (ring, x, z) => { let c = false; for (let i = 0, j = ring.length
 async function buildOverlays() {
   const my = ++OV.busy, want = Object.keys(OVL).filter(ovOn);
   try { await Promise.all(want.map(ovData)); } catch (e) { note('An overlay file did not load: ' + e.message); }
+  if (globalThis.DocklandsRiver) try { await DocklandsRiver.load(); } catch (e) { note('A river file did not load: ' + e.message); }   // River layers (river-layer.js)
   if (my !== OV.busy) return;
   for (const k of ['solid', 'glass', 'tips', 'flat']) if (OV[k]) { OV[k].free(); OV[k] = null; }
   const S = new Mesh(), G = new Mesh(), F = new Mesh(), tips = [], hits = [], polys = [], n = {}, stick = (x, z, y0, y1, w, col) => beam(S, [x, y0, z], [x + .01, y1, z], w, w, col);
@@ -1595,6 +1599,7 @@ async function buildOverlays() {
     for (const f of d.features) { if (!f.geometry || f.geometry.type !== 'Point') continue; const [lo, la] = f.geometry.coordinates, [x, z] = geo(lo, la); if (!inBox(x, z)) continue; const g = groundAt(x, z);
       stick(x, z, g, g + 14, 1, [.95, .82, .45]); stick(x, z, g + 14, g + 19, 5, [1, .78, .25]); n.venues++; hits.push({ x, y: g + 16, z, card: () => ldsCard('venues', d, f.properties) }); } }
   if (D('works')) worksBuild(OV.data.works, S, G, F, tips, hits, polys, n, stick);
+  if (globalThis.DocklandsRiver) DocklandsRiver.build({ S, G, F, tips, hits, polys, n });   // River layers: piers, routes, notices, swim water, moorings, ships; boats and locks go to OV.rclock
   OV.flat = F.n ? F.upload() : null; OV.solid = S.n ? S.upload() : null; OV.glass = G.n ? G.upload() : null; OV.tips = tips.length ? spriteBuf(tips) : null; OV.hits = hits; OV.polys = polys.sort((a, b) => a.pri - b.pri); OV.n = n; draw();
 }
 function ovRibbon(M, ring, w, col) {   // a closed outline as flat quads on the ground (0.7 m up), inside the model only
@@ -2236,6 +2241,8 @@ if (/[?&]capture\b/.test(location.search)) captureMode(true);
 if (/[?&]night\b/.test(location.search)) setNight(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
+// River layer group (river-layer.js, Layers > River): the helpers it draws with
+if (globalThis.DocklandsRiver) DocklandsRiver.init({ Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovCredit, londonTime, loadJSON, draw, note, A, OV, labels, labelBox, info, buildOverlays, wl: () => tidalLevel ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level });
 window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder,
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,

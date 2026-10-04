@@ -252,16 +252,38 @@ owner says yes: one page a day, facts only (date, time, direction, vessel name, 
 dated history file, vessel names matched to `wikidata-vessels.json` and OSM ships by name only. Other routes checked:
 none open (the X account is excluded; PLA notices do not list lifts). The 3D page's Tower Bridge card links to the page.
 
-## Proposed use on the 3D page (not built)
+## On the 3D page and the atlas (built 2026-10-04)
 
-- River buses as moving markers between piers, driven by the timetable and corrected by live TfL arrivals (CORS, no
-  key, so the page can call TfL itself); the Woolwich Ferry crossing likewise.
-- Lock badges at the OSM positions: green when the clock is inside the window (tide gauges for LW/HW from `levels.json`
-  or a high-water time), red with the CRT notice title when a closure is in force.
-- Swim-water chips on Eden Dock and the three Royal Docks: last sample date, rating, E. coli, water temperature.
-- Harbourmaster notices as tinted boxes on the river (bbox) with the PLA link; port-wide ones in a list.
-- Thames Barrier: a closure banner on test days, and the DIFF difference as a live gauge.
-- Moorings, houseboats and named historic ships (Wikidata, OSM) as small labelled markers at the water's edge.
+3D page: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/ (Menu > Layers > River; all off by
+default). Atlas: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#river (lists with dates and sources)
+and https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#map (layer "River snapshots"). The atlas reads
+`feeds/river/*.json` at run time; `atlas/data/atlas.json` and `tools/build-atlas.mjs` are not involved. Page side,
+code and tests: skill `docklands-3d-page`, "River layer".
+
+- River buses: no positions exist, so a boat is placed by the timetable: departure + the minutes to each later pier
+  (`minutes_to_later_zone_piers_by_interval`), linear between two piers along the Thames centreline of
+  `docklands/data/river.json` (straight across when the two piers are within 6 centreline points: RB4). Schedule names
+  are matched to the weekday ("Monday to Friday", "Saturday and Sunday", Woolwich Ferry names); bank holidays and
+  planned closures are not applied. Live correction only after a tap: one request to
+  `https://api.tfl.gov.uk/Line/rb1,rb4,rb6,woolwich-ferry/Arrivals` (CORS, no key); per vessel the soonest prediction;
+  the boat sits between the stop before that pier and the pier, at 1 - seconds left / timetable minutes of that leg.
+  Live positions are used for 5 minutes and only while the page clock is within 15 minutes of now. On 4 October 2026
+  (12:46 BST) 100 predictions gave 5 boats in the indexed piers; piers west of Bankside are not in the snapshot.
+- Locks: high and low water are found in `levels.json` (local extreme over 3 h either side, 2.5 h of readings before
+  and 1.5 h after, a parabola through three readings for the time). "London Bridge" uses Tower Pier, cleaned against
+  Charlton as `docklands/sky.js` does (F21); "North Woolwich" uses Silvertown. Outside the 48 hours held, the time is
+  stepped by whole 12 h 25.2 min cycles from the nearest measured extreme and labelled an estimate (spring-neap drift:
+  up to about an hour within a week); after 7 days the badge is grey, "tide not known". A CRT notice of type
+  "Navigation Closure" in force makes the badge red (Limehouse, 14 to 16 October 2026); a "Navigation Restriction" is
+  listed in the card only.
+- PLA notices: only the bbox is kept (no polygons: facts only). A box under 700 m diagonal is drawn as its outline; a
+  long reach (the barge-driving notice covers Greenwich to Lambeth) as one line along the river at 0.4 of the half-width
+  from the centreline plus a bar across each end. First try (an outline along both banks at 0.8 of the distance to the
+  bank) put a wide violet band across the foreground of the Rotherhithe photo view.
+- Thames Barrier: the 11 October 2026 test is listed by GOV.UK as 08:05 to 18:05 (a full-tide test, not the usual
+  2.5 h). The banner shows on the clock's day and otherwise names the next test.
+- The Royal Docks samples lie east of the model box (x 2,613 to 6,160 m against an edge at 2,350 m): one marker at the
+  east edge carries all six. Wikidata vessel Q30765817 has no English label: shown as "Wikidata Q30765817".
 
 ## Traps, in short
 

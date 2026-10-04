@@ -341,6 +341,31 @@ What went wrong first (and the rule):
   reporting point; the AIP's precise line is on the 1:50 000 chart (not copied), and the card says so.
 - Cultural venue positions are drawn as published; F25 (a constant offset in 10 venue layers) is not corrected here.
 
+## River layer (2026-10-04)
+
+Live: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/ (Menu > Layers > River). Data and methods:
+skill `cwplans-river-and-water`, "On the 3D page and the atlas".
+
+- **Its own file**, `docklands/river-layer.js` (like `sky.js`), so that agents working in parallel on `index.html` meet
+  only seven one-line hooks: the script tag; `DocklandsRiver.load()` after the overlay files load and
+  `DocklandsRiver.build({ S, G, F, tips, hits, polys, n })` before the upload in `buildOverlays()`; one draw line for
+  `OV.rclock`; `DocklandsRiver.extendCard(l)` in `showInfo()`; `DocklandsRiver.init({...helpers})` before
+  `window.__docklands`. The file adds the Layers section (after `#ovLdsNote`), the Credits block "River and water", a
+  row in the Sky panel and its CSS itself. The main script binds `input[id^="ov_"]` before `init`, so the file binds its
+  own six inputs.
+- **Clock parts in their own buffer.** Boats and lock badges change with the page clock: `OV.rclock` (opaque, full
+  brightness), rebuilt once a minute of page clock while either layer is on; their tap entries carry `rclk` and are
+  swapped in `OV.hits` without rebuilding the other overlays. A new clock day rebuilds everything (PLA notices are by day).
+- Static parts go to the shared overlay buffers: piers and badges in `S`, route lines and notice outlines in `F` (on the
+  water: max(ground, tide level) + 0.5 to 0.6 m), notice areas in `polys` for the ground tap.
+- Labels: Wikidata and OSM named ships and the two swim-water chips are `labels` entries with `river: true`, removed and
+  added on each build. A null name broke `placeLabels` (it reads `name.length`): every label needs a string name.
+- Measured 2026-10-04 (all six on, clock 12:45 BST Sunday): 8 piers, 11 route legs, 3 to 4 boats, 7 locks, 7 notice
+  outlines (3 port-wide in the list), 2 swim markers, 134 moorings, 51 houseboats, 7 PLA visitor moorings, 19 ships,
+  21 labels; 237 tap anchors, solid 2,464 triangles; build 6 to 20 s on SwiftShader including the first file loads.
+  Test results of the photo views: README-style numbers in the ACTIVITY-LOG entry of that day.
+- Tower Bridge's card (Wikidata Q83125) links the lift times page and says why they are not copied (terms).
+
 ## Credits and the window lock (2026-10-04)
 
 Owner, 2026-10-04: "Move credits into main menus. Ensure user actions cant resize zoom dragdrop etc the containing os/app

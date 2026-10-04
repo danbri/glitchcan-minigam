@@ -699,3 +699,16 @@ central tower - do we have an index of these?"
   web search result. No data licence: the site says data is the operator's, "no license, no terms of use". Not used.
 - M7AZV is not an Open Waters station. Open route: the operator adds the Open Waters output (CC0, kept by
   `tools/fetch-ais.mjs` unchanged) or states a licence; the owner decides whether to ask. No data file, no new fault.
+
+## 2026-10-04 — River layer on the 3D page and River view in the atlas (river layer agent)
+- 3D page: Menu > Layers > River (`docklands/river-layer.js`, seven one-line hooks in index.html): river-bus piers,
+  routes and boats by timetable for the page clock (live TfL arrivals only after a tap), lock badges (tide window from
+  the EA gauges, red on a CRT closure), PLA notice outlines on the water, swim-water chips (Eden Dock, Royal Docks at
+  the east edge), OSM moorings and houseboats, PLA visitor moorings, named ships labelled, Thames Barrier banner in the
+  Layers section and the Sky panel, Tower Bridge card (lift times not copied: terms). Credits block "River and water".
+- Atlas: #river lists the 12 river snapshots with dates and sources; #map layer "River snapshots".
+- Tests (SwiftShader WebGL): rotherhithe, greenland, pier x 1600x900 DPR 1 and 390x844 DPR 3, layers on and off, plus
+  the map view: no console error; mean luma on/off 0.094/0.094, 0.067/0.067, 0.090/0.088, 0.066/0.066, 0.114/0.111,
+  0.080/0.080; red share unchanged within 0.005 points. Cards, lock states for 4, 11 and 15 October, banner and live
+  correction (TfL response fixture) checked. No shader changed.
+- data-register.json: river-layer.js entry; shown_on and page loads for the river snapshots.

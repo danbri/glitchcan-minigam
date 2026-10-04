@@ -70,10 +70,10 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 | `feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amended.geojson` | 403 kB | derived | 6 UPRN values were chosen by a point-in-building-outline test against OSM building outlines (route b); the file holds no OSM geometry, tags or ids | osmfr-greater-london |  |
 | `feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.uprn-amendments.json` | 116 kB | ids | OSM building way and relation ids named as evidence (route b) | osmfr-greater-london |  |
-| `feeds/river/locks.json` | 21 kB | ids | OSM element id and its centroid for each lock |  |  |
-| `feeds/river/eden-dock.json` | 4 kB | ids | OSM relation 18985240 (Eden Dock) centroid as the position |  |  |
-| `feeds/river/royal-docks.json` | 11 kB | ids | west or east part of the OSM dock polygons as approximate positions |  |  |
-| `feeds/river/osm-river.json` | 207 kB | raw | element ids, centroids and a short tag list (name, mooring, operator, ref and the like) | osmfr-greater-london |  |
+| `feeds/river/locks.json` | 21 kB | ids | OSM element id and its centroid for each lock |  | docklands/index.html, atlas/index.html |
+| `feeds/river/eden-dock.json` | 4 kB | ids | OSM relation 18985240 (Eden Dock) centroid as the position |  | docklands/index.html, atlas/index.html |
+| `feeds/river/royal-docks.json` | 11 kB | ids | west or east part of the OSM dock polygons as approximate positions |  | docklands/index.html, atlas/index.html |
+| `feeds/river/osm-river.json` | 207 kB | raw | element ids, centroids and a short tag list (name, mooring, operator, ref and the like) | osmfr-greater-london | docklands/index.html, atlas/index.html |
 | `feeds/river/locks-facts.json` | 9 kB | ids | OSM element ids of the locks |  |  |
 | `registry/sources/construction/sites.json` | 1.7 MB | derived | element ids and a few tags of landuse=construction, building=construction, building:part=construction and construction=* features; outlines of 9 footprints and of 57 unmatched areas | osmfr-greater-london | docklands/index.html |
 | `registry/sources/construction/README.md` | 9 kB | counts |  |  |  |
@@ -265,6 +265,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `docklands/data/sky/weather-2026-10-03.json` | 4 kB | hourly weather at Canary Wharf for 3 and 4 October 2026 (London time): cloud by layer, visibility, humidity, dew point, rain, temperature, wind | Open-Meteo weather API (CC BY 4.0 (data); API free for non-commercial use) |
 | `docklands/data/sky/tide-2026-10-03.json` | 12 kB | 15-minute tidal levels (m AOD, UTC) at Tower Pier, Charlton and Silvertown from 3 October 2026 00:00 UTC to the fetch time | Environment Agency real-time flood-monitoring API: tidal level readings at Tower Pier (OGL v3.0) |
 | `docklands/sky.js` | 64 kB | code, not data: the page clock, the sky (sun, moon, planets, Jupiter's moons, stars, constellation lines, Milky Way band, satellites, cloud and haze), weather and tide for the time shown, and the Sky panel | written or computed in this project (repository licence) |
+| `docklands/river-layer.js` | 41 kB | code, not data: the 3D page's River layer group (river buses by timetable and live TfL arrivals after a tap, locks by tide window and CRT notices, PLA notice outlines, swim water, moorings, houseboats, named ships, the Thames Barrier test-day banner, the Tower Bridge card) | written or computed in this project (repository licence) |
 | `docklands/reference/night-2026-10-03/promenade-skyline-railing.jpg` | 998 kB | owner's night photo: the skyline across the river from the riverside path (Night mode reference) | supplied by the repository owner (owner's) |
 | `docklands/reference/night-2026-10-03/promenade-skyline-bollard.jpg` | 1.3 MB | owner's night photo: the skyline from the river edge with a mooring bollard (Night mode reference) | supplied by the repository owner (owner's) |
 | `docklands/reference/night-2026-10-03/promenade-zoom-moon-blur.jpg` | 584 kB | owner's night photo: zoom on towers with the moon, out of focus (Night mode reference) | supplied by the repository owner (owner's) |
