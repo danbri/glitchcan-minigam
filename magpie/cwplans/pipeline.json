@@ -4926,7 +4926,7 @@
         }
       ],
       "method": "Reads a GeoJSON snapshot of vessels in the zone envelope, the station list and the SSE stream for a bounded time; classes each event by its own licence; writes kept vessels as dated facts and counts everything else.",
-      "judgement": "Open Waters re-serves each event under its upstream source's terms. Only open licences are kept (CC0 single volunteer receptions, NLOD, CC BY). AISHub (a private written assurance reported by Open Waters, revocable) and aisstream.io (no terms) are not kept without the owner's agreement; on 2026-10-04 they were the whole vessel coverage of the zone, so 0 vessels were kept and 3 CC0 aids to navigation.",
+      "judgement": "Owner decision 2026-10-04: AISHub and aisstream.io events are kept for scoping (licence class scoping-accepted-2026-10-04), marked for review before scaling or commercial use. Before that decision: Open Waters re-serves each event under its upstream source's terms. Only open licences were kept (CC0 single volunteer receptions, NLOD, CC BY). AISHub (a private written assurance reported by Open Waters, revocable) and aisstream.io (no terms) are not kept without the owner's agreement; on 2026-10-04 they were the whole vessel coverage of the zone, so 0 vessels were kept and 3 CC0 aids to navigation.",
       "rules": [
         "Keep an event only when license is CC0-1.0, NLOD-2.0 or CC-BY-4.0; snapshot features by the source of the last message (station:/udp:/mmsi: = CC0, kystverket/barentswatch = NLOD, digitraffic = CC BY).",
         "Fields of a kept vessel only from kept events or kept snapshot features.",

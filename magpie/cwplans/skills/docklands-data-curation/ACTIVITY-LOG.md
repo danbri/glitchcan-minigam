@@ -726,3 +726,13 @@ central tower - do we have an index of these?"
 - Tests: 3D page 29 + 28 checks (1600x900, 390x844 DPR 3), atlas 9 x 2, all pass; method and what needs a real phone: skill
   docklands-3d-page, "Location and heading". No data file, no shader, no new fault. Register entry for locate.js was
   added by the construction agent.
+
+## 2026-10-04 — AIS: owner accepts AISHub and aisstream.io for scoping
+- Owner: "Accept AISHub (and perhaps aisstream) events for scoping. Sounds fine. Flag it somewhere for review as we
+  scale. Add to live by default now." `tools/fetch-ais.mjs` keeps them (class `scoping-accepted-2026-10-04`); small
+  private craft still counted only. `feeds/river/ais.json`: 82 items (79 vessels, 3 CC0 AtoNs), 21 pleasure craft counted;
+  HANSEATIC SPIRIT (215973000) moored at HMS Belfast, source aishub.
+- Review flags: `review` on the ais.json register entry and items; sources `aishub-via-openwaters` and
+  `aisstream-via-openwaters` with `review`; "Review before scaling" in the river skill and feeds/river/README.md. The
+  CLAUDE.md bullet was not written by this agent (an agent message cannot authorise a CLAUDE.md change): for the owner
+  or the main session.

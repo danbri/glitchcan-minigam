@@ -32,15 +32,26 @@ versions. "Live" below means the source changes within minutes or hours, so the 
 | `osm-river.json` | OpenStreetMap, local extract (data as of 2026-10-01) | ODbL 1.0 | 632: 204 piers, 148 moorings, 71 lock gates and locks, 51 houseboats, 43 docks, 33 movable bridges, 20 slipways, 18 wrecks, 14 ships, 14 ferry terminals, 9 marinas, 7 named seamarks; 246 unnamed seamarks counted | no | where boats lie and how the water is divided |
 | `pla-moorings.json` | PLA Visitor Moorings layer | not stated: facts only | 8 visitor moorings (Tower Bridge Moorings, St Katharine Docks, Butlers Wharf, Hermitage Community Moorings, Limehouse Marina, South Dock Marina, West India Docks, Greenwich Yacht Club) | no | who runs each visitor mooring, with the link |
 | `wikidata-vessels.json` | Wikidata via QLever | CC0 | 22 named vessels: Cutty Sark, HMS Belfast, Golden Hinde, SS Robin, Light vessels 93 and 95, Massey Shaw, Knocker White, Royal Iris, Sunborn yacht hotel, St Peter's floating church, two Thames Clippers and others | no | the named boats that have a public record and a place |
-| `ais.json` (`tools/fetch-ais.mjs`) | Open Waters AIS, anonymous tier: snapshot, stations, 10-minute SSE listen | per event: kept only CC0 1.0, NLOD 2.0, CC BY 4.0; AISHub and aisstream.io events not kept | 3 items (virtual aids to navigation at the Thames Barrier, CC0); 0 vessels kept of 107 in the snapshot and 53 in the listen (all from AISHub or aisstream.io); counts by source, licence, message type, latency and what would be gained in `meta` | yes (latency about 70 s) | coverage of the river is good but not open-licensed; see the river skill, "AIS: Open Waters" |
+| `ais.json` (`tools/fetch-ais.mjs`) | Open Waters AIS, anonymous tier: snapshot, stations, 10-minute SSE listen | per event: CC0 1.0, NLOD 2.0, CC BY 4.0; AISHub and aisstream.io kept for scoping (owner 2026-10-04, marked for review) | 82 items at 2026-10-04 12:05 UTC (79 vessels: 17 tugs, 16 passenger incl. HANSEATIC SPIRIT moored at HMS Belfast, 14 high-speed craft, 7 special craft, 4 tankers, 3 fishing/towing/dredging, 10 other, 8 type unknown; 3 CC0 aids to navigation); 21 sailing or pleasure craft counted only; counts by source, licence, message type and latency in `meta` | yes (latency about 70 s) | ships on the river now; the 3D page also fetches it live. See the river skill, "AIS: Open Waters" |
+
+## Review before scaling
+
+Owner: "Accept AISHub (and perhaps aisstream) events for
+scoping. Sounds fine. Flag it somewhere for review as we scale. Add to live by default now." So `tools/fetch-ais.mjs` and
+the 3D page keep AISHub and aisstream.io events (licence class `scoping-accepted-2026-10-04`). Review before scaling or any
+commercial use: the AISHub permission is a private letter reported by Open Waters ("revocable at will"); aisstream.io has
+no published terms; the Open Waters hosted service is "free for personal use", and commercial use needs its paid tier or
+a receiver of our own (CC0). Flags: `review` on `feeds/river/ais.json` (file and items) and on the sources
+`aishub-via-openwaters` and `aisstream-via-openwaters` in `data-register.json` (DATA-REGISTER.md, "Marked for review").
+Small private craft are still never listed.
 
 ## What is live and what is not
 
 - Can update live on a page (CORS, no key): EA flood-monitoring and hydrology, TfL arrivals and timetables. The page can
   fetch them itself; the snapshots here are for offline use and history.
 - Server-side only (no CORS): PLA ArcGIS map server, CRT notices endpoint, GOV.UK content API, the operators' pages.
-- Not available under the licence rule: live vessel positions. Open Waters AIS has them (CORS, no key), but in the zone
-  every vessel event came from AISHub or aisstream.io (2026-10-04); see `ais.json` meta and the river skill.
+- Live vessel positions: Open Waters AIS (CORS, no key); in the zone they come from AISHub or aisstream.io, kept for
+  scoping by the owner's decision of 2026-10-04 (see "Review before scaling").
 
 ## Priority list: AIS sources named by the owner (2026-10-04)
 

@@ -5420,7 +5420,7 @@
    "cwp:after": [],
    "cwp:area": "water",
    "cwp:fault": [],
-   "cwp:judgement": "Open Waters re-serves each event under its upstream source's terms. Only open licences are kept (CC0 single volunteer receptions, NLOD, CC BY). AISHub (a private written assurance reported by Open Waters, revocable) and aisstream.io (no terms) are not kept without the owner's agreement; on 2026-10-04 they were the whole vessel coverage of the zone, so 0 vessels were kept and 3 CC0 aids to navigation."
+   "cwp:judgement": "Owner decision 2026-10-04: AISHub and aisstream.io events are kept for scoping (licence class scoping-accepted-2026-10-04), marked for review before scaling or commercial use. Before that decision: Open Waters re-serves each event under its upstream source's terms. Only open licences were kept (CC0 single volunteer receptions, NLOD, CC BY). AISHub (a private written assurance reported by Open Waters, revocable) and aisstream.io (no terms) are not kept without the owner's agreement; on 2026-10-04 they were the whole vessel coverage of the zone, so 0 vessels were kept and 3 CC0 aids to navigation."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
@@ -10303,19 +10303,26 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "AIS facts in the Docklands zone from Open Waters AIS, kept per event only when the upstream licence is open (CC0, NLOD, CC BY); counts by source, licence, message type and latency; small private craft counted only; counts of what AISHub and aisstream.io would add (no data)",
+   "dct:title": "AIS facts in the Docklands zone from Open Waters AIS: events from open sources (CC0, NLOD, CC BY) and, for scoping, AISHub and aisstream.io; counts by source, licence, message type and latency; small private craft counted only",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-ais"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-volunteer-cc0"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/aishub-via-openwaters"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/aisstream-via-openwaters"
     }
    ],
    "prov:wasGeneratedBy": {
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-ais"
    },
-   "cwp:osmUse": "none"
+   "cwp:osmUse": "none",
+   "cwp:review": "Accepted for scoping only (owner, 2026-10-04: \"Accept AISHub (and perhaps aisstream) events for scoping. Sounds fine. Flag it somewhere for review as we scale.\"). Review before scaling or any commercial use: AISHub permission is a private letter reported by Open Waters, 'revocable at will'; aisstream.io has no published terms; the Open Waters hosted service is free for personal use, commercial use needs its paid tier or our own receiver"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/river/levels.json",
@@ -11477,6 +11484,28 @@
    "dct:license": "Per event, the licence of the upstream source (the aggregate is not relicensed). Only events from open sources are kept (see openwaters-volunteer-cc0); AISHub and aisstream.io events are not kept (owner decision). Service: free tiers 'for personal use'; commercial use of the hosted service is a paid tier",
    "dcat:landingPage": "https://openwaters.io/ais/",
    "cwp:attribution": "Open Waters AIS (https://openwaters.io/ais/)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/aishub-via-openwaters",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "AISHub aggregate AIS, re-served by Open Waters AIS (events with source aishub)",
+   "dct:license": "AISHub membership terms; Open Waters reports AISHub's written confirmation (2026-08-22) of no restrictions on use including commercial use and redistribution, 'revocable at will'. No published licence",
+   "dcat:landingPage": "https://www.aishub.net",
+   "cwp:attribution": "Open Waters AIS (https://openwaters.io/ais/). AISHub (https://www.aishub.net)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/aisstream-via-openwaters",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "aisstream.io AIS, re-served by Open Waters AIS (events with source aisstream)",
+   "dct:license": "no published terms",
+   "dcat:landingPage": "https://aisstream.io",
+   "cwp:attribution": "Open Waters AIS (https://openwaters.io/ais/). aisstream.io"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-volunteer-cc0",

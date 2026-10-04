@@ -37,14 +37,15 @@ const inB = (b, lat, lon) => lon >= b[0] && lon <= b[2] && lat >= b[1] && lat <=
 const zoneOf = (lat, lon) => lat == null || lon == null ? null
   : inB(MODEL, lat, lon) ? 'model' : inB(EAST, lat, lon) ? 'east' : inB(LEA, lat, lon) ? 'lea' : null;
 
-// ---- licence per event. Keep only an open licence named by the source itself (Open Waters README and docs/policy.md,
-// read 2026-10-04). AISHub and aisstream.io events are not kept without the owner's agreement.
+// ---- licence per event (Open Waters README and docs/policy.md, read 2026-10-04). Open licences are kept. AISHub and
+// aisstream.io events are kept for scoping by the owner's decision of 2026-10-04 (class scoping-accepted-2026-10-04):
+// REVIEW before scaling or any commercial use (river skill, "Review before scaling").
 const LICENCE = {
   'CC0-1.0': { cls: 'cc0', keep: true, attribution: 'Open Waters AIS (https://openwaters.io/ais/)' },
   'NLOD-2.0': { cls: 'nlod', keep: true, attribution: 'Contains data under the Norwegian licence for Open Government data (NLOD) distributed by the Norwegian Coastal Administration.' },
   'CC-BY-4.0': { cls: 'cc-by', keep: true, attribution: 'Source: Fintraffic / digitraffic.fi, license CC 4.0 BY.' },
-  'aishub-terms': { cls: 'aishub', keep: false },
-  'aisstream-io-terms': { cls: 'aisstream', keep: false },
+  'aishub-terms': { cls: 'scoping-accepted-2026-10-04', keep: true, attribution: 'Open Waters AIS (https://openwaters.io/ais/). AISHub (https://www.aishub.net)' },
+  'aisstream-io-terms': { cls: 'scoping-accepted-2026-10-04', keep: true, attribution: 'Open Waters AIS (https://openwaters.io/ais/). aisstream.io' },
 };
 function licenceOf(ev) {                                   // ev: a stream event or a snapshot feature's properties
   const src = String(ev.source || '');
@@ -148,10 +149,12 @@ for (const f of snap.features || []) {
   const p = f.properties || {}, [lon, lat] = f.geometry ? f.geometry.coordinates : [null, null];
   C.snapshot.vessels++; inc(C.snapshot.by_source, srcKind(p.source));
   const L = licenceOf(p); inc(C.snapshot.by_licence, L.cls);
-  const probe = { kind: p.kind, ship_type: p.type, class: p.class || null };
+  const probe = { kind: p.kind, ship_type: p.type, class: p.class || CLASS_OF[p.msg_type] || null };
   if (!L.keep) { C.snapshot.dropped_licence++; drop(p.mmsi, probe); continue; }
   C.snapshot.kept++;
-  upd(p.mmsi, v => Object.assign(v, { kind: p.kind, name: p.name ?? v.name, ship_type: p.type ?? v.ship_type, class: p.class ?? v.class,
+  upd(p.mmsi, v => Object.assign(v, { kind: p.kind, name: p.name ?? v.name, ship_type: p.type ?? v.ship_type, class: probe.class ?? v.class,
+    callsign: p.callsign ?? v.callsign, destination: p.destination ?? v.destination, length: p.length ?? v.length, beam: p.beam ?? v.beam,
+    imo: p.imo ?? v.imo, flag: p.flag ?? v.flag,
     lat, lon, cog: p.cog, sog: p.sog, heading: p.heading, nav_status: p.nav_status, time: p.seen, source: p.source, lic: L, from: 'snapshot' }));
 }
 
@@ -184,6 +187,8 @@ for (const line of streamLines) {
     }
     if (m.Name) v.name = String(m.Name).trim(); if (m.CallSign) v.callsign = String(m.CallSign).trim(); if (m.Type) v.ship_type = m.Type;
     if (m.Destination) v.destination = String(m.Destination).trim();
+    if (m.Dimension && m.Dimension.A + m.Dimension.B > 0) v.length = m.Dimension.A + m.Dimension.B;
+    if (m.ImoNumber) v.imo = m.ImoNumber;
     if (m.ReportA?.Name) v.name = String(m.ReportA.Name).trim(); if (m.ReportB?.ShipType) v.ship_type = m.ReportB.ShipType; if (m.ReportB?.CallSign) v.callsign = String(m.ReportB.CallSign).trim();
   });
 }
@@ -208,9 +213,11 @@ for (const v of V.values()) {
   items.push({ id: `ais-${v.mmsi}`, kind: v.kind || 'vessel', mmsi: v.mmsi, name: v.name || null, callsign: v.callsign || null,
     ship_type: v.ship_type ?? null, ship_type_group: v.kind === 'vessel' ? TYPE_GROUP(v.ship_type) : null, class: v.class || null,
     position: { lat: r5(v.lat), lon: r5(v.lon), precision: 'AIS reported fix', zone: zoneOf(v.lat, v.lon) },
+    imo: v.imo ?? null, flag: v.flag ?? null, length_m: v.length ?? null, beam_m: v.beam ?? null,
     values: { cog: v.cog ?? null, sog_kn: v.sog ?? null, heading: v.heading ?? null, nav_status: v.nav_status ?? null,
       nav_status_name: v.nav_status != null ? NAV[v.nav_status] || null : null, destination: v.destination || null },
-    time: v.time, source: v.source, source_kind: srcKind(v.source), from: v.from, licence: v.lic.lic, attribution: v.lic.attribution,
+    time: v.time, source: v.source, source_kind: srcKind(v.source), from: v.from, licence: v.lic.lic, licence_class: v.lic.cls, attribution: v.lic.attribution,
+    review: v.lic.cls.startsWith('scoping-accepted') ? 'AISHub / aisstream.io event accepted for scoping only (owner 2026-10-04); review before scaling or commercial use' : undefined,
     url: `${API}/v1/vessels/${v.mmsi}` });
 }
 items.sort((a, b) => a.id.localeCompare(b.id));
@@ -224,11 +231,12 @@ const out = {
   meta: {
     source: 'openwaters-ais', url: 'https://openwaters.io/ais/', api: API,
     fetched: run.started, listen: { from: run.started, to: run.ended, seconds: run.listen_s, bbox: run.bbox },
-    licence: 'per event, from the source it came from (Open Waters does not relicense the aggregate). Kept: CC0 1.0 (volunteer receptions), NLOD 2.0 (Kystverket, BarentsWatch), CC BY 4.0 (Digitraffic). Not kept: AISHub membership terms, aisstream.io (no published terms)',
+    licence: 'per event, from the source it came from (Open Waters does not relicense the aggregate). Open: CC0 1.0 (volunteer receptions), NLOD 2.0 (Kystverket, BarentsWatch), CC BY 4.0 (Digitraffic). Accepted for scoping by the owner on 2026-10-04, REVIEW before scaling or commercial use: AISHub membership terms (a private written permission reported by Open Waters, revocable at will), aisstream.io (no published terms)',
+    review: 'AISHub and aisstream.io events accepted for scoping only (owner, 2026-10-04: "Accept AISHub (and perhaps aisstream) events for scoping ... Flag it somewhere for review as we scale"). Open Waters hosted service is free for personal use; commercial use needs its paid tier or our own receiver.',
     attribution: 'Open Waters AIS (https://openwaters.io/ais/); per item: the attribution given with its event',
     method: 'Anonymous tier, no key. One GeoJSON snapshot of the envelope (/v1/vessels: vessels heard in the last 30 min, stationary ones up to 7 days), the station list (/v1/stations), and one SSE subscription (/v1/stream?bbox&snapshot=1) for the listen time. Each event is kept or dropped by its own licence; kept vessels that are small private craft are counted, not listed.',
     rules: [
-      'Licence: keep an event only when its license is CC0-1.0, NLOD-2.0 or CC-BY-4.0; drop aishub-terms, aisstream-io-terms and anything unknown (counted by class). Snapshot features: by the source of the vessel\'s last message.',
+      'Licence: keep an event when its license is CC0-1.0, NLOD-2.0 or CC-BY-4.0, or (scoping only, owner 2026-10-04) aishub-terms or aisstream-io-terms; drop anything unknown (counted by class). Snapshot features: by the source of the vessel\'s last message.',
       'Fields of a kept vessel come only from kept events or from a snapshot feature whose source is kept.',
       'Small private craft (ITU type 36/37; class B without a commercial type; class and type not heard) are counted in counts.private_not_listed, never listed.',
       'Sentinels dropped: COG 360, SOG 102.3, heading 511, nav status 15. Positions rounded to 5 decimals (about 1 m).',
@@ -236,7 +244,7 @@ const out = {
     ],
     counts: { ...C, items: items.length, private_not_listed: privateCounts },
     coverage: { stations_touching_zone: near },
-    not_kept_would_gain: { note: 'what the owner would gain by agreeing to AISHub and aisstream.io events: distinct non-private vessels by type group (counts only, nothing kept)',
+    not_kept_would_gain: { note: 'vessels from sources not kept (unknown licences): distinct non-private vessels by type group (counts only)',
       vessels: gain.vessels, by_group: gain.by_group, private_craft_seen: gain.private },
   },
   items,

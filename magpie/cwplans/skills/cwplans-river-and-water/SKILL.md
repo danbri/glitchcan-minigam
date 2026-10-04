@@ -187,11 +187,20 @@ Out: `feeds/river/ais.json`. Raw runs: `data/raw/ais/<stamp>/` (gitignored: they
 | stations whose footprint touches the zone | aishub, aisstream, and one volunteer station near "Saint Peters, United Kingdom" (Thanet, Kent; 49 vessels in 30 min): it hears the Barrier AtoNs, no vessels in the zone |
 | ground truth | HANSEATIC SPIRIT (MMSI 215973000, ITU type 69 passenger, nav status 5 moored) at 51.50696,-0.08212, alongside HMS Belfast, seen 11:20 to 11:26 UTC: shown, source aishub (owner's report and the coordinator's snapshot agree) |
 
-**Licence filter (rule in use):** keep an event when its `license` is CC0-1.0, NLOD-2.0 or CC-BY-4.0; drop
+**Review before scaling (owner decision, 2026-10-04).** Owner: "Accept AISHub (and perhaps aisstream) events for
+scoping. Sounds fine. Flag it somewhere for review as we scale. Add to live by default now." So `tools/fetch-ais.mjs` and
+the 3D page keep AISHub and aisstream.io events (licence class `scoping-accepted-2026-10-04`). Review before scaling or any
+commercial use: the AISHub permission is a private letter reported by Open Waters ("revocable at will"); aisstream.io has
+no published terms; the Open Waters hosted service is "free for personal use", and commercial use needs its paid tier or
+a receiver of our own (CC0). Flags: `review` on `feeds/river/ais.json` (file and items) and on the sources
+`aishub-via-openwaters` and `aisstream-via-openwaters` in `data-register.json` (DATA-REGISTER.md, "Marked for review").
+Small private craft are still never listed.
+
+**Licence filter (rule used until the owner's decision of 2026-10-04):** keep an event when its `license` is CC0-1.0, NLOD-2.0 or CC-BY-4.0; drop
 `aishub-terms`, `aisstream-io-terms` and anything unknown, counted by class. Snapshot features have no `license`: classed
 by the source of the vessel's last message. Fields of a kept vessel come only from kept events or kept features.
 Kept today: 3 items (Thames Barrier, Barrier Gardens and Silvertown virtual AtoNs, CC0), 0 vessels.
-**What the owner would gain by agreeing to AISHub + aisstream (counts only, from the tool run):** 78 non-private vessels
+**What the owner would gain by agreeing to AISHub + aisstream (counts only, from the first tool run; now kept):** 78 non-private vessels
 (20 passenger, 16 tug, 14 high-speed craft (the Uber Boat Thames Clippers), 8 special craft, 4 tanker, 3
 fishing/towing/dredging, 7 other, 6 type unknown) and 27 private craft that would still be counted only.
 
@@ -203,8 +212,7 @@ udp.ais.openwaters.io:10110) makes its receptions CC0 events with source `statio
 messages a day gives the contributor tier (any area, raw NMEA). A dongle and a VHF antenna with a river view near the
 zone would do it. The token is a secret: keep it in the environment settings, never in the repo or the chat.
 
-**Page layer (proposed, not built):** with today's filter a "Ships (AIS)" layer would show three buoy-like AtoNs and no
-ships, so it waits for the owner's decision on AISHub, or for our own receiver. When built: call `/v1/vessels` only after a
+**Page layer:** built after the owner's decision (see the 3D-page skill, "Ships (AIS)"). Design: call `/v1/vessels` only after a
 tap (CORS, no key), filter by `source`/`license` in the page, markers with a heading arrow, card with name, type, speed,
 destination, time and source, and the per-source attribution in Credits.
 
