@@ -1927,7 +1927,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 
 #### 54. `walk-london-datastore` (tools/walk-london-datastore.mjs)
 
-- Command: `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]`
+- Command: `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs probe [id ...] (needs npm install --no-save xlsx@0.18.5); node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]`
 - Method: Walks the London Datastore (a DataPress site with a CKAN-compatible API): reads the whole catalogue from the v3 export, writes it compact (one dataset per line); triages every dataset by written rules (licence class, relevance to the zone, kind, whether the project already holds or lists it, value themes, join keys, sensitivity, score); harvests the shortlisted open datasets and keeps the features that meet the 3D model box, as GeoJSON in WGS84 with a meta member (source, URLs, fetch date, licence, attribution, method, counts).
 - Rules:
   - Catalogue: publisher = organisation (logo title), else CKAN maintainer, else custom.author; geo = custom.geo (spatial granularity); update_frequency = custom.update_frequency; resource format = file extension; resource URL = https://data.london.gov.uk/download/{dataset}/{id}/{file}. Not kept: descriptions, contact names and emails, logos.
@@ -1940,6 +1940,8 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - Coordinates: GeoPackage SRS 27700, or a custom definition on Airy 1830 with the BNG projection (srs_id 100000) -> BNG; output WGS84 to 6 decimal places through OSTN15. CSV points: a row is WGS84 when |x| <= 180 and |y| <= 90, else BNG; empty or zero coordinates -> no_geometry.
   - Dropped fields: names matching e-mail, phone, contact, fax, mobile, owner name, person (none matched in the 13 harvested files). uprn_suspect: a UPRN field with an exponent or 9+ digits ending in 5+ zeros (F22). The Brownfield Register is read from its CSV, not the GPKG (F23).
   - Network: one request at a time over the whole tool, at least 1.1 s apart; up to 6 tries with Retry-After or a doubling pause on 429, 5xx and network errors; User-Agent glitchcan-cwplans/0.1. robots.txt disallows only /debug, /manage/, /login, /logout.
+  - Details walk (--details, 2026-10-04, all 1,305 datasets): /api/v3/dataset/<id> adds per resource the publisher's generic format (kind) and an md5 hash, and per dataset the description; the catalogue keeps a details member (resource count, kinds, archivedAt, nextReviewDate, geo, the granularity words and zone place names found in the description, resources only in the details record). The description text itself is not kept. Result: 0 archived, 0 resources missing from the export, geo identical to the export for all 1,305.
+  - Zone references (refs): a code is a zone code when a live or terminated ONSPD (August 2026) postcode whose grid reference lies in the 3D model box carries it, or when its polygon in the Datastore's Statistical GIS Boundary Files (20od9: LSOA/MSOA 2021, OA/LSOA/MSOA/wards 2011, wards 2014 and 2018) meets the box. Zone UPRNs: OS Open UPRN X/Y in the box; zone TOIDs: the LIDS TopographicArea TOIDs of those UPRNs (raw cache only).
 - Inputs:
   - **lds-catalogue** (London Datastore catalogue, site terms (https://data.london.gov.uk/about/terms-and-conditions, read 2026-10-04): data may be used for any purpose; each dataset has its own licence (recorded per record); a re-user states that the GLA cannot warrant the quality or accuracy of the data): https://data.london.gov.uk/api/v3/datasets/export.json; GET, every public dataset in one response (11 MB on 2026-10-04)
   - **lds-catalogue** (London Datastore catalogue, site terms (https://data.london.gov.uk/about/terms-and-conditions, read 2026-10-04): data may be used for any purpose; each dataset has its own licence (recorded per record); a re-user states that the GLA cannot warrant the quality or accuracy of the data): https://data.london.gov.uk/api/action/package_search; GET, no parameters (q, rows and start are ignored): all datasets with the CKAN organisation and maintainer
@@ -1961,6 +1963,10 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - [pipeline.json](pipeline.json)
   - [feeds/feeds.json](feeds/feeds.json)
   - `data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif` (local, not committed)
+  - **onspd** (ONS Postcode Directory, August 2026, OGL v3.0): https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/ONS_Postcode_Directory_(August_2026)_(Hosted_Table)/FeatureServer/0/query; refs: object ids per postcode district (pcds LIKE '<district> %'), then rows by id in batches of 200 (pcds, grid reference, OA/LSOA/MSOA 2001/2011/2021, ward codes)
+  - **lds-20od9** (London Datastore 20od9: Statistical GIS Boundary Files for London, OGL v3.0 (London Datastore: "Open Government Licence v3")): https://data.london.gov.uk/download/20od9/<resource id>/<file>; refs and harvest statistical-boundaries: LSOA 2021, MSOA 2021, 2011 statistical boundaries, wards 2014 and 2018 (shapefile zips)
+  - `data/raw/registry/osopenuprn_202609_csv.zip` (local, not committed)
+  - `data/raw/registry/lids-2026-09_csv_BLPU-UPRN-TopographicArea-TOID-5.zip` (local, not committed)
 - Outputs:
   - [feeds/london-datastore/catalogue.json](feeds/london-datastore/catalogue.json)
   - [feeds/london-datastore/triage.json](feeds/london-datastore/triage.json)
@@ -1977,6 +1983,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - [feeds/london-datastore/site-allocations/site-allocations.geojson](feeds/london-datastore/site-allocations/site-allocations.geojson)
   - [feeds/london-datastore/southwark-local-list/southwark-local-list.geojson](feeds/london-datastore/southwark-local-list/southwark-local-list.geojson)
   - [feeds/london-datastore/strategic-industrial-land/strategic-industrial-land.geojson](feeds/london-datastore/strategic-industrial-land/strategic-industrial-land.geojson)
+  - [feeds/london-datastore/zone-codes.json](feeds/london-datastore/zone-codes.json)
   - `data/raw/london-datastore/` (local, not committed)
 - Network: yes; deterministic: no; kind: fetch; after: nothing
 - Hand judgement: The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md.
@@ -2443,7 +2450,7 @@ All tool activities in an order that satisfies every "after" (the brands merge a
 51. `build-splats` (splats): `node magpie/cwplans/tools/build-splats.mjs [--ground 4] [--cell 7.2] [--box x0,x1,z0,z1]`
 52. `build-river` (water): `node magpie/cwplans/tools/build-river.mjs`
 53. `fetch-sky` (sky, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [lcy] [--date 2026-10-03]`
-54. `walk-london-datastore` (feeds, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]`
+54. `walk-london-datastore` (feeds, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs probe [id ...] (needs npm install --no-save xlsx@0.18.5); node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]`
 55. `amend-uprns` (feeds, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/amend-uprns.mjs cultural-infrastructure [--refresh]; generic: node magpie/cwplans/tools/amend-uprns.mjs --in <file> --uprn-field <f> --id-field <f[,f]> [--ref a:<file>]... [--ref c:<file>]... [--open-uprn <zip|csv>] [--footprints <osm-clip.json.gz>] --out <copy> --amendments <json>`
 56. `check-fp16-shaders` (imagery): `node magpie/cwplans/tools/check-fp16-shaders.mjs [--no-browser]`
 57. `fetch-crown-lighting` (lighting, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-crown-lighting.mjs [--press] [--commons] [--thumbs] [--no-fetch]`

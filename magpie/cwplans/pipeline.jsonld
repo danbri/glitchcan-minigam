@@ -3760,6 +3760,22 @@
     },
     {
      "@id": "urn:cwplans:local:data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd",
+     "dcat:accessURL": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/ONS_Postcode_Directory_(August_2026)_(Hosted_Table)/FeatureServer/0/query",
+     "dct:description": "refs: object ids per postcode district (pcds LIKE '<district> %'), then rows by id in batches of 200 (pcds, grid reference, OA/LSOA/MSOA 2001/2011/2021, ward codes)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9",
+     "dcat:accessURL": "https://data.london.gov.uk/download/20od9/<resource id>/<file>",
+     "dct:description": "refs and harvest statistical-boundaries: LSOA 2021, MSOA 2021, 2011 statistical boundaries, wards 2014 and 2018 (shapefile zips)"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/registry/osopenuprn_202609_csv.zip"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/registry/lids-2026-09_csv_BLPU-UPRN-TopographicArea-TOID-5.zip"
     }
    ],
    "prov:generated": [
@@ -3809,13 +3825,16 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/strategic-industrial-land/strategic-industrial-land.geojson"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-codes.json"
+    },
+    {
      "@id": "urn:cwplans:local:data/raw/london-datastore/"
     }
    ],
    "cwp:tool": {
     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/walk-london-datastore.mjs"
    },
-   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]",
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs probe [id ...] (needs npm install --no-save xlsx@0.18.5); node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]",
    "cwp:kind": "fetch",
    "cwp:rule": [
     "Catalogue: publisher = organisation (logo title), else CKAN maintainer, else custom.author; geo = custom.geo (spatial granularity); update_frequency = custom.update_frequency; resource format = file extension; resource URL = https://data.london.gov.uk/download/{dataset}/{id}/{file}. Not kept: descriptions, contact names and emails, logos.",
@@ -3827,7 +3846,9 @@
     "Harvest zone: a feature is kept when its geometry meets the 3D model box (BNG E 532400-539900, N 176700-182300): a vertex inside, an edge crossing (Liang-Barsky) or the box centre inside a polygon. Whole geometries kept, not cut; whole_in_zone and in_cw (meets the Canary Wharf registry box -0.03, 51.498, -0.005, 51.51) are added.",
     "Coordinates: GeoPackage SRS 27700, or a custom definition on Airy 1830 with the BNG projection (srs_id 100000) -> BNG; output WGS84 to 6 decimal places through OSTN15. CSV points: a row is WGS84 when |x| <= 180 and |y| <= 90, else BNG; empty or zero coordinates -> no_geometry.",
     "Dropped fields: names matching e-mail, phone, contact, fax, mobile, owner name, person (none matched in the 13 harvested files). uprn_suspect: a UPRN field with an exponent or 9+ digits ending in 5+ zeros (F22). The Brownfield Register is read from its CSV, not the GPKG (F23).",
-    "Network: one request at a time over the whole tool, at least 1.1 s apart; up to 6 tries with Retry-After or a doubling pause on 429, 5xx and network errors; User-Agent glitchcan-cwplans/0.1. robots.txt disallows only /debug, /manage/, /login, /logout."
+    "Network: one request at a time over the whole tool, at least 1.1 s apart; up to 6 tries with Retry-After or a doubling pause on 429, 5xx and network errors; User-Agent glitchcan-cwplans/0.1. robots.txt disallows only /debug, /manage/, /login, /logout.",
+    "Details walk (--details, 2026-10-04, all 1,305 datasets): /api/v3/dataset/<id> adds per resource the publisher's generic format (kind) and an md5 hash, and per dataset the description; the catalogue keeps a details member (resource count, kinds, archivedAt, nextReviewDate, geo, the granularity words and zone place names found in the description, resources only in the details record). The description text itself is not kept. Result: 0 archived, 0 resources missing from the export, geo identical to the export for all 1,305.",
+    "Zone references (refs): a code is a zone code when a live or terminated ONSPD (August 2026) postcode whose grid reference lies in the 3D model box carries it, or when its polygon in the Datastore's Statistical GIS Boundary Files (20od9: LSOA/MSOA 2021, OA/LSOA/MSOA/wards 2011, wards 2014 and 2018) meets the box. Zone UPRNs: OS Open UPRN X/Y in the box; zone TOIDs: the LIDS TopographicArea TOIDs of those UPRNs (raw cache only)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -8933,7 +8954,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "the whole London Datastore catalogue, 2026-10-04: 1,305 datasets, one per line (id, title, publisher, licence, topics, tags, geo granularity, update frequency, dates, 11,348 resources with format, size and download path, 312 links)",
+   "dct:title": "the whole London Datastore catalogue, 2026-10-04: 1,305 datasets, one per line (id, title, publisher, licence, topics, tags, geo granularity, update frequency, dates, 11,348 resources with format, generic kind, md5, size and download path, 312 links; a details member from /api/v3/dataset/<id> for all 1,305: resource count, kinds, archivedAt, next review, the granularity words and zone place names named in the description)",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue"
@@ -9307,6 +9328,26 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-codes.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the zone's area codes and postcodes: OA, LSOA and MSOA codes (2001, 2011, 2021), ward codes (2011, 2014, 2018, 2026, statistical 2005) of the areas that meet the 3D model box or hold a postcode whose ONSPD grid reference lies in it; the zone postcodes; ward and MSOA names",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9"
     }
    ],
    "prov:wasGeneratedBy": {
@@ -10620,6 +10661,27 @@
    "dct:license": "OGL v3.0",
    "dcat:landingPage": "https://data.london.gov.uk/dataset/strategic-industrial-land-sil-2y5xy",
    "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (GLA Planning Constraints Map). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 20od9: Statistical GIS Boundary Files for London (Greater London Authority; ONS and OS boundaries)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/statistical-gis-boundary-files-london-20od9",
+   "cwp:attribution": "Contains National Statistics data (c) Crown copyright and database right; contains OS data (c) Crown copyright and database right. The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-datasets",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore dataset resources opened by the area probe (open-licence datasets only; samples, not kept in the repo)",
+   "dct:license": "each dataset's own open licence (OGL, CC BY, ODC-By, public domain), recorded per dataset in feeds/london-datastore/probe.json and catalogue.json",
+   "dcat:landingPage": "https://data.london.gov.uk/"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",

@@ -13,7 +13,7 @@
 // Raw downloads: data/raw/london-datastore/ (gitignored), reused unless --refresh.
 // Network: one request at a time, at least 1 s apart, backoff on 429 and 5xx (Retry-After honoured), project UA.
 // Method, rules and the reasons: skills/cwplans-london-datastore/SKILL.md; results: feeds/london-datastore/README.md.
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { execFileSync } from 'child_process';
 import { RAW, UA, TOOLS } from './lib.mjs';
@@ -47,6 +47,29 @@ export function politeFetch(url, { minGapMs = 1100, tries = 6 } = {}) {
   };
   const p = chain.then(run, run); chain = p.catch(() => {}); return p;
 }
+// a capped GET: Range bytes=0-(max-1); a server that ignores Range (200) has its stream cut at max bytes.
+// Returns { buf, status, partial } and never throws on an HTTP error status (status is the evidence).
+export function politeGet(url, { maxBytes = Infinity, minGapMs = 1100, tries = 4 } = {}) {
+  const run = async () => {
+    for (let k = 1; ; k++) {
+      const wait = last + minGapMs - Date.now(); if (wait > 0) await sleep(wait);
+      last = Date.now(); nReq++;
+      let r, err;
+      try { r = await fetch(url, { headers: { 'User-Agent': UA, ...(isFinite(maxBytes) ? { Range: `bytes=0-${maxBytes - 1}` } : {}) }, signal: AbortSignal.timeout(300000) }); } catch (e) { err = e; }
+      if (r && (r.ok || r.status === 206)) {
+        const chunks = []; let n = 0, partial = r.status === 206; const rd = r.body.getReader();
+        try { for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); n += value.length; if (n >= maxBytes) { partial = true; await rd.cancel(); break; } } }
+        catch (e) { err = e; }
+        if (!err) { last = Date.now(); const total = +(r.headers.get('content-range') || '').split('/')[1] || +r.headers.get('content-length') || null; return { buf: Buffer.concat(chunks).subarray(0, isFinite(maxBytes) ? maxBytes : undefined), status: r.status, partial: partial && (!total || total > maxBytes), total }; }
+      }
+      const retry = err || r.status === 429 || r.status >= 500;
+      if (!retry || k >= tries) return { buf: null, status: r ? r.status : 'network: ' + (err?.message || '').slice(0, 60), partial: false };
+      const ra = r && +r.headers.get('retry-after');
+      await sleep(ra ? ra * 1000 : minGapMs * 2 ** k);
+    }
+  };
+  const p = chain.then(run, run); chain = p.catch(() => {}); return p;
+}
 export async function rawFile(name, url) {
   const f = join(RAWDIR, name);
   mkdirSync(dirname(f), { recursive: true });
@@ -57,6 +80,8 @@ export async function rawFile(name, url) {
 const readJson = f => JSON.parse(readFileSync(f, 'utf8'));
 
 // ================================================================== walk
+// granularity words and zone place names looked for in a dataset description (details walk)
+export const DESC_AREA_RE = /\b(lower super output areas?|middle super output areas?|output areas?|lsoas?|msoas?|wards?|postcodes?|postcode sectors?|boroughs?|local authorit(?:y|ies)|uprns?|toids?|coordinates|easting|northing|latitude|longitude|grid squares?|point locations?|polygons?|shapefiles?|geopackage|london[- ]wide|national|england and wales|canary wharf|isle of dogs|docklands|poplar|millwall|limehouse|wapping|rotherhithe|canada water|surrey quays|deptford|greenwich peninsula|royal docks|silvertown)\b/gi;
 const ext = s => { const m = /\.([A-Za-z0-9]{1,8})$/.exec((s || '').split('?')[0]); return m ? m[1].toLowerCase() : null; };
 async function walk() {
   const exp = await rawFile('export.json', `${BASE}/api/v3/datasets/export.json`);
@@ -70,9 +95,13 @@ async function walk() {
     catch (e) { console.warn('details failed', d.id, e.message); }
   } else nDetails = readdirSync(join(RAWDIR, 'details')).length;
   const detail = id => { const f = join(RAWDIR, 'details', id + '.json'); return existsSync(f) ? readJson(f) : null; };
+  // what the dataset description says about its area: granularity words and zone place names (the text is not kept)
+  const descArea = html => { const t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/g, ' ');
+    return [...new Set([...t.matchAll(DESC_AREA_RE)].map(m => m[1].toLowerCase().replace(/\s+/g, ' ')))].sort(); };
   const datasets = list.map(d => {
     const p = pkg.get(d.id), det = detail(d.id);
     const fmt = new Map(Object.entries(det?.resources || {}).map(([k, v]) => [k, v.format]));
+    const md5 = new Map(Object.entries(det?.resources || {}).map(([k, v]) => [k, v.hash]));
     return {
       id: d.id,
       title: d.title,
@@ -93,8 +122,12 @@ async function walk() {
           id: r.id, ...(std ? { file } : { url: r.url }), ...(r.title && r.title !== name && r.title !== r.filename ? { title: r.title } : {}),
           format: ext(name) || fmt.get(r.id) || null, ...(fmt.get(r.id) ? { kind: fmt.get(r.id) } : {}), size: r.size ?? null, date: r.timestamp?.slice(0, 10) || null,
           ...(r.timeframeFrom || r.timeframeTo ? { timeframe: [r.timeframeFrom || null, r.timeframeTo || null] } : {}),
+          ...(md5.get(r.id) ? { md5: md5.get(r.id) } : {}),
         };
       }),
+      ...(det ? { details: { resources: Object.keys(det.resources || {}).length, kinds: [...new Set(Object.values(det.resources || {}).map(v => v.format).filter(Boolean))].sort(),
+        archived: det.archivedAt || null, next_review: det.nextReviewDate || null, geo: det.custom?.geo || null, description_area: descArea(det.description),
+        only_in_details: Object.keys(det.resources || {}).filter(k => !(d.resources || []).some(r => r.id === k)).length } } : {}),
       links: (d.links || []).map(l => ({ title: l.title, url: l.url, http: l.httpStatus ?? null, checked: l.qaTimestamp?.slice(0, 10) || null })),
     };
   });
@@ -189,10 +222,26 @@ function projectHas(cat) {
   return { has, unknownRefs: [...unknownRefs] };
 }
 
+const DATA_RELEVANCE = { 'zone-point': 'zone-data', 'zone-uprn': 'zone-data', 'zone-postcode': 'zone-data', 'zone-code': 'zone-data', 'zone-place': 'zone-data',
+  'london-fine': 'london-fine', 'borough-rows': 'london-borough', 'london-coarse': 'london-coarse', none: 'none' };
+const FINAL_RULES = [
+  'F1 sensitive: the title names records about people in sensitive situations (never harvested)',
+  'F2 harvested: the project holds the data (a committed file, the data register, pipeline.json or a tool names the dataset)',
+  'F3 not-open: the licence is not open (none stated, share-alike, restricted or other)',
+  'F4 links only: unavailable when every link failed the Datastore QA check, else deferred (publisher site or API not followed)',
+  'F5 unavailable: every probe request failed (HTTP status in the reason)',
+  'F6 listed-for-harvest: relevant (zone place, zone borough, zone value in the data, or finer than a borough London-wide) with a machine-readable resource; reason and size given',
+  'F7 deferred: relevant but documents only',
+  'F8 not-relevant: the data shows borough rows only, London or coarser, or no geography',
+  'F9 not-relevant: the metadata names only places outside the zone',
+  'F10 deferred: the data could not be read (size cap, unreadable format, no readable resource)',
+  'F11 deferred: open, coarse or unknown by metadata, not probed',
+];
 function triage() {
   const cat = readJson(join(OUT, 'catalogue.json')).datasets;
   const { has, unknownRefs } = projectHas(cat);
-  const out = {}, counts = { licence: {}, relevance: {}, kind: {}, have: {}, themes: {}, sensitive: 0, open_relevant_new: 0 };
+  const out = {}, counts = { state: {}, licence: {}, relevance: {}, relevance_final: {}, kind: {}, have: {}, themes: {}, sensitive: 0, open_relevant_new: 0 };
+  const probed = existsSync(join(OUT, 'probe.json')) ? readJson(join(OUT, 'probe.json')).datasets : {};
   const inc = (o, k) => { o[k] = (o[k] || 0) + 1; };
   for (const d of cat) {
     const reasons = [];
@@ -246,9 +295,35 @@ function triage() {
     const recency = year >= 2024 ? 1 : year >= 2021 ? 0.8 : year >= 2016 ? 0.5 : 0.3;
     const score = sensitive ? 0 : +(RELEVANCE_W[rel] * Math.max(value, 0.5) * recency * (machine ? 1 : 0.4) * (keys.some(k => k !== 'borough') ? 1.3 : 1)
       * (open ? 1 : 0) * (have === 'held' ? 0 : have === 'listed' ? 0.8 : 1)).toFixed(2);
-    const relevant = ['zone-place', 'zone-borough', 'london-fine'].includes(rel);
-    out[d.id] = { title: d.title, licence: lic, open, relevance: rel, relevant, kind, stale, have, themes, keys: [...new Set(keys)], formats, sensitive, score, reasons };
-    inc(counts.licence, lic); inc(counts.relevance, rel); inc(counts.kind, kind); inc(counts.have, have); themes.forEach(t => inc(counts.themes, t));
+    if (d.details?.description_area?.length) reasons.push(`description names: ${d.details.description_area.join(', ')}`);
+    // the area found inside the data (probe.json) re-classes the relevance of a probed dataset
+    const pr = probed[d.id];
+    let relFinal = rel;
+    if (pr && pr.area !== 'not-read') { relFinal = DATA_RELEVANCE[pr.area]; reasons.push(`area from the data: ${pr.area} (${pr.rule.split(':')[0]}): ${pr.evidence}`); }
+    const relevant = ['zone-place', 'zone-borough', 'zone-data', 'london-fine'].includes(relFinal);
+    // the final state: first rule that matches (FINAL_RULES)
+    const readable = d.resources.filter(r => MACHINE_FORMATS.includes(r.format));
+    const sizeOf = rs => rs.reduce((a, r) => a + (r.size || 0), 0);
+    let state, why, rule;
+    if (sensitive) [state, rule, why] = ['sensitive', 'F1', 'title names records about people in sensitive situations'];
+    else if (have === 'held') [state, rule, why] = ['harvested', 'F2', `held: ${[...h.held].slice(0, 3).join(', ')}`];
+    else if (!open) [state, rule, why] = ['not-open', 'F3', `licence ${d.licence || 'none stated'} (${lic})`];
+    else if (!d.resources.length) {
+      const bad = d.links.filter(l => l.http && l.http >= 400);
+      [state, rule, why] = d.links.length && bad.length === d.links.length ? ['unavailable', 'F4', `links only, every link failed the Datastore QA check: ${bad.map(l => 'HTTP ' + l.http).join(', ')}`]
+        : ['deferred', 'F4', `links only (${d.links.length}): the publisher's site or API, not followed by this walk`];
+    }
+    else if (pr && pr.area === 'not-read' && pr.rule === 'every request failed') [state, rule, why] = ['unavailable', 'F5', pr.evidence];
+    else if (relevant && readable.length) [state, rule, why] = ['listed-for-harvest', 'F6', `${pr && pr.area !== 'not-read' ? 'data: ' + pr.area : 'metadata: ' + rel}; ${readable.length} machine-readable resources, ${(sizeOf(readable) / 1e6).toFixed(1)} MB (largest ${(Math.max(...readable.map(r => r.size || 0)) / 1e6).toFixed(1)} MB)`];
+    else if (relevant) [state, rule, why] = ['deferred', 'F7', `relevant (${relFinal}) but documents only: ${formats.join(', ')}`];
+    else if (pr && pr.area !== 'not-read') [state, rule, why] = ['not-relevant', 'F8', `data: ${pr.area}: ${pr.evidence.slice(0, 300)}`];
+    else if (rel === 'other-area') [state, rule, why] = ['not-relevant', 'F9', 'metadata names only places outside the zone'];
+    else if (pr) [state, rule, why] = ['deferred', 'F10', `area not read from the data: ${pr.rule}${pr.evidence ? ' (' + pr.evidence.slice(0, 200) + ')' : ''}`];
+    else [state, rule, why] = ['deferred', 'F11', `not probed (metadata relevance ${rel})`];
+    out[d.id] = { title: d.title, licence: lic, open, relevance: rel, ...(pr ? { relevance_data: pr.area } : {}), relevance_final: relFinal, relevant, kind, stale, have, themes, keys: [...new Set(keys)], formats, sensitive, score,
+      state, state_rule: rule, state_reason: why, reasons };
+    inc(counts.state, state);
+    inc(counts.licence, lic); inc(counts.relevance, rel); inc(counts.relevance_final, relFinal); inc(counts.kind, kind); inc(counts.have, have); themes.forEach(t => inc(counts.themes, t));
     if (sensitive) counts.sensitive++;
     if (open && relevant && have === 'new' && !sensitive) counts.open_relevant_new++;
   }
@@ -263,6 +338,8 @@ function triage() {
       value: 'themes by keyword on title and tags, plus the Datastore topics (' + Object.entries(TOPIC_THEMES).map(([k, v]) => `${k} -> ${v}`).join(', ') + '); weights: ' + Object.entries(THEMES).map(([k, [w]]) => `${k} ${w}`).join(', ') + '. value = sum of the weights.',
       keys: 'join keys named in title, tags, slug or geo: ' + Object.keys(JOIN_KEYS).join(', ') + '; coordinates when geo is a point or a spatial format is present.',
       sensitive: 'title matches ' + SENSITIVE.source + ' -> catalogued, score 0, never harvested.',
+      area_from_data: 'probe.json (tools/walk-london-datastore.mjs probe): the area class found in a sample of the data replaces the metadata relevance of a probed dataset: ' + Object.entries(DATA_RELEVANCE).map(([k, v]) => `${k} -> ${v}`).join(', ') + '.',
+      final_state: FINAL_RULES,
       score: 'relevance weight (' + Object.entries(RELEVANCE_W).map(([k, v]) => `${k} ${v}`).join(', ') + ') x max(value, 0.5) x recency (newest year >= 2024: 1, >= 2021: 0.8, >= 2016: 0.5, else 0.3) x (a machine-readable format ? 1 : 0.4) x (a join key finer than a borough ? 1.3 : 1) x (open ? 1 : 0) x (held 0, listed 0.8, else 1); 0 when sensitive.',
     },
     counts, unmatched_references: unknownRefs,
@@ -270,6 +347,8 @@ function triage() {
   };
   writeFileSync(join(OUT, 'triage.json'), '{"meta":' + JSON.stringify(meta, null, 1) + ',\n"datasets":{\n' + Object.entries(out).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => JSON.stringify(k) + ':' + JSON.stringify(v)).join(',\n') + '\n}}\n');
   console.log(JSON.stringify(counts, null, 1));
+  const total = Object.values(counts.state).reduce((a, b) => a + b, 0);
+  console.log(`final states: ${JSON.stringify(counts.state)}; sum ${total} of ${cat.length}${total === cat.length ? ' (every dataset has a state)' : ' MISMATCH'}`);
   console.log('top 40:'); for (const id of ranked.slice(0, 40)) { const t = out[id]; console.log(id, t.score, t.relevance, t.licence, t.have, t.kind, t.themes.join('+'), '|', t.title); }
 }
 
@@ -292,6 +371,23 @@ const HARVEST = {
   'air-quality-monitoring-sites': { id: '23n41', file: 'Air_quality_monitoring_sites.gpkg', fmt: 'gpkg', theme: 'environment' },
   'cultural-infrastructure':   { id: '23697', file: 'cultural_venues_in_GIS_format.gpkg', fmt: 'gpkg', theme: 'occupants-organisations' },
   'lvmf-2026-consultation':    { id: '2gqpn', fmt: 'shpzip', all: true, theme: 'heritage' },
+  // second walk (area from the data), 2026-10-04: the backlog head
+  'town-centres':              { id: 'e55z7', file: 'Town_Centres_Boundaries.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
+  'opportunity-areas':         { id: 'epr7z', file: 'Opportunity_Areas.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
+  'high-streets':              { id: '2rq4w', file: 'GLA_High_Street_boundaries_2.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
+  // two resources share the name business_improvement_districts.zip on 2025-05-12: the shapefile one by id
+  'business-improvement-districts': { id: 'vqmx7', resource: '42dacf04-f4d1-408a-85af-ba17818d2505', fmt: 'shpzip', theme: 'occupants-organisations' },
+  'statistical-boundaries':    { id: '20od9', files: ['LB_LSOA2021_shp.zip', 'LB_MSOA2021_shp.zip', 'London-wards-2018.zip'], fmt: 'shpzip', theme: 'people-housing' },
+  // tables: the rows of the zone's areas only (zone-codes.json); the summary workbooks, not the long RM csv tables
+  'census2021-ward-labour-market':        { id: '2lw9m', fmt: 'table', formats: ['xlsx'], all: true, codes: ['ward2026', 'ward2018', 'ward2014'], theme: 'people-housing' },
+  'census2021-ward-housing':              { id: '2r7gm', fmt: 'table', formats: ['xlsx'], all: true, codes: ['ward2026', 'ward2018', 'ward2014'], theme: 'people-housing' },
+  'census2021-ward-qualifications-health': { id: '24636', fmt: 'table', formats: ['xlsx'], all: true, codes: ['ward2026', 'ward2018', 'ward2014'], theme: 'people-housing' },
+  'census2021-ward-demography-migration': { id: 'vqlx7', fmt: 'table', formats: ['xlsx'], all: true, codes: ['ward2026', 'ward2018', 'ward2014'], theme: 'people-housing' },
+  'census2021-lsoa-labour-market':        { id: 'e76rk', fmt: 'table', formats: ['xlsx'], all: true, codes: ['lsoa21'], theme: 'people-housing' },
+  'census2021-lsoa-housing':              { id: 'emxpl', fmt: 'table', formats: ['xlsx'], all: true, codes: ['lsoa21'], theme: 'people-housing' },
+  'census2021-lsoa-demography-migration': { id: '2gj6n', fmt: 'table', formats: ['xlsx'], all: true, codes: ['lsoa21'], theme: 'people-housing' },
+  // 264 MB: streamed, rows of zone TOIDs kept, the file not stored
+  'solar-opportunity':         { id: 'vdxyl', file: 'LSOM_by_TOID.csv', fmt: 'table', codes: ['toid'], theme: 'environment' },
 };
 // The zone: the 3D model box (tools/fetch-docklands.mjs BOX_BNG / BOX_WGS84); in_cw: the Canary Wharf registry box.
 const ZONE_BNG = { e0: 532400, e1: 539900, n0: 176700, n1: 182300 }, ZONE_WGS84 = [-0.0950, 51.4740, 0.0150, 51.5220];
@@ -378,7 +474,7 @@ function readDbf(dbf, utf8) {
   }
   return rows;
 }
-function readShpZip(zipFile) {
+function readShpZip(zipFile, { skipBad = false } = {}) {
   const names = execFileSync('unzip', ['-Z1', zipFile], { encoding: 'utf8' }).split('\n').filter(Boolean);
   const get = n => execFileSync('unzip', ['-p', zipFile, n], { maxBuffer: 1 << 30 });
   const out = [];
@@ -387,7 +483,7 @@ function readShpZip(zipFile) {
     const prj = find('.prj') ? get(find('.prj')).toString() : '', cpg = find('.cpg') ? get(find('.cpg')).toString() : '';
     const geoms = readShp(get(shpName)), rows = find('.dbf') ? readDbf(get(find('.dbf')), /utf-?8/i.test(cpg)) : [];
     const srs = /British_National_Grid|OSGB_1936|27700/i.test(prj) ? 27700 : /WGS_1984|4326/i.test(prj) && !/Mercator/i.test(prj) ? 4326 : null;
-    if (!srs) throw new Error(`${shpName}: unknown projection ${prj.slice(0, 80)}`);
+    if (!srs) { if (skipBad) continue; throw new Error(`${shpName}: unknown projection ${prj.slice(0, 80)}`); }
     geoms.forEach((g, i) => out.push({ layer: stem.split('/').pop(), srs, geom: g, props: rows[i] || {} }));
   }
   return { layers: [...new Set(out.map(f => f.layer))].map(l => ({ table: l, srs: out.find(f => f.layer === l).srs })), features: out };
@@ -446,9 +542,12 @@ async function harvest(keys) {
     const H = HARVEST[key]; if (!H) throw new Error(`unknown harvest key ${key}`);
     const d = cat.get(H.id), T = tri[H.id];
     if (!T.open || T.sensitive) throw new Error(`${key}: ${H.id} is not open (${T.licence}) or is sensitive`);
-    const pick = (d.resources.filter(r => H.file ? decodeURIComponent(r.file || r.url.split('/').pop()) === H.file : r.format === H.fmt || (H.fmt === 'shpzip' && r.format === 'zip')));
+    const fileOf = r => decodeURIComponent(r.file || r.url.split('/').pop());
+    const pick = d.resources.filter(r => H.resource ? [].concat(H.resource).includes(r.id) : H.files ? H.files.includes(fileOf(r)) : H.file ? fileOf(r) === H.file
+      : H.fmt === 'table' ? (H.formats || ['xlsx', 'csv']).includes(r.format) : r.format === H.fmt || (H.fmt === 'shpzip' && r.format === 'zip'));
     if (!pick.length) throw new Error(`${key}: no resource ${H.file || H.fmt} in ${H.id}`);
-    const resources = H.all ? pick : [pick.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0]];
+    const resources = H.all || H.files || Array.isArray(H.resource) ? pick : [pick.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0]];
+    if (H.fmt === 'table') { summary.push(await harvestTable(key, H, d, T, resources)); continue; }
     let feats = [], layers = [];
     const used = [];
     for (const r of resources) {
@@ -508,9 +607,242 @@ async function harvest(keys) {
   return summary;
 }
 
+// ================================================================== refs: the zone's codes, postcodes and UPRNs
+// Out: feeds/london-datastore/zone-codes.json (committed) and data/raw/london-datastore/zone-uprns.txt (cache).
+const ONSPD = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/ONS_Postcode_Directory_(August_2026)_(Hosted_Table)/FeatureServer/0';
+// postcode districts that meet the 3D model box (each row is then tested by its own grid reference)
+const ZONE_DISTRICTS = ['E1', 'E1W', 'E2', 'E3', 'E14', 'E15', 'E16', 'EC2M', 'EC2N', 'EC2R', 'EC2V', 'EC3A', 'EC3M', 'EC3N', 'EC3R', 'EC3V', 'EC4N', 'EC4R', 'EC4V', 'SE1', 'SE4', 'SE5', 'SE8', 'SE10', 'SE14', 'SE15', 'SE16', 'SE17'];
+const ONSPD_CODES = ['oa01cd', 'lsoa01cd', 'msoa01cd', 'oa11cd', 'lsoa11cd', 'msoa11cd', 'oa21cd', 'lsoa21cd', 'msoa21cd', 'wd26cd', 'wdstl05cd', 'lad26cd'];
+const BOUNDARY_FILES = [                 // 20od9 Statistical GIS Boundary Files for London (OGL v3): codes of areas that meet the box
+  ['LB_LSOA2021_shp.zip', null], ['LB_MSOA2021_shp.zip', null], ['statistical-gis-boundaries-london.zip', '2011'], ['London-wards-2014.zip', 'ward2014'], ['London-wards-2018.zip', 'ward2018']];
+async function refs() {
+  const { bngProjector } = await import('./lib.mjs'); await bngProjector();
+  const [e0, n0, e1, n1] = [532400, 176700, 539900, 182300];
+  const codes = {}, names = {}, postcodes = [], add = (k, c) => (codes[k] ||= new Set()).add(c);
+  // 1. ONSPD (August 2026): ids per district, then rows in batches; keep rows whose grid reference is in the box
+  let nRows = 0;
+  for (const dist of ZONE_DISTRICTS) {
+    const ids = JSON.parse(await politeFetch(`${ONSPD}/query?where=${encodeURIComponent(`pcds LIKE '${dist} %'`)}&returnIdsOnly=true&f=json`)).objectIds || [];
+    for (let i = 0; i < ids.length; i += 200) {
+      const j = JSON.parse(await politeFetch(`${ONSPD}/query?objectIds=${ids.slice(i, i + 200).join(',')}&outFields=pcds,east1m,north1m,doterm,${ONSPD_CODES.join(',')}&f=json`));
+      for (const { attributes: a } of j.features || []) {
+        nRows++;
+        if (!(a.east1m >= e0 && a.east1m <= e1 && a.north1m >= n0 && a.north1m <= n1)) continue;
+        postcodes.push(a.pcds);
+        for (const k of ONSPD_CODES) if (a[k] && /^E0[0125]\d{6}$/.test(a[k])) add(k.replace(/cd$/, '').replace(/^wd26$/, 'ward2026').replace(/^wdstl05$/, 'ward_stat2005'), a[k]);
+      }
+    }
+    console.log('onspd', dist, ids.length, 'postcodes; zone so far', postcodes.length);
+  }
+  // 2. boundary files (BNG shapefiles): the codes of polygons that meet the box
+  const used = [];
+  const cat = readJson(join(OUT, 'catalogue.json')).datasets.find(d => d.id === '20od9');
+  for (const [fileName, vintage] of BOUNDARY_FILES) {
+    const r = cat.resources.find(x => decodeURIComponent(x.file || '') === fileName); if (!r) throw new Error('20od9: no ' + fileName);
+    const url = `${BASE}/download/20od9/${r.id}/${r.file}`, raw = await rawFile(`20od9/${fileName}`, url);
+    used.push({ file: fileName, url, resource_date: r.date, fetched: raw.fetched });
+    const got = readShpZip(raw.file, { skipBad: true });
+    for (const f of got.features) {
+      if (!f.geom || f.srs !== 27700 || !meets(f.geom, [e0, n0, e1, n1])) continue;
+      const lay = f.layer.toLowerCase();
+      for (const [k, v] of Object.entries(f.props)) {
+        if (typeof v !== 'string' || !/^E0[0125]\d{6}$/.test(v)) continue;
+        const t = v.startsWith('E00') ? 'oa' : v.startsWith('E01') ? 'lsoa' : v.startsWith('E02') ? 'msoa' : 'ward';
+        const yr = /(\d\d)cd$/i.exec(k)?.[1];
+        const key = vintage && vintage.startsWith('ward') ? (t === 'ward' ? vintage : t + '11') : yr ? t + yr : t === 'ward' ? 'ward2011' + (/citymerged/.test(lay) ? '' : '') : t + '11';
+        add(key, v);
+        // the name beside the code (LSOA21CD -> LSOA21NM, GSS_CODE -> NAME)
+        const nmKey = Object.keys(f.props).find(kk => /cd$/i.test(k) && kk.toLowerCase() === k.toLowerCase().replace(/cd$/, 'nm')) || (/gss_code/i.test(k) ? Object.keys(f.props).find(kk => /^name$/i.test(kk)) : null);
+        const nm = nmKey && typeof f.props[nmKey] === 'string' ? f.props[nmKey] : null;
+        if (nm && !/^[EW]\d{8}$/.test(nm) && !names[v] && (t === 'ward' || t === 'msoa')) names[v] = nm;
+      }
+    }
+  }
+  // 3. zone UPRNs from OS Open UPRN (registry raw cache) -> raw cache only (derivable; not committed)
+  const zipU = join(RAW, 'registry', 'osopenuprn_202609_csv.zip'); let nU = 0;
+  const lines = f => readFileSync(f, 'utf8').split('\n').filter(Boolean).length;
+  if (existsSync(join(RAWDIR, 'zone-uprns.txt')) && !REFRESH) nU = lines(join(RAWDIR, 'zone-uprns.txt'));
+  else if (existsSync(zipU)) {
+    const inner = execFileSync('unzip', ['-Z1', zipU], { encoding: 'utf8' }).split('\n').find(n => /\.csv$/i.test(n));
+    const out = execFileSync('sh', ['-c', `unzip -p "$0" "$1" | awk -F, 'NR>1 && $2>=${e0} && $2<=${e1} && $3>=${n0} && $3<=${n1} {print $1}'`, zipU, inner], { maxBuffer: 1 << 28, encoding: 'utf8' });
+    writeFileSync(join(RAWDIR, 'zone-uprns.txt'), out); nU = out.split('\n').filter(Boolean).length;
+  } else console.warn('no OS Open UPRN zip at', zipU, '- zone UPRN test disabled');
+  // 4. zone TOIDs: the MasterMap TopographicArea TOIDs of the zone UPRNs (OS LIDS BLPU-UPRN-TopographicArea-TOID-5) -> raw cache;
+  // used to clip datasets keyed by TOID (London Solar Opportunity Map). A building with no UPRN has no TOID here.
+  const lids = readdirSync(join(RAW, 'registry')).filter(f => /^lids-.*BLPU-UPRN-TopographicArea-TOID-5\.zip$/.test(f)).sort().pop(); let nT = 0;
+  if (existsSync(join(RAWDIR, 'zone-toids.txt')) && !REFRESH) nT = lines(join(RAWDIR, 'zone-toids.txt'));
+  else if (lids && nU) {
+    execFileSync('sh', ['-c', `unzip -p "$0" BLPU_UPRN_TopographicArea_TOID_5.csv | awk -F, 'NR==FNR {u[$1]=1; next} ($2 in u) {print $5}' "$1" - | sort -u > "$2"`, join(RAW, 'registry', lids), join(RAWDIR, 'zone-uprns.txt'), join(RAWDIR, 'zone-toids.txt')]);
+    nT = readFileSync(join(RAWDIR, 'zone-toids.txt'), 'utf8').split('\n').filter(Boolean).length;
+  } else console.warn('no OS LIDS UPRN-TOID zip in', join(RAW, 'registry'), '- zone TOID list not made');
+  const meta = {
+    made: today, tool: 'tools/walk-london-datastore.mjs refs',
+    zone: 'the 3D model box, BNG E 532400-539900, N 176700-182300 (WGS84 -0.095, 51.474 to 0.015, 51.522)',
+    method: 'A code is a zone code when (a) a live or terminated postcode of ONSPD August 2026 whose grid reference (east1m, north1m) lies in the box carries it (oa/lsoa/msoa 2001, 2011, 2021; ward2026 = wd26cd; ward_stat2005 = wdstl05cd), or (b) its polygon in the London Datastore Statistical GIS Boundary Files (20od9) meets the box (vertex inside, edge crossing or box inside): LSOA and MSOA 2021, OA/LSOA/MSOA 2011 and wards 2011 (statistical-gis-boundaries-london.zip), wards 2014 and 2018. postcodes = ONSPD postcodes with the grid reference in the box (districts ' + ZONE_DISTRICTS.join(', ') + '). Zone UPRNs (OS Open UPRN 2026-09, X/Y in the box): ' + nU + '; zone TOIDs (OS LIDS UPRN to TopographicArea TOID of those UPRNs): ' + nT + '; both in the raw cache, not committed.',
+    sources: [{ name: 'ONS Postcode Directory (August 2026)', url: ONSPD, licence: 'Open Government Licence v3.0', attribution: 'Contains OS data (c) Crown copyright and database right 2026; Contains Royal Mail data (c) Royal Mail copyright and database right 2026; Source: Office for National Statistics licensed under the Open Government Licence v.3.0', rows_read: nRows },
+      { name: 'Statistical GIS Boundary Files for London (London Datastore 20od9)', page: `${BASE}/dataset/statistical-gis-boundary-files-london-20od9`, licence: 'Open Government Licence v3.0', attribution: 'Contains National Statistics data (c) Crown copyright and database right; Contains OS data (c) Crown copyright and database right. The GLA cannot warrant the quality or accuracy of the data.', files: used },
+      { name: 'OS Open UPRN (2026-09)', licence: 'Open Government Licence v3.0', note: 'zone UPRN list in the raw cache only' },
+      { name: 'OS Open Linked Identifiers, BLPU UPRN to TopographicArea TOID (2026-09)', licence: 'Open Government Licence v3.0', note: 'zone TOID list in the raw cache only' }],
+    counts: { postcodes: postcodes.length, zone_uprns: nU, zone_toids: nT, ...Object.fromEntries(Object.entries(codes).map(([k, v]) => [k, v.size])) },
+  };
+  const o = { meta, codes: Object.fromEntries(Object.entries(codes).sort().map(([k, v]) => [k, [...v].sort()])), names: Object.fromEntries(Object.entries(names).sort()), postcodes: [...new Set(postcodes)].sort() };
+  writeFileSync(join(OUT, 'zone-codes.json'), JSON.stringify(o, null, 0).replace(/\],"/g, '],\n"') + '\n');
+  console.log(JSON.stringify(meta.counts));
+}
+
+// ================================================================== probe: area detection inside the data
+// For every open dataset whose metadata area is unknown, borough or London-wide: sample up to CAPS.perDataset
+// machine-readable resources within the size caps and classify the area found in the data (lds-probe.mjs).
+// Out: feeds/london-datastore/probe.json. Raw samples in data/raw/london-datastore/probe/<id>/ (reused).
+async function probe(only) {
+  const P = await import('./lds-probe.mjs');
+  const refsZ = P.loadRefs(join(OUT, 'zone-codes.json'), join(RAWDIR, 'zone-uprns.txt'));
+  const cat = readJson(join(OUT, 'catalogue.json')).datasets, tri = readJson(join(OUT, 'triage.json')).datasets;
+  const outFile = join(OUT, 'probe.json');
+  const prev = existsSync(outFile) && !REFRESH ? readJson(outFile).datasets : {};
+  const targets = cat.filter(d => only.length ? only.includes(d.id) : tri[d.id].open && !tri[d.id].sensitive && PROBE_RELEVANCE.includes(tri[d.id].relevance));
+  const res = { ...prev }; let bytes = 0, k = 0;
+  const save = () => writeFileSync(outFile, '{"meta":' + JSON.stringify(probeMeta(P, res), null, 1) + ',\n"datasets":{\n' + Object.entries(res).sort((a, b) => a[0].localeCompare(b[0])).map(([id, v]) => JSON.stringify(id) + ':' + JSON.stringify(v)).join(',\n') + '\n}}\n');
+  for (const d of targets) {
+    k++;
+    if (res[d.id] && !only.length) continue;
+    const S = P.newSignals(), sampled = [], skipped = [];
+    // candidate resources: readable formats; names with a finer-area word first, then CSV, sheets, zip, gpkg; newest first
+    const fine = /lsoa|msoa|ward|\boa\b|output.?area|postcode|point|site|location|address|uprn|toid|grid|_shp|gis|boundar/i;
+    const order = { text: 0, sheet: 1, gpkg: 2, zip: 3 };
+    const cands = d.resources.filter(r => P.READABLE[r.format]).sort((a, b) => (fine.test(b.file || '') - fine.test(a.file || '')) || (order[P.READABLE[a.format]] - order[P.READABLE[b.format]]) || (b.date || '').localeCompare(a.date || ''));
+    for (const r of cands) {
+      if (sampled.length >= P.CAPS.perDataset) break;
+      const how = P.READABLE[r.format], cap = how === 'text' ? P.CAPS.text : P.CAPS[how];
+      if (how !== 'text' && r.size > cap) { skipped.push({ resource: r.id, file: r.file ? decodeURIComponent(r.file) : r.url, size: r.size, reason: `over the ${how} cap (${cap / 1e6} MB)` }); continue; }
+      const url = r.url || `${BASE}/download/${d.id}/${r.id}/${r.file}`;
+      let name = (r.file || url.split('/').pop()).replace(/[^A-Za-z0-9._%-]/g, '_'); try { name = decodeURIComponent(name).replace(/[^A-Za-z0-9._ -]/g, '_'); } catch { }
+      const f = join(RAWDIR, 'probe', d.id, r.id.slice(0, 8) + '-' + name.slice(-80) + (how === 'text' ? '.head' : ''));
+      const rec = { resource: r.id, file: name, format: r.format, size: r.size, date: r.date };
+      let buf;
+      if (existsSync(f) && statSync(f).size > 0) { buf = readFileSync(f); rec.cached = true; }
+      else {
+        const g = await politeGet(url, { maxBytes: how === 'text' ? P.CAPS.text : Infinity });
+        rec.http = g.status;
+        if (!g.buf) { sampled.push(rec); continue; }
+        buf = g.buf; rec.partial = g.partial; mkdirSync(dirname(f), { recursive: true }); writeFileSync(f, buf); bytes += buf.length;
+      }
+      rec.bytes_read = buf.length;
+      try {
+        if (how === 'text') P.readTextSample(S, refsZ, buf, r.format, name);
+        else if (how === 'sheet') Object.assign(rec, await P.readSheet(S, refsZ, buf, name));
+        else if (how === 'gpkg') Object.assign(rec, await P.readGpkgSample(S, refsZ, f, name));
+        else if (how === 'zip') Object.assign(rec, await P.readZip(S, refsZ, f, name));
+      } catch (e) { rec.error = e.message.slice(0, 160); }
+      // disk: whole files over 5 MB are not kept after reading (the result is in probe.json; --refresh re-reads)
+      if (how !== 'text' && buf.length > 5e6 && !rec.cached) { rmSync(f, { force: true }); rec.cache = 'not kept (over 5 MB)'; }
+      sampled.push(rec);
+      if (P.classify(S).area.startsWith('zone-')) break;               // a zone signal: enough
+    }
+    const fmts = [...new Set(d.resources.map(r => r.format))];
+    const c = sampled.some(s => s.bytes_read) ? P.classify(S) : { area: 'not-read', rule: !d.resources.length ? 'no resources (links only)' : !cands.length ? `no readable data resource (formats: ${fmts.join(', ') || 'none'})` : skipped.length && !sampled.length ? 'every readable resource is over the size cap' : 'every request failed', evidence: sampled.map(s => `${s.file}: HTTP ${s.http}`).join('; ') || skipped.map(s => `${s.file} ${s.size} bytes: ${s.reason}`).join('; ') };
+    res[d.id] = { title: d.title, relevance_meta: tri[d.id].relevance, ...c, sampled, ...(skipped.length ? { skipped } : {}), signals: sampled.some(s => s.bytes_read) ? P.finishSignals(S) : undefined };
+    if (k % 10 === 0) { save(); console.log(`probe ${k}/${targets.length} ${d.id} ${c.area} | ${(bytes / 1e6).toFixed(0)} MB new`); }
+    if (bytes > 3e9) { console.warn('stop: 3 GB read in this run (disk and politeness); run again to continue'); break; }
+  }
+  save();
+  const counts = {}; for (const v of Object.values(res)) counts[v.area] = (counts[v.area] || 0) + 1;
+  console.log('probe done', JSON.stringify(counts), `${(bytes / 1e6).toFixed(0)} MB new`);
+}
+const PROBE_RELEVANCE = ['unknown', 'london-borough', 'london-coarse'];
+function probeMeta(P, res) {
+  const counts = {}; for (const v of Object.values(res)) counts[v.area] = (counts[v.area] || 0) + 1;
+  return {
+    made: today, tool: 'tools/walk-london-datastore.mjs probe (readers and rules in tools/lds-probe.mjs)',
+    targets: `open, not sensitive datasets whose metadata relevance is ${PROBE_RELEVANCE.join(', ')} (triage.json before the probe)`,
+    caps: P.CAPS, readable_formats: P.READABLE,
+    selection: `up to ${P.CAPS.perDataset} readable resources per dataset: file names with a finer-area word (lsoa, msoa, ward, oa, postcode, point, site, location, address, uprn, toid, grid, gis, boundary) first, then csv/txt/json/xml, sheets, gpkg, zip; newest first; stop at the first zone signal. Documents (pdf, docx, images, audio) are not opened.`,
+    rules: P.AREA_RULES.map(([k, v]) => `${k}: ${v}`),
+    references: 'feeds/london-datastore/zone-codes.json (zone OA/LSOA/MSOA/ward codes and postcodes); zone UPRNs from OS Open UPRN in the raw cache; boroughs: E09 codes and the 33 names; zone boroughs ' + P.ZONE_BOROUGH_CODES.join(', '),
+    note: 'A sample is a sample: a London-wide file sorted by code may hold zone rows after the first 1 MB (then london-fine, not zone-code). The evidence string says how many rows were read.',
+    counts,
+  };
+}
+
+// ---- tabular harvest: the rows of a table whose area code is a zone code (zone-codes.json), with the header rows.
+// Sheets (xlsx, xls, ods) through SheetJS, CSV streamed line by line (large files are not kept: rows are filtered on
+// the way). H.codes: the code types to match (e.g. ['lsoa21'] or ['ward2026', 'ward2018']).
+async function harvestTable(key, H, d, T, resources) {
+  const zc = readJson(join(OUT, 'zone-codes.json'));
+  const byToid = H.codes.includes('toid');
+  const zone = byToid ? new Set(readFileSync(join(RAWDIR, 'zone-toids.txt'), 'utf8').split('\n').filter(Boolean)) : new Set(H.codes.flatMap(k => zc.codes[k] || []));
+  if (!zone.size) throw new Error(`${key}: no zone codes of type ${H.codes}`);
+  const KEY_RE = byToid ? /osgb\d{10,16}/ : /E0[0125]\d{6}/;
+  const codeRe = /^E0[0125]\d{6}$/;
+  const tables = [], used = []; let nRows = 0, nZone = 0;
+  const XLSX = (await import('xlsx')).default;
+  for (const r of resources) {
+    const url = r.url || `${BASE}/download/${H.id}/${r.id}/${r.file}`, name = decodeURIComponent(url.split('/').pop());
+    let rowsets = [];
+    if (r.format === 'csv') {
+      // stream: keep the first line (header) and the rows whose first code cell is a zone code
+      const f = join(RAWDIR, H.id, name + '.zone.csv'); let lines;
+      if (existsSync(f) && !REFRESH) { lines = readFileSync(f, 'utf8').split('\n').filter(Boolean); nRows += +(existsSync(f + '.count') ? readFileSync(f + '.count', 'utf8') : 0); }
+      else {
+        lines = []; let head = null, rest = ''; const nBefore = nRows;
+        const res = await politeStream(url, chunk => {
+          rest += chunk; const parts = rest.split(/\r?\n/); rest = parts.pop();
+          for (const line of parts) { if (head == null) { head = line; lines.push(line); continue; } nRows++; const m = KEY_RE.exec(line); if (m && zone.has(m[0])) lines.push(line); }
+        });
+        if (rest && head != null) { nRows++; const m = KEY_RE.exec(rest); if (m && zone.has(m[0])) lines.push(rest); }
+        mkdirSync(dirname(f), { recursive: true }); writeFileSync(f, lines.join('\n') + '\n'); writeFileSync(f + '.count', String(nRows - nBefore));
+        used.push({ resource: r.id, file: name, url, size: r.size, resource_date: r.date, fetched: today, http: res.status });
+      }
+      const parsed = lines.map(l => parseCsvLine(l));
+      rowsets.push({ name, header: [parsed[0]], rows: parsed.slice(1) });
+      if (!used.find(u => u.resource === r.id)) used.push({ resource: r.id, file: name, url, size: r.size, resource_date: r.date, fetched: statSync(f).mtime.toISOString().slice(0, 10) });
+    } else {
+      const raw = await rawFile(`${H.id}/${name}`, url);
+      used.push({ resource: r.id, file: name, url, size: r.size, resource_date: r.date, fetched: raw.fetched });
+      const wb = XLSX.read(readFileSync(raw.file), { type: 'buffer', dense: true });
+      for (const sn of wb.SheetNames) {
+        const all = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: true, defval: null, blankrows: false });
+        const isCodeRow = row => (row || []).some(v => typeof v === 'string' && codeRe.test(v.trim()));
+        const first = all.findIndex(isCodeRow); if (first < 0) continue;
+        nRows += all.length - first;
+        rowsets.push({ name: `${name}#${sn}`, header: all.slice(Math.max(0, first - 3), first), rows: all.slice(first).filter(row => (row || []).some(v => typeof v === 'string' && zone.has(v.trim()))) });
+      }
+    }
+    for (const t of rowsets) { nZone += t.rows.length; tables.push({ table: t.name, header_rows: t.header, rows: t.rows }); }
+  }
+  const lic = d.licence, licUrl = readJson(join(OUT, 'catalogue.json')).meta.licence_urls[lic] || null;
+  const meta = {
+    source: `London Datastore: ${d.title} (${d.publisher})`, dataset: H.id, page: `${BASE}/dataset/${d.slug}`, resources: used, licence: lic, licence_url: licUrl,
+    attribution: (T.licence === 'ogl' ? `Contains public sector information licensed under the ${lic} (${d.publisher}).` : `${d.publisher}, ${lic}.`) + (H.extraAttribution ? ' ' + H.extraAttribution : '') + ' The GLA cannot warrant the quality or accuracy of the data (London Datastore terms).',
+    dataset_modified: d.modified, geo: d.geo, theme: H.theme,
+    method: `walk-london-datastore.mjs harvest ${key}: ${resources.length} resources (${[...new Set(resources.map(r => r.format))].join(', ')}); ${byToid ? 'a row is kept when its TOID is a zone TOID (the OS MasterMap TopographicArea TOIDs of the OS Open UPRN points in the 3D model box, through OS Open Linked Identifiers; a building with no UPRN is missed)' : `a row is kept when a cell holds a zone code of type ${H.codes.join(' or ')} (feeds/london-datastore/zone-codes.json: areas that meet the 3D model box or hold a zone postcode)`}. Sheets: the up to 3 rows above the first coded row are kept as header_rows. CSV: streamed; the first line is the header; a row is kept by its first ${byToid ? 'TOID (osgb...)' : 'E00/E01/E02/E05 code'}.`,
+    counts: { source_rows: nRows, zone_rows: nZone, tables: tables.length, zone_codes_of_type: zone.size },
+  };
+  const dir = join(OUT, key); mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, key + '.json'), '{"meta":' + JSON.stringify(meta, null, 1) + ',\n"tables":[\n' + tables.map(t => JSON.stringify({ table: t.table, header_rows: t.header_rows }).slice(0, -1) + ',"rows":[\n' + t.rows.map(r => JSON.stringify(r)).join(',\n') + '\n]}').join(',\n') + '\n]}\n');
+  console.log(key, H.id, JSON.stringify(meta.counts));
+  return [key, H.id, lic, meta.counts];
+}
+function parseCsvLine(l) { const out = []; let cur = '', q = false; for (let i = 0; i < l.length; i++) { const c = l[i]; if (q) { if (c === '"') { if (l[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; } else if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = ''; } else cur += c; } out.push(cur); return out.map(v => v.replace(/^\uFEFF/, '')); }
+// a streamed GET in the polite queue: onText(chunk) per decoded chunk; nothing is kept but what the callback keeps
+export function politeStream(url, onText, { minGapMs = 1100 } = {}) {
+  const run = async () => {
+    const wait = last + minGapMs - Date.now(); if (wait > 0) await sleep(wait);
+    last = Date.now(); nReq++;
+    const r = await fetch(url, { headers: { 'User-Agent': UA } });
+    if (!r.ok) throw new Error(`${r.status} ${url}`);
+    const dec = new TextDecoder('utf-8'); let n = 0;
+    for await (const chunk of r.body) { n += chunk.length; onText(dec.decode(chunk, { stream: true })); }
+    onText(dec.decode()); last = Date.now(); return { status: r.status, bytes: n };
+  };
+  const p = chain.then(run, run); chain = p.catch(() => {}); return p;
+}
+
 // ================================================================== main
 const cmd = args[0];
 if (cmd === 'walk') await walk();
 else if (cmd === 'triage') triage();
 else if (cmd === 'harvest') await harvest(args.slice(1).filter(a => !a.startsWith('--')));
+else if (cmd === 'refs') await refs();
+else if (cmd === 'probe') await probe(args.slice(1).filter(a => !a.startsWith('--')));
 else { console.log('usage: walk-london-datastore.mjs walk [--details] [--refresh] | triage | harvest [key ...] [--refresh]\nharvest keys: ' + Object.keys(HARVEST).join(' ')); }
