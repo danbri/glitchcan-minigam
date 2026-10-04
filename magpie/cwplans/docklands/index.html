@@ -1135,7 +1135,7 @@ document.querySelectorAll('[data-glow]').forEach(x => x.onchange = () => {
 });
 function drawGlow() {
   if (!L.glow && !L.aura) return;
-  gl.uniform1f(uGlow, 1); gl.uniform1f(uTime, performance.now() / 1000); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false);
+  gl.uniform1f(uGlow, 1); gl.uniform1f(uTime, performance.now() / 1000 % (20 * Math.PI / 3.3));   /* one period of sin(time*3.3) x 10: the sum stays small enough for fp16 (mediump on phones) */ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false);
   drawMesh(L.aura, .3); drawMesh(L.glow, 1);          // with the depth test: hidden by nearer buildings, like real light
   gl.disable(gl.DEPTH_TEST); drawMesh(L.glow, .14); gl.enable(gl.DEPTH_TEST);   // a faint pass through them, so nothing is lost
   gl.uniform1f(uGlow, 0); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);

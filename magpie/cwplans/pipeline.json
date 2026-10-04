@@ -3334,6 +3334,34 @@
       "judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md."
     },
     {
+      "id": "check-fp16-shaders",
+      "tool": "tools/check-fp16-shaders.mjs",
+      "command": "node magpie/cwplans/tools/check-fp16-shaders.mjs [--no-browser]",
+      "kind": "check",
+      "used": [
+        {
+          "file": "docklands/index.html"
+        },
+        {
+          "file": "docklands/sky.js"
+        }
+      ],
+      "generated": [],
+      "method": "Checks the 3D page's shaders for what a phone GPU would do differently from the headless SwiftShader renderer: opens the page in headless Chromium, captures every compiled shader source, and counts each program's uniform rows, varyings, samplers and attributes against the WebGL 1 minimums; then re-runs the shaders' risky maths (hashes, time arguments, far positions, derivatives) in Node with every intermediate rounded to IEEE binary16, beside fp32.",
+      "rules": [
+        "fp16: round to nearest, ties to even, 10-bit mantissa, exponents -14 to 15 with subnormals, overflow to infinity (Node 22 has no Math.f16round).",
+        "A case fails only for a shader declared mediump (on a phone mediump may be fp16); cases for shaders that ask for highp where present (HIP, PRE) are reported as notes, because every OpenGL ES 3 GPU has highp in fragment shaders.",
+        "Each case quotes the shader text it mirrors; when that text is gone from the page the case is reported STALE and the tool fails.",
+        "Uniform rows are counted without packing (every float, vec2 and vec3 a whole row), so a real count is at most the one shown; minimums: 128 vertex and 16 fragment uniform vectors, 8 varyings, 8 texture units, 8 attributes.",
+        "Writes nothing; exit 1 on a failing or stale case."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [],
+      "area": "imagery",
+      "faults": []
+    },
+    {
       "id": "fetch-trees",
       "tool": "tools/build-trees.mjs",
       "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-trees.mjs fetch [gla|osgs|tpo|tow ...]",
