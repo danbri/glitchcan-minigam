@@ -7,14 +7,64 @@
   "attribution": "© OpenStreetMap contributors (https://www.openstreetmap.org/copyright); Tower Hamlets Council, Markets in Tower Hamlets",
   "osm_extract": "osmfr-greater-london (data-register.json osm_extracts; local, not committed)",
   "method": "OSM amenity=marketplace nodes and ways in the zone, read from the local Greater London extract (ways placed at the mean of their nodes); the Tower Hamlets street-markets page parsed for name, days, place and times, joined to OSM by name, else placed on the OSM street it names. Other boroughs publish no market list in a form read here (README gaps).",
-  "th_markets": [],
+  "th_markets": [
+   {
+    "name": "Brick Lane Market",
+    "days": "Sundays",
+    "place": "Brick Lane, E1",
+    "times": "Sundays, 10am to 3pm",
+    "osm": null
+   },
+   {
+    "name": "Columbia Road Flower Market",
+    "days": "Sundays",
+    "place": "Columbia Road, E2",
+    "times": "Sundays, 8am to 2pm",
+    "osm": null
+   },
+   {
+    "name": "Petticoat Lane Market",
+    "days": "Sunday",
+    "place": "Middlesex Street, E1",
+    "times": "Sundays, 9am to 3pm",
+    "osm": null
+   },
+   {
+    "name": "Petticoat Lane Street Food",
+    "days": "Mondays to Fridays",
+    "place": "Wentworth Street E1",
+    "times": "Monday to Friday, 8am to 4pm",
+    "osm": null
+   },
+   {
+    "name": "Whitechapel Market",
+    "days": "Monday to Saturday",
+    "place": "Whitechapel Road, E1",
+    "times": "Monday to Saturday, 8am to 6pm",
+    "osm": null
+   },
+   {
+    "name": "Chrisp Street Market",
+    "days": "Monday to Saturday",
+    "place": "Chrisp Street, E14",
+    "times": "Monday to Saturday, 8am to 6pm",
+    "osm": "way/50437784"
+   },
+   {
+    "name": "Roman Road Market",
+    "days": "Tuesday, Thursday and Saturday",
+    "place": "Roman Road, E3",
+    "times": "Tuesday, Thursday, Saturday, 8am to 6pm",
+    "osm": null
+   }
+  ],
   "counts": {
-   "items": 25,
-   "th_markets_on_page": 0,
+   "items": 28,
+   "th_markets_on_page": 7,
    "osm_marketplaces": 25,
-   "th_matched_osm": 0,
-   "th_placed_by_street": 0,
-   "th_outside_zone": 0
+   "th_matched_osm": 1,
+   "th_placed_by_street": 3,
+   "th_outside_zone": 3
   },
   "zone": {
    "model_box_wgs84": [
@@ -455,22 +505,23 @@
   {
    "id": "osm-market:way/50437784",
    "kind": "market",
-   "title": "Chrisp Street Market",
+   "title": "Chrisp Street Market: Monday to Saturday, 8am to 6pm",
    "start": null,
    "end": null,
-   "recurring": null,
+   "recurring": "Monday to Saturday, 8am to 6pm",
    "opening_hours": null,
-   "location": "Chrisp Street Market",
-   "borough": null,
+   "location": "Chrisp Street, E14",
+   "borough": "Tower Hamlets",
    "lat": 51.512602,
    "lon": -0.014312,
    "zone": "model",
    "placed_by": "OSM way 50437784 (mean of its nodes)",
    "osm": "way/50437784",
    "operator": null,
-   "url": "https://www.openstreetmap.org/way/50437784",
+   "url": "https://www.towerhamlets.gov.uk/lgnl/business/markets/markets_in_tower_hamlets.aspx",
    "sources": [
-    "osm"
+    "osm",
+    "th-markets-page"
    ]
   },
   {
@@ -554,6 +605,66 @@
    "operator": null,
    "url": "https://www.greenwichvintagemarket.co.uk/",
    "sources": [
+    "osm"
+   ]
+  },
+  {
+   "id": "th-market:petticoat-lane",
+   "kind": "market",
+   "title": "Petticoat Lane Market: Sundays, 9am to 3pm",
+   "start": null,
+   "end": null,
+   "recurring": "Sundays, 9am to 3pm",
+   "location": "Middlesex Street, E1",
+   "street": "Middlesex Street",
+   "borough": "Tower Hamlets",
+   "lat": 51.518007,
+   "lon": -0.078635,
+   "zone": "model",
+   "placed_by": "street named on the council page, OSM street position",
+   "url": "https://www.towerhamlets.gov.uk/lgnl/business/markets/markets_in_tower_hamlets.aspx",
+   "sources": [
+    "th-markets-page",
+    "osm"
+   ]
+  },
+  {
+   "id": "th-market:petticoat-lane",
+   "kind": "market",
+   "title": "Petticoat Lane Street Food: Monday to Friday, 8am to 4pm",
+   "start": null,
+   "end": null,
+   "recurring": "Monday to Friday, 8am to 4pm",
+   "location": "Wentworth Street E1",
+   "street": "Wentworth Street",
+   "borough": "Tower Hamlets",
+   "lat": 51.516756,
+   "lon": -0.07502,
+   "zone": "model",
+   "placed_by": "street named on the council page, OSM street position",
+   "url": "https://www.towerhamlets.gov.uk/lgnl/business/markets/markets_in_tower_hamlets.aspx",
+   "sources": [
+    "th-markets-page",
+    "osm"
+   ]
+  },
+  {
+   "id": "th-market:whitechapel",
+   "kind": "market",
+   "title": "Whitechapel Market: Monday to Saturday, 8am to 6pm",
+   "start": null,
+   "end": null,
+   "recurring": "Monday to Saturday, 8am to 6pm",
+   "location": "Whitechapel Road, E1",
+   "street": "Whitechapel Road",
+   "borough": "Tower Hamlets",
+   "lat": 51.518384,
+   "lon": -0.063217,
+   "zone": "model",
+   "placed_by": "street named on the council page, OSM street position",
+   "url": "https://www.towerhamlets.gov.uk/lgnl/business/markets/markets_in_tower_hamlets.aspx",
+   "sources": [
+    "th-markets-page",
     "osm"
    ]
   }

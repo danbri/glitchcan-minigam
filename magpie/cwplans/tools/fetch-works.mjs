@@ -538,8 +538,8 @@ async function markets() {
     const tg = o.tags, k = key(tg.name), thm = tg.name && th.find(x => key(x.name) && (key(x.name) === k || k.includes(key(x.name)) || key(x.name).includes(k)));
     if (thm) { thm.osm = `${o.type}/${o.id}`; counts.th_matched_osm++; }
     items.push({
-      id: `osm-market:${o.type}/${o.id}`, kind: 'market', title: `${tg.name || 'Market (no name in OSM)'}${thm ? `: ${thm.days}, ${thm.times}` : tg.opening_hours ? `: ${tg.opening_hours}` : ''}`,
-      start: null, end: null, recurring: thm ? `${thm.days}, ${thm.times}` : tg.opening_hours || null, opening_hours: tg.opening_hours || null, location: thm?.place || tg['addr:street'] || tg.name || null,
+      id: `osm-market:${o.type}/${o.id}`, kind: 'market', title: `${tg.name || 'Market (no name in OSM)'}${thm ? `: ${thm.times}` : tg.opening_hours ? `: ${tg.opening_hours}` : ''}`,
+      start: null, end: null, recurring: thm ? `${thm.times}` : tg.opening_hours || null, opening_hours: tg.opening_hours || null, location: thm?.place || tg['addr:street'] || tg.name || null,
       borough: thm ? 'Tower Hamlets' : null, lat: r6(o.lat), lon: r6(o.lon), zone: z, placed_by: `OSM ${o.type} ${o.id}${o.type === 'way' ? ' (mean of its nodes)' : ''}`,
       osm: `${o.type}/${o.id}`, operator: tg.operator || null, url: tg.website || tg['contact:website'] || (thm ? thUrl : `https://www.openstreetmap.org/${o.type}/${o.id}`),
       sources: thm ? ['osm', 'th-markets-page'] : ['osm'],
@@ -550,7 +550,7 @@ async function markets() {
     const z = p ? zoneOf(p[1], p[0]) : null;
     if (!z) { counts.th_outside_zone++; continue; }
     counts.th_placed_by_street++;
-    items.push({ id: `th-market:${key(x.name).replace(/ /g, '-')}`, kind: 'market', title: `${x.name}: ${x.days}, ${x.times}`, start: null, end: null, recurring: `${x.days}, ${x.times}`,
+    items.push({ id: `th-market:${key(x.name).replace(/ /g, '-')}`, kind: 'market', title: `${x.name}: ${x.times}`, start: null, end: null, recurring: `${x.times}`,
       location: x.place, street: streetOf(x.place), borough: 'Tower Hamlets', lat: r6(p[1]), lon: r6(p[0]), zone: z, placed_by: 'street named on the council page, OSM street position', url: thUrl, sources: ['th-markets-page', 'osm'] });
   }
   write('markets', { url: `${thUrl}; OSM amenity=marketplace`, licence: 'OSM: ODbL 1.0 (© OpenStreetMap contributors); Tower Hamlets page: council website terms, days and times as facts with the link',
