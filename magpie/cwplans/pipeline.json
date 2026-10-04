@@ -4280,6 +4280,159 @@
       ],
       "note": "DATA-REGISTER.md and METHODS.md carry the run date.",
       "area": "provenance"
+    },
+    {
+      "id": "fetch-river",
+      "tool": "tools/fetch-river.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-river.mjs [pla-notices crt-notices thames-barrier levels osm-river locks eden-dock royal-docks ea-sondes ea-wims river-bus pla-moorings wikidata-vessels] [--no-fetch] [--list]",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "pla-ntm-live",
+          "endpoint": "https://maps.pla.co.uk/server/rest/services/Hosted/NtMs_Live/FeatureServer/0/query",
+          "request": "where 1=1, envelope -0.095,51.474,0.085,51.528, outFields id, district, name, reach, title, dates, issuer_title, link, closure, archived; geometry WGS84"
+        },
+        {
+          "source": "crt-notices-api",
+          "endpoint": "https://canalrivertrust.org.uk/api/stoppage/notices",
+          "request": "consult=false, start = fetch date - 60 days, end = + 240 days, fields title, region, waterways, path, typeId, reasonId, programmeId, start, end, state; geometry=point"
+        },
+        {
+          "source": "govuk-thames-barrier",
+          "endpoint": "https://www.gov.uk/api/content/guidance/the-thames-barrier",
+          "request": "the page body; the planned-tests table and the closure totals"
+        },
+        {
+          "source": "ea-flood-monitoring",
+          "endpoint": "https://environment.data.gov.uk/flood-monitoring/id/stations/{id} and /readings?since=now-48h&_sorted&_limit=10000; /id/floods?lat=51.505&long=0&dist=15",
+          "request": "16 stations: 0007, 0001, 0003, 0006, 4410TH, six DIFF_* barrier stations, 5390TH, 5380TH, 4370TH, 4326TH, 4389TH"
+        },
+        {
+          "source": "crt-pages",
+          "endpoint": "two CRT boating pages",
+          "request": "HTTP GET to check each page cited in feeds/river/locks-facts.json still answers"
+        },
+        {
+          "source": "southwark-south-dock",
+          "endpoint": "https://www.southwark.gov.uk/culture-and-sport/south-dock-marina/navigation-thames",
+          "request": "HTTP GET (page check)"
+        },
+        {
+          "source": "sea-lanes-cw",
+          "endpoint": "https://sealanescanarywharf.co.uk/water-quality/ and /swimming/",
+          "request": "HTML GET"
+        },
+        {
+          "source": "rodma-water-quality",
+          "endpoint": "https://royaldockswaterways.com/impact-responsibility/documents/ and each linked 'Water Quality Testing Results' PDF",
+          "request": "HTML GET, PDF GET; pdftotext -layout and -raw"
+        },
+        {
+          "source": "ea-hydrology",
+          "endpoint": "https://environment.data.gov.uk/hydrology/id/stations/{id}, /id/measures?station=..., /id/measures/{m}/readings?min-date=..",
+          "request": "stations CADOG2, BARIERA, ERITH1; every measure from fetch date - 2 days"
+        },
+        {
+          "source": "ea-water-quality-archive",
+          "endpoint": "https://environment.data.gov.uk/water-quality/sampling-point and /sampling-point/{id}/observation",
+          "request": "Accept: application/ld+json; radius searches (51.498,-0.045,5 km), (51.505,0.045,4.5 km), (51.52,-0.01,2 km), limit 250 with skip; observations limit=1 then the last 60"
+        },
+        {
+          "source": "tfl-unified-api",
+          "endpoint": "https://api.tfl.gov.uk/Line/Mode/river-bus, /Line/{id}/Route/Sequence/{dir}, /Line/{id}/Timetable/{pier}?direction=, /Line/{ids}/Arrivals",
+          "request": "rb1, rb4, rb6, woolwich-ferry; both directions"
+        },
+        {
+          "source": "pla-arcgis",
+          "endpoint": "https://maps.pla.co.uk/server/rest/services/Visitor_Moorings/FeatureServer and https://services8.arcgis.com/QgdzYlEcjteGD0VH/arcgis/rest/services/Berths_Owners/FeatureServer",
+          "request": "first layer, envelope query, geometry WGS84"
+        },
+        {
+          "source": "wikidata",
+          "endpoint": "https://qlever.dev/api/wikidata",
+          "request": "one query: P31/P279* watercraft (Q1229765) with P625 in the envelope; label, description, class, P571, P458, P587"
+        },
+        {
+          "local": "data/raw/docklands/greater_london-latest.osm.pbf",
+          "source": "osm"
+        },
+        {
+          "file": "feeds/river/locks-facts.json"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/river/pla-notices.json"
+        },
+        {
+          "file": "feeds/river/crt-notices.json"
+        },
+        {
+          "file": "feeds/river/thames-barrier.json"
+        },
+        {
+          "file": "feeds/river/ea-flood-warnings.json"
+        },
+        {
+          "file": "feeds/river/levels.json"
+        },
+        {
+          "file": "feeds/river/locks.json"
+        },
+        {
+          "file": "feeds/river/eden-dock.json"
+        },
+        {
+          "file": "feeds/river/royal-docks.json"
+        },
+        {
+          "file": "feeds/river/ea-sondes.json"
+        },
+        {
+          "file": "feeds/river/ea-wims.json"
+        },
+        {
+          "file": "feeds/river/river-bus.json"
+        },
+        {
+          "file": "feeds/river/osm-river.json"
+        },
+        {
+          "file": "feeds/river/pla-moorings.json"
+        },
+        {
+          "file": "feeds/river/wikidata-vessels.json"
+        },
+        {
+          "local": "data/raw/river/"
+        }
+      ],
+      "method": "Fetches dated snapshots of the river, docks, locks, water quality, moorings and boats in the Docklands zone (the 3D model box, the Royal Docks margin and a strip north to Bow Locks) and writes one JSON file per source: {meta: source, url, fetched, licence, attribution, method, counts, zone; items: id, kind, time or validity, position {lat, lon, precision, zone}, values, url}.",
+      "rules": [
+        "Zone: model box -0.095,51.474 to 0.015,51.522; east margin 0.015,51.495 to 0.085,51.522 (as fetch-works); Lea strip -0.025,51.522 to 0.010,51.528. Server queries use the envelope -0.095,51.474 to 0.085,51.528; items are kept when their point (or one point) falls in the zone.",
+        "Politeness: one request at a time per host, at least 1.1 s apart (3 s for web.archive.org), up to 5 tries with Retry-After or a doubling pause on 429, 5xx, timeouts and resets; 4xx not retried; User-Agent from tools/lib.mjs. QLever through lib.mjs qlever().",
+        "PLA (licence not stated) and CRT (no open licence): facts and links only. PLA: the notice number from the link (the name field holds placeholders), kind by title keywords, centroid = mean of polygon vertices, bbox, 'portwide' when the bbox is wider than 0.3 degrees; notice text, polygons, comments, invoice references and staff names dropped. PLA moorings: contact numbers and e-mails dropped.",
+        "CRT notices: type, reason and programme ids mapped with the lookups embedded in the notices page on 2026-10-04.",
+        "Thames Barrier: rows of the planned-tests table; London local times converted to ISO with the day's BST/GMT offset.",
+        "Levels: measures with no readings dropped; series that publish about once a minute (DIFF_*) thinned to the first reading per 15-minute slot plus the latest; no cleaning (Tower Pier low-water fault F21 left for the consumer).",
+        "Locks: rules hand-written in feeds/river/locks-facts.json; position = centroid of the named OSM element; CRT notices matched by keywords in crt_match against title and waterway; every cited page re-checked by HTTP GET. Conflicting operator statements kept in 'conflicts'.",
+        "Eden Dock: rows of the table wq-readings-table; temperature from the weather-item-value before 'Water Temperature', stamped with the fetch time. Position: OSM relation 18985240.",
+        "Royal Docks: pdftotext -layout for per-sample values, -raw for cyanobacteria rows (colonies/ml and the result kept as printed); 'Royal George V Dock' mapped to King George V Dock (written form kept); positions = mean of the vertices in the west or east fifth of the OSM dock polygon, marked approximate.",
+        "EA sondes: plausibility rules flag (never change) pH outside 6 to 9.5, negative turbidity or oxygen, ammonium over 50 mg/L (fault F24).",
+        "EA WIMS: BNG to WGS84 by a Helmert transform (proj4, about 5 m); water points get their latest sample from the last 60 observations.",
+        "TfL: longest stop sequence per line and direction; timetable from the first zone pier; arrivals kept at zone piers only.",
+        "OSM: osmium extract of the envelope, tags-filter, export geojsonseq; deduplicated by type/id; unnamed seamarks and untyped elements counted, not listed.",
+        "Raw responses cached under data/raw/river/<source>/ (gitignored); URLs that carry the run's date are cached under a stable key so --no-fetch works; snapshots overwritten on each run (git keeps history)."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "area": "water",
+      "faults": [
+        "F21",
+        "F24"
+      ],
+      "judgement": "Licence classes per source (facts only for PLA, CRT and the operators' pages); the lock rules in feeds/river/locks-facts.json are read and paraphrased by hand (recorded with URL and date); the sonde plausibility thresholds; the choice of stations and sondes. Recorded in skills/cwplans-river-and-water/SKILL.md and feeds/river/README.md."
     }
   ],
   "manual_activities": [

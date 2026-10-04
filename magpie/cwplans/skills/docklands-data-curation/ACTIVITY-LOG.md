@@ -499,6 +499,27 @@ Owner's questions: how the colours at the top of One Canada Square are chosen, a
 - Open: cloud heights; tide predictions (no open source); moonlight calibration against a moonlit photo; a phone test of
   the list in the 3D-page skill; the apex question needs a photo with EXIF.
 
+## 2026-10-04 river, docks, locks, water quality and boats (river agent)
+
+- New tool `tools/fetch-river.mjs` (pipeline activity `fetch-river`, area water) and 14 snapshots in `feeds/river/`
+  (README there), skill `cwplans-river-and-water`. Counts on 2026-10-04: 13 PLA notices to mariners (facts only, from the
+  PLA ArcGIS layer NtMs_Live; pla.co.uk blocks scripts), 18 CRT notices of 1,076 national (the JSON endpoint behind the
+  notices page, found by watching the page's requests), 8 Thames Barrier planned tests (GOV.UK, OGL), 0 flood warnings,
+  17 level series (Thames gauges, 6 barrier DIFF stations, Lee, Ravensbourne, Quaggy), 9 locks with rules from
+  `locks-facts.json` (hand-written), Eden Dock 4 samples (May to August 2026, all Excellent) and 16.6 °C, Royal Docks 6
+  samples of 9 September 2026 (all Excellent), 20 EA sonde series, 41 WIMS points, TfL 12 piers, 18 timetables, 48
+  arrival predictions, 632 OSM features, 8 PLA visitor moorings, 22 Wikidata vessels.
+- Catalogued, not patched: F24 (BARIERA sonde values impossible; flagged); a conflict between two CRT pages on the West
+  India Dock Entrance Lock window (both kept); "Royal George V Dock" in the RoDMA certificate (alias, written form
+  kept). Storm overflows are not repeated here (`feeds/live/overflows.json`).
+- Rejected: open live AIS does not exist for this use (aisstream: key, server only, no stated licence; AISHub: receiver
+  required; GFW: CC BY-NC; MarineTraffic, VesselFinder: proprietary); EA bathing-water API (403 from the container);
+  CRT ArcGIS layers (no commercial use); boat occupants (no open source).
+- Feeds catalogue: 6 entries added to `feeds/feeds.json` (CRT notices endpoint, Sea Lanes water quality, RoDMA
+  certificate, EA sondes at Cadogan Pier and Erith, GOV.UK barrier tests, Wikidata vessels).
+- Open: lock state from the tide (needs high-water times: ADMIRALTY key), St Katharine and Royal Docks lock rules, an
+  AIS decision for the owner, the 3D page layers proposed in the skill.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

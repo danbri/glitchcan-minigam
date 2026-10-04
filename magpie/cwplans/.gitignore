@@ -33,3 +33,6 @@ data/raw/london-datastore/
 
 # live-state raw downloads (tools/fetch-live.mjs)
 data/raw/live/
+
+# river, docks and water downloads (tools/fetch-river.mjs)
+data/raw/river/
