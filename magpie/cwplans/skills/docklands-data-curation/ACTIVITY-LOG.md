@@ -746,3 +746,18 @@ central tower - do we have an index of these?"
   HMS Belfast. One real fetch: 62 drawn, card correct (moored, 139 m, HAMBURG, source aishub).
 - Fault found and fixed before push: at full brightness the white hulls glared in the night photo views (Rotherhithe):
   drawn with the ground's night dim (max(nDim, 0.35)) now.
+
+## 2026-10-04 — Open-data portals walk, batch 1: data.gov.uk and planning.data.gov.uk
+- New tool `tools/walk-portals.mjs` with adapters `tools/portals/{dgu,pdg,index}.mjs`; new skill
+  `skills/cwplans-open-portals/`; outputs in `feeds/portals/`; raw cache `data/raw/portals/` (gitignored).
+- data.gov.uk: all 59,451 datasets read (63 requests); 25,492 in scope (S1 260, S2 23,863, S3 GLA 1,365, S4 4).
+  Final states: not-relevant 9,035, walked-elsewhere 5,121, not-open 4,809, unavailable 3,199, deferred 1,991,
+  listed-for-harvest 1,257, sensitive 72, held 8. Rule fixes from reading the first run: "Poplar" (a tree) matched the
+  zone place list; short slugs matched project prose as held; airport and rail "safeguarding" areas read as sensitive;
+  deleted records kept resources. Committed: catalogue 1.8 MB, triage 2.4 MB.
+- planning.data.gov.uk: 222 datasets, zone counts by spatial query (478 requests). Harvested 26 (7.1 MB): listed
+  buildings 1,769 and outlines 1,557, Heritage at Risk 58, Article 4 areas 344 (all directions, not only
+  office-to-residential), area TPOs 141, EA flood zones 824 (cut at the box: 5.5 MB to 1.2 MB), AQMAs, LNRs, NSIPs
+  (Silvertown Tunnel, Tideway, Heat Main), Greenwich section 106 agreements, plan records. Held 11, not-relevant 79,
+  unavailable 106.
+- Next: borough portals, Nomis and ONS Open Geography, national APIs; a service probe for the data.gov.uk backlog.

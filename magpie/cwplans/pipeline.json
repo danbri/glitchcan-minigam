@@ -4935,6 +4935,286 @@
         "Not kept: counted by type group in meta.not_kept_would_gain, no ids or names.",
         "Politeness: one HTTP request at a time >= 2 s apart, one stream, User-Agent from tools/lib.mjs; raw runs gitignored."
       ]
+    },
+    {
+      "id": "walk-portals",
+      "tool": "tools/walk-portals.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs <dgu|pdg|boroughs|nomis|onsgeo|national> walk [--refresh]; node magpie/cwplans/tools/walk-portals.mjs <portal> triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs <portal> harvest [key ...]; node magpie/cwplans/tools/walk-portals.mjs dgu catalogue; node magpie/cwplans/tools/walk-portals.mjs index",
+      "kind": "fetch",
+      "method": "Walks the open-data portals other than the London Datastore that cover the zone, one adapter per portal (tools/portals/*.mjs): reads each catalogue whole (data.gov.uk CKAN: all 59,451 datasets; planning.data.gov.uk: all 222 datasets with a count of the entities that meet the zone), triages every dataset in scope by written rules to one final state (harvested, held, listed-for-harvest, deferred, not-relevant, not-open, unavailable, sensitive, walked-elsewhere), and harvests the open, relevant datasets clipped to the 3D model box as GeoJSON (WGS84) or JSON rows with a meta member (source, API, fetch date, licence, attribution, method, counts).",
+      "rules": [
+        "Politeness: one request at a time over the run, at least 1.1 s apart, robots.txt read for every host before the first request and obeyed (longest matching rule), backoff on 429 and 5xx with Retry-After, the project User-Agent.",
+        "Licence class (licenceClass in walk-portals.mjs): OGL, CC BY, ODC-By, CC0/PDDL/public domain are open; NC or closed is restricted; CC BY-SA and ODbL are share-alike (never harvested; OSM is the only share-alike exception); 'no conditions apply' alone is open-unclear; no licence is none (metadata only). data.gov.uk records with no licence whose resources all sit on GOV.UK, ONS, Nomis, NHS Digital, DfT road traffic or data.police.uk count as ogl-site-terms (those sites' terms give OGL v3.0).",
+        "data.gov.uk scope: S1 local publishers (zone boroughs, LTGDC, Canal & River Trust, TfL, Royal Museums Greenwich, PLA, local NHS), S2 named national publishers, S3 the GLA (the London Datastore: state walked-elsewhere), S4 other publishers whose title or tags name a zone place or borough; out of scope only counted per organisation.",
+        "data.gov.uk states, first match: T0 by hand; T1 sensitive title; T2 held (dataset id, or a name of 15+ characters with a hyphen, in a tool, data-register.json or pipeline.json); T3 walked-elsewhere (GLA); T4 unavailable (no resources); T5 not-relevant administrative (payments, spending, staff, contracts, FOI); T6 not-open; T7 not-relevant other area (bounding box misses the zone, or the title names another region, county, city or London borough); T8 deferred documents only; T9 listed-for-harvest (zone place, zone borough, London-fine or national-fine); T10 not-relevant coarser than a borough; T11 deferred area unknown.",
+        "Zone place names (title and tags only, not the description): the London Datastore list plus Thames Barrier, Tideway, Lower Lea, Leamouth; not when the text has tree or crop words (Poplar is also a tree: 'Energy Crops Scheme' and short rotation coppice records matched it).",
+        "planning.data.gov.uk: zone = entities whose geometry intersects the box polygon (the platform's spatial query); for documents, agreements and plans the entities of the zone planning organisations (GLA 144, Greenwich 150, Lewisham 198, City 203, Newham 246, Southwark 329, Tower Hamlets 350). States P0 by hand (held from another source), P1 harvested, P2 ended, P3 not-open, P4 empty, P5 code list, P6 nothing in the zone, P7 listed-for-harvest, P8 deferred.",
+        "Harvest: whole geometries that meet the box are kept, rounded to 6 decimals, with in_zone, whole_in_zone, in_cw; EA flood zones are simplified (0.5 m) and cut at the box (clipped_to_zone). Fields matching e-mail, phone, contact, owner name, person, officer, agent, applicant are dropped and listed.",
+        "Committed outputs stay small: the data.gov.uk triage lists datasets one by one only for the states that need a decision or hold data; the bulk states are name lists keyed by state, rule and reason. National files stay raw and uncommitted; only zone extracts are committed."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "area": "feeds",
+      "faults": [],
+      "judgement": "The scope lists, the zone place exceptions, the JUDGED tables (held from another source, coarser than the zone) and the HARVEST tables were set by hand from the first triage; the reasons are in the tables and in feeds/portals/README.md. Licences that read 'no restrictions' without naming a licence (the Tower Hamlets ArcGIS Hub) are not treated as open.",
+      "used": [
+        {
+          "source": "op-dgu-catalogue",
+          "endpoint": "https://www.data.gov.uk/api/action/package_search",
+          "request": "walk: GET ?rows=1000&start=<n>&sort=metadata_created asc (60 pages, 59,451 datasets on 2026-10-04)"
+        },
+        {
+          "source": "op-pdg-catalogue",
+          "endpoint": "https://www.planning.data.gov.uk/dataset.json",
+          "request": "walk: GET dataset.json, then one entity.json count per dataset (zone polygon, intersects; or per zone planning organisation)"
+        },
+        {
+          "source": "op-pdg-agricultural-land-classification",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=agricultural-land-classification&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest agricultural-land-classification"
+        },
+        {
+          "source": "op-pdg-air-quality-management-area",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=air-quality-management-area&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest air-quality-management-area"
+        },
+        {
+          "source": "op-pdg-article-4-direction",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=article-4-direction&organisation_entity=<198|203|329|350>&limit=500&offset=<n>",
+          "request": "pdg harvest article-4-direction"
+        },
+        {
+          "source": "op-pdg-article-4-direction-area",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=article-4-direction-area&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest article-4-direction-area"
+        },
+        {
+          "source": "op-pdg-certificate-of-immunity",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=certificate-of-immunity&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest certificate-of-immunity"
+        },
+        {
+          "source": "op-pdg-community-infrastructure-levy-schedule",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=community-infrastructure-levy-schedule&organisation_entity=<144|203>&limit=500&offset=<n>",
+          "request": "pdg harvest community-infrastructure-levy-schedule"
+        },
+        {
+          "source": "op-pdg-conservation-area-document",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=conservation-area-document&organisation_entity=<150|198|246|350>&limit=500&offset=<n>",
+          "request": "pdg harvest conservation-area-document"
+        },
+        {
+          "source": "op-pdg-design-code",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=design-code&organisation_entity=<329>&limit=500&offset=<n>",
+          "request": "pdg harvest design-code"
+        },
+        {
+          "source": "op-pdg-developer-agreement",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=developer-agreement&organisation_entity=<150>&limit=500&offset=<n>",
+          "request": "pdg harvest developer-agreement"
+        },
+        {
+          "source": "op-pdg-developer-agreement-contribution",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=developer-agreement-contribution&organisation_entity=<150>&limit=500&offset=<n>",
+          "request": "pdg harvest developer-agreement-contribution"
+        },
+        {
+          "source": "op-pdg-developer-agreement-transaction",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=developer-agreement-transaction&organisation_entity=<150>&limit=500&offset=<n>",
+          "request": "pdg harvest developer-agreement-transaction"
+        },
+        {
+          "source": "op-pdg-flood-risk-zone",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=flood-risk-zone&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest flood-risk-zone"
+        },
+        {
+          "source": "op-pdg-heritage-at-risk",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=heritage-at-risk&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest heritage-at-risk"
+        },
+        {
+          "source": "op-pdg-infrastructure-funding-statement",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=infrastructure-funding-statement&organisation_entity=<150|198|350>&limit=500&offset=<n>",
+          "request": "pdg harvest infrastructure-funding-statement"
+        },
+        {
+          "source": "op-pdg-infrastructure-project",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=infrastructure-project&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest infrastructure-project"
+        },
+        {
+          "source": "op-pdg-listed-building",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=listed-building&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest listed-building"
+        },
+        {
+          "source": "op-pdg-listed-building-outline",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=listed-building-outline&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest listed-building-outline"
+        },
+        {
+          "source": "op-pdg-local-area-requirements",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=local-area-requirements&organisation_entity=<150|198|203|246|329|350>&limit=500&offset=<n>",
+          "request": "pdg harvest local-area-requirements"
+        },
+        {
+          "source": "op-pdg-local-nature-reserve",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=local-nature-reserve&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest local-nature-reserve"
+        },
+        {
+          "source": "op-pdg-local-plan",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=local-plan&organisation_entity=<150|198|203|246|329|350>&limit=500&offset=<n>",
+          "request": "pdg harvest local-plan"
+        },
+        {
+          "source": "op-pdg-park-and-garden",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=park-and-garden&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest park-and-garden"
+        },
+        {
+          "source": "op-pdg-plan-timetable",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=plan-timetable&organisation_entity=<150|198|203|246|329|350>&limit=500&offset=<n>",
+          "request": "pdg harvest plan-timetable"
+        },
+        {
+          "source": "op-pdg-tree-preservation-order",
+          "endpoint": "https://www.planning.data.gov.uk/entity.json?dataset=tree-preservation-order&organisation_entity=<350>&limit=500&offset=<n>",
+          "request": "pdg harvest tree-preservation-order"
+        },
+        {
+          "source": "op-pdg-tree-preservation-zone",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=tree-preservation-zone&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest tree-preservation-zone"
+        },
+        {
+          "source": "op-pdg-world-heritage-site",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=world-heritage-site&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest world-heritage-site"
+        },
+        {
+          "source": "op-pdg-world-heritage-site-buffer-zone",
+          "endpoint": "https://www.planning.data.gov.uk/entity.geojson?dataset=world-heritage-site-buffer-zone&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+          "request": "pdg harvest world-heritage-site-buffer-zone"
+        },
+        {
+          "file": "feeds/london-datastore/zone-codes.json",
+          "note": "zone codes, postcodes and names (the area reference)"
+        },
+        {
+          "file": "data-register.json",
+          "note": "triage: references (held)"
+        },
+        {
+          "file": "pipeline.json",
+          "note": "triage: references (held)"
+        },
+        {
+          "file": "feeds/feeds.json",
+          "note": "triage: references (listed)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/portals/dgu/catalogue.json"
+        },
+        {
+          "file": "feeds/portals/dgu/triage.json"
+        },
+        {
+          "file": "feeds/portals/index.json"
+        },
+        {
+          "file": "feeds/portals/pdg/agricultural-land-classification/agricultural-land-classification.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/air-quality-management-area/air-quality-management-area.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/article-4-direction/article-4-direction.json"
+        },
+        {
+          "file": "feeds/portals/pdg/article-4-direction-area/article-4-direction-area.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/catalogue.json"
+        },
+        {
+          "file": "feeds/portals/pdg/certificate-of-immunity/certificate-of-immunity.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/community-infrastructure-levy-schedule/community-infrastructure-levy-schedule.json"
+        },
+        {
+          "file": "feeds/portals/pdg/conservation-area-document/conservation-area-document.json"
+        },
+        {
+          "file": "feeds/portals/pdg/design-code/design-code.json"
+        },
+        {
+          "file": "feeds/portals/pdg/developer-agreement/developer-agreement.json"
+        },
+        {
+          "file": "feeds/portals/pdg/developer-agreement-contribution/developer-agreement-contribution.json"
+        },
+        {
+          "file": "feeds/portals/pdg/developer-agreement-transaction/developer-agreement-transaction.json"
+        },
+        {
+          "file": "feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/heritage-at-risk/heritage-at-risk.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/infrastructure-funding-statement/infrastructure-funding-statement.json"
+        },
+        {
+          "file": "feeds/portals/pdg/infrastructure-project/infrastructure-project.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/listed-building/listed-building.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/local-area-requirements/local-area-requirements.json"
+        },
+        {
+          "file": "feeds/portals/pdg/local-nature-reserve/local-nature-reserve.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/local-plan/local-plan.json"
+        },
+        {
+          "file": "feeds/portals/pdg/park-and-garden/park-and-garden.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/plan-timetable/plan-timetable.json"
+        },
+        {
+          "file": "feeds/portals/pdg/tree-preservation-order/tree-preservation-order.json"
+        },
+        {
+          "file": "feeds/portals/pdg/tree-preservation-zone/tree-preservation-zone.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/triage.json"
+        },
+        {
+          "file": "feeds/portals/pdg/world-heritage-site/world-heritage-site.geojson"
+        },
+        {
+          "file": "feeds/portals/pdg/world-heritage-site-buffer-zone/world-heritage-site-buffer-zone.geojson"
+        },
+        {
+          "local": "data/raw/portals/",
+          "note": "per portal: the raw catalogue (data.gov.uk all.jsonl.gz, 59,451 compact records), service capabilities, national downloads streamed for zone rows (gitignored; reused unless --refresh)"
+        }
+      ]
     }
   ],
   "manual_activities": [
@@ -5429,6 +5709,14 @@
     {
       "tool": "tools/lds-probe.mjs",
       "provides": "Area detection inside London Datastore files for walk-london-datastore.mjs probe: the size caps, readers (CSV and text samples, sheets through SheetJS, GeoPackage envelopes, zipped shapefile envelopes and dbf), the signals (coordinates, UPRNs, postcodes, OA/LSOA/MSOA/ward/borough codes, borough and zone place names) and the area classes D1 to D8. No side effects; the caller passes the data."
+    },
+    {
+      "tool": "tools/portals/dgu.mjs",
+      "provides": "walk-portals.mjs adapter for data.gov.uk: CKAN walk to a compact raw catalogue, scope S1-S4, triage rules T0-T11, the compact committed catalogue."
+    },
+    {
+      "tool": "tools/portals/pdg.mjs",
+      "provides": "walk-portals.mjs adapter for planning.data.gov.uk: dataset list, zone counts by spatial query or by zone planning organisation, triage P0-P8, harvest (GeoJSON by spatial query; tables by organisation; simplify and clip for flood zones)."
     }
   ],
   "tests": [

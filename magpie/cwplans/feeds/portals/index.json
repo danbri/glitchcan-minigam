@@ -1,0 +1,228 @@
+{
+ "meta": {
+  "made": "2026-10-04",
+  "tool": "tools/walk-portals.mjs index",
+  "note": "counts per portal from each triage.json meta; harvested files with size and item count"
+ },
+ "portals": {
+  "dgu": {
+   "portal": "data.gov.uk",
+   "triaged": "2026-10-04",
+   "datasets_seen": 59451,
+   "in_scope": 25492,
+   "counts": {
+    "listed-for-harvest": 1331,
+    "not-relevant": 9033,
+    "deferred": 1993,
+    "not-open": 8501,
+    "unavailable": 3194,
+    "walked-elsewhere": 1355,
+    "sensitive": 77,
+    "held": 8
+   },
+   "harvested_files": 0,
+   "harvested_bytes": 0,
+   "catalogue_bytes": 4255364,
+   "harvested": []
+  },
+  "pdg": {
+   "portal": "planning.data.gov.uk",
+   "triaged": "2026-10-04",
+   "datasets_seen": null,
+   "in_scope": null,
+   "counts": {
+    "unavailable": 106,
+    "harvested": 26,
+    "not-relevant": 79,
+    "held": 11
+   },
+   "harvested_files": 26,
+   "harvested_bytes": 7070161,
+   "catalogue_bytes": 137990,
+   "harvested": [
+    {
+     "key": "agricultural-land-classification",
+     "file": "pdg/agricultural-land-classification/agricultural-land-classification.geojson",
+     "bytes": 16254,
+     "items": 2,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "air-quality-management-area",
+     "file": "pdg/air-quality-management-area/air-quality-management-area.geojson",
+     "bytes": 168614,
+     "items": 8,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "article-4-direction",
+     "file": "pdg/article-4-direction/article-4-direction.json",
+     "bytes": 414447,
+     "items": 602,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "article-4-direction-area",
+     "file": "pdg/article-4-direction-area/article-4-direction-area.geojson",
+     "bytes": 886638,
+     "items": 344,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "certificate-of-immunity",
+     "file": "pdg/certificate-of-immunity/certificate-of-immunity.geojson",
+     "bytes": 26688,
+     "items": 20,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "community-infrastructure-levy-schedule",
+     "file": "pdg/community-infrastructure-levy-schedule/community-infrastructure-levy-schedule.json",
+     "bytes": 2607,
+     "items": 2,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "conservation-area-document",
+     "file": "pdg/conservation-area-document/conservation-area-document.json",
+     "bytes": 104240,
+     "items": 151,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "design-code",
+     "file": "pdg/design-code/design-code.json",
+     "bytes": 1495,
+     "items": 1,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "developer-agreement",
+     "file": "pdg/developer-agreement/developer-agreement.json",
+     "bytes": 138483,
+     "items": 370,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "developer-agreement-contribution",
+     "file": "pdg/developer-agreement-contribution/developer-agreement-contribution.json",
+     "bytes": 561771,
+     "items": 1398,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "developer-agreement-transaction",
+     "file": "pdg/developer-agreement-transaction/developer-agreement-transaction.json",
+     "bytes": 344049,
+     "items": 813,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "flood-risk-zone",
+     "file": "pdg/flood-risk-zone/flood-risk-zone.geojson",
+     "bytes": 1183504,
+     "items": 824,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "heritage-at-risk",
+     "file": "pdg/heritage-at-risk/heritage-at-risk.geojson",
+     "bytes": 76455,
+     "items": 58,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "infrastructure-funding-statement",
+     "file": "pdg/infrastructure-funding-statement/infrastructure-funding-statement.json",
+     "bytes": 3197,
+     "items": 3,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "infrastructure-project",
+     "file": "pdg/infrastructure-project/infrastructure-project.geojson",
+     "bytes": 382594,
+     "items": 3,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "listed-building",
+     "file": "pdg/listed-building/listed-building.geojson",
+     "bytes": 940639,
+     "items": 1769,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "listed-building-outline",
+     "file": "pdg/listed-building-outline/listed-building-outline.geojson",
+     "bytes": 1474809,
+     "items": 1557,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "local-area-requirements",
+     "file": "pdg/local-area-requirements/local-area-requirements.json",
+     "bytes": 7407,
+     "items": 6,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "local-nature-reserve",
+     "file": "pdg/local-nature-reserve/local-nature-reserve.geojson",
+     "bytes": 24212,
+     "items": 7,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "local-plan",
+     "file": "pdg/local-plan/local-plan.json",
+     "bytes": 12570,
+     "items": 17,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "park-and-garden",
+     "file": "pdg/park-and-garden/park-and-garden.geojson",
+     "bytes": 19667,
+     "items": 6,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "plan-timetable",
+     "file": "pdg/plan-timetable/plan-timetable.json",
+     "bytes": 90824,
+     "items": 191,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "tree-preservation-order",
+     "file": "pdg/tree-preservation-order/tree-preservation-order.json",
+     "bytes": 27647,
+     "items": 72,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "tree-preservation-zone",
+     "file": "pdg/tree-preservation-zone/tree-preservation-zone.geojson",
+     "bytes": 137404,
+     "items": 141,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "world-heritage-site",
+     "file": "pdg/world-heritage-site/world-heritage-site.geojson",
+     "bytes": 11551,
+     "items": 2,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "world-heritage-site-buffer-zone",
+     "file": "pdg/world-heritage-site-buffer-zone/world-heritage-site-buffer-zone.geojson",
+     "bytes": 12395,
+     "items": 1,
+     "licence": "Open Government Licence v3.0"
+    }
+   ]
+  }
+ }
+}

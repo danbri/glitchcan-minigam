@@ -47,3 +47,6 @@ data/raw/construction/
 
 # AIS raw runs (tools/fetch-ais.mjs): include AISHub and aisstream events, never commit
 data/raw/ais/
+
+# open-data portal walks (tools/walk-portals.mjs): catalogues, probes and national downloads; only zone extracts are committed
+data/raw/portals

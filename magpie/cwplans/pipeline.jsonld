@@ -5423,6 +5423,285 @@
    "cwp:judgement": "Owner decision 2026-10-04: AISHub and aisstream.io events are kept for scoping (licence class scoping-accepted-2026-10-04), marked for review before scaling or commercial use. Before that decision: Open Waters re-serves each event under its upstream source's terms. Only open licences were kept (CC0 single volunteer receptions, NLOD, CC BY). AISHub (a private written assurance reported by Open Waters, revocable) and aisstream.io (no terms) are not kept without the owner's agreement; on 2026-10-04 they were the whole vessel coverage of the zone, so 0 vessels were kept and 3 CC0 aids to navigation."
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals",
+   "@type": "prov:Activity",
+   "rdfs:label": "walk-portals",
+   "dct:description": "Walks the open-data portals other than the London Datastore that cover the zone, one adapter per portal (tools/portals/*.mjs): reads each catalogue whole (data.gov.uk CKAN: all 59,451 datasets; planning.data.gov.uk: all 222 datasets with a count of the entities that meet the zone), triages every dataset in scope by written rules to one final state (harvested, held, listed-for-harvest, deferred, not-relevant, not-open, unavailable, sensitive, walked-elsewhere), and harvests the open, relevant datasets clipped to the 3D model box as GeoJSON (WGS84) or JSON rows with a meta member (source, API, fetch date, licence, attribution, method, counts).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-dgu-catalogue",
+     "dcat:accessURL": "https://www.data.gov.uk/api/action/package_search",
+     "dct:description": "walk: GET ?rows=1000&start=<n>&sort=metadata_created asc (60 pages, 59,451 datasets on 2026-10-04)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-catalogue",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/dataset.json",
+     "dct:description": "walk: GET dataset.json, then one entity.json count per dataset (zone polygon, intersects; or per zone planning organisation)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-agricultural-land-classification",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=agricultural-land-classification&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest agricultural-land-classification"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-air-quality-management-area",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=air-quality-management-area&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest air-quality-management-area"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-article-4-direction",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=article-4-direction&organisation_entity=<198|203|329|350>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest article-4-direction"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-article-4-direction-area",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=article-4-direction-area&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest article-4-direction-area"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-certificate-of-immunity",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=certificate-of-immunity&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest certificate-of-immunity"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-community-infrastructure-levy-schedule",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=community-infrastructure-levy-schedule&organisation_entity=<144|203>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest community-infrastructure-levy-schedule"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-conservation-area-document",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=conservation-area-document&organisation_entity=<150|198|246|350>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest conservation-area-document"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-design-code",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=design-code&organisation_entity=<329>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest design-code"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=developer-agreement&organisation_entity=<150>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest developer-agreement"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement-contribution",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=developer-agreement-contribution&organisation_entity=<150>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest developer-agreement-contribution"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement-transaction",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=developer-agreement-transaction&organisation_entity=<150>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest developer-agreement-transaction"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-flood-risk-zone",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=flood-risk-zone&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest flood-risk-zone"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-heritage-at-risk",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=heritage-at-risk&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest heritage-at-risk"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-infrastructure-funding-statement",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=infrastructure-funding-statement&organisation_entity=<150|198|350>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest infrastructure-funding-statement"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-infrastructure-project",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=infrastructure-project&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest infrastructure-project"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-listed-building",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=listed-building&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest listed-building"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-listed-building-outline",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=listed-building-outline&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest listed-building-outline"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-area-requirements",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=local-area-requirements&organisation_entity=<150|198|203|246|329|350>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest local-area-requirements"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-nature-reserve",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=local-nature-reserve&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest local-nature-reserve"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-plan",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=local-plan&organisation_entity=<150|198|203|246|329|350>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest local-plan"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-park-and-garden",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=park-and-garden&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest park-and-garden"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-plan-timetable",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=plan-timetable&organisation_entity=<150|198|203|246|329|350>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest plan-timetable"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-tree-preservation-order",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.json?dataset=tree-preservation-order&organisation_entity=<350>&limit=500&offset=<n>",
+     "dct:description": "pdg harvest tree-preservation-order"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-tree-preservation-zone",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=tree-preservation-zone&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest tree-preservation-zone"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-world-heritage-site",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=world-heritage-site&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest world-heritage-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-world-heritage-site-buffer-zone",
+     "dcat:accessURL": "https://www.planning.data.gov.uk/entity.geojson?dataset=world-heritage-site-buffer-zone&geometry=<zone polygon WKT>&geometry_relation=intersects&limit=500&offset=<n>",
+     "dct:description": "pdg harvest world-heritage-site-buffer-zone"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-codes.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data-register.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/feeds.json"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/dgu/catalogue.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/dgu/triage.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/index.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/agricultural-land-classification/agricultural-land-classification.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/air-quality-management-area/air-quality-management-area.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/article-4-direction/article-4-direction.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/article-4-direction-area/article-4-direction-area.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/catalogue.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/certificate-of-immunity/certificate-of-immunity.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/community-infrastructure-levy-schedule/community-infrastructure-levy-schedule.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/conservation-area-document/conservation-area-document.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/design-code/design-code.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/developer-agreement/developer-agreement.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/developer-agreement-contribution/developer-agreement-contribution.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/developer-agreement-transaction/developer-agreement-transaction.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/heritage-at-risk/heritage-at-risk.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/infrastructure-funding-statement/infrastructure-funding-statement.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/infrastructure-project/infrastructure-project.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/listed-building/listed-building.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/local-area-requirements/local-area-requirements.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/local-nature-reserve/local-nature-reserve.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/local-plan/local-plan.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/park-and-garden/park-and-garden.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/plan-timetable/plan-timetable.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/tree-preservation-order/tree-preservation-order.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/tree-preservation-zone/tree-preservation-zone.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/triage.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/world-heritage-site/world-heritage-site.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/world-heritage-site-buffer-zone/world-heritage-site-buffer-zone.geojson"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/portals/"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/walk-portals.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs <dgu|pdg|boroughs|nomis|onsgeo|national> walk [--refresh]; node magpie/cwplans/tools/walk-portals.mjs <portal> triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-portals.mjs <portal> harvest [key ...]; node magpie/cwplans/tools/walk-portals.mjs dgu catalogue; node magpie/cwplans/tools/walk-portals.mjs index",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Politeness: one request at a time over the run, at least 1.1 s apart, robots.txt read for every host before the first request and obeyed (longest matching rule), backoff on 429 and 5xx with Retry-After, the project User-Agent.",
+    "Licence class (licenceClass in walk-portals.mjs): OGL, CC BY, ODC-By, CC0/PDDL/public domain are open; NC or closed is restricted; CC BY-SA and ODbL are share-alike (never harvested; OSM is the only share-alike exception); 'no conditions apply' alone is open-unclear; no licence is none (metadata only). data.gov.uk records with no licence whose resources all sit on GOV.UK, ONS, Nomis, NHS Digital, DfT road traffic or data.police.uk count as ogl-site-terms (those sites' terms give OGL v3.0).",
+    "data.gov.uk scope: S1 local publishers (zone boroughs, LTGDC, Canal & River Trust, TfL, Royal Museums Greenwich, PLA, local NHS), S2 named national publishers, S3 the GLA (the London Datastore: state walked-elsewhere), S4 other publishers whose title or tags name a zone place or borough; out of scope only counted per organisation.",
+    "data.gov.uk states, first match: T0 by hand; T1 sensitive title; T2 held (dataset id, or a name of 15+ characters with a hyphen, in a tool, data-register.json or pipeline.json); T3 walked-elsewhere (GLA); T4 unavailable (no resources); T5 not-relevant administrative (payments, spending, staff, contracts, FOI); T6 not-open; T7 not-relevant other area (bounding box misses the zone, or the title names another region, county, city or London borough); T8 deferred documents only; T9 listed-for-harvest (zone place, zone borough, London-fine or national-fine); T10 not-relevant coarser than a borough; T11 deferred area unknown.",
+    "Zone place names (title and tags only, not the description): the London Datastore list plus Thames Barrier, Tideway, Lower Lea, Leamouth; not when the text has tree or crop words (Poplar is also a tree: 'Energy Crops Scheme' and short rotation coppice records matched it).",
+    "planning.data.gov.uk: zone = entities whose geometry intersects the box polygon (the platform's spatial query); for documents, agreements and plans the entities of the zone planning organisations (GLA 144, Greenwich 150, Lewisham 198, City 203, Newham 246, Southwark 329, Tower Hamlets 350). States P0 by hand (held from another source), P1 harvested, P2 ended, P3 not-open, P4 empty, P5 code list, P6 nothing in the zone, P7 listed-for-harvest, P8 deferred.",
+    "Harvest: whole geometries that meet the box are kept, rounded to 6 decimals, with in_zone, whole_in_zone, in_cw; EA flood zones are simplified (0.5 m) and cut at the box (clipped_to_zone). Fields matching e-mail, phone, contact, owner name, person, officer, agent, applicant are dropped and listed.",
+    "Committed outputs stay small: the data.gov.uk triage lists datasets one by one only for the states that need a decision or hold data; the bulk states are name lists keyed by state, rule and reason. National files stay raw and uncommitted; only zone extracts are committed."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [],
+   "cwp:area": "feeds",
+   "cwp:fault": [],
+   "cwp:judgement": "The scope lists, the zone place exceptions, the JUDGED tables (held from another source, coarser than the zone) and the HARVEST tables were set by hand from the first triage; the reasons are in the tables and in feeds/portals/README.md. Licences that read 'no restrictions' without naming a licence (the Tower Hamlets ArcGIS Hub) are not treated as open."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
    "@type": "prov:Activity",
    "rdfs:label": "Published levels used as tunnel and structure controls",
@@ -10843,6 +11122,599 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/dgu/catalogue.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "data.gov.uk: the catalogue as walked (compact records)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-dgu-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/dgu/triage.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "data.gov.uk: the final state of every dataset by written rules (state, rule, reason; ranked list for harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-dgu-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/index.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "index of the open-data portal walks: per portal, datasets seen, final-state counts, harvested files and sizes",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/agricultural-land-classification/agricultural-land-classification.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Agricultural land classification (agricultural-land-classification): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 2 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-agricultural-land-classification"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/air-quality-management-area/air-quality-management-area.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Air quality management area (air-quality-management-area): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 8 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-air-quality-management-area"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/article-4-direction/article-4-direction.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Article 4 direction (article-4-direction): zone rows (JSON with a meta member); 602 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-article-4-direction"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/article-4-direction-area/article-4-direction-area.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Article 4 direction area (article-4-direction-area): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 344 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-article-4-direction-area"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/catalogue.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: the catalogue as walked (compact records)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/certificate-of-immunity/certificate-of-immunity.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Certificate of immunity (certificate-of-immunity): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 20 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-certificate-of-immunity"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/community-infrastructure-levy-schedule/community-infrastructure-levy-schedule.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Community infrastructure levy schedule (community-infrastructure-levy-schedule): zone rows (JSON with a meta member); 2 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-community-infrastructure-levy-schedule"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/conservation-area-document/conservation-area-document.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Conservation area document (conservation-area-document): zone rows (JSON with a meta member); 151 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-conservation-area-document"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/design-code/design-code.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Design code (design-code): zone rows (JSON with a meta member); 1 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-design-code"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/developer-agreement/developer-agreement.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Developer agreement (developer-agreement): zone rows (JSON with a meta member); 370 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/developer-agreement-contribution/developer-agreement-contribution.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Developer agreement contribution (developer-agreement-contribution): zone rows (JSON with a meta member); 1398 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement-contribution"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/developer-agreement-transaction/developer-agreement-transaction.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Developer agreement transaction (developer-agreement-transaction): zone rows (JSON with a meta member); 813 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement-transaction"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/flood-risk-zone/flood-risk-zone.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Flood risk zone (flood-risk-zone): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 824 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-flood-risk-zone"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/heritage-at-risk/heritage-at-risk.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Heritage at risk (heritage-at-risk): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 58 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-heritage-at-risk"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/infrastructure-funding-statement/infrastructure-funding-statement.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Infrastructure funding statement (infrastructure-funding-statement): zone rows (JSON with a meta member); 3 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-infrastructure-funding-statement"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/infrastructure-project/infrastructure-project.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Infrastructure project (infrastructure-project): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 3 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-infrastructure-project"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/listed-building/listed-building.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Listed building (listed-building): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 1769 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-listed-building"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/listed-building-outline/listed-building-outline.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Listed building outline (listed-building-outline): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 1557 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-listed-building-outline"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/local-area-requirements/local-area-requirements.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Local area requirements (local-area-requirements): zone rows (JSON with a meta member); 6 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-area-requirements"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/local-nature-reserve/local-nature-reserve.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Local nature reserve (local-nature-reserve): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 7 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-nature-reserve"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/local-plan/local-plan.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Local plan (local-plan): zone rows (JSON with a meta member); 17 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-plan"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/park-and-garden/park-and-garden.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Historic parks and gardens (park-and-garden): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 6 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-park-and-garden"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/plan-timetable/plan-timetable.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: plan timetable (plan-timetable): zone rows (JSON with a meta member); 191 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-plan-timetable"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/tree-preservation-order/tree-preservation-order.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Tree preservation order (tree-preservation-order): zone rows (JSON with a meta member); 72 rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-tree-preservation-order"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/tree-preservation-zone/tree-preservation-zone.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: Tree preservation zone (tree-preservation-zone): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 141 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-tree-preservation-zone"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/triage.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: the final state of every dataset by written rules (state, rule, reason; ranked list for harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/world-heritage-site/world-heritage-site.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: World heritage site (world-heritage-site): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 2 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-world-heritage-site"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/world-heritage-site-buffer-zone/world-heritage-site-buffer-zone.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "planning.data.gov.uk: World heritage site buffer zone (world-heritage-site-buffer-zone): features that meet the 3D model box (GeoJSON WGS84 with a meta member); 1 features",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-world-heritage-site-buffer-zone"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the open-data portal walks other than the London Datastore: portals, method, counts per state, harvested files, licences that blocked, what is left",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-dgu-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-catalogue"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/dgu/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the data.gov.uk walk: scope, rules, counts, ranked backlog",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-dgu-catalogue"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the planning.data.gov.uk walk: datasets, zone counts, harvested files and their licences",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-catalogue"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm",
    "@type": [
     "prov:Entity",
@@ -12212,6 +13084,313 @@
    "dct:title": "Royal Docks Waterways (Royal Docks Management Authority): water quality results certificate PDF",
    "dct:license": "all rights reserved; sample results kept as facts with URL and fetch date (crawl for scoping, owner 2026-10-03)",
    "dcat:landingPage": "https://royaldockswaterways.com/impact-responsibility/documents/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-agricultural-land-classification",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Agricultural land classification (agricultural-land-classification)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/agricultural-land-classification",
+   "cwp:attribution": "© Natural England copyright. Contains Ordnance Survey data © Crown copyright and database right 2026."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-air-quality-management-area",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Air quality management area (air-quality-management-area)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/air-quality-management-area",
+   "cwp:attribution": "© Crown copyright and database rights 2026 licenced under Defra's Public Sector Mapping Agreement with Ordnance Survey (licence No. 100022861)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-article-4-direction",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Article 4 direction (article-4-direction)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/article-4-direction",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-article-4-direction-area",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Article 4 direction area (article-4-direction-area)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/article-4-direction-area",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-certificate-of-immunity",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Certificate of immunity (certificate-of-immunity)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/certificate-of-immunity",
+   "cwp:attribution": "© Historic England 2026. Contains Ordnance Survey data © Crown copyright and database right 2026. The Historic England GIS Data contained in this material was obtained on [date]. The most publicly available up to date Historic England GIS Data can be obtained from [HistoricEngland.org.uk](https://historicengland.org.uk)."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-community-infrastructure-levy-schedule",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Community infrastructure levy schedule (community-infrastructure-levy-schedule)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/community-infrastructure-levy-schedule",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-conservation-area-document",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Conservation area document (conservation-area-document)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/conservation-area-document",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-design-code",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Design code (design-code)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/design-code",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Developer agreement (developer-agreement)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/developer-agreement",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement-contribution",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Developer agreement contribution (developer-agreement-contribution)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/developer-agreement-contribution",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-developer-agreement-transaction",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Developer agreement transaction (developer-agreement-transaction)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/developer-agreement-transaction",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-flood-risk-zone",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Flood risk zone (flood-risk-zone)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/flood-risk-zone",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-heritage-at-risk",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Heritage at risk (heritage-at-risk)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/heritage-at-risk",
+   "cwp:attribution": "© Historic England 2026. Contains Ordnance Survey data © Crown copyright and database right 2026. The Historic England GIS Data contained in this material was obtained on [date]. The most publicly available up to date Historic England GIS Data can be obtained from [HistoricEngland.org.uk](https://historicengland.org.uk)."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-infrastructure-funding-statement",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Infrastructure funding statement (infrastructure-funding-statement)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/infrastructure-funding-statement",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-infrastructure-project",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Infrastructure project (infrastructure-project)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/infrastructure-project",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-listed-building",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Listed building (listed-building)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/listed-building",
+   "cwp:attribution": "© Historic England 2026. Contains Ordnance Survey data © Crown copyright and database right 2026. The Historic England GIS Data contained in this material was obtained on [date]. The most publicly available up to date Historic England GIS Data can be obtained from [HistoricEngland.org.uk](https://historicengland.org.uk)."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-listed-building-outline",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Listed building outline (listed-building-outline)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/listed-building-outline",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-area-requirements",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Local area requirements (local-area-requirements)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/local-area-requirements",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-nature-reserve",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Local nature reserve (local-nature-reserve)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/local-nature-reserve",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-local-plan",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Local plan (local-plan)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/local-plan",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-park-and-garden",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Historic parks and gardens (park-and-garden)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/park-and-garden",
+   "cwp:attribution": "© Historic England 2026. Contains Ordnance Survey data © Crown copyright and database right 2026. The Historic England GIS Data contained in this material was obtained on [date]. The most publicly available up to date Historic England GIS Data can be obtained from [HistoricEngland.org.uk](https://historicengland.org.uk)."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-plan-timetable",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: plan timetable (plan-timetable)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/plan-timetable",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-tree-preservation-order",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Tree preservation order (tree-preservation-order)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/tree-preservation-order",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-tree-preservation-zone",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: Tree preservation zone (tree-preservation-zone)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/tree-preservation-zone",
+   "cwp:attribution": "© Crown copyright and database right 2026"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-world-heritage-site",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: World heritage site (world-heritage-site)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/world-heritage-site",
+   "cwp:attribution": "© Historic England 2026. Contains Ordnance Survey data © Crown copyright and database right 2026. The Historic England GIS Data contained in this material was obtained on [date]. The most publicly available up to date Historic England GIS Data can be obtained from [HistoricEngland.org.uk](https://historicengland.org.uk)."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-world-heritage-site-buffer-zone",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk: World heritage site buffer zone (world-heritage-site-buffer-zone)",
+   "dct:license": "Open Government Licence v3.0",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/dataset/world-heritage-site-buffer-zone",
+   "cwp:attribution": "© Historic England 2026. Contains Ordnance Survey data © Crown copyright and database right 2026. The Historic England GIS Data contained in this material was obtained on [date]. The most publicly available up to date Historic England GIS Data can be obtained from [HistoricEngland.org.uk](https://historicengland.org.uk)."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-dgu-catalogue",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "data.gov.uk catalogue (CKAN API package_search at www.data.gov.uk)",
+   "dct:license": "catalogue metadata OGL v3.0 (data.gov.uk); each dataset has its own licence, recorded per record",
+   "dcat:landingPage": "https://www.data.gov.uk/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-catalogue",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "planning.data.gov.uk (MHCLG Planning Data platform): dataset list and entity API",
+   "dct:license": "OGL v3.0 (every dataset; attribution text per dataset)",
+   "dcat:landingPage": "https://www.planning.data.gov.uk/",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3.0 (planning.data.gov.uk); per-dataset attribution in each file's meta"
   }
  ]
 }
