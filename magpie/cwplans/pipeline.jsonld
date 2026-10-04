@@ -4058,6 +4058,21 @@
      "dct:description": "run 20o91: 1 resources chosen by the rules (areas-that-qualify-for-eco_csco-support.xls)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20oj9",
+     "dcat:accessURL": "https://data.london.gov.uk/download/20oj9/<resource id>/<file>",
+     "dct:description": "run 20oj9: 2 resources chosen by the rules (gla-debt-advice-clients-combined-2010-11-supressed.xls, gla-debt-advice-clients-combined-2011-12-supressed.xls)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20om6",
+     "dcat:accessURL": "https://data.london.gov.uk/download/20om6/<resource id>/<file>",
+     "dct:description": "run 20om6: 1 resources chosen by the rules (dwellings-council-band-ward.csv)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20pj6",
+     "dcat:accessURL": "https://data.london.gov.uk/download/20pj6/<resource id>/<file>",
+     "dct:description": "run 20pj6: 1 resources chosen by the rules (Schools_ParliamentaryConstituencies.xlsx)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20pz9",
      "dcat:accessURL": "https://data.london.gov.uk/download/20pz9/<resource id>/<file>",
      "dct:description": "run 20pz9: 2 resources chosen by the rules (Triple Jeopardy Heat Maps.zip, Triple Jeopardy Heat Maps GIS files.zip)"
@@ -4071,6 +4086,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23j8j",
      "dcat:accessURL": "https://data.london.gov.uk/download/23j8j/<resource id>/<file>",
      "dct:description": "run 23j8j: 1 resources chosen by the rules (floorspace-nte.xlsx)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23nd7",
+     "dcat:accessURL": "https://data.london.gov.uk/download/23nd7/<resource id>/<file>",
+     "dct:description": "run 23nd7: 1 resources chosen by the rules (census passports by EU countries.xlsx)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23nz3",
@@ -4091,6 +4111,16 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-248xz",
      "dcat:accessURL": "https://data.london.gov.uk/download/248xz/<resource id>/<file>",
      "dct:description": "run 248xz: 2 resources chosen by the rules (gla-allotment-locations-shp.zip, gla-allotment-locations-tab.zip)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24r8x",
+     "dcat:accessURL": "https://data.london.gov.uk/download/24r8x/<resource id>/<file>",
+     "dct:description": "run 24r8x: 3 resources chosen by the rules (national-insurance-number-registrations.csv, nino-country-all-years-msoa-london.xlsx, nino-ward-london.xls)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24rd8",
+     "dcat:accessURL": "https://data.london.gov.uk/download/24rd8/<resource id>/<file>",
+     "dct:description": "run 24rd8: 1 resources chosen by the rules (empty-homes-audit-data.csv)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24rox",
@@ -4268,6 +4298,11 @@
      "dct:description": "run 2ry4d: 2 resources chosen by the rules (lp-consultation-oct-2009-subregions-shp.zip, lp-consultation-oct-2009-subregions-tab.zip)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ry8d",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2ry8d/<resource id>/<file>",
+     "dct:description": "run 2ry8d: 1 resources chosen by the rules (laei-2006-modelled-pm10a-20m-2010-values.zip)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2w1g8",
      "dcat:accessURL": "https://data.london.gov.uk/download/2w1g8/<resource id>/<file>",
      "dct:description": "run 2w1g8: 1 resources chosen by the rules (night-time-economy.xls)"
@@ -4288,9 +4323,19 @@
      "dct:description": "run 2wwq4: 3 resources chosen by the rules (Interim_2024_based_housing_led_projections_central.xlsx, Interim_2024_based_housing_led_projections_high.xlsx, Interim_2024_based_housing_led_projections_low.xlsx)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2wzwz",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2wzwz/<resource id>/<file>",
+     "dct:description": "run 2wzwz: 2 resources chosen by the rules (tfl-lu-spad-2011-2012.csv, tfl-lu-spad-2010-2011.csv)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2yjmq",
      "dcat:accessURL": "https://data.london.gov.uk/download/2yjmq/<resource id>/<file>",
      "dct:description": "run 2yjmq: 1 resources chosen by the rules (Protected Vistas LVMF.zip)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2yrpy",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2yrpy/<resource id>/<file>",
+     "dct:description": "run 2yrpy: 1 resources chosen by the rules (laei-2006-modelled-no2-20m-2006-values.zip)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e1616",
@@ -4301,6 +4346,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e16o8",
      "dcat:accessURL": "https://data.london.gov.uk/download/e16o8/<resource id>/<file>",
      "dct:description": "run e16o8: 1 resources chosen by the rules (London 2022 Wards.xlsx)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e188j",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e188j/<resource id>/<file>",
+     "dct:description": "run e188j: 1 resources chosen by the rules (laei-2006-modelled-no2-20m-2010-values.zip)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e18rk",
@@ -4336,6 +4386,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e55pw",
      "dcat:accessURL": "https://data.london.gov.uk/download/e55pw/<resource id>/<file>",
      "dct:description": "run e55pw: 1 resources chosen by the rules (London_Boroughs.gpkg)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e5mp7",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e5mp7/<resource id>/<file>",
+     "dct:description": "run e5mp7: 9 resources chosen by the rules (visualisation-data-labour.zip, ns-sec-in-london-data.xlsx, hours-worked-data.xlsx, cycling-to-work-data.xlsx, visualisation-data-qualifications.zip, cis-economic-activity-dashboard.xlsx, qualifications-data.xlsx, homeworking-data.xlsx, EconomicActivityRateDashboard.xlsx)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e6600",
@@ -4383,6 +4438,11 @@
      "dct:description": "run em875: 5 resources chosen by the rules (GLA_assets.csv, LFB_assets.csv, LLDC_assets.csv, Met_assets.csv, TFL_assets.csv)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emq65",
+     "dcat:accessURL": "https://data.london.gov.uk/download/emq65/<resource id>/<file>",
+     "dct:description": "run emq65: 1 resources chosen by the rules (2017 London Town Centre Health Check Report Appendix 4 - technical appendix.xlsx)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqkp",
      "dcat:accessURL": "https://data.london.gov.uk/download/emqkp/<resource id>/<file>",
      "dct:description": "run emqkp: 1 resources chosen by the rules (LP_2016_town_centre_points.zip)"
@@ -4413,9 +4473,24 @@
      "dct:description": "run exy3m: 8 resources chosen by the rules (MPS Ward Level Crime (most recent 24 months).csv, MPS Borough Level Crime (most recent 24 months).csv, MPS LSOA Level Crime (most recent 24 months).csv, MPS Borough Level Crime (Historical).csv, MPS LSOA Level Crime (Historical).csv, MPS Ward Level Crime (Historical).csv, Business Crime Borough Leve)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exy6d",
+     "dcat:accessURL": "https://data.london.gov.uk/download/exy6d/<resource id>/<file>",
+     "dct:description": "run exy6d: 2 resources chosen by the rules (1. Supporting Information.zip, 2. GIS files.zip)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exyop",
+     "dcat:accessURL": "https://data.london.gov.uk/download/exyop/<resource id>/<file>",
+     "dct:description": "run exyop: 2 resources chosen by the rules (1. Supporting Information.zip, 2. GIS files.zip)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exyrm",
      "dcat:accessURL": "https://data.london.gov.uk/download/exyrm/<resource id>/<file>",
      "dct:description": "run exyrm: 5 resources chosen by the rules (pubs-borough-msoa.xls, licensed-restaurants-cafes-borough.xls, unlicensed-restaurants-cafes-borough.xls, take-away-borough.xls, licensed-clubs-borough.xls)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exywx",
+     "dcat:accessURL": "https://data.london.gov.uk/download/exywx/<resource id>/<file>",
+     "dct:description": "run exywx: 2 resources chosen by the rules (2 - Grid Emissions Summary - Excel Files.zip, LAEI2013_MinorRoads_and_ColdStart_Emissions_byGrid_AllYears.zip)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-v864q",
@@ -4510,6 +4585,15 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/areas-that-qualify-for-carbon-saving-community/areas-that-qualify-for-carbon-saving-community.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-debt-advice-clients/london-debt-advice-clients.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/dwellings-by-council-tax-band-wards/dwellings-by-council-tax-band-wards.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/schools-and-educational-institutions-air/schools-and-educational-institutions-air.geojson"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/mortality-risk-from-high-temperatures-in-london/mortality-risk-from-high-temperatures-in-london.geojson"
     },
     {
@@ -4517,6 +4601,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/floorspace-of-selected-night-time-economy/floorspace-of-selected-night-time-economy.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/detailed-euefta-passport-held-ward-tool/detailed-euefta-passport-held-ward-tool.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/estimating-births-using-gp-registration-data/estimating-births-using-gp-registration-data.json"
@@ -4529,6 +4616,12 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/allotment-locations/allotment-locations.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/national-insurance-number-registrations-of/national-insurance-number-registrations-of.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-empty-homes-audit/london-empty-homes-audit.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2013-london-town-centre-health-check-analysis/2013-london-town-centre-health-check-analysis.json"
@@ -4654,6 +4747,9 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/sub-regions-london-plan-consultation-2009/sub-regions-london-plan-consultation-2009.geojson"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2ry8d/london-atmospheric-emissions-inventory-laei-2ry8d.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/londons-night-time-economy-by-borough-and-msoa/londons-night-time-economy-by-borough-and-msoa.json"
     },
     {
@@ -4666,13 +4762,22 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/interim-2024-based-housing-led-population/interim-2024-based-housing-led-population.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-underground-signals-passed-at-danger/london-underground-signals-passed-at-danger.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/lvmf-protected-vistas-gis-files/lvmf-protected-vistas-gis-files.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2yrpy/london-atmospheric-emissions-inventory-laei-2yrpy.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-plan-amr-19-tables-and-data/london-plan-amr-19-tables-and-data.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/borough-council-election-results-2022/borough-council-election-results-2022.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-e188j/london-atmospheric-emissions-inventory-laei-e188j.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/polling-stations-in-london-for-2010-local-and/polling-stations-in-london-for-2010-local-and.json"
@@ -4694,6 +4799,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-boroughs/london-boroughs.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-labour-market-and-qualifications/2011-census-labour-market-and-qualifications.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-output-area-classification/london-output-area-classification.json"
@@ -4729,6 +4837,9 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/gla-group-land-assets/gla-group-land-assets.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-town-centre-health-check-analysis-report/london-town-centre-health-check-analysis-report.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/town-centre-locations-london-plan-2016/town-centre-locations-london-plan-2016.geojson"
     },
     {
@@ -4747,7 +4858,16 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/mps-recorded-crime-geographic-breakdown/mps-recorded-crime-geographic-breakdown.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-exy6d/london-atmospheric-emissions-inventory-laei-exy6d.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-exyop/london-atmospheric-emissions-inventory-laei-exyop.geojson"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/number-of-public-houses-licenced-clubs/number-of-public-houses-licenced-clubs.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2013/london-atmospheric-emissions-inventory-laei-2013.geojson"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/annual-births-by-age-of-mother/annual-births-by-age-of-mother.json"
@@ -4813,6 +4933,7 @@
     "personal: columns whose name matches e-?mail|phone|tel(ephone)?$|^tel|contact|^fax|mobile|website_contact|^owner_?name|person are dropped (contact details), also under the cwplans exception.",
     "outcome: harvested: at least one zone row or feature; no-zone-rows: every row or feature read, none in the zone (then triage states the dataset not-relevant, rule F8b, with the counts as evidence); not-readable: no resource could be read (deferred, F10b); documents-only: the zips hold documents only (deferred, F7); deferred-by-hand: a HAND rule with the reason (deferred, F3c); held-for-owner: not run (owner decision pending; the state is left as it was).",
     "clip: a polygon of over 1,000 vertices that reaches beyond the zone (a London-wide boundary) is cut to the 3D model box plus 500 m (Sutherland-Hodgman, ring by ring) and marked clipped_to_zone; smaller geometries are kept whole.",
+    "as_table: a hand rule may keep rows with coordinates as a table (the LAEI grid summaries are one row per cell, source and year: 33,540 points made 15 MB of GeoJSON for LAEI 2010).",
     "thin: a hand rule may thin a regular 20 m grid (LAEI concentrations) to 1 cell in 5 each way (a 100 m grid), by the BNG cell index of the point or of the cell centre; the meta says so.",
     "hand rule 2o8ng: the 2019-based tools; the 2016-based xls creators (54-57 MB) are superseded",
     "hand rule 2r48w: LAEI 2016: grid emission summaries, the road traffic links (GIS), the 20 m concentration grid thinned to 100 m, population and schools exceeding; the per-link emission workbooks (217-447 MB) not read",
@@ -4829,12 +4950,12 @@
     "hand rule 2ry8d: LAEI 2006 modelled values per 20 m grid point: the point read from GRID_ID (gla + easting + northing), thinned to 100 m as em95y",
     "hand rule 2yrpy: LAEI 2006 modelled values per 20 m grid point: the point read from GRID_ID (gla + easting + northing), thinned to 100 m as em95y",
     "hand rule e188j: LAEI 2006 modelled values per 20 m grid point: the point read from GRID_ID (gla + easting + northing), thinned to 100 m as em95y",
-    "hand rule 2ry01: LAEI 2008 20 m concentration grids thinned to 100 m",
-    "hand rule e6410: LAEI 2010 summary emissions and concentrations (20 m thinned to 100 m); 2-Emissions (1.7 GB, per source) not read",
+    "hand rule 2ry01: LAEI 2008 concentration maps: five 20 m grid shapefiles of about 150 MB each (millions of cells); reading them whole exhausted the 12 GB heap here (2026-10-04); the newer LAEI 2016 20 m grid is harvested thinned to 100 m, and the 2013 and 2019 releases cover the same air",
+    "hand rule e6410: LAEI 2010 summary emissions (1 km grid); the 20 m concentrations (555 MB) are not read whole here (the LAEI 2008 grids exhausted the heap) and 2-Emissions (1.7 GB, per source) not read; LAEI 2016 holds a newer 20 m grid",
     "hand rule em9mg: LAEI 2008: the folders zip; the two database zips hold the same tables as Access databases",
     "hand rule exy6d: LAEI 2013 focus areas: GIS and supporting zips; the images zip (199 MB) not read",
     "hand rule exyop: LAEI 2016 focus areas: GIS and supporting zips; the images zip (520 MB) not read",
-    "hand rule exywx: LAEI 2013: grid emission summaries, minor roads by grid, the updated 20 m concentrations thinned to 100 m; the per-link workbooks (350-390 MB each) and older concentration releases not read",
+    "hand rule exywx: LAEI 2013: grid emission summaries and minor roads by grid (1 km); the 20 m concentration zips (786 MB and 1.5 GB) are not read whole here (the LAEI 2008 grids exhausted the heap; LAEI 2016 holds a newer 20 m grid); the per-link workbooks (350-390 MB each) and older concentration releases not read",
     "hand rule 2g1zq: 2011-geography mid-year estimates; the 2001-geography files and the custom age tools repeat them",
     "hand rule ex9jd: the London ward series and the MSOA 2010-2011 file; LAD-level files have no zone rows; the LSOA 2010-2011 csv (746 MB) not read; rds not readable",
     "hand rule 2jxq0: kept as tables (5,492 zone permissions: 11.7 MB as GeoJSON points); the permission-level extracts (permissions, non-residential floorspace and bedrooms); the unit-level approvals and completions (3 files, 22,417 zone rows, 40 MB of output) repeat the same permissions unit by unit",
@@ -4846,6 +4967,7 @@
     "hand rule 29jwj: the 2011 output area outlines only (the LSOA, MSOA and ward layers of 2011 repeat statistical-boundaries and 20od9); 5 decimals",
     "hand rule 2r401: Breathe London AQMesh pods: a time series of sensor readings with the pod position on every row (65 MB CSV; the zone rows came to 42 MB as points); the readings belong to a time-series store, not the repository; the pod positions alone are in the Breathe London network listing",
     "hand rule e64on: the London-wide postcode files (2010 and later) and the LSOA summaries, kept as tables; the tab-delimited twins and the 33 per-borough files repeat them (13 MB with the duplicates as points)",
+    "hand rule 2zj4k: Royal Docks Grant Data: the whole dataset is about the Royal Docks (title and publisher, the Royal Docks Enterprise Zone team); its rows name projects, not areas: every row kept (key \"whole dataset\")",
     "hand rule e55gn: postcode rows with coordinates kept as a table (8,217 zone postcodes: 1.5 MB as rows, 11.8 MB as GeoJSON points)",
     "hand rule 2jkxd: the workbooks (one row per area, years across); the CSVs (89 MB for LSOA) hold the same figures one row per area and year",
     "hand rule ep8xy: the time series workbook; the five yearly model workbooks (2011-2015, 8.6 MB each) repeat it month by month",
@@ -13281,6 +13403,285 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-debt-advice-clients/london-debt-advice-clients.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Debt Advice Clients: 138 zone rows of 2724 in 14 tables (keys: sector 138); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20oj9"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/dwellings-by-council-tax-band-wards/dwellings-by-council-tax-band-wards.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Dwellings by Council Tax Band, Wards: 44 zone rows of 627 in 1 tables (keys: city 1, ward2003 42, ward 1); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20om6"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/schools-and-educational-institutions-air/schools-and-educational-institutions-air.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Schools and educational institutions air quality exposure data broken down by parliamentary constituency: 179 features that meet the 3D model box (of 3261 read), 5 in the Canary Wharf box; GeoJSON WGS84 with a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20pj6"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/detailed-euefta-passport-held-ward-tool/detailed-euefta-passport-held-ward-tool.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Detailed EU/EFTA Passport held - Ward Tool: 157 zone rows of 1551 in 6 tables (keys: city 1, ward 48, column ward 48); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23nd7"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/national-insurance-number-registrations-of/national-insurance-number-registrations-of.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "National Insurance Number Registrations of Overseas Nationals, Borough and MSOA: 1130 zone rows of 193843 in 20 tables (keys: msoa 1088, ward2003 42); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24r8x"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-empty-homes-audit/london-empty-homes-audit.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Empty Homes Audit: 1259 zone rows of 11201 in 1 tables (keys: sector 858, ward2003 397, ward 4); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24rd8"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2ry8d/london-atmospheric-emissions-inventory-laei-2ry8d.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Atmospheric Emissions Inventory (LAEI) 2006 Modelled PM10 Annual Mean Concentration 2010 Values: 4332 zone rows of 4060984 in 1 tables (keys: grid 4332); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ry8d"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-underground-signals-passed-at-danger/london-underground-signals-passed-at-danger.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Underground Signals Passed at Danger: 19 zone rows of 726 in 2 tables (keys: station 19); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2wzwz"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2yrpy/london-atmospheric-emissions-inventory-laei-2yrpy.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Atmospheric Emissions Inventory (LAEI) 2006 Modelled Annual Mean Concentration NO2 2006 Values: 4332 zone rows of 4060984 in 1 tables (keys: grid 4332); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2yrpy"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-e188j/london-atmospheric-emissions-inventory-laei-e188j.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Atmospheric Emissions Inventory (LAEI) 2006 Modelled Annual Mean Concentration NO2 2010 Values: 4332 zone rows of 4060984 in 1 tables (keys: grid 4332); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e188j"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-labour-market-and-qualifications/2011-census-labour-market-and-qualifications.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2011 Census Labour Market & Qualifications: 7539 zone rows of 134531 in 190 tables (keys: city 27, ward 1343, lsoa 5620, msoa 71, cmwd 478); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e5mp7"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-town-centre-health-check-analysis-report/london-town-centre-health-check-analysis-report.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Town Centre Health Check Analysis Report: 5 zone rows of 331 in 7 tables (keys: town-centre 5); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emq65"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-exy6d/london-atmospheric-emissions-inventory-laei-exy6d.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Atmospheric Emissions Inventory (LAEI) 2013 Air Quality Focus Areas - December 2016 update: 22 features that meet the 3D model box (of 187 read), 1 in the Canary Wharf box; GeoJSON WGS84 with a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exy6d"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-exyop/london-atmospheric-emissions-inventory-laei-exyop.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Atmospheric Emissions Inventory (LAEI) 2016 Air Quality Focus Areas: 22 features that meet the 3D model box (of 183 read), 1 in the Canary Wharf box; GeoJSON WGS84 with a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exyop"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-atmospheric-emissions-inventory-laei-2013/london-atmospheric-emissions-inventory-laei-2013.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Atmospheric Emissions Inventory (LAEI) 2013: 1872 features that meet the 3D model box (of 80520 read), 72 in the Canary Wharf box; GeoJSON WGS84 with a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exywx"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/bikes.json",
    "@type": [
     "prov:Entity",
@@ -16727,6 +17128,171 @@
    "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
    "dcat:landingPage": "https://data.london.gov.uk/dataset/children-in-poverty-ni116-vq867",
    "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (HM Revenue & Customs). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20oj9",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 20oj9: London Debt Advice Clients (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-debt-advice-clients-20oj9",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20om6",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 20om6: Dwellings by Council Tax Band, Wards (Valuation Office Agency)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/dwellings-by-council-tax-band-wards-20om6",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Valuation Office Agency). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20pj6",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 20pj6: Schools and educational institutions air quality exposure data broken down by parliamentary constituency (Greater London Authority)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/schools-and-educational-institutions-air-quality-exposure-data-b-20pj6",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23nd7",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 23nd7: Detailed EU/EFTA Passport held - Ward Tool (Census Information Scheme)",
+   "dct:license": "CC BY (version not stated by the Datastore) (London Datastore: \"Creative Commons Attribution\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/detailed-euefta-passport-held-ward-tool-23nd7",
+   "cwp:attribution": "Census Information Scheme, CC BY (version not stated by the Datastore). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24r8x",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 24r8x: National Insurance Number Registrations of Overseas Nationals, Borough and MSOA (Department for Work and Pensions)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/national-insurance-number-registrations-of-overseas-nationals-bo-24r8x",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Department for Work and Pensions). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24rd8",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 24rd8: London Empty Homes Audit (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-empty-homes-audit-24rd8",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2ry8d",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2ry8d: London Atmospheric Emissions Inventory (LAEI) 2006 Modelled PM10 Annual Mean Concentration 2010 Values (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-atmospheric-emissions-inventory-laei-2006-modelled-pm10-a-2ry8d",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2wzwz",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2wzwz: London Underground Signals Passed at Danger (Transport for London)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-underground-signals-passed-at-danger-2wzwz",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Transport for London). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2yrpy",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2yrpy: London Atmospheric Emissions Inventory (LAEI) 2006 Modelled Annual Mean Concentration NO2 2006 Values (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-atmospheric-emissions-inventory-laei-2006-modelled-annual-2yrpy",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e188j",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e188j: London Atmospheric Emissions Inventory (LAEI) 2006 Modelled Annual Mean Concentration NO2 2010 Values (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-atmospheric-emissions-inventory-laei-2006-modelled-annual-e188j",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e5mp7",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e5mp7: 2011 Census Labour Market & Qualifications (Census Information Scheme)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2011-census-labour-market-and-qualifications-e5mp7",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emq65",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore emq65: London Town Centre Health Check Analysis Report (Greater London Authority)",
+   "dct:license": "CC BY (version not stated by the Datastore) (London Datastore: \"Creative Commons Attribution\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-town-centre-health-check-analysis-report-emq65",
+   "cwp:attribution": "Greater London Authority, CC BY (version not stated by the Datastore). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exy6d",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore exy6d: London Atmospheric Emissions Inventory (LAEI) 2013 Air Quality Focus Areas - December 2016 update (GLA and TFL Air Quality)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-atmospheric-emissions-inventory-laei-2013-air-quality-foc-exy6d",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (GLA and TFL Air Quality). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exyop",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore exyop: London Atmospheric Emissions Inventory (LAEI) 2016 Air Quality Focus Areas (GLA and TFL Air Quality)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-atmospheric-emissions-inventory-laei-2016-air-quality-foc-exyop",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (GLA and TFL Air Quality). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exywx",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore exywx: London Atmospheric Emissions Inventory (LAEI) 2013 (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-atmospheric-emissions-inventory-laei-2013-exywx",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",

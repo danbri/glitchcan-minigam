@@ -36,6 +36,7 @@ export const AUTO_RULES = {
   personal: 'columns whose name matches ' + DROP_FIELD.source + ' are dropped (contact details), also under the cwplans exception.',
   outcome: 'harvested: at least one zone row or feature; no-zone-rows: every row or feature read, none in the zone (then triage states the dataset not-relevant, rule F8b, with the counts as evidence); not-readable: no resource could be read (deferred, F10b); documents-only: the zips hold documents only (deferred, F7); deferred-by-hand: a HAND rule with the reason (deferred, F3c); held-for-owner: not run (owner decision pending; the state is left as it was).',
   clip: 'a polygon of over 1,000 vertices that reaches beyond the zone (a London-wide boundary) is cut to the 3D model box plus 500 m (Sutherland-Hodgman, ring by ring) and marked clipped_to_zone; smaller geometries are kept whole.',
+  as_table: 'a hand rule may keep rows with coordinates as a table (the LAEI grid summaries are one row per cell, source and year: 33,540 points made 15 MB of GeoJSON for LAEI 2010).',
   thin: 'a hand rule may thin a regular 20 m grid (LAEI concentrations) to 1 cell in 5 each way (a 100 m grid), by the BNG cell index of the point or of the cell centre; the meta says so.',
 };
 const ORDER = ['gpkg', 'geojson', 'zip', 'csv', 'tsv', 'xlsx', 'xlsm', 'xls', 'ods', 'json', 'txt'];
@@ -53,7 +54,7 @@ const OWNER_HOLD = { '2g980': 'Shut in lift releases (lift entrapments) attended
 export const HAND = {
   // resource choices (files: RegExp on the file name); thin: keep 1 in 5 x 1 in 5 cells of a 20 m grid (a 100 m grid)
   '2o8ng': { files: /custom_age_tool_/, why: 'the 2019-based tools; the 2016-based xls creators (54-57 MB) are superseded' },
-  '2r48w': { files: /Emissions_Summary-NOxPMCO2|Emissions_Summary-OtherPollutants|Emissions_Summary_GIS|Concentrations_Data_CSV|RoadTrafficData_GIS|exceeding/i, thin: 20, why: 'LAEI 2016: grid emission summaries, the road traffic links (GIS), the 20 m concentration grid thinned to 100 m, population and schools exceeding; the per-link emission workbooks (217-447 MB) not read' },
+  '2r48w': { asTable: true, files: /Emissions_Summary-NOxPMCO2|Emissions_Summary-OtherPollutants|Emissions_Summary_GIS|Concentrations_Data_CSV|RoadTrafficData_GIS|exceeding/i, thin: 20, why: 'LAEI 2016: grid emission summaries, the road traffic links (GIS), the 20 m concentration grid thinned to 100 m, population and schools exceeding; the per-link emission workbooks (217-447 MB) not read' },
   'e550x': { files: /Newham/, why: 'one zip per borough; Newham is the only zone borough in the dataset' },
   '2wwq4': { sheets: /persons|components/i, why: 'the persons and components-of-change sheets of the three variants; the male and female sheets split the persons rows (13.8 MB with them, single year of age x ward x sex)' },
   '2zp76': { files: /^gla_2024_housing_led_central_(ward|msoa)\.xlsx$/, why: '2024-based central projection at ward and MSOA (the low and high variants tripled the output to 10 MB; they stay at the source); the variant zips (0.7-1.5 GB), the borough-level files and the superseded 2022-based workbooks not read' },
@@ -64,12 +65,12 @@ export const HAND = {
   // the LAEI 2006 value files carry no coordinates: the first column GRID_ID ("gla503560175340") is the point's BNG
   // easting and northing (6 digits each), the same points as em95y
   ...Object.fromEntries(['298jq', '2jrkd', '2np13', '2ry8d', '2yrpy', 'e188j'].map(id => [id, { thin: 20, grid: /^gla(\d{6})(\d{6})$/, why: 'LAEI 2006 modelled values per 20 m grid point: the point read from GRID_ID (gla + easting + northing), thinned to 100 m as em95y' }])),
-  '2ry01': { thin: 20, why: 'LAEI 2008 20 m concentration grids thinned to 100 m' },
-  'e6410': { files: /1-Summary-Emissions|3-Concentrations/, thin: 20, why: 'LAEI 2010 summary emissions and concentrations (20 m thinned to 100 m); 2-Emissions (1.7 GB, per source) not read' },
-  'em9mg': { files: /laei-2008-folders/, why: 'LAEI 2008: the folders zip; the two database zips hold the same tables as Access databases' },
+  '2ry01': { skip: 'LAEI 2008 concentration maps: five 20 m grid shapefiles of about 150 MB each (millions of cells); reading them whole exhausted the 12 GB heap here (2026-10-04); the newer LAEI 2016 20 m grid is harvested thinned to 100 m, and the 2013 and 2019 releases cover the same air', outcome: 'deferred-by-hand' },
+  'e6410': { asTable: true, files: /1-Summary-Emissions/, why: 'LAEI 2010 summary emissions (1 km grid); the 20 m concentrations (555 MB) are not read whole here (the LAEI 2008 grids exhausted the heap) and 2-Emissions (1.7 GB, per source) not read; LAEI 2016 holds a newer 20 m grid' },
+  'em9mg': { asTable: true, files: /laei-2008-folders/, why: 'LAEI 2008: the folders zip; the two database zips hold the same tables as Access databases' },
   'exy6d': { files: /GIS|Supporting/, why: 'LAEI 2013 focus areas: GIS and supporting zips; the images zip (199 MB) not read' },
   'exyop': { files: /GIS|Supporting/, why: 'LAEI 2016 focus areas: GIS and supporting zips; the images zip (520 MB) not read' },
-  'exywx': { files: /Grid Emissions Summary|MinorRoads_and_ColdStart|4\.1\. Concentrations/, thin: 20, why: 'LAEI 2013: grid emission summaries, minor roads by grid, the updated 20 m concentrations thinned to 100 m; the per-link workbooks (350-390 MB each) and older concentration releases not read' },
+  'exywx': { asTable: true, files: /Grid Emissions Summary|MinorRoads_and_ColdStart/, why: 'LAEI 2013: grid emission summaries and minor roads by grid (1 km); the 20 m concentration zips (786 MB and 1.5 GB) are not read whole here (the LAEI 2008 grids exhausted the heap; LAEI 2016 holds a newer 20 m grid); the per-link workbooks (350-390 MB each) and older concentration releases not read' },
   '2g1zq': { files: /ons-mye-(LSOA|MSOA)11\.csv|land-area/, why: '2011-geography mid-year estimates; the 2001-geography files and the custom age tools repeat them' },
   'ex9jd': { files: /WD22_London|population_msoa11_2010_to_2011\.csv/, why: 'the London ward series and the MSOA 2010-2011 file; LAD-level files have no zone rows; the LSOA 2010-2011 csv (746 MB) not read; rds not readable' },
   '2jxq0': { files: /^LDD Permissions for Datastore/, asTable: true, why: 'kept as tables (5,492 zone permissions: 11.7 MB as GeoJSON points); the permission-level extracts (permissions, non-residential floorspace and bedrooms); the unit-level approvals and completions (3 files, 22,417 zone rows, 40 MB of output) repeat the same permissions unit by unit' },
@@ -81,6 +82,7 @@ export const HAND = {
   '29jwj': { dropLayers: /^(?!.*OA_2011)/i, decimals: 5, why: 'the 2011 output area outlines only (the LSOA, MSOA and ward layers of 2011 repeat statistical-boundaries and 20od9); 5 decimals' },
   '2r401': { skip: 'Breathe London AQMesh pods: a time series of sensor readings with the pod position on every row (65 MB CSV; the zone rows came to 42 MB as points); the readings belong to a time-series store, not the repository; the pod positions alone are in the Breathe London network listing', outcome: 'deferred-by-hand' },
   'e64on': { files: /^financial-capability-(lsoa-summary(-2010)?\.csv|postcode-london(-2010)?\.zip)$/, asTable: true, why: 'the London-wide postcode files (2010 and later) and the LSOA summaries, kept as tables; the tab-delimited twins and the 33 per-borough files repeat them (13 MB with the duplicates as points)' },
+  '2zj4k': { allRows: true, why: 'Royal Docks Grant Data: the whole dataset is about the Royal Docks (title and publisher, the Royal Docks Enterprise Zone team); its rows name projects, not areas: every row kept (key "whole dataset")' },
   'e55gn': { asTable: true, why: 'postcode rows with coordinates kept as a table (8,217 zone postcodes: 1.5 MB as rows, 11.8 MB as GeoJSON points)' },
   '2jkxd': { files: /\.xls$/, why: 'the workbooks (one row per area, years across); the CSVs (89 MB for LSOA) hold the same figures one row per area and year' },
   'ep8xy': { files: /Time Series/, why: 'the time series workbook; the five yearly model workbooks (2011-2015, 8.6 MB each) repeat it month by month' },
@@ -179,6 +181,7 @@ const inZone = p => p.srs === 4326 ? p.x >= ZW[0] && p.x <= ZW[2] && p.y >= ZW[1
 // the zone key of a row, or null. ctx: { cols, wardLevel }
 function zoneKey(row, ctx) {
   const R = refs(), c = ctx.cols;
+  if (CUR_ALL) return 'whole dataset';
   if (ctx.grid) { const m = ctx.grid.exec(String(row[0] ?? '')); if (m) { const p = { x: +m[1], y: +m[2], srs: 27700 }; ctx.xyRows++; return inZone(p) && (!ctx.thin || thinKeep(p, ctx.thin)) ? 'grid' : null; } }
   if (hasXY(c)) { const p = xyOf(row, c); if (p) { ctx.xyRows++; if (inZone(p) && (!ctx.thin || thinKeep(p, ctx.thin))) return 'xy'; } }
   if (c.uprn != null) { const v = String(row[c.uprn] ?? '').trim().replace(/\.0+$/, ''); if (/^\d{1,12}$/.test(v) && R.uprn.has(v)) return 'uprn:' + v; }
@@ -259,7 +262,7 @@ function filterTable(all, name) {
   for (let i = 0; i < Math.min(30, all.length); i++) { const c = colsOf(all[i]); if (hasXY(c) || c.uprn != null || c.toid != null || c.sector != null) { hi = i; cols = c; break; } }
   let first = all.findIndex((r, i) => i > hi && isDataRow(r, cols));
   // a table keyed by names only (stations, town centres): data starts at the first row with a text cell and a number
-  if (first < 0 && CUR_NAMES) first = all.findIndex((r, i) => i > hi && (r || []).some(v => typeof v === 'string' && v.trim()) && (r || []).some(v => typeof v === 'number'));
+  if (first < 0 && (CUR_NAMES || CUR_ALL)) first = all.findIndex((r, i) => i > hi && (r || []).some(v => typeof v === 'string' && v.trim()) && (r || []).some(v => typeof v === 'number'));
   if (first < 0) return { name, n: all.length, rows: [], zone_keys: [], header_rows: [], nodata: true };
   const ctx = { cols, wardLevel: all.slice(first, first + 5000).some(r => (r || []).some(v => typeof v === 'string' && /^E05\d{6}$/.test(v.trim()))), xyRows: 0, thin: CUR_THIN, grid: CUR_GRID, names: CUR_NAMES,
     ...profileCols(all.slice(first), all[first - 1]) };
@@ -270,7 +273,7 @@ function filterTable(all, name) {
 }
 
 // ---- readers
-let XLSX = null, ExcelJS = null, CUR_THIN = null, CUR_GRID = null, CUR_NAMES = null, CUR_SHEETS = null;
+let XLSX = null, ExcelJS = null, CUR_THIN = null, CUR_GRID = null, CUR_NAMES = null, CUR_SHEETS = null, CUR_ALL = false;
 async function sheetsOf(file, label, size) {
   const out = [];
   if (/\.(xlsx|xlsm)$/i.test(file) && size > KEEP_RAW) {
@@ -403,7 +406,7 @@ async function runDataset(d, T, L) {
   const plan = planDataset(d), key = HAND[d.id]?.key || keyOf(d);
   if (plan.skip) { L.datasets[d.id] = { title: d.title, key, outcome: HAND[d.id].outcome || 'not-readable', reason: plan.skip, date: today }; return; }
   const parts = [], notes = [...plan.notes];
-  CUR_THIN = HAND[d.id]?.thin || null; CUR_GRID = HAND[d.id]?.grid || null; CUR_SHEETS = HAND[d.id]?.sheets || null;
+  CUR_THIN = HAND[d.id]?.thin || null; CUR_GRID = HAND[d.id]?.grid || null; CUR_SHEETS = HAND[d.id]?.sheets || null; CUR_ALL = !!HAND[d.id]?.allRows;
   // name keys: only for datasets whose geography is town centres or stations (the metadata or the title says so)
   CUR_NAMES = d.geo === 'Town Centres' || /town centre|London Plan AMR/i.test(d.title) ? zoneNameMap('town_centres') : d.geo === 'Train Stations' || /\bstation|underground|signals passed/i.test(d.title) ? zoneNameMap('stations') : null;
   if (CUR_NAMES) notes.push(`name keys: ${CUR_NAMES.size} zone ${/station/.test([...CUR_NAMES.values()][0]) ? 'station' : 'town centre'} names (zone-names.json); a cell equal to one (normalised) is a zone row, a weaker key than a code`);
