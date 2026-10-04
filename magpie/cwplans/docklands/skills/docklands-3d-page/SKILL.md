@@ -35,10 +35,10 @@ then confirm that the live file is the commit:
     git show HEAD:magpie/cwplans/docklands/index.html | sha1sum      # equal once Pages has deployed
 
 Other agents commit in the same working tree, often with files staged. Commit only your own content: build a temporary
-index from HEAD (`GIT_INDEX_FILE=... git read-tree HEAD`), add your blobs, `git commit-tree`, move HEAD with
-`git update-ref HEAD <new> <old>` (it refuses if HEAD moved), then `git reset -q HEAD -- <your paths>`. For a shared file
-(data-register.json, pipeline.json, ACTIVITY-LOG.md) apply your insertion to HEAD's copy at commit time, never to a copy
-read earlier: on 2026-10-04 a copy read a few minutes before the commit undid another agent's register entries (repaired
+index from the remote (`git fetch origin master`, `GIT_INDEX_FILE=... git read-tree origin/master`), add your blobs,
+`git commit-tree -p origin/master`, and push that commit (`git push origin <commit>:refs/heads/master`; it is refused if
+the remote moved, then start again). For a shared file (data-register.json, pipeline.json, ACTIVITY-LOG.md) apply your
+insertion to `git show origin/master:<file>` at commit time (the coordinator's rule), never to a copy read earlier: on 2026-10-04 a copy read a few minutes before the commit undid another agent's register entries (repaired
 in the next commit).
 
 Most of the page is long one-line statements. On 2026-10-03 a comment inserted in the middle of a line commented out

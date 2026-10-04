@@ -5,8 +5,10 @@ description: >-
   Sky, ?t=2026-10-03T22:30 or ?t=photo): astronomy-engine for the sun, the moon's phase and bright limb, planets,
   Jupiter's moons, rise/set, twilight, golden and blue hour; Bright Star Catalogue stars with a light-pollution star
   limit; d3-celestial constellation lines; a Milky Way band computed from galactic coordinates; CelesTrak satellites
-  through satellite.js and the next ISS pass; Open-Meteo cloud layers and haze; Environment Agency tide readings
-  interpolated along the Thames; the photo-time solution for the owner's night photos (23:56 BST, about ±4 min) and how
+  through satellite.js and the next ISS pass; IAU star names and NASA HEASARC Messier objects (only what the sky
+  shows, not behind buildings); Open-Meteo cloud layers placed by the EUMETSAT Meteosat cloud mask; why no live aircraft
+  (every ADS-B source's terms) and the London City Airport approach paths; Environment Agency tide readings by chainage
+  along the Thames for every vertex of the river, faulty gauge readings left out (F21); the photo-time solution for the owner's night photos (23:56 BST, about ±4 min) and how
   it was measured; the fetch tool and snapshots (tools/fetch-sky.mjs, docklands/data/sky/). Reach for it before you
   change sky.js or its hooks in index.html, add a sky object or a data source, refresh the snapshots, solve another
   photo's time from the sun or the moon, or explain why the sky, a star, a satellite or the river level shows what it

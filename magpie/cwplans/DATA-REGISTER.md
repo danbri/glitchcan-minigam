@@ -59,13 +59,13 @@ Attribution on every page that shows OSM data: "© OpenStreetMap contributors", 
 | `docklands/data/sky/lcy-approach.json` | 1 kB | derived | 2 node positions of one runway way (aeroway=runway, ref 09/27), its length and heading tags | osmfr-greater-london | docklands/index.html |
 | `docklands/data/towers.json` | 47 kB | derived | building and building:part outlines as the starting footprint (shifted onto the LiDAR); a tier whose outline is within IoU 0.95 of an OSM outline uses that outline; OSM heights kept for comparison | osmfr-greater-london | docklands/index.html |
 | `docklands/data/trees.json` | 6.4 MB | derived | natural=tree nodes (position, species, genus, taxon, height, diameter_crown, node id) not within 3 m of an inventory tree; natural=tree_row lines; green area outlines (leisure park, garden, pitch, playground, nature_reserve; landuse grass, forest, meadow, recreation_ground; natural wood, scrub) with way or relation ids | osmfr-greater-london | docklands/index.html |
-| `METHODS.md` | 257 kB | notes | describes how OSM data is fetched, clipped and joined |  |  |
+| `METHODS.md` | 264 kB | notes | describes how OSM data is fetched, clipped and joined |  |  |
 | `methods-intro.md` | 9 kB | notes | states the ODbL rule and the attribution |  |  |
 | `feeds/works/markets.json` | 18 kB | raw | amenity=marketplace nodes and ways: name, opening_hours, operator, website, position (ways at the mean of their nodes); highway names to place council-page markets | osmfr-greater-london | feeds/whatson.html |
 | `feeds/works/works.json` | 756 kB | derived | market items from feeds/works/markets.json | osmfr-greater-london | feeds/whatson.html |
 | `feeds/works/README.md` | 10 kB | notes | says the markets come from OSM and gives counts |  |  |
 | `README.md` | 11 kB | notes | describes the OSM layers |  |  |
-| `docklands/README.md` | 49 kB | notes | describes the OSM layers and counts |  |  |
+| `docklands/README.md` | 58 kB | notes | describes the OSM layers and counts |  |  |
 | `postcodes/README.md` | 8 kB | notes | counts of postcodes seen in OSM |  |  |
 | `registry/README.md` | 10 kB | notes | counts of OSM-placed occupants |  |  |
 
@@ -250,12 +250,12 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `docklands/reference/night-2026-10-03/zoom-moon-towers.jpg` | 607 kB | owner's night photo: zoom on towers and the moon (Night mode reference; moon position fixes the time) | supplied by the repository owner (owner's) |
 | `docklands/reference/night-2026-10-03/river-warehouses-skyline.jpg` | 790 kB | owner's night photo: river, warehouses and the towers behind (Night mode reference) | supplied by the repository owner (owner's) |
 | `docklands/reference/night-2026-10-03/clipper-canary-wharf-pier.jpg` | 1.1 MB | owner's night photo from a Thames Clipper at Canary Wharf pier (Night mode reference) | supplied by the repository owner (owner's) |
-| `docklands/reference/night-2026-10-03/README.md` | 6 kB | what the reference photos are, where and when the owner took them, and their copyright | supplied by the repository owner (owner's) |
+| `docklands/reference/night-2026-10-03/README.md` | 7 kB | what the reference photos are, where and when the owner took them, and their copyright | supplied by the repository owner (owner's) |
 | `docklands/data/towers.json` | 47 kB | tiered massing of the Canary Wharf towers of 100 m or more (27 fitted from the LiDAR, 4 not yet built at the 2020 flight, 2 skipped with reasons): tier outlines and levels in model metres, roof fit checks against the 2018 and 2020 flights, OSM and Wikidata heights | Environment Agency LiDAR Composite DTM/DSM 1 m (OGL v3.0); Environment Agency LiDAR DSM survey tiles 1999 to 2022 (OGL v3.0); OpenStreetMap (ODbL 1.0); Wikidata (CC0 1.0) |
 | `docklands/data/trees.json` | 6.4 MB | 81,875 trees (position, height, crown spread, taxon, source and record id) and 15,708 green areas (OS Open Greenspace sites, OSM parks, gardens, pitches, grass and woods, Trees Outside Woodland canopy groups) in the model box, 0.5 m, model metres | GLA London Public Realm Trees, November 2025 release (OGL v3.0); planning.data.gov.uk dataset 'tree' (OGL v3.0); OpenStreetMap (ODbL 1.0); Forest Research National Trees Outside Woodland map V1, London (OGL v3.0); OS Open Greenspace, version 2026-04 (OGL v3.0 (OS OpenData licence: http://os.uk/opendata/licence redirects to OGL v3)) |
 | `pipeline.json` | 234 kB | provenance of every transform: one W3C PROV activity a tool (used, generated, rules) | written or computed in this project (repository licence) |
-| `pipeline.jsonld` | 463 kB | pipeline.json and this register as JSON-LD (PROV-O, DCAT, Dublin Core) for a knowledge graph | written or computed in this project (repository licence) |
-| `METHODS.md` | 257 kB | method catalogue of the whole project: owner rules, every tool activity by subject area in rebuild order, hand-judgement steps, fault register summary | written or computed in this project (repository licence) |
+| `pipeline.jsonld` | 477 kB | pipeline.json and this register as JSON-LD (PROV-O, DCAT, Dublin Core) for a knowledge graph | written or computed in this project (repository licence) |
+| `METHODS.md` | 264 kB | method catalogue of the whole project: owner rules, every tool activity by subject area in rebuild order, hand-judgement steps, fault register summary | written or computed in this project (repository licence) |
 | `methods-intro.md` | 9 kB | hand-written front section of METHODS.md: the policy and owner rules that govern the methods, crawl and hand-curation rules | written or computed in this project (repository licence) |
 | `docklands/data/imagery.js` | 424 kB | satellite colour per 3D terrain vertex (Sentinel-2 true colour, 13 August 2026, 10 m) | Copernicus Sentinel-2 L2A (Copernicus Sentinel data: free, full and open (attribution)) |
 | `feeds/SURVEY-2026-10-03.md` | 168 kB | the 2026-10-03 source survey (341 sources in seven areas, 135 left out with reasons) | written or computed in this project (repository licence) |
@@ -281,7 +281,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `registry/sources/pla/README.md` | 16 kB | wet-area sources and licences | written or computed in this project (repository licence) |
 | `research-report-2026-10.md` | 16 kB | the owner's research report, verbatim | supplied by the repository owner (owner's) |
 | `README.md` | 11 kB | corridor notes | written or computed in this project (repository licence) |
-| `docklands/README.md` | 49 kB | Docklands notes | written or computed in this project (repository licence) |
+| `docklands/README.md` | 58 kB | Docklands notes | written or computed in this project (repository licence) |
 | `postcodes/README.md` | 8 kB | postcode method | written or computed in this project (repository licence) |
 | `registry/README.md` | 10 kB | registry method | written or computed in this project (repository licence) |
 | `feeds/london-datastore/catalogue.json` | 2.7 MB | the whole London Datastore catalogue, 2026-10-04: 1,305 datasets, one per line (id, title, publisher, licence, topics, tags, geo granularity, update frequency, dates, 11,348 resources with format, size and download path, 312 links) | London Datastore catalogue (site terms (https://data.london.gov.uk/about/terms-and-conditions, read 2026-10-04): data may be used for any purpose; each dataset has its own licence (recorded per record); a re-user states that the GLA cannot warrant the quality or accuracy of the data) |
