@@ -4,11 +4,16 @@ description: >-
   The London Datastore (data.london.gov.uk, GLA, a DataPress site) walked for magpie/cwplans: the current API
   (/api/v3/datasets/export.json gives all 1,305 datasets in one response; the CKAN-compatible /api/action/package_search
   ignores q, rows and start; organization_list and license_list answer 410), the site terms (any purpose; state that
-  the GLA cannot warrant the data), the tool tools/walk-london-datastore.mjs (walk, triage, harvest), the written
-  triage rules (licence class, relevance to the Docklands zone, kind, held/listed by the project, value themes, join
-  keys, sensitive titles, score), the 13 harvested datasets in feeds/london-datastore/ (conservation areas, Southwark
-  local list, brownfield register, site allocations, SIL, LSIS, safeguarded wharves, Article 4, designated open
-  space, CAZ, air quality sites, cultural infrastructure venues, LVMF 2026 views) clipped to the 3D model box, and
+  the GLA cannot warrant the data), the tool tools/walk-london-datastore.mjs (walk with --details, refs, probe,
+  triage, harvest), the written triage rules (licence class, relevance to the Docklands zone, kind, held/listed by the
+  project, value themes, join keys, sensitive titles, score), the area read from inside the data (probe: zone codes,
+  postcodes, UPRNs, coordinates, place names; size caps; rules D1-D8; tools/lds-probe.mjs), the final state of every
+  dataset (rules F1-F11; harvested, listed-for-harvest, not-relevant, not-open, deferred, unavailable, sensitive), the
+  31 harvested datasets in feeds/london-datastore/ (planning designations, town centres, Opportunity Areas, high
+  streets, BIDs, LSOA/MSOA/ward boundaries, 2021 Census by ward and LSOA as zone rows, heat demand and solar potential
+  per building, green roofs, urban heat island, air quality, cultural venues, LVMF views) clipped to the 3D model box,
+  metadata that understates the area (F27), geometry-only and file-format traps (F28, F29), stale LiDAR (F30),
+  mislabelled WGS84 columns (F31), and
   the traps: GLA Planning Constraints Map GeoPackages with geometry only and a brownfield OBJECTID that is not the
   CSV's (F23), spreadsheet-rounded UPRNs in the cultural infrastructure map (F22) and the method that amends them in a copy
   (tools/amend-uprns.mjs: detection classes, recovery routes, confidence, amendments file), a constant position offset
@@ -28,13 +33,20 @@ Checked against the tool and the files on 2026-10-04.
 ## Run
 
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk          # catalogue.json (2 requests)
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk --details   # + 1,305 detail records (~35 min)
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs          # zone-codes.json (ONSPD, 20od9; ~3 min)
+    npm install --no-save xlsx@0.18.5                                                      # SheetJS, for probe and table harvests
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs probe [id ...] [--rescan]   # probe.json (~30 min)
     node magpie/cwplans/tools/walk-london-datastore.mjs triage                             # triage.json (no network)
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...]   # feeds/london-datastore/<key>/
     node magpie/cwplans/tools/check-data-register.mjs --write
 
 `--refresh` re-downloads (raw files in `data/raw/london-datastore/`, gitignored, are reused otherwise). `--details`
-also GETs `/api/v3/dataset/<id>` for every dataset (1,305 requests, about 25 minutes); a check of 186 on 2026-10-04
-found nothing the export lacks except a generic format word, so it is not needed for a normal re-walk.
+also GETs `/api/v3/dataset/<id>` for every dataset (done for all 1,305 on 2026-10-04: 0 archived, 0 resources the
+export lacks, `geo` as in the export; it adds the generic format, an md5 per resource and the description, of which
+only area words are kept). Order: walk, refs, probe, triage, harvest, register, triage again (the harvested datasets
+become held). `refs` needs `data/raw/registry/osopenuprn_*.zip` and the LIDS UPRN-TOID zip for the zone UPRN and TOID
+lists (raw cache); without them the UPRN test and the TOID clip are off.
 Politeness is in the tool: one request at a time over the whole run, at least 1.1 s apart, backoff on 429 and 5xx,
 the project User-Agent. Do not run two copies at once (two processes are two queues).
 
@@ -71,6 +83,33 @@ the project User-Agent. Do not run two copies at once (two processes are two que
   It ranks; it does not decide. The themes are keyword lists and the Datastore topics add themes broadly, so read the
   `reasons` and the resources before choosing.
 
+## Area from the data (probe) and the final state
+
+Owner, 2026-10-04: "look into unknown area datasets - areas may be specified within the data". `probe` opens every
+open, not sensitive dataset whose metadata relevance is unknown, london-borough or london-coarse (671 on 2026-10-04).
+
+- **References** (`refs`, `zone-codes.json`): a code is a zone code when a zone postcode (ONSPD August 2026, grid
+  reference in the box, 28 postcode districts searched) carries it, or its polygon in the 20od9 boundary files meets
+  the box. OA/LSOA/MSOA of 2001, 2011, 2021; wards 2011, 2014, 2018, 2026. The City appears as one row (E09000001) in
+  ward tables: the table harvest keeps it.
+- **Caps** (`CAPS` in `lds-probe.mjs`): text formats the first 1 MB (Range; the server honours it); workbooks whole to
+  20 MB (SheetJS, 3,000 rows, 40 sheets); zips whole to 60 MB (12 entries, zone borough and place names first);
+  GeoPackages whole to 100 MB. Up to 3 resources per dataset, finer-area file names first; stop at a zone signal.
+  Whole files over 5 MB are not kept after reading (disk). 776 MB in the first pass.
+- **Rules** D1-D8, first match: zone-point, zone-uprn, zone-postcode (3+ distinct), zone-code, zone-place (2+ names,
+  3+ cells), london-fine, borough-rows, london-coarse, none. The data class replaces the metadata relevance.
+- **What failed first** (and the fixes now in the rules): a layer's bounding box meets the zone for any London-wide
+  layer, so D1 counts feature envelopes, not the layer box; one cell with "Deptford" or a single publisher postcode
+  (City Hall SE1 2AA) made a payments list "zone": D2 and D4 need several; census table ids (QS101EW) read as
+  postcodes until the 121 UK postcode areas were required; columns named East/North in polls are regions, so a
+  coordinate counts only when its value is in the London range.
+- **Final state** (`triage.json` `state`, `state_rule`, `state_reason`), first match: F1 sensitive; F2 harvested (held);
+  F3 not-open; F3b excluded before; F3c by hand (`JUDGED` table, with the reason); F4 links only (unavailable when every
+  link failed the QA check); F5 unavailable; F6 listed-for-harvest (with size); F7 deferred, documents only; F8
+  not-relevant by the data; F9 not-relevant, other area; F10 deferred, not readable; F11 not probed. The triage prints
+  the counts and checks that they sum to the catalogue (1,305 on 2026-10-04: harvested 35, listed 219, not-relevant
+  539, not-open 346, deferred 142, unavailable 16, sensitive 8).
+
 ## Harvest
 
 The `HARVEST` table in the tool names each dataset, the resource file and its reader: GeoPackage (`node:sqlite` plus a
@@ -79,6 +118,12 @@ geometry is kept when it meets the 3D model box (vertex inside, edge crossing, o
 geometries are kept, with `whole_in_zone` and `in_cw` (Canary Wharf registry box). Output: `<key>/<key>.geojson`,
 WGS84 to 6 decimals through OSTN15, with a `meta` member: source, dataset id, page, resources with URL and dates,
 fetch date, licence and URL, attribution, layers and CRS, method, counts, `attributes_in_source`, fields dropped.
+
+Tables (`fmt: 'table'`): the rows whose area code is a zone code (`codes: ['lsoa21']`, `['ward2026', 'ward2018',
+'ward2014']`), or whose TOID is a zone TOID (`codes: ['toid']`, CSV streamed and not stored), or whose own easting and
+northing lie in the box (`zipEntry` + `xy`, a CSV inside a zip read through `unzip -p`); output `<key>/<key>.json` with
+`meta` and `tables[]` (`header_rows`, `rows`). `drop` leaves out columns a join gives back (listed in the meta).
+`resource` picks a resource by id (two BIDs resources share a file name); `skipLayers` drops duplicate layers.
 
 To add a dataset: check its licence class and resources in `catalogue.json`, add a row to `HARVEST`, run
 `harvest <key>`, read the output by hand (attributes present? coordinates in the right place? `in_zone` plausible?),
@@ -183,13 +228,20 @@ checked; match on latitude and longitude, not on eastings).
 | | A GPKG custom `srs_id` 100000 ("unnamed", Airy 1830 + the BNG projection) | read as EPSG:27700 by its definition; any other unknown SRS stops the harvest |
 | | Brownfield CSV `geox`/`geoy` mix BNG metres and WGS84 degrees row by row; 167 rows have none | per-row test, `no_geometry` counted |
 | | The local OSTN15 grid covers only the London area: WGS84 points far outside fail the grid shift | WGS84 rows outside the zone plus 0.02 degrees are skipped before transforming |
-| | Flood Risk (2w4wy) is EA Flood Map polygons with no flood zone class | not harvested; use the EA source |
+| | Flood Risk (2w4wy) is EA Flood Map polygons with no flood zone class | not harvested; use the EA source (`JUDGED`) |
+| F27 | `custom.geo` or the title says borough or London-wide, the data has LSOA/ward/point rows (36 datasets; 20 more with no geo field) | probe the data; the data class wins |
+| F28 | Opportunity Areas GeoPackage (2025-12-23) is geometry only; the 2025-08 shapefile zip has the names | check `attributes_in_source`; look for an older file |
+| F29 | BIDs: two resources with one file name on one date, and Web Mercator; LAEI 2019 focus areas: no .prj; HUDU model: encrypted xlsx | pick by resource id; unproject 3857; no .prj read as BNG only inside the London BNG range |
+| F30 | Solar Opportunity Map 2025-12 rates 97% of zone roofs from LiDAR of 2012 | keep `lidar_date`; check the building's completion year |
+| F31 | Air quality summary statistics: `LatitudeWGS84`/`LongitudeWGS84` hold Web Mercator metres | read `Latitude`/`Longitude`; judge coordinates by value, not by column name |
 | | Old slugs without ids (`dataset/recorded_crime_summary`) do not resolve | listed in `triage.json` `meta.unmatched_references` |
 
 ## Open (2026-10-04)
 
-The ranked backlog is in the README: Town Centre Boundaries, Opportunity Areas, High Street Boundaries and BIDs first
-(listed in feeds.json, not held); then boundaries and census tables for ward and LSOA joins; the London Heat Map and
-the Solar Opportunity Map by TOID (large; clip by the zone's TOIDs). Not yet joined to the registry: the cultural
-venues by UPRN (use the amended copy; high and medium only; minus `uprn_suspect`) and the brownfield sites by address. The GLA Planning Data Map ArcGIS service
-that may hold the missing attributes answered 403 (2026-10-04).
+The ranked backlog is in the README (219 listed for harvest). Next: Areas of Intensification, Biodiversity Hotspots,
+the LGIF hex results joined to the hex grid, the Decentralised Energy Capacity Study, schools air quality exposure (a
+sheet-to-points harvest), 2011 Census by ward and LSOA for change since 2021, the housing-led projections (xlsx over
+the 20 MB cap: needs a streaming xlsx reader). Ask the owner before the lift entrapment incidents (2g980, addresses)
+and the Assembly Member gifts register (e68wz, named people). Not yet joined to the registry: the cultural venues by
+UPRN (amended copy; high and medium only; minus `uprn_suspect`), the brownfield sites by address, the heat and solar
+rows by TOID. The GLA Planning Data Map ArcGIS service that may hold the missing attributes answered 403 (2026-10-04).

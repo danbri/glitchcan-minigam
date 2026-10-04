@@ -22,7 +22,8 @@
  "layers": [
   {
    "table": "business_improvement_districts",
-   "srs": 4326
+   "srs": 4326,
+   "from": "EPSG:3857"
   }
  ],
  "crs_source": "EPSG:4326",

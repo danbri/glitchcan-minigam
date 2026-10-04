@@ -3492,6 +3492,26 @@
           "source": "lds-e55z7",
           "endpoint": "https://data.london.gov.uk/download/e55z7/<resource id>/<file>",
           "request": "harvest town-centres: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2w184",
+          "endpoint": "https://data.london.gov.uk/download/2w184/<resource id>/<file>",
+          "request": "harvest air-quality-annual-objectives: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2nl6n",
+          "endpoint": "https://data.london.gov.uk/download/2nl6n/<resource id>/<file>",
+          "request": "harvest green-roofs-caz: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-2zj76",
+          "endpoint": "https://data.london.gov.uk/download/2zj76/<resource id>/<file>",
+          "request": "harvest laei-2019-focus-areas: the resources named in HARVEST (GET)"
+        },
+        {
+          "source": "lds-vdjgm",
+          "endpoint": "https://data.london.gov.uk/download/vdjgm/<resource id>/<file>",
+          "request": "harvest urban-heat-island-2016: the resources named in HARVEST (GET)"
         }
       ],
       "generated": [
@@ -3589,6 +3609,18 @@
           "file": "feeds/london-datastore/town-centres/town-centres.geojson"
         },
         {
+          "file": "feeds/london-datastore/air-quality-annual-objectives/air-quality-annual-objectives.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/green-roofs-caz/green-roofs-caz.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/laei-2019-focus-areas/laei-2019-focus-areas.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/urban-heat-island-2016/urban-heat-island-2016.geojson"
+        },
+        {
           "local": "data/raw/london-datastore/",
           "note": "export.json, package_search.json, details/<id>.json, <dataset id>/<file> downloads (gitignored; reused unless --refresh)"
         }
@@ -3621,7 +3653,8 @@
         "F27",
         "F28",
         "F29",
-        "F30"
+        "F30",
+        "F31"
       ],
       "judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md. The probe rules (caps, thresholds of D2 and D4, the place list) were set by reading the first full run: one cell naming Deptford or one publisher postcode (City Hall) made a zone dataset of a payments list, so D2 needs 3 distinct zone postcodes and D4 2 names in 3 cells; census table ids (QS101EW) read as postcodes until the UK postcode area list was added. Fatal fires (24yo6, incident postcodes) was added to the sensitive titles by hand."
     },

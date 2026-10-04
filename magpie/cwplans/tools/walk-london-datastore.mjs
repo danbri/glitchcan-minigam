@@ -222,6 +222,14 @@ function projectHas(cat) {
   return { has, unknownRefs: [...unknownRefs] };
 }
 
+// datasets decided by hand (the reason is the evidence): open and relevant by the rules, but not to be harvested
+const JUDGED = {
+  '2w4wy': ['not-relevant', 'Flood Risk: EA Flood Map polygons with no flood zone class (harvested once and dropped, 2026-10-04); the EA Flood Map for Planning is the source to use'],
+  '2rjn1': ['not-relevant', 'Southwark conservation areas: the London-wide set (emqwg, harvested) holds them'],
+  'exp5p': ['not-relevant', 'Postcode Directory for London (Feb 2022): ONSPD August 2026 is held (postcodes/, zone-codes.json)'],
+  '296oy': ['not-relevant', 'London Building Stock Model 1: superseded by LBSM 2 (2k55d), held through tools/registry-lbsm.mjs'],
+  'e68wz': ['deferred', 'Assembly Member Gifts and Hospitality Register: records about named people (donors and members); not harvested without the owner'],
+};
 const DATA_RELEVANCE = { 'zone-point': 'zone-data', 'zone-uprn': 'zone-data', 'zone-postcode': 'zone-data', 'zone-code': 'zone-data', 'zone-place': 'zone-data',
   'london-fine': 'london-fine', 'borough-rows': 'london-borough', 'london-coarse': 'london-coarse', none: 'none' };
 const FINAL_RULES = [
@@ -229,6 +237,7 @@ const FINAL_RULES = [
   'F2 harvested: the project holds the data (a committed file, the data register, pipeline.json or a tool names the dataset)',
   'F3 not-open: the licence is not open (none stated, share-alike, restricted or other)',
   'F3b deferred: open, but an earlier project decision excluded it (an "excluded" list or a survey "left out" line)',
+  'F3c by hand: a dataset in the JUDGED table of the tool (not-relevant or deferred, with the reason)',
   'F4 links only: unavailable when every link failed the Datastore QA check, else deferred (publisher site or API not followed)',
   'F5 unavailable: every probe request failed (HTTP status in the reason)',
   'F6 listed-for-harvest: relevant (zone place, zone borough, zone value in the data, or finer than a borough London-wide) with a machine-readable resource; reason and size given',
@@ -309,6 +318,7 @@ function triage() {
     if (sensitive) [state, rule, why] = ['sensitive', 'F1', 'title names records about people in sensitive situations'];
     else if (have === 'held') [state, rule, why] = ['harvested', 'F2', `held: ${[...h.held].slice(0, 3).join(', ')}`];
     else if (!open) [state, rule, why] = ['not-open', 'F3', `licence ${d.licence || 'none stated'} (${lic})`];
+    else if (JUDGED[d.id]) [state, rule, why] = [JUDGED[d.id][0], 'F3c', 'by hand: ' + JUDGED[d.id][1]];
     else if (have === 'excluded-before') [state, rule, why] = ['deferred', 'F3b', `excluded before by the project (${[...h.excluded].join(', ')}); not harvested without the owner`];
     else if (!d.resources.length) {
       const bad = d.links.filter(l => l.http && l.http >= 400);
@@ -390,6 +400,11 @@ const HARVEST = {
   'census2021-lsoa-housing':              { id: 'emxpl', fmt: 'table', formats: ['xlsx'], all: true, codes: ['lsoa21'], theme: 'people-housing' },
   'census2021-lsoa-demography-migration': { id: '2gj6n', fmt: 'table', formats: ['xlsx'], all: true, codes: ['lsoa21'], theme: 'people-housing' },
   // 264 MB: streamed, rows of zone TOIDs kept, the file not stored
+  // area from the data (probe.json): zone values in datasets whose metadata said borough, London-wide or nothing
+  'green-roofs-caz':           { id: '2nl6n', fmt: 'shpzip', theme: 'environment' },
+  'urban-heat-island-2016':    { id: 'vdjgm', fmt: 'shpzip', theme: 'environment' },
+  'laei-2019-focus-areas':     { id: '2zj76', file: '2. GIS files.zip', fmt: 'shpzip', theme: 'environment' },
+  'air-quality-annual-objectives': { id: '2w184', file: 'annual-objectives-by-site-and-species.csv', fmt: 'csv', theme: 'environment' },
   // 80 MB zip, one 431 MB CSV of every London building TOID with its own easting/northing: rows in the box only
   'heat-demand':               { id: '2ogw5', file: 'LHM_2024_08_London.zip', fmt: 'table', zipEntry: 'LHM_London.csv', xy: ['EASTING', 'NORTHING'], theme: 'environment',
     drop: ['LATITUDE', 'LONGITUDE', 'OA', 'LSOA', 'MSOA', 'WARD_CODE', 'WARD', 'ADMINISTRATIVE_AREA'], dropWhy: 'derivable: WGS84 from EASTING/NORTHING (OSTN15); OA, LSOA, MSOA, ward and borough by point in polygon or from the OA through the ONS lookups (statistical-boundaries, zone-codes.json); dropped to keep the file near 5 MB' },
@@ -490,12 +505,15 @@ function readShpZip(zipFile, { skipBad = false } = {}) {
     const geoms = readShp(get(shpName)), rows = find('.dbf') ? readDbf(get(find('.dbf')), /utf-?8/i.test(cpg)) : [];
     // Web Mercator (EPSG:3857, e.g. the 2025 BIDs file) is unprojected to WGS84 longitude/latitude on the sphere
     const merc = /Web_Mercator|Pseudo_Mercator|3857/i.test(prj);
-    const srs = /British_National_Grid|OSGB_1936|27700/i.test(prj) ? 27700 : merc || (/WGS_1984|4326/i.test(prj) && !/Mercator/i.test(prj)) ? 4326 : null;
+    // no .prj (LAEI 2019 focus areas): BNG only when every vertex lies in the London BNG range (F29)
+    let noPrj = false;
+    if (!prj.trim()) { let ok = geoms.some(Boolean); for (const g of geoms) if (g) eachPt(g, ([x, y]) => { if (!(x > 480000 && x < 590000 && y > 140000 && y < 220000)) ok = false; }); if (ok) noPrj = true; }
+    const srs = noPrj ? 27700 : /British_National_Grid|OSGB_1936|27700/i.test(prj) ? 27700 : merc || (/WGS_1984|4326/i.test(prj) && !/Mercator/i.test(prj)) ? 4326 : null;
     if (!srs) { if (skipBad) continue; throw new Error(`${shpName}: unknown projection ${prj.slice(0, 80)}`); }
     const R = 6378137, unmerc = ([x, y]) => [x / R * 180 / Math.PI, (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * 180 / Math.PI];
-    geoms.forEach((g, i) => out.push({ layer: stem.split('/').pop(), srs, ...(merc ? { from: 'EPSG:3857' } : {}), geom: merc && g ? mapPts(g, unmerc) : g, props: rows[i] || {} }));
+    geoms.forEach((g, i) => out.push({ layer: stem.split('/').pop(), srs, ...(merc ? { from: 'EPSG:3857' } : noPrj ? { from: 'no .prj; BNG from the coordinate range' } : {}), geom: merc && g ? mapPts(g, unmerc) : g, props: rows[i] || {} }));
   }
-  return { layers: [...new Set(out.map(f => f.layer))].map(l => ({ table: l, srs: out.find(f => f.layer === l).srs })), features: out };
+  return { layers: [...new Set(out.map(f => f.layer))].map(l => { const f = out.find(f => f.layer === l); return { table: l, srs: f.srs, ...(f.from ? { from: f.from } : {}) }; }), features: out };
 }
 // ---- RFC 4180 CSV
 function parseCsv(text) {

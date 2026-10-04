@@ -1,15 +1,22 @@
 # London Datastore walk (2026-10-04)
 
 A recorded walk through the whole London Datastore (https://data.london.gov.uk/, Greater London Authority) for the
-Docklands zone: the catalogue, a triage of every dataset by written rules, and a harvest of 13 open datasets clipped
-to the zone. Owner, 2026-10-04: "Can we work our way through open data London portal?"
+Docklands zone: the catalogue, a triage of every dataset by written rules, and a harvest of 31 open datasets clipped
+to the zone. Owner, 2026-10-04: "Can we work our way through open data London portal?" Second walk, same day: "No
+Open London Dataset Left Unexplored" and "look into unknown area datasets - areas may be specified within the data":
+the details of all 1,305 datasets, the area read from inside the data of 671 datasets, and a final state for every
+dataset (below).
 
 - Tool: `tools/walk-london-datastore.mjs` (https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/walk-london-datastore.mjs)
 - Method, rules and how to re-walk: skill `cwplans-london-datastore`
   (https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/cwplans-london-datastore/SKILL.md)
-- Files here: `catalogue.json` (every dataset, one per line), `triage.json` (class and reasons per dataset, ranked list),
-  one folder per harvested dataset with a `.geojson` that carries a `meta` member (source, URLs, fetch date, licence,
-  attribution, method, counts).
+- Files here: `catalogue.json` (every dataset, one per line, with its details), `triage.json` (class, reasons, final
+  state and the rule that fired, per dataset; ranked list), `probe.json` (the area found inside the data, with the
+  evidence), `zone-codes.json` (the zone's OA/LSOA/MSOA/ward codes and postcodes), one folder per harvested dataset
+  with a `.geojson` or a `.json` table that carries a `meta` member (source, URLs, fetch date, licence, attribution,
+  method, counts).
+- Live: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/london-datastore/triage.json and
+  https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/london-datastore/probe.json
 
 ## Source, API and terms
 
@@ -24,8 +31,9 @@ to the zone. Owner, 2026-10-04: "Can we work our way through open data London po
   data**, and must not imply GLA endorsement. robots.txt disallows only `/debug`, `/manage/`, `/login`, `/logout`.
 - Politeness: one request at a time, at least 1.1 s apart, backoff on 429 and 5xx, User-Agent
   `glitchcan-cwplans/0.1 (https://github.com/danbri/glitchcan-minigam)`. The walk itself is two requests; the harvest
-  made 18 downloads (91 MB, including the two later dropped: Flood Risk and the 2024 LGBTQ venue list). A per-dataset detail walk (`--details`) was stopped after 186 of 1,305:
-  those records added only a generic format word ("spreadsheet") and no `archivedAt`.
+  made 18 downloads (91 MB, including the two later dropped: Flood Risk and the 2024 LGBTQ venue list). The details walk (`--details`) covers all 1,305 datasets
+  (second walk): 0 archived, 0 resources that the export lacks, `geo` the same as the export; it adds the generic
+  format, an md5 per resource and the description, from which only area words are kept (`details` in the catalogue).
 
 ## Counts (triage of 1,305 datasets)
 
@@ -64,8 +72,53 @@ Themes (keyword rules on title and tags plus the Datastore topics; a dataset can
 statistics 598, buildings and places 297, environment 256, occupants and organisations 189, transport 138, events and
 works 122, heritage 6.
 
-Sensitive (catalogued, never harvested): 7 — MPS homicide dashboard, MPS custody and strip searches, two MPS stop and
+Sensitive (catalogued, never harvested): 8 — Fatal fires (24yo6, incident postcodes; added in the second walk), MPS homicide dashboard, MPS custody and strip searches, two MPS stop and
 search sets, LFB bariatric incidents, rough sleeping (CHAIN), suicide mortality rates.
+
+## Second walk: area from the data and a final state for every dataset
+
+**Zone references** (`zone-codes.json`, `walk-london-datastore.mjs refs`): 20,315 zone postcodes (ONSPD August 2026,
+grid reference in the box), and the codes of the areas that meet the box or hold a zone postcode: OA 2001/2011/2021
+(1,113 / 1,328 / 1,509), LSOA (247 / 307 / 318), MSOA (65 / 75 / 75), wards 2011, 2014, 2018, 2026 (63 / 65 / 65 / 67).
+In the raw cache only: 366,912 zone UPRNs (OS Open UPRN) and 65,589 zone TOIDs (OS Open Linked Identifiers).
+
+**Area from the data** (`probe.json`, `walk-london-datastore.mjs probe`, readers in `tools/lds-probe.mjs`): every open,
+not sensitive dataset whose metadata area was unknown, borough or London-wide (671) was opened: up to 3 readable
+resources each, 1 MB of a text file (HTTP Range), whole workbooks to 20 MB, zips to 60 MB, GeoPackages to 100 MB
+(776 MB read in the first pass). 558 were read; 113 were not (66 with no readable data resource: documents, images,
+audio; 43 links only; 4 over the size caps). No download failed. Signals looked for: coordinates (lat/lon or easting/northing, judged by the value, not the column
+name), feature envelopes, UPRNs, TOIDs, postcodes, OA/LSOA/MSOA/ward/borough codes, borough names and zone place
+names. Rules D1 to D8 (first match) are in `probe.json` `meta.rules` and the skill.
+
+| area found in the data | datasets | of which the metadata said unknown |
+|---|---|---|
+| zone-point (a coordinate or feature in the box) | 11 | 5 |
+| zone-uprn (a zone UPRN) | 1 | 1 |
+| zone-postcode (3+ distinct zone postcodes) | 3 | 1 |
+| zone-code (a zone OA/LSOA/MSOA/ward code) | 20 | 10 |
+| zone-place (2+ zone place names, 3+ cells; weakest) | 19 | 3 |
+| london-fine (finer than a borough, no zone value in the sample) | 5 | 3 |
+| borough-rows | 282 | 13 |
+| london-coarse (London, region, national) | 112 | 26 |
+| none (no geography in the sample) | 105 | 63 |
+| not read | 113 | 65 |
+
+So 20 of the 190 open datasets with no area in the metadata have zone values inside (10 by codes, 5 by points, 1 by
+UPRN, 1 by postcodes, 3 by place names); 34 more said borough or London-wide and hold zone rows (fault F27).
+
+**Final state of all 1,305 datasets** (`triage.json` `state`, `state_rule`, `state_reason`; rules F1 to F11 in
+`meta.rules.final_state`):
+
+| state | datasets | rule |
+|---|---|---|
+| harvested (held by the project) | 35 | F2 |
+| listed-for-harvest (relevant, machine-readable; reason and size given) | 219 | F6 |
+| not-relevant | 539 | F8 data: borough rows 282, London or coarser 112, none 104; F9 other areas 37; F3c by hand 4 |
+| not-open (licence) | 346 | F3: none stated 322, restricted 15, share-alike 7, other 2 |
+| deferred | 142 | F10 data not readable 70; F4 links only 59; F7 documents only 11; F3b excluded before 1; F3c by hand 1 |
+| unavailable | 16 | F4: links only, every link failed the Datastore QA check |
+| sensitive | 8 | F1 |
+| **sum** | **1,305** | |
 
 **What the project already had** (dataset ids and slugs found in the committed files before this walk): held 2
 (London Public Realm Trees 2r45m in `docklands/data/trees.json`; LBSM 2 2k55d through `tools/registry-lbsm.mjs`),
@@ -73,7 +126,7 @@ listed 45 (catalogue entries in `feeds/feeds.json`, the 2026-10-03 survey and no
 documented), excluded before 3 (MPS homicide, MPS custody, road casualties). After this commit: held 15. One old
 reference does not resolve to a current dataset: `dataset/recorded_crime_summary` (in `feeds/feeds.json`).
 
-## Harvested (13 datasets, new to the project)
+## Harvested (31 datasets, new to the project; 13 in the first walk, 18 in the second)
 
 Zone = the 3D model box (WGS84 -0.095, 51.474 to 0.015, 51.522). Whole geometries that meet the box are kept;
 `whole_in_zone` and `in_cw` (meets the Canary Wharf registry box) are added. Output: GeoJSON, WGS84 (BNG through OSTN15).
@@ -93,6 +146,19 @@ Zone = the 3D model box (WGS84 -0.095, 51.474 to 0.015, 51.522). Whole geometrie
 | `central-activities-zone/` | 23jxk Central Activities Zone (London Plan 2021) | OGL v3 | 1 | 1 | 0 | — |
 | `air-quality-monitoring-sites/` | 23n41 Air Quality Monitoring Sites | CC BY 4.0 | 239 | 28 | 0 | site id, network |
 | `lvmf-2026-consultation/` | 2gqpn LVMF 2026 consultation (paths, vistas, viewpoints) | OGL v3 | 114 | 35 | 0 | view ids |
+| `town-centres/` | e55z7 Town Centre Boundaries (2025-12) | OGL v3 | 234 | 23 | 1 | site reference, name, class (Canary Wharf: Major) |
+| `opportunity-areas/` | epr7z Opportunity Areas (2025-08 shapefile; the GPKG is geometry only, F28) | OGL v3 | 35 | 11 | 2 | site reference, name (Isle of Dogs, Canada Water...) |
+| `high-streets/` | 2rq4w GLA High Street Boundaries (2025-06) | OGL v3 | 640 | 30 | 1 | high street id, name |
+| `business-improvement-districts/` | vqmx7 BIDs (2025-05 shapefile, Web Mercator, F29) | CC BY | 76 | 7 | 0 | BID name, borough, web link |
+| `statistical-boundaries/` | 20od9 LSOA 2021, MSOA 2021, wards 2018 | OGL v3 | 6,653 | 457 | 43 | LSOA, MSOA and ward codes and names |
+| `census2021-ward-*/` (4 sets) | 2lw9m, 2r7gm, 24636, vqlx7 2021 Census by ward (summary workbooks) | OGL v3 | 57,242 rows | 4,203 rows | — | ward code (49 zone wards and the City as one row) |
+| `census2021-lsoa-*/` (3 sets) | e76rk, emxpl, 2gj6n 2021 Census by LSOA (summary workbooks) | OGL v3 | 284,659 rows | 18,126 rows | — | LSOA 2021 code (318 zone LSOAs) |
+| `heat-demand/` | 2ogw5 London Heat Map 2024 building heat demand (431 MB CSV in a zip) | OGL v3 | 2,080,631 | 54,181 | — | TOID, easting/northing (area columns dropped: derivable) |
+| `solar-opportunity/` | vdxyl London Solar Opportunity Map by TOID (264 MB CSV, streamed) | OGL v3 | 3,340,029 | 55,261 | — | TOID (LiDAR of 2012, F30) |
+| `green-roofs-caz/` | 2nl6n Green roofs in the CAZ (2015 imagery) | CC BY | 476 | 89 | 0 | area m2 |
+| `urban-heat-island-2016/` | vdjgm Urban Heat Island, warm summer 2016 (grid points) | OGL v3 | 1,732 | 56 | 9 | grid x/y, temperatures |
+| `laei-2019-focus-areas/` | 2zj76 LAEI 2019 Air Quality Focus Areas (no .prj, F29) | OGL v3 | 160 | 22 | 1 | name, borough |
+| `air-quality-annual-objectives/` | 2w184 Air quality summary statistics (to 2015) | OGL v2 | 7,449 rows | 760 rows (15 sites) | 151 | site code (WGS84 columns hold Web Mercator, F31) |
 
 **Rounded UPRNs (F22): the amended copy.** `cultural-infrastructure/cultural-infrastructure.uprn-amended.geojson` is a
 copy of the harvested file in which only recovered UPRN cells differ; every change, every value left unknown, the
@@ -107,7 +173,9 @@ Live: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/london-dat
 
 Attribution for every file: "Contains public sector information licensed under the Open Government Licence v3.0"
 (CC BY for the air quality sites) with the publisher named in `meta.attribution`, and "The GLA cannot warrant the
-quality or accuracy of the data." No field was dropped (no personal contact fields in these 13).
+quality or accuracy of the data." No personal contact field was dropped. Tables (census, heat, solar) are `.json`
+files with `meta` and `tables[]` (`header_rows`, `rows`), the zone rows only; the heat file leaves out eight area
+columns that a join gives back (listed in its `meta.columns_dropped`).
 
 Choices made by hand from the ranked list (also in the tool's `HARVEST` table):
 - Cultural Infrastructure: the 2023 dataset's GIS file (all 26 venue types) instead of the 2025 dataset (2rj5o: no
@@ -117,32 +185,35 @@ Choices made by hand from the ranked list (also in the tool's `HARVEST` table):
   Flood Map for Planning, which is the better source.
 - Southwark's own Conservation Areas (2rjn1, ranked first) is not taken: the London-wide set (emqwg) has them.
 
-## Ranked backlog (open, relevant, not harvested)
+## Ranked backlog (open, relevant, not harvested: 219 listed for harvest)
 
-From `triage.json` `meta.ranked`, with why each matters and what stops it today.
+`triage.json`: `state` = `listed-for-harvest`, ranked by `score`; `state_reason` gives the rule and the size. The head,
+by hand:
 
-| rank | dataset | why it matters | note |
-|---|---|---|---|
-| 1 | e55z7 Town Centre Boundaries (gpkg, 2025-12) | London Plan town centre outlines and classes in the zone | listed in feeds.json, not held; quick |
-| 2 | epr7z Opportunity Areas (gpkg, 2025-12) | the Isle of Dogs and South Poplar OA outline (the OAPF area) | listed, quick |
-| 3 | 2rq4w GLA High Street Boundaries (gpkg, 2025-06) | high street outlines in the zone | listed, quick |
-| 4 | vqmx7 Business Improvement Districts (CC BY, shp zip, 2025-05) | BID outlines in the zone: who manages the public realm | listed; the tool's shapefile reader is ready |
-| 5 | 20od9 Statistical GIS Boundary Files | ward, LSOA, MSOA, OA outlines for the joins below | ONS boundaries already held for wards; OA/LSOA would be new |
-| 6 | exp5p Postcode Directory for London (csv) | postcode to OA/LSOA/ward | ONSPD already held (`postcodes/`): duplicate, low value |
-| 7 | 2lw9m / e76rk 2021 Census labour market by ward and LSOA | residents' work, joins by ward and LSOA codes | statistics; take after the boundaries |
-| 8 | 2wwq4 2024-based housing-led population projections by ward (ODC-By) | the zone's expected growth by ward | attribution licence |
-| 9 | 29j4y London Schools Atlas | pupil flows by school | GIAS already gives the schools; atlas adds catchments |
-| 10 | 2w4xy / e56xw UKPN proposed and open streetworks (CC BY, live) | utility works in the zone | links only (UKPN portal, API key); overlaps Street Manager in `feeds/works/` |
-| 11 | 2468x UKPN live power cuts (CC BY, live) | outages by postcode sector | UKPN portal API |
-| 12 | v8onw / vdjx4 / vd455 ULEZ boundaries (gpkg) | the zone is inside every ULEZ stage | low value: the whole zone is in |
-| 13 | vdjql Areas of Intensification (gpkg) | London Plan intensification areas | check whether any meet the zone |
-| 14 | 2lzpg Electric Vehicle Charging Site (CC BY, 2019) | rapid charge points | old; the national chargepoint register is better |
-| 15 | 2ogw5 London Heat Map 2024 building heat demand (zip 80 MB) | heat demand per building (UPRN/TOID) | listed; large; next for buildings |
-| 16 | vdxyl London Solar Opportunity Map by TOID (csv 264 MB) | roof solar potential per building TOID | listed; large; clip by TOID list from OS Open UPRN |
-| 17 | 2ko88 / 2zj1y Cultural Infrastructure Map (2019 publication, 2024) | pubs (2ko88 `Pubs.csv`), skate parks, community centres not in the 2023 set | take `Pubs.csv` and `Community_centres` next |
-| 18 | e6w0w Plot ratios in industrial developments | building densities on industrial land | 2018 |
-| 19 | 2zwnk Noise Pollution in London (Defra, 2018) | road and rail noise contours | old; Defra strategic noise maps 2022 are newer |
-| 20 | 2489z Land use by borough and ward | land use shares per ward | 2018 |
+| dataset | why it matters | note |
+|---|---|---|
+| vdjql Areas of Intensification (gpkg) | London Plan intensification areas | small; check `attributes_in_source` (F23/F28 class) |
+| v8w4q Biodiversity Hotspots for Planning (GiGL, CC BY, shp 8.6 MB) | 5,016 zone polygons (probe) | large output; clip and keep the class fields |
+| e70pq London Green Infrastructure Framework (2026) | hex grid (442 zone hexes) and hex results CSV (15 MB) | join hex results to the grid by hex id |
+| 2g1rn Decentralised Energy Capacity Study (zips 52 MB) | heat loads with points and TOIDs (57 zone points in the sample) | overlaps `heat-demand/`; take the supply side |
+| 20pj6 Schools air quality exposure (xlsx with easting/northing) | 179 zone schools | needs a sheet-to-points harvest |
+| 2g980 Lift entrapments attended by LFB (UPRN) | 438 zone UPRNs in the sample | incident records at addresses: owner's view first |
+| 2w1xz Referral planning applications since 2011 | 96 zone postcodes | join to the registry by postcode |
+| 24y36 Gender Pay Gaps in London (employers with addresses) | 306 zone postcodes (EC, E14) | occupants: join by postcode and name |
+| 2k843 London Ward Well-Being Scores; e1zg8 travel to work by bicycle, ward; 2489z land use by ward | ward rows | old wards (2014): use `zone-codes.json` ward2014 |
+| 20og1, 2w9wz, e790q, expxp, eprjg 2011 Census by ward/LSOA/OA | zone codes found | the 2021 sets are harvested; take 2011 for change |
+| 2jxzj Fuel Poverty; 23g07 childhood obesity (ward, MSOA); 29z80 health inequalities indicators | zone LSOA/ward rows | statistics, small |
+| 2wwq4 2024-based housing-led population projections (ODC-By, xlsx 75 MB each) | the zone's growth by ward | over the 20 MB sheet cap: a stream reader for xlsx is needed |
+| 29j4y London Schools Atlas | catchments | GIAS already gives the schools |
+| v8onw / vdjx4 / vd455 ULEZ boundaries | the whole zone is inside | low value |
+| 2zwnk Noise Pollution in London (2018) | road and rail noise | Defra 2022 maps are newer |
+| 2ko88 / 2zj1y Cultural Infrastructure Map (2019, 2024) | pubs, community centres not in the 2023 set | evidence for F22 already read by tools/amend-uprns.mjs |
+
+By hand, not harvested (rule F3c, `JUDGED` in the tool): Flood Risk 2w4wy (EA polygons without a zone class), Southwark
+conservation areas 2rjn1 (in emqwg), Postcode Directory exp5p (ONSPD held), LBSM 1 296oy (LBSM 2 held); the Assembly
+Member Gifts register e68wz is deferred (records about named people). Road casualties e1z1j stays excluded (F3b).
+Place-name matches (D4) are the weakest class: election results by constituency, LFB station names and survey answers
+match place names; read `probe.json` before taking one.
 
 Zone-specific but no licence stated (not taken; ask the GLA): 20pw9 and 2j0n0 Isle of Dogs and South Poplar OAPF,
 2gq0r Listed Buildings in Southwark, 2z18q Canada Water Masterplan hearing documents, vd43m Tower Hamlets waste
@@ -150,8 +221,10 @@ strategy. 2rj5o Cultural Infrastructure Map 2025 (the newest venue list) also st
 
 ## Gaps
 
-- Relevance is decided from metadata (title, tags, geo field, formats), not by opening every file: the 353 "unknown"
-  datasets were not opened. A dataset can cover the zone and still be ranked low.
+- The probe reads a sample: a London-wide file sorted by code can hold zone rows after the first 1 MB or 3,000 rows
+  (then it is london-fine, not zone). Not opened: 324 datasets with no licence (metadata only), documents (pdf, docx),
+  links-only datasets, 4 files over the caps (`probe.json` `skipped`). London-fine datasets of the first walk (by
+  metadata) were not probed.
 - The theme rules are keyword lists; topics add themes broadly (every "planning" dataset counts as buildings and
   places). Read the reasons before trusting a rank.
 - 324 datasets state no licence. Several are GLA documents that are probably OGL; they stay out until the GLA says so.

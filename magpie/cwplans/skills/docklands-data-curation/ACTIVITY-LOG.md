@@ -581,6 +581,31 @@ Owner's questions: how the colours at the top of One Canada Square are chosen, a
   check-fp16-shaders: prF 25 fragment uniform rows, 8 varyings (unchanged).
 - Lost once: the first worktree (`scratchpad/wt`) was deleted by another agent mid-step; the edits were re-applied from scripts.
 
+## 2026-10-04 London Datastore second walk: area from the data, a state for every dataset (London Datastore agent)
+
+Owner: "No Open London Dataset Left Unexplored"; "Continue the walk. Also look into unknown area datasets - areas may
+be specified within the data".
+- Details walk finished: all 1,305 `/api/v3/dataset/<id>` records (0 archived, 0 hidden resources, geo as in the
+  export); catalogue keeps kinds, md5 and the area words of each description (094a3eb).
+- Zone references: `feeds/london-datastore/zone-codes.json` (ONSPD August 2026 postcodes in the box and the 20od9
+  boundaries: OA/LSOA/MSOA 2001/2011/2021, wards 2011-2026, 20,315 postcodes); zone UPRNs (366,912) and TOIDs (65,589)
+  in the raw cache (094a3eb).
+- Probe (`tools/lds-probe.mjs`, `probe.json`): 671 open datasets with unknown, borough or London-wide metadata opened
+  within written size caps; 558 read; 54 hold zone values (20 codes, 11 points, 3 postcodes, 1 UPRN, 19 place names);
+  of the 190 open datasets with no area in the metadata, 20 have zone values. Rules were tightened after reading the
+  first run (one place name or one publisher postcode is not enough; census table ids are not postcodes) (9e86ed9).
+- Final state for all 1,305 in `triage.json` (sum checked by the tool): harvested 35, listed-for-harvest 219,
+  not-relevant 539, not-open 346, deferred 142, unavailable 16, sensitive 8 (Fatal fires added to the sensitive titles).
+- Harvested 18 more datasets clipped to the zone: town centres, Opportunity Areas, high streets, BIDs, LSOA/MSOA/ward
+  boundaries, seven 2021 Census sets (zone ward and LSOA rows), heat demand (54,181 buildings), solar potential
+  (55,261 TOIDs) (ff3e617); green roofs, urban heat island, LAEI 2019 focus areas, air quality annual objectives
+  (this commit).
+- Faults: F27 (metadata understates the area), F28 (Opportunity Areas GPKG geometry only), F29 (BIDs file name and
+  Web Mercator, LAEI no .prj, encrypted HUDU workbook), F30 (solar map on 2012 LiDAR), F31 (WGS84 columns holding Web
+  Mercator).
+- Open: the backlog head in feeds/london-datastore/README.md; ask the owner about lift entrapment incidents (addresses)
+  and the Assembly Member gifts register (named people); a streaming xlsx reader for workbooks over 20 MB.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
@@ -602,5 +627,5 @@ Owner's questions: how the colours at the top of One Canada Square are chosen, a
 14. Methods: commit the one-off scripts named in `pipeline.json` `manual_activities` `gap` (facts.json quote check and
     FACTS.md, feeds/underground README, feeds README and EVENTS.md, pixel palette) when next run; pace
     `registry-wikidata.mjs` through `tools/lib.mjs` `qlever()`.
-15. London Datastore: harvest the backlog head (Town Centre Boundaries, Opportunity Areas, High Street Boundaries,
-    BIDs); join cultural venues by UPRN from the amended copy (high and medium; not `uprn_suspect`, F22) and brownfield sites by address into the registry.
+15. London Datastore: (backlog head harvested: town centres, Opportunity Areas, high streets, BIDs, census, heat,
+    solar) next: Areas of Intensification, Biodiversity Hotspots, LGIF hex results; join heat and solar rows by TOID; join cultural venues by UPRN from the amended copy (high and medium; not `uprn_suspect`, F22) and brownfield sites by address into the registry.
