@@ -3882,6 +3882,106 @@
       ]
     },
     {
+      "id": "fetch-live",
+      "tool": "tools/fetch-live.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-live.mjs [bikes lifts crowding jamcams ukpn overflows notams helicopters] [--no-fetch]",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "tfl-live-feeds",
+          "endpoint": "https://api.tfl.gov.uk/BikePoint",
+          "request": "every dock, one request"
+        },
+        {
+          "source": "tfl-live-feeds",
+          "endpoint": "https://api.tfl.gov.uk/Disruptions/Lifts/v2/",
+          "request": "every current lift outage, one request"
+        },
+        {
+          "source": "tfl-live-feeds",
+          "endpoint": "https://api.tfl.gov.uk/StopPoint/Mode/tube,dlr,elizabeth-line,overground",
+          "request": "station positions, naptan and hub codes; cached (reused when present)"
+        },
+        {
+          "source": "tfl-live-feeds",
+          "endpoint": "https://api.tfl.gov.uk/crowding/{naptan}/Live",
+          "request": "one request per Tube, DLR, Elizabeth line and Overground station naptan in the zone (65 on 2026-10-04)"
+        },
+        {
+          "source": "tfl-live-feeds",
+          "endpoint": "https://api.tfl.gov.uk/Place/Type/JamCam",
+          "request": "every camera, one request"
+        },
+        {
+          "source": "ukpn-live-faults",
+          "endpoint": "https://ukpowernetworks.opendatasoft.com/api/explore/v2.1/catalog/datasets/ukpn-live-faults/exports/json",
+          "request": "the whole dataset"
+        },
+        {
+          "source": "thames-water-storm-overflows",
+          "endpoint": "https://services2.arcgis.com/g6o32ZDQ33GpCIu3/arcgis/rest/services/Thames_Water_Storm_Overflow_Activity_(Production)_view/FeatureServer/0/query",
+          "request": "envelope -0.095,51.474,0.085,51.522 (inSR 4326), outFields=*, returnGeometry=false"
+        },
+        {
+          "source": "nats-pib",
+          "endpoint": "https://pibs.nats.co.uk/operational/pibs/PIB.xml",
+          "request": "the full UK PIB, one request"
+        },
+        {
+          "source": "nats-uk-aip",
+          "endpoint": "https://www.aurora.nats.co.uk/htmlAIP/Publications/2024-03-21-AIRAC/html/eAIP/EG-AD-2.EGLL-en-GB.html and EG-ENR-5.1-en-GB.html",
+          "request": "two pages; cached (reused when present)"
+        },
+        {
+          "local": "data/raw/live/ (raw responses; --no-fetch reads them)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/live/bikes.json"
+        },
+        {
+          "file": "feeds/live/lifts.json"
+        },
+        {
+          "file": "feeds/live/crowding.json"
+        },
+        {
+          "file": "feeds/live/jamcams.json"
+        },
+        {
+          "file": "feeds/live/ukpn.json"
+        },
+        {
+          "file": "feeds/live/overflows.json"
+        },
+        {
+          "file": "feeds/live/notams.json"
+        },
+        {
+          "file": "feeds/live/helicopters.json"
+        }
+      ],
+      "method": "Fetches live and fast-changing state for the Docklands zone (the model box plus the east margin of fetch-works) and writes one dated snapshot per source with a common item shape {id, kind, name, zone, time, position, values, url}: Santander Cycles docks, TfL lift outages, live station busyness, JamCam cameras, UKPN power cuts, Thames Water storm overflows, NOTAMs (cranes and temporary areas) and the UK AIP helicopter structure (H4 and restricted areas).",
+      "rules": [
+        "Zone: BOX_WGS84 of fetch-docklands.mjs (-0.095, 51.474, 0.015, 51.522) = 'model'; 0.015 to 0.085 E, 51.495 to 51.522 N = 'east'; items outside are dropped, except context items in helicopters.json (zone null).",
+        "Bikes: values as published (NbBikes, NbStandardBikes, NbEBikes, NbEmptyDocks, NbDocks; Installed, Locked, Temporary); unavailable_docks = NbDocks - NbBikes - NbEmptyDocks; time = the newest property 'modified'.",
+        "Lifts: stationUniqueId matched to StopPoint naptanId, then hubNaptanCode; kept when the station is in the zone; message kept as published.",
+        "Crowding: Tube and DLR (940GZZLU, 940GZZDL) then 910G station naptans in the zone, one at a time; percentageOfBaseline rounded to 0.001; dataAvailable false and 404 counted, not listed.",
+        "JamCams: position, view, available, imageUrl and videoUrl recorded; no image fetched or stored.",
+        "UKPN: kept when geopoint is in the zone; fullpostcodedata, mainmessage, plannedincidentreason and incidentcategorycustomerfriendlydescription dropped.",
+        "Storm overflows: Status 1 discharging (indicated, not confirmed), 0 not, -1 monitor offline; epoch milliseconds to UTC ISO.",
+        "NOTAMs: kept when a position stated in item E (DDMMSS(.s)N DDDMMSS(.s)E/W) lies in the zone, or item E states none and the Q-line centre does with a radius of at most 5 NM; deduplicated by series/number/year; kept: Q-code, FIR, item A, validity (PERM kept as text), lower/upper FL, Q radius, item E positions and 'n FT AGL / m FT AMSL' heights, area vertices for 'BOUNDED BY', the first bracketed place label; dropped: item E text, phone numbers, contacts.",
+        "Helicopters: H4 rows of EGLL AD 2.22 para 12 (the table anchored on 'Isle-of-Dogs'): reporting type (compulsory or on request), name, OS grid reference, position, description cut to 120 characters; the H4 vertical profile as printed; ENR 5.1 EGR158, EGR159, EGR160: vertices, arc centres and radii, upper limit, permitted users, SI; an area is in the zone when its vertex centroid or a vertex is.",
+        "Network: User-Agent glitchcan-cwplans/0.1; one request at a time per host, at least 1.5 s apart; up to 5 tries with Retry-After or a doubling pause on 429, 5xx, timeouts and resets; 404 returned without retry; files overwritten on every run."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "area": "feeds",
+      "judgement": "Which sources are open enough to commit (TfL terms, CC BY 4.0) and which only as facts (NATS PIB, UK AIP) or not at all (CAA CAP 1455; OpenSky, adsb.fi, airplanes.live, ADS-B Exchange; adsb.lol as ODbL without the owner's agreement) is recorded in data-register.json sources, feeds/live/README.md and the skill cwplans-live-state."
+    },
+    {
       "id": "check-data-register",
       "tool": "tools/check-data-register.mjs",
       "command": "node magpie/cwplans/tools/check-data-register.mjs",

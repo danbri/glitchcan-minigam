@@ -3,7 +3,7 @@
   "area": "Canary Wharf and the Isle of Dogs (E14) first; SE16 (Rotherhithe, Surrey Quays, Canada Water, east Bermondsey), Limehouse, Wapping, Greenwich and North Greenwich (SE10), Deptford, Cody Dock and Bow Creek / Leamouth (E16), and the Thames from London Bridge to Canary Wharf. Reference point for samples: 51.505, -0.02 (Canary Wharf).",
   "method": "Every url, api (when no sample) and sample fetched with curl through the session proxy on 2026-10-02 with User-Agent \"glitchcan-cwplans/0.1 (https://github.com/danbri/glitchcan-minigam)\". cors = an Access-Control-Allow-Origin header on the sample (or api) response to a request carrying Origin: https://danbri.github.io. Re-check with check-feeds.mjs.",
   "counts": {
-    "verified": 461,
+    "verified": 468,
     "not verified": 21,
     "key-required": 26,
     "blocked": 33
@@ -14943,6 +14943,181 @@
       "canary_wharf_relevance": "Agent access to E14 property transactions and corporate ownership.",
       "area": "web data, archives, dataset search and MCP servers",
       "added": "2026-10-03"
+    },
+    {
+      "id": "tfl-bikepoint-all",
+      "name": "Santander Cycles: every docking station with live bikes and docks (TfL BikePoint)",
+      "category": "traffic and transport",
+      "provider": "Transport for London",
+      "url": "https://api-portal.tfl.gov.uk/",
+      "api": "https://api.tfl.gov.uk/BikePoint",
+      "sample": "https://api.tfl.gov.uk/BikePoint",
+      "format": "JSON",
+      "auth": "none (app key for regular polling)",
+      "licence": "TfL open data terms; attribution 'Powered by TfL Open Data'",
+      "cors": true,
+      "update": "about 5 minutes",
+      "coverage": "London: 799 docks; 138 in the 3D model box",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/json; charset=utf-8"
+      },
+      "sample_result": "799 docks; in the model box 138 docks, 1,889 bikes (132 e-bikes), 1,661 empty docks of 3,897 (4 Oct 2026 08:24 UTC).",
+      "notes": "Snapshot: feeds/live/bikes.json (tools/fetch-live.mjs). NbDocks - NbBikes - NbEmptyDocks = docks neither free nor holding a bike.",
+      "area": "live state, aviation and micromobility",
+      "added": "2026-10-04"
+    },
+    {
+      "id": "nats-full-uk-pib-xml",
+      "name": "NATS contingency full UK PIB (all UK NOTAMs, XML, hourly)",
+      "category": "aviation and airspace",
+      "provider": "NATS (UK AIS)",
+      "url": "https://nats-uk.ead-it.com/cms-nats/opencms/en/Briefing/contingency-pibs/",
+      "api": "https://pibs.nats.co.uk/operational/pibs/PIB.xml",
+      "sample": "https://pibs.nats.co.uk/operational/pibs/PIB.xml",
+      "format": "XML (EAD PIB, no declared schema)",
+      "auth": "none",
+      "licence": "© NATS Limited; no open licence stated: facts only (ids, positions, heights, times)",
+      "cors": false,
+      "update": "hourly",
+      "coverage": "UK FIRs; NOTAMs valid now and in the next 7 days",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/xml"
+      },
+      "sample_result": "1,265 NOTAM entries; 18 with a position in the Docklands zone: 12 crane notices with heights (up to 719 ft AMSL at Gracechurch Street; Blackwall 392 ft) and 6 temporary danger/reserved areas for drone flights over the Thames by Southwark.",
+      "notes": "Snapshot: feeds/live/notams.json. Place by the position in item E (0.1 s), not the Q-line (whole minutes). A NOTAM appears in two PIB sections: dedupe.",
+      "area": "live state, aviation and micromobility",
+      "added": "2026-10-04"
+    },
+    {
+      "id": "nats-uk-aip-egll-helicopter-routes",
+      "name": "UK AIP EGLL AD 2.22 para 12: helicopter routes in the London CTR and London City CTR (H4 along the Thames)",
+      "category": "aviation and airspace",
+      "provider": "NATS for the CAA (UK AIP)",
+      "url": "https://www.aurora.nats.co.uk/htmlAIP/Publications/history-en-GB.html",
+      "api": null,
+      "sample": "https://www.aurora.nats.co.uk/htmlAIP/Publications/2024-03-21-AIRAC/html/eAIP/EG-AD-2.EGLL-en-GB.html",
+      "format": "XHTML",
+      "auth": "none",
+      "licence": "Crown copyright / NATS; facts only",
+      "cors": false,
+      "update": "28-day AIRAC cycle",
+      "coverage": "London and London City CTRs",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/xhtml+xml;charset=UTF-8"
+      },
+      "sample_result": "H4: Isle-of-Dogs (compulsory, 512902N 0000042W, north abeam Cutty Sark), London Bridge (on request), Vauxhall Bridge, Chelsea Bridge, London Heliport; VFR max 2000 ft, suggested min 1000 ft, SVFR max 1500 ft.",
+      "notes": "Issues after 2024-03-21 listed on the history page answered 404 from the container on 2026-10-04. Snapshot: feeds/live/helicopters.json.",
+      "area": "live state, aviation and micromobility",
+      "added": "2026-10-04"
+    },
+    {
+      "id": "nats-uk-aip-enr-5-1",
+      "name": "UK AIP ENR 5.1: restricted areas EGR158 City of London, EGR159 Isle of Dogs, EGR160 Specified Area",
+      "category": "aviation and airspace",
+      "provider": "NATS for the CAA (UK AIP)",
+      "url": "https://www.aurora.nats.co.uk/htmlAIP/Publications/history-en-GB.html",
+      "api": null,
+      "sample": "https://www.aurora.nats.co.uk/htmlAIP/Publications/2024-03-21-AIRAC/html/eAIP/EG-ENR-5.1-en-GB.html",
+      "format": "XHTML",
+      "auth": "none",
+      "licence": "Crown copyright / NATS; facts only (the areas are made by statutory instrument, SI 2004/2091 for the Isle of Dogs)",
+      "cors": false,
+      "update": "28-day AIRAC cycle",
+      "coverage": "UK",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/xhtml+xml;charset=UTF-8"
+      },
+      "sample_result": "EGR159 ISLE OF DOGS: SFC to 1400 ft ALT over Canary Wharf; permitted: Metropolitan Police aircraft, Special Flight Notification, any helicopter on route H4, ENSF clearance, London City Airport traffic.",
+      "notes": "Snapshot: feeds/live/helicopters.json (vertices and arcs).",
+      "area": "live state, aviation and micromobility",
+      "added": "2026-10-04"
+    },
+    {
+      "id": "caa-cap1455-london-helicopter-operations",
+      "name": "CAA CAP 1455: London helicopter operations data 2007-2026 (daily counts)",
+      "category": "aviation and airspace",
+      "provider": "UK Civil Aviation Authority",
+      "url": "https://www.caa.co.uk/data-and-analysis/airspace-and-environment/airspace/london-helicopter-operations/",
+      "api": null,
+      "sample": "https://www.caa.co.uk/publication/download/29232",
+      "format": "XLSX (one sheet per month)",
+      "auth": "none",
+      "licence": "© CAA: download for own use; no reproduction for publication (CAA copyright page)",
+      "cors": false,
+      "update": "irregular (2026 sheets filled to June on 2026-10-04)",
+      "coverage": "London (Heathrow) and London City CTRs",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      },
+      "sample_result": "Daily: total helicopters, time band, single/twin, route H / H4 / direct, police, HEMS, Battersea. Jan-Jun 2026: 6,926 helicopters, 658 on H4, 1,473 police, 686 HEMS, 1,822 Battersea.",
+      "notes": "Not committed (terms). Quote sums as facts only.",
+      "area": "live state, aviation and micromobility",
+      "added": "2026-10-04"
+    },
+    {
+      "id": "legislation-si-2004-2091-isle-of-dogs",
+      "name": "The Air Navigation (Restriction of Flying) (Isle of Dogs) Regulations 2004 (SI 2004/2091)",
+      "category": "aviation and airspace",
+      "provider": "legislation.gov.uk (The National Archives)",
+      "url": "https://www.legislation.gov.uk/uksi/2004/2091/made",
+      "api": "https://www.legislation.gov.uk/uksi/2004/2091/made/data.xml",
+      "sample": "https://www.legislation.gov.uk/uksi/2004/2091/made/data.xml",
+      "format": "XML (CLML)",
+      "auth": "none",
+      "licence": "Open Government Licence v3.0",
+      "cors": true,
+      "update": "static",
+      "coverage": "the Isle of Dogs restricted area (EGR159)",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/xml;charset=utf-8"
+      },
+      "sample_result": "Metadata record returned; the made text is the legal basis of EGR159.",
+      "notes": "The AIP gives the current vertices; the SI may have been amended.",
+      "area": "live state, aviation and micromobility",
+      "added": "2026-10-04"
+    },
+    {
+      "id": "mobilitydata-gbfs-systems",
+      "name": "MobilityData GBFS systems catalogue (systems.csv)",
+      "category": "traffic and transport",
+      "provider": "MobilityData",
+      "url": "https://github.com/MobilityData/gbfs",
+      "api": "https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv",
+      "sample": "https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv",
+      "format": "CSV",
+      "auth": "none",
+      "licence": "repository licence (see the repository); a list of feed URLs",
+      "cors": true,
+      "update": "irregular",
+      "coverage": "world",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "text/plain; charset=utf-8"
+      },
+      "sample_result": "No London system listed (GB: Beryl, Bolt Liverpool, Donkey Republic, Dott outside London, nextbike, Zeus). Dott GBFS for 'london' 404, Lime 404, Voi 401 on 2026-10-04.",
+      "notes": "There is no open live feed for London dockless bikes or e-scooters.",
+      "area": "live state, aviation and micromobility",
+      "added": "2026-10-04"
     }
   ],
   "excluded": [
@@ -15947,5 +16122,5 @@
       "added": "2026-10-03"
     }
   ],
-  "updated": "2026-10-03"
+  "updated": "2026-10-04"
 }

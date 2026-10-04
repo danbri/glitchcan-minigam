@@ -37,6 +37,7 @@ before and after), and what is still open. The other cwplans skills write their 
 | `cwplans-public-registers` | `magpie/cwplans/skills/` | GIAS, CQC, ODS, charities, Ofsted, gambling, Active Places, FSA pubs: licences, fields dropped, the join and its traps (F17 to F20), rejected sources |
 | `cwplans-london-datastore` | `magpie/cwplans/skills/` | the London Datastore walk: the v3 export API and terms, `tools/walk-london-datastore.mjs` (walk, triage, harvest), the triage rules, the 13 harvested sets in `feeds/london-datastore/`, the ranked backlog, F22 and F23 |
 | `docklands-sky` | `magpie/cwplans/docklands/skills/` | the page clock and `?t=`, the sky (sun, moon phase and limb, planets, stars, constellation lines, Milky Way, satellites), Open-Meteo weather, EA tide at the time shown, the photo-time solution, `tools/fetch-sky.mjs` and the snapshots, their licences |
+| `cwplans-live-state` | `magpie/cwplans/skills/` | live state in the zone (`tools/fetch-live.mjs`, `feeds/live/`): hire bikes, lift outages, station busyness, JamCams, power cuts, storm overflows, NOTAM cranes, the helicopter route H4 and EGR159; what cannot be known (live helicopter positions, dockless bikes) and the ranked backlog |
 
 ## Ship at once
 

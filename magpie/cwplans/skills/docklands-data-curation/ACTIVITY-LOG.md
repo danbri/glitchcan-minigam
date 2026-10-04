@@ -432,6 +432,31 @@ Owner instruction, 2026-10-04: "Wrap it all up into skills". Three new skills, e
   first); join the cultural venues to the registry by UPRN (minus `uprn_suspect`) and the brownfield sites by address;
   the 353 "unknown" datasets were not opened; 324 datasets with no licence wait on the GLA.
 
+## 2026-10-04 live state: helicopters, hire bikes, lifts, cranes (live-state agent)
+
+- Owner, 2026-10-04: "Do we know anything about the periodic Chinook helicopter and other copter flights? ... Hire bike
+  parking and pickup points. What else might be measured or have interesting state?" New tool `tools/fetch-live.mjs`
+  (pipeline activity `fetch-live`, area feeds), snapshots in `feeds/live/` (8 files and README), skill
+  `cwplans-live-state`, six sources in `data-register.json`, 7 verified sources added to `feeds/feeds.json`.
+- Snapshots of 4 Oct 2026 08:24-08:27 UTC: 138 Santander Cycles docks in the zone (1,889 bikes, 132 e-bikes, 3,897 docks,
+  347 docks neither free nor holding a bike); 4 lift outages (Canary Wharf: no step-free access to the Jubilee line);
+  busyness for 20 of 65 stations; 115 JamCams; 1 UKPN incident (restored); 17 storm overflow monitors (none discharging);
+  18 NOTAMs (12 cranes with heights, up to 719 ft AMSL at Gracechurch Street; 6 temporary drone areas over the Thames by
+  Southwark); 8 helicopter facts (H4 Isle-of-Dogs and London Bridge points, EGR158, EGR159 Isle of Dogs SFC-1400 ft, EGR160).
+- Helicopters: route, points, altitudes and restricted areas are published (UK AIP; facts only). Live positions are not
+  available under an allowed licence (OpenSky, adsb.fi, airplanes.live, ADS-B Exchange restricted; adsb.lol ODbL needs the
+  owner's agreement): no position sample committed. CAA CAP 1455 daily counts may not be reproduced: four sums quoted.
+  Chinook transits: no published schedule or flight plan.
+- Hire bikes: no open live feed or bay dataset for London dockless operators (GBFS 404/401; none in the MobilityData list).
+- Traps: NATS eAIP issues after 2024-03-21 answer 404 from the container (the 2024-03-21 issue is used; re-check); the
+  first " H4 " in the EGLL page is another table; a NOTAM appears twice in the PIB; canarywharf.com bot challenge and an
+  Internet Archive reset left the estate's hire-bike rules unread.
+- Mistake made and repaired: an insertion script wrote `CLAUDE.md` with `open(p, 'w').write(f(open(p).read()))`, which
+  truncates before it reads (the same fault the London Datastore agent logged); the file was empty for about a minute
+  and was restored from HEAD plus the uncommitted crown-lighting row. The scripts now read first and refuse to shrink.
+- Open: the ranked backlog in `feeds/live/README.md` (TfL arrivals, Tower Bridge lifts, AIS, EV charger OCPI feeds, flood
+  warnings, air quality); the 3D page layers proposed in the skill; ask the owner about ODbL for adsb.lol.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
