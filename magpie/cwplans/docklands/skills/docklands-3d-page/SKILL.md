@@ -11,7 +11,8 @@ description: >-
   fp16 / highp fault that left phones dark, and how to test a visual change headless (SwiftShader, renderNow and
   toDataURL, two sizes x two pixel ratios x the photo views, numbers not one look). Reach for it before you edit
   docklands/index.html, add a layer or a style, change a shader, judge a render, or push a page change. The sky,
-  clock, weather and tide have their own skill (pending). Append to the curation skill's ACTIVITY-LOG.md.
+  clock, weather and tide have their own skill (pending). Also the crown halo by date and the overlays (live state,
+  London Datastore: OV). Append to the curation skill's ACTIVITY-LOG.md.
 ---
 
 # The Docklands 3D page
@@ -40,6 +41,11 @@ index from the remote (`git fetch origin master`, `GIT_INDEX_FILE=... git read-t
 the remote moved, then start again). For a shared file (data-register.json, pipeline.json, ACTIVITY-LOG.md) apply your
 insertion to `git show origin/master:<file>` at commit time (the coordinator's rule), never to a copy read earlier: on 2026-10-04 a copy read a few minutes before the commit undid another agent's register entries (repaired
 in the next commit).
+
+**Give your worktree a name no other agent will use.** The scratchpad directory is shared by every agent of the session:
+on 2026-10-04 a worktree at `scratchpad/wt` was deleted by another agent mid-task (uncommitted edits lost; the server then
+answered 404 and the tests timed out, which looked like a page fault). Use `scratchpad/<your-task>/wt`, keep each step's edits
+as a re-runnable apply script (it also re-applies cleanly after `git rebase origin/master`), and commit each step at once.
 
 Most of the page is long one-line statements. On 2026-10-03 a comment inserted in the middle of a line commented out
 `gl.colorMask(true, ...)` and left the page black after "Splats only". `render()` now resets blend, depth mask,
@@ -283,6 +289,56 @@ Only a real phone can confirm: the frame time and the bloom cost on a phone GPU;
 above what the programs use (read them with `gl.getParameter` on the phone); that `highp` is really used where `HIP`
 asks for it (`getShaderPrecisionFormat`); the look of the glitter paths and the bloom on a small bright screen; memory
 with the splats, trees and facade atlas loaded; audio and touch (separate rules above).
+
+## Crown halo by date and overlays (2026-10-04)
+
+Live: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?t=photo (red halo, pyramid faces dark) and
+https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?t=2022-05-26T22:00&night (purple, Elizabeth line week).
+
+- **Crown halo** (`CROWN`, `crownFor(day)`, `crownNow()`; Layers > "Crown halo colour by date", on): for the page clock's
+  *evening* (London date of the clock minus 6 h, so 01:00 belongs to the night before) take a One Canada Square campaign
+  whose dates include it (month-only dates cover the month; `days` limits it to those days), else an observation of that
+  date (one with a hex first; "pyramid faces" in `what_lit` lights the faces, "faces dark" or "not lit" does not), else a
+  neutral warm white and "not known". Data: `registry/sources/lighting/crown-lighting.json` (skill
+  `cwplans-crown-lighting`), loaded when Night is on or when the record card or Sky panel asks. The text goes to
+  `#crownNote` (Layers, with Night), the record card of cwb-0413 and the Sky panel row "One Canada Square halo"
+  (`__docklands.crownText()`). The white apex light is not touched.
+- **No new uniform row.** The facade program's `night` became a `vec4`: x = 0 day, 1 night with dark pyramid faces, 2 with
+  lit faces; yzw = the halo colour. `check-fp16-shaders.mjs` after the change: prF still 25 fragment uniform rows and 8 of 8
+  varyings. A new `uniform vec3` would have been row 26; there is no varying left for anything.
+- The halo's sprites (and their reflections) are in their own buffers `NIGHT.ocs`, `NIGHT.ocsR`, rebuilt by `ocsHalo()` only
+  when the colour key changes; `buildNightLights()` keeps their positions in `NIGHT.ocsPts` (the counts in `NIGHT.n` are
+  unchanged: 1,769 reflections).
+- **Overlays** (`OV`, `OVL`, `buildOverlays()`; Layers > "Live state (snapshot)" and "London Datastore (GLA)", all off): one
+  build for all ticked layers into four buffers: `OV.solid` (opaque, drawn with the pins, full brightness), `OV.glass`
+  (see-through, blended, no depth write, dimmed to 0.5 at night), `OV.flat` (ground outlines, lit like the ground:
+  max(night dim, 0.35)) and `OV.tips` (crane tip lights, through `drawLights` in `drawNight`). Heights are m OD as
+  everywhere; feet above mean sea level x 0.3048 (`FT2M`), Newlyn datum within about 0.1 m of mean sea level.
+- **Taps**: `ovTapPoint` (anchors within 22 CSS px on screen, nearest) runs before the building pick; `ovTapGround` (the
+  ray from the tap meets the ground: `groundUnder`, three passes against `groundAt`; then point in ring, holes out, smaller
+  layers first, EGR159 last) runs only when the pick finds no building. Each card gives the snapshot time in London time
+  and the source's own credit line (`meta.attribution`): "Powered by TfL Open Data", "Source: UK AIS (NATS)", the GLA's
+  OGL line with "The GLA cannot warrant the quality or accuracy of the data".
+- Measured 2026-10-04 (all layers on): 135 docks, 3 lift outages, 10 cranes (5 lit tips), H4 110 centreline points,
+  EGR159 80 ring points, 10 wharves, 623 open-space and 118 conservation-area polygons, 662 venues; 832 tap anchors and
+  752 outlines; solid 113,870 triangles, glass 538; `buildOverlays` about 0.3 s with the files cached (SwiftShader host).
+  Test matrix (map, `?night`, `?t=photo`, `?view=rotherhithe` x 1600 x 900 DPR 1 and 390 x 844 DPR 3) with every layer on:
+  no console error; `?t=photo` mean luma 0.116 and 0.086 (0.094 and 0.066 with the layers off), red 0.086% and 0.061%.
+
+What went wrong first (and the rule):
+- **See-through fences round planning outlines** (12 m, alpha 0.45) washed the whole skyline green in `?t=photo`: the photo
+  eye stands next to a designated open space outline on the Rotherhithe promenade. Outlines lie on the ground now
+  (2.5 m ribbons, 0.7 m up). Check every new layer from the photo views, not only from above.
+- **A lid on EGR159** (alpha 0.07 over 7 km2) tinted the whole Isle of Dogs and the sky behind it pink once the camera was
+  inside the prism. No lid; walls fade from 0.09 at the top to 0 at the ground.
+- **Outlines outside the model floated in the black sky**: `groundAt` clamps to the edge of the terrain grid, so a ring
+  that leaves the model box gets walls hanging past the edge. Draw only segments with both ends inside the model.
+- **Arc centres among the vertices** (F26): `feeds/live/helicopters.json` lists EGR159's two arc centres as vertices. The
+  page draws, in their place, the arc clockwise (bearing from grid north increasing) from the vertex before to the vertex
+  after, radius from `arcs` (0.3 NM, 0.55 NM), as UK AIP ENR 5.1 words it ("thence clockwise by the arc of a circle").
+- H4 is drawn along `data/river.json`'s centreline from the model's west edge to the point nearest the Isle-of-Dogs
+  reporting point; the AIP's precise line is on the 1:50 000 chart (not copied), and the card says so.
+- Cultural venue positions are drawn as published; F25 (a constant offset in 10 venue layers) is not corrected here.
 
 ## Testing
 

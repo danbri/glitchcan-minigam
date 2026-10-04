@@ -566,6 +566,21 @@ Owner's questions: how the colours at the top of One Canada Square are chosen, a
 - Open: more Feedspot and ooh.directory categories; a larger Common Crawl sample or a second crawl; per-feed licence
   review before production; dedupe FeedBurner copies by final URL.
 
+## 2026-10-04 crown halo by date, live state and London Datastore on the 3D page (overlay agent)
+
+- Night: One Canada Square's halo takes the colour of the page clock's evening from `registry/sources/lighting/crown-lighting.json`
+  (campaign, else dated observation, else neutral "not known"); `?t=photo` = #9d3f3c with the pyramid faces dark; apex light
+  unchanged. Layers "Crown halo colour by date" (on by default in Night); record card, Sky panel and Layers say which. 725e470.
+- Layers "Live state (snapshot)": hire bike docks, lift outages, NOTAM cranes (lit tips), H4 band 1,000-2,000 ft, EGR159 prism
+  to 1,400 ft; tap = card with the snapshot time and the credit. f6d9bf4.
+- Layers "London Datastore (GLA)": conservation areas, designated open space, safeguarded wharves (ground outlines), cultural
+  venues (markers); card with the OGL credit and the GLA warranty line. 5e05cf4.
+- Register: the page now loads crown-lighting.json, four feeds/live files and four london-datastore files (`shown_on` set).
+- Fault F26 (arc centres listed as vertices in helicopters.json; the page draws the arcs). Lessons in the docklands-3d-page skill.
+- Tests: four URLs x 1600 x 900 DPR 1 and 390 x 844 DPR 3, every layer on, no console error; numbers in the skill.
+  check-fp16-shaders: prF 25 fragment uniform rows, 8 varyings (unchanged).
+- Lost once: the first worktree (`scratchpad/wt`) was deleted by another agent mid-step; the edits were re-applied from scripts.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
