@@ -150,7 +150,8 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
       <div class="chips" role="radiogroup" aria-label="Style">
         <label><input type="radio" name="style" value="normal" checked> Map</label><label><input type="radio" name="style" value="pixel"> Isometric pixel art</label>
       </div>
-      <div class="chips row"><label><input type="checkbox" id="nightMode"> Night</label></div>
+      <div class="chips row"><label><input type="checkbox" id="nightMode"> Night</label><label><input type="checkbox" id="crownDate" checked> Crown halo colour by date</label></div>
+      <p class="small" id="crownNote" hidden></p>
       <p class="small" id="nightNote" hidden></p>
       <p class="small" id="pixNote" hidden>Pixel art: an isometric view in a 33-colour palette with stylised trees, people, cyclists, buses, cabs, now and then a police car, ambulance or fire engine, gulls, river traffic (Thames Clipper catamarans, tourist boats, tugs towing waste barges, aggregate barges, speedboats) and swimmers in Eden Dock. Drag to move, pinch or wheel to zoom, twist two fingers to turn, move two fingers up or down to tilt (mouse: right or Shift drag). The arrows at the top right turn by a quarter. The animals and traffic are illustrative, not live data.</p>
       <h3>Ground image</h3>
@@ -313,13 +314,13 @@ const FLOD = !!(gl.getExtension('EXT_shader_texture_lod') && gl.getExtension('OE
 // (Apple's at least) run mediump as fp16, so no window lit there (README "Night", 2026-10-04)
 const HIP = '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n';
 const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension GL_OES_standard_derivatives : enable\n#define TEXL(s,u,l) texture2DLodEXT(s,u,l)\n#define LODOF(t) clamp(log2(max(max(length(dFdx(t)),length(dFdy(t))),1e-4)),0.,8.)\n#define FWID(t) max(fwidth(t).x,fwidth(t).y)\n#define FW2(t) fwidth(t)\n'
-  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n#define FWID(t) (dist/700.)\n#define FW2(t) vec2(dist/700.)\n') + HIP + 'varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform float night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec2 fslot[16];uniform float ftex;varying vec4 gk;varying vec3 wq;varying vec3 ev;uniform vec3 md;uniform vec3 mlc;' +
+  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n#define FWID(t) (dist/700.)\n#define FW2(t) vec2(dist/700.)\n') + HIP + 'varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform vec4 night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec2 fslot[16];uniform float ftex;varying vec4 gk;varying vec3 wq;varying vec3 ev;uniform vec3 md;uniform vec3 mlc;' +
   'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
   'float vn(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+1.),f.x),f.y);}' +
   // night (map style): dark walls; lit windows by the building's use (registry homes and occupant types): homes warm
   // (2700-3200 K) in clusters of flats, offices cool white by floors and floor bands, a few blue-white; lit crowns; haze
   'vec3 nightCol(vec3 base,float photo,float mk){float ty=floor(gk.w/1000.+.001),top=gk.w-ty*1000.,ht=max(1.,top-gk.z),sd=h(gk.xy*.0137+.31);' +
-  'vec3 col;if(uu<0.){col=base*.035+vec3(.006);if(ty>4.5&&wy>top+.5)col=mix(vec3(.30,.13,.16),vec3(.10,.07,.09),clamp((wy-top)/14.,0.,1.));}' +   // roofs; One Canada Square: the pyramid lit from its base
+  'vec3 col;if(uu<0.){col=base*.035+vec3(.006);if(ty>4.5&&wy>top+.5&&night.x>1.5)col=mix(night.yzw*.32,night.yzw*.1,clamp((wy-top)/14.,0.,1.));}' +   // roofs; One Canada Square: the pyramid lit from its base when a source says so (night.x 2)
   'else{col=base*(.045+.02*photo)+vec3(.008,.008,.01);' +
   'if(win>.5){float off=step(1.5,ty)*step(ty,2.5);vec2 gg=vec2(uu/1.8,(wy-gk.z)/3.6),cell=floor(gg),f=fract(gg);' +
   'float wm=off>.5?step(.06,f.x)*step(f.x,.94)*step(.16,f.y)*step(f.y,.82):step(.16,f.x)*step(f.x,.84)*step(.22,f.y)*step(f.y,.82);' +
@@ -331,13 +332,13 @@ const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension G
   'L=mix(vec3(1.,.74,.46),vec3(1.,.90,.66),h(vec2(fid,fl)+3.1));if(h(vec2(fid,fl)+5.7)<.05)L=vec3(.70,.80,1.);L*=(.7+.5*h(cell+1.7))*lit;L=mix(L,vec3(.93,.78,.55)*p*.85,fw);}' +   // warm as the photos (#c1a573 at the median); far: the mean
   'col=mix(col,vec3(.018,.02,.026)+L,wm);}' +
   'float tb=top-wy;if(ty>3.5&&ty<4.5&&tb<13.){float tri=abs(fract(uu/9.)*2.-1.),yy=1.-tb/13.,ln=min(abs(tri-yy),abs(tri-(1.-yy)));col=mix(vec3(.10,.08,.06),vec3(1.,.90,.70),smoothstep(.04,.12,ln));}' +   // Newfoundland: the lit diagrid crown
-  'else if(ty>4.5&&tb<7.)col=mix(col,vec3(.95,.30,.40),.85);' +   // One Canada Square: pink-red band under the pyramid
+  'else if(ty>4.5&&tb<7.)col=mix(col,night.yzw,.85*step(.01,night.y+night.z+night.w));' +   // One Canada Square: the halo band under the pyramid in the colour of the evening (CROWN)
   'else if(ht>90.&&tb<3.5)col+=vec3(.32,.30,.27)*smoothstep(3.5,.5,tb);}' +   // other towers: a soft band at the top
   'col+=base*mlc*mk;' +   // moonlight (README "Night": strength from the moon's magnitude and altitude, cool tint)
   'if(win<-.5)col=base*.6;' +   // a data colour mode: keep its colours readable
   'return mix(col,vec3(.085,.07,.058),(1.-exp(-dist/5200.))*.6);}' +   // haze in the colour of the sky glow
   'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
-  'if(night>.5&&pxm==0.){float ab=v.a*255.,ph=0.;vec3 b=col;if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tile, dark
+  'if(night.x>.5&&pxm==0.){float ab=v.a*255.,ph=0.;vec3 b=col;if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tile, dark
   'vec2 tc=vec2(uu/S.x,wy/S.y),q=fract(tc),st=vec2(mod(sl,8.),floor(sl/8.));float lod=LODOF(tc*256.),e=.5*exp2(floor(lod)+1.);b=TEXL(ftx,vec2(st.x*256.+e+q.x*(256.-2.*e),st.y*256.+e+(1.-q.y)*(256.-2.*e))/vec2(2048.,1024.),lod).rgb;ph=1.;}' +
   'float mk=0.;if(mlc.b>0.){' + (FLOD ? 'vec3 N=normalize(cross(dFdx(wq),dFdy(wq)));if(dot(N,ev)<0.)N=-N;mk=max(dot(N,md),0.);' : 'mk=uu<0.?max(md.y,0.):.32*sqrt(max(0.,1.-md.y*md.y));') + '}' +
   'gl_FragColor=vec4(nightCol(b,ph,mk),a);return;}' +
@@ -345,7 +346,7 @@ const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension G
   'float ab=v.a*255.;' +
   'if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tower's tile, repeated by its size in metres
   'vec2 tc=vec2(uu/S.x,wy/S.y),q=fract(tc),st=vec2(mod(sl,8.),floor(sl/8.));float lod=LODOF(tc*256.),e=.5*exp2(floor(lod)+1.);' +
-  'col=TEXL(ftx,vec2(st.x*256.+e+q.x*(256.-2.*e),st.y*256.+e+(1.-q.y)*(256.-2.*e))/vec2(2048.,1024.),lod).rgb*(.45+.75*lum);if(night>.5)col*=.35;}' +
+  'col=TEXL(ftx,vec2(st.x*256.+e+q.x*(256.-2.*e),st.y*256.+e+(1.-q.y)*(256.-2.*e))/vec2(2048.,1024.),lod).rgb*(.45+.75*lum);if(night.x>.5)col*=.35;}' +
   'else if(uu>=0.&&win>.5&&pxm>0.&&pxm<1.5){float fl=wy/(pxm*4.),fy=fract(fl),fx=floor(gl_FragCoord.x),m=v.a<.99?floor((v.a*255.-200.)/8.+.5):3.;' +   // pixel art: a pattern per material on the art-pixel grid (no moire)
   'if(m<.5){float w=step(mod(fx,4.),1.)*step(.3,fy)*step(fy,.8);col=mix(col,col*.55+vec3(.05,.07,.11),w);}' +   // brick: punched windows
   'else if(m<1.5){float w=step(mod(fx,5.),1.)*step(.3,fy)*step(fy,.8);col=mix(col,vec3(.33,.40,.50),w*.85);}' +   // render: punched windows, darker glass
@@ -354,9 +355,9 @@ const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension G
   'else col*=1.-.14*step(mod(fx,3.),.5);}' +   // metal cladding seams
   'else if(uu>=0.&&win>.5&&pxm==0.){float bw=1.8,fh=3.6;vec2 g=vec2(uu/bw,wy/fh),cell=floor(g),f=fract(g);float w=step(.14,f.x)*step(f.x,.86)*step(.2,f.y)*step(f.y,.84)*clamp(1.4-dist/900.,.15,1.);' +
   'vec3 gl=pxm>0.?(lum<.45?vec3(.50,.58,.64):vec3(.30,.35,.45))+vec3(.18,.18,.18)*step(.92,h(vec2(cell.x,0.))):mix(vec3(.13,.18,.25),vec3(.42,.52,.62),clamp(wy/300.,0.,1.)+h(cell)*.12)*(.55+.7*lum);' +
-  'if(night>.5){float lit=step(.58,h(cell+7.3));col=mix(col*.22,vec3(1.,.8,.48)*(.55+.45*h(cell+1.7)),w*lit);col=mix(col,gl*.25,w*(1.-lit));}else col=mix(col,gl,w*.8);}' +
+  'if(night.x>.5){float lit=step(.58,h(cell+7.3));col=mix(col*.22,vec3(1.,.8,.48)*(.55+.45*h(cell+1.7)),w*lit);col=mix(col,gl*.25,w*(1.-lit));}else col=mix(col,gl,w*.8);}' +
   'else if(uu<0.&&uu>-41.&&roofTex>.5){col=min(vec3(1.),texture2D(tx,uv).rgb*(.6+.9*lum));}' +
-  'else if(night>.5)col*=.3;' +
+  'else if(night.x>.5)col*=.3;' +
   'gl_FragColor=vec4(col,a);}';   // vertex alpha carries the material or facade slot, not opacity
 const prF = gl.createProgram(); gl.attachShader(prF, sh(gl.VERTEX_SHADER, fvs)); gl.attachShader(prF, sh(gl.FRAGMENT_SHADER, ffs));
 gl.bindAttribLocation(prF, aP, 'p'); gl.bindAttribLocation(prF, aC, 'c'); gl.bindAttribLocation(prF, [0, 1, 2].find(i => i !== aP && i !== aC), 'u'); gl.bindAttribLocation(prF, 3, 'g'); gl.linkProgram(prF);
@@ -655,7 +656,7 @@ let queued = false; function draw() { if (!queued) { queued = true; requestAnima
 function drawFacades(M, alpha, P) {
   if (!M || !M.count) return; gl.useProgram(prF);
   gl.uniformMatrix4fv(fu.m, false, MVP); gl.uniform3f(fu.eye, CAM.eye[0], CAM.eye[1], CAM.eye[2]); gl.uniform1f(fu.vz, VZ); gl.uniform1f(fu.a, alpha); gl.uniform1f(fu.cut, P.cut < 250 ? P.cut : 1e9);
-  gl.uniform1f(fu.pxm, PIX.on ? cam.dist * .84 / PIX.fh : 0); gl.uniform1f(fu.night, nightOn() || ground === 'night2012' ? 1 : 0); const ML = MOON.on ? MOON.c : [0, 0, 0]; gl.uniform3fv(fu.mlc, ML); gl.uniform3fv(fu.md, MOON.dir); gl.uniform1f(fu.win, $('colourBy').value !== 'source' ? -1 : $('showWindows').checked ? 1 : 0);
+  gl.uniform1f(fu.pxm, PIX.on ? cam.dist * .84 / PIX.fh : 0); { const hc = crownNow(); gl.uniform4f(fu.night, nightOn() || ground === 'night2012' ? (hc.pyr ? 2 : 1) : 0, hc.c[0], hc.c[1], hc.c[2]); } const ML = MOON.on ? MOON.c : [0, 0, 0]; gl.uniform3fv(fu.mlc, ML); gl.uniform3fv(fu.md, MOON.dir); gl.uniform1f(fu.win, $('colourBy').value !== 'source' ? -1 : $('showWindows').checked ? 1 : 0);
   const rt = !!groundTex && ground !== 'night2012' && ground !== 'intensity2020'; gl.uniform1f(fu.roofTex, rt ? 1 : 0);
   if (TEXIDX) { const B = TEXIDX.box; gl.uniform4f(fu.box, B.x0, B.z0, B.x1 - B.x0, B.z1 - B.z0); } gl.uniform1i(fu.tx, 0); if (rt) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); }
   gl.uniform1f(fu.ftex, FTX ? 1 : 0); if (FTX) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FTX); gl.uniform1i(fu.ftx, 1); gl.uniform2fv(fu.fslot, FT.slots); gl.activeTexture(gl.TEXTURE0); }
@@ -918,6 +919,7 @@ async function selectBuilding(k) {
   const comp = Array.isArray(b.companies) ? `${b.companies.length} registered: ${b.companies.slice(0, 8).map(c => esc(c.name)).join(', ')}${b.companies.length > 8 ? ' …' : ''}` : b.companies ? `${esc(b.companies.count)} registered` : 'none matched';
   info.innerHTML = `<b>${esc(b.name || ab.id)}</b> <span class="small">${esc(ab.id)}${b.osm_name && b.osm_name !== b.name ? ` · OSM “${esc(b.osm_name)}”` : ''}${b.description ? ' · ' + esc(b.description) : ''}</span>
     <div class="small">Height: ${ab.wh ? `Wikidata ${ab.wh} m · ` : ''}${ab.h ? `OSM ${ab.h} m · ` : ''}${ab.mh ? `3D model ${ab.mh} m (${esc(ab.ms)})` : ''} · floors ${ab.lv ?? '—'} · below ground ${ab.lu ?? '—'} · ground ${base} m OD</div>
+    ${ab.id === 'cwb-0413' ? `<div class="small">Halo (the lit band at the foot of the pyramid), ${esc(crownText())}. The white flashing light at the apex is an aviation light, not part of the display. <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lighting/README.md">Lighting record</a> (a sample: no public schedule exists).</div>` : ''}
     ${b.owners.length ? `<div class="small">Owner: ${b.owners.map(o => esc(o.name)).join(', ')}</div>` : ''}
     <div class="small">Homes: ${b.homes ? esc(b.homes.count) : 0} · companies: ${comp} · postcodes: ${b.postcodes.map(esc).join(', ') || '—'}</div>
     ${occ.length ? `<table>${levels.map(lv => `<tr><td>${typeof lv === 'number' ? (lv === 0 ? 'ground' : (lv > 0 ? '+' : '') + lv) : 'no level'}</td><td>${byLv.get(lv).map(o => esc(o.name) + ohMark(o)).join(' · ')}</td></tr>`).join('')}</table>${ohList(b.occupants)}<div class="small">${withLv.length} occupants drawn at their floor (OSM level or CWG mall level × ${storey} m storey height; a level is a floor index, not a measured height).</div>` : '<div class="small">No occupants recorded.</div>'}
@@ -1153,6 +1155,40 @@ const nightOn = () => NIGHT.on && !PIX.on;
 // x the share of the sky not under low and mid cloud; a cool tint. Walls take it by their angle to the moon (Lambert, the
 // normal from the screen derivatives), roofs and the ground by its altitude. K is drawn, not measured: a full moon at 40
 // degrees lifts a wall facing it about three times above the unlit night wall. README "Night", moonlight.
+// One Canada Square's halo (the lit band at the foot of the pyramid) for the page clock's evening: a campaign whose dates
+// include it, else a dated observation of it, else a neutral warm white ("not known"). Layers > "Crown halo colour by date",
+// on by default. Data: registry/sources/lighting/crown-lighting.json (skill cwplans-crown-lighting). The evening is the
+// London date of the clock minus 6 hours, so 01:00 belongs to the night before. The white flashing apex light is another
+// system and stays white. The facade shader gets the colour in night.yzw; night.x is 2 when a source says the pyramid faces
+// were lit too (else they stay dark, as in the owner's photo of 3 October 2026).
+const CROWN = { on: true, data: null, loading: false, key: '', cur: null, NEUTRAL: [.62, .58, .52], OLD: [.95, .30, .40] };
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+const eveningOf = t => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t - 6 * 3600e3));
+function crownFor(day) {
+  const D = CROWN.data, pad = (d, end) => d.length === 7 ? d + (end ? '-31' : '-01') : d;
+  if (!D) return { c: CROWN.NEUTRAL, pyr: false, lit: true, kind: 'unknown', text: 'not known (the lighting record has not loaded)' };
+  const camp = D.campaigns.find(c => c.building === 'cwb-0413' && pad(c.from) <= day && day <= pad(c.to || c.from, true) && (!c.days || c.days.includes(day)));
+  if (camp) return { c: camp.hex ? hexRgb(camp.hex) : CROWN.NEUTRAL, pyr: false, lit: true, kind: 'campaign', text: `campaign: ${camp.reason} (${camp.colour}${camp.hex ? `, ${camp.hex} ${camp.hex_kind || ''}`.trimEnd() : '; colour not given, drawn neutral'}${camp.hours ? ', ' + camp.hours : ''})` };
+  const obs = D.observations.filter(o => o.building === 'cwb-0413' && o.date === day).sort((a, b) => !!b.hex - !!a.hex)[0];
+  if (obs) { const dark = !obs.hex && /not lit/i.test(obs.colour), photo = /photo/i.test(obs.evidence_kind || '');
+    return { c: dark ? [0, 0, 0] : obs.hex ? hexRgb(obs.hex) : CROWN.NEUTRAL, pyr: !dark && /pyramid faces/i.test(obs.what_lit) && !/faces dark/i.test(obs.what_lit), lit: !dark, kind: 'observed',
+      text: `${photo ? 'observed in photo' : `observed (${obs.evidence_kind})`}: ${obs.colour}${obs.hex ? ' ' + obs.hex : ''}; ${obs.what_lit}${obs.time ? '; ' + obs.time : ''}` }; }
+  return { c: CROWN.NEUTRAL, pyr: false, lit: true, kind: 'unknown', text: 'not known: no campaign or dated observation for this evening (no public schedule exists); drawn a neutral warm white' };
+}
+function crownNow(need) {
+  if (!CROWN.on) { if (CROWN.key !== 'off') CROWN.cur = { c: CROWN.OLD, pyr: true, lit: true, kind: 'off', key: 'off', day: '', text: 'colour by date is off: the drawn pink-red', spr: [1, .32, .42] }; CROWN.key = 'off'; return CROWN.cur; }
+  if (!CROWN.data && !CROWN.loading && (need || nightOn())) { CROWN.loading = true; loadJSON('../registry/sources/lighting/crown-lighting.json').then(d => { CROWN.data = d; draw(); }).catch(e => { CROWN.loading = false; console.warn('crown-lighting.json', e); }); }
+  const day = eveningOf(globalThis.DocklandsSky ? DocklandsSky.t : Date.now()), key = day + (CROWN.data ? '+' : '-');
+  if (key !== CROWN.key) { CROWN.key = key; const c = crownFor(day), m = Math.max(...c.c, 1e-3); CROWN.cur = { ...c, day, key, spr: c.c.map(v => Math.min(1, v / m)) };
+    const el = $('crownNote'); if (el) el.textContent = `One Canada Square's halo, evening of ${day}: ${CROWN.cur.text}.`; }
+  return CROWN.cur;
+}
+const crownText = () => { const c = crownNow(true); return c.day ? `evening of ${c.day}: ${c.text}` : c.text; };
+function ocsHalo() {   // One Canada Square's halo sprites (lights and their reflections) in the colour of the evening
+  const c = crownNow(); if (NIGHT.ocsKey === c.key) return; NIGHT.ocsKey = c.key; for (const k of ['ocs', 'ocsR']) if (NIGHT[k]) { NIGHT[k].free(); NIGHT[k] = null; }
+  if (!NIGHT.ocsPts || !c.lit) return; const dw = NIGHT.ocsDw ?? 1e9;
+  NIGHT.ocs = spriteBuf(NIGHT.ocsPts.map(o => ({ ...o, c: c.spr }))); NIGHT.ocsR = spriteBuf(NIGHT.ocsPts.map(o => ({ ...o, c: c.spr, s: 5, i: .3 * Math.exp(-dw / 200) })));
+}
 const MOON = { on: false, dir: [0, 1, 0], c: [0, 0, 0], g: [0, 0, 0], tint: [.62, .72, .95], K: .16, k: 0, alt: -90, rel: 0, ext: 0 };
 function moonNow(nm) {
   MOON.on = false; const S = globalThis.DocklandsSky, A = S && S.A; if (!nm || !A || !A.moon || !A.sun) return MOON;
@@ -1287,8 +1323,11 @@ function buildNightLights() {
   // lit crowns (Newfoundland, One Canada Square): soft sprites round them stand in for bloom; the pyramid's apex light
   if (useT) for (const t of TOWERS) { const top = towerTop(t), use = nightUse(t.model_buildings[0]); if (use !== 4 && use !== 5) continue;
     const ring = (t.tiers.find(tr => top - 1 >= tr.y0 - .01 && top - 1 <= tr.y1 + .01) || t.tiers[0]).ring, { cx, cz } = centre(ring), dw = W.dist(cx, cz);
+    if (use === 5) NIGHT.ocsPts = [];   // One Canada Square's halo sprites take the colour of the evening (CROWN): their own small buffers
     for (let k = 0; k < ring.length; k += Math.max(1, ring.length >> 3)) {
-      const [x, z] = ring[k], o = { x: x + (x - cx) * .1, y: top - (use === 4 ? 6 : 3.5), z: z + (z - cz) * .1, c: use === 4 ? [1, .88, .66] : [1, .3, .42], i: .2, s: use === 4 ? 4 : 3, px: pxr(1, 6), h: 3, sd: rnd1() }; direct.push(o); R({ ...o, s: 5, i: .3 * Math.exp(-dw / 200) }); }
+      const [x, z] = ring[k], o = { x: x + (x - cx) * .1, y: top - (use === 4 ? 6 : 3.5), z: z + (z - cz) * .1, c: [1, .88, .66], i: .2, s: use === 4 ? 4 : 3, px: pxr(1, 6), h: 3, sd: rnd1() };
+      if (use === 5) { NIGHT.ocsPts.push(o); nRefl++; continue; } direct.push(o); R({ ...o, s: 5, i: .3 * Math.exp(-dw / 200) }); }
+    if (use === 5) NIGHT.ocsDw = dw;
     if (t.top && t.top.kind === 'pyramid' && t.top.apex) { const [ax, ay, az] = t.top.apex; direct.push({ x: ax, y: ay + 1, z: az, c: [1, .85, .85], i: .9, s: 1, px: pxr(.8, 2.2), h: 3.2, sd: rnd1() }); } }
   // riverside lamps: about every 25 m along the EA flood walls by the Thames and its creeks (3 m inland, where the
   // riverside walks run) and along footpaths within 15 m of the tidal water; none on inland roads or dock quays.
@@ -1313,7 +1352,7 @@ function buildNightLights() {
     const edges = ring.map((p, i) => [p, ring[(i + 1) % n]]).sort((a, b) => Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1]) - Math.hypot(a[1][0] - a[0][0], a[1][1] - a[0][1])).slice(0, 2);
     for (const [a, b] of edges) { const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, l = Math.hypot(mx - cx, mz - cz) || 1, ox = (mx - cx) / l * .7, oz = (mz - cz) / l * .7; nSign++;
       for (let k = -3; k <= 3; k++) { const f = .5 + k * .05; direct.push({ x: a[0] + (b[0] - a[0]) * f + ox, y: top - 6, z: a[1] + (b[1] - a[1]) * f + oz, c: [.88, .94, 1], i: .55, s: .9, px: pxr(.5, 3), h: 1.6, sd: rnd1() }); } } }
-  NIGHT.lights = spriteBuf(direct); NIGHT.refl = spriteBuf(refl); NIGHT.built = true; NIGHT.lamps = lamps; buildTreesLit();
+  NIGHT.lights = spriteBuf(direct); NIGHT.refl = spriteBuf(refl); NIGHT.built = true; NIGHT.ocsKey = null; NIGHT.lamps = lamps; buildTreesLit();
   NIGHT.n = { tall: nTall, red: nRed, lamps: nLamp, columns: nEm, reflections: nRefl, signs: nSign };
 }
 // trees by the river walk, up-lit by the lamps: crowns within 10 m of a lamp, drawn again a little larger and lit green
@@ -1336,8 +1375,8 @@ function drawLights(buf, refl, P) {
 function drawNight(P) {   // after the scene: lights with the depth test, then their reflections on the water pixels only
   if (!NIGHT.built) return;
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
-  gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.stencilFunc(gl.ALWAYS, 0, 255); drawLights(NIGHT.lights, false, P);
-  gl.disable(gl.DEPTH_TEST); gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.EQUAL, 1, 255); drawLights(NIGHT.refl, true, P); const mg = moonGlitter(); if (mg) drawLights(mg, true, P);
+  gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.stencilFunc(gl.ALWAYS, 0, 255); drawLights(NIGHT.lights, false, P); ocsHalo(); drawLights(NIGHT.ocs, false, P);
+  gl.disable(gl.DEPTH_TEST); gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.EQUAL, 1, 255); drawLights(NIGHT.refl, true, P); drawLights(NIGHT.ocsR, true, P); const mg = moonGlitter(); if (mg) drawLights(mg, true, P);
   gl.enable(gl.DEPTH_TEST); gl.disable(gl.STENCIL_TEST); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
 }
 // night bloom: the frame so far is copied to a texture, its bright parts (lit windows, lamps, red lights, crowns) are
@@ -1374,9 +1413,11 @@ function setNight(on) {
     $('nightNote').hidden = false; $('nightNote').textContent = `Night: windows lit by building use (registry homes and occupants: homes warm, offices cool by floors), ${n.red.toLocaleString('en-GB')} red aviation lights on ${n.tall} buildings of 90 m or more (roof corners; every 52 m or less below the top from 150 m, as the Air Navigation Order asks), ${n.lamps.toLocaleString('en-GB')} lamps on the Thames walks (every 25 m within 15 m of the river), reflections of the lights near the water. The moon is at its real place for the time shown (Menu > Sky; ${m.moon[1] > 0 ? `${Math.round(Math.asin(m.moon[1]) * 180 / Math.PI)}° up, ${Math.round(m.lit * 100)}% lit` : 'below the horizon'}). Window lights and lamp positions are drawn, not measured.`;
     if (!PIX.on) nightTick(); }
   else $('nightNote').hidden = true;
+  $('crownNote').hidden = !on;
   draw();
 }
 $('nightMode').onchange = () => setNight($('nightMode').checked);
+$('crownDate').onchange = () => { CROWN.on = $('crownDate').checked; CROWN.key = ''; draw(); };
 
 // pins: heritage places, quality issues, live crime
 let crime = null;
@@ -1874,7 +1915,7 @@ if (/[?&]capture\b/.test(location.search)) captureMode(true);
 if (/[?&]night\b/.test(location.search)) setNight(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); },
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText,
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,
   relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
