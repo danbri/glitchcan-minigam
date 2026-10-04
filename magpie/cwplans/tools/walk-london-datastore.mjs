@@ -187,7 +187,7 @@ const THEMES = {
 const TOPIC_THEMES = { planning: 'buildings-places', housing: 'people-housing', demographics: 'people-housing', environment: 'environment', transport: 'transport',
   'art-and-culture': 'occupants-organisations', 'crime-and-community-safety': 'events-works', health: 'people-housing', 'income-poverty-welfare': 'people-housing' };
 // Records about individual people in sensitive situations: catalogued, never harvested (CLAUDE.md data ethics).
-const SENSITIVE = /\b(homicide|victims?|strip search|intimate|suicide|custody|stop and search|stop & search|hate crime|domestic abuse|sexual|safeguarding|missing persons?|rough sleep\w*|chain|bariatric|deaths? in)\b/i;
+const SENSITIVE = /\b(fatal|homicide|victims?|strip search|intimate|suicide|custody|stop and search|stop & search|hate crime|domestic abuse|sexual|safeguarding|missing persons?|rough sleep\w*|chain|bariatric|deaths? in)\b/i;
 const JOIN_KEYS = { uprn: /\buprn\b/i, toid: /\btoid\b/i, postcode: /postcode/i, ward: /\bwards?\b/i, lsoa: /\blsoa|lower super output/i, msoa: /\bmsoa|middle super output/i, oa: /\boutput areas?\b/i, borough: /\bborough|local authorit/i, company: /companies house|company number/i };
 const RELEVANCE_W = { 'zone-place': 5, 'zone-borough': 4, 'london-fine': 3, 'london-borough': 1.5, unknown: 1, 'london-coarse': 0.3, 'other-area': 0 };
 
@@ -228,6 +228,7 @@ const FINAL_RULES = [
   'F1 sensitive: the title names records about people in sensitive situations (never harvested)',
   'F2 harvested: the project holds the data (a committed file, the data register, pipeline.json or a tool names the dataset)',
   'F3 not-open: the licence is not open (none stated, share-alike, restricted or other)',
+  'F3b deferred: open, but an earlier project decision excluded it (an "excluded" list or a survey "left out" line)',
   'F4 links only: unavailable when every link failed the Datastore QA check, else deferred (publisher site or API not followed)',
   'F5 unavailable: every probe request failed (HTTP status in the reason)',
   'F6 listed-for-harvest: relevant (zone place, zone borough, zone value in the data, or finer than a borough London-wide) with a machine-readable resource; reason and size given',
@@ -308,6 +309,7 @@ function triage() {
     if (sensitive) [state, rule, why] = ['sensitive', 'F1', 'title names records about people in sensitive situations'];
     else if (have === 'held') [state, rule, why] = ['harvested', 'F2', `held: ${[...h.held].slice(0, 3).join(', ')}`];
     else if (!open) [state, rule, why] = ['not-open', 'F3', `licence ${d.licence || 'none stated'} (${lic})`];
+    else if (have === 'excluded-before') [state, rule, why] = ['deferred', 'F3b', `excluded before by the project (${[...h.excluded].join(', ')}); not harvested without the owner`];
     else if (!d.resources.length) {
       const bad = d.links.filter(l => l.http && l.http >= 400);
       [state, rule, why] = d.links.length && bad.length === d.links.length ? ['unavailable', 'F4', `links only, every link failed the Datastore QA check: ${bad.map(l => 'HTTP ' + l.http).join(', ')}`]
@@ -699,7 +701,7 @@ async function probe(only) {
   const refsZ = P.loadRefs(join(OUT, 'zone-codes.json'), join(RAWDIR, 'zone-uprns.txt'));
   const cat = readJson(join(OUT, 'catalogue.json')).datasets, tri = readJson(join(OUT, 'triage.json')).datasets;
   const outFile = join(OUT, 'probe.json');
-  const prev = existsSync(outFile) && !REFRESH ? readJson(outFile).datasets : {};
+  const prev = existsSync(outFile) && !REFRESH && !args.includes('--rescan') ? readJson(outFile).datasets : {};   // --rescan: re-read the cached samples
   const targets = cat.filter(d => only.length ? only.includes(d.id) : tri[d.id].open && !tri[d.id].sensitive && PROBE_RELEVANCE.includes(tri[d.id].relevance));
   const res = { ...prev }; let bytes = 0, k = 0;
   const save = () => writeFileSync(outFile, '{"meta":' + JSON.stringify(probeMeta(P, res), null, 1) + ',\n"datasets":{\n' + Object.entries(res).sort((a, b) => a[0].localeCompare(b[0])).map(([id, v]) => JSON.stringify(id) + ':' + JSON.stringify(v)).join(',\n') + '\n}}\n');

@@ -49,6 +49,8 @@ const PLACE_RE = new RegExp(`\\b(${ZONE_PLACE_NAMES.join('|')})\\b`, 'i');
 // ---- codes and patterns
 const CODE_RE = /\b(E0[0125]\d{6}|E09\d{6}|E12\d{6}|E0[678]\d{6}|E92000001|W0[56]\d{6}|S1[23]\d{6})\b/g;
 const PC_RE = /\b([A-Z]{1,2}\d[A-Z\d]?) ?(\d[A-Z]{2})\b/g;
+// the 121 UK postcode areas: a match whose letters are not an area (census table ids such as QS101EW) is not a postcode
+const PC_AREAS = new Set('AB AL B BA BB BD BH BL BN BR BS BT CA CB CF CH CM CO CR CT CV CW DA DD DE DG DH DL DN DT DY E EC EH EN EX FK FY G GL GU HA HD HG HP HR HS HU HX IG IP IV KA KT KW KY L LA LD LE LL LN LS LU M ME MK ML N NE NG NN NP NR NW OL OX PA PE PH PL PO PR RG RH RM S SA SE SG SK SL SM SN SO SP SR SS ST SW SY TA TD TF TN TQ TR TS TW UB W WA WC WD WF WN WR WS WV YO ZE GY JE IM'.split(' '));
 const HDR = {
   lat: /^(lat|latitude|lat_?wgs84|wgs84_?lat|y_?lat|point_?y_?wgs84)$/i, lon: /^(lon|long|lng|longitude|long_?wgs84|wgs84_?lon(g)?|x_?lon(g)?)$/i,
   e: /^(x|easting|eastings|east|x_?coord(inate)?|os_?x|bng_?x|geo_?x|grid_?ref_?e(asting)?|xcoord|x_?bng|location_?easting|easting_?osgr)$/i,
@@ -68,7 +70,7 @@ export function loadRefs(zoneCodesFile, uprnFile) {
 
 // ---- detection over a table (rows of cells) and over plain text
 export function newSignals() {
-  return { rows: 0, coords: null, uprn: null, toid: false, postcodes: { n: 0, zone: 0, sample: [] }, codes: {}, zoneCodes: {}, boroughs: { zone: new Set(), other: new Set() },
+  return { rows: 0, coords: null, uprn: null, toid: false, postcodes: { n: 0, zone: 0, sample: [], zoneSet: new Set() }, codes: {}, zoneCodes: {}, boroughs: { zone: new Set(), other: new Set() },
     london: false, national: false, places: {}, sources: [] };
 }
 const addCode = (S, refs, c) => {
@@ -84,8 +86,9 @@ function scanText(S, refs, s) {
   if (!s) return;
   for (const m of s.matchAll(CODE_RE)) addCode(S, refs, m[1]);
   for (const m of s.matchAll(PC_RE)) {
+    if (!PC_AREAS.has(/^[A-Z]+/.exec(m[1])[0])) continue;
     const pc = m[1] + m[2]; S.postcodes.n++;
-    if (refs.pcs.has(pc)) { S.postcodes.zone++; if (S.postcodes.sample.length < 5 && !S.postcodes.sample.includes(m[1] + ' ' + m[2])) S.postcodes.sample.push(m[1] + ' ' + m[2]); }
+    if (refs.pcs.has(pc)) { S.postcodes.zone++; S.postcodes.zoneSet.add(pc); if (S.postcodes.sample.length < 5 && !S.postcodes.sample.includes(m[1] + ' ' + m[2])) S.postcodes.sample.push(m[1] + ' ' + m[2]); }
   }
   const p = PLACE_RE.exec(s); if (p) { const k = p[1].toLowerCase(); S.places[k] = (S.places[k] || 0) + 1; }
 }
@@ -245,6 +248,9 @@ export async function readZip(S, refs, file, label) {
   const names = execFileSync('unzip', ['-Z1', file], { encoding: 'utf8', maxBuffer: 1 << 26 }).split('\n').filter(Boolean).filter(n => !/__MACOSX|\/$/.test(n));
   const get = (n, max) => execFileSync('sh', ['-c', `unzip -p "$0" "$1" | head -c ${max}`, file, n.replace(/([\[\]*?])/g, '\\$1')], { maxBuffer: 1 << 28 });
   const inner = []; let n = 0;
+  // entries that name a zone borough or place first (per-borough zips: the zone boroughs are read within the cap)
+  const zoneFirst = new RegExp(`(${['tower.?hamlets', 'southwark', 'lewisham', 'greenwich', 'newham', 'city.?of.?london', ...ZONE_PLACE_NAMES.map(x => x.replace(/ /g, '.?'))].join('|')})`, 'i');
+  names.sort((a, b) => zoneFirst.test(b) - zoneFirst.test(a));
   for (const name of names) {
     if (n >= 12) break;
     const e = (/\.([a-z0-9]+)$/i.exec(name)?.[1] || '').toLowerCase(), lab = `${label}/${name}`;
@@ -269,10 +275,10 @@ export async function readZip(S, refs, file, label) {
 export const AREA_RULES = [
   ['zone-point', 'D1: a coordinate in the sample (a row\'s lat/lon or easting/northing, a feature\'s point or envelope) lies in or meets the zone (3D model box)'],
   ['zone-uprn', 'D2: a UPRN in the sample is a zone UPRN (OS Open UPRN inside the box)'],
-  ['zone-postcode', 'D2: a full postcode in the sample is a zone postcode (ONSPD centre inside the box)'],
+  ['zone-postcode', 'D2: 3 or more distinct full postcodes in the sample are zone postcodes (ONSPD grid reference inside the box); one or two are often the publisher\'s own address'],
   ['zone-code', 'D3: an OA, LSOA, MSOA or ward code in the sample is a zone code (zone-codes.json)'],
-  ['zone-place', 'D4: a cell names a place in the zone (Canary Wharf, Isle of Dogs, Poplar, Rotherhithe, Deptford, Royal Docks...)'],
-  ['london-fine', 'D5: finer than a borough, London-wide, but no zone value in the sample (coordinates in London, small-area codes, postcodes, UPRNs or TOIDs)'],
+  ['zone-place', 'D4: cells name 2 or more distinct places in the zone, 3 or more times (Canary Wharf, Isle of Dogs, Poplar, Rotherhithe, Deptford, Royal Docks...); the weakest zone rule: names of wards, constituencies, stations or town centres, without codes'],
+  ['london-fine', 'D5: finer than a borough, London-wide, but no zone value in the sample (5 or more coordinates in London, small-area codes, 20 or more postcodes, UPRNs or TOIDs)'],
   ['borough-rows', 'D6: rows for zone boroughs (E09 code or name), nothing finer'],
   ['london-coarse', 'D7: London, region or national rows only; or only boroughs outside the zone'],
   ['none', 'D8: no geography found in the sample'],
@@ -283,16 +289,17 @@ export function classify(S) {
   if (C) ev.push(`coordinates ${C.columns.slice(0, 3).join('; ')}${C.columns.length > 3 ? ` (+${C.columns.length - 3} layers)` : ''}: ${C.n} rows or features read, ${C.london} in London, ${C.zone} in the zone`);
   if (S.uprn) ev.push(`UPRN column "${S.uprn.column}": ${S.uprn.n} values, ${S.uprn.zone} zone UPRNs, ${S.uprn.rounded} rounded`);
   if (S.toid) ev.push('TOID column');
-  if (S.postcodes.n) ev.push(`postcodes: ${S.postcodes.n}, ${S.postcodes.zone} in the zone${S.postcodes.sample.length ? ' (' + S.postcodes.sample.join(', ') + ')' : ''}`);
+  if (S.postcodes.n) ev.push(`postcodes: ${S.postcodes.n}, ${S.postcodes.zone} in the zone (${S.postcodes.zoneSet.size} distinct)${S.postcodes.sample.length ? ' (' + S.postcodes.sample.join(', ') + ')' : ''}`);
   const codes = Object.entries(S.codes).map(([k, v]) => `${k} ${v}`); if (codes.length) ev.push(`codes: ${codes.join(', ')}${zc.length ? '; zone codes: ' + zc.join(', ') : ''}`);
   if (S.boroughs.zone.size || S.boroughs.other.size) ev.push(`boroughs: ${S.boroughs.zone.size} zone, ${S.boroughs.other.size} other`);
   const pl = Object.entries(S.places).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k} ${v}`); if (pl.length) ev.push(`zone place names: ${pl.join(', ')}`);
   if (S.london) ev.push('London rows'); if (S.national) ev.push('national/regional rows');
   ev.push(`${S.rows} rows read`);
-  const fine = (C && C.london) || ['oa', 'lsoa', 'msoa', 'ward'].some(k => S.codes[k]) || S.postcodes.n >= 5 || (S.uprn && S.uprn.n) || S.toid;
-  const cls = (C && C.zone) ? 'zone-point' : S.uprn?.zone ? 'zone-uprn' : S.postcodes.zone ? 'zone-postcode' : zc.length ? 'zone-code'
-    : pl.length ? 'zone-place' : fine ? 'london-fine' : S.boroughs.zone.size ? 'borough-rows'
+  const zonePc = S.postcodes.zoneSet.size, plN = Object.keys(S.places).length, plCells = Object.values(S.places).reduce((a, b) => a + b, 0);
+  const fine = (C && C.london >= 5) || ['oa', 'lsoa', 'msoa', 'ward'].some(k => S.codes[k]) || S.postcodes.n >= 20 || (S.uprn && S.uprn.n) || S.toid;
+  const cls = (C && C.zone) ? 'zone-point' : S.uprn?.zone ? 'zone-uprn' : zonePc >= 3 ? 'zone-postcode' : zc.length ? 'zone-code'
+    : plN >= 2 && plCells >= 3 ? 'zone-place' : fine ? 'london-fine' : S.boroughs.zone.size ? 'borough-rows'
     : (S.boroughs.other.size || S.london || S.national) ? 'london-coarse' : 'none';
   return { area: cls, rule: AREA_RULES.find(r => r[0] === cls)[1], evidence: ev.join('; ') };
 }
-export const finishSignals = S => ({ ...S, boroughs: { zone: [...S.boroughs.zone], other: S.boroughs.other.size }, zoneCodes: Object.fromEntries(Object.entries(S.zoneCodes).map(([k, v]) => [k, [...v].slice(0, 10).concat(v.size > 10 ? [`+${v.size - 10}`] : [])])) });
+export const finishSignals = S => ({ ...S, postcodes: { n: S.postcodes.n, zone: S.postcodes.zone, zone_distinct: S.postcodes.zoneSet.size, sample: S.postcodes.sample }, boroughs: { zone: [...S.boroughs.zone], other: S.boroughs.other.size }, zoneCodes: Object.fromEntries(Object.entries(S.zoneCodes).map(([k, v]) => [k, [...v].slice(0, 10).concat(v.size > 10 ? [`+${v.size - 10}`] : [])])) });

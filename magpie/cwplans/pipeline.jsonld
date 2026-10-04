@@ -3776,6 +3776,11 @@
     },
     {
      "@id": "urn:cwplans:local:data/raw/registry/lids-2026-09_csv_BLPU-UPRN-TopographicArea-TOID-5.zip"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-datasets",
+     "dcat:accessURL": "https://data.london.gov.uk/download/<dataset id>/<resource id>/<file>",
+     "dct:description": "probe: up to 3 readable resources per target dataset; text formats with Range bytes=0-1048575 (first 1 MB), sheets up to 20 MB, zips up to 60 MB, GeoPackages up to 100 MB whole; one request at a time, 1.1 s apart"
     }
    ],
    "prov:generated": [
@@ -3828,6 +3833,9 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-codes.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/probe.json"
+    },
+    {
      "@id": "urn:cwplans:local:data/raw/london-datastore/"
     }
    ],
@@ -3848,7 +3856,10 @@
     "Dropped fields: names matching e-mail, phone, contact, fax, mobile, owner name, person (none matched in the 13 harvested files). uprn_suspect: a UPRN field with an exponent or 9+ digits ending in 5+ zeros (F22). The Brownfield Register is read from its CSV, not the GPKG (F23).",
     "Network: one request at a time over the whole tool, at least 1.1 s apart; up to 6 tries with Retry-After or a doubling pause on 429, 5xx and network errors; User-Agent glitchcan-cwplans/0.1. robots.txt disallows only /debug, /manage/, /login, /logout.",
     "Details walk (--details, 2026-10-04, all 1,305 datasets): /api/v3/dataset/<id> adds per resource the publisher's generic format (kind) and an md5 hash, and per dataset the description; the catalogue keeps a details member (resource count, kinds, archivedAt, nextReviewDate, geo, the granularity words and zone place names found in the description, resources only in the details record). The description text itself is not kept. Result: 0 archived, 0 resources missing from the export, geo identical to the export for all 1,305.",
-    "Zone references (refs): a code is a zone code when a live or terminated ONSPD (August 2026) postcode whose grid reference lies in the 3D model box carries it, or when its polygon in the Datastore's Statistical GIS Boundary Files (20od9: LSOA/MSOA 2021, OA/LSOA/MSOA/wards 2011, wards 2014 and 2018) meets the box. Zone UPRNs: OS Open UPRN X/Y in the box; zone TOIDs: the LIDS TopographicArea TOIDs of those UPRNs (raw cache only)."
+    "Zone references (refs): a code is a zone code when a live or terminated ONSPD (August 2026) postcode whose grid reference lies in the 3D model box carries it, or when its polygon in the Datastore's Statistical GIS Boundary Files (20od9: LSOA/MSOA 2021, OA/LSOA/MSOA/wards 2011, wards 2014 and 2018) meets the box. Zone UPRNs: OS Open UPRN X/Y in the box; zone TOIDs: the LIDS TopographicArea TOIDs of those UPRNs (raw cache only).",
+    "Area from the data (probe): every open, not sensitive dataset whose metadata relevance is unknown, london-borough or london-coarse (671) is opened: up to 3 readable resources (finer-area file names first, then csv/txt/json/xml, sheets, gpkg, zip; newest first; stop at the first zone signal). Caps: text formats the first 1 MB (HTTP Range); xlsx/xlsm/xls/ods whole up to 20 MB (SheetJS, 3,000 rows and 40 sheets read); zip whole up to 60 MB (shapefile record envelopes and dbf, inner csv/sheets/gpkg, 12 entries, zone borough and place names first); GeoPackage whole up to 100 MB (every geometry envelope). Documents (pdf, docx, images, audio) are not opened.",
+    "Area class from the data, first match: D1 zone-point (a row's lat/lon or easting/northing, or a feature envelope, in or meeting the box; the value decides WGS84 or BNG); D2 zone-uprn (a zone UPRN in a UPRN column) or zone-postcode (3+ distinct zone postcodes; the postcode's letters must be one of the 121 UK areas); D3 zone-code (an OA/LSOA/MSOA/ward code in zone-codes.json); D4 zone-place (2+ distinct zone place names, 3+ cells); D5 london-fine (5+ London coordinates, small-area codes, 20+ postcodes, UPRN or TOID columns, no zone value in the sample); D6 borough-rows (zone borough code or name, nothing finer); D7 london-coarse (London, region, national, or other boroughs only); D8 none. The data class replaces the metadata relevance of a probed dataset.",
+    "Final state, first match (every dataset gets one): F1 sensitive; F2 harvested (held); F3 not-open (licence); F3b deferred (excluded before by the project); F4 links only (unavailable when every link failed the Datastore QA check, else deferred); F5 unavailable (every probe request failed); F6 listed-for-harvest (relevant with a machine-readable resource; reason and size); F7 deferred (relevant, documents only); F8 not-relevant (data: borough rows, London or coarser, none); F9 not-relevant (metadata names only places outside the zone); F10 deferred (data not readable: size cap, format, no readable resource); F11 deferred (not probed)."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -3856,9 +3867,10 @@
    "cwp:area": "feeds",
    "cwp:fault": [
     "F22",
-    "F23"
+    "F23",
+    "F27"
    ],
-   "cwp:judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md."
+   "cwp:judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md. The probe rules (caps, thresholds of D2 and D4, the place list) were set by reading the first full run: one cell naming Deptford or one publisher postcode (City Hall) made a zone dataset of a payments list, so D2 needs 3 distinct zone postcodes and D4 2 names in 3 cells; census table ids (QS101EW) read as postcodes until the UK postcode area list was added. Fatal fires (24yo6, incident postcodes) was added to the sensitive titles by hand."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/amend-uprns",
@@ -9328,6 +9340,72 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/catalogue.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the whole London Datastore catalogue, 2026-10-04: 1,305 datasets, one per line (id, title, publisher, licence, topics, tags, geo granularity, update frequency, dates, 11,348 resources with format, generic kind, md5, size and download path, 312 links; a details member from /api/v3/dataset/<id> for all 1,305: resource count, kinds, archivedAt, next review, the granularity words and zone place names named in the description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/probe.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "area found inside the data of every open dataset whose metadata area is unknown, borough or London-wide: the resources sampled (size caps), the signals (coordinates in the zone, zone UPRNs, postcodes, OA/LSOA/MSOA/ward codes, borough rows, zone place names), the area class and the rule that fired",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-datasets"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-uprn"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-codes.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the zone's area codes and postcodes: OA, LSOA and MSOA codes (2001, 2011, 2021), ward codes (2011, 2014, 2018, 2026, statistical 2005) of the areas that meet the 3D model box or hold a postcode whose ONSPD grid reference lies in it; the zone postcodes; ward and MSOA names",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20od9"
     }
    ],
    "prov:wasGeneratedBy": {
