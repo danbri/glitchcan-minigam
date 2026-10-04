@@ -6877,6 +6877,111 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/promenade-skyline-railing.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's night photo: the skyline across the river from the riverside path (Night mode reference)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "the owner's copyright, kept with permission (2026-10-04); not open-licensed"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/promenade-skyline-bollard.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's night photo: the skyline from the river edge with a mooring bollard (Night mode reference)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "the owner's copyright, kept with permission (2026-10-04); not open-licensed"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/promenade-zoom-moon-blur.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's night photo: zoom on towers with the moon, out of focus (Night mode reference)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "the owner's copyright, kept with permission (2026-10-04); not open-licensed"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/zoom-moon-towers.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's night photo: zoom on towers and the moon (Night mode reference; moon position fixes the time)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "the owner's copyright, kept with permission (2026-10-04); not open-licensed"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/river-warehouses-skyline.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's night photo: river, warehouses and the towers behind (Night mode reference)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "the owner's copyright, kept with permission (2026-10-04); not open-licensed"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/clipper-canary-wharf-pier.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's night photo from a Thames Clipper at Canary Wharf pier (Night mode reference)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "the owner's copyright, kept with permission (2026-10-04); not open-licensed"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "what the reference photos are, where and when the owner took them, and their copyright",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "the owner's copyright, kept with permission (2026-10-04); not open-licensed"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/towers.json",
    "@type": [
     "prov:Entity",
