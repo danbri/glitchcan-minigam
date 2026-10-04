@@ -208,6 +208,36 @@ ships, so it waits for the owner's decision on AISHub, or for our own receiver. 
 tap (CORS, no key), filter by `source`/`license` in the page, markers with a heading arrow, card with name, type, speed,
 destination, time and source, and the per-source attribution in Credits.
 
+## AIS: the aiscatcher.org community network (checked 2026-10-04, owner's lead)
+
+Owner's lead: "There is at least one active station explicitly named 'M7AZV River Thames AIS'. The whole network is
+free/open-source with a live map; no paywall on the data the stations share." Free to view is not an open licence.
+
+- **robots.txt** (https://www.aiscatcher.org/robots.txt, read 2026-10-04 11:54 UTC): `User-agent: *` disallows `/api/`,
+  `/hub/`, `/hub_station_mmsi/`, `/mvt/`, `/mvt2/`, `/tiles/`, `/ship/ais/`, `/search/`, `/download` and more;
+  `User-agent: ClaudeBot`, `GPTBot`, `CCBot`, `Google-Extended` and other AI agents: `Disallow: /`. So no page, map
+  tile or API of aiscatcher.org was fetched by this project (only robots.txt). Station facts below come from a web
+  search result for the station page, not from the page.
+- **Station:** "M7AZV River Thames AIS", aiscatcher.org station id 1370
+  (https://www.aiscatcher.org/stations/details/1370), London; position as published to 2 decimals 51.47, -0.13
+  (about 4 km west of the model box; HMS Belfast about 5 km, the Thames Barrier about 12 km); maximum reception distance
+  32.1 nm. So it very probably hears the zone. Uptime and message counts: not read (robots). M7AZV is an amateur radio
+  call sign and names a person: record only the call sign and station name as the station publishes them.
+- **Terms:** the AIS-catcher software is GPL v3 (README: "Licensed under GNU General Public License v3.0"); that covers
+  code, not data. The site's About page, in the search result: "What your antenna picks up is yours — no license, no
+  terms of use." No data licence for the community hub, map or API was found in the README, the docs
+  (https://jvde-github.github.io/AIS-catcher-docs/community/, "© 2021-2026 ... All rights reserved") or the search
+  results. Rights stay with each station operator; nothing grants reuse to us. No public API is documented; `/api/` is
+  disallowed. Class: no licence stated + robots disallow: **not used**.
+- **Open Waters:** no station named M7AZV or in London in `/v1/stations` (39 stations, 2026-10-04; UK volunteer
+  stations only near Saint Peters (Kent), Southend-on-Sea and Portland). So M7AZV does not feed Open Waters now.
+- **The open route:** AIS-catcher can send to several places at once. If the operator adds the Open Waters output
+  (`-Q wssmqtt://x:<token>@ais.openwaters.io:443/v1/stream MSGFORMAT NMEA`, or UDP `-u udp.ais.openwaters.io 10110`),
+  the station's receptions become CC0 volunteer events and `tools/fetch-ais.mjs` keeps them with no change. Or the
+  operator states a licence (CC0 or CC BY) for the station's data. Either needs a request to the operator through the
+  aiscatcher.org station contact or the AIS-catcher community; the owner decides whether to ask. Test when it happens:
+  HANSEATIC SPIRIT (MMSI 215973000) alongside HMS Belfast, source `station:` or `udp:` in `ais.json`.
+
 ## Tower Bridge lift times: not fetched (terms, 2026-10-04)
 
 https://www.towerbridge.org.uk/lift-times redirects to https://www.towerbridge.org.uk/bridge-lifts (date, time,

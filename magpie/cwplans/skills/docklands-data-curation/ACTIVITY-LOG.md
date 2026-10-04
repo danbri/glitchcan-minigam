@@ -692,3 +692,10 @@ central tower - do we have an index of these?"
   non-private vessels if the owner accepts AISHub and aisstream.io (counts only). Raw runs gitignored (`data/raw/ais/`).
 - No page layer: it would show no ships under the rule. Owner decisions: AISHub events (Open Waters reports a written,
   revocable AISHub assurance); or a receiver of our own fed to Open Waters (CC0). No new fault.
+
+## 2026-10-04 — aiscatcher.org community network (owner's lead: "M7AZV River Thames AIS")
+- robots.txt of aiscatcher.org disallows `/api/`, `/hub/`, tiles and search for all, and the whole site for ClaudeBot
+  and other AI agents: only robots.txt was fetched. Station facts (id 1370, about 51.47,-0.13, max range 32.1 nm) from a
+  web search result. No data licence: the site says data is the operator's, "no license, no terms of use". Not used.
+- M7AZV is not an Open Waters station. Open route: the operator adds the Open Waters output (CC0, kept by
+  `tools/fetch-ais.mjs` unchanged) or states a licence; the owner decides whether to ask. No data file, no new fault.

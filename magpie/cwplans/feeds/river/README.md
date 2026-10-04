@@ -72,6 +72,11 @@ verify the terms and the coverage at the source before any fetch, and record the
 
 ## Rejected or not reached, and why
 
+- **aiscatcher.org community network** (owner's lead, station "M7AZV River Thames AIS", id 1370, about 51.47,-0.13,
+  range up to 32.1 nm): no data licence ("What your antenna picks up is yours — no license, no terms of use"), and
+  robots.txt disallows `/api/`, `/hub/`, tiles and search for all agents and the whole site for ClaudeBot and other AI
+  agents. Not fetched. The station does not feed Open Waters (2026-10-04). Open route: the operator adds the Open
+  Waters output (CC0) or states a licence. River skill, "AIS: the aiscatcher.org community network".
 - **AIS, live vessel positions.** aisstream.io: free key through a GitHub sign-in; its documentation forbids direct
   browser connections (a server must proxy) and no data licence or terms page exists (`/terms` and `/terms-of-service`
   answer 404); not used without the owner's key and a decision on the licence. AISHub: an account only for those who
