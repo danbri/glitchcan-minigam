@@ -280,16 +280,17 @@ const HARVEST = {
   'conservation-areas':        { id: 'emqwg', file: 'Conservation_Areas.gpkg', fmt: 'gpkg', theme: 'heritage' },
   'southwark-local-list':      { id: 'e1r5k', fmt: 'geojson', theme: 'heritage' },
   'site-allocations':          { id: '2jxpm', file: 'Site_Allocations.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
-  'brownfield-register':       { id: '2og9g', file: 'Brownfield_Register.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
+  // the GPKG holds polygons with OBJECTID only, and its OBJECTID does not match the CSV's objectid (127 of 238 zone
+  // polygons fall over 500 m from the CSV point with that id): the CSV, with its own points, is the source used
+  'brownfield-register':       { id: '2og9g', file: 'Brownfield_Register_tbl.csv', fmt: 'csv', xy: ['geox', 'geoy'], theme: 'buildings-places' },
   'central-activities-zone':   { id: '23jxk', file: 'caz_lp_2021.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
   'strategic-industrial-land': { id: '2y5xy', file: 'Strategic_Industrial_Land.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
   'locally-significant-industrial-sites': { id: '29z31', file: 'Locally_Significant_Industrial_Sites.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
   'safeguarded-wharves':       { id: '2g90r', file: 'Safeguarded_Wharves.gpkg', fmt: 'gpkg', theme: 'transport' },
   'article4-office-residential': { id: '2gy3r', file: 'Article_4_Directions_Office_to_Residential.gpkg', fmt: 'gpkg', theme: 'buildings-places' },
   'designated-open-space':     { id: 'e195k', file: 'Designated_Open_Space.gpkg', fmt: 'gpkg', theme: 'environment' },
-  'flood-risk':                { id: '2w4wy', file: 'Flood_Risk.gpkg', fmt: 'gpkg', theme: 'environment' },
   'air-quality-monitoring-sites': { id: '23n41', file: 'Air_quality_monitoring_sites.gpkg', fmt: 'gpkg', theme: 'environment' },
-  'cultural-infrastructure-2024': { id: '2zj1y', fmt: 'csv', theme: 'occupants-organisations' },
+  'cultural-infrastructure':   { id: '23697', file: 'cultural_venues_in_GIS_format.gpkg', fmt: 'gpkg', theme: 'occupants-organisations' },
   'lvmf-2026-consultation':    { id: '2gqpn', fmt: 'shpzip', all: true, theme: 'heritage' },
 };
 // The zone: the 3D model box (tools/fetch-docklands.mjs BOX_BNG / BOX_WGS84); in_cw: the Canary Wharf registry box.
@@ -327,6 +328,14 @@ async function readGpkg(file) {
   const { DatabaseSync } = await import('node:sqlite');
   const db = new DatabaseSync(file, { readOnly: true });
   const layers = db.prepare(`SELECT c.table_name t, g.column_name g, g.srs_id s FROM gpkg_contents c JOIN gpkg_geometry_columns g ON g.table_name = c.table_name WHERE c.data_type = 'features'`).all();
+  // the layer's SRS: an EPSG code, or a custom definition on the Airy 1830 ellipsoid with the BNG projection (srs_id 100000 in
+  // some GLA files) -> EPSG:27700; anything else stops the harvest
+  const srsDef = new Map(db.prepare('SELECT srs_id, organization o, organization_coordsys_id c, definition d FROM gpkg_spatial_ref_sys').all().map(r => [r.srs_id, r]));
+  const srsOf = id => { const r = srsDef.get(id); if (!r) throw new Error(`${file}: no srs ${id}`);
+    if (/^epsg$/i.test(r.o) && [27700, 4326].includes(r.c)) return r.c;
+    if (/airy/i.test(r.d) && /Transverse_Mercator/i.test(r.d) && /400000/.test(r.d) && /-100000/.test(r.d)) return 27700;
+    throw new Error(`${file}: SRS ${id} not understood: ${String(r.d).slice(0, 120)}`); };
+  for (const L of layers) L.s = srsOf(L.s);
   const out = [];
   for (const L of layers) {
     for (const row of db.prepare(`SELECT * FROM "${L.t}"`).all()) {
@@ -452,11 +461,13 @@ async function harvest(keys) {
       else if (H.fmt === 'geojson') { const j = readJson(raw.file); const crs = j.crs?.properties?.name || ''; const srs = /27700/.test(crs) ? 27700 : 4326; got = { layers: [{ table: name, srs, crs }], features: j.features.map(f => ({ layer: name, srs, geom: f.geometry, props: f.properties || {} })) }; }
       else if (H.fmt === 'csv') {
         const rows = parseCsv(readFileSync(raw.file, 'utf8'));
-        const cols = Object.keys(rows[0] || {}), lat = cols.find(c => /^lat(itude)?$/i.test(c)), lon = cols.find(c => /^(lon|lng|long|longitude)$/i.test(c)), ea = cols.find(c => /^(easting|x|x_coord)$/i.test(c)), no = cols.find(c => /^(northing|y|y_coord)$/i.test(c));
-        if (!(lat && lon) && !(ea && no)) throw new Error(`${key}: no coordinate columns in ${cols.join(', ')}`);
-        got = { layers: [{ table: name, srs: lat ? 4326 : 27700, columns: lat ? [lon, lat] : [ea, no] }], features: rows.map(p => {
-          const x = +(lat ? p[lon] : p[ea]), y = +(lat ? p[lat] : p[no]);
-          return { layer: name, srs: lat ? 4326 : 27700, geom: isFinite(x) && isFinite(y) && x && y ? { type: 'Point', coordinates: [x, y] } : null, props: p };
+        const cols = Object.keys(rows[0] || {});
+        const [cx, cy] = H.xy || [cols.find(c => /^(lon|lng|long|longitude|easting)$/i.test(c)), cols.find(c => /^(lat|latitude|northing)$/i.test(c))];
+        if (!cx || !cy) throw new Error(`${key}: no coordinate columns in ${cols.join(', ')}`);
+        // CRS per row: |x| <= 180 and |y| <= 90 -> WGS84 longitude/latitude, else BNG metres (registers mix both)
+        got = { layers: [{ table: name, srs: 'per row', columns: [cx, cy] }], features: rows.map(p => {
+          const x = +p[cx], y = +p[cy], ok = p[cx] !== '' && p[cy] !== '' && isFinite(x) && isFinite(y) && x && y, wgs = Math.abs(x) <= 180 && Math.abs(y) <= 90;
+          return { layer: name, srs: wgs ? 4326 : 27700, geom: ok ? { type: 'Point', coordinates: [x, y] } : null, props: p };
         }) };
       }
       feats.push(...got.features.map(f => ({ ...f, resource: r.id }))); layers.push(...got.layers);
@@ -465,11 +476,15 @@ async function harvest(keys) {
     const kept = [], dropped = new Set(); let noGeom = 0;
     for (const f of feats) {
       if (!f.geom) { noGeom++; continue; }
+      // WGS84 rows far outside the zone are skipped before any transform (the local OSTN15 grid covers only the London area)
+      if (f.srs === 4326) { const b = bboxOf(f.geom), m = 0.02; if (b[2] < ZONE_WGS84[0] - m || b[0] > ZONE_WGS84[2] + m || b[3] < ZONE_WGS84[1] - m || b[1] > ZONE_WGS84[3] + m) continue; }
       const gB = f.srs === 4326 ? mapPts(f.geom, c => toBng(c)) : f.geom;
       if (!meets(gB, BOXB)) continue;
       const { kept: props, dropped: dr } = cleanProps(f.props); dr.forEach(x => dropped.add(x));
       const bb = bboxOf(gB), inside = bb[0] >= BOXB[0] && bb[1] >= BOXB[1] && bb[2] <= BOXB[2] && bb[3] <= BOXB[3];
-      kept.push({ type: 'Feature', properties: { ...(layers.length > 1 ? { layer: f.layer } : {}), ...props, in_cw: meets(gB, CWB), whole_in_zone: inside },
+      // a UPRN that a spreadsheet rounded (1E+11, 200000000000): 9 or more digits ending in 5 or more zeros, or an exponent
+      const uprnSuspect = Object.entries(props).some(([k, v]) => /uprn/i.test(k) && v != null && (/e\+/i.test(String(v)) || /^\d{4,}0{5,}$/.test(String(v))));
+      kept.push({ type: 'Feature', properties: { ...(layers.length > 1 ? { layer: f.layer } : {}), ...props, ...(uprnSuspect ? { uprn_suspect: true } : {}), in_cw: meets(gB, CWB), whole_in_zone: inside },
         geometry: f.srs === 4326 ? mapPts(f.geom, ([x, y]) => [r6(x), r6(y)]) : mapPts(f.geom, toWgs) });
     }
     const lic = d.licence, licUrl = readJson(join(OUT, 'catalogue.json')).meta.licence_urls[lic] || null;
@@ -479,8 +494,10 @@ async function harvest(keys) {
       attribution: (T.licence === 'ogl' ? `Contains public sector information licensed under the ${lic} (${d.publisher}).` : `${d.publisher}, ${lic}.`) + ' The GLA cannot warrant the quality or accuracy of the data (London Datastore terms).',
       dataset_modified: d.modified, update_frequency: d.update_frequency, geo: d.geo, theme: H.theme,
       layers, crs_source: [...new Set(layers.map(l => l.srs))].map(s => 'EPSG:' + s).join(', '), crs_output: 'EPSG:4326 (WGS84), 6 decimal places; BNG to WGS84 through the OS OSTN15 grid (lib.mjs bngProjector)',
-      method: `walk-london-datastore.mjs harvest ${key}: download ${H.all ? 'every ' + H.fmt + ' resource' : 'the newest matching resource'} (${H.fmt}); read every feature; keep a feature whose geometry meets the zone (the 3D model box, BNG E ${ZONE_BNG.e0}-${ZONE_BNG.e1}, N ${ZONE_BNG.n0}-${ZONE_BNG.n1}; WGS84 ${ZONE_WGS84.join(', ')}): a vertex inside, an edge crossing the box or the box inside a polygon. Whole geometries are kept (not cut at the box): whole_in_zone says whether all of it lies inside. in_cw: the geometry meets the Canary Wharf registry box ${CW_BOX.join(', ')}. Source attributes kept as published except fields matching ${DROP_FIELD.source} (none are expected).`,
-      counts: { source_features: feats.length, no_geometry: noGeom, in_zone: kept.length, in_cw: kept.filter(f => f.properties.in_cw).length },
+      method: `walk-london-datastore.mjs harvest ${key}: download ${H.all ? 'every ' + H.fmt + ' resource' : 'the newest matching resource'} (${H.fmt}); read every feature; keep a feature whose geometry meets the zone (the 3D model box, BNG E ${ZONE_BNG.e0}-${ZONE_BNG.e1}, N ${ZONE_BNG.n0}-${ZONE_BNG.n1}; WGS84 ${ZONE_WGS84.join(', ')}): a vertex inside, an edge crossing the box or the box inside a polygon. Whole geometries are kept (not cut at the box): whole_in_zone says whether all of it lies inside. in_cw: the geometry meets the Canary Wharf registry box ${CW_BOX.join(', ')}. Source attributes kept as published except fields matching ${DROP_FIELD.source}. uprn_suspect: a UPRN field that a spreadsheet rounded (an exponent, or 9+ digits ending in 5+ zeros); not a key (fault F22).${H.fmt === 'csv' ? ` Points from the columns ${(H.xy || ['longitude/easting', 'latitude/northing']).join(', ')}; a row is WGS84 when |x| <= 180 and |y| <= 90, else BNG; rows with no coordinates are counted as no_geometry.` : ''}`,
+      counts: { source_features: feats.length, no_geometry: noGeom, in_zone: kept.length, in_cw: kept.filter(f => f.properties.in_cw).length,
+        ...(kept.some(f => Object.keys(f.properties).some(k => /uprn/i.test(k))) ? { with_uprn: kept.filter(f => Object.entries(f.properties).some(([k, v]) => /^(os_addressbase_)?uprn$/i.test(k) && v)).length, uprn_suspect: kept.filter(f => f.properties.uprn_suspect).length } : {}) },
+      attributes_in_source: Object.keys(feats.find(f => f.geom)?.props || {}).filter(k => !/^(fid|objectid|shape_length|shape_area)$/i.test(k)).length ? 'yes' : 'none (geometry and object ids only)',
       fields_dropped: [...dropped],
     };
     const dir = join(OUT, key); mkdirSync(dir, { recursive: true });

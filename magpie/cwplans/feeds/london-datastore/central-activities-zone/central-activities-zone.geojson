@@ -27,13 +27,16 @@
  ],
  "crs_source": "EPSG:27700",
  "crs_output": "EPSG:4326 (WGS84), 6 decimal places; BNG to WGS84 through the OS OSTN15 grid (lib.mjs bngProjector)",
- "method": "walk-london-datastore.mjs harvest central-activities-zone: download the newest matching resource (gpkg); read every feature; keep a feature whose geometry meets the zone (the 3D model box, BNG E 532400-539900, N 176700-182300; WGS84 -0.095, 51.474, 0.015, 51.522): a vertex inside, an edge crossing the box or the box inside a polygon. Whole geometries are kept (not cut at the box): whole_in_zone says whether all of it lies inside. in_cw: the geometry meets the Canary Wharf registry box -0.03, 51.498, -0.005, 51.51. Source attributes kept as published except fields matching e-?mail|phone|tel(ephone)?$|^tel|contact|^fax|mobile|website_contact|^owner_?name|person (none are expected).",
+ "method": "walk-london-datastore.mjs harvest central-activities-zone: download the newest matching resource (gpkg); read every feature; keep a feature whose geometry meets the zone (the 3D model box, BNG E 532400-539900, N 176700-182300; WGS84 -0.095, 51.474, 0.015, 51.522): a vertex inside, an edge crossing the box or the box inside a polygon. Whole geometries are kept (not cut at the box): whole_in_zone says whether all of it lies inside. in_cw: the geometry meets the Canary Wharf registry box -0.03, 51.498, -0.005, 51.51. Source attributes kept as published except fields matching e-?mail|phone|tel(ephone)?$|^tel|contact|^fax|mobile|website_contact|^owner_?name|person. uprn_suspect: a UPRN field that a spreadsheet rounded (an exponent, or 9+ digits ending in 5+ zeros); not a key (fault F22).",
  "counts": {
   "source_features": 1,
   "no_geometry": 0,
   "in_zone": 1,
-  "in_cw": 0
+  "in_cw": 0,
+  "with_uprn": 0,
+  "uprn_suspect": 0
  },
+ "attributes_in_source": "yes",
  "fields_dropped": []
 },
 "features":[

@@ -406,6 +406,32 @@ Owner instruction, 2026-10-04: "Wrap it all up into skills". Three new skills, e
   (proxy drops).
 - 10 new event sources added to `feeds/events.json` and an `EVENTS.md` section.
 
+## 2026-10-04: London Datastore walk (London Datastore agent)
+
+- Owner, 2026-10-04: "Can we work our way through open data London portal?" New tool `tools/walk-london-datastore.mjs`
+  (walk, triage, harvest), skill `cwplans-london-datastore`, results in `feeds/london-datastore/README.md`.
+- API found: the site is DataPress; `/api/v3/datasets/export.json` gives all 1,305 datasets in one response;
+  `/api/action/package_search` ignores q/rows/start; `organization_list` and `license_list` answer 410. Terms read:
+  any purpose, state that the GLA cannot warrant the data.
+- Catalogue (`catalogue.json`, one dataset per line): 1,305 datasets, 11,348 resources, 312 links.
+- Triage (`triage.json`, written rules, reasons per dataset): licence ogl 872, cc-by 68, public-domain 9, odc-by 7,
+  share-alike 8, restricted 15, other 2, none 324. Relevance zone-place 6, zone-borough 12, london-fine 263,
+  london-borough 362, london-coarse 255, other-area 54, unknown 353. Sensitive 7 (never harvested). The project held
+  2 before (public realm trees, LBSM 2), listed 45, had excluded 3; held 15 after this commit.
+- Harvested 13 open datasets clipped to the 3D model box (features in zone): cultural venues 662 (UPRN on 599),
+  Southwark local list 599, designated open space 517, brownfield sites 229, site allocations 137, conservation
+  areas 112, LVMF 2026 views 35, air quality sites 28, SIL 14, safeguarded wharves 10, Article 4 office to residential
+  9, LSIS 8, CAZ 1. Flood Risk harvested and dropped (no flood zone class; the EA source is better).
+- New faults: F22 (UPRNs rounded by a spreadsheet in the Cultural Infrastructure Map: 56 of 599 zone venues) and F23
+  (Planning Constraints Map GeoPackages with geometry only; the brownfield GPKG OBJECTID is not the CSV objectid:
+  127 of 238 zone polygons over 500 m from the CSV point with that id). Rules in the tool; checks in the meta counts.
+- Mistake made and repaired: a Python one-liner opened `CLAUDE.md` for writing before reading it and emptied the
+  file for about a minute; restored from HEAD plus the other agent's uncommitted crown-lighting row. Read first,
+  then write.
+- Open: the ranked backlog in the README (Town Centre Boundaries, Opportunity Areas, High Street Boundaries and BIDs
+  first); join the cultural venues to the registry by UPRN (minus `uprn_suspect`) and the brownfield sites by address;
+  the 353 "unknown" datasets were not opened; 324 datasets with no licence wait on the GLA.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
@@ -427,3 +453,5 @@ Owner instruction, 2026-10-04: "Wrap it all up into skills". Three new skills, e
 14. Methods: commit the one-off scripts named in `pipeline.json` `manual_activities` `gap` (facts.json quote check and
     FACTS.md, feeds/underground README, feeds README and EVENTS.md, pixel palette) when next run; pace
     `registry-wikidata.mjs` through `tools/lib.mjs` `qlever()`.
+15. London Datastore: harvest the backlog head (Town Centre Boundaries, Opportunity Areas, High Street Boundaries,
+    BIDs); join cultural venues by UPRN (not `uprn_suspect`, F22) and brownfield sites by address into the registry.
