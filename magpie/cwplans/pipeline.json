@@ -79,6 +79,10 @@
       "title": "Skyline"
     },
     {
+      "id": "sky",
+      "title": "Sky, time, weather and tide"
+    },
+    {
       "id": "feeds",
       "title": "Feeds and events"
     },
@@ -3060,6 +3064,70 @@
         "build-docklands"
       ],
       "area": "water"
+    },
+    {
+      "id": "fetch-sky",
+      "tool": "tools/fetch-sky.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [--date 2026-10-03]",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "yale-bsc5",
+          "endpoint": "https://cdsarc.cds.unistra.fr/ftp/V/50/catalog.gz",
+          "request": "the whole catalogue, fixed-width text (gzip)"
+        },
+        {
+          "source": "d3-celestial",
+          "endpoint": "https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/constellations.lines.json",
+          "request": "GeoJSON MultiLineString per constellation"
+        },
+        {
+          "source": "celestrak",
+          "endpoint": "https://celestrak.org/NORAD/elements/gp.php",
+          "request": "CATNR=25544 (ISS), CATNR=48274 (Tiangong), GROUP=visual; FORMAT=json (OMM)"
+        },
+        {
+          "source": "open-meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "request": "latitude=51.505, longitude=-0.02, start_date=DATE, end_date=DATE+1, hourly cloud cover (total, low, mid, high), visibility, humidity, dew point, precipitation, weather code, temperature, wind; timezone Europe/London; model best_match"
+        },
+        {
+          "source": "ea-flood-monitoring",
+          "endpoint": "https://environment.data.gov.uk/flood-monitoring/id/measures/{station}-level-tidal_level-i-15_min-mAOD/readings",
+          "request": "stations 0007 Tower Pier, 0003 Charlton, 0001 Silvertown; startdate=DATE, enddate=DATE+2, _sorted, _limit=1000; plus /id/stations/{station} for the position"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/sky/stars.json"
+        },
+        {
+          "file": "docklands/data/sky/constellation-lines.json"
+        },
+        {
+          "file": "docklands/data/sky/sats-2026-10-03.json"
+        },
+        {
+          "file": "docklands/data/sky/weather-2026-10-03.json"
+        },
+        {
+          "file": "docklands/data/sky/tide-2026-10-03.json"
+        }
+      ],
+      "method": "Fetches the star catalogue, the constellation lines, satellite orbital elements, hourly weather and tide-gauge readings for the Sky panel of the 3D page (docklands/sky.js) and writes small JSON snapshots; the weather and tide files cover the London date given and the next day (the owner's photo evening, 3 October 2026).",
+      "rules": [
+        "Stars: Bright Star Catalogue rows with a J2000 position and V <= 5.5 (2,887); columns from the CDS ReadMe: HR 1-4, RA 76-83, Dec 84-90, Vmag 103-107, B-V 110-114; RA and Dec to 0.001 degree, V and B-V to 0.01; a missing B-V becomes 0.6; sorted by V.",
+        "Constellation lines: every line string kept; longitude turned into RA 0-360 degrees; coordinates rounded to 0.01 degree. The Milky Way outlines of the same repository are not fetched (no stated licence); the page computes the band from galactic coordinates.",
+        "Satellites: the three requests merged, one record per NORAD catalogue number; OMM fields kept as published. CelesTrak keeps no history, so a snapshot holds the elements current at fetch time (run within a day or two of the date). One request per group per run (CelesTrak: at most one download per 2 hours).",
+        "Weather: the forecast API's past hours (best_match model, UK Met Office UKV first for London; it has visibility, which the ERA5 archive lacks); values as published, hourly, London time.",
+        "Tide: 15-minute instantaneous readings in m AOD, UTC times, sorted; no gap filling; EA gives readings only, no predictions.",
+        "Network: User-Agent glitchcan-cwplans/0.1; three retries 3, 6 and 9 s apart on timeouts and 5xx (the agent proxy drops connections now and then); 4xx is not retried; files overwritten on every run."
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [],
+      "area": "sky",
+      "judgement": "Source choice and licence decisions (BSC5 as public domain, d3-celestial lines as BSD-3, CelesTrak with no stated licence and flagged for review, Vieira Milky Way outlines refused) are recorded in data-register.json sources and docklands/README.md \"Sky, time, weather and tide\"."
     },
     {
       "id": "fetch-trees",

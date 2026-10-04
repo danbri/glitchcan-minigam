@@ -132,7 +132,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
       <button type="button" data-view="area" aria-pressed="false">Whole area</button><button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button><button type="button" data-view="under" aria-pressed="false">Underground</button><button type="button" data-view="plan" aria-pressed="false">Plan</button><button type="button" data-view="rotherhithe" aria-pressed="false">Night from Rotherhithe</button><button type="button" data-view="greenland" aria-pressed="false">Night from Greenland Pier</button><button type="button" data-view="pier" aria-pressed="false">Night at Canary Wharf Pier</button><button type="button" id="digBtn" aria-pressed="false" aria-controls="gauge">Below ground</button>
     </div></div>
     <nav id="dtabs" role="tablist" aria-label="Panels">
-      <button type="button" role="tab" data-pane="paneLayers" aria-selected="false">Layers</button><button type="button" role="tab" data-pane="paneRoute" aria-selected="false">Route</button><button type="button" role="tab" data-pane="paneAbout" aria-selected="false">About</button>
+      <button type="button" role="tab" data-pane="paneLayers" aria-selected="false">Layers</button><button type="button" role="tab" data-pane="paneSky" aria-selected="false">Sky</button><button type="button" role="tab" data-pane="paneRoute" aria-selected="false">Route</button><button type="button" role="tab" data-pane="paneAbout" aria-selected="false">About</button>
     </nav>
     <div id="drawerBody">
     <div class="pane" id="paneRoute">
@@ -218,6 +218,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
         <span><i class="sw" style="background:var(--ell)"></i>Other Overground / rail</span><span><i class="sw" style="background:var(--tun)"></i>Road and foot tunnels</span><span><i class="sw" style="background:#f9c75a"></i>Published slab levels (Crossrail Place)</span><span><i class="sw" style="background:var(--water)"></i>Water</span><span><i class="sw" style="background:#e07a3f"></i>Tidal flood walls to their crest level (EA)</span><span><i class="sw" style="background:#2a4a6b"></i>Thames riverbed, UKHO soundings in m OD</span>
       </div></details>
     </div>
+    <div class="pane" id="paneSky"><p class="small">Loading the sky…</p></div>
     <div class="pane" id="paneAbout">
       <h2>Docklands: London Bridge to Cody Dock, Canary Wharf above and below ground</h2>
       <p class="small"><a href="../atlas/">atlas</a> · <a href="../">Canada Water corridor</a> · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/README.md">data notes</a> · <a href="../feeds/">feeds and APIs</a> · map data <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL), EA LiDAR, aerial photography and flood defences (OGL), UKHO (OGL), Wikidata (CC0), Copernicus Sentinel-2 · <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md">data licences</a></p>
@@ -240,6 +241,9 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
 <script src="data/area.js"></script>
 <script src="data/under.js"></script>
 <script src="opening-hours.js"></script>
+<script src="vendor/astronomy.browser.min.js"></script>
+<script src="vendor/satellite.min.js"></script>
+<script src="sky.js"></script>
 <script>
 (() => {
 'use strict';
@@ -357,7 +361,7 @@ gl.bindAttribLocation(prF, aP, 'p'); gl.bindAttribLocation(prF, aC, 'c'); gl.bin
 if (!gl.getProgramParameter(prF, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prF));
 const FU = n => gl.getUniformLocation(prF, n), fa = { p: gl.getAttribLocation(prF, 'p'), u: gl.getAttribLocation(prF, 'u'), c: gl.getAttribLocation(prF, 'c') };
 const fu = { pxm: FU('pxm'), eye: FU('eye'), m: FU('m'), vz: FU('vz'), box: FU('box'), a: FU('a'), cut: FU('cut'), night: FU('night'), roofTex: FU('roofTex'), win: FU('win'), tx: FU('tx'), ftx: FU('ftx'), fslot: FU('fslot'), ftex: FU('ftex'), viz: FU('viz'), bands: FU('bands'), vbox: FU('vbox'), vk: FU('vk'), time: FU('time') };
-const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })();
+const LIGHT = (() => { const l = [-.45, .8, -.35], n = Math.hypot(...l); return l.map(v => v / n); })(), LIGHT0 = LIGHT.slice();
 const shade = (col, nx, ny, nz) => { const l = Math.hypot(nx, ny, nz) || 1, k = .5 + .5 * Math.max(0, (nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]) / l); return [col[0] * k, col[1] * k, col[2] * k]; };
 
 // Mesh builder: interleaved [x y z] float + [r g b a] bytes = 16 bytes per vertex, 32-bit indices
@@ -665,7 +669,7 @@ function render() {
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); const nDim = nm ? (cutOn ? .6 : .12) : night ? .45 : 1; gl.uniform1f(uDim, nDim);
   gl.disable(gl.BLEND); gl.depthMask(true); gl.colorMask(true, true, true, true); gl.disable(gl.POLYGON_OFFSET_FILL);   // a fresh state every frame
-  if (nm) drawSky();   // night: the sky behind everything
+  if (nm || (!PIX.on && globalThis.DocklandsSky && DocklandsSky.day)) drawSky(nm);   // night (or the clock's day sky): the sky behind everything
   const sOnly = SPL.mode === 'only' && SPL.n;
   if (sOnly) {   // invisible occluders: depth only, pushed back a little so splats lying on a wall or the ground pass the test
     gl.colorMask(false, false, false, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 8);
@@ -699,7 +703,7 @@ function render() {
   drawGlow();
   if (L.hi || L.route) { gl.disable(gl.DEPTH_TEST); drawMesh(L.hi, .9); drawMesh(L.route, .95); gl.enable(gl.DEPTH_TEST); }
   if (PIX.on) pixEnd(w, h);
-  placeLabels();
+  placeLabels(); if (globalThis.DocklandsSky) DocklandsSky.after({ MVP, VZ, cssW: cv.clientWidth, cssH: cv.clientHeight, pix: PIX.on });
 }
 
 // ---------- input: drag rotates, right/shift/two-finger drag pans, wheel/pinch zooms, two-finger twist turns.
@@ -1127,39 +1131,12 @@ function drawGlow() {
 // there. Lights are additive soft sprites with a halo, which also stands in for bloom. README "Night".
 const NIGHT = { on: false, built: false, lights: null, refl: null, loop: 0, wl: 2.5, moon: null, moonAt: 0, n: {} };
 const nightOn = () => NIGHT.on && !PIX.on;
-const skyPr = gl.createProgram();
-gl.attachShader(skyPr, sh(gl.VERTEX_SHADER, 'attribute vec2 q;varying vec2 n;void main(){n=q;gl_Position=vec4(q,.9999,1.);}'));
-gl.attachShader(skyPr, sh(gl.FRAGMENT_SHADER, '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n' +
-  'varying vec2 n;uniform vec3 cr;uniform vec3 cu;uniform vec3 cf;uniform vec2 tn;uniform vec3 md;uniform vec3 sx;uniform float ci;uniform float mk;' +
-  'void main(){vec3 d=normalize(cf+n.x*tn.x*cr+n.y*tn.y*cu);float e=d.y;' +
-  'vec3 c=mix(vec3(.22,.20,.17),vec3(.10,.095,.09),smoothstep(-.02,.05,e));c=mix(c,vec3(.045,.044,.043),smoothstep(.04,.3,e));' +   // warm glow of the city at the horizon, near black above (measured from the photos: README Night)
-  'if(mk>.5){vec3 o=d-md;float a=length(o),R=.0095;c+=vec3(.20,.18,.15)*exp(-a*a/.00025)*.3;' +   // the moon, drawn at twice its apparent size, with a faint halo
-  'if(a<R*1.15){vec3 ya=normalize(cross(md,sx));float u=dot(o,sx)/R,v=dot(o,ya)/R,s=sqrt(max(0.,1.-v*v)),lit=smoothstep(-.06,.06,u+ci*s);' +
-  'c=mix(c,mix(vec3(.05,.05,.06),vec3(1.,.93,.80),lit),smoothstep(1.06,.94,a/R));}}' +
-  'gl_FragColor=vec4(c,1.);}'));
-gl.bindAttribLocation(skyPr, aP, 'q'); gl.linkProgram(skyPr);
-const KU = Object.fromEntries(['cr', 'cu', 'cf', 'tn', 'md', 'sx', 'ci', 'mk'].map(k => [k, gl.getUniformLocation(skyPr, k)]));
-// sun and moon for a date at Canary Wharf (low-precision formulas as in SunCalc / Meeus): direction in model axes
-// (x east, y up, -z north), the moon's phase angle
-function sunMoon(date, lat = 51.505, lon = -0.02) {
-  const rad = Math.PI / 180, d = date / 864e5 - .5 + 2440588 - 2451545, e = rad * 23.4397, phi = rad * lat, st = rad * (280.16 + 360.9856235 * d) + rad * lon;
-  const ra = (l, b) => Math.atan2(Math.sin(l) * Math.cos(e) - Math.tan(b) * Math.sin(e), Math.cos(l)), de = (l, b) => Math.asin(Math.sin(b) * Math.cos(e) + Math.cos(b) * Math.sin(e) * Math.sin(l));
-  const dir = (r, dc) => { const H = st - r, alt = Math.asin(Math.sin(phi) * Math.sin(dc) + Math.cos(phi) * Math.cos(dc) * Math.cos(H)), az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dc) * Math.cos(phi)) + Math.PI;
-    return [Math.sin(az) * Math.cos(alt), Math.sin(alt), -Math.cos(az) * Math.cos(alt)]; };
-  const M = rad * (357.5291 + .98560028 * d), Ls = M + rad * (1.9148 * Math.sin(M) + .02 * Math.sin(2 * M) + .0003 * Math.sin(3 * M)) + rad * 102.9372 + Math.PI, sRa = ra(Ls, 0), sDe = de(Ls, 0);
-  const Lm = rad * (218.316 + 13.176396 * d), Mm = rad * (134.963 + 13.064993 * d), F = rad * (93.272 + 13.229350 * d), l = Lm + rad * 6.289 * Math.sin(Mm), b = rad * 5.128 * Math.sin(F), dist = 385001 - 20905 * Math.cos(Mm), mRa = ra(l, b), mDe = de(l, b);
-  const p = Math.acos(Math.sin(sDe) * Math.sin(mDe) + Math.cos(sDe) * Math.cos(mDe) * Math.cos(sRa - mRa)), inc = Math.atan2(149598000 * Math.sin(p), dist - 149598000 * Math.cos(p));
-  return { sun: dir(sRa, sDe), moon: dir(mRa, mDe), phase: inc, lit: (1 + Math.cos(inc)) / 2 };
-}
-function drawSky() {
-  if (!NIGHT.moon || Date.now() - NIGHT.moonAt > 60000) { NIGHT.moon = sunMoon(Date.now()); NIGHT.moonAt = Date.now(); }
-  const V = VIEW, r = [V[0], V[4], V[8]], u = [V[1], V[5], V[9]], f = [-V[2], -V[6], -V[10]], t = Math.tan(CAM.fovY / 2), m = NIGHT.moon;
-  gl.useProgram(skyPr); gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
-  gl.uniform3fv(KU.cr, r); gl.uniform3fv(KU.cu, u); gl.uniform3fv(KU.cf, f); gl.uniform2f(KU.tn, t * CAM.aspect, t);
-  const md = m.moon, s = m.sun, k = dot(s, md), sx = nrm(s.map((v, i) => v - md[i] * k));   // towards the sun, across the moon's disc
-  gl.uniform3fv(KU.md, md); gl.uniform3fv(KU.sx, sx); gl.uniform1f(KU.ci, Math.cos(m.phase)); gl.uniform1f(KU.mk, md[1] > -.01 && !PIX.on ? 1 : 0);
-  gl.disableVertexAttribArray(aC); gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  gl.enableVertexAttribArray(aC); gl.useProgram(pr); gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
+// the sky (sun, moon, stars, planets, satellites, cloud) is drawn by sky.js for the page clock (Menu > Sky; README "Sky, time,
+// weather and tide"); this calls it and restores the state the scene expects
+const sunMoon = d => globalThis.DocklandsSky ? DocklandsSky.sunMoon(d) : { sun: [0, -1, 0], moon: [0, -1, 0], phase: 0, lit: 0 };
+function drawSky(nm) {
+  const S = globalThis.DocklandsSky; if (S) S.draw({ gl, VIEW, PROJ, CAM, VZ, aP, aC, nm, cssW: cv.clientWidth, cssH: cv.clientHeight });
+  gl.enableVertexAttribArray(aC); gl.useProgram(pr); gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.disable(gl.BLEND);
 }
 // light sprites: 4 vertices each, [x y z, corner qx qy, rgba, size m, px, halo, seed] = 40 bytes. px packs the smallest and
 // largest core radius in CSS pixels (min + 10 x round(max x 10)): a light has a size in metres, clamped on screen. refl = 1
@@ -1334,8 +1311,8 @@ function bloom(w, h) {
 function nightTick() { if (!nightOn()) { NIGHT.loop = 0; return; } draw(); NIGHT.loop = setTimeout(() => requestAnimationFrame(nightTick), 50); }   // ripples at about 20 frames a second
 function setNight(on) {
   NIGHT.on = on; $('nightMode').checked = on; clearTimeout(NIGHT.loop); NIGHT.loop = 0;
-  if (on) { if (!NIGHT.built) buildNightLights(); if (L.bld && !L.bld.kinds && NREG) buildBld(); const n = NIGHT.n, m = sunMoon(Date.now());
-    $('nightNote').hidden = false; $('nightNote').textContent = `Night: windows lit by building use (registry homes and occupants: homes warm, offices cool by floors), ${n.red.toLocaleString('en-GB')} red aviation lights on ${n.tall} buildings of 90 m or more (roof corners; every 52 m or less below the top from 150 m, as the Air Navigation Order asks), ${n.lamps.toLocaleString('en-GB')} lamps on the Thames walks (every 25 m within 15 m of the river), reflections of the lights near the water. The moon is at its real place now (${m.moon[1] > 0 ? `${Math.round(Math.asin(m.moon[1]) * 180 / Math.PI)}° up, ${Math.round(m.lit * 100)}% lit` : 'below the horizon'}). Window lights and lamp positions are drawn, not measured.`;
+  if (on) { if (!NIGHT.built) buildNightLights(); if (L.bld && !L.bld.kinds && NREG) buildBld(); const n = NIGHT.n, m = sunMoon(globalThis.DocklandsSky ? DocklandsSky.t : Date.now());
+    $('nightNote').hidden = false; $('nightNote').textContent = `Night: windows lit by building use (registry homes and occupants: homes warm, offices cool by floors), ${n.red.toLocaleString('en-GB')} red aviation lights on ${n.tall} buildings of 90 m or more (roof corners; every 52 m or less below the top from 150 m, as the Air Navigation Order asks), ${n.lamps.toLocaleString('en-GB')} lamps on the Thames walks (every 25 m within 15 m of the river), reflections of the lights near the water. The moon is at its real place for the time shown (Menu > Sky; ${m.moon[1] > 0 ? `${Math.round(Math.asin(m.moon[1]) * 180 / Math.PI)}° up, ${Math.round(m.lit * 100)}% lit` : 'below the horizon'}). Window lights and lamp positions are drawn, not measured.`;
     if (!PIX.on) nightTick(); }
   else $('nightNote').hidden = true;
   draw();
@@ -1839,6 +1816,9 @@ if (/[?&]night\b/.test(location.search)) setNight(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
 window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); },
+  // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
+  setTidal(v) { tidalLevel = v; buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; },
+  relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; delete cam.hfov; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };

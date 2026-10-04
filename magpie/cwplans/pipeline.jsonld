@@ -3425,6 +3425,75 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky",
+   "@type": "prov:Activity",
+   "rdfs:label": "fetch-sky",
+   "dct:description": "Fetches the star catalogue, the constellation lines, satellite orbital elements, hourly weather and tide-gauge readings for the Sky panel of the 3D page (docklands/sky.js) and writes small JSON snapshots; the weather and tide files cover the London date given and the next day (the owner's photo evening, 3 October 2026).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/yale-bsc5",
+     "dcat:accessURL": "https://cdsarc.cds.unistra.fr/ftp/V/50/catalog.gz",
+     "dct:description": "the whole catalogue, fixed-width text (gzip)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/d3-celestial",
+     "dcat:accessURL": "https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/constellations.lines.json",
+     "dct:description": "GeoJSON MultiLineString per constellation"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/celestrak",
+     "dcat:accessURL": "https://celestrak.org/NORAD/elements/gp.php",
+     "dct:description": "CATNR=25544 (ISS), CATNR=48274 (Tiangong), GROUP=visual; FORMAT=json (OMM)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/open-meteo",
+     "dcat:accessURL": "https://api.open-meteo.com/v1/forecast",
+     "dct:description": "latitude=51.505, longitude=-0.02, start_date=DATE, end_date=DATE+1, hourly cloud cover (total, low, mid, high), visibility, humidity, dew point, precipitation, weather code, temperature, wind; timezone Europe/London; model best_match"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-flood-monitoring",
+     "dcat:accessURL": "https://environment.data.gov.uk/flood-monitoring/id/measures/{station}-level-tidal_level-i-15_min-mAOD/readings",
+     "dct:description": "stations 0007 Tower Pier, 0003 Charlton, 0001 Silvertown; startdate=DATE, enddate=DATE+2, _sorted, _limit=1000; plus /id/stations/{station} for the position"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/stars.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/constellation-lines.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/sats-2026-10-03.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/weather-2026-10-03.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/tide-2026-10-03.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/fetch-sky.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [--date 2026-10-03]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Stars: Bright Star Catalogue rows with a J2000 position and V <= 5.5 (2,887); columns from the CDS ReadMe: HR 1-4, RA 76-83, Dec 84-90, Vmag 103-107, B-V 110-114; RA and Dec to 0.001 degree, V and B-V to 0.01; a missing B-V becomes 0.6; sorted by V.",
+    "Constellation lines: every line string kept; longitude turned into RA 0-360 degrees; coordinates rounded to 0.01 degree. The Milky Way outlines of the same repository are not fetched (no stated licence); the page computes the band from galactic coordinates.",
+    "Satellites: the three requests merged, one record per NORAD catalogue number; OMM fields kept as published. CelesTrak keeps no history, so a snapshot holds the elements current at fetch time (run within a day or two of the date). One request per group per run (CelesTrak: at most one download per 2 hours).",
+    "Weather: the forecast API's past hours (best_match model, UK Met Office UKV first for London; it has visibility, which the ERA5 archive lacks); values as published, hourly, London time.",
+    "Tide: 15-minute instantaneous readings in m AOD, UTC times, sorted; no gap filling; EA gives readings only, no predictions.",
+    "Network: User-Agent glitchcan-cwplans/0.1; three retries 3, 6 and 9 s apart on timeouts and 5xx (the agent proxy drops connections now and then); 4xx is not retried; files overwritten on every run."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [],
+   "cwp:area": "sky",
+   "cwp:fault": [],
+   "cwp:judgement": "Source choice and licence decisions (BSC5 as public domain, d3-celestial lines as BSD-3, CelesTrak with no stated licence and flagged for review, Vieira Milky Way outlines refused) are recorded in data-register.json sources and docklands/README.md \"Sky, time, weather and tide\"."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-trees",
    "@type": "prov:Activity",
    "rdfs:label": "fetch-trees",
@@ -6877,6 +6946,106 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/stars.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2,887 stars to V 5.5: HR number, J2000 RA and Dec (degrees), V magnitude, B-V; for the sky in the 3D page",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/yale-bsc5"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/constellation-lines.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "IAU constellation stick figures: line strings of J2000 RA/Dec, rounded to 0.01 degree",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/d3-celestial"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/sats-2026-10-03.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "orbital elements (OMM) of the ISS, Tiangong and about 150 bright satellites, fetched 4 October 2026, for the photo evening of 3 October",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/celestrak"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "CelesTrak states no licence; credited on the page"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/weather-2026-10-03.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "hourly weather at Canary Wharf for 3 and 4 October 2026 (London time): cloud by layer, visibility, humidity, dew point, rain, temperature, wind",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/open-meteo"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/tide-2026-10-03.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "15-minute tidal levels (m AOD, UTC) at Tower Pier, Charlton and Silvertown from 3 October 2026 00:00 UTC to the fetch time",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-flood-monitoring"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/sky.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the page clock, the sky (sun, moon, planets, Jupiter's moons, stars, constellation lines, Milky Way band, satellites, cloud and haze), weather and tide for the time shown, and the Sky panel",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/night-2026-10-03/promenade-skyline-railing.jpg",
    "@type": [
     "prov:Entity",
@@ -7837,6 +8006,61 @@
    ],
    "dct:title": "@factoidal/core 0.7.1 (npm), RDF parsing and SPARQL 1.1 engine used to load and query the structured data",
    "dct:license": "Apache-2.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/yale-bsc5",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Yale Bright Star Catalogue, 5th revised edition (Hoffleit & Warren 1991), CDS VizieR V/50",
+   "dct:license": "public domain (NASA Astronomical Data Center); CDS asks that catalogues be cited",
+   "dcat:landingPage": "https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50",
+   "cwp:attribution": "Yale Bright Star Catalogue, 5th ed. (Hoffleit & Warren 1991), via CDS"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/d3-celestial",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "d3-celestial data/constellations.lines.json (Olaf Frohn)",
+   "dct:license": "BSD-3-Clause (repository licence, Copyright (c) 2015 Olaf Frohn); lines after the IAU constellation charts",
+   "dcat:landingPage": "https://github.com/ofrohn/d3-celestial",
+   "cwp:attribution": "Constellation lines: d3-celestial, Olaf Frohn (BSD-3-Clause)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/celestrak",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "CelesTrak GP element sets (OMM JSON): ISS, Tiangong and the 'visual' group",
+   "dct:license": "no licence stated; US Government (18 SDS / Space-Track) orbital data republished by CelesTrak; usage policy: download only when needed, at most once per 2 hours, check errors",
+   "dcat:landingPage": "https://celestrak.org/NORAD/elements/",
+   "cwp:attribution": "Orbital data: CelesTrak"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/open-meteo",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Open-Meteo weather API (forecast API past hours and forecasts; archive API for older dates)",
+   "dct:license": "CC BY 4.0 (data); API free for non-commercial use",
+   "dcat:landingPage": "https://open-meteo.com/",
+   "cwp:attribution": "Weather data by Open-Meteo.com (CC BY 4.0)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-flood-monitoring",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Environment Agency real-time flood-monitoring API: tidal level readings at Tower Pier (0007), Charlton (0003) and Silvertown (0001)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+   "cwp:attribution": "This uses Environment Agency flood and river level data from the real-time data API (Beta)"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own",

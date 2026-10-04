@@ -280,8 +280,8 @@ function initGL(ctx) {
 }
 
 // how faint a star the sky shows: city (Bortle 8-9) or a dark site; twilight, moonlight and haze take magnitudes off
-function nelm() {
-  const A = S.A, h = A.sun.alt, base = S.dark ? 6.3 : 4.2; let n = base;
+function nelm() {   // Night style shows the night sky whatever the hour
+  const A = S.A, h = S.ctx && S.ctx.nm ? Math.min(A.sun.alt, -18) : A.sun.alt, base = S.dark ? 6.3 : 4.2; let n = base;
   if (h > -18) n = h < -6 ? Math.min(base, 2.2 + (base - 2.2) * (-6 - h) / 12) : h < 0 ? 2.2 - 3.4 * (h + 6) / 6 : -4.5;
   n -= (S.dark ? 1.2 : .35) * A.moon.frac * Math.max(0, Math.min(1, (A.moon.alt + 2) / 12));
   const w = S.wxNow; if (w && w.visibility != null) n -= Math.max(0, Math.min(1.2, (12000 - w.visibility) / 8000));
