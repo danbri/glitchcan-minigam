@@ -2,9 +2,9 @@
 // docklands/data/sky/. Method and rules: pipeline.json activity "fetch-sky"; lessons: docklands/README.md
 // "Sky, time, weather and tide".
 //
-//   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [--date 2026-10-03]
+//   NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [--date 2026-10-03]
 //
-// With no part named, all five run. --date picks the evening of the weather and tide snapshots (London date; the
+// With no part named, all seven run. --date picks the evening of the weather and tide snapshots (London date; the
 // snapshot covers that day and the next, so the hours after midnight are in it). Satellites are always the current
 // CelesTrak elements (CelesTrak keeps no history), so run "sats" within a day or two of the date.
 import { writeFileSync, mkdirSync } from 'fs';
@@ -83,4 +83,34 @@ if (want('tide')) {
   }
   save(`tide-${DATE}.json`, { source: 'Environment Agency real-time flood-monitoring API, tidal level readings', url: 'https://environment.data.gov.uk/flood-monitoring/doc/reference', fetched: new Date().toISOString(), licence: 'OGL v3.0',
     attribution: 'This uses Environment Agency flood and river level data from the real-time data API (Beta)', units: 'm AOD (Ordnance Datum Newlyn), 15-minute instantaneous readings, UTC', stations: out });
+}
+
+// 6. Star names: the IAU Catalog of Star Names (WGSN), the plain-text edition kept by the WGSN secretary (E. Mamajek).
+// IAU products are under CC BY ("free to use ... as long as the source is mentioned"); the names are facts. Kept: the
+// names of stars in our Bright Star Catalogue extract (joined by HR number), with the constellation; columns are read
+// by the positions of the header's column titles (names can hold spaces).
+if (want('names')) {
+  const u = 'https://www.pas.rochester.edu/~emamajek/WGSN/IAU-CSN.txt', txt = (await fetchRetry(u)).toString('utf8'), L = txt.split('\n');
+  const head = L.find(l => l.startsWith('#Name/ASCII')), at = k => head.indexOf(k), cut = (l, a, b) => l.slice(at(a), b ? at(b) : undefined).trim();
+  const stars = new Set(JSON.parse((await import('fs')).readFileSync(join(OUT, 'stars.json'), 'utf8')).stars.map(s => s[0])), names = [];
+  for (const l of L) { if (!l.trim() || l.startsWith('#') || l.startsWith('$')) continue; const des = cut(l, 'Designation', 'ID'), m = /^HR (\d+)$/.exec(des); if (!m || !stars.has(+m[1])) continue;
+    names.push([+m[1], cut(l, 'Name/Diacritics', 'Designation'), l.slice(at('Con'), at('Con') + 3).trim()]); }
+  names.sort((a, b) => a[0] - b[0]);
+  save('star-names.json', { source: 'IAU Catalog of Star Names (IAU-CSN), IAU Division C Working Group on Star Names (WGSN)', url: u, official: 'https://www.iau.org/public/themes/naming_stars/', fetched: today,
+    licence: 'CC BY (IAU products: "free to use ... as long as the source is mentioned"); credit the IAU WGSN', fields: ['hr', 'name', 'constellation'], count: names.length, names });
+}
+
+// 7. Messier objects: the HEASARC MESSIER table (NASA GSFC; 109 objects, M 102 left out as a duplicate of M 101),
+// compiled from Sky Catalog 2000.0 vol. 2 (Hirshfeld & Sinnott 1985). Positions J2000. A US Government (NASA) service:
+// no copyright claimed. Not OpenNGC (CC BY-SA). Kept: number, NGC, RA, Dec, V, the largest dimension (arcmin), type, name.
+if (want('messier')) {
+  const u = 'https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3query.pl?tablehead=name%3Dheasarc_messier&Action=Query&ResultMax=0&displaymode=BatchDisplay&Fields=All&Coordinates=Equatorial&Equinox=2000';
+  const L = (await fetchRetry(u)).toString('utf8').split('\n'), head = L.find(l => l.startsWith('|name')).split('|').map(s => s.trim()), objs = [];
+  for (const l of L) { if (!/^\|M /.test(l)) continue; const c = l.split('|').map(s => s.trim()), g = k => c[head.indexOf(k)];
+    const [rh, rm, rs] = g('ra').split(/\s+/).map(Number), dd = g('dec'), sg = dd.startsWith('-') ? -1 : 1, [d, dm, ds] = dd.replace('-', '').split(/\s+/).map(Number);
+    const dim = Math.max(...g('dimension').split(/X/i).map(Number).filter(isFinite));
+    objs.push([+g('name').slice(2), g('alt_name'), Math.round((rh + rm / 60 + rs / 3600) * 15 * 1000) / 1000, Math.round(sg * (d + dm / 60 + ds / 3600) * 1000) / 1000, +g('vmag'), dim || null, g('object_type'), g('notes').toLowerCase().replace(/\b\w/g, x => x.toUpperCase()).replace(/(?!^)\b(Or|And|Of|The|In)\b/g, w => w.toLowerCase())]); }
+  objs.sort((a, b) => a[0] - b[0]);
+  save('messier.json', { source: 'HEASARC MESSIER table (NASA GSFC), compiled from Sky Catalog 2000.0 vol. 2 (Hirshfeld & Sinnott 1985)', url: 'https://heasarc.gsfc.nasa.gov/W3Browse/all/messier.html', request: u, fetched: today,
+    licence: 'NASA HEASARC service, US Government work: no copyright claimed (public domain); positions and magnitudes are facts', fields: ['m', 'ngc', 'ra_deg_j2000', 'dec_deg_j2000', 'vmag', 'size_arcmin', 'type (OC open cluster, GB globular, DI diffuse nebula, PL planetary, S spiral, E elliptical, IR irregular)', 'name'], count: objs.length, objects: objs });
 }

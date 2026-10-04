@@ -83,7 +83,9 @@ Counts per source and the date range: README.
   Long roads still leak: a stop name such as "Monument" matches text about works nearby.
 - **The Gazette's `geo:Point` is the publisher's office, not the street** (Westminster notices carry a point in
   Canary Wharf: their agent). Filter on the issuing authority at the start of the notice text. The search `content`
-  is a snippet, often "London Borough of …", so the notice page is fetched for each hit.
+  is a snippet, often "London Borough of …", so the notice page is fetched for each hit. A borough is still too
+  wide (Southwark's East Dulwich and Lewisham's SE23 orders came back): an order that names postcode districts, none of
+  which reaches the zone (zone districts plus E3, EC2, EC4, SE1, SE14, SE15), is dropped and counted.
 - **Gazette robots.txt**: `Crawl-delay: 10`; `/notice/*/data.jsonld|.ttl|.rdf|.xml` and `?view=linked-data` are
   disallowed (one `data.jsonld` was fetched by mistake while probing on 2026-10-04; `?view=linked-data` answered 429).
   The tool fetches only `data.json` searches and `/notice/{id}` pages, 10 s apart. Submitter names (`f:name`,

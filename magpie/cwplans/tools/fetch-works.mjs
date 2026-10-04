@@ -53,6 +53,8 @@ const LONDON_BOROUGHS = ['Barking and Dagenham', 'Barnet', 'Bexley', 'Brent', 'B
   'Lewisham', 'Merton', 'Newham', 'Redbridge', 'Richmond', 'Southwark', 'Sutton', 'Tower Hamlets', 'Waltham Forest', 'Wandsworth', 'Westminster'];
 // postcode districts that lie (almost) wholly in the zone; E3, SE1, SE14 and SE15 reach far outside it and are not used
 const ZONE_DISTRICTS = ['E1', 'E1W', 'E14', 'E16', 'EC3*', 'SE8', 'SE10', 'SE16'];
+// districts that reach into the zone at all (for dropping orders that name only districts elsewhere)
+const TOUCH_DISTRICTS = [...ZONE_DISTRICTS, 'E3', 'EC2*', 'EC4*', 'SE1', 'SE14', 'SE15'];
 const boroughIn = text => { const t = String(text || '').toLowerCase(); const b = LONDON_BOROUGHS.find(n => t.includes(n.toLowerCase())); return b || null; };
 const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 const r6 = v => v == null ? null : Math.round(v * 1e6) / 1e6;
@@ -385,7 +387,7 @@ const AUTH = [['Tower Hamlets', /london borough of tower hamlets|tower hamlets c
   ['Lewisham', /london borough of lewisham|lewisham council/i], ['Greenwich', /royal borough of greenwich/i], ['Newham', /london borough of newham|newham council/i],
   ['City of London', /city of london corporation|corporation of london|common council of the city of london|the city of london \(/i]];
 async function gazette() {
-  const since = addDays(TODAY, -120), found = new Map(), counts = { searches: 0, search_hits: 0, notices: 0, fetched_pages: 0, kept: 0, dropped_other_authority: 0 };
+  const since = addDays(TODAY, -120), found = new Map(), counts = { searches: 0, search_hits: 0, notices: 0, fetched_pages: 0, kept: 0, dropped_other_authority: 0, dropped_districts_outside: 0 };
   for (const [name] of AUTH) for (const type of ['1501', '1503']) {
     const q = `noticetypes=${type}&text=${encodeURIComponent(`"${name}"`)}&start-publish-date=${since}&results-page-size=100`;
     const r = await cached(`gazette-search-${type}-${name.replace(/\W+/g, '-')}.json`, `https://www.thegazette.co.uk/all-notices/notice/data.json?${q}`);
@@ -406,20 +408,25 @@ async function gazette() {
     const tfl = /transport for london/i.test(head);
     if (!auth && tfl) { const b = BOROUGHS.find(x => new RegExp(x.replace(/ /g, '\\s+'), 'i').test(text.slice(0, 1500))); auth = b ? `${b} (TfL)` : null; }
     if (!auth) { counts.dropped_other_authority++; continue; }
+    // postcode districts named in the order: an order that names only districts outside the zone is dropped
+    const districts = [...new Set([...text.matchAll(/\b((?:EC|E|SE)\d{1,2}[A-Z]?)\b(?:\s+\d[A-Z]{2})?/g)].map(m => m[1]))];
+    const touch = d => TOUCH_DISTRICTS.some(z => z.endsWith('*') ? d.startsWith(z.slice(0, -1)) : d === z);
+    if (districts.length && !districts.some(touch)) { counts.dropped_districts_outside++; continue; }
     counts.kept++;
     const temporary = /temporary|section 14\b|s\.?\s?14\(|section 16a|experimental/i.test(text);
     const dates = [...text.matchAll(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d\d)\b/g)].map(m => new Date(`${m[1]} ${m[2]} ${m[3]} 12:00Z`).toISOString().slice(0, 10));
     const future = [...new Set(dates)].filter(d => d >= n.published.slice(0, 10)).sort();
     items.push({
       id: `gazette:${n.id}`, kind: temporary ? 'TTRO' : 'traffic order', title: cut(head.replace(/^(notice)\s+/i, ''), 300), start: future[0] || n.published.slice(0, 10), end: future.length > 1 ? future.at(-1) : null,
-      dates_in_text: future.slice(0, 12), published: n.published.slice(0, 10), location: auth, borough: auth.replace(/ \(TfL\)$/, ''), lat: null, lon: null, zone: 'borough',
-      placed_by: 'issuing authority (the Gazette geo point is the publisher office)', notice_type: n.type === '1501' ? 'Road Traffic Acts' : 'Highways', temporary,
+      dates_in_text: future.slice(0, 12), published: n.published.slice(0, 10), location: districts.length ? `${auth}: ${districts.join(', ')}` : auth, borough: auth.replace(/ \(TfL\)$/, ''),
+      postcode: districts.filter(touch).join(', ') || null, lat: null, lon: null, zone: districts.some(touch) ? 'district' : 'borough',
+      placed_by: districts.some(touch) ? 'issuing authority and a postcode district in the text' : 'issuing authority only (the Gazette geo point is the publisher office)', notice_type: n.type === '1501' ? 'Road Traffic Acts' : 'Highways', temporary,
       url: `https://www.thegazette.co.uk/notice/${n.id}`,
     });
   }
   write('gazette', { url: 'https://www.thegazette.co.uk/all-notices/notice/data.json (noticetypes 1501, 1503) and https://www.thegazette.co.uk/notice/{id}', ...LICENCES.ogl,
     attribution: 'Contains public sector information licensed under the Open Government Licence v3.0 (The Gazette)',
-    method: `Search per zone authority (${BOROUGHS.join(', ')}) and notice type (1501 Road Traffic Acts, 1503 Highways), published since ${since}; full notice page for each (10 s between requests, robots.txt Crawl-delay); kept when the notice opens with a zone authority, or with Transport for London and names a zone borough. "TTRO" = text says temporary, section 14, 16A or experimental. Dates are the day-month-year phrases in the text on or after publication (the order's dates, often also consultation dates). Submitter and signatory names dropped.`,
+    method: `Search per zone authority (${BOROUGHS.join(', ')}) and notice type (1501 Road Traffic Acts, 1503 Highways), published since ${since}; full notice page for each (10 s between requests, robots.txt Crawl-delay); kept when the notice opens with a zone authority, or with Transport for London and names a zone borough; dropped when it names postcode districts and none reaches the zone (${TOUCH_DISTRICTS.join(', ')}). "TTRO" = text says temporary, section 14, 16A or experimental. Dates are the day-month-year phrases in the text on or after publication (the order's dates, often also consultation dates). Submitter and signatory names dropped.`,
     since, counts }, items);
 }
 

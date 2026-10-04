@@ -1,0 +1,50 @@
+{"type":"FeatureCollection","meta":{
+ "source": "London Datastore: Cultural Infrastructure Map 2024 (Greater London Authority)",
+ "dataset": "2zj1y",
+ "page": "https://data.london.gov.uk/dataset/cultural-infrastructure-map-2024-2zj1y",
+ "resources": [
+  {
+   "resource": "5f5276e2-5972-4f0f-89c3-cf165b06ae0f",
+   "file": "culture_inf_2024_lgbt_venues.csv",
+   "url": "https://data.london.gov.uk/download/2zj1y/5f5276e2-5972-4f0f-89c3-cf165b06ae0f/culture_inf_2024_lgbt_venues.csv",
+   "size": 11073,
+   "resource_date": "2024-12-17",
+   "fetched": "2026-10-04"
+  }
+ ],
+ "licence": "Open Government Licence v3",
+ "licence_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+ "attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data (London Datastore terms).",
+ "dataset_modified": "2024-12-19",
+ "update_frequency": "One off",
+ "geo": "Coordinates",
+ "theme": "occupants-organisations",
+ "layers": [
+  {
+   "table": "culture_inf_2024_lgbt_venues.csv",
+   "srs": 4326,
+   "columns": [
+    "longitude",
+    "latitude"
+   ]
+  }
+ ],
+ "crs_source": "EPSG:4326",
+ "crs_output": "EPSG:4326 (WGS84), 6 decimal places; BNG to WGS84 through the OS OSTN15 grid (lib.mjs bngProjector)",
+ "method": "walk-london-datastore.mjs harvest cultural-infrastructure-2024: download the newest matching resource (csv); read every feature; keep a feature whose geometry meets the zone (the 3D model box, BNG E 532400-539900, N 176700-182300; WGS84 -0.095, 51.474, 0.015, 51.522): a vertex inside, an edge crossing the box or the box inside a polygon. Whole geometries are kept (not cut at the box): whole_in_zone says whether all of it lies inside. in_cw: the geometry meets the Canary Wharf registry box -0.03, 51.498, -0.005, 51.51. Source attributes kept as published except fields matching e-?mail|phone|tel(ephone)?$|^tel|contact|^fax|mobile|website_contact|^owner_?name|person (none are expected).",
+ "counts": {
+  "source_features": 60,
+  "no_geometry": 0,
+  "in_zone": 6,
+  "in_cw": 0
+ },
+ "fields_dropped": []
+},
+"features":[
+{"type":"Feature","properties":{"objectid":"23","name":"George & Dragon, The","address1":"2 Blackheath Hill","address2":null,"address3":"SE10 8DE","borough_name":"Greenwich","postcode":"SE10 8DE","website":"http://www.georgedragon.com/","os_addressbase_uprn":"10010199835","latitude":"51.47284598","longitude":"-0.014952004","borough_code":"E09000011","ward_2022_name":"Greenwich Park","ward_2022_code":"E05014081","open_status":"1","status":"Open","uniqueid":"22_020","vid":null,"ukregistrationnumber":null,"dunsnumber":null,"in_cw":false,"whole_in_zone":true},"geometry":{"type":"Point","coordinates":[-0.014952,51.472846]}},
+{"type":"Feature","properties":{"objectid":"35","name":"Lord Clyde, The","address1":"9 Wotton Road","address2":null,"address3":"SE8 5TQ","borough_name":"Lewisham","postcode":"SE8 3FT","website":"https://www.instagram.com/thelordclyde.se8/","os_addressbase_uprn":"10010244524","latitude":"51.4810851","longitude":"-0.0333351","borough_code":"E09000023","ward_2022_name":"Deptford","ward_2022_code":"E05013719","open_status":"1","status":"Open","uniqueid":"24_035","vid":null,"ukregistrationnumber":null,"dunsnumber":null,"in_cw":false,"whole_in_zone":true},"geometry":{"type":"Point","coordinates":[-0.033335,51.481085]}},
+{"type":"Feature","properties":{"objectid":"38","name":"Old Ship, The","address1":"17 Barnes Street","address2":null,"address3":"E14 7NW","borough_name":"Tower Hamlets","postcode":"E14 7NW","website":"www.oldship.net","os_addressbase_uprn":"6045231","latitude":"51.5139121","longitude":"-0.039873459","borough_code":"E09000030","ward_2022_name":"St Dunstan's","ward_2022_code":"E05009329","open_status":"1","status":"Open","uniqueid":"24_038","vid":null,"ukregistrationnumber":null,"dunsnumber":null,"in_cw":false,"whole_in_zone":true},"geometry":{"type":"Point","coordinates":[-0.039873,51.513912]}},
+{"type":"Feature","properties":{"objectid":"43","name":"Rose and Crown","address1":"1 Crooms Hill","address2":null,"address3":"SE10 8ER","borough_name":"Greenwich","postcode":"SE10 8ER","website":"https://www.greeneking.co.uk/pubs/greater-london/ye-olde-rose-and-crown","os_addressbase_uprn":"10010200404","latitude":"51.47871233","longitude":"-0.007712625","borough_code":"E09000011","ward_2022_name":"Greenwich Park","ward_2022_code":"E05014081","open_status":"1","status":"Open","uniqueid":"22_035","vid":null,"ukregistrationnumber":null,"dunsnumber":null,"in_cw":false,"whole_in_zone":true},"geometry":{"type":"Point","coordinates":[-0.007713,51.478712]}},
+{"type":"Feature","properties":{"objectid":"49","name":"Triangle","address1":"34 Watson's Street","address2":null,"address3":"SE8 4AU","borough_name":"Lewisham","postcode":"SE8 4AU","website":"https://www.instagram.com/triangledeptford/","os_addressbase_uprn":"1E+11","latitude":"51.4764932","longitude":"-0.0325543","borough_code":"E09000023","ward_2022_name":"Deptford","ward_2022_code":"E05013719","open_status":"1","status":"Open","uniqueid":"24_049","vid":null,"ukregistrationnumber":null,"dunsnumber":null,"in_cw":false,"whole_in_zone":true},"geometry":{"type":"Point","coordinates":[-0.032554,51.476493]}},
+{"type":"Feature","properties":{"objectid":"57","name":"White Swan, The","address1":"556 Commercial Road","address2":null,"address3":"E14 7JD","borough_name":"Tower Hamlets","postcode":"E14 7JD","website":"http://www.bjswhiteswan.com","os_addressbase_uprn":"6047411","latitude":"51.5126047","longitude":"-0.040203411","borough_code":"E09000030","ward_2022_name":"Shadwell","ward_2022_code":"E05009332","open_status":"1","status":"Open","uniqueid":"22_050","vid":null,"ukregistrationnumber":null,"dunsnumber":null,"in_cw":false,"whole_in_zone":true},"geometry":{"type":"Point","coordinates":[-0.040203,51.512605]}}
+]}

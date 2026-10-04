@@ -30,3 +30,6 @@ data/raw/works/
 
 # London Datastore raw downloads (tools/walk-london-datastore.mjs)
 data/raw/london-datastore/
+
+# live-state raw downloads (tools/fetch-live.mjs)
+data/raw/live/
