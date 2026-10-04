@@ -3705,6 +3705,11 @@
           "request": "run 20o91: 1 resources chosen by the rules (areas-that-qualify-for-eco_csco-support.xls)"
         },
         {
+          "source": "lds-20og1",
+          "endpoint": "https://data.london.gov.uk/download/20og1/<resource id>/<file>",
+          "request": "run 20og1: 5 resources chosen by the rules (trends-in-overcrowding-data.xls, housing-characteristics-data.xls, tenure-by-economic-activity-data.xls, tenure-by-ns-sec-data.xlsx, visualisation-data-housing.zip)"
+        },
+        {
           "source": "lds-20oj9",
           "endpoint": "https://data.london.gov.uk/download/20oj9/<resource id>/<file>",
           "request": "run 20oj9: 2 resources chosen by the rules (gla-debt-advice-clients-combined-2010-11-supressed.xls, gla-debt-advice-clients-combined-2011-12-supressed.xls)"
@@ -3790,6 +3795,11 @@
           "request": "run 24rz6: 8 resources chosen by the rules (2015  PTALs Grid Values.zip, LSOA2001 AvPTAI2015.csv, LSOA2011 AvPTAI2015.csv, COA2011 AvPTAI2015.csv, WPZone2011 AvPTAI2015.csv, Ward2011 AvPTAI2015.csv, Ward2014 AvPTAI2015.csv, Borough AvPTAI2015.csv)"
         },
         {
+          "source": "lds-24y36",
+          "endpoint": "https://data.london.gov.uk/download/24y36/<resource id>/<file>",
+          "request": "run 24y36: 4 resources chosen by the rules (gender-pay-gap.xlsx, London Gender Pay Gap Data - 2023 to 2024.xlsx, UK Gender Pay Gap Data - 2023 to 2024.xlsx, Gender pay gap by SIC2007 UK London.xlsx)"
+        },
+        {
           "source": "lds-24yxz",
           "endpoint": "https://data.london.gov.uk/download/24yxz/<resource id>/<file>",
           "request": "run 24yxz: 1 resources chosen by the rules (Housing_Zones.gpkg)"
@@ -3815,9 +3825,19 @@
           "request": "run 29z80: 1 resources chosen by the rules (London HIS indicators data - February 2026.xlsx)"
         },
         {
+          "source": "lds-29z9o",
+          "endpoint": "https://data.london.gov.uk/download/29z9o/<resource id>/<file>",
+          "request": "run 29z9o: 1 resources chosen by the rules (london-loneliness-MSOA-LSOA.xlsx)"
+        },
+        {
           "source": "lds-2g1p1",
           "endpoint": "https://data.london.gov.uk/download/2g1p1/<resource id>/<file>",
           "request": "run 2g1p1: 2 resources chosen by the rules (lsoa-police-front-counter-travel-times-2013.zip, police-counters.csv)"
+        },
+        {
+          "source": "lds-2g1rn",
+          "endpoint": "https://data.london.gov.uk/download/2g1rn/<resource id>/<file>",
+          "request": "run 2g1rn: 3 resources chosen by the rules (gla-decs-phase-1.zip, gla-decs-phase-2.zip, gla-decs-phase-3.zip)"
         },
         {
           "source": "lds-2g1zq",
@@ -3885,6 +3905,16 @@
           "request": "run 2jxm6: 3 resources chosen by the rules (EDI evidence base for London chart data June 2019 update.xlsx, EDI evidence base for London chart data.xlsx, EDI evidence base for London background tables.zip)"
         },
         {
+          "source": "lds-2jxzj",
+          "endpoint": "https://data.london.gov.uk/download/2jxzj/<resource id>/<file>",
+          "request": "run 2jxzj: 2 resources chosen by the rules (Fuel Poverty Low Income Low Energy Efficiency.xlsx, fuel poverty.xlsx)"
+        },
+        {
+          "source": "lds-2k533",
+          "endpoint": "https://data.london.gov.uk/download/2k533/<resource id>/<file>",
+          "request": "run 2k533: 1 resources chosen by the rules (M2045_MPS_Antisocial_Behaviour.csv)"
+        },
+        {
           "source": "lds-2k843",
           "endpoint": "https://data.london.gov.uk/download/2k843/<resource id>/<file>",
           "request": "run 2k843: 1 resources chosen by the rules (london-ward-well-being-probability-scores.zip)"
@@ -3913,6 +3943,16 @@
           "source": "lds-2kodd",
           "endpoint": "https://data.london.gov.uk/download/2kodd/<resource id>/<file>",
           "request": "run 2kodd: 1 resources chosen by the rules (Low_Emission_Zone.gpkg)"
+        },
+        {
+          "source": "lds-2kokr",
+          "endpoint": "https://data.london.gov.uk/download/2kokr/<resource id>/<file>",
+          "request": "run 2kokr: 1 resources chosen by the rules (local-by-election-results-since-2010-london.xls)"
+        },
+        {
+          "source": "lds-2l15g",
+          "endpoint": "https://data.london.gov.uk/download/2l15g/<resource id>/<file>",
+          "request": "run 2l15g: 5 resources chosen by the rules (London wards id2019 summary measures.xlsx, ID 2019 for London.xlsx, ID 2015 for London.xls, IMD MAPS.zip, gla-deprivation-indices-ward-2007.csv)"
         },
         {
           "source": "lds-2l4gg",
@@ -3948,6 +3988,11 @@
           "source": "lds-2nln8",
           "endpoint": "https://data.london.gov.uk/download/2nln8/<resource id>/<file>",
           "request": "run 2nln8: 9 resources chosen by the rules (summary.csv, bbox.csv, modelled_OA_rents.csv, MyLondon_fare_zone_OA.csv, MyLondon_LOAC_area_description_text_v3.csv, MyLondon_postcode_OA.csv, MyLondon_traveltime_to_Bank_station_OA.csv, MyLondonSchoolsCatchmentv2.csv, bbox-lsoa.csv)"
+        },
+        {
+          "source": "lds-2nplx",
+          "endpoint": "https://data.london.gov.uk/download/2nplx/<resource id>/<file>",
+          "request": "run 2nplx: 4 resources chosen by the rules (gla-elections-votes-party-borough-2008.csv, gla-ward-postal-turnouts-2008.xls, gla-elections-votes-ward-2008.xls, First-and-second-votes-matrix-borough-constituency-london.xls)"
         },
         {
           "source": "lds-2og0w",
@@ -4040,9 +4085,19 @@
           "request": "run 2w9lz: 12 resources chosen by the rules (Mapping-template-for-wards-B&D.xls, Mapping-template-for-wards-Barnet.xls, Mapping-template-for-wards-Bexley.xls, Mapping-template-for-wards-Brent.xls, Mapping-template-for-wards-Bromley.xls, Mapping-template-for-wards-Camden.xls, Mapping-template-for-wards-Croydon.xls, Mapping-template-for-wards-Ea)"
         },
         {
+          "source": "lds-2w9wz",
+          "endpoint": "https://data.london.gov.uk/download/2w9wz/<resource id>/<file>",
+          "request": "run 2w9wz: 2 resources chosen by the rules (visualisation-data-health.zip, health-&-disability-data.xlsx)"
+        },
+        {
           "source": "lds-2wwq4",
           "endpoint": "https://data.london.gov.uk/download/2wwq4/<resource id>/<file>",
           "request": "run 2wwq4: 3 resources chosen by the rules (Interim_2024_based_housing_led_projections_central.xlsx, Interim_2024_based_housing_led_projections_high.xlsx, Interim_2024_based_housing_led_projections_low.xlsx)"
+        },
+        {
+          "source": "lds-2wz1y",
+          "endpoint": "https://data.london.gov.uk/download/2wz1y/<resource id>/<file>",
+          "request": "run 2wz1y: 3 resources chosen by the rules (local-elections-votes-party-2006.csv, local-elections-statistics-ward-2006.xls, local-elections-candidate-votes-ward-2006.csv)"
         },
         {
           "source": "lds-2wzwz",
@@ -4068,6 +4123,11 @@
           "source": "lds-2z0yn",
           "endpoint": "https://data.london.gov.uk/download/2z0yn/<resource id>/<file>",
           "request": "run 2z0yn: 2 resources chosen by the rules (msoa-data.csv, msoa-data-old-boundaries.csv)"
+        },
+        {
+          "source": "lds-2zw9q",
+          "endpoint": "https://data.london.gov.uk/download/2zw9q/<resource id>/<file>",
+          "request": "run 2zw9q: 1 resources chosen by the rules (detailed ethnic group x age x sex tool.zip)"
         },
         {
           "source": "lds-2zwwy",
@@ -4135,6 +4195,11 @@
           "request": "run e55pw: 1 resources chosen by the rules (London_Boroughs.gpkg)"
         },
         {
+          "source": "lds-e585w",
+          "endpoint": "https://data.london.gov.uk/download/e585w/<resource id>/<file>",
+          "request": "run e585w: 2 resources chosen by the rules (gla-elections-votes-party-borough-2004.csv, gla-elections-votes-ward-2004.xls)"
+        },
+        {
           "source": "lds-e5mkx",
           "endpoint": "https://data.london.gov.uk/download/e5mkx/<resource id>/<file>",
           "request": "run e5mkx: 1 resources chosen by the rules (London-Ward-Fuel-Poverty-Scores.xls)"
@@ -4180,9 +4245,24 @@
           "request": "run e6wp0: 3 resources chosen by the rules (London_SHLAA_2017_approvals_and_allocations.zip, SHLAA 2017 Appendix D Approvals.xlsx, SHLAA 2017 Appendix E Allocations.xlsx)"
         },
         {
+          "source": "lds-e70pq",
+          "endpoint": "https://data.london.gov.uk/download/e70pq/<resource id>/<file>",
+          "request": "run e70pq: 4 resources chosen by the rules (LGIF hex results (01.04.26).csv, LGIF data dictionary.xlsx, Hex350_grid_GLA.zip, LGIF change log.xlsx)"
+        },
+        {
           "source": "lds-e710q",
           "endpoint": "https://data.london.gov.uk/download/e710q/<resource id>/<file>",
           "request": "run e710q: 1 resources chosen by the rules (particulate-air-pollution-mortality.csv)"
+        },
+        {
+          "source": "lds-e716q",
+          "endpoint": "https://data.london.gov.uk/download/e716q/<resource id>/<file>",
+          "request": "run e716q: 4 resources chosen by the rules (parliamentary-constituency-profiles-data.csv, london-parliamentary-constituency-profiles-2010.xls, london-parliamentary-constituency-profiles-2010-with-maps.xls, LSOA_to_Ward13_to_Parl_Cons-LONDONonly.xls)"
+        },
+        {
+          "source": "lds-e790q",
+          "endpoint": "https://data.london.gov.uk/download/e790q/<resource id>/<file>",
+          "request": "run e790q: 6 resources chosen by the rules (2011-census-comparison-data.xls, london-unrounded-data.xls, ward-pop-ONS-GLA-Census.xls, population-base-tool.zip, 2011-census-comparator-chart.xls, household-and-ce-population.xlsx)"
         },
         {
           "source": "lds-e79kk",
@@ -4210,6 +4290,11 @@
           "request": "run em875: 5 resources chosen by the rules (GLA_assets.csv, LFB_assets.csv, LLDC_assets.csv, Met_assets.csv, TFL_assets.csv)"
         },
         {
+          "source": "lds-em8qy",
+          "endpoint": "https://data.london.gov.uk/download/em8qy/<resource id>/<file>",
+          "request": "run em8qy: 3 resources chosen by the rules (tfl-tube-performance.xlsx, multi-year-station-entry-and-exit-figures.xls, lu-performance-data.xlsx)"
+        },
+        {
           "source": "lds-em9rg",
           "endpoint": "https://data.london.gov.uk/download/em9rg/<resource id>/<file>",
           "request": "run em9rg: 1 resources chosen by the rules (ethnic-group-ward-2001.csv)"
@@ -4228,6 +4313,11 @@
           "source": "lds-emqkp",
           "endpoint": "https://data.london.gov.uk/download/emqkp/<resource id>/<file>",
           "request": "run emqkp: 1 resources chosen by the rules (LP_2016_town_centre_points.zip)"
+        },
+        {
+          "source": "lds-emqzm",
+          "endpoint": "https://data.london.gov.uk/download/emqzm/<resource id>/<file>",
+          "request": "run emqzm: 3 resources chosen by the rules (green_cover_borough_summary_0.05.xlsx, green_cover_ward_summary_0.05.xlsx, tile_grid_467_bng_GLA.zip)"
         },
         {
           "source": "lds-ep0rw",
@@ -4250,6 +4340,16 @@
           "request": "run ep8xy: 1 resources chosen by the rules (Claimant Count Time Series.xlsx)"
         },
         {
+          "source": "lds-ep8zy",
+          "endpoint": "https://data.london.gov.uk/download/ep8zy/<resource id>/<file>",
+          "request": "run ep8zy: 3 resources chosen by the rules (detailed-country-birth-2011-borough.csv, Top Countries of birth in London.xlsx, countries of birth by ward tool.xlsx)"
+        },
+        {
+          "source": "lds-ex9jd",
+          "endpoint": "https://data.london.gov.uk/download/ex9jd/<resource id>/<file>",
+          "request": "run ex9jd: 2 resources chosen by the rules (gla_modelled_estimates_series_WD22_London_2011_2022_wide.csv, population_msoa11_2010_to_2011.csv)"
+        },
+        {
           "source": "lds-exgxp",
           "endpoint": "https://data.london.gov.uk/download/exgxp/<resource id>/<file>",
           "request": "run exgxp: 2 resources chosen by the rules (lda-brownfield-land-2009-10-shp.zip, lda-brownfield-land-2009-10-tab.zip)"
@@ -4258,6 +4358,11 @@
           "source": "lds-exprl",
           "endpoint": "https://data.london.gov.uk/download/exprl/<resource id>/<file>",
           "request": "run exprl: 3 resources chosen by the rules (ward-profiles-excel-version.csv, ward-atlas-data.csv, ward-atlas-2014boundaries.xls)"
+        },
+        {
+          "source": "lds-expxp",
+          "endpoint": "https://data.london.gov.uk/download/expxp/<resource id>/<file>",
+          "request": "run expxp: 2 resources chosen by the rules (visualisation-data-households.zip, dependent-children-data.xlsx)"
         },
         {
           "source": "lds-exy3m",
@@ -4310,6 +4415,16 @@
           "request": "run v8o11: 1 resources chosen by the rules (Internet-user-classification.xlsx)"
         },
         {
+          "source": "lds-v8o87",
+          "endpoint": "https://data.london.gov.uk/download/v8o87/<resource id>/<file>",
+          "request": "run v8o87: 1 resources chosen by the rules (AoLR Data collection 2017.csv)"
+        },
+        {
+          "source": "lds-v8o91",
+          "endpoint": "https://data.london.gov.uk/download/v8o91/<resource id>/<file>",
+          "request": "run v8o91: 1 resources chosen by the rules (Propensity for Social Exclusion of Older People in London Data.xlsx)"
+        },
+        {
           "source": "lds-v8onw",
           "endpoint": "https://data.london.gov.uk/download/v8onw/<resource id>/<file>",
           "request": "run v8onw: 2 resources chosen by the rules (ULEZCentral_CongestionChargingZone.zip, CentralUltraLowEmissionZone.gpkg)"
@@ -4323,6 +4438,11 @@
           "source": "lds-vd455",
           "endpoint": "https://data.london.gov.uk/download/vd455/<resource id>/<file>",
           "request": "run vd455: 1 resources chosen by the rules (LondonWideUltraLowEmissionZone.gpkg)"
+        },
+        {
+          "source": "lds-vd4q4",
+          "endpoint": "https://data.london.gov.uk/download/vd4q4/<resource id>/<file>",
+          "request": "run vd4q4: 6 resources chosen by the rules (total_fertility_rates_wards.csv, total_fertility_rates_msoa.csv, age_specific_fertility_rates_wards.csv, age_specific_fertility_rates_msoa.csv, total_fertility_rates.csv, age_specific_fertility_rates.csv)"
         },
         {
           "source": "lds-vd615",
@@ -4343,6 +4463,11 @@
           "source": "lds-vdjx4",
           "endpoint": "https://data.london.gov.uk/download/vdjx4/<resource id>/<file>",
           "request": "run vdjx4: 1 resources chosen by the rules (InnerUltraLowEmissionZone.gpkg)"
+        },
+        {
+          "source": "lds-vdjyn",
+          "endpoint": "https://data.london.gov.uk/download/vdjyn/<resource id>/<file>",
+          "request": "run vdjyn: 1 resources chosen by the rules (elected-representatives-london.xlsx)"
         },
         {
           "source": "lds-vdjz5",
@@ -4385,6 +4510,9 @@
         },
         {
           "file": "feeds/london-datastore/areas-that-qualify-for-carbon-saving-community/areas-that-qualify-for-carbon-saving-community.json"
+        },
+        {
+          "file": "feeds/london-datastore/2011-census-housing/2011-census-housing.json"
         },
         {
           "file": "feeds/london-datastore/london-debt-advice-clients/london-debt-advice-clients.json"
@@ -4444,6 +4572,9 @@
           "file": "feeds/london-datastore/public-transport-accessibility-levels/public-transport-accessibility-levels.json"
         },
         {
+          "file": "feeds/london-datastore/gender-pay-gaps-in-london/gender-pay-gaps-in-london.json"
+        },
+        {
           "file": "feeds/london-datastore/housing-zones/housing-zones.geojson"
         },
         {
@@ -4462,10 +4593,19 @@
           "file": "feeds/london-datastore/london-health-inequalities-strategy-indicators/london-health-inequalities-strategy-indicators.json"
         },
         {
+          "file": "feeds/london-datastore/probability-of-loneliness-for-those-aged-65-and/probability-of-loneliness-for-those-aged-65-and.json"
+        },
+        {
           "file": "feeds/london-datastore/police-front-counter-access-times/police-front-counter-access-times.geojson"
         },
         {
           "file": "feeds/london-datastore/police-front-counter-access-times/police-front-counter-access-times.json"
+        },
+        {
+          "file": "feeds/london-datastore/decentralised-energy-capacity-study/decentralised-energy-capacity-study.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/decentralised-energy-capacity-study/decentralised-energy-capacity-study.json"
         },
         {
           "file": "feeds/london-datastore/super-output-area-population-lsoa-msoa-london/super-output-area-population-lsoa-msoa-london.json"
@@ -4510,6 +4650,12 @@
           "file": "feeds/london-datastore/equality-diversity-and-inclusion-evidence-base/equality-diversity-and-inclusion-evidence-base.json"
         },
         {
+          "file": "feeds/london-datastore/fuel-poverty/fuel-poverty.json"
+        },
+        {
+          "file": "feeds/london-datastore/mps-antisocialbehaviour/mps-antisocialbehaviour.json"
+        },
+        {
           "file": "feeds/london-datastore/london-ward-well-being-scores/london-ward-well-being-scores.json"
         },
         {
@@ -4529,6 +4675,12 @@
         },
         {
           "file": "feeds/london-datastore/low-emission-zone/low-emission-zone.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/local-authority-by-election-results/local-authority-by-election-results.json"
+        },
+        {
+          "file": "feeds/london-datastore/indices-of-deprivation/indices-of-deprivation.json"
         },
         {
           "file": "feeds/london-datastore/characteristics-of-pupils-living-in-london/characteristics-of-pupils-living-in-london.json"
@@ -4553,6 +4705,9 @@
         },
         {
           "file": "feeds/london-datastore/mylondon/mylondon.json"
+        },
+        {
+          "file": "feeds/london-datastore/london-elections-results-2008-borough/london-elections-results-2008-borough.json"
         },
         {
           "file": "feeds/london-datastore/geographic-lookups-for-london/geographic-lookups-for-london.json"
@@ -4609,7 +4764,13 @@
           "file": "feeds/london-datastore/excel-mapping-template-for-london-boroughs-and/excel-mapping-template-for-london-boroughs-and.json"
         },
         {
+          "file": "feeds/london-datastore/2011-census-health-and-care/2011-census-health-and-care.json"
+        },
+        {
           "file": "feeds/london-datastore/interim-2024-based-housing-led-population/interim-2024-based-housing-led-population.json"
+        },
+        {
+          "file": "feeds/london-datastore/council-elections-voters-2006/council-elections-voters-2006.json"
         },
         {
           "file": "feeds/london-datastore/london-underground-signals-passed-at-danger/london-underground-signals-passed-at-danger.json"
@@ -4625,6 +4786,9 @@
         },
         {
           "file": "feeds/london-datastore/msoa-atlas/msoa-atlas.json"
+        },
+        {
+          "file": "feeds/london-datastore/detailed-ethnicity-by-age-and-sex-ward-tools/detailed-ethnicity-by-age-and-sex-ward-tools.json"
         },
         {
           "file": "feeds/london-datastore/approved-food-establishments/approved-food-establishments.geojson"
@@ -4669,6 +4833,9 @@
           "file": "feeds/london-datastore/london-boroughs/london-boroughs.geojson"
         },
         {
+          "file": "feeds/london-datastore/london-elections-results-2004-borough/london-elections-results-2004-borough.json"
+        },
+        {
           "file": "feeds/london-datastore/london-fuel-poverty-risk-indicators-wards/london-fuel-poverty-risk-indicators-wards.json"
         },
         {
@@ -4699,7 +4866,16 @@
           "file": "feeds/london-datastore/strategic-housing-land-availability-assessment/strategic-housing-land-availability-assessment.geojson"
         },
         {
+          "file": "feeds/london-datastore/london-green-infrastructure-framework-lgif/london-green-infrastructure-framework-lgif.geojson"
+        },
+        {
           "file": "feeds/london-datastore/estimation-of-health-impacts-of-particulate/estimation-of-health-impacts-of-particulate.json"
+        },
+        {
+          "file": "feeds/london-datastore/london-parliamentary-constituency-profiles-2010/london-parliamentary-constituency-profiles-2010.json"
+        },
+        {
+          "file": "feeds/london-datastore/2011-census-demography/2011-census-demography.json"
         },
         {
           "file": "feeds/london-datastore/london-elections-results-2012-wards-boroughs/london-elections-results-2012-wards-boroughs.json"
@@ -4720,6 +4896,9 @@
           "file": "feeds/london-datastore/gla-group-land-assets/gla-group-land-assets.json"
         },
         {
+          "file": "feeds/london-datastore/london-underground-performance-reports/london-underground-performance-reports.json"
+        },
+        {
           "file": "feeds/london-datastore/ethnic-group-by-ward-2001/ethnic-group-by-ward-2001.json"
         },
         {
@@ -4730,6 +4909,12 @@
         },
         {
           "file": "feeds/london-datastore/town-centre-locations-london-plan-2016/town-centre-locations-london-plan-2016.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/london-green-and-blue-cover/london-green-and-blue-cover.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/london-green-and-blue-cover/london-green-and-blue-cover.json"
         },
         {
           "file": "feeds/london-datastore/opportunity-area-points-london-plan/opportunity-area-points-london-plan.geojson"
@@ -4744,10 +4929,19 @@
           "file": "feeds/london-datastore/gla-claimant-count-model-output/gla-claimant-count-model-output.json"
         },
         {
+          "file": "feeds/london-datastore/detailed-country-of-birth-2011-census-borough/detailed-country-of-birth-2011-census-borough.json"
+        },
+        {
+          "file": "feeds/london-datastore/modelled-population-backseries/modelled-population-backseries.json"
+        },
+        {
           "file": "feeds/london-datastore/london-brownfield-sites-review/london-brownfield-sites-review.geojson"
         },
         {
           "file": "feeds/london-datastore/ward-profiles-and-atlas/ward-profiles-and-atlas.json"
+        },
+        {
+          "file": "feeds/london-datastore/2011-census-households-and-families/2011-census-households-and-families.json"
         },
         {
           "file": "feeds/london-datastore/mps-recorded-crime-geographic-breakdown/mps-recorded-crime-geographic-breakdown.json"
@@ -4780,6 +4974,12 @@
           "file": "feeds/london-datastore/2014-internet-user-classification-iuc-lsoa/2014-internet-user-classification-iuc-lsoa.json"
         },
         {
+          "file": "feeds/london-datastore/assessment-of-local-risks-supporting-the-london/assessment-of-local-risks-supporting-the-london.json"
+        },
+        {
+          "file": "feeds/london-datastore/propensity-for-social-exclusion-of-older-people/propensity-for-social-exclusion-of-older-people.json"
+        },
+        {
           "file": "feeds/london-datastore/ultra-low-emissions-zone-2019/ultra-low-emissions-zone-2019.geojson"
         },
         {
@@ -4787,6 +4987,9 @@
         },
         {
           "file": "feeds/london-datastore/london-wide-ultra-low-emission-zone-2023/london-wide-ultra-low-emission-zone-2023.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/age-specific-fertility-rates/age-specific-fertility-rates.json"
         },
         {
           "file": "feeds/london-datastore/office-for-national-statistics-ons-population/office-for-national-statistics-ons-population.json"
@@ -4799,6 +5002,9 @@
         },
         {
           "file": "feeds/london-datastore/inner-ultra-low-emissions-zone-expansion-2021/inner-ultra-low-emissions-zone-expansion-2021.geojson"
+        },
+        {
+          "file": "feeds/london-datastore/elected-representatives-london/elected-representatives-london.json"
         },
         {
           "file": "feeds/london-datastore/borough-council-election-results-2018/borough-council-election-results-2018.json"
@@ -4865,6 +5071,7 @@
         "hand rule 2r401: Breathe London AQMesh pods: a time series of sensor readings with the pod position on every row (65 MB CSV; the zone rows came to 42 MB as points); the readings belong to a time-series store, not the repository; the pod positions alone are in the Breathe London network listing",
         "hand rule e64on: the London-wide postcode files (2010 and later) and the LSOA summaries, kept as tables; the tab-delimited twins and the 33 per-borough files repeat them (13 MB with the duplicates as points)",
         "hand rule 2zj4k: Royal Docks Grant Data: the whole dataset is about the Royal Docks (title and publisher, the Royal Docks Enterprise Zone team); its rows name projects, not areas: every row kept (key \"whole dataset\")",
+        "hand rule epr1g: OS Code-Point Open (2014 copy on the Datastore): the zone postcodes with their positions came to 25 MB; the project holds the newer ONSPD August 2026 positions of the same postcodes (postcodes/, zone-codes.json)",
         "hand rule e55gn: postcode rows with coordinates kept as a table (8,217 zone postcodes: 1.5 MB as rows, 11.8 MB as GeoJSON points)",
         "hand rule 2jkxd: the workbooks (one row per area, years across); the CSVs (89 MB for LSOA) hold the same figures one row per area and year",
         "hand rule ep8xy: the time series workbook; the five yearly model workbooks (2011-2015, 8.6 MB each) repeat it month by month",

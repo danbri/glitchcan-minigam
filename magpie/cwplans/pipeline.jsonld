@@ -4058,6 +4058,11 @@
      "dct:description": "run 20o91: 1 resources chosen by the rules (areas-that-qualify-for-eco_csco-support.xls)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20og1",
+     "dcat:accessURL": "https://data.london.gov.uk/download/20og1/<resource id>/<file>",
+     "dct:description": "run 20og1: 5 resources chosen by the rules (trends-in-overcrowding-data.xls, housing-characteristics-data.xls, tenure-by-economic-activity-data.xls, tenure-by-ns-sec-data.xlsx, visualisation-data-housing.zip)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20oj9",
      "dcat:accessURL": "https://data.london.gov.uk/download/20oj9/<resource id>/<file>",
      "dct:description": "run 20oj9: 2 resources chosen by the rules (gla-debt-advice-clients-combined-2010-11-supressed.xls, gla-debt-advice-clients-combined-2011-12-supressed.xls)"
@@ -4143,6 +4148,11 @@
      "dct:description": "run 24rz6: 8 resources chosen by the rules (2015  PTALs Grid Values.zip, LSOA2001 AvPTAI2015.csv, LSOA2011 AvPTAI2015.csv, COA2011 AvPTAI2015.csv, WPZone2011 AvPTAI2015.csv, Ward2011 AvPTAI2015.csv, Ward2014 AvPTAI2015.csv, Borough AvPTAI2015.csv)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24y36",
+     "dcat:accessURL": "https://data.london.gov.uk/download/24y36/<resource id>/<file>",
+     "dct:description": "run 24y36: 4 resources chosen by the rules (gender-pay-gap.xlsx, London Gender Pay Gap Data - 2023 to 2024.xlsx, UK Gender Pay Gap Data - 2023 to 2024.xlsx, Gender pay gap by SIC2007 UK London.xlsx)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24yxz",
      "dcat:accessURL": "https://data.london.gov.uk/download/24yxz/<resource id>/<file>",
      "dct:description": "run 24yxz: 1 resources chosen by the rules (Housing_Zones.gpkg)"
@@ -4168,9 +4178,19 @@
      "dct:description": "run 29z80: 1 resources chosen by the rules (London HIS indicators data - February 2026.xlsx)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-29z9o",
+     "dcat:accessURL": "https://data.london.gov.uk/download/29z9o/<resource id>/<file>",
+     "dct:description": "run 29z9o: 1 resources chosen by the rules (london-loneliness-MSOA-LSOA.xlsx)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g1p1",
      "dcat:accessURL": "https://data.london.gov.uk/download/2g1p1/<resource id>/<file>",
      "dct:description": "run 2g1p1: 2 resources chosen by the rules (lsoa-police-front-counter-travel-times-2013.zip, police-counters.csv)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g1rn",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2g1rn/<resource id>/<file>",
+     "dct:description": "run 2g1rn: 3 resources chosen by the rules (gla-decs-phase-1.zip, gla-decs-phase-2.zip, gla-decs-phase-3.zip)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g1zq",
@@ -4238,6 +4258,16 @@
      "dct:description": "run 2jxm6: 3 resources chosen by the rules (EDI evidence base for London chart data June 2019 update.xlsx, EDI evidence base for London chart data.xlsx, EDI evidence base for London background tables.zip)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jxzj",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2jxzj/<resource id>/<file>",
+     "dct:description": "run 2jxzj: 2 resources chosen by the rules (Fuel Poverty Low Income Low Energy Efficiency.xlsx, fuel poverty.xlsx)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2k533",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2k533/<resource id>/<file>",
+     "dct:description": "run 2k533: 1 resources chosen by the rules (M2045_MPS_Antisocial_Behaviour.csv)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2k843",
      "dcat:accessURL": "https://data.london.gov.uk/download/2k843/<resource id>/<file>",
      "dct:description": "run 2k843: 1 resources chosen by the rules (london-ward-well-being-probability-scores.zip)"
@@ -4266,6 +4296,16 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2kodd",
      "dcat:accessURL": "https://data.london.gov.uk/download/2kodd/<resource id>/<file>",
      "dct:description": "run 2kodd: 1 resources chosen by the rules (Low_Emission_Zone.gpkg)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2kokr",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2kokr/<resource id>/<file>",
+     "dct:description": "run 2kokr: 1 resources chosen by the rules (local-by-election-results-since-2010-london.xls)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2l15g",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2l15g/<resource id>/<file>",
+     "dct:description": "run 2l15g: 5 resources chosen by the rules (London wards id2019 summary measures.xlsx, ID 2019 for London.xlsx, ID 2015 for London.xls, IMD MAPS.zip, gla-deprivation-indices-ward-2007.csv)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2l4gg",
@@ -4301,6 +4341,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2nln8",
      "dcat:accessURL": "https://data.london.gov.uk/download/2nln8/<resource id>/<file>",
      "dct:description": "run 2nln8: 9 resources chosen by the rules (summary.csv, bbox.csv, modelled_OA_rents.csv, MyLondon_fare_zone_OA.csv, MyLondon_LOAC_area_description_text_v3.csv, MyLondon_postcode_OA.csv, MyLondon_traveltime_to_Bank_station_OA.csv, MyLondonSchoolsCatchmentv2.csv, bbox-lsoa.csv)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2nplx",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2nplx/<resource id>/<file>",
+     "dct:description": "run 2nplx: 4 resources chosen by the rules (gla-elections-votes-party-borough-2008.csv, gla-ward-postal-turnouts-2008.xls, gla-elections-votes-ward-2008.xls, First-and-second-votes-matrix-borough-constituency-london.xls)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2og0w",
@@ -4393,9 +4438,19 @@
      "dct:description": "run 2w9lz: 12 resources chosen by the rules (Mapping-template-for-wards-B&D.xls, Mapping-template-for-wards-Barnet.xls, Mapping-template-for-wards-Bexley.xls, Mapping-template-for-wards-Brent.xls, Mapping-template-for-wards-Bromley.xls, Mapping-template-for-wards-Camden.xls, Mapping-template-for-wards-Croydon.xls, Mapping-template-for-wards-Ea)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2w9wz",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2w9wz/<resource id>/<file>",
+     "dct:description": "run 2w9wz: 2 resources chosen by the rules (visualisation-data-health.zip, health-&-disability-data.xlsx)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2wwq4",
      "dcat:accessURL": "https://data.london.gov.uk/download/2wwq4/<resource id>/<file>",
      "dct:description": "run 2wwq4: 3 resources chosen by the rules (Interim_2024_based_housing_led_projections_central.xlsx, Interim_2024_based_housing_led_projections_high.xlsx, Interim_2024_based_housing_led_projections_low.xlsx)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2wz1y",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2wz1y/<resource id>/<file>",
+     "dct:description": "run 2wz1y: 3 resources chosen by the rules (local-elections-votes-party-2006.csv, local-elections-statistics-ward-2006.xls, local-elections-candidate-votes-ward-2006.csv)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2wzwz",
@@ -4421,6 +4476,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2z0yn",
      "dcat:accessURL": "https://data.london.gov.uk/download/2z0yn/<resource id>/<file>",
      "dct:description": "run 2z0yn: 2 resources chosen by the rules (msoa-data.csv, msoa-data-old-boundaries.csv)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2zw9q",
+     "dcat:accessURL": "https://data.london.gov.uk/download/2zw9q/<resource id>/<file>",
+     "dct:description": "run 2zw9q: 1 resources chosen by the rules (detailed ethnic group x age x sex tool.zip)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2zwwy",
@@ -4488,6 +4548,11 @@
      "dct:description": "run e55pw: 1 resources chosen by the rules (London_Boroughs.gpkg)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e585w",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e585w/<resource id>/<file>",
+     "dct:description": "run e585w: 2 resources chosen by the rules (gla-elections-votes-party-borough-2004.csv, gla-elections-votes-ward-2004.xls)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e5mkx",
      "dcat:accessURL": "https://data.london.gov.uk/download/e5mkx/<resource id>/<file>",
      "dct:description": "run e5mkx: 1 resources chosen by the rules (London-Ward-Fuel-Poverty-Scores.xls)"
@@ -4533,9 +4598,24 @@
      "dct:description": "run e6wp0: 3 resources chosen by the rules (London_SHLAA_2017_approvals_and_allocations.zip, SHLAA 2017 Appendix D Approvals.xlsx, SHLAA 2017 Appendix E Allocations.xlsx)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e70pq",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e70pq/<resource id>/<file>",
+     "dct:description": "run e70pq: 4 resources chosen by the rules (LGIF hex results (01.04.26).csv, LGIF data dictionary.xlsx, Hex350_grid_GLA.zip, LGIF change log.xlsx)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e710q",
      "dcat:accessURL": "https://data.london.gov.uk/download/e710q/<resource id>/<file>",
      "dct:description": "run e710q: 1 resources chosen by the rules (particulate-air-pollution-mortality.csv)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e716q",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e716q/<resource id>/<file>",
+     "dct:description": "run e716q: 4 resources chosen by the rules (parliamentary-constituency-profiles-data.csv, london-parliamentary-constituency-profiles-2010.xls, london-parliamentary-constituency-profiles-2010-with-maps.xls, LSOA_to_Ward13_to_Parl_Cons-LONDONonly.xls)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e790q",
+     "dcat:accessURL": "https://data.london.gov.uk/download/e790q/<resource id>/<file>",
+     "dct:description": "run e790q: 6 resources chosen by the rules (2011-census-comparison-data.xls, london-unrounded-data.xls, ward-pop-ONS-GLA-Census.xls, population-base-tool.zip, 2011-census-comparator-chart.xls, household-and-ce-population.xlsx)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e79kk",
@@ -4563,6 +4643,11 @@
      "dct:description": "run em875: 5 resources chosen by the rules (GLA_assets.csv, LFB_assets.csv, LLDC_assets.csv, Met_assets.csv, TFL_assets.csv)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-em8qy",
+     "dcat:accessURL": "https://data.london.gov.uk/download/em8qy/<resource id>/<file>",
+     "dct:description": "run em8qy: 3 resources chosen by the rules (tfl-tube-performance.xlsx, multi-year-station-entry-and-exit-figures.xls, lu-performance-data.xlsx)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-em9rg",
      "dcat:accessURL": "https://data.london.gov.uk/download/em9rg/<resource id>/<file>",
      "dct:description": "run em9rg: 1 resources chosen by the rules (ethnic-group-ward-2001.csv)"
@@ -4581,6 +4666,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqkp",
      "dcat:accessURL": "https://data.london.gov.uk/download/emqkp/<resource id>/<file>",
      "dct:description": "run emqkp: 1 resources chosen by the rules (LP_2016_town_centre_points.zip)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqzm",
+     "dcat:accessURL": "https://data.london.gov.uk/download/emqzm/<resource id>/<file>",
+     "dct:description": "run emqzm: 3 resources chosen by the rules (green_cover_borough_summary_0.05.xlsx, green_cover_ward_summary_0.05.xlsx, tile_grid_467_bng_GLA.zip)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-ep0rw",
@@ -4603,6 +4693,16 @@
      "dct:description": "run ep8xy: 1 resources chosen by the rules (Claimant Count Time Series.xlsx)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-ep8zy",
+     "dcat:accessURL": "https://data.london.gov.uk/download/ep8zy/<resource id>/<file>",
+     "dct:description": "run ep8zy: 3 resources chosen by the rules (detailed-country-birth-2011-borough.csv, Top Countries of birth in London.xlsx, countries of birth by ward tool.xlsx)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-ex9jd",
+     "dcat:accessURL": "https://data.london.gov.uk/download/ex9jd/<resource id>/<file>",
+     "dct:description": "run ex9jd: 2 resources chosen by the rules (gla_modelled_estimates_series_WD22_London_2011_2022_wide.csv, population_msoa11_2010_to_2011.csv)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exgxp",
      "dcat:accessURL": "https://data.london.gov.uk/download/exgxp/<resource id>/<file>",
      "dct:description": "run exgxp: 2 resources chosen by the rules (lda-brownfield-land-2009-10-shp.zip, lda-brownfield-land-2009-10-tab.zip)"
@@ -4611,6 +4711,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exprl",
      "dcat:accessURL": "https://data.london.gov.uk/download/exprl/<resource id>/<file>",
      "dct:description": "run exprl: 3 resources chosen by the rules (ward-profiles-excel-version.csv, ward-atlas-data.csv, ward-atlas-2014boundaries.xls)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-expxp",
+     "dcat:accessURL": "https://data.london.gov.uk/download/expxp/<resource id>/<file>",
+     "dct:description": "run expxp: 2 resources chosen by the rules (visualisation-data-households.zip, dependent-children-data.xlsx)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-exy3m",
@@ -4663,6 +4768,16 @@
      "dct:description": "run v8o11: 1 resources chosen by the rules (Internet-user-classification.xlsx)"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-v8o87",
+     "dcat:accessURL": "https://data.london.gov.uk/download/v8o87/<resource id>/<file>",
+     "dct:description": "run v8o87: 1 resources chosen by the rules (AoLR Data collection 2017.csv)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-v8o91",
+     "dcat:accessURL": "https://data.london.gov.uk/download/v8o91/<resource id>/<file>",
+     "dct:description": "run v8o91: 1 resources chosen by the rules (Propensity for Social Exclusion of Older People in London Data.xlsx)"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-v8onw",
      "dcat:accessURL": "https://data.london.gov.uk/download/v8onw/<resource id>/<file>",
      "dct:description": "run v8onw: 2 resources chosen by the rules (ULEZCentral_CongestionChargingZone.zip, CentralUltraLowEmissionZone.gpkg)"
@@ -4676,6 +4791,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vd455",
      "dcat:accessURL": "https://data.london.gov.uk/download/vd455/<resource id>/<file>",
      "dct:description": "run vd455: 1 resources chosen by the rules (LondonWideUltraLowEmissionZone.gpkg)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vd4q4",
+     "dcat:accessURL": "https://data.london.gov.uk/download/vd4q4/<resource id>/<file>",
+     "dct:description": "run vd4q4: 6 resources chosen by the rules (total_fertility_rates_wards.csv, total_fertility_rates_msoa.csv, age_specific_fertility_rates_wards.csv, age_specific_fertility_rates_msoa.csv, total_fertility_rates.csv, age_specific_fertility_rates.csv)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vd615",
@@ -4696,6 +4816,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdjx4",
      "dcat:accessURL": "https://data.london.gov.uk/download/vdjx4/<resource id>/<file>",
      "dct:description": "run vdjx4: 1 resources chosen by the rules (InnerUltraLowEmissionZone.gpkg)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdjyn",
+     "dcat:accessURL": "https://data.london.gov.uk/download/vdjyn/<resource id>/<file>",
+     "dct:description": "run vdjyn: 1 resources chosen by the rules (elected-representatives-london.xlsx)"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdjz5",
@@ -4738,6 +4863,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/areas-that-qualify-for-carbon-saving-community/areas-that-qualify-for-carbon-saving-community.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-housing/2011-census-housing.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-debt-advice-clients/london-debt-advice-clients.json"
@@ -4797,6 +4925,9 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/public-transport-accessibility-levels/public-transport-accessibility-levels.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/gender-pay-gaps-in-london/gender-pay-gaps-in-london.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/housing-zones/housing-zones.geojson"
     },
     {
@@ -4815,10 +4946,19 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-health-inequalities-strategy-indicators/london-health-inequalities-strategy-indicators.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/probability-of-loneliness-for-those-aged-65-and/probability-of-loneliness-for-those-aged-65-and.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/police-front-counter-access-times/police-front-counter-access-times.geojson"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/police-front-counter-access-times/police-front-counter-access-times.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/decentralised-energy-capacity-study/decentralised-energy-capacity-study.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/decentralised-energy-capacity-study/decentralised-energy-capacity-study.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/super-output-area-population-lsoa-msoa-london/super-output-area-population-lsoa-msoa-london.json"
@@ -4863,6 +5003,12 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/equality-diversity-and-inclusion-evidence-base/equality-diversity-and-inclusion-evidence-base.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/fuel-poverty/fuel-poverty.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/mps-antisocialbehaviour/mps-antisocialbehaviour.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-ward-well-being-scores/london-ward-well-being-scores.json"
     },
     {
@@ -4882,6 +5028,12 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/low-emission-zone/low-emission-zone.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/local-authority-by-election-results/local-authority-by-election-results.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/indices-of-deprivation/indices-of-deprivation.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/characteristics-of-pupils-living-in-london/characteristics-of-pupils-living-in-london.json"
@@ -4906,6 +5058,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/mylondon/mylondon.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-elections-results-2008-borough/london-elections-results-2008-borough.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/geographic-lookups-for-london/geographic-lookups-for-london.json"
@@ -4962,7 +5117,13 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/excel-mapping-template-for-london-boroughs-and/excel-mapping-template-for-london-boroughs-and.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-health-and-care/2011-census-health-and-care.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/interim-2024-based-housing-led-population/interim-2024-based-housing-led-population.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/council-elections-voters-2006/council-elections-voters-2006.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-underground-signals-passed-at-danger/london-underground-signals-passed-at-danger.json"
@@ -4978,6 +5139,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/msoa-atlas/msoa-atlas.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/detailed-ethnicity-by-age-and-sex-ward-tools/detailed-ethnicity-by-age-and-sex-ward-tools.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/approved-food-establishments/approved-food-establishments.geojson"
@@ -5022,6 +5186,9 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-boroughs/london-boroughs.geojson"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-elections-results-2004-borough/london-elections-results-2004-borough.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-fuel-poverty-risk-indicators-wards/london-fuel-poverty-risk-indicators-wards.json"
     },
     {
@@ -5052,7 +5219,16 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/strategic-housing-land-availability-assessment/strategic-housing-land-availability-assessment.geojson"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-green-infrastructure-framework-lgif/london-green-infrastructure-framework-lgif.geojson"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/estimation-of-health-impacts-of-particulate/estimation-of-health-impacts-of-particulate.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-parliamentary-constituency-profiles-2010/london-parliamentary-constituency-profiles-2010.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-demography/2011-census-demography.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-elections-results-2012-wards-boroughs/london-elections-results-2012-wards-boroughs.json"
@@ -5073,6 +5249,9 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/gla-group-land-assets/gla-group-land-assets.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-underground-performance-reports/london-underground-performance-reports.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/ethnic-group-by-ward-2001/ethnic-group-by-ward-2001.json"
     },
     {
@@ -5083,6 +5262,12 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/town-centre-locations-london-plan-2016/town-centre-locations-london-plan-2016.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-green-and-blue-cover/london-green-and-blue-cover.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-green-and-blue-cover/london-green-and-blue-cover.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/opportunity-area-points-london-plan/opportunity-area-points-london-plan.geojson"
@@ -5097,10 +5282,19 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/gla-claimant-count-model-output/gla-claimant-count-model-output.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/detailed-country-of-birth-2011-census-borough/detailed-country-of-birth-2011-census-borough.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/modelled-population-backseries/modelled-population-backseries.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-brownfield-sites-review/london-brownfield-sites-review.geojson"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/ward-profiles-and-atlas/ward-profiles-and-atlas.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-households-and-families/2011-census-households-and-families.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/mps-recorded-crime-geographic-breakdown/mps-recorded-crime-geographic-breakdown.json"
@@ -5133,6 +5327,12 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2014-internet-user-classification-iuc-lsoa/2014-internet-user-classification-iuc-lsoa.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/assessment-of-local-risks-supporting-the-london/assessment-of-local-risks-supporting-the-london.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/propensity-for-social-exclusion-of-older-people/propensity-for-social-exclusion-of-older-people.json"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/ultra-low-emissions-zone-2019/ultra-low-emissions-zone-2019.geojson"
     },
     {
@@ -5140,6 +5340,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-wide-ultra-low-emission-zone-2023/london-wide-ultra-low-emission-zone-2023.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/age-specific-fertility-rates/age-specific-fertility-rates.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/office-for-national-statistics-ons-population/office-for-national-statistics-ons-population.json"
@@ -5152,6 +5355,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/inner-ultra-low-emissions-zone-expansion-2021/inner-ultra-low-emissions-zone-expansion-2021.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/elected-representatives-london/elected-representatives-london.json"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/borough-council-election-results-2018/borough-council-election-results-2018.json"
@@ -5222,6 +5428,7 @@
     "hand rule 2r401: Breathe London AQMesh pods: a time series of sensor readings with the pod position on every row (65 MB CSV; the zone rows came to 42 MB as points); the readings belong to a time-series store, not the repository; the pod positions alone are in the Breathe London network listing",
     "hand rule e64on: the London-wide postcode files (2010 and later) and the LSOA summaries, kept as tables; the tab-delimited twins and the 33 per-borough files repeat them (13 MB with the duplicates as points)",
     "hand rule 2zj4k: Royal Docks Grant Data: the whole dataset is about the Royal Docks (title and publisher, the Royal Docks Enterprise Zone team); its rows name projects, not areas: every row kept (key \"whole dataset\")",
+    "hand rule epr1g: OS Code-Point Open (2014 copy on the Datastore): the zone postcodes with their positions came to 25 MB; the project holds the newer ONSPD August 2026 positions of the same postcodes (postcodes/, zone-codes.json)",
     "hand rule e55gn: postcode rows with coordinates kept as a table (8,217 zone postcodes: 1.5 MB as rows, 11.8 MB as GeoJSON points)",
     "hand rule 2jkxd: the workbooks (one row per area, years across); the CSVs (89 MB for LSOA) hold the same figures one row per area and year",
     "hand rule ep8xy: the time series workbook; the five yearly model workbooks (2011-2015, 8.6 MB each) repeat it month by month",
@@ -15061,6 +15268,507 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-housing/2011-census-housing.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2011 Census Housing: 2925 zone rows of 54091 in 123 tables (keys: lsoa 2529, city 9, ward 387); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20og1"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/gender-pay-gaps-in-london/gender-pay-gaps-in-london.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Gender Pay Gaps in London: 1235 zone rows of 13945 in 8 tables (keys: postcode 1235); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24y36"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/probability-of-loneliness-for-those-aged-65-and/probability-of-loneliness-for-those-aged-65-and.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Probability of loneliness for those aged 65 and over: 352 zone rows of 5885 in 4 tables (keys: msoa 71, lsoa 281); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-29z9o"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/decentralised-energy-capacity-study/decentralised-energy-capacity-study.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Decentralised Energy Capacity Study: 574 features that meet the 3D model box (of 8748 read), 80 in the Canary Wharf box; GeoJSON WGS84 with a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g1rn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/decentralised-energy-capacity-study/decentralised-energy-capacity-study.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Decentralised Energy Capacity Study: 10584 zone rows of 187829 in 223 tables (keys: msoa 7402, lsoa 3173, postcode 9); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g1rn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/fuel-poverty/fuel-poverty.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Fuel Poverty: 544 zone rows of 9859 in 7 tables (keys: lsoa 544); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jxzj"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/mps-antisocialbehaviour/mps-antisocialbehaviour.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "MPS AntiSocialBehaviour: 29144 zone rows of 250449 in 1 tables (keys: sector 4472, ward 24672); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2k533"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/local-authority-by-election-results/local-authority-by-election-results.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Local Authority By-Election Results: 11 zone rows of 305 in 1 tables (keys: ward2003 8, ward 3); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2kokr"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/indices-of-deprivation/indices-of-deprivation.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Indices of Deprivation: 7032 zone rows of 307698 in 49 tables (keys: ward 46, lsoa 6338, ward2003 648); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2l15g"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-elections-results-2008-borough/london-elections-results-2008-borough.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Elections Results 2008, Borough: 84 zone rows of 2078 in 8 tables (keys: ward2003 84); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2nplx"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-health-and-care/2011-census-health-and-care.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2011 Census Health & Care: 2600 zone rows of 47996 in 59 tables (keys: city 8, ward 344, lsoa 2248); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2w9wz"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/council-elections-voters-2006/council-elections-voters-2006.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Council Elections Voters 2006: 1110 zone rows of 13538 in 5 tables (keys: ward2003 1110); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2wz1y"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/detailed-ethnicity-by-age-and-sex-ward-tools/detailed-ethnicity-by-age-and-sex-ward-tools.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Detailed Ethnicity by Age & Sex Ward Tools  (2011 Census): 86 zone rows of 4062 in 11 tables (keys: cmwd 86); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2zw9q"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-elections-results-2004-borough/london-elections-results-2004-borough.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Elections Results 2004, Borough: 42 zone rows of 824 in 3 tables (keys: ward2003 42); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e585w"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-green-infrastructure-framework-lgif/london-green-infrastructure-framework-lgif.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Green Infrastructure Framework (LGIF): 442 features that meet the 3D model box (of 15041 read), 34 in the Canary Wharf box; GeoJSON WGS84 with a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e70pq"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-parliamentary-constituency-profiles-2010/london-parliamentary-constituency-profiles-2010.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Parliamentary Constituency Profiles 2010: 346 zone rows of 7928 in 42 tables (keys: lsoa 263, ward2003 80, ward 3); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e716q"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-demography/2011-census-demography.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2011 Census Demography: 1454 zone rows of 23035 in 71 tables (keys: ward2003 252, ward 1181, city 21); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e790q"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-underground-performance-reports/london-underground-performance-reports.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Underground Performance Reports: 248 zone rows of 30938 in 75 tables (keys: station 248); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-em8qy"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-green-and-blue-cover/london-green-and-blue-cover.geojson",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Green and Blue Cover: 20 features that meet the 3D model box (of 467 read), 2 in the Canary Wharf box; GeoJSON WGS84 with a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqzm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/london-green-and-blue-cover/london-green-and-blue-cover.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "London Green and Blue Cover: 70 zone rows of 754 in 4 tables (keys: city 25, ward 45); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqzm"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/detailed-country-of-birth-2011-census-borough/detailed-country-of-birth-2011-census-borough.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Detailed Country of birth (2011 Census), Borough: 976 zone rows of 14865 in 15 tables (keys: cmwd 47, column cmwd 94); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-ep8zy"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/modelled-population-backseries/modelled-population-backseries.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Modelled population backseries: 34944 zone rows of 2744924 in 2 tables (keys: city 182, ward 8918, msoa 25844); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-ex9jd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/2011-census-households-and-families/2011-census-households-and-families.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "2011 Census Households & Families: 2600 zone rows of 48145 in 68 tables (keys: city 8, ward 344, lsoa 2248); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-expxp"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/assessment-of-local-risks-supporting-the-london/assessment-of-local-risks-supporting-the-london.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Assessment of Local Risks supporting the London Safety Plan 2017: 44 zone rows of 627 in 1 tables (keys: ward 43, city 1); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-v8o87"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/propensity-for-social-exclusion-of-older-people/propensity-for-social-exclusion-of-older-people.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Propensity for Social Exclusion of Older People in London (Report): 1108 zone rows of 19333 in 5 tables (keys: lsoa 1108); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-v8o91"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/age-specific-fertility-rates/age-specific-fertility-rates.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Age specific fertility rates: 18600 zone rows of 2310560 in 6 tables (keys: ward 1764, city 36, msoa 16800); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vd4q4"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/elected-representatives-london/elected-representatives-london.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Elected Representatives, London: 33147 zone rows of 313916 in 8 tables (keys: ward 12916, postcode 18787, city 1444); JSON tables with zone_keys and a meta member (rule-driven harvest)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdjyn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/bikes.json",
    "@type": [
     "prov:Entity",
@@ -20832,6 +21540,281 @@
    "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
    "dcat:landingPage": "https://data.london.gov.uk/dataset/custom-age-tool-for-2011-census-population-borough-and-ward-vd6mm",
    "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Office for National Statistics). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-20og1",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 20og1: 2011 Census Housing (Census Information Scheme)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2011-census-housing-20og1",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-24y36",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 24y36: Gender Pay Gaps in London (Greater London Authority)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/gender-pay-gaps-in-london-24y36",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-29z9o",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 29z9o: Probability of loneliness for those aged 65 and over (Office for National Statistics)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/probability-of-loneliness-for-those-aged-65-and-over-29z9o",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Office for National Statistics). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g1rn",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2g1rn: Decentralised Energy Capacity Study (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/decentralised-energy-capacity-study-2g1rn",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jxzj",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2jxzj: Fuel Poverty (Greater London Authority)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/fuel-poverty-2jxzj",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2k533",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2k533: MPS AntiSocialBehaviour (Metropolitan Police Service)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/mps-antisocialbehaviour-2k533",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Metropolitan Police Service). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2kokr",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2kokr: Local Authority By-Election Results (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/local-authority-by-election-results-2kokr",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2l15g",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2l15g: Indices of Deprivation (Ministry of Housing, Communities & Local Government)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/indices-of-deprivation-2l15g",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Ministry of Housing, Communities & Local Government). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2nplx",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2nplx: London Elections Results 2008, Borough (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-elections-results-2008-borough-2nplx",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2w9wz",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2w9wz: 2011 Census Health & Care (Census Information Scheme)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2011-census-health-and-care-2w9wz",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2wz1y",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2wz1y: Council Elections Voters 2006 (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/council-elections-voters-2006-2wz1y",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2zw9q",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore 2zw9q: Detailed Ethnicity by Age & Sex Ward Tools  (2011 Census) (Census Information Scheme)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/detailed-ethnicity-by-age-and-sex-ward-tools-2011-census-2zw9q",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e585w",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e585w: London Elections Results 2004, Borough (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-elections-results-2004-borough-e585w",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e70pq",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e70pq: London Green Infrastructure Framework (LGIF) (GLA and TFL Air Quality)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-green-infrastructure-framework-lgif-e70pq",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (GLA and TFL Air Quality). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e716q",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e716q: London Parliamentary Constituency Profiles 2010 (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-parliamentary-constituency-profiles-2010-e716q",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e790q",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore e790q: 2011 Census Demography (Census Information Scheme)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2011-census-demography-e790q",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-em8qy",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore em8qy: London Underground Performance Reports (Transport for London)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-underground-performance-reports-em8qy",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Transport for London). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqzm",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore emqzm: London Green and Blue Cover (Greater London Authority)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/london-green-and-blue-cover-emqzm",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-ep8zy",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore ep8zy: Detailed Country of birth (2011 Census), Borough (Office for National Statistics)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/detailed-country-of-birth-2011-census-borough-ep8zy",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Office for National Statistics). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-ex9jd",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore ex9jd: Modelled population backseries (Greater London Authority)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/modelled-population-backseries-ex9jd",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-expxp",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore expxp: 2011 Census Households & Families (Census Information Scheme)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/2011-census-households-and-families-expxp",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-v8o87",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore v8o87: Assessment of Local Risks supporting the London Safety Plan 2017 (London Fire Brigade)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/assessment-of-local-risks-supporting-the-london-safety-plan-2017-v8o87",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (London Fire Brigade). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-v8o91",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore v8o91: Propensity for Social Exclusion of Older People in London (Report) (Census Information Scheme)",
+   "dct:license": "OGL v3.0 (London Datastore: \"Open Government Licence v3\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/propensity-for-social-exclusion-of-older-people-in-london-report-v8o91",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v3 (Census Information Scheme). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vd4q4",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore vd4q4: Age specific fertility rates (GLA Demography)",
+   "dct:license": "CC BY (version not stated by the Datastore) (London Datastore: \"Creative Commons Attribution\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/age-specific-fertility-rates-vd4q4",
+   "cwp:attribution": "GLA Demography, CC BY (version not stated by the Datastore). The GLA cannot warrant the quality or accuracy of the data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdjyn",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore vdjyn: Elected Representatives, London (Greater London Authority)",
+   "dct:license": "OGL v2.0 (London Datastore: \"Open Government Licence v2\")",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/elected-representatives-london-vdjyn",
+   "cwp:attribution": "Contains public sector information licensed under the Open Government Licence v2 (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds",
