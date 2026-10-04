@@ -385,6 +385,27 @@ Owner instruction, 2026-10-04: "Wrap it all up into skills". Three new skills, e
 - Open: One Canada Square's model apex projects about 0.9° above the photo's apex in both photos (cause not found);
   no tide predictions (no open source); CelesTrak licence to review before prototyping ends.
 
+## 2026-10-04 permits, works, closures and what's on (works agent)
+
+- Owner: "look into local authority permissioning for events, street closures, markets and events across entire zone"
+  and "get tfl and road/bus/train planned works". New tool `tools/fetch-works.mjs` (activity `fetch-works`), snapshots
+  in `feeds/works/` (one per source, `{meta, items}`) and `works.json` (1,552 items), page
+  https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/whatson.html, skill `cwplans-permits-and-works`.
+- Zone: the model box plus a Royal Docks margin (0.015 to 0.085 E). Items: TfL lines 29, TfL buses 53, TfL roads 59
+  (9 planned events), Street Manager permits 1,035 open of 3,909 in the zone (September archive) and activities 44,
+  Gazette 72 (16 TTROs), Tower Hamlets licence notices 11 (8 TENs), planning 18, markets 28, venue events 203.
+- Owner feedback on the first page: "looks like all roads and busses" (85% Street Manager). Page split into "What's on"
+  (default, 284 items) and "Closures and works" (rail first, buses, road closures and works grouped by street); venue
+  programmes harvested from every verified event feed in `feeds/events.json` at run time.
+- Traps met (in the skill): TfL affected stops have lat/lon 0 (NaPTAN 910/930/940 used); the Gazette geo point is the
+  publisher's office and each notice names the council's own office postcode (removed before reading districts);
+  Gazette robots.txt Crawl-delay 10 (one disallowed `data.jsonld` was fetched by mistake while probing); "press" matched
+  "WordPress"; Royal Docks Atom mixes articles with events.
+- Not reached or rejected: Tower Hamlets eLR register (TLS reset again); other boroughs' Idox licensing registers (forms:
+  owner decision needed); NRE and Network Rail feeds (accounts); Street Manager live (SNS endpoint); Internet Archive
+  (proxy drops).
+- 10 new event sources added to `feeds/events.json` and an `EVENTS.md` section.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

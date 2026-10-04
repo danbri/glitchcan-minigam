@@ -12,19 +12,19 @@
       "not verified": 2
     },
     "rest-api": {
-      "verified": 17,
+      "verified": 23,
       "key-required": 4
     },
     "whats-on-page": {
-      "verified": 29,
+      "verified": 30,
       "not verified": 5
     },
     "other": {
-      "verified": 5,
+      "verified": 7,
       "not verified": 2
     },
     "openings-closings": {
-      "verified": 16,
+      "verified": 17,
       "key-required": 2
     }
   },
@@ -4041,6 +4041,324 @@
         ]
       },
       "notes": "Has CORS when it answers. overpass.kumi.systems gave 504 and overpass.private.coffee held data ten weeks old. The query nwr[\"shop\"](newer:\"2026-09-01T00:00:00Z\")(bbox) lists shops created or edited since a date; add disused:shop / opening_date filters. Use osm-changesets-bbox from here instead."
+    },
+    {
+      "id": "tfl-planned-status-zone-lines",
+      "name": "TfL planned closures by date range, every line serving the zone (tube, DLR, Elizabeth line, Overground, river bus, cable car, national rail)",
+      "category": "rest-api",
+      "subject": "planned engineering closures and service changes, 90 days ahead",
+      "provider": "Transport for London",
+      "url": "https://api-portal.tfl.gov.uk/",
+      "feed": "https://api.tfl.gov.uk/Line/jubilee,dlr,elizabeth,windrush,district,hammersmith-city,c2c,southeastern,rb1,rb4,rb6,london-cable-car/Status/2026-10-04T00:00:00/to/2027-01-02T23:59:00?detail=true",
+      "format": "JSON",
+      "auth": "none",
+      "licence": "TfL open data terms (Powered by TfL Open Data)",
+      "cors": true,
+      "update": "as works are planned",
+      "coverage": "London; filtered to the zone by affected stop",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/json; charset=utf-8"
+      },
+      "sample": {
+        "items": 29,
+        "newest": "2026-12-28",
+        "titles": [
+          "Waterloo & City: Waterloo & City line: service operates 06:00 until 00:30, Monday to Friday only. There is no service on Saturdays, Sundays…",
+          "c2c: https://www.nationalrail.co.uk/service-disruptions/amended-c-2-c-20260818/",
+          "Waterloo & City: Waterloo and City Line: Service will resume at 06:00 on Monday."
+        ]
+      },
+      "notes": "Affected stops come with lat/lon 0: place them through NaPTAN (940G/910G/930G stop-area id -> 9400/9100/9300 station entry). Snapshot: feeds/works/tfl-lines.json (tools/fetch-works.mjs)."
+    },
+    {
+      "id": "tfl-road-disruption-range",
+      "name": "TfL road disruptions by date range (works, planned events, incidents)",
+      "category": "rest-api",
+      "subject": "road works, road events (runs, marches, filming, festivals) and closures",
+      "provider": "Transport for London",
+      "url": "https://api-portal.tfl.gov.uk/",
+      "feed": "https://api.tfl.gov.uk/Road/all/Disruption?stripContent=true&startDate=2026-10-04T00:00:00&endDate=2027-01-02T23:59:00",
+      "format": "JSON",
+      "auth": "none",
+      "licence": "TfL open data terms (Powered by TfL Open Data)",
+      "cors": true,
+      "update": "minutes",
+      "coverage": "London (447 disruptions in 90 days on 2026-10-04); filter by point",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/json; charset=utf-8"
+      },
+      "sample": {
+        "items": 9,
+        "newest": "2026-11-08",
+        "titles": [
+          "Procession - [A11] Whitechapel Road (Both directions) at the junction of [A107] Cambridge Heath Road - A procession to mark the Battle of C…",
+          "Karan Aujila - The O2 - Millennium Way (All approaches) at the junction of Ordnance Crescent - Karan Aujila in concert.",
+          "[A1202] Commercial Street (Northbound) between Pomell Way and [A11] Whitechapel High Street - Lane restrictions will be in place at these t…"
+        ]
+      },
+      "notes": "With startDate/endDate the list includes planned disruptions (70 \"Planned events\" London-wide on 2026-10-04); without them only current ones. Sample: planned events in the zone. Snapshot: feeds/works/tfl-road.json."
+    },
+    {
+      "id": "tfl-road-street-disruption",
+      "name": "TfL closed and restricted street segments by date range",
+      "category": "rest-api",
+      "subject": "which street segments a road disruption closes, both directions or one",
+      "provider": "Transport for London",
+      "url": "https://api-portal.tfl.gov.uk/",
+      "feed": "https://api.tfl.gov.uk/Road/all/Street/Disruption?startDate=2026-10-04T00:00:00&endDate=2026-11-30T23:59:00",
+      "format": "JSON",
+      "auth": "none",
+      "licence": "TfL open data terms (Powered by TfL Open Data)",
+      "cors": true,
+      "update": "minutes",
+      "coverage": "London (321 segments on 2026-10-04)",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/json; charset=utf-8"
+      },
+      "sample": {
+        "items": 321,
+        "newest": null,
+        "titles": [
+          "SELBORNE ROAD (E17): Closed, Both directions (Thames Water works)"
+        ]
+      },
+      "notes": "Line strings with start and end points; joined to Road/all/Disruption by disruptionId in feeds/works/tfl-road.json."
+    },
+    {
+      "id": "tfl-bus-route-disruption",
+      "name": "TfL bus route disruptions and diversions (all routes)",
+      "category": "rest-api",
+      "subject": "diversions for road closures, events and works",
+      "provider": "Transport for London",
+      "url": "https://api-portal.tfl.gov.uk/",
+      "feed": "https://api.tfl.gov.uk/Line/Mode/bus/Status?detail=true",
+      "format": "JSON (13 MB)",
+      "auth": "none",
+      "licence": "TfL open data terms (Powered by TfL Open Data)",
+      "cors": true,
+      "update": "minutes",
+      "coverage": "London (675 routes, 155 distinct disruption texts on 2026-10-04)",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/json; charset=utf-8"
+      },
+      "sample": {
+        "items": 28,
+        "newest": "2027-02-01",
+        "titles": [
+          "Routes 133: KING WILLIAM STREET, City of London: Route 133 is on diversion towards Streatham only until 19:00 on 1 February 2027 due to maj…",
+          "Routes 21, 43, 141: KING WILLIAM STREET, City of London: Routes 21 43 and 141 are on diversion southbound only until 19:00 on 1 February 20…",
+          "Routes n21: KING WILLIAM STREET, City of London: Route N21 is on diversion towards Bexleyheath only until 19:00 on 1 February 2027 due to m…"
+        ]
+      },
+      "notes": "Route sections are whole routes with lat/lon 0, so the place is in the text only. A borough name in the text is too coarse; feeds/works keeps a diversion when the text names a zone stop on one of its routes, else a zone postcode district."
+    },
+    {
+      "id": "tfl-bus-stop-disruption",
+      "name": "TfL bus stop closures (all modes: bus)",
+      "category": "rest-api",
+      "subject": "closed or moved bus stops with dates",
+      "provider": "Transport for London",
+      "url": "https://api-portal.tfl.gov.uk/",
+      "feed": "https://api.tfl.gov.uk/StopPoint/Mode/bus/Disruption?includeRouteBlockedStops=true",
+      "format": "JSON",
+      "auth": "none",
+      "licence": "TfL open data terms (Powered by TfL Open Data)",
+      "cors": true,
+      "update": "minutes",
+      "coverage": "London (366 stop disruptions on 2026-10-04)",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/json; charset=utf-8"
+      },
+      "sample": {
+        "items": 25,
+        "newest": "2027-01-01",
+        "titles": [
+          "Exning Road (->E); Star Lane Stn / Star Primary Sch (Stop E); Malmesbury Terrace (Stop R): Bus stop closed. Signal works.",
+          "Ferndale Street (Stop X): Bus stop closed until 17:00 Friday 1 January 2027, due to sewer works at Ferndale Street. Use the next or previou…",
+          "Tollgate Road (Stop E): Bus Stop Closed Please use the next stop or the previous stop to catch your bus"
+        ]
+      },
+      "notes": "ATCO codes only: positions from NaPTAN (area 490)."
+    },
+    {
+      "id": "street-manager-archive-activity",
+      "name": "DfT Street Manager open-data archive: highway-authority activities (street events, cranes, hoardings)",
+      "category": "other",
+      "subject": "events booked on the highway, crane and platform days, hoardings, section 50 works, skips, scaffolding",
+      "provider": "Department for Transport",
+      "url": "https://department-for-transport-streetmanager.github.io/street-manager-docs/open-data/",
+      "feed": "https://opendata.manage-roadworks.service.gov.uk/activity/2026/09.zip",
+      "format": "ZIP of JSON notifications, one per event (monthly; S3 listing at https://opendata.manage-roadworks.service.gov.uk/?list-type=2&prefix=activity/)",
+      "auth": "none",
+      "licence": "Open Government Licence v3.0",
+      "cors": false,
+      "update": "monthly archive (live data is an SNS push to a subscriber endpoint)",
+      "coverage": "England (16,531 notifications in September 2026; 105 activities in the zone, 14 of type event)",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/zip"
+      },
+      "sample": {
+        "items": 44,
+        "newest": "2027-06-03",
+        "titles": [
+          "(24434) Hoarding for Christopher Street for external generators for refurbishment works.",
+          "(73515) Length (m): 75 Height (m): 2.4",
+          "(77096) THE WROUGHT IRON RAILINGS ARE UNSAFE Length (m): 5.3 Breadth (m): 2 Height (m): 2.6 Total"
+        ]
+      },
+      "notes": "activity_type event = an event on the highway the council knows of. Snapshot: feeds/works/street-manager-activities.json."
+    },
+    {
+      "id": "street-manager-archive-permit",
+      "name": "DfT Street Manager open-data archive: works permits",
+      "category": "other",
+      "subject": "road works permits with promoter, street, traffic management (road closure, lane closure, signals) and dates",
+      "provider": "Department for Transport",
+      "url": "https://department-for-transport-streetmanager.github.io/street-manager-docs/open-data/",
+      "feed": "https://opendata.manage-roadworks.service.gov.uk/permit/2026/09.zip",
+      "format": "ZIP of JSON notifications (about 1 GB, 1,081,996 files for September 2026)",
+      "auth": "none",
+      "licence": "Open Government Licence v3.0",
+      "cors": false,
+      "update": "monthly archive",
+      "coverage": "England; 3,909 permits in the zone in September 2026, 1,035 still open on 2026-10-04",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/zip"
+      },
+      "sample": {
+        "items": 316,
+        "newest": "2027-11-17",
+        "titles": [
+          "Utility asset works by THAMES WATER: Road closure",
+          "Utility asset works by THAMES WATER: Road closure (TTRO required)",
+          "Utility repair and maintenance works by THAMES WATER: Road closure (TTRO required)"
+        ]
+      },
+      "notes": "Snapshot: feeds/works/street-manager.json."
+    },
+    {
+      "id": "gazette-road-traffic-by-authority",
+      "name": "The Gazette: Road Traffic Acts notices by issuing authority (JSON search)",
+      "category": "rest-api",
+      "subject": "traffic orders and temporary traffic orders (TTROs)",
+      "provider": "The Gazette (TSO for The National Archives)",
+      "url": "https://www.thegazette.co.uk/all-notices/notice",
+      "feed": "https://www.thegazette.co.uk/all-notices/notice/data.json?noticetypes=1501&text=%22Tower%20Hamlets%22&start-publish-date=2026-06-06&results-page-size=100",
+      "format": "JSON (data.json); notice pages HTML",
+      "auth": "none",
+      "licence": "Open Government Licence v3.0",
+      "cors": false,
+      "update": "daily",
+      "coverage": "the zone authorities; 79 notices in 120 days on 2026-10-04",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/json;charset=UTF-8"
+      },
+      "sample": {
+        "items": 72,
+        "newest": "2028-07-31",
+        "titles": [
+          "ROYAL BOROUGH OF GREENWICH ROAD TRAFFIC REGULATION ACT 1984 – SECTION 14(1) BRAMSHOT AVENUE – WAITING AND LOADING PROHIBITIONS AND PARKING …",
+          "ROYAL BOROUGH OF GREENWICH ROAD TRAFFIC REGULATION ACT 1984 – SECTION 14(1) IGNATIUS SANCHO ROAD – WAITING AND LOADING PROHIBTIONS (TEMPORA…",
+          "ROYAL BOROUGH OF GREENWICH ROAD TRAFFIC REGULATION ACT 1984 – SECTION 14(1) GOUROCK ROAD – CHANGES TO PARKING PLACES (TEMPORARY MEASURES) […"
+        ]
+      },
+      "notes": "The search geo point is the publisher office, not the street; filter on the issuing authority. robots.txt Crawl-delay 10; per-notice data.jsonld/.ttl/.rdf/.xml and ?view=linked-data are disallowed. Few London borough TTROs are published here."
+    },
+    {
+      "id": "pld-temporary-events",
+      "name": "Planning London Datahub: applications for temporary events and structures in the zone",
+      "category": "openings-closings",
+      "subject": "temporary event spaces, marquees, ice rinks, stages, pop-ups",
+      "provider": "Greater London Authority (Planning London Datahub)",
+      "url": "https://www.london.gov.uk/programmes-strategies/planning/digital-planning/planning-london-datahub",
+      "feed": "https://planningdata.london.gov.uk/api-guest/applications/_search",
+      "format": "JSON (Elasticsearch _search, POST; query in feeds/works/planning.json meta.query)",
+      "auth": "none for server-side POST",
+      "licence": "GLA terms (see GLA documentation)",
+      "cors": false,
+      "update": "daily",
+      "coverage": "the zone box; 93 matching applications, 18 validated in the last two years",
+      "machine_readable": "json",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "application/json; charset=UTF-8"
+      },
+      "sample": {
+        "items": 18,
+        "newest": "2026-09-25",
+        "titles": [
+          "P2025/1393/FUL TEA GARDENS: Temporary Change of Use of Finsbury Square for event days of up to 93 (65 days in addition of the 28 allowed th…",
+          "25/AP/0809 London Bridge City Pier: Temporary installation of a pop-up bar and seating area, including the use of the existing pagodas at L…",
+          "PA/25/01179/NC Canada Square Park, Canada Square, London, E14: Erection of 1 linked marquee to house a skate exchange with a temporary cove…"
+        ]
+      },
+      "notes": "Decision and application dates, not event dates. Snapshot: feeds/works/planning.json."
+    },
+    {
+      "id": "th-markets-page",
+      "name": "Tower Hamlets: Markets in Tower Hamlets (days, times, places)",
+      "category": "whats-on-page",
+      "subject": "street markets with days and opening times",
+      "provider": "London Borough of Tower Hamlets",
+      "url": "https://www.towerhamlets.gov.uk/lgnl/business/markets/markets_in_tower_hamlets.aspx",
+      "feed": null,
+      "format": "HTML",
+      "auth": "none",
+      "licence": "council website terms (facts and link)",
+      "cors": false,
+      "update": "rarely",
+      "coverage": "Tower Hamlets street markets",
+      "machine_readable": "html-only",
+      "verified": {
+        "date": "2026-10-04",
+        "status": "verified",
+        "http": 200,
+        "content_type": "text/html; charset=utf-8"
+      },
+      "sample": {
+        "items": 7,
+        "newest": null,
+        "titles": [
+          "Brick Lane Market: Sundays, Sundays, 10am to 3pm",
+          "Columbia Road Flower Market: Sundays, Sundays, 8am to 2pm",
+          "Petticoat Lane Market: Sunday, Sundays, 9am to 3pm"
+        ]
+      },
+      "notes": "Parsed in feeds/works/markets.json and joined to OSM marketplaces."
     }
   ],
   "excluded": [

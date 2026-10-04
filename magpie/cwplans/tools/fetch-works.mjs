@@ -7,7 +7,7 @@
 //   options: --refresh (re-download cached raw files: NaPTAN, Street Manager archives, Gazette notices),
 //            --days=90 (TfL look-ahead), --month=2026-09 (Street Manager archive month; default the last full month)
 //
-// Sources: tfl-lines tfl-bus tfl-road street-manager gazette th-licences planning markets
+// Sources: tfl-lines tfl-bus tfl-road street-manager gazette th-licences planning markets venue-events
 // Out:  magpie/cwplans/feeds/works/<source>.json  {meta: {source, url, fetched, licence, attribution, method, counts}, items}
 //       magpie/cwplans/feeds/works/works.json     every item in the zone from every snapshot, one normalised list
 // Raw:  magpie/cwplans/data/raw/works/ (gitignored)
@@ -383,6 +383,9 @@ async function streetManager() {
 // last 120 days. The search's geo point is the publisher's office, not the street, so the filter is the issuing authority.
 // Full text: the notice page /notice/{id} (robots.txt allows it; data.jsonld/.ttl/.rdf/.xml and ?view=linked-data are
 // disallowed, Crawl-delay 10). Submitter names (f:name, f:familyName) and signatories are not kept.
+// office postcodes found in the notices (2026-10-04): Greenwich Woolwich Centre, Lewisham Catford, Newham Dockside,
+// Southwark Tooley Street and PO box, TfL Palestra, City Guildhall, Tower Hamlets
+const OFFICE_POSTCODES = /\b(SE18 6HQ|SE6 4RU|E16 2QU|SE1 2QH|SE1 8NJ|SE1P 5LX|EC2V 7HH|EC2P 2EJ|E1 0HJ|E1 1BJ)\b/g;
 const AUTH = [['Tower Hamlets', /london borough of tower hamlets|tower hamlets council/i], ['Southwark', /london borough of southwark|southwark council/i],
   ['Lewisham', /london borough of lewisham|lewisham council/i], ['Greenwich', /royal borough of greenwich/i], ['Newham', /london borough of newham|newham council/i],
   ['City of London', /city of london corporation|corporation of london|common council of the city of london|the city of london \(/i]];
@@ -409,7 +412,9 @@ async function gazette() {
     if (!auth && tfl) { const b = BOROUGHS.find(x => new RegExp(x.replace(/ /g, '\\s+'), 'i').test(text.slice(0, 1500))); auth = b ? `${b} (TfL)` : null; }
     if (!auth) { counts.dropped_other_authority++; continue; }
     // postcode districts named in the order: an order that names only districts outside the zone is dropped
-    const districts = [...new Set([...text.matchAll(/\b((?:EC|E|SE)\d{1,2}[A-Z]?)\b(?:\s+\d[A-Z]{2})?/g)].map(m => m[1]))];
+    // the authorities' own office postcodes (where to send objections) are not places of the order
+    const placeText = text.replace(OFFICE_POSTCODES, ' ');
+    const districts = [...new Set([...placeText.matchAll(/\b((?:EC|E|SE)\d{1,2}[A-Z]?)\b(?:\s+\d[A-Z]{2})?/g)].map(m => m[1]))];
     const touch = d => TOUCH_DISTRICTS.some(z => z.endsWith('*') ? d.startsWith(z.slice(0, -1)) : d === z);
     if (districts.length && !districts.some(touch)) { counts.dropped_districts_outside++; continue; }
     counts.kept++;
@@ -426,7 +431,7 @@ async function gazette() {
   }
   write('gazette', { url: 'https://www.thegazette.co.uk/all-notices/notice/data.json (noticetypes 1501, 1503) and https://www.thegazette.co.uk/notice/{id}', ...LICENCES.ogl,
     attribution: 'Contains public sector information licensed under the Open Government Licence v3.0 (The Gazette)',
-    method: `Search per zone authority (${BOROUGHS.join(', ')}) and notice type (1501 Road Traffic Acts, 1503 Highways), published since ${since}; full notice page for each (10 s between requests, robots.txt Crawl-delay); kept when the notice opens with a zone authority, or with Transport for London and names a zone borough; dropped when it names postcode districts and none reaches the zone (${TOUCH_DISTRICTS.join(', ')}). "TTRO" = text says temporary, section 14, 16A or experimental. Dates are the day-month-year phrases in the text on or after publication (the order's dates, often also consultation dates). Submitter and signatory names dropped.`,
+    method: `Search per zone authority (${BOROUGHS.join(', ')}) and notice type (1501 Road Traffic Acts, 1503 Highways), published since ${since}; full notice page for each (10 s between requests, robots.txt Crawl-delay); kept when the notice opens with a zone authority, or with Transport for London and names a zone borough; dropped when it names postcode districts (the authority's office postcode removed first) and none reaches the zone (${TOUCH_DISTRICTS.join(', ')}). "TTRO" = text says temporary, section 14, 16A or experimental. Dates are the day-month-year phrases in the text on or after publication (the order's dates, often also consultation dates). Submitter and signatory names dropped.`,
     since, counts }, items);
 }
 
@@ -567,8 +572,127 @@ async function markets() {
     th_markets: th.map(({ name, days, place, times, osm: o }) => ({ name, days, place, times, osm: o || null })), counts }, items);
 }
 
+// ======================= A. Venue and council event programmes (feeds/events.json, read at run time) =======================
+// Every verified event feed in feeds/events.json is harvested, so feeds that other work adds join automatically. Selected:
+// category ical, rss-atom, rest-api or whats-on-page; a feed URL; name, subject or id about events or what's on; not
+// news, consultations, meetings, warnings or works (or harvest: true / false on the entry to override). Kept per item:
+// title, dates, venue, link only (no description text). An item needs a date from the feed's own event fields (ICS
+// DTSTART, RSS ev:startdate, WordPress ACF dates, or a date in the title or link) or, for a single-venue programme, is
+// kept undated ("on the programme; dates on the venue page"). Position: the item's own postcode or location, else the
+// venue of the feed host (VENUES, placed through its postcode), else the entry's own lat/lon or postcode fields.
+const VENUES = {
+  'www.theo2.co.uk': { name: 'The O2', postcode: 'SE10 0DX' },
+  'space.org.uk': { name: 'The Space, Westferry Road', postcode: 'E14 3RS' },
+  'wiltons.org.uk': { name: "Wilton's Music Hall", postcode: 'E1 8JB' },
+  'greenwichtheatre.org.uk': { name: 'Greenwich Theatre', postcode: 'SE10 8ES' },
+  'www.royaldocks.london': { name: 'Royal Docks (several venues)', postcode: 'E16 1ZE', area: true },
+  'www.trinitybuoywharf.com': { name: 'Trinity Buoy Wharf', postcode: 'E14 0JY' },
+  'codydock.org.uk': { name: 'Cody Dock', postcode: 'E16 4SP' },
+  'www.mudchute.org': { name: 'Mudchute Park and Farm', postcode: 'E14 3HP' },
+  'www.excel.london': { name: 'ExCeL London', postcode: 'E16 1XL' },
+};
+// feeds whose publish date is the event date (checked by hand: the Royal Docks Atom feed's <published> is the event day
+// at midnight; entries published at another time of day carry an update time and are left undated)
+const PUBLISHED_IS_EVENT_DATE = new Set(['www.royaldocks.london']);
+const EVENT_WORDS = /event|what'?s[ -]?on|whatson|programme|calendar|concert|gig|exhibition|listing|performance|festival/i;
+const NOT_EVENTS = /\b(news|press releases?|consultations?|decisions?|meetings?|committee|warnings?|flood|history|edits?|closures?|disruptions?|works|notices|bank holidays?|insolvency|planning|retailers?|ratings|changesets?|inception|hansard|questions|openings?|food)\b/i;
+// feeds that mix articles with events: only these links are events
+const EVENT_PATH = { 'www.royaldocks.london': /\/whats-on\// };
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const decode = s => htmlText(String(s ?? '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1'));
+// a date written in a title or a URL slug: "5 October 2026", "5-October-2026", "Saturday 10 October"
+function dateIn(text, ref = TODAY) {
+  const t = String(text || '').toLowerCase().replace(/[-_/]+/g, ' ');
+  const m = t.match(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTHS.join('|')})(?:\\s+(20\\d\\d))?\\b`));
+  if (!m) return null;
+  const mo = MONTHS.indexOf(m[2]) + 1;
+  let y = m[3] ? +m[3] : +ref.slice(0, 4);
+  let d = `${y}-${String(mo).padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  if (!m[3] && d < addDays(ref, -60)) d = `${y + 1}${d.slice(4)}`;   // no year: the next occurrence
+  return isNaN(Date.parse(d)) ? null : d;
+}
+function parseIcs(text) {
+  const un = text.replace(/\r?\n[ \t]/g, ''), out = [];
+  for (const b of un.split('BEGIN:VEVENT').slice(1)) {
+    const f = k => { const m = b.match(new RegExp(`^${k}(?:;[^:\\n]*)?:(.*)$`, 'm')); return m ? m[1].trim().replace(/\\([,;n])/g, (_, c) => c === 'n' ? ' ' : c) : null; };
+    const dt = v => { if (!v) return null; const m = v.match(/^(\d{4})(\d\d)(\d\d)(?:T(\d\d)(\d\d)(\d\d)(Z?))?/); return m ? (m[4] ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}${m[7] ? 'Z' : ''}` : `${m[1]}-${m[2]}-${m[3]}`) : null; };
+    out.push({ title: f('SUMMARY'), start: dt(f('DTSTART')), end: dt(f('DTEND')), link: f('URL'), where: f('LOCATION') });
+  }
+  return out;
+}
+function parseFeedXml(text) {
+  const out = [];
+  for (const m of text.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/g)) {
+    const x = m[0], tag = k => { const r = x.match(new RegExp(`<${k}\\b[^>]*>([\\s\\S]*?)</${k}>`)); return r ? decode(r[1]) : null; };
+    const link = tag('link') || x.match(/<link\b[^>]*href="([^"]+)"/)?.[1] || tag('guid');
+    out.push({ title: tag('title'), link: link && link.trim(), evStart: tag('ev:startdate'), evEnd: tag('ev:enddate'), where: tag('ev:location') || tag('category'),
+      published: tag('published') || tag('pubDate') });
+  }
+  return out;
+}
+function parseWpJson(arr) {
+  return (Array.isArray(arr) ? arr : []).map(p => {
+    const acf = p.acf && typeof p.acf === 'object' ? p.acf : {};
+    const dk = Object.keys(acf).find(k => /date/i.test(k) && acf[k]);
+    return { title: decode(p.title?.rendered || p.title), link: p.link, acfDates: dk ? String(acf[dk]) : null, where: acf.attribute_Location || null };
+  });
+}
+async function venueEvents() {
+  const ev = JSON.parse(readFileSync(join(CW, 'feeds', 'events.json'), 'utf8'));
+  const picked = ev.sources.filter(s => s.harvest === true || (s.harvest !== false && s.feed && s.verified?.status === 'verified'
+    && ['ical', 'rss-atom', 'rest-api', 'whats-on-page'].includes(s.category) && EVENT_WORDS.test(`${s.id} ${s.name} ${s.subject || ''}`)
+    && !NOT_EVENTS.test(`${s.id} ${s.name}`) && /^(ics|rss|atom|json)$/.test(s.machine_readable)));
+  const counts = { feeds_in_events_json: ev.sources.length, feeds_picked: picked.length, per_feed: {} };
+  // venue positions through their postcodes
+  const vgeo = await postcodes([...Object.values(VENUES).map(v => v.postcode), ...picked.map(s => s.postcode).filter(Boolean)]);
+  const raw = [];
+  for (const s of picked) {
+    const host = new URL(s.feed).host, c = counts.per_feed[s.id] = { host, format: s.machine_readable, items: 0, dated: 0, undated_kept: 0, kept: 0, past: 0, no_position: 0, outside_zone: 0 };
+    let got;
+    try { got = (await cached(`venue-${s.id}.raw`, s.feed, { headers: s.request_headers || {}, ...(s.request_body ? { method: 'POST', body: JSON.stringify(s.request_body), headers: { 'Content-Type': 'application/json', ...(s.request_headers || {}) } } : {}) })).buf.toString('utf8'); }
+    catch (e) { c.error = e.message.slice(0, 120); continue; }
+    let list = [];
+    if (s.machine_readable === 'ics') list = parseIcs(got);
+    else if (s.machine_readable === 'json') { try { const j = JSON.parse(got); list = parseWpJson(Array.isArray(j) ? j : j.items || j.events || []); } catch { c.error = 'not JSON'; } }
+    else list = parseFeedXml(got);
+    c.items = list.length;
+    const venue = VENUES[host] || (s.venue ? { name: s.venue, postcode: s.postcode } : null);
+    for (const it of list) if (it.title && (!EVENT_PATH[host] || EVENT_PATH[host].test(it.link || ''))) raw.push({ s, host, c, venue, it });
+  }
+  // item postcodes (TH events give an address in <category>)
+  const ipc = await postcodes(raw.map(r => (String(r.it.where || '').match(PC) || []).slice(1, 3).join(' ').toUpperCase()).filter(Boolean));
+  const items = [], seen = new Set();
+  for (const { s, host, c, venue, it } of raw) {
+    let start = it.start || it.evStart || null, end = it.end || it.evEnd || null, precision = start ? 'feed event date' : null;
+    if (!start && it.acfDates) { const [a, b] = it.acfDates.split(/\s*[-–]\s*(?=\d)/); start = dateIn(a); end = dateIn(b) || start; precision = start ? 'venue listing dates' : null; }
+    if (!start && PUBLISHED_IS_EVENT_DATE.has(host) && /T00:00:00/.test(it.published || '')) {   // a time other than midnight is an update time, not an event day
+      start = it.published.slice(0, 10); precision = 'feed published date (= event day for this feed)'; }
+    if (!start) { const d = dateIn(it.title) || dateIn(decodeURIComponent(String(it.link || '').split('/').pop() || '')); if (d) { start = d; precision = 'date in the title or link'; } }
+    const day = start ? String(start).slice(0, 10) : null, last = end ? String(end).slice(0, 10) : day;
+    if (day) { c.dated++; if (last < TODAY || day > addDays(TODAY, 180)) { c.past++; continue; } }
+    else if (!venue || venue.area) { continue; }
+    else c.undated_kept++;
+    const pc = (String(it.where || '').match(PC) || []).slice(1, 3).join(' ').toUpperCase() || null;
+    const g = (pc && ipc.get(pc)) || (venue && vgeo.get(venue.postcode)) || (s.lat != null ? { lat: s.lat, lon: s.lon } : null);
+    if (!g) { c.no_position++; continue; }
+    const z = zoneOf(g.lat, g.lon); if (!z) { c.outside_zone++; continue; }
+    const id = `venue:${s.id}:${h8((it.link || '') + it.title + (day || ''))}`; if (seen.has(id)) continue; seen.add(id);
+    c.kept++;
+    items.push({
+      id, kind: 'venue event', title: cut(it.title, 160), start: start || null, end: end && end !== start ? end : null, date_from: precision || 'no date in the feed (on the programme)',
+      venue: pc && ipc.get(pc) ? cut(it.where, 120) : venue?.name || null, location: (pc && ipc.get(pc) ? cut(it.where, 120) : venue?.name) || null, postcode: pc || venue?.postcode || null,
+      borough: g.district || null, lat: r6(g.lat), lon: r6(g.lon), zone: z, placed_by: pc && ipc.get(pc) ? 'postcode in the item' : venue?.area ? 'area of the feed (several venues)' : 'venue of the feed host (postcode)',
+      feed: s.id, url: it.link || s.url,
+    });
+  }
+  write('venue-events', { url: 'every verified event feed in feeds/events.json (read at run time)', licence: 'per feed (venue and council websites; titles, dates and links as facts only)',
+    attribution: `Event listings of ${[...new Set(items.map(i => i.feed))].length} venue and council feeds; titles, dates and links only, each item links to its source`,
+    method: 'Feeds picked from feeds/events.json by category, verified status and event words (harvest: true/false overrides); ICS, RSS/Atom and WordPress REST JSON parsed; one item per event with title, dates, venue and link; dated items from today to 180 days ahead; undated items only from single-venue programmes. Positions: postcode in the item, else the venue of the feed host through its postcode (postcodes.io, ONSPD).',
+    venues: VENUES, counts }, items);
+}
+
 // ======================= combined =======================
-const SOURCES = { 'tfl-lines': tflLines, 'tfl-bus': tflBus, 'tfl-road': tflRoad, 'street-manager': streetManager, gazette, 'th-licences': thLicences, planning, markets };
+const SOURCES = { 'tfl-lines': tflLines, 'tfl-bus': tflBus, 'tfl-road': tflRoad, 'street-manager': streetManager, gazette, 'th-licences': thLicences, planning, markets, 'venue-events': venueEvents };
 function combine() {
   const files = readdirSync(OUT).filter(f => f.endsWith('.json') && f !== 'works.json').sort();
   const items = [], sources = [];

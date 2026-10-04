@@ -7,8 +7,11 @@ description: >-
   disruptions (works, planned events, closed street segments), TfL planned line closures by date range (tube, DLR,
   Elizabeth line, Windrush, national rail, river buses, cable car), bus diversions and stop closures placed through
   NaPTAN, Gazette traffic orders and TTROs, Planning London Datahub applications for temporary events and structures,
-  and markets (OSM marketplaces plus the Tower Hamlets markets page). Covers the tool tools/fetch-works.mjs, the
-  snapshots in feeds/works/, the combined works.json and the whatson.html page, each source's licence and attribution,
+  markets (OSM marketplaces plus the Tower Hamlets markets page), and venue and council event programmes harvested
+  from every verified event feed in feeds/events.json at run time (The O2, Royal Docks, Greenwich Theatre, The Space,
+  Wilton's, Tower Hamlets events). Covers the tool tools/fetch-works.mjs, the
+  snapshots in feeds/works/, the combined works.json and the whatson.html page (a "What's on" view and a "Closures and
+  works" view, road works grouped by street), each source's licence and attribution,
   how each item is placed in the zone and what it says about ad-hoc events, the traps (TfL sends lat/lon 0 for stops,
   the Gazette geo point is the publisher's office, borough names are too coarse for bus diversions, robots.txt
   Crawl-delay 10 on the Gazette), and what was rejected or not reached (Idox licensing registers are forms, the Tower
@@ -35,8 +38,8 @@ Sources, counts and gaps: https://github.com/danbri/glitchcan-minigam/blob/maste
     node magpie/cwplans/tools/fetch-works.mjs --no-fetch                           # rebuild from data/raw/works/
     options: --refresh (re-download kept raw files), --days=90 (TfL look-ahead), --month=2026-09 (Street Manager)
 
-Sources: `tfl-lines tfl-bus tfl-road street-manager gazette th-licences planning markets` (street-manager writes two
-snapshots: permits and activities). Time on 2026-10-04: about 40 s for Street Manager (two archives already
+Sources: `tfl-lines tfl-bus tfl-road street-manager gazette th-licences planning markets venue-events` (street-manager
+writes two snapshots: permits and activities). Time on 2026-10-04: about 40 s for Street Manager (two archives already
 downloaded; the permit archive is about 1 GB, 1,081,996 files), 45 s for buses (13 MB status file), 2 min for the
 OSM extract (markets), and 10 s per Gazette request. Without `NODE_USE_ENV_PROXY=1`, Node `fetch` ignores
 `HTTPS_PROXY` here.
@@ -67,6 +70,7 @@ owner's zone); `line` = a rail line that serves the zone with no stop named; `bo
 | `th-licences` | Tower Hamlets weekly licence applications page (council terms; facts and link) | address postcode (postcodes.io, ONSPD) | Temporary Event Notices with dates: parties, pop-ups, New Year's Eve; new venues |
 | `planning` | Planning London Datahub (GLA terms; facts and link) | site centroid | applications for temporary event spaces, marquees, ice rinks, stages, with decision dates |
 | `markets` | OSM `amenity=marketplace` (ODbL, local extract) + Tower Hamlets markets page | OSM element; else the street the page names | regular markets with days and times |
+| `venue-events` | every verified event feed in `feeds/events.json`, read at run time (each site's terms: title, dates, venue, link only) | postcode in the item, else the feed host's venue (`VENUES`, by postcode) | **the venue programmes**: concerts, theatre, community events |
 
 Counts per source and the date range: README.
 
@@ -85,7 +89,10 @@ Counts per source and the date range: README.
   Canary Wharf: their agent). Filter on the issuing authority at the start of the notice text. The search `content`
   is a snippet, often "London Borough of …", so the notice page is fetched for each hit. A borough is still too
   wide (Southwark's East Dulwich and Lewisham's SE23 orders came back): an order that names postcode districts, none of
-  which reaches the zone (zone districts plus E3, EC2, EC4, SE1, SE14, SE15), is dropped and counted.
+  which reaches the zone (zone districts plus E3, EC2, EC4, SE1, SE14, SE15), is dropped and counted. Remove the authorities'
+  own office postcodes first (SE18 6HQ Greenwich, SE6 4RU Lewisham, E16 2QU Newham, SE1 2QH and SE1P 5LX Southwark,
+  SE1 8NJ TfL, EC2V 7HH and EC2P 2EJ City): every notice gives one for objections, and the first draft read Southwark's
+  SE1 2QH as the place of every Southwark order (27 dropped, then 4 once the office postcodes were removed).
 - **Gazette robots.txt**: `Crawl-delay: 10`; `/notice/*/data.jsonld|.ttl|.rdf|.xml` and `?view=linked-data` are
   disallowed (one `data.jsonld` was fetched by mistake while probing on 2026-10-04; `?view=linked-data` answered 429).
   The tool fetches only `data.json` searches and `/notice/{id}` pages, 10 s apart. Submitter names (`f:name`,
@@ -103,6 +110,44 @@ Counts per source and the date range: README.
 - **Planning London Datahub** dates are application and decision dates, not event dates; applications validated more
   than two years before the fetch are dropped (73 of 93 on 2026-10-04).
 
+## Venue programmes (`venue-events`)
+
+- **Feeds come from `feeds/events.json` at run time**, so feeds another session adds there join on the next run.
+  Picked: category `ical`, `rss-atom`, `rest-api` or `whats-on-page`; verified; a feed URL; `ics`, `rss`, `atom` or
+  `json`; id, name or subject with an event word; not news, press releases, consultations, meetings, warnings,
+  closures, works or notices. `harvest: true` or `false` on an entry overrides the rule. First draft lesson: the word
+  "press" matched "WordPress" and dropped every venue REST feed: the exclusions are whole words now.
+- **Only title, dates, venue and link** are stored; no description text (venue and council sites state no open
+  licence).
+- **Dates**: ICS `DTSTART`/`DTEND`, RSS `ev:startdate`/`ev:enddate` (The O2), WordPress ACF date fields (Greenwich
+  Theatre `acf.dates`, "24 October-24 October", year inferred as the next occurrence), else a "5 October 2026" date in
+  the title or link slug (Tower Hamlets events), else the Atom `<published>` day for hosts checked by hand
+  (`PUBLISHED_IS_EVENT_DATE`: Royal Docks, and only entries published at midnight; others carry an update time). The
+  RSS `pubDate` and the WordPress `date` are publish dates, never event dates. Undated items are kept only from
+  single-venue programmes (The Space, Wilton's: "on the programme, dates on the venue page").
+- **Mixed feeds**: the Royal Docks Atom feed holds articles too; `EVENT_PATH` keeps `/whats-on/` links only (2,306
+  entries, 15 upcoming events on 2026-10-04).
+- **Position**: a postcode in the item (Tower Hamlets events put the address in `<category>`), else the venue of the
+  feed host (`VENUES`: host, name, postcode, placed through postcodes.io), else `lat`/`lon` or `postcode` on the
+  events.json entry. A new venue feed with no postcodes in its items needs a `VENUES` row, or its items are counted as
+  `no_position`. Feeds with several venues and no item places (the GLA) give nothing.
+
+## The page (`feeds/whatson.html`)
+
+Owner feedback on the first version (2026-10-04): "looks like all roads and busses": 1,082 of 1,277 items were Street
+Manager works and no venue programmes were in it. Now two views:
+- **What's on** (default): venue events, TENs and licence applications, street events and TfL planned road events,
+  temporary-event planning applications, markets; by day for 30 days, later (collapsed), undated programme items,
+  markets and regular events. Filters: search, kind, borough.
+- **Closures and works** (`#closures`): rail and river closures first, then bus diversions and stop closures (they
+  affect most people), road closures grouped by street and borough (count and date span, expandable), Gazette traffic
+  orders, then road works with no closure grouped by street. Filters: today, next 7 days (default), a chosen day, any
+  date; kind; search.
+- A table at the end: per source, the item count, how many items each view shows, the fetch date, the attribution and
+  the licence. The OSM notice links to https://www.openstreetmap.org/copyright (the data-register check needs it).
+- Which view an item goes to is decided on the page from `kind` (`ONKIND`, `CLKIND` in the script): a new kind must be
+  added there or it falls into "road works".
+
 ## Rejected or not reached (2026-10-04)
 
 | source | result | why |
@@ -115,6 +160,8 @@ Counts per source and the date range: README.
 | Street Manager section 58 notices | not used | restrictions after resurfacing; not events |
 | Parks events applications, filming notices | not found | no published list or feed found for the zone boroughs in this session |
 | Internet Archive copies of the Tower Hamlets weekly page (history) | not reached | web.archive.org connections dropped by the proxy on 2026-10-04 |
+| Greenwich Peninsula what's on (sitemap + per-event JSON-LD) | not harvested yet | one page request per event; needs the crawl rules of `cwplans-web-harvest` |
+| GLA upcoming events RSS | harvested, 0 kept | no place in the items and no single venue |
 
 ## Extending
 
