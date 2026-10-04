@@ -680,3 +680,15 @@ central tower - do we have an index of these?"
 - towerbridge.org.uk: /lift-times redirects to /bridge-lifts; robots.txt 404. Legal statement clause 2.5 forbids scraping
   and text or data mining; clause 5.3 forbids reuse of data. Not fetched; recorded in feeds/feeds.json
   (tower-bridge-lifts), feeds/live/README.md backlog, the river and live-state skills. Waiting on the owner.
+
+## 2026-10-04 — Open Waters AIS (priority list item 1)
+- Read the Open Waters AIS terms (site, API docs, aiscast README, policy, limits, contributor agreement): licence per
+  event (`source`, `license`, `attribution` on each), no key for the anonymous tier, CORS `*`, 120 HTTP requests a
+  minute, 2 streams, 100 square degrees. Quotes and the CC0-per-reception / ODbL-aggregate reading: river skill, "AIS: Open Waters".
+- Coverage of the zone envelope is good but not open: snapshot 107 vessels (aishub 95, aisstream 9, CC0 3 virtual AtoNs);
+  15-minute curl listen 1,166 events / 56 vessels, 10-minute tool listen 813 events / 53 vessels, all AISHub or
+  aisstream.io, latency p50 69 s. HANSEATIC SPIRIT (215973000) seen moored at HMS Belfast, source aishub.
+- New tool `tools/fetch-ais.mjs` and `feeds/river/ais.json`: kept 3 CC0 aids to navigation, 0 vessels; would gain 78
+  non-private vessels if the owner accepts AISHub and aisstream.io (counts only). Raw runs gitignored (`data/raw/ais/`).
+- No page layer: it would show no ships under the rule. Owner decisions: AISHub events (Open Waters reports a written,
+  revocable AISHub assurance); or a receiver of our own fed to Open Waters (CC0). No new fault.

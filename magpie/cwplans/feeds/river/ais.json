@@ -1,0 +1,220 @@
+{
+ "meta": {
+  "source": "openwaters-ais",
+  "url": "https://openwaters.io/ais/",
+  "api": "https://ais.openwaters.io",
+  "fetched": "2026-10-04T11:38:58.311Z",
+  "listen": {
+   "from": "2026-10-04T11:38:58.311Z",
+   "to": "2026-10-04T11:49:00.474Z",
+   "seconds": 600,
+   "bbox": "51.474,-0.095,51.528,0.085"
+  },
+  "licence": "per event, from the source it came from (Open Waters does not relicense the aggregate). Kept: CC0 1.0 (volunteer receptions), NLOD 2.0 (Kystverket, BarentsWatch), CC BY 4.0 (Digitraffic). Not kept: AISHub membership terms, aisstream.io (no published terms)",
+  "attribution": "Open Waters AIS (https://openwaters.io/ais/); per item: the attribution given with its event",
+  "method": "Anonymous tier, no key. One GeoJSON snapshot of the envelope (/v1/vessels: vessels heard in the last 30 min, stationary ones up to 7 days), the station list (/v1/stations), and one SSE subscription (/v1/stream?bbox&snapshot=1) for the listen time. Each event is kept or dropped by its own licence; kept vessels that are small private craft are counted, not listed.",
+  "rules": [
+   "Licence: keep an event only when its license is CC0-1.0, NLOD-2.0 or CC-BY-4.0; drop aishub-terms, aisstream-io-terms and anything unknown (counted by class). Snapshot features: by the source of the vessel's last message.",
+   "Fields of a kept vessel come only from kept events or from a snapshot feature whose source is kept.",
+   "Small private craft (ITU type 36/37; class B without a commercial type; class and type not heard) are counted in counts.private_not_listed, never listed.",
+   "Sentinels dropped: COG 360, SOG 102.3, heading 511, nav status 15. Positions rounded to 5 decimals (about 1 m).",
+   "Zone: model box, Royal Docks margin, Lea strip as tools/fetch-river.mjs; server queries use the envelope -0.095,51.474 to 0.085,51.528."
+  ],
+  "counts": {
+   "snapshot": {
+    "vessels": 107,
+    "by_source": {
+     "aishub": 95,
+     "aisstream": 9,
+     "station": 3
+    },
+    "by_licence": {
+     "aishub": 95,
+     "aisstream": 9,
+     "cc0": 3
+    },
+    "kept": 3,
+    "dropped_licence": 104,
+    "private_counted": 0
+   },
+   "stream": {
+    "frames": 814,
+    "events": 813,
+    "replayed": 180,
+    "live": 633,
+    "by_source": {
+     "aishub": 732,
+     "aisstream": 81
+    },
+    "by_licence": {
+     "aishub": 732,
+     "aisstream": 81
+    },
+    "by_msg_type": {
+     "PositionReport": 754,
+     "ShipStaticData": 55,
+     "StandardClassBPositionReport": 2,
+     "StaticDataReport": 2
+    },
+    "synthesized": 813,
+    "vessels": 53,
+    "vessels_by_source": {
+     "aishub": 53,
+     "aisstream": 42
+    },
+    "kept_events": 0,
+    "dropped_events": 813,
+    "latency_s": {
+     "n": 633,
+     "p50": 69.4,
+     "p90": 79.3,
+     "max": 92.8
+    },
+    "position_accuracy_flag": {
+     "high": 521,
+     "low": 235
+    }
+   },
+   "items": 3,
+   "private_not_listed": {}
+  },
+  "coverage": {
+   "stations_touching_zone": [
+    {
+     "station": "aishub",
+     "source": "aishub",
+     "near": null,
+     "vessels_30min": 49137,
+     "events_24h": 40710841,
+     "last_age_s": 20
+    },
+    {
+     "station": "aisstream",
+     "source": "aisstream",
+     "near": null,
+     "vessels_30min": 25652,
+     "events_24h": 2689839,
+     "last_age_s": 139
+    },
+    {
+     "station": "station:ed25519:P69TVC1AMdBPPNnRuE6rhndm…",
+     "source": "station",
+     "near": "Saint Peters, United Kingdom",
+     "vessels_30min": 49,
+     "events_24h": 112771,
+     "last_age_s": 0
+    }
+   ]
+  },
+  "not_kept_would_gain": {
+   "note": "what the owner would gain by agreeing to AISHub and aisstream.io events: distinct non-private vessels by type group (counts only, nothing kept)",
+   "vessels": 78,
+   "by_group": {
+    "passenger": 20,
+    "high-speed craft": 14,
+    "other": 7,
+    "tug": 16,
+    "unknown": 6,
+    "special craft (pilot, SAR, tug, port tender, law enforcement, medical)": 8,
+    "fishing, towing, dredging, diving, military": 3,
+    "tanker": 4
+   },
+   "private_craft_seen": 27
+  }
+ },
+ "items": [
+  {
+   "id": "ais-992356231",
+   "kind": "aton",
+   "mmsi": 992356231,
+   "name": "BARRIER GARDENS",
+   "callsign": null,
+   "ship_type": null,
+   "ship_type_group": null,
+   "class": null,
+   "position": {
+    "lat": 51.49573,
+    "lon": 0.04163,
+    "precision": "AIS reported fix",
+    "zone": "east"
+   },
+   "values": {
+    "cog": null,
+    "sog_kn": null,
+    "heading": null,
+    "nav_status": null,
+    "nav_status_name": null,
+    "destination": null
+   },
+   "time": "2026-10-04T05:46:46Z",
+   "source": "station:ed25519:P69TVC1AMdBPPNnRuE6rhndmxovPKpjujWyTSuwwl3I",
+   "source_kind": "station",
+   "from": "snapshot",
+   "licence": "CC0-1.0",
+   "attribution": "Open Waters AIS (https://openwaters.io/ais/)",
+   "url": "https://ais.openwaters.io/v1/vessels/992356231"
+  },
+  {
+   "id": "ais-992356232",
+   "kind": "aton",
+   "mmsi": 992356232,
+   "name": "SILVERTOWN",
+   "callsign": null,
+   "ship_type": null,
+   "ship_type_group": null,
+   "class": null,
+   "position": {
+    "lat": 51.49823,
+    "lon": 0.046,
+    "precision": "AIS reported fix",
+    "zone": "east"
+   },
+   "values": {
+    "cog": null,
+    "sog_kn": null,
+    "heading": null,
+    "nav_status": null,
+    "nav_status_name": null,
+    "destination": null
+   },
+   "time": "2026-10-04T06:22:02Z",
+   "source": "station:ed25519:P69TVC1AMdBPPNnRuE6rhndmxovPKpjujWyTSuwwl3I",
+   "source_kind": "station",
+   "from": "snapshot",
+   "licence": "CC0-1.0",
+   "attribution": "Open Waters AIS (https://openwaters.io/ais/)",
+   "url": "https://ais.openwaters.io/v1/vessels/992356232"
+  },
+  {
+   "id": "ais-992356240",
+   "kind": "aton",
+   "mmsi": 992356240,
+   "name": "THMS BARRIER",
+   "callsign": null,
+   "ship_type": null,
+   "ship_type_group": null,
+   "class": null,
+   "position": {
+    "lat": 51.4976,
+    "lon": 0.0372,
+    "precision": "AIS reported fix",
+    "zone": "east"
+   },
+   "values": {
+    "cog": null,
+    "sog_kn": null,
+    "heading": null,
+    "nav_status": null,
+    "nav_status_name": null,
+    "destination": null
+   },
+   "time": "2026-10-04T05:46:38Z",
+   "source": "station:ed25519:P69TVC1AMdBPPNnRuE6rhndmxovPKpjujWyTSuwwl3I",
+   "source_kind": "station",
+   "from": "snapshot",
+   "licence": "CC0-1.0",
+   "attribution": "Open Waters AIS (https://openwaters.io/ais/)",
+   "url": "https://ais.openwaters.io/v1/vessels/992356240"
+  }
+ ]
+}

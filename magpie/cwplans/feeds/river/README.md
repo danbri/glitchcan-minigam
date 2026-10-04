@@ -32,13 +32,15 @@ versions. "Live" below means the source changes within minutes or hours, so the 
 | `osm-river.json` | OpenStreetMap, local extract (data as of 2026-10-01) | ODbL 1.0 | 632: 204 piers, 148 moorings, 71 lock gates and locks, 51 houseboats, 43 docks, 33 movable bridges, 20 slipways, 18 wrecks, 14 ships, 14 ferry terminals, 9 marinas, 7 named seamarks; 246 unnamed seamarks counted | no | where boats lie and how the water is divided |
 | `pla-moorings.json` | PLA Visitor Moorings layer | not stated: facts only | 8 visitor moorings (Tower Bridge Moorings, St Katharine Docks, Butlers Wharf, Hermitage Community Moorings, Limehouse Marina, South Dock Marina, West India Docks, Greenwich Yacht Club) | no | who runs each visitor mooring, with the link |
 | `wikidata-vessels.json` | Wikidata via QLever | CC0 | 22 named vessels: Cutty Sark, HMS Belfast, Golden Hinde, SS Robin, Light vessels 93 and 95, Massey Shaw, Knocker White, Royal Iris, Sunborn yacht hotel, St Peter's floating church, two Thames Clippers and others | no | the named boats that have a public record and a place |
+| `ais.json` (`tools/fetch-ais.mjs`) | Open Waters AIS, anonymous tier: snapshot, stations, 10-minute SSE listen | per event: kept only CC0 1.0, NLOD 2.0, CC BY 4.0; AISHub and aisstream.io events not kept | 3 items (virtual aids to navigation at the Thames Barrier, CC0); 0 vessels kept of 107 in the snapshot and 53 in the listen (all from AISHub or aisstream.io); counts by source, licence, message type, latency and what would be gained in `meta` | yes (latency about 70 s) | coverage of the river is good but not open-licensed; see the river skill, "AIS: Open Waters" |
 
 ## What is live and what is not
 
 - Can update live on a page (CORS, no key): EA flood-monitoring and hydrology, TfL arrivals and timetables. The page can
   fetch them itself; the snapshots here are for offline use and history.
 - Server-side only (no CORS): PLA ArcGIS map server, CRT notices endpoint, GOV.UK content API, the operators' pages.
-- Not available: live vessel positions (see AIS below).
+- Not available under the licence rule: live vessel positions. Open Waters AIS has them (CORS, no key), but in the zone
+  every vessel event came from AISHub or aisstream.io (2026-10-04); see `ais.json` meta and the river skill.
 
 ## Priority list: AIS sources named by the owner (2026-10-04)
 
@@ -54,6 +56,9 @@ verify the terms and the coverage at the source before any fetch, and record the
    share-alike source allowed without the owner's agreement, so ask first, as for adsb.lol); events from AISHub or
    aisstream (no formal open terms: not kept). Small private craft can identify their owners: treat as personal data
    under the cwplans exception, scoping only.
+   **Result (2026-10-04):** coverage yes (107 vessels in the snapshot, 53 in a 10-minute listen; HANSEATIC SPIRIT seen
+   moored at HMS Belfast), keepable no: aishub 95 and aisstream 9 of 107; CC0 volunteer events only for 3 aids to
+   navigation. Owner decision: accept AISHub events (78 non-private vessels gained), or feed our own receiver (CC0).
 2. **Kystverket / BarentsWatch** (Norwegian Coastal Administration). NLOD 2.0, open, attribution, no registration for
    the open tier; raw TCP stream, APIs, history in Kystdatahuset. Licence fit: allowed. Coverage: Norwegian waters only,
    so no Thames positions. Use: a test stream for the AIS pipeline (decode, filter by box, write facts), and the

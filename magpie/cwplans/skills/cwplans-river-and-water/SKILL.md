@@ -11,7 +11,7 @@ description: >-
   Lanes Canary Wharf) and the Royal Docks (RoDMA PDF certificate), EA continuous sondes and the Water Quality Archive,
   TfL river buses (routes, timetables, live arrival predictions), OSM moorings, houseboats and ships, PLA visitor
   moorings, and Wikidata vessels. Licences per source, the facts-only rule for PLA and CRT, why there is no open live
-  AIS, and the traps (time-stamped URLs and --no-fetch, minute-level DIFF readings, a sonde with impossible values F24,
+  AIS (Open Waters AIS measured: Thames coverage is AISHub and aisstream only, tools/fetch-ais.mjs keeps CC0/NLOD/CC BY events), and the traps (time-stamped URLs and --no-fetch, minute-level DIFF readings, a sonde with impossible values F24,
   two CRT pages that disagree on the West India lock window, a certificate that misnames King George V Dock). Reach for
   it before you refresh or add a river or water source, show boats, locks, notices or swim-water status on the 3D page,
   or answer "can I swim in the dock today?", "is the lock open?" or "what ships are on the river?".
@@ -107,7 +107,9 @@ when another working copy rewrote the file; append, never replace, and check `gi
 
 ## AIS: why there is no live vessel layer
 
-No open, licensed, browser-usable live AIS exists for the Thames. aisstream.io needs a key (GitHub sign-in), forbids
+Open Waters AIS (measured 2026-10-04, section below) re-serves good Thames coverage with CORS and no key, but every
+vessel event in the zone came from AISHub or aisstream.io, which the licence rule does not keep: so still no open,
+licensed live AIS for vessels on the Thames. aisstream.io needs a key (GitHub sign-in), forbids
 browser connections and states no data licence; AISHub needs a contributed receiver; Global Fishing Watch is CC BY-NC;
 MarineTraffic and VesselFinder are proprietary. If the owner supplies an aisstream key and accepts its terms, the route
 is a small server (or a scheduled fetch) that subscribes with the zone bounding box and writes positions as facts; ship
@@ -128,6 +130,7 @@ verify the terms and the coverage at the source before any fetch, and record the
    share-alike source allowed without the owner's agreement, so ask first, as for adsb.lol); events from AISHub or
    aisstream (no formal open terms: not kept). Small private craft can identify their owners: treat as personal data
    under the cwplans exception, scoping only.
+   **Result (2026-10-04):** coverage yes, keepable no. See "AIS: Open Waters" below.
 2. **Kystverket / BarentsWatch** (Norwegian Coastal Administration). NLOD 2.0, open, attribution, no registration for
    the open tier; raw TCP stream, APIs, history in Kystdatahuset. Licence fit: allowed. Coverage: Norwegian waters only,
    so no Thames positions. Use: a test stream for the AIS pipeline (decode, filter by box, write facts), and the
@@ -138,6 +141,72 @@ verify the terms and the coverage at the source before any fetch, and record the
 4. **Global Fishing Watch APIs**. Processed AIS products (fishing effort, presence, vessel identity); free for
    non-commercial use (CC BY-NC style), key required. Licence fit: non-commercial is a restricted licence, which the
    cwplans licence limit excludes; needs the owner's decision before any use. Coverage: global, but aimed at fishing.
+
+## AIS: Open Waters (measured 2026-10-04)
+
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-ais.mjs                # snapshot + stations + 10 min listen
+    NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-ais.mjs --listen=0     # snapshot only
+    node magpie/cwplans/tools/fetch-ais.mjs --no-fetch                          # rebuild ais.json from the newest raw run
+
+Out: `feeds/river/ais.json`. Raw runs: `data/raw/ais/<stamp>/` (gitignored: they hold AISHub and aisstream events).
+
+**Terms read 2026-10-04** (https://openwaters.io/ais/, https://openwaters.io/api/ais/, the aiscast README,
+`docs/policy.md`, `docs/limits.md`, `docs/contributor-agreement.md` at https://github.com/openwatersio/aiscast):
+- robots.txt: `User-agent: * Allow: /` with "Content-Signal: search=yes,ai-input=yes,ai-train=yes".
+- "Licensing is per source, and the aggregate is not relicensed: each event is re-served under the terms of the source it
+  came from." Every `/v1` event carries `source`, `license` and `attribution`. Values seen: `aishub-terms`,
+  `aisstream-io-terms`; documented: CC0 for volunteer receptions, NLOD 2.0 (Kystverket, BarentsWatch), CC BY 4.0
+  (Digitraffic). Credit line for all: "Open Waters AIS (https://openwaters.io/ais/)".
+- Volunteer receivers: "Receptions are dedicated to the public domain under the contributor agreement; no attribution
+  required. The aggregate database is published under ODbL." In practice: one event (one reception) is CC0 and can be
+  kept; a database built from many volunteer receptions as Open Waters publishes it (its archive, or a bulk copy) is the
+  ODbL aggregate. Our `ais.json` keeps single CC0 events we received; it does not copy the Open Waters aggregate.
+- AISHub: the site says AISHub "confirmed in writing that there are no restrictions on use, including commercial use and
+  redistribution. Credit 'AISHub'"; `policy.md` adds "Revocable at will" and dates the confirmation 2026-08-22. That is
+  Open Waters' report of a private letter, not a published AISHub licence: not kept without the owner's agreement.
+- aisstream.io: "no published terms", "Best effort, frequently offline": not kept.
+- Service tiers: "free for personal use"; anonymous (no key): 2 streams per address, 20 messages a second, 100 square
+  degrees, HTTP 120 requests a minute; personal token free (Ed25519 key pair, no e-mail); commercial use of the hosted
+  service is a paid tier ("permission to use this service commercially", `policy.md`). Scoping is not commercial use; a
+  product would need the commercial tier or our own receiver.
+- Endpoints: `GET /v1/vessels?bbox=minLat,minLon,maxLat,maxLon` (GeoJSON, vessels heard in the last 30 min plus
+  stationary ones up to 7 days, max 500 old ones), `GET /v1/vessels/{mmsi}`, `/track` (48 h anonymous), `GET /v1/stations`,
+  SSE and WebSocket `/v1/stream` (`snapshot=1` replays the last state), `/v1/nmea` (contributor tier), vector tiles, an
+  MCP server. CORS: `access-control-allow-origin: *` on `/v1/vessels`: a page can call it with no key.
+- Privacy: opt-out for small craft tied to a person; volunteer stations shown as a keyed hash, never an address.
+
+**Coverage, zone envelope 51.474,-0.095 to 51.528,0.085:**
+
+| test | result |
+|---|---|
+| snapshot 11:22 UTC | 108 vessels: aishub 97, aisstream 8, volunteer station 3 (all three are virtual aids to navigation at the Thames Barrier) |
+| curl SSE listen 11:23 to 11:38 (15 min) | 1,166 events, 56 vessels; aishub 1,073, aisstream 93, CC0 0; PositionReport 1,096, ShipStaticData 63, class B 7 |
+| tool run 11:38 to 11:49 (10 min) | snapshot 107 (kept 3 AtoN); stream 813 events (633 live, 180 replayed), 53 vessels, kept 0; all `synthesized: true` (rebuilt from JSON, not a VHF reception) |
+| latency (receive minus event time, live events) | p50 69 s, p90 79 s, max 93 s: AISHub is "about a minute behind" |
+| position precision | AIS fix to about 0.2 m resolution; PositionAccuracy flag high (under 10 m) on 521, low on 235 events |
+| stations whose footprint touches the zone | aishub, aisstream, and one volunteer station near "Saint Peters, United Kingdom" (Thanet, Kent; 49 vessels in 30 min): it hears the Barrier AtoNs, no vessels in the zone |
+| ground truth | HANSEATIC SPIRIT (MMSI 215973000, ITU type 69 passenger, nav status 5 moored) at 51.50696,-0.08212, alongside HMS Belfast, seen 11:20 to 11:26 UTC: shown, source aishub (owner's report and the coordinator's snapshot agree) |
+
+**Licence filter (rule in use):** keep an event when its `license` is CC0-1.0, NLOD-2.0 or CC-BY-4.0; drop
+`aishub-terms`, `aisstream-io-terms` and anything unknown, counted by class. Snapshot features have no `license`: classed
+by the source of the vessel's last message. Fields of a kept vessel come only from kept events or kept features.
+Kept today: 3 items (Thames Barrier, Barrier Gardens and Silvertown virtual AtoNs, CC0), 0 vessels.
+**What the owner would gain by agreeing to AISHub + aisstream (counts only, from the tool run):** 78 non-private vessels
+(20 passenger, 16 tug, 14 high-speed craft (the Uber Boat Thames Clippers), 8 special craft, 4 tanker, 3
+fishing/towing/dredging, 7 other, 6 type unknown) and 27 private craft that would still be counted only.
+
+**Small private craft rule:** ITU type 36 or 37, class B without a commercial type, or class and type not heard: counted
+in `counts.private_not_listed`, never listed. In the zone many are yachts in St Katharine Docks and South Dock Marina.
+
+**The open route:** a receiver of our own fed to Open Waters (AIS-catcher with a free personal token over MQTT, or UDP to
+udp.ais.openwaters.io:10110) makes its receptions CC0 events with source `station:<our key>` that this tool keeps; 1,000
+messages a day gives the contributor tier (any area, raw NMEA). A dongle and a VHF antenna with a river view near the
+zone would do it. The token is a secret: keep it in the environment settings, never in the repo or the chat.
+
+**Page layer (proposed, not built):** with today's filter a "Ships (AIS)" layer would show three buoy-like AtoNs and no
+ships, so it waits for the owner's decision on AISHub, or for our own receiver. When built: call `/v1/vessels` only after a
+tap (CORS, no key), filter by `source`/`license` in the page, markers with a heading arrow, card with name, type, speed,
+destination, time and source, and the per-source attribution in Credits.
 
 ## Tower Bridge lift times: not fetched (terms, 2026-10-04)
 

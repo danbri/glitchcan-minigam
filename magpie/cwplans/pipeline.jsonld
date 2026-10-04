@@ -5383,6 +5383,46 @@
    "cwp:judgement": "The status windows (7, 5 and 2 years), the \"major\" filter and the match distances are judgements, recorded in the tool header, meta.status_rules and meta.match_rules and the cwplans-construction skill. facts.json is hand-written from crawled pages and the owner's photos (crawl list inside it)."
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-ais",
+   "@type": "prov:Activity",
+   "rdfs:label": "fetch-ais",
+   "dct:description": "Reads a GeoJSON snapshot of vessels in the zone envelope, the station list and the SSE stream for a bounded time; classes each event by its own licence; writes kept vessels as dated facts and counts everything else.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-ais",
+     "dcat:accessURL": "https://ais.openwaters.io/v1/vessels, /v1/stations, /v1/stream (SSE)",
+     "dct:description": "bbox=51.474,-0.095,51.528,0.085 (minLat,minLon,maxLat,maxLon); stream with snapshot=1 for --listen seconds (default 600, max 1800); anonymous tier, no key"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/river/ais.json"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/ais/"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/fetch-ais.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-ais.mjs [--listen=600] [--no-fetch]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Keep an event only when license is CC0-1.0, NLOD-2.0 or CC-BY-4.0; snapshot features by the source of the last message (station:/udp:/mmsi: = CC0, kystverket/barentswatch = NLOD, digitraffic = CC BY).",
+    "Fields of a kept vessel only from kept events or kept snapshot features.",
+    "Small private craft (ITU 36/37; class B without a commercial type 30-35 or 40-99; class and type not heard) counted, never listed.",
+    "AIS sentinels dropped (COG 360, SOG 102.3, heading 511, nav status 15); positions rounded to 5 decimals.",
+    "Not kept: counted by type group in meta.not_kept_would_gain, no ids or names.",
+    "Politeness: one HTTP request at a time >= 2 s apart, one stream, User-Agent from tools/lib.mjs; raw runs gitignored."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [],
+   "cwp:area": "water",
+   "cwp:fault": [],
+   "cwp:judgement": "Open Waters re-serves each event under its upstream source's terms. Only open licences are kept (CC0 single volunteer receptions, NLOD, CC BY). AISHub (a private written assurance reported by Open Waters, revocable) and aisstream.io (no terms) are not kept without the owner's agreement; on 2026-10-04 they were the whole vessel coverage of the zone, so 0 vessels were kept and 3 CC0 aids to navigation."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
    "@type": "prov:Activity",
    "rdfs:label": "Published levels used as tunnel and structure controls",
@@ -10244,6 +10284,26 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/river/ais.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "AIS facts in the Docklands zone from Open Waters AIS, kept per event only when the upstream licence is open (CC0, NLOD, CC BY); counts by source, licence, message type and latency; small private craft counted only; counts of what AISHub and aisstream.io would add (no data)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-ais"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-volunteer-cc0"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-ais"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/river/levels.json",
    "@type": [
     "prov:Entity",
@@ -11392,6 +11452,28 @@
    "dct:license": "CC BY 4.0 (data); API free for non-commercial use",
    "dcat:landingPage": "https://open-meteo.com/",
    "cwp:attribution": "Weather data by Open-Meteo.com (CC BY 4.0)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-ais",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Open Waters AIS (Open Water Software, LLC): live AIS re-served from several upstream sources, anonymous tier, ais.openwaters.io /v1/vessels, /v1/stations, /v1/stream (SSE)",
+   "dct:license": "Per event, the licence of the upstream source (the aggregate is not relicensed). Only events from open sources are kept (see openwaters-volunteer-cc0); AISHub and aisstream.io events are not kept (owner decision). Service: free tiers 'for personal use'; commercial use of the hosted service is a paid tier",
+   "dcat:landingPage": "https://openwaters.io/ais/",
+   "cwp:attribution": "Open Waters AIS (https://openwaters.io/ais/)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-volunteer-cc0",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Open Waters AIS volunteer receiving stations (single receptions, source station:/udp:/mmsi:)",
+   "dct:license": "CC0 1.0 per reception (Open Waters contributor agreement); the Open Waters aggregate of volunteer receptions is ODbL and is not copied",
+   "dcat:landingPage": "https://github.com/openwatersio/aiscast/blob/main/docs/contributor-agreement.md",
+   "cwp:attribution": "Open Waters AIS (https://openwaters.io/ais/) (not required for CC0)"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-flood-monitoring",

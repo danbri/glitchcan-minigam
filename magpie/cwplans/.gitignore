@@ -44,3 +44,6 @@ data/raw/uprn-amend/
 data/raw/feed-discovery/
 # construction index caches (tools/build-construction-index.mjs)
 data/raw/construction/
+
+# AIS raw runs (tools/fetch-ais.mjs): include AISHub and aisstream events, never commit
+data/raw/ais/

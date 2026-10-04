@@ -4903,6 +4903,38 @@
         "F35"
       ],
       "area": "construction"
+    },
+    {
+      "id": "fetch-ais",
+      "area": "water",
+      "tool": "tools/fetch-ais.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-ais.mjs [--listen=600] [--no-fetch]",
+      "kind": "fetch",
+      "used": [
+        {
+          "source": "openwaters-ais",
+          "endpoint": "https://ais.openwaters.io/v1/vessels, /v1/stations, /v1/stream (SSE)",
+          "request": "bbox=51.474,-0.095,51.528,0.085 (minLat,minLon,maxLat,maxLon); stream with snapshot=1 for --listen seconds (default 600, max 1800); anonymous tier, no key"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/river/ais.json"
+        },
+        {
+          "local": "data/raw/ais/"
+        }
+      ],
+      "method": "Reads a GeoJSON snapshot of vessels in the zone envelope, the station list and the SSE stream for a bounded time; classes each event by its own licence; writes kept vessels as dated facts and counts everything else.",
+      "judgement": "Open Waters re-serves each event under its upstream source's terms. Only open licences are kept (CC0 single volunteer receptions, NLOD, CC BY). AISHub (a private written assurance reported by Open Waters, revocable) and aisstream.io (no terms) are not kept without the owner's agreement; on 2026-10-04 they were the whole vessel coverage of the zone, so 0 vessels were kept and 3 CC0 aids to navigation.",
+      "rules": [
+        "Keep an event only when license is CC0-1.0, NLOD-2.0 or CC-BY-4.0; snapshot features by the source of the last message (station:/udp:/mmsi: = CC0, kystverket/barentswatch = NLOD, digitraffic = CC BY).",
+        "Fields of a kept vessel only from kept events or kept snapshot features.",
+        "Small private craft (ITU 36/37; class B without a commercial type 30-35 or 40-99; class and type not heard) counted, never listed.",
+        "AIS sentinels dropped (COG 360, SOG 102.3, heading 511, nav status 15); positions rounded to 5 decimals.",
+        "Not kept: counted by type group in meta.not_kept_would_gain, no ids or names.",
+        "Politeness: one HTTP request at a time >= 2 s apart, one stream, User-Agent from tools/lib.mjs; raw runs gitignored."
+      ]
     }
   ],
   "manual_activities": [
