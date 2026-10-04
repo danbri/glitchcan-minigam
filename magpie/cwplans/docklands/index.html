@@ -150,6 +150,8 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
       <div class="chips" role="radiogroup" aria-label="Style">
         <label><input type="radio" name="style" value="normal" checked> Map</label><label><input type="radio" name="style" value="pixel"> Isometric pixel art</label>
       </div>
+      <div class="chips row"><label><input type="checkbox" id="nightMode"> Night</label></div>
+      <p class="small" id="nightNote" hidden></p>
       <p class="small" id="pixNote" hidden>Pixel art: an isometric view in a 33-colour palette with stylised trees, people, cyclists, buses, cabs, now and then a police car, ambulance or fire engine, gulls, river traffic (Thames Clipper catamarans, tourist boats, tugs towing waste barges, aggregate barges, speedboats) and swimmers in Eden Dock. Drag to move, pinch or wheel to zoom, twist two fingers to turn, move two fingers up or down to tilt (mouse: right or Shift drag). The arrows at the top right turn by a quarter. The animals and traffic are illustrative, not live data.</p>
       <h3>Ground image</h3>
       <div class="chips" role="radiogroup" aria-label="Ground image">
@@ -279,33 +281,57 @@ function tunnelY(l, p, P) {
   return c[2] === 'src' ? c[1] : c[1] - Math.min(P.ddeep, Math.abs(s - c[0]) / n);
 }
 
-const cv = $('c'), gl = cv.getContext('webgl', { antialias: true, alpha: false });
+const cv = $('c'), gl = cv.getContext('webgl', { antialias: true, alpha: false, stencil: true });   // stencil: night water marks its pixels for the reflections
 if (!gl || !gl.getExtension('OES_element_index_uint')) { hud.textContent = 'WebGL (with 32-bit indices) is not available: see the text tables below'; textTables(); return; }
 // one program for everything. The terrain alone may sample a ground image (useTex): texture coordinates come from x, z and the
 // image box (docklands/data/tex/textures.json); the vertex colour then carries only the hill shading. dim darkens the rest at night.
 const vs = 'attribute vec3 p;attribute vec4 c;uniform mat4 m;uniform float vz;uniform vec4 box;varying vec4 v;varying float wy;varying vec2 uv;void main(){v=c;wy=p.y;uv=(p.xz-box.xy)/box.zw;gl_Position=m*vec4(p.x,p.y*vz,p.z,1.);}';
-const fs = 'precision mediump float;varying vec4 v;varying float wy;varying vec2 uv;uniform float a;uniform float cut;uniform float mono;uniform float useTex;uniform float dim;uniform float glow;uniform float time;uniform sampler2D tx;void main(){if(wy>cut)discard;if(mono>.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}vec3 col=useTex>.5?min(vec3(1.),texture2D(tx,uv).rgb*v.rgb*1.35):v.rgb*dim;float k=1.;if(glow>.5){k=.55+.45*sin(time*3.3+wy*.09+v.a*40.);col=col*(1.+.6*k);}gl_FragColor=vec4(col,(glow>.5?k:v.a)*a);}';
+const fs = 'precision mediump float;varying vec4 v;varying float wy;varying vec2 uv;uniform float a;uniform float cut;uniform float mono;uniform float useTex;uniform float dim;uniform float glow;uniform float time;uniform vec4 ov;uniform sampler2D tx;void main(){if(wy>cut)discard;if(mono>.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}vec3 col=useTex>.5?min(vec3(1.),texture2D(tx,uv).rgb*v.rgb*1.35)*dim:v.rgb*dim;col=mix(col,ov.rgb,ov.a);float k=1.;if(glow>.5){k=.55+.45*sin(time*3.3+wy*.09+v.a*40.);col=col*(1.+.6*k);}gl_FragColor=vec4(col,(glow>.5?k:v.a)*a);}';
 const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
 const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
-const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono'), uTex = U_('useTex'), uDim = U_('dim'), uBox = U_('box'), uGlow = U_('glow'), uTime = U_('time');
-gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.uniform1f(uGlow, 0); gl.uniform4f(uBox, 0, 0, 1, 1); gl.uniform1i(U_('tx'), 0);
+const aP = gl.getAttribLocation(pr, 'p'), aC = gl.getAttribLocation(pr, 'c'), U_ = n => gl.getUniformLocation(pr, n), uM = U_('m'), uA = U_('a'), uCut = U_('cut'), uVz = U_('vz'), uMono = U_('mono'), uTex = U_('useTex'), uDim = U_('dim'), uBox = U_('box'), uGlow = U_('glow'), uTime = U_('time'), uOv = U_('ov');
+gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.uniform1f(uGlow, 0); gl.uniform4f(uOv, 0, 0, 0, 0); gl.uniform4f(uBox, 0, 0, 1, 1); gl.uniform1i(U_('tx'), 0);
 gl.enableVertexAttribArray(aP); gl.enableVertexAttribArray(aC);
 // facade program (buildings only): 20-byte vertices [x y z u] + rgba. Walls get a window grid from the storey height
 // (3.6 m) and u, the distance along the wall; at night some windows are lit. Roofs of low buildings take the ground image.
 // With music in pixel art (viz), each building follows the frequency band of its centre (west bass, east treble):
-// g = [centre x, centre z, base m OD] per vertex; stretch scales its height, swirl twists it, noise sways it.
-const fvs = 'attribute vec3 p;attribute float u;attribute vec4 c;attribute vec3 g;uniform mat4 m;uniform float vz;uniform vec4 box;uniform vec3 eye;uniform float viz;uniform float bands[24];uniform vec4 vbox;uniform vec3 vk;uniform float time;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;' +
-  'void main(){v=c;vec3 q=p;if(viz>.5){int bi=int(clamp((g.x-vbox.x)/(vbox.y-vbox.x),0.,.9999)*24.);float b=0.;for(int i=0;i<24;i++)if(i==bi)b=bands[i];' +
+// g = [centre x, centre z, base m OD, night kind] per vertex; stretch scales its height, swirl twists it, noise sways it.
+// Night kind (g.w) = window use * 1000 + roof top in m OD: 0 unknown, 1 homes, 2 offices, 3 hotel, 4 Newfoundland, 5 One Canada Square.
+const fvs = 'attribute vec3 p;attribute float u;attribute vec4 c;attribute vec4 g;uniform mat4 m;uniform float vz;uniform vec4 box;uniform vec3 eye;uniform float viz;uniform float bands[24];uniform vec4 vbox;uniform vec3 vk;uniform float time;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;varying vec4 gk;' +
+  'void main(){v=c;gk=g;vec3 q=p;if(viz>.5){int bi=int(clamp((g.x-vbox.x)/(vbox.y-vbox.x),0.,.9999)*24.);float b=0.;for(int i=0;i<24;i++)if(i==bi)b=bands[i];' +
   'float o=max(max(vbox.x-g.x,g.x-vbox.y),max(vbox.z-g.y,g.y-vbox.w));b*=1.-smoothstep(150.,700.,o);float h=max(0.,p.y-g.z),k=1.+1.6*vk.x*b;q.y=g.z+h*k;' +
   'float an=vk.z*b*h/140.,cs=cos(an),sn=sin(an);vec2 d=p.xz-g.xy;d=vec2(cs*d.x-sn*d.y,sn*d.x+cs*d.y);float w=vk.y*b*h*.03*sin(time*3.+g.x*.05+h*.06);q.xz=g.xy+d+vec2(w,w*.6);}' +
   'wy=q.y;uu=u;uv=(q.xz-box.xy)/box.zw;dist=distance(vec3(q.x,q.y*vz,q.z),eye);gl_Position=m*vec4(q.x,q.y*vz,q.z,1.);}';
 // photo facade tiles: mip level from the derivatives of the unwrapped tile coordinate (fract() would make it jump at
 // every seam). Tiles are 256 px and aligned, so each mip level of the atlas averages within one tile.
 const FLOD = !!(gl.getExtension('EXT_shader_texture_lod') && gl.getExtension('OES_standard_derivatives'));
-const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension GL_OES_standard_derivatives : enable\n#define TEXL(s,u,l) texture2DLodEXT(s,u,l)\n#define LODOF(t) clamp(log2(max(max(length(dFdx(t)),length(dFdy(t))),1e-4)),0.,8.)\n'
-  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n') + 'precision mediump float;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform float night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec2 fslot[16];uniform float ftex;' +
+const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension GL_OES_standard_derivatives : enable\n#define TEXL(s,u,l) texture2DLodEXT(s,u,l)\n#define LODOF(t) clamp(log2(max(max(length(dFdx(t)),length(dFdy(t))),1e-4)),0.,8.)\n#define FWID(t) max(fwidth(t).x,fwidth(t).y)\n'
+  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n#define FWID(t) (dist/700.)\n') + 'precision mediump float;varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform float night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec2 fslot[16];uniform float ftex;varying vec4 gk;' +
   'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
+  'float vn(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+1.),f.x),f.y);}' +
+  // night (map style): dark walls; lit windows by the building's use (registry homes and occupant types): homes warm
+  // (2700-3200 K) in clusters of flats, offices cool white by floors and floor bands, a few blue-white; lit crowns; haze
+  'vec3 nightCol(vec3 base,float photo){float ty=floor(gk.w/1000.+.001),top=gk.w-ty*1000.,ht=max(1.,top-gk.z),sd=h(gk.xy*.0137+.31);' +
+  'vec3 col;if(uu<0.){col=base*.035+vec3(.006);if(ty>4.5&&wy>top+.5)col=mix(vec3(.30,.13,.16),vec3(.10,.07,.09),clamp((wy-top)/14.,0.,1.));}' +   // roofs; One Canada Square: the pyramid lit from its base
+  'else{col=base*(.045+.02*photo)+vec3(.008,.008,.01);' +
+  'if(win>.5){float off=step(1.5,ty)*step(ty,2.5);vec2 gg=vec2(uu/1.8,(wy-gk.z)/3.6),cell=floor(gg),f=fract(gg);' +
+  'float wm=off>.5?step(.06,f.x)*step(f.x,.94)*step(.16,f.y)*step(f.y,.82):step(.16,f.x)*step(f.x,.84)*step(.22,f.y)*step(f.y,.82);' +
+  'wm=mix(wm,off>.5?.6:.42,smoothstep(.35,.9,FWID(gg)));vec3 L;' +   // far away a window is under a pixel: its mean, not moire
+  'if(off>.5){float fl=cell.y,lf=step(h(vec2(fl,sd*13.)),.36),sg=h(vec2(floor(cell.x/9.),fl)+sd*5.),lit=lf*step(.22,sg)+(1.-lf)*step(.94,sg);' +
+  'L=mix(vec3(.74,.84,1.),vec3(.95,.96,.92),h(vec2(fl,2.)+sd))*(.6+.25*h(vec2(floor(cell.x/9.),fl)))*lit;}' +
+  'else{float fl=cell.y,fid=floor((cell.x+floor(h(vec2(fl,sd))*3.))/3.),p=(ty>2.5?.45:ty>.5?.33:.24)*(ht<30.?.7:1.);' +
+  'float pl=clamp(p+(vn(vec2(cell.x/7.,fl/3.)+sd*41.)-.5)*1.1,0.,1.),hf=h(vec2(fid,fl)+sd*31.),lit=step(hf,pl)*step(.15,h(cell+sd*7.));' +
+  'L=mix(vec3(1.,.62,.32),vec3(1.,.80,.55),h(vec2(fid,fl)+3.1));if(h(vec2(fid,fl)+5.7)<.05)L=vec3(.70,.80,1.);L*=(.55+.45*h(cell+1.7))*lit;}' +
+  'col=mix(col,vec3(.018,.02,.026)+L,wm);}' +
+  'float tb=top-wy;if(ty>3.5&&ty<4.5&&tb<13.){float tri=abs(fract(uu/9.)*2.-1.),yy=1.-tb/13.,ln=min(abs(tri-yy),abs(tri-(1.-yy)));col=mix(vec3(.10,.08,.06),vec3(1.,.90,.70),smoothstep(.04,.12,ln));}' +   // Newfoundland: the lit diagrid crown
+  'else if(ty>4.5&&tb<7.)col=mix(col,vec3(.95,.30,.40),.85);' +   // One Canada Square: pink-red band under the pyramid
+  'else if(ht>90.&&tb<3.5)col+=vec3(.32,.30,.27)*smoothstep(3.5,.5,tb);}' +   // other towers: a soft band at the top
+  'if(win<-.5)col=base*.6;' +   // a data colour mode: keep its colours readable
+  'return mix(col,vec3(.085,.07,.058),(1.-exp(-dist/5200.))*.6);}' +   // haze in the colour of the sky glow
   'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
+  'if(night>.5&&pxm==0.){float ab=v.a*255.,ph=0.;vec3 b=col;if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tile, dark
+  'vec2 tc=vec2(uu/S.x,wy/S.y),q=fract(tc),st=vec2(mod(sl,8.),floor(sl/8.));float lod=LODOF(tc*256.),e=.5*exp2(floor(lod)+1.);b=TEXL(ftx,vec2(st.x*256.+e+q.x*(256.-2.*e),st.y*256.+e+(1.-q.y)*(256.-2.*e))/vec2(2048.,1024.),lod).rgb;ph=1.;}' +
+  'gl_FragColor=vec4(nightCol(b,ph),a);return;}' +
   'if(pxm>0.)col=min(vec3(1.),col*1.3);' +   // pixel art: brighter walls, windows on the art-pixel grid
   'float ab=v.a*255.;' +
   'if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tower's tile, repeated by its size in metres
@@ -347,9 +373,9 @@ class Mesh {
   }
   free() { if (this.vb) { gl.deleteBuffer(this.vb); gl.deleteBuffer(this.ib); } }
 }
-class MeshF {   // like Mesh with a fourth float per vertex (u); 20 bytes a vertex; plus g = [centre x, centre z, base] in a second buffer
-  constructor() { this.f = []; this.idx = []; this.n = 0; this.g = []; this.cur = [0, 0, 0]; this.hold = false; }
-  v(x, y, z, u, c, a = 1) { this.g.push(this.cur[0], this.cur[1], this.cur[2]); this.f.push(x, y, z, u, ((c[0] * 255) | 0) | (((c[1] * 255) | 0) << 8) | (((c[2] * 255) | 0) << 16) | (((a * 255) | 0) << 24)); return this.n++; }
+class MeshF {   // like Mesh with a fourth float per vertex (u); 20 bytes a vertex; plus g = [centre x, centre z, base, night kind] in a second buffer
+  constructor() { this.f = []; this.idx = []; this.n = 0; this.g = []; this.cur = [0, 0, 0]; this.kind = 0; this.hold = false; }
+  v(x, y, z, u, c, a = 1) { this.g.push(this.cur[0], this.cur[1], this.cur[2], this.kind); this.f.push(x, y, z, u, ((c[0] * 255) | 0) | (((c[1] * 255) | 0) << 8) | (((c[2] * 255) | 0) << 16) | (((a * 255) | 0) << 24)); return this.n++; }
   tri(a, b, c) { this.idx.push(a, b, c); }
   upload() {
     const buf = new ArrayBuffer(this.f.length * 4), f32 = new Float32Array(buf), u32 = new Uint32Array(buf);
@@ -457,11 +483,21 @@ function towerF(M, t, col, mat) {
   });
   M.hold = false;
 }
+// night: how a building's windows light up, from what the registry knows (atlas index: homes, OSM building type)
+const NIGHT_USE = { residential: 1, apartments: 1, house: 1, terrace: 1, houseboat: 1, 'yes;apartments': 1, hotel: 3, commercial: 2, office: 2, retail: 2, data_center: 2, service: 2, industrial: 2, warehouse: 2, college: 2, school: 2, train_station: 2, public: 2, clinic: 2 };
+let NREG = null;   // { AT, regOf } once the atlas index has loaded (both are declared further down)
+function nightUse(i) {
+  if (!NREG) return 0; const k = NREG.regOf[i]; if (k < 0) return 0; const r = NREG.AT.buildings[k];
+  if (r.id === 'cwb-0451') return 4; if (r.id === 'cwb-0413') return 5;
+  if (r.hm > 0) return 1; return NIGHT_USE[r.t] ?? (r.o > 3 || r.co > 20 ? 2 : 0);
+}
+const nightKind = (i, top) => nightUse(i) * 1000 + Math.max(0, Math.min(999, top));
+const towerTop = t => Math.max(...t.tiers.filter((tr, k) => !(k === t.tiers.length - 1 && t.top && t.top.kind === 'pyramid' && t.top.apex)).map(tr => tr.y1));   // the highest wall (not the pyramid)
 function buildBld() { if (L.bld) L.bld.free(); const M = new MeshF(), useT = TOWERS && skyIdx < 0;
   const look = (b, i) => { const sl = facSlot(i); return sl != null ? [[.9, .9, .9], -1 - sl] : [buildingColour(b, i), buildingMat && buildingMat(b, i)]; };
-  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (!(h > 0)) return; const [c, m] = notFlown(i) ? [[.36, .42, .52], null] : look(b, i); prismF(M, b, b.b + (b.mh || 0), b.b + h, c, !!b.mh, m); });
-  if (useT) for (const t of TOWERS) { const mi = t.model_buildings[0], [c, m] = look(A.buildings[mi], mi); towerF(M, t, c, m); }
-  L.bld = M.upload(); }
+  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (!(h > 0)) return; const [c, m] = notFlown(i) ? [[.36, .42, .52], null] : look(b, i); M.kind = nightKind(i, b.b + h); prismF(M, b, b.b + (b.mh || 0), b.b + h, c, !!b.mh, m); });
+  if (useT) for (const t of TOWERS) { const mi = t.model_buildings[0], [c, m] = look(A.buildings[mi], mi); M.kind = nightKind(mi, towerTop(t)); towerF(M, t, c, m); }
+  L.bld = M.upload(); L.bld.kinds = !!NREG; }
 buildBld();
 // photo style (drone frames for splat training): materials instead of the map colour codes, no diagram layers
 const PHOTO_BLD = [[.74, .75, .76], [.62, .66, .70], [.80, .78, .74], [.55, .60, .66], [.70, .68, .64], [.66, .70, .72]];
@@ -584,12 +620,12 @@ let queued = false; function draw() { if (!queued) { queued = true; requestAnima
 function drawFacades(M, alpha, P) {
   if (!M || !M.count) return; gl.useProgram(prF);
   gl.uniformMatrix4fv(fu.m, false, MVP); gl.uniform3f(fu.eye, CAM.eye[0], CAM.eye[1], CAM.eye[2]); gl.uniform1f(fu.vz, VZ); gl.uniform1f(fu.a, alpha); gl.uniform1f(fu.cut, P.cut < 250 ? P.cut : 1e9);
-  gl.uniform1f(fu.pxm, PIX.on ? cam.dist * .84 / PIX.fh : 0); gl.uniform1f(fu.night, ground === 'night2012' ? 1 : 0); gl.uniform1f(fu.win, $('showWindows').checked && $('colourBy').value === 'source' ? 1 : 0);
+  gl.uniform1f(fu.pxm, PIX.on ? cam.dist * .84 / PIX.fh : 0); gl.uniform1f(fu.night, nightOn() || ground === 'night2012' ? 1 : 0); gl.uniform1f(fu.win, $('colourBy').value !== 'source' ? -1 : $('showWindows').checked ? 1 : 0);
   const rt = !!groundTex && ground !== 'night2012' && ground !== 'intensity2020'; gl.uniform1f(fu.roofTex, rt ? 1 : 0);
   if (TEXIDX) { const B = TEXIDX.box; gl.uniform4f(fu.box, B.x0, B.z0, B.x1 - B.x0, B.z1 - B.z0); } gl.uniform1i(fu.tx, 0); if (rt) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); }
   gl.uniform1f(fu.ftex, FTX ? 1 : 0); if (FTX) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FTX); gl.uniform1i(fu.ftx, 1); gl.uniform2fv(fu.fslot, FT.slots); gl.activeTexture(gl.TEXTURE0); }
   const V = VIZ.on && PIX.on, F = A.meta.focus; gl.uniform1f(fu.viz, V ? 1 : 0); if (V) { gl.uniform1fv(fu.bands, VIZ.bands); gl.uniform4f(fu.vbox, F.x0, F.x1, F.z0, F.z1); gl.uniform3f(fu.vk, VIZ.stretch, VIZ.noise, VIZ.swirl); gl.uniform1f(fu.time, performance.now() / 1000 % 1000); }
-  if (M.gb) { gl.enableVertexAttribArray(3); gl.bindBuffer(gl.ARRAY_BUFFER, M.gb); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, 12, 0); } else { gl.disableVertexAttribArray(3); gl.vertexAttrib3f(3, 0, 0, 0); }
+  if (M.gb) { gl.enableVertexAttribArray(3); gl.bindBuffer(gl.ARRAY_BUFFER, M.gb); gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 16, 0); } else { gl.disableVertexAttribArray(3); gl.vertexAttrib4f(3, 0, 0, 0, 0); }
   gl.enableVertexAttribArray(fa.u);
   gl.bindBuffer(gl.ARRAY_BUFFER, M.vb); gl.vertexAttribPointer(fa.p, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(fa.u, 1, gl.FLOAT, false, 20, 12); gl.vertexAttribPointer(fa.c, 4, gl.UNSIGNED_BYTE, true, 20, 16);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, M.ib); gl.drawElements(gl.TRIANGLES, M.count, gl.UNSIGNED_INT, 0);
@@ -603,7 +639,7 @@ function drawMesh(M, alpha) {
 function render() {
   queued = false; const P = par(); VZ = P.vz; buildTunnels(P); buildUnder(P); if (NET) buildWalk();
   const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-  if (PIX.on) pixBegin(); else gl.viewport(0, 0, w, h); const night = ground === 'night2012'; if (night) gl.clearColor(.02, .025, .035, 1); else if (satOn) gl.clearColor(.70, .76, .82, 1); else gl.clearColor(.059, .071, .082, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
+  if (PIX.on) pixBegin(); else gl.viewport(0, 0, w, h); const nm = nightOn(), night = nm || ground === 'night2012'; if (night) gl.clearColor(.05, .048, .048, 1); else if (satOn) gl.clearColor(.70, .76, .82, 1); else gl.clearColor(.059, .071, .082, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.disable(gl.STENCIL_TEST);
   const ce = Math.cos(cam.pitch); let T = [cam.tx, cam.ty * VZ, cam.tz], eye = [T[0] + cam.dist * Math.sin(cam.yaw) * ce, T[1] + cam.dist * Math.sin(cam.pitch), T[2] + cam.dist * Math.cos(cam.yaw) * ce];
   // free camera (drone flights, setEye): eye and target in model metres, vertical field of view in radians
   if (cam.eye) { eye = [cam.eye[0], cam.eye[1] * VZ, cam.eye[2]]; T = [cam.target[0], cam.target[1] * VZ, cam.target[2]]; }
@@ -611,21 +647,25 @@ function render() {
   CAM = { eye, target: T, fovY: cam.fov || .8, aspect: w / h, w, h };
   PROJ = PIX.on ? ortho(cam.dist * .42 * w / h, cam.dist * .42, 10, 14000) : persp(cam.fov || .8, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000); VIEW = look(eye, T, [0, 1, 0]); MVP = mul(PROJ, VIEW);
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
-  gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); gl.uniform1f(uDim, night ? .45 : 1);
+  gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); const nDim = nm ? (cutOn ? .6 : .12) : night ? .45 : 1; gl.uniform1f(uDim, nDim);
   gl.disable(gl.BLEND); gl.depthMask(true); gl.colorMask(true, true, true, true); gl.disable(gl.POLYGON_OFFSET_FILL);   // a fresh state every frame
+  if (nm) drawSky();   // night: the sky behind everything
   const sOnly = SPL.mode === 'only' && SPL.n;
   if (sOnly) {   // invisible occluders: depth only, pushed back a little so splats lying on a wall or the ground pass the test
     gl.colorMask(false, false, false, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 8);
     if (bm !== 'off' && !VIZ.on) drawFacades(L.bld, 1, P);   // with music the towers move: only the ground occludes
     drawMesh(L.terrain, 1); gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
   }
-  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn && !sOnly && (!PHOTO || PIX.on)) { drawMesh(L.water, 1); drawMesh(L.tidal, 1); }   // photo style: the water is in the ground image
+  drawMesh(L.tunnels, 1); drawMesh(L.railOpen, 1); if ($('showBed').checked) drawMesh(L.riverbed, 1); if (!cutOn && !sOnly && (!PHOTO || PIX.on)) {   // photo style: the water is in the ground image
+    if (nm) { gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.ALWAYS, 1, 255); gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE); gl.uniform4f(uOv, .055, .042, .028, 1); }   // night: near-black water marks its pixels
+    drawMesh(L.water, 1); drawMesh(L.tidal, 1);
+    if (nm) { gl.uniform4f(uOv, 0, 0, 0, 0); gl.stencilFunc(gl.ALWAYS, 0, 255); } }   // whatever is drawn in front of the water clears the mark
   if ($('showUnder').checked) drawMesh(L.under, 1);
   if ($('showRoads').checked) drawMesh(L.roads, 1);
   if ($('showFloors').checked) drawMesh(L.floors, 1);
   if ($('showWalls').checked) drawMesh(L.walls, 1);
   if ($('showTrees').checked && !PIX.on && L.treesN && !sOnly) drawMesh(L.treesN, 1);
-  drawMesh(L.pins, 1); drawMesh(L.walk, 1);
+  gl.uniform1f(uDim, 1); drawMesh(L.pins, 1); drawMesh(L.walk, 1); gl.uniform1f(uDim, nDim);
   if (bm === 'solid' && !sOnly) drawFacades(L.bld, 1, P);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (bm === 'ghost' && !sOnly) drawFacades(L.bld, .22, P);
@@ -634,8 +674,10 @@ function render() {
   if (cutOn) { drawMesh(L.water, .35); drawMesh(L.tidal, .35); drawMesh(L.dockVol, .3); }
   if (!satOn && !sOnly) drawMesh(L.greens, cutOn ? .2 : .55);
   if (groundTex) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); gl.uniform1f(uTex, 1); }
-  if (!sOnly) drawMesh(L.terrain, cutOn ? .14 : PIX.on ? 1 : satOn ? .97 : .5); gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.depthMask(true);
+  if (nm) gl.uniform1f(uDim, groundTex && ground === 'night2012' ? 1 : nDim);   // night: the EA night photograph keeps its own light
+  if (!sOnly) drawMesh(L.terrain, cutOn ? .14 : PIX.on ? 1 : nm ? .95 : satOn ? .97 : .5); gl.uniform1f(uTex, 0); gl.uniform1f(uDim, 1); gl.depthMask(true);
   if (!PIX.on) drawSplats(P);
+  if (nm) drawNight(P);
   if (PIX.on) { gl.uniform1f(uCut, 1e9); gl.disable(gl.BLEND); drawMesh(L.trees, 1); drawMesh(PIX.ents, 1); gl.enable(gl.BLEND); }
   drawGlow();
   if (L.hi || L.route) { gl.disable(gl.DEPTH_TEST); drawMesh(L.hi, .9); drawMesh(L.route, .95); gl.enable(gl.DEPTH_TEST); }
@@ -759,7 +801,7 @@ const note = t => { $('dataNote').textContent = t; if (t) toast(t); };
 const HT = b => b.wh || b.h || b.mh || 0;
 const rampCol = t => { const S = [[44, 123, 182], [171, 217, 233], [255, 255, 191], [253, 174, 97], [215, 25, 28]]; t = Math.max(0, Math.min(1, t)) * 4; const i = Math.min(3, Math.floor(t)), f = t - i; return [0, 1, 2].map(c => (S[i][c] + (S[i + 1][c] - S[i][c]) * f) / 255); };
 loadJSON('../atlas/data/atlas.json').then(d => {
-  AT = d; d.buildings.forEach((b, k) => (b.mi || []).forEach(i => { regOf[i] = k; }));
+  AT = d; d.buildings.forEach((b, k) => (b.mi || []).forEach(i => { regOf[i] = k; })); NREG = { AT, regOf }; if (NIGHT.on) { buildBld(); buildNightLights(); draw(); }
   buildPick(); $('dataNote').textContent = (`Tap a building at Canary Wharf for its record (${d.buildings.length.toLocaleString('en-GB')} buildings with registry ids).`);
 }).catch(e => note('The atlas index did not load: ' + e.message));
 
@@ -787,7 +829,7 @@ function pickAt(cx, cy) {
     fboW = w; fboH = h;
   }
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.viewport(0, 0, w, h); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null); gl.clearColor(0, 0, 0, 1);   // no feedback loop with fboTex gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(true);
+  gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.STENCIL_TEST); gl.depthMask(true);
   const P = par(); gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, P.cut < 250 ? P.cut : 1e9);
   gl.uniform1f(uDim, 1); gl.uniform1f(uTex, 0); gl.uniform1f(uMono, 1); drawMesh(L.terrain, 1); gl.uniform1f(uMono, 0);
   if ($('bmode').value !== 'off') drawMesh(L.pick, 1);
@@ -869,9 +911,9 @@ const instExt = gl.getExtension('ANGLE_instanced_arrays');
 const VIZ_BANDS = 24;
 const VIZ = { on: false, bands: new Float32Array(VIZ_BANDS), peak: new Float32Array(VIZ_BANDS).fill(.3), stretch: .8, noise: .35, swirl: .5, orbit: true };
 const svs = 'attribute vec2 corner;attribute vec3 ctr;attribute vec3 ca;attribute vec3 cb;attribute vec4 col;attribute vec3 g0;attribute vec2 g1;uniform mat4 view;uniform mat4 proj;uniform vec2 focal;uniform vec2 vp;uniform float vz;uniform float cut;' +
-  'uniform float viz;uniform float bands[' + VIZ_BANDS + '];uniform float stretch;uniform float noise;uniform float swirl;uniform float time;varying vec4 vc;varying vec2 vq;' +
+  'uniform float viz;uniform float bands[' + VIZ_BANDS + '];uniform float stretch;uniform float noise;uniform float swirl;uniform float time;uniform float sdim;varying vec4 vc;varying vec2 vq;' +
   'float hs(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}' +
-  'void main(){vec3 P=ctr;float sy=1.;vec4 C=col;' +
+  'void main(){vec3 P=ctr;float sy=1.;vec4 C=col;C.rgb*=sdim;' +
   // music: stretch each building up from its base with its band, turn it round its own axis, shake it, light it
   'if(viz>.5&&g0.x>=0.){int bi=int(g0.x);float lv=0.;for(int k=0;k<' + VIZ_BANDS + ';k++){if(k==bi)lv=bands[k];}' +
   'float rel=clamp((P.y-g0.y)/max(1.,g0.z-g0.y),0.,1.);sy=max(.15,1.+stretch*(1.7*lv-.35));P.y=g0.y+(P.y-g0.y)*sy;' +
@@ -888,7 +930,7 @@ const svs = 'attribute vec2 corner;attribute vec3 ctr;attribute vec3 ca;attribut
   'vq=corner;vc=C;gl_Position=vec4(ndc.xy+(corner.x*mj+corner.y*mn)*2./vp,ndc.z,1.);}';
 const sfs = 'precision mediump float;varying vec4 vc;varying vec2 vq;void main(){float A=-dot(vq,vq);if(A<-4.)discard;float B=exp(A)*vc.a;gl_FragColor=vec4(vc.rgb*B,B);}';
 const prS = gl.createProgram(); gl.attachShader(prS, sh(gl.VERTEX_SHADER, svs)); gl.attachShader(prS, sh(gl.FRAGMENT_SHADER, sfs)); gl.bindAttribLocation(prS, 0, 'corner'); gl.linkProgram(prS);
-const SA = Object.fromEntries(['corner', 'ctr', 'ca', 'cb', 'col', 'g0', 'g1'].map(k => [k, gl.getAttribLocation(prS, k)])), SU = Object.fromEntries(['view', 'proj', 'focal', 'vp', 'vz', 'cut', 'viz', 'bands', 'stretch', 'noise', 'swirl', 'time'].map(k => [k, gl.getUniformLocation(prS, k)]));
+const SA = Object.fromEntries(['corner', 'ctr', 'ca', 'cb', 'col', 'g0', 'g1'].map(k => [k, gl.getAttribLocation(prS, k)])), SU = Object.fromEntries(['view', 'proj', 'focal', 'vp', 'vz', 'cut', 'viz', 'bands', 'stretch', 'noise', 'swirl', 'time', 'sdim'].map(k => [k, gl.getUniformLocation(prS, k)]));
 const quadBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-2, -2, 2, -2, -2, 2, 2, 2]), gl.STATIC_DRAW);
 // sorting worker: holds the instance records (10 words each: centre, covariance upper triangle, rgba) and returns them far to near
 const REC = 15;   // words a splat: centre 3, covariance 6, rgba 1, band, base, top, axis x, axis z
@@ -941,7 +983,7 @@ function drawSplats(P) {
   gl.useProgram(prS); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   gl.uniformMatrix4fv(SU.view, false, VIEW); gl.uniformMatrix4fv(SU.proj, false, PROJ); const fy = CAM.h / 2 / Math.tan(CAM.fovY / 2);
   gl.uniform2f(SU.focal, fy, fy); gl.uniform2f(SU.vp, CAM.w, CAM.h); gl.uniform1f(SU.vz, VZ); gl.uniform1f(SU.cut, P.cut < 250 ? P.cut : 1e9);
-  const V = VIZ.on && SPL.groups; gl.uniform1f(SU.viz, V ? 1 : 0); gl.uniform1fv(SU.bands, VIZ.bands); gl.uniform1f(SU.stretch, VIZ.stretch); gl.uniform1f(SU.noise, VIZ.noise); gl.uniform1f(SU.swirl, VIZ.swirl); gl.uniform1f(SU.time, performance.now() / 1000);
+  const V = VIZ.on && SPL.groups; gl.uniform1f(SU.viz, V ? 1 : 0); gl.uniform1fv(SU.bands, VIZ.bands); gl.uniform1f(SU.stretch, VIZ.stretch); gl.uniform1f(SU.noise, VIZ.noise); gl.uniform1f(SU.swirl, VIZ.swirl); gl.uniform1f(SU.time, performance.now() / 1000); gl.uniform1f(SU.sdim, nightOn() ? .16 : 1);
   const used = [SA.corner, SA.ctr, SA.ca, SA.cb, SA.col, SA.g0, SA.g1].filter(i => i >= 0); used.forEach(i => gl.enableVertexAttribArray(i));
   gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.vertexAttribPointer(SA.corner, 2, gl.FLOAT, false, 0, 0); instExt.vertexAttribDivisorANGLE(SA.corner, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, SPL.buf);
@@ -1060,6 +1102,158 @@ function drawGlow() {
   gl.disable(gl.DEPTH_TEST); drawMesh(L.glow, .14); gl.enable(gl.DEPTH_TEST);   // a faint pass through them, so nothing is lost
   gl.uniform1f(uGlow, 0); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
 }
+
+// ---------- night (Layers > Style > Night, or ?night): the map style as the estate looks from the river after dark.
+// Lit windows by building use are in the facade shader (nightCol). Here: the sky with its warm horizon glow and the moon
+// at its real place for now in London; red aviation lights; lit crowns; riverside lamps; and their reflections on the
+// water as vertical streaks with ripples. The water marks its pixels in the stencil buffer; the streaks are drawn only
+// there. Lights are additive soft sprites with a halo, which also stands in for bloom. README "Night".
+const NIGHT = { on: false, built: false, lights: null, refl: null, loop: 0, wl: 2.5, moon: null, moonAt: 0, n: {} };
+const nightOn = () => NIGHT.on && !PIX.on;
+const skyPr = gl.createProgram();
+gl.attachShader(skyPr, sh(gl.VERTEX_SHADER, 'attribute vec2 q;varying vec2 n;void main(){n=q;gl_Position=vec4(q,.9999,1.);}'));
+gl.attachShader(skyPr, sh(gl.FRAGMENT_SHADER, '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n' +
+  'varying vec2 n;uniform vec3 cr;uniform vec3 cu;uniform vec3 cf;uniform vec2 tn;uniform vec3 md;uniform vec3 sx;uniform float ci;uniform float mk;' +
+  'void main(){vec3 d=normalize(cf+n.x*tn.x*cr+n.y*tn.y*cu);float e=d.y;' +
+  'vec3 c=mix(vec3(.22,.19,.16),vec3(.10,.092,.085),smoothstep(-.03,.12,e));c=mix(c,vec3(.050,.048,.048),smoothstep(.10,.6,e));' +   // warm glow of the city at the horizon, near black above (measured from the photos: README Night)
+  'if(mk>.5){vec3 o=d-md;float a=length(o),R=.0095;c+=vec3(.20,.18,.15)*exp(-a*a/.0018)*.35;' +   // the moon, drawn at twice its apparent size, with a faint halo
+  'if(a<R*1.15){vec3 ya=normalize(cross(md,sx));float u=dot(o,sx)/R,v=dot(o,ya)/R,s=sqrt(max(0.,1.-v*v)),lit=smoothstep(-.06,.06,u+ci*s);' +
+  'c=mix(c,mix(vec3(.05,.05,.06),vec3(1.,.93,.80),lit),smoothstep(1.06,.94,a/R));}}' +
+  'gl_FragColor=vec4(c,1.);}'));
+gl.bindAttribLocation(skyPr, aP, 'q'); gl.linkProgram(skyPr);
+const KU = Object.fromEntries(['cr', 'cu', 'cf', 'tn', 'md', 'sx', 'ci', 'mk'].map(k => [k, gl.getUniformLocation(skyPr, k)]));
+// sun and moon for a date at Canary Wharf (low-precision formulas as in SunCalc / Meeus): direction in model axes
+// (x east, y up, -z north), the moon's phase angle
+function sunMoon(date, lat = 51.505, lon = -0.02) {
+  const rad = Math.PI / 180, d = date / 864e5 - .5 + 2440588 - 2451545, e = rad * 23.4397, phi = rad * lat, st = rad * (280.16 + 360.9856235 * d) + rad * lon;
+  const ra = (l, b) => Math.atan2(Math.sin(l) * Math.cos(e) - Math.tan(b) * Math.sin(e), Math.cos(l)), de = (l, b) => Math.asin(Math.sin(b) * Math.cos(e) + Math.cos(b) * Math.sin(e) * Math.sin(l));
+  const dir = (r, dc) => { const H = st - r, alt = Math.asin(Math.sin(phi) * Math.sin(dc) + Math.cos(phi) * Math.cos(dc) * Math.cos(H)), az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dc) * Math.cos(phi)) + Math.PI;
+    return [Math.sin(az) * Math.cos(alt), Math.sin(alt), -Math.cos(az) * Math.cos(alt)]; };
+  const M = rad * (357.5291 + .98560028 * d), Ls = M + rad * (1.9148 * Math.sin(M) + .02 * Math.sin(2 * M) + .0003 * Math.sin(3 * M)) + rad * 102.9372 + Math.PI, sRa = ra(Ls, 0), sDe = de(Ls, 0);
+  const Lm = rad * (218.316 + 13.176396 * d), Mm = rad * (134.963 + 13.064993 * d), F = rad * (93.272 + 13.229350 * d), l = Lm + rad * 6.289 * Math.sin(Mm), b = rad * 5.128 * Math.sin(F), dist = 385001 - 20905 * Math.cos(Mm), mRa = ra(l, b), mDe = de(l, b);
+  const p = Math.acos(Math.sin(sDe) * Math.sin(mDe) + Math.cos(sDe) * Math.cos(mDe) * Math.cos(sRa - mRa)), inc = Math.atan2(149598000 * Math.sin(p), dist - 149598000 * Math.cos(p));
+  return { sun: dir(sRa, sDe), moon: dir(mRa, mDe), phase: inc, lit: (1 + Math.cos(inc)) / 2 };
+}
+function drawSky() {
+  if (!NIGHT.moon || Date.now() - NIGHT.moonAt > 60000) { NIGHT.moon = sunMoon(Date.now()); NIGHT.moonAt = Date.now(); }
+  const V = VIEW, r = [V[0], V[4], V[8]], u = [V[1], V[5], V[9]], f = [-V[2], -V[6], -V[10]], t = Math.tan(CAM.fovY / 2), m = NIGHT.moon;
+  gl.useProgram(skyPr); gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+  gl.uniform3fv(KU.cr, r); gl.uniform3fv(KU.cu, u); gl.uniform3fv(KU.cf, f); gl.uniform2f(KU.tn, t * CAM.aspect, t);
+  const md = m.moon, s = m.sun, k = dot(s, md), sx = nrm(s.map((v, i) => v - md[i] * k));   // towards the sun, across the moon's disc
+  gl.uniform3fv(KU.md, md); gl.uniform3fv(KU.sx, sx); gl.uniform1f(KU.ci, Math.cos(m.phase)); gl.uniform1f(KU.mk, md[1] > -.01 && !PIX.on ? 1 : 0);
+  gl.disableVertexAttribArray(aC); gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.enableVertexAttribArray(aC); gl.useProgram(pr); gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
+}
+// light sprites: 4 vertices each, [x y z, corner qx qy, rgba, size m, min px, halo, seed] = 40 bytes. refl = 1 draws the
+// reflection of each light: a vertical streak from the water under it to below its mirror image, rippled, on water only.
+const lfree = [0, 1, 2, 3].filter(i => i !== aP && i !== aC), aQ = lfree[0], aK = lfree[1];
+const lpr = gl.createProgram();
+gl.attachShader(lpr, sh(gl.VERTEX_SHADER, 'attribute vec3 p;attribute vec2 q;attribute vec4 c;attribute vec4 k;uniform mat4 m;uniform float vz;uniform vec2 vp;uniform float fy;uniform float dpr;uniform mediump float refl;uniform float wl;uniform float cut;' +
+  'varying vec4 vc;varying vec3 vq;void main(){vc=c;if(p.y>cut){gl_Position=vec4(2.,2.,2.,1.);return;}' +
+  'if(refl<.5){vec4 cp=m*vec4(p.x,p.y*vz,p.z,1.);if(cp.w<=.5){gl_Position=vec4(2.,2.,2.,1.);return;}float px=max(k.y*dpr,k.x*fy/cp.w);vc.a*=mix(1.,.5,smoothstep(2500.,7000.,cp.w));' +
+  'vq=vec3(q*k.z,k.z);gl_Position=cp+vec4(q*px*k.z*2./vp*cp.w,0.,0.);}' +
+  'else{vec4 a=m*vec4(p.x,wl*vz,p.z,1.),b=m*vec4(p.x,(2.*wl-p.y)*vz,p.z,1.);if(a.w<=1.||b.w<=1.){gl_Position=vec4(2.,2.,2.,1.);return;}' +
+  'vec2 sa=a.xy/a.w,sb=b.xy/b.w;float t=(q.y+1.)*.9;vec2 s=sa+(sb-sa)*t;float w=max(k.y*dpr*1.3,k.x*fy/b.w);s.x+=q.x*w*4.*2./vp.x;' +
+  'vq=vec3(q.x*4.,t,k.w);gl_Position=vec4(s,0.,1.);}}'));
+gl.attachShader(lpr, sh(gl.FRAGMENT_SHADER, 'precision mediump float;varying vec4 vc;varying vec3 vq;uniform float refl;uniform float time;' +
+  'void main(){float I;if(refl<.5){float r=length(vq.xy);I=smoothstep(1.15,.55,r)+.3*exp(-r*.9)*(1.-smoothstep(vq.z*.6,vq.z,r));}' +
+  'else{float y=gl_FragCoord.y,sd=vq.z,t=vq.y,wob=sin(y*.21+time*1.7+sd*6.)*.9+sin(y*.057-time*.8+sd*2.)*1.1,dx=vq.x-wob;' +
+  'float rip=.5+.5*sin(y*1.1+time*3.7+sd*9.)*sin(y*.31-time*1.9+sd*4.);I=exp(-dx*dx*.7)*smoothstep(0.,.18,t)*(1.-smoothstep(.95,1.8,t))*(.04+.96*rip*rip*rip);}' +
+  'gl_FragColor=vec4(vc.rgb*vc.a*I,1.);}'));
+gl.bindAttribLocation(lpr, aP, 'p'); gl.bindAttribLocation(lpr, aC, 'c'); gl.bindAttribLocation(lpr, aQ, 'q'); gl.bindAttribLocation(lpr, aK, 'k'); gl.linkProgram(lpr);
+if (!gl.getProgramParameter(lpr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(lpr));
+const LU = Object.fromEntries(['m', 'vz', 'vp', 'fy', 'dpr', 'refl', 'wl', 'cut', 'time'].map(k => [k, gl.getUniformLocation(lpr, k)]));
+function spriteBuf(list) {   // list of { x, y, z, c: [r, g, b], i: intensity, s: size m, px: min px, h: halo, sd: seed }
+  const n = list.length, buf = new ArrayBuffer(n * 4 * 40), f = new Float32Array(buf), u = new Uint32Array(buf), idx = new Uint32Array(n * 6);
+  list.forEach((o, j) => { const pk = ((o.c[0] * 255) | 0) | (((o.c[1] * 255) | 0) << 8) | (((o.c[2] * 255) | 0) << 16) | ((Math.min(1, o.i) * 255 | 0) << 24);
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([qx, qy], k) => { const b = (4 * j + k) * 10; f[b] = o.x; f[b + 1] = o.y; f[b + 2] = o.z; f[b + 3] = qx; f[b + 4] = qy; u[b + 5] = pk >>> 0; f[b + 6] = o.s; f[b + 7] = o.px; f[b + 8] = o.h; f[b + 9] = o.sd ?? Math.random(); });
+    idx.set([4 * j, 4 * j + 1, 4 * j + 2, 4 * j, 4 * j + 2, 4 * j + 3], 6 * j); });
+  const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, buf, gl.STATIC_DRAW);
+  const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+  return { vb, ib, count: n * 6, free() { gl.deleteBuffer(vb); gl.deleteBuffer(ib); } };
+}
+// water as a 10 m raster (scanline fill of the water outlines), to find what is near the water
+function waterGrid() {
+  if (NIGHT.wg) return NIGHT.wg; const E = A.meta.extent, G = 10, nx = Math.ceil((E.x1 - E.x0) / G), nz = Math.ceil((E.z1 - E.z0) / G), g = new Uint8Array(nx * nz);
+  for (const w of A.water) { const f = dec(w.p), starts = [0, ...(w.holes || []), f.length / 2], rows = new Map();
+    for (let r = 0; r < starts.length - 1; r++) for (let i = starts[r]; i < starts[r + 1]; i++) { const j = i + 1 < starts[r + 1] ? i + 1 : starts[r], x0 = f[2 * i], z0 = f[2 * i + 1], x1 = f[2 * j], z1 = f[2 * j + 1];
+      const ja = Math.ceil((Math.min(z0, z1) - E.z0) / G - .5), jb = Math.floor((Math.max(z0, z1) - E.z0) / G - .5);
+      for (let jj = Math.max(0, ja); jj <= Math.min(nz - 1, jb); jj++) { const zc = E.z0 + (jj + .5) * G; if ((z0 > zc) === (z1 > zc)) continue; const x = x0 + (zc - z0) / (z1 - z0) * (x1 - x0); if (!rows.has(jj)) rows.set(jj, []); rows.get(jj).push(x); } }
+    for (const [jj, xs] of rows) { xs.sort((a, b) => a - b); for (let k = 0; k + 1 < xs.length; k += 2) for (let ii = Math.max(0, Math.ceil((xs[k] - E.x0) / G - .5)); ii <= Math.min(nx - 1, Math.floor((xs[k + 1] - E.x0) / G - .5)); ii++) g[jj * nx + ii] = 1; } }
+  const at = (x, z) => { const i = Math.floor((x - E.x0) / G), j = Math.floor((z - E.z0) / G); return i >= 0 && j >= 0 && i < nx && j < nz ? g[j * nx + i] : 0; };
+  const near = (x, z, r) => { for (let dz = -r; dz <= r; dz += G) for (let dx = -r; dx <= r; dx += G) if (dx * dx + dz * dz <= r * r && at(x + dx, z + dz)) return true; return false; };
+  return (NIGHT.wg = { at, near });
+}
+// roof corners of a ring: where the outline turns by more than 35 degrees; at most the 4 extreme ones; pushed out 0.8 m
+function corners(ring) {
+  const n = ring.length; let cx = 0, cz = 0; for (const p of ring) { cx += p[0]; cz += p[1]; } cx /= n; cz /= n;
+  let c = ring.filter((p, i) => { const a = ring[(i + n - 1) % n], b = ring[(i + 1) % n], t1 = Math.atan2(p[1] - a[1], p[0] - a[0]), t2 = Math.atan2(b[1] - p[1], b[0] - p[0]); return Math.abs(((t2 - t1 + 3 * Math.PI) % (2 * Math.PI)) - Math.PI) > .6; });
+  if (c.length > 6 || c.length < 3) { const src = c.length > 6 ? c : ring; c = [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([a, b]) => src.reduce((m, p) => a * p[0] + b * p[1] > a * m[0] + b * m[1] ? p : m)); }
+  const out = []; for (const p of c) if (!out.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < 6)) out.push(p);
+  return out.map(p => { const dx = p[0] - cx, dz = p[1] - cz, l = Math.hypot(dx, dz) || 1; return [p[0] + dx / l * .8, p[1] + dz / l * .8]; });
+}
+const ringOf = o => { const f = dec(o.p), n = o.holes && o.holes.length ? o.holes[0] : f.length / 2, r = []; for (let i = 0; i < n; i++) r.push([f[2 * i], f[2 * i + 1]]); return r; };
+function buildNightLights() {
+  for (const k of ['lights', 'refl']) if (NIGHT[k]) { NIGHT[k].free(); NIGHT[k] = null; }
+  const W = waterGrid(), direct = [], refl = [], RED = [1, .08, .04], useT = TOWERS && skyIdx < 0; let sd = 1;
+  const rnd1 = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  NIGHT.wl = (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level + .1;
+  const red = (x, y, z, i) => { const o = { x, y, z, c: RED, i, s: 1.1, px: 1.5, h: 7, sd: rnd1() }; direct.push(o); refl.push({ ...o, s: 2, px: 1, i: i * .14 }); };
+  const aviation = (ringAt, base, top) => {   // steady red at the roof corners; on buildings over 150 m also about every 50 m below the top
+    for (const [x, z] of corners(ringAt(top))) red(x, top + 1.2, z, 1);
+    if (top - base > 150) for (let y = top - 50; y > base + 45; y -= 50) for (const [x, z] of corners(ringAt(y))) red(x, y, z, .85); };
+  let nRed = 0, nTall = 0, nLamp = 0, nEm = 0;
+  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (!(h > 45)) return; nTall++; const r = ringOf(b); aviation(() => r, b.b, b.b + h); });
+  if (useT) for (const t of TOWERS) { nTall++; const top = towerTop(t), tierAt = y => (t.tiers.find(tr => y >= tr.y0 - .01 && y <= tr.y1 + .01 && !(t.top && t.top.kind === 'pyramid' && tr === t.tiers.at(-1))) || t.tiers[0]).ring;
+    aviation(tierAt, t.base_m_od ?? t.tiers[0].y0, top);
+    const use = nightUse(t.model_buildings[0]), ring = tierAt(top - 1); let cx = 0, cz = 0; for (const p of ring) { cx += p[0]; cz += p[1]; } cx /= ring.length; cz /= ring.length;
+    if (use === 4 || use === 5) for (let k = 0; k < ring.length; k += Math.max(1, ring.length >> 3)) {   // bloom round the lit crowns
+      const [x, z] = ring[k], o = { x: x + (x - cx) * .1, y: top - (use === 4 ? 6 : 3.5), z: z + (z - cz) * .1, c: use === 4 ? [1, .88, .66] : [1, .3, .42], i: .22, s: use === 4 ? 4 : 3, px: 1.5, h: 3, sd: rnd1() }; direct.push(o); refl.push({ ...o, s: 5, i: .25 }); }
+    if (t.top && t.top.kind === 'pyramid' && t.top.apex) { const [ax, ay, az] = t.top.apex; direct.push({ x: ax, y: ay + 1, z: az, c: [1, .85, .85], i: .9, s: 1.2, px: 1.6, h: 8, sd: rnd1() }); } }
+  nRed = refl.length;
+  // riverside lamps: about every 25 m along the EA flood walls (the riverside walks follow them, 3 m inland) and along the
+  // paths and roads within 40 m of the water; warm orange, some white LED
+  const lampAt = new Map(), key = (x, z) => Math.floor(x / 12) + ',' + Math.floor(z / 12), runs = [];
+  for (const d of A.defences || []) { const q = dec(d.q, 3), pts = []; for (let i = 0; i < q.length; i += 3) pts.push([q[i], q[i + 1], Math.max(q[i + 2], d.c - 1)]); runs.push([pts, 3]); }
+  for (const l of A.lines) if (!l.tunnel && (l.k === 'foot' || l.k === 'road')) { const q = dec(l.q, 3), pts = []; for (let i = 0; i < q.length; i += 3) pts.push([q[i], q[i + 1], q[i + 2]]); runs.push([pts, 0]); }
+  for (const [pts, off] of runs) { if (pts.length < 2) continue; const pl = polyline(pts);
+    for (let s = 6; s < pl.len; s += 25) { const p0 = along(pl, s), side = W.at(p0.x - p0.hz * 6, p0.z + p0.hx * 6) ? -1 : 1, p = { ...p0, x: p0.x - p0.hz * off * side, z: p0.z + p0.hx * off * side }; if (W.at(p.x, p.z) || !W.near(p.x, p.z, 40)) continue;
+      let close = false; for (let a = -1; a <= 1 && !close; a++) for (let c = -1; c <= 1; c++) { const v = lampAt.get((Math.floor(p.x / 12) + a) + ',' + (Math.floor(p.z / 12) + c)); if (v && Math.hypot(v[0] - p.x, v[1] - p.z) < 16) { close = true; break; } }
+      if (close) continue; lampAt.set(key(p.x, p.z), [p.x, p.z]); nLamp++;
+      const led = rnd1() < .3, o = { x: p.x, y: p.y + 5, z: p.z, c: led ? [1, .92, .7] : [1, .58, .22], i: 1, s: .8, px: 1.9, h: 6, sd: rnd1() }; direct.push(o); refl.push({ ...o, s: 1.8, px: 1.4, i: .75 }); } }
+  // lit windows reflected: columns of light for buildings over 25 m near the water, coloured by use, as bright as their lit share
+  A.buildings.forEach((b, i) => { if (useT && towerOf.has(i)) return; const h = heightOf(b, i); if (!(h > 12)) return; const r = ringOf(b); let cx = 0, cz = 0, rad = 0; for (const p of r) { cx += p[0]; cz += p[1]; } cx /= r.length; cz /= r.length; for (const p of r) rad = Math.max(rad, Math.hypot(p[0] - cx, p[1] - cz));
+    if (!W.near(cx, cz, h > 40 ? 150 : 60)) return; const use = nightUse(i), col = use === 2 ? [.8, .88, 1] : [1, .7, .4], share = use === 2 ? .32 : use === 0 ? .26 : .36;
+    for (let y = b.b + Math.min(8, h / 2); y < b.b + h - 3; y += 22) { refl.push({ x: cx, y, z: cz, c: col, i: share * Math.min(1, rad / 25) * .7, s: rad * .4, px: 1.2, h: 4, sd: rnd1() }); nEm++; } });
+  NIGHT.lights = spriteBuf(direct); NIGHT.refl = spriteBuf(refl); NIGHT.built = true;
+  NIGHT.n = { tall: nTall, red: nRed, lamps: nLamp, columns: nEm };
+}
+function drawLights(buf, refl, P) {
+  if (!buf || !buf.count) return; gl.useProgram(lpr);
+  gl.uniformMatrix4fv(LU.m, false, MVP); gl.uniform1f(LU.vz, VZ); gl.uniform2f(LU.vp, CAM.w, CAM.h); gl.uniform1f(LU.fy, CAM.h / 2 / Math.tan(CAM.fovY / 2)); gl.uniform1f(LU.dpr, Math.min(2, devicePixelRatio || 1));
+  gl.uniform1f(LU.refl, refl ? 1 : 0); gl.uniform1f(LU.wl, NIGHT.wl); gl.uniform1f(LU.cut, P.cut < 250 ? P.cut : 1e9); gl.uniform1f(LU.time, performance.now() / 1000 % 1000);
+  gl.enableVertexAttribArray(aQ); gl.enableVertexAttribArray(aK); gl.bindBuffer(gl.ARRAY_BUFFER, buf.vb);
+  gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 40, 0); gl.vertexAttribPointer(aQ, 2, gl.FLOAT, false, 40, 12); gl.vertexAttribPointer(aC, 4, gl.UNSIGNED_BYTE, true, 40, 20); gl.vertexAttribPointer(aK, 4, gl.FLOAT, false, 40, 24);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf.ib); gl.drawElements(gl.TRIANGLES, buf.count, gl.UNSIGNED_INT, 0);
+  gl.disableVertexAttribArray(aQ); gl.disableVertexAttribArray(aK); gl.useProgram(pr);
+}
+function drawNight(P) {   // after the scene: lights with the depth test, then their reflections on the water pixels only
+  if (!NIGHT.built) return;
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
+  gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.stencilFunc(gl.ALWAYS, 0, 255); drawLights(NIGHT.lights, false, P);
+  gl.disable(gl.DEPTH_TEST); gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.EQUAL, 1, 255); drawLights(NIGHT.refl, true, P);
+  gl.enable(gl.DEPTH_TEST); gl.disable(gl.STENCIL_TEST); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
+}
+function nightTick() { if (!nightOn()) { NIGHT.loop = 0; return; } draw(); NIGHT.loop = setTimeout(() => requestAnimationFrame(nightTick), 50); }   // ripples at about 20 frames a second
+function setNight(on) {
+  NIGHT.on = on; $('nightMode').checked = on; clearTimeout(NIGHT.loop); NIGHT.loop = 0;
+  if (on) { if (!NIGHT.built) buildNightLights(); if (L.bld && !L.bld.kinds && NREG) buildBld(); const n = NIGHT.n, m = sunMoon(Date.now());
+    $('nightNote').hidden = false; $('nightNote').textContent = `Night: windows lit by building use (registry homes and occupants: homes warm, offices cool by floors), ${n.red.toLocaleString('en-GB')} red aviation lights on ${n.tall} buildings over 45 m, ${n.lamps.toLocaleString('en-GB')} riverside lamps (every 25 m along paths and roads within 40 m of the water), reflections on the water. The moon is at its real place now (${m.moon[1] > 0 ? `${Math.round(Math.asin(m.moon[1]) * 180 / Math.PI)}° up, ${Math.round(m.lit * 100)}% lit` : 'below the horizon'}). Window lights and lamp positions are drawn, not measured.`;
+    if (!PIX.on) nightTick(); }
+  else $('nightNote').hidden = true;
+  draw();
+}
+$('nightMode').onchange = () => setNight($('nightMode').checked);
 
 // pins: heritage places, quality issues, live crime
 let crime = null;
@@ -1379,14 +1573,14 @@ async function setStyle(mode) {
     for (const id of ['showLabels', 'showUnder', 'showWalls', 'showBed']) $(id).checked = false;
     await loadTrees().catch(e => toast('Trees did not load: ' + e.message)); buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); const nt = buildTrees();
     PIX.on = true; PIX.actors = makeActors(); Object.assign(cam, { pitch: .5236, yaw: Math.PI / 4, dist: Math.min(cam.dist, 520) }); unview();
-    $('isoBtns').hidden = false; $('pixNote').hidden = false; $('gauge').hidden = true; $('digBtn').hidden = true;
+    $('isoBtns').hidden = false; $('pixNote').hidden = false; $('gauge').hidden = true; $('digBtn').hidden = true; $('nightMode').disabled = true;
     toast(`Pixel art: ${nt.toLocaleString('en-GB')} trees, ${PIX.actors.length} moving figures, boats and birds`); cancelAnimationFrame(PIX.loop); PIX.loop = requestAnimationFrame(pixTick);
   } else {
     PIX.on = false; cancelAnimationFrame(PIX.loop); const S = PIX.saved; PIXSTYLE = null; Object.assign(C, S.C); buildingColour = S.bc; buildingMat = null;
     $('showLabels').checked = S.labels; $('showUnder').checked = S.under; $('showWalls').checked = S.walls; $('showBed').checked = S.bed;
     buildTerrain(null); buildWater(); buildTidal(); buildGreens(); buildLines(); buildBld(); Object.assign(cam, S.cam);
     if (S.ground !== 'none') { document.querySelector(`input[name=ground][value=${S.ground}]`).checked = true; await setGround(S.ground); }
-    $('isoBtns').hidden = true; $('pixNote').hidden = true; $('digBtn').hidden = false; draw();
+    $('isoBtns').hidden = true; $('pixNote').hidden = true; $('digBtn').hidden = false; $('nightMode').disabled = false; if (NIGHT.on) setNight(true); draw();
   }
 }
 document.querySelectorAll('input[name=style]').forEach(r => r.onchange = () => r.checked && setStyle(r.value).catch(e => toast('Style did not load: ' + e.message)));
@@ -1400,7 +1594,7 @@ function setSkyYear(k) {
   const sv = skyIdx < 0 ? null : SKY.surveys[skyIdx], standing = skyIdx < 0 ? null : Object.values(SKY.buildings).filter(v => v[skyIdx] > 0).length;
   $('skyYearO').value = skyIdx < 0 ? 'today' : String(SKY.years[skyIdx]);
   if (sv) $('skyNote').textContent = `${sv.year}: EA LiDAR surface model (${sv.product.replace(/_/g, ' ')}, ${sv.res_m} m); ${standing} of ${Object.keys(SKY.buildings).length} buildings on the estate standing (over 3 m and a quarter of today's height), ${sv.buildings_flown} with data; the others keep today's height in slate blue. Today's OSM outlines; demolished buildings do not appear.`;
-  buildBld(); if (AT) buildPick(); if (glowOn.length) buildGlow(); draw();
+  buildBld(); if (AT) buildPick(); if (glowOn.length) buildGlow(); if (NIGHT.built) buildNightLights(); draw();
 }
 $('skyYear').oninput = () => setSkyYear(+$('skyYear').value);
 let skyTimer = 0;
@@ -1554,9 +1748,10 @@ function captureMode(on) {
   $('colourBy').value = 'source'; buildingColour = on ? photoColour : (b, i) => b.s === 1 || b.s === 4 ? C.bldlv : C.bld; buildBld(); buildLines(); draw();
 }
 if (/[?&]capture\b/.test(location.search)) captureMode(true);
+if (/[?&]night\b/.test(location.search)) setNight(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; },
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon,
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
@@ -1568,7 +1763,7 @@ loadJSON('data/tex/facades.json').then(T => new Promise((ok, no) => { const im =
   gl.generateMipmap(gl.TEXTURE_2D); gl.activeTexture(gl.TEXTURE0); FTX = t; $('facCredit').textContent = 'Facade photos (tiles cut from them): ' + T.attribution + '.'; $('attribFac').textContent = ' · facade photos CC BY (About)';
   const go = () => { if (!AT) return setTimeout(go, 400); buildBld(); draw(); }; go();
 }).catch(e => console.warn('facade textures', e));
-loadJSON('data/towers.json').then(T => { TOWERS = Object.values(T.buildings).filter(t => t.tiers && t.tiers.length && t.status === 'fitted'); for (const t of TOWERS) for (const mi of t.model_buildings) towerOf.set(mi, t); buildBld(); draw(); }).catch(e => console.warn('towers.json', e));
+loadJSON('data/towers.json').then(T => { TOWERS = Object.values(T.buildings).filter(t => t.tiers && t.tiers.length && t.status === 'fitted'); for (const t of TOWERS) for (const mi of t.model_buildings) towerOf.set(mi, t); buildBld(); if (NIGHT.built) buildNightLights(); draw(); }).catch(e => console.warn('towers.json', e));
 // #at=x,z[,dist]: start looking at a point in local metres (the atlas links here with a building's x, z)
 const atM = /(?:^#|&)at=(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?/.exec(location.hash);
 if (atM) { Object.assign(cam, { tx: +atM[1], tz: +atM[2], ty: 0, dist: +(atM[3] || 600) }); unview(); draw(); }
