@@ -13,7 +13,9 @@ sources, with API, licence, robots.txt and state, is written by hand in the adap
 | Ofcom Connected Nations | unavailable | www.ofcom.org.uk answers 403 to scripted requests, robots.txt included. The London Datastore walk holds an Ofcom broadband-by-postcode table from the GLA (`../../london-datastore/`) |
 | Nomis API | not-open (not used) | robots.txt disallows `/api/v01/dataset/` and `/query/`; the census comes from the bulk zips (`../nomis/`) |
 | HMLR price paid, HMLR INSPIRE polygons, FSA ratings, Historic England, EA flood zones, OS Open UPRN, OS Open Greenspace | held | already in the project, or harvested here from planning.data.gov.uk |
-| OS Open Names, Open USRN, Open Roads, Open Rivers, Built Up Areas | listed-for-harvest | GB-wide downloads of hundreds of MB; the container had 2.3 GB of free disk on 2026-10-04 |
+| OS Open Names | harvested | `os-open-names/`: 4,066 named places, roads, stations, schools, waters in the box from the GB CSV (tiles TQ26 and TQ28: the GB file uses 20 km tiles), with DBpedia and GeoNames links; the 11,272 postcode entries are left out (postcode centres are held from ONSPD). 1.7 MB |
+| OS Open Rivers | harvested | `os-open-rivers/`: 19 watercourse links and 15 hydro nodes with a vertex in the box. 15 kB |
+| OS Open USRN, Open Roads, Built Up Areas | listed-for-harvest | GB downloads of 0.3 to 1 GB; the container had about 2 GB of free disk on 2026-10-04 |
 | English Indices of Deprivation 2025 by LSOA | listed-for-harvest | GOV.UK, OGL |
 | BGS | deferred | licences differ per product; read each before use |
 | Coal Authority | not-relevant | London is outside the coalfield |

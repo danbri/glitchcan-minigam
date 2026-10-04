@@ -29,7 +29,9 @@ export const SOURCES = [
   { key: 'ea-flood-zones', name: 'EA Flood Map for Planning (flood zones 2 and 3)', licence: OGL, state: 'held', reason: 'harvested from planning.data.gov.uk (../pdg/flood-risk-zone/); EA spatial flood defences held (ea-defences)' },
   { key: 'os-open-uprn', name: 'OS Open UPRN and Open Linked Identifiers', licence: OGL, state: 'held', reason: 'held (os-open-uprn)' },
   { key: 'os-open-greenspace', name: 'OS Open Greenspace', licence: OGL, state: 'held', reason: 'held (os-open-greenspace)' },
-  { key: 'os-open-names', name: 'OS Open Names / Open USRN / Open Roads / Open Rivers / Built Up Areas', api: 'https://api.os.uk/downloads/v1/products', licence: 'OGL (OS OpenData)', state: 'listed-for-harvest', reason: 'GB-wide downloads (hundreds of MB each); container disk was 2.4 GB free on 2026-10-04: one product at a time, zone extract only' },
+  { key: 'os-open-names', name: 'OS Open Names (GB CSV)', api: 'https://api.os.uk/downloads/v1/products/OpenNames/downloads', licence: 'OGL (OS OpenData)', state: 'harvest' },
+  { key: 'os-open-rivers', name: 'OS Open Rivers (GB GeoPackage)', api: 'https://api.os.uk/downloads/v1/products/OpenRivers/downloads', licence: 'OGL (OS OpenData)', state: 'harvest' },
+  { key: 'os-open-usrn-roads', name: 'OS Open USRN, Open Roads, Built Up Areas', api: 'https://api.os.uk/downloads/v1/products', licence: 'OGL (OS OpenData)', state: 'listed-for-harvest', reason: 'GB downloads of 0.3 to 1 GB; the container had about 2 GB of free disk on 2026-10-04: one product at a time, zone extract only, the download deleted after reading' },
   { key: 'coal-authority', name: 'Coal Authority mining reporting areas', licence: OGL, state: 'not-relevant', reason: 'London is outside the coalfield' },
   { key: 'bgs', name: 'British Geological Survey datasets', licence: 'BGS terms per product (OGL for some, commercial for others)', state: 'deferred', reason: '4,128 BGS records on data.gov.uk have no licence field; BGS Geology 625k/50k licences to be read per product before use' },
   { key: 'ons-imd', name: 'English Indices of Deprivation 2025 by LSOA', licence: OGL, state: 'listed-for-harvest', reason: 'GOV.UK statistics (MHCLG); zone LSOA rows' },
@@ -49,7 +51,7 @@ export async function triage() {
   writeLines(join(OUT, 'national', 'triage.json'), { portal: 'national sources of the brief', triaged: today, counts, rules: ['state written by hand in SOURCES after checking API, licence and robots.txt; harvested when the zone file exists'] }, 'sources', rows);
   console.log(counts);
 }
-const HARVEST_FILES = { 'dft-aadf': 'dft-aadf.geojson', 'dft-stats19': 'dft-stats19.json', 'police-crime': 'police-crime.json', 'desnz-energy': 'desnz-energy.json' };
+const HARVEST_FILES = { 'os-open-names': 'os-open-names.geojson', 'os-open-rivers': 'os-open-rivers.geojson', 'dft-aadf': 'dft-aadf.geojson', 'dft-stats19': 'dft-stats19.json', 'police-crime': 'police-crime.json', 'desnz-energy': 'desnz-energy.json' };
 
 // ---------------------------------------------------------------- harvests
 const DFT_LA = { 93: 'Tower Hamlets', 103: 'Southwark', 104: 'Lewisham', 105: 'Greenwich', 167: 'Newham', 174: 'City of London' };
@@ -163,7 +165,53 @@ async function desnz() {
   const out = `{"meta":${JSON.stringify(meta, null, 1)},\n"tables":[\n${tables.map(t => JSON.stringify(t)).join(',\n')}\n]}\n`;
   writeFileSync(join(OUT, 'national', 'desnz-energy', 'desnz-energy.json'), out); return out.length;
 }
-const FN = { 'dft-aadf': dftAadf, 'dft-stats19': stats19, 'police-crime': policeCrime, 'desnz-energy': desnz };
+// OS OpenData: GB downloads, read for the zone and deleted (disk); BNG to WGS84 through the OSTN15 grid
+async function bngInverse() { const { bngProjector } = await import('../lib.mjs'); const proj4 = (await import('proj4')).default; await bngProjector(); const P = proj4('EPSG:4326', 'BNG'); return ([e, n]) => P.inverse([e, n]).map(v => Math.round(v * 1e6) / 1e6); }
+const ZB = [532400, 176700, 539900, 182300];
+const inZB = (e, n) => e >= ZB[0] && e <= ZB[2] && n >= ZB[1] && n <= ZB[3];
+const OS_ATTRIB = 'Contains OS data © Crown copyright and database right 2026 (OS OpenData, Open Government Licence v3.0)';
+async function osOpenNames() {
+  const { execFileSync } = await import('child_process'); const { rmSync } = await import('fs');
+  const url = 'https://api.os.uk/downloads/v1/products/OpenNames/downloads?area=GB&format=CSV&redirect';
+  const { file, fetched } = await rawFile('national/opname_csv_gb.zip', url);
+  const entries = execFileSync('unzip', ['-Z1', file]).toString().split('\n');
+  const hdrE = entries.find(e => /OS_Open_Names_Header\.csv$/i.test(e)), tiles = entries.filter(e => /\/(TQ37|TQ38|TQ26|TQ28)\.csv$/i.test(e));   // 10 km names, or the 20 km tiles the GB CSV actually uses (TQ26, TQ28)
+  const H = csvCells(execFileSync('unzip', ['-p', file, hdrE]).toString().split(/\r?\n/)[0]);
+  const toW = await bngInverse(); const feats = []; let pcSkipped = 0; const KEEP = ['ID', 'NAMES_URI', 'NAME1', 'NAME1_LANG', 'NAME2', 'NAME2_LANG', 'TYPE', 'LOCAL_TYPE', 'POSTCODE_DISTRICT', 'POPULATED_PLACE', 'DISTRICT_BOROUGH', 'SAME_AS_DBPEDIA', 'SAME_AS_GEONAMES', 'MBR_XMIN', 'MBR_YMIN', 'MBR_XMAX', 'MBR_YMAX'];
+  for (const t of tiles) for (const line of execFileSync('unzip', ['-p', file, t], { maxBuffer: 1 << 28 }).toString().split(/\r?\n/)) {
+    if (!line) continue; const c = csvCells(line), r = Object.fromEntries(H.map((h, i) => [h, c[i]]));
+    const e = +r.GEOMETRY_X, n = +r.GEOMETRY_Y; if (!inZB(e, n)) continue;
+    if (r.LOCAL_TYPE === 'Postcode') { pcSkipped++; continue; }     // postcode centres: held from ONSPD
+    const p = {}; for (const k of KEEP) if (r[k]) p[k.toLowerCase()] = /^MBR_/.test(k) ? +r[k] : r[k];
+    feats.push({ type: 'Feature', geometry: { type: 'Point', coordinates: toW([e, n]) }, properties: p });
+  }
+  if (!process.argv.includes('--keep-raw')) rmSync(file);
+  const meta = { source: 'OS Open Names (GB, CSV)', page: 'https://www.ordnancesurvey.co.uk/products/os-open-names', api: url, entries: tiles, fetched, licence: OGL, licence_url: 'https://www.ordnancesurvey.co.uk/customers/public-sector/public-sector-licensing/open-data', attribution: OS_ATTRIB, zone: ZONE_TEXT,
+    method: 'walk-portals.mjs national harvest os-open-names: the GB CSV zip (103 MB, deleted after reading), the tiles that hold the box (the GB CSV uses 20 km tiles: TQ26 and TQ28), entries whose GEOMETRY_X/Y lie in the box (BNG), less the postcode entries (postcode centres are held from ONSPD); BNG to WGS84 through OSTN15; MBR (BNG) kept for streets and areas',
+    counts: { features: feats.length, postcode_entries_left_out: pcSkipped, by_type: feats.reduce((a, f) => (a[f.properties.local_type] = (a[f.properties.local_type] || 0) + 1, a), {}) } };
+  return writeGeojson(join(OUT, 'national', 'os-open-names', 'os-open-names.geojson'), meta, feats);
+}
+async function osOpenRivers() {
+  const { rmSync } = await import('fs'); const { readGpkg } = await import('../walk-london-datastore.mjs');
+  const url = 'https://api.os.uk/downloads/v1/products/OpenRivers/downloads?area=GB&format=GeoPackage&redirect';
+  const { file: zip, fetched } = await rawFile('national/oprvrs_gpkg_gb.zip', url);
+  const { execFileSync } = await import('child_process');
+  const ent = execFileSync('unzip', ['-Z1', zip]).toString().split('\n').find(e => /\.gpkg$/i.test(e));
+  const gp = join(RAWP, 'national', 'oprvrs_gb.gpkg'); execFileSync('sh', ['-c', `unzip -p "${zip}" "${ent}" > "${gp}"`]);
+  const G = await readGpkg(gp); const toW = await bngInverse(); const feats = [];
+  const mp = (g, f) => g.type === 'Point' ? { type: g.type, coordinates: f(g.coordinates) } : g.type === 'LineString' || g.type === 'MultiPoint' ? { type: g.type, coordinates: g.coordinates.map(f) } : g.type === 'MultiLineString' || g.type === 'Polygon' ? { type: g.type, coordinates: g.coordinates.map(r => r.map(f)) } : { type: g.type, coordinates: g.coordinates.map(p => p.map(r => r.map(f))) };
+  for (const F of G.features) {
+    if (!F.geom) continue; let hit = false; const chk = c => { if (typeof c[0] === 'number') { if (inZB(c[0], c[1])) hit = true; } else c.forEach(chk); }; chk(F.geom.coordinates); if (!hit) continue;
+    const p = { layer: F.layer }; for (const [k, v] of Object.entries(F.props)) if (v !== null && v !== '' && !/^fid$/i.test(k)) p[k] = v;
+    feats.push({ type: 'Feature', geometry: mp(F.geom, toW), properties: p });
+  }
+  if (!process.argv.includes('--keep-raw')) { rmSync(zip); rmSync(gp); }
+  const meta = { source: 'OS Open Rivers (GB, GeoPackage)', page: 'https://www.ordnancesurvey.co.uk/products/os-open-rivers', api: url, layers: G.layers, fetched, licence: OGL, licence_url: 'https://www.ordnancesurvey.co.uk/customers/public-sector/public-sector-licensing/open-data', attribution: OS_ATTRIB, zone: ZONE_TEXT,
+    method: 'walk-portals.mjs national harvest os-open-rivers: the GB GeoPackage (52 MB zip, deleted after reading); watercourse links and hydro nodes with a vertex in the box (BNG); whole geometries, BNG to WGS84 through OSTN15',
+    counts: { features: feats.length, by_layer: feats.reduce((a, f) => (a[f.properties.layer] = (a[f.properties.layer] || 0) + 1, a), {}) } };
+  return writeGeojson(join(OUT, 'national', 'os-open-rivers', 'os-open-rivers.geojson'), meta, feats);
+}
+const FN = { 'os-open-names': osOpenNames, 'os-open-rivers': osOpenRivers, 'dft-aadf': dftAadf, 'dft-stats19': stats19, 'police-crime': policeCrime, 'desnz-energy': desnz };
 export async function harvest(keys) {
   for (const k of keys.length ? keys : Object.keys(FN)) {
     (await import('fs')).mkdirSync(join(OUT, 'national', k), { recursive: true });

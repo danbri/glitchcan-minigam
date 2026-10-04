@@ -794,3 +794,10 @@ central tower - do we have an index of these?"
   LSOA column holds 2021 codes); police.uk 80,432 crimes aggregated to 2,782 snap points x 14 categories and by
   month; DESNZ electricity and gas by LSOA/MSOA 2010-2024 (2.0 MB). Ofcom refuses scripts (403).
 - Size of batch 2: 7.6 MB harvests + 2.1 MB catalogues and triage. feeds/portals/ total about 21 MB.
+
+## 2026-10-04 — Open-data portals walk, batch 3: all Nomis tables, OS Open Names and Open Rivers
+- Nomis: every Census 2021 topic summary now harvested at its finest level (68: 52 at OA, 16 at MSOA; 3.7 MB);
+  5 published from local authority up only; TS079 zip unreadable. F45: TS010's OA and LSOA CSVs are empty (0 bytes).
+- OS Open Names: 4,066 named places, roads, stations, schools and waters in the box (postcode entries left out: held
+  from ONSPD), 1.7 MB; OS Open Rivers: 34 features. GB downloads deleted after reading (disk was 1.9 GB free).
+- data.gov.uk service probe running (WFS hits and ArcGIS counts in the box for the 387 listed datasets with a service).

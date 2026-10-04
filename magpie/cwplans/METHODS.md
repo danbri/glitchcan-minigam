@@ -2711,27 +2711,77 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - **op-nat-desnz-energy** (DESNZ sub-national electricity and gas consumption statistics, LSOA and MSOA, 2010-2024, Open Government Licence v3.0): https://www.gov.uk/government/statistics/lower-and-middle-super-output-areas-electricity-consumption ; https://www.gov.uk/government/statistics/lower-and-middle-super-output-areas-gas-consumption; national harvest desnz-energy
   - **op-nat-dft-aadf** (DfT road traffic statistics: annual average daily flow by count point, Open Government Licence v3.0): https://roadtraffic.dft.gov.uk/; national harvest dft-aadf
   - **op-nat-dft-stats19** (DfT road safety data, Open Government Licence v3.0): https://roadtraffic.dft.gov.uk/; national harvest dft-stats19
+  - **op-nat-os-open-names** (OS Open Names, Open Government Licence v3.0): https://api.os.uk/downloads/v1/products/OpenNames/downloads?area=GB&format=CSV&redirect; national harvest os-open-names
+  - **op-nat-os-open-rivers** (OS Open Rivers, Open Government Licence v3.0): https://api.os.uk/downloads/v1/products/OpenRivers/downloads?area=GB&format=GeoPackage&redirect; national harvest os-open-rivers
   - **op-nat-police-crime** (police.uk street-level crime, Open Government Licence v3.0): https://data.police.uk/api/crimes-street/all-crime?poly=<6 tiles of the box>&date=<month>; national harvest police-crime
   - **op-nomis-census2021-ts001-oa** (Census 2021 TS001: Number of usual residents in households and communal establishments, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts001-oa
+  - **op-nomis-census2021-ts002-oa** (Census 2021 TS002: Legal partnership status, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts002-oa
   - **op-nomis-census2021-ts003-oa** (Census 2021 TS003: Household composition, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts003-oa
   - **op-nomis-census2021-ts004-oa** (Census 2021 TS004: Country of birth, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts004-oa
+  - **op-nomis-census2021-ts005-oa** (Census 2021 TS005: Passports held, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts005-oa
+  - **op-nomis-census2021-ts006-oa** (Census 2021 TS006: Population density, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts006-oa
+  - **op-nomis-census2021-ts007-msoa** (Census 2021 TS007: Age by single year of age, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts007-msoa
   - **op-nomis-census2021-ts007a-oa** (Census 2021 TS007A: Age by five-year age bands, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts007a-oa
+  - **op-nomis-census2021-ts008-oa** (Census 2021 TS008: Sex, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts008-oa
+  - **op-nomis-census2021-ts010-msoa** (Census 2021 TS010: Living arrangements, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts010-msoa
   - **op-nomis-census2021-ts011-oa** (Census 2021 TS011: Households by deprivation dimensions, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts011-oa
+  - **op-nomis-census2021-ts013-msoa** (Census 2021 TS013: Passports held, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts013-msoa
+  - **op-nomis-census2021-ts015-oa** (Census 2021 TS015: Year of arrival in UK, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts015-oa
+  - **op-nomis-census2021-ts016-oa** (Census 2021 TS016: Length of residence, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts016-oa
   - **op-nomis-census2021-ts017-oa** (Census 2021 TS017: Household size, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts017-oa
+  - **op-nomis-census2021-ts018-oa** (Census 2021 TS018: Age of arrival in the UK, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts018-oa
+  - **op-nomis-census2021-ts019-oa** (Census 2021 TS019: Migrant Indicator, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts019-oa
+  - **op-nomis-census2021-ts020-oa** (Census 2021 TS020: Number of non-UK short-term residents by sex, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts020-oa
   - **op-nomis-census2021-ts021-oa** (Census 2021 TS021: Ethnic group, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts021-oa
+  - **op-nomis-census2021-ts022-msoa** (Census 2021 TS022: Ethnic group, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts022-msoa
+  - **op-nomis-census2021-ts023-oa** (Census 2021 TS023: Multiple ethnic group, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts023-oa
+  - **op-nomis-census2021-ts025-oa** (Census 2021 TS025: Household language, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts025-oa
+  - **op-nomis-census2021-ts026-oa** (Census 2021 TS026: Multiple main languages in households, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts026-oa
+  - **op-nomis-census2021-ts027-oa** (Census 2021 TS027: National identity - UK, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts027-oa
+  - **op-nomis-census2021-ts028-msoa** (Census 2021 TS028: National identity, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts028-msoa
   - **op-nomis-census2021-ts029-oa** (Census 2021 TS029: Proficiency in english, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts029-oa
   - **op-nomis-census2021-ts030-oa** (Census 2021 TS030: Religion, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts030-oa
+  - **op-nomis-census2021-ts031-msoa** (Census 2021 TS031: Religion, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts031-msoa
+  - **op-nomis-census2021-ts032-oa** (Census 2021 TS032: Welsh language skills, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts032-oa
+  - **op-nomis-census2021-ts033-oa** (Census 2021 TS033: Welsh language skills, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts033-oa
+  - **op-nomis-census2021-ts034-oa** (Census 2021 TS034: Welsh language skills, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts034-oa
+  - **op-nomis-census2021-ts035-oa** (Census 2021 TS035: Welsh language skills, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts035-oa
+  - **op-nomis-census2021-ts036-oa** (Census 2021 TS036: Welsh language skills, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts036-oa
   - **op-nomis-census2021-ts037-oa** (Census 2021 TS037: General health, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts037-oa
   - **op-nomis-census2021-ts038-oa** (Census 2021 TS038: Disability, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts038-oa
+  - **op-nomis-census2021-ts039-oa** (Census 2021 TS039: Provision of unpaid care, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts039-oa
+  - **op-nomis-census2021-ts040-oa** (Census 2021 TS040: Number of disabled people in the household, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts040-oa
+  - **op-nomis-census2021-ts041-oa** (Census 2021 TS041: Number of Households, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts041-oa
   - **op-nomis-census2021-ts044-oa** (Census 2021 TS044: Accommodation type, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts044-oa
   - **op-nomis-census2021-ts045-oa** (Census 2021 TS045: Car or van availability, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts045-oa
+  - **op-nomis-census2021-ts046-oa** (Census 2021 TS046: Central heating, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts046-oa
+  - **op-nomis-census2021-ts047-msoa** (Census 2021 TS047: Communal establishment residents by age and sex, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts047-msoa
+  - **op-nomis-census2021-ts048-msoa** (Census 2021 TS048: Communal establishment management and type, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts048-msoa
   - **op-nomis-census2021-ts050-oa** (Census 2021 TS050: Number of bedrooms, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts050-oa
+  - **op-nomis-census2021-ts051-oa** (Census 2021 TS051: Number of rooms, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts051-oa
+  - **op-nomis-census2021-ts052-oa** (Census 2021 TS052: Occupancy rating for bedrooms, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts052-oa
+  - **op-nomis-census2021-ts053-oa** (Census 2021 TS053: Occupancy rating for rooms, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts053-oa
   - **op-nomis-census2021-ts054-oa** (Census 2021 TS054: Tenure, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts054-oa
+  - **op-nomis-census2021-ts055-oa** (Census 2021 TS055: Purpose of second address, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts055-oa
+  - **op-nomis-census2021-ts056-oa** (Census 2021 TS056: Second address indicator, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts056-oa
   - **op-nomis-census2021-ts058-oa** (Census 2021 TS058: Distance travelled to work, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts058-oa
+  - **op-nomis-census2021-ts059-oa** (Census 2021 TS059: Hours worked, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts059-oa
+  - **op-nomis-census2021-ts060-msoa** (Census 2021 TS060: Industry, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts060-msoa
   - **op-nomis-census2021-ts061-oa** (Census 2021 TS061: Method of travel to work, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts061-oa
   - **op-nomis-census2021-ts062-oa** (Census 2021 TS062: NS-SeC, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts062-oa
+  - **op-nomis-census2021-ts063-oa** (Census 2021 TS063: Occupation, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts063-oa
+  - **op-nomis-census2021-ts064-msoa** (Census 2021 TS064: Occupation - minor groups, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts064-msoa
+  - **op-nomis-census2021-ts065-oa** (Census 2021 TS065: Unemployment history, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts065-oa
   - **op-nomis-census2021-ts066-oa** (Census 2021 TS066: Economic activity status, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts066-oa
   - **op-nomis-census2021-ts067-oa** (Census 2021 TS067: Highest level of qualification, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts067-oa
+  - **op-nomis-census2021-ts068-oa** (Census 2021 TS068: Schoolchildren and full-time students, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts068-oa
+  - **op-nomis-census2021-ts071-msoa** (Census 2021 TS071: Previously served in the UK armed forces, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts071-msoa
+  - **op-nomis-census2021-ts072-msoa** (Census 2021 TS072: Number of people in household who have previously served in UK armed forces, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts072-msoa
+  - **op-nomis-census2021-ts073-msoa** (Census 2021 TS073: Population who have previously served in UK armed forces in communal establishments and in households, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts073-msoa
+  - **op-nomis-census2021-ts074-msoa** (Census 2021 TS074: Household Reference Person indicator of previous service in UK armed forces, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts074-msoa
+  - **op-nomis-census2021-ts075-oa** (Census 2021 TS075: Multi religion households, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts075-oa
+  - **op-nomis-census2021-ts077-msoa** (Census 2021 TS077: Sexual orientation, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts077-msoa
+  - **op-nomis-census2021-ts078-msoa** (Census 2021 TS078: Gender identity, Open Government Licence v3.0): https://www.nomisweb.co.uk/sources/census_2021_bulk; nomis harvest census2021-ts078-msoa
   - **op-onsgeo-lsoa21-centroids** (ONS Open Geography Portal: Lower layer Super Output Areas, Open Government Licence v3.0 (ONS geography licences: https://www.ons.gov.uk/methodology/geography/licences)): https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_PopCentroids_EW_2021_V4/FeatureServer/0/query; onsgeo harvest lsoa21-centroids
   - **op-onsgeo-oa21-boundaries** (ONS Open Geography Portal: Output Areas, Open Government Licence v3.0 (ONS geography licences: https://www.ons.gov.uk/methodology/geography/licences)): https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/OA_2021_EW_BGC_V2_RUC/FeatureServer/0/query; onsgeo harvest oa21-boundaries
   - **op-onsgeo-oa21-centroids** (ONS Open Geography Portal: Output Areas, Open Government Licence v3.0 (ONS geography licences: https://www.ons.gov.uk/methodology/geography/licences)): https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/OA_December_2021_EW_PWC_V4/FeatureServer/0/query; onsgeo harvest oa21-centroids
@@ -2800,35 +2850,86 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - [feeds/portals/boroughs/lewisham-ev-chargepoints/lewisham-ev-chargepoints.geojson](feeds/portals/boroughs/lewisham-ev-chargepoints/lewisham-ev-chargepoints.geojson)
   - [feeds/portals/boroughs/triage.json](feeds/portals/boroughs/triage.json)
   - [feeds/portals/dgu/catalogue.json](feeds/portals/dgu/catalogue.json)
+  - [feeds/portals/dgu/probe.json](feeds/portals/dgu/probe.json)
   - [feeds/portals/dgu/triage.json](feeds/portals/dgu/triage.json)
   - [feeds/portals/index.json](feeds/portals/index.json)
   - [feeds/portals/national/catalogue.json](feeds/portals/national/catalogue.json)
   - [feeds/portals/national/desnz-energy/desnz-energy.json](feeds/portals/national/desnz-energy/desnz-energy.json)
   - [feeds/portals/national/dft-aadf/dft-aadf.geojson](feeds/portals/national/dft-aadf/dft-aadf.geojson)
   - [feeds/portals/national/dft-stats19/dft-stats19.json](feeds/portals/national/dft-stats19/dft-stats19.json)
+  - [feeds/portals/national/os-open-names/os-open-names.geojson](feeds/portals/national/os-open-names/os-open-names.geojson)
+  - [feeds/portals/national/os-open-rivers/os-open-rivers.geojson](feeds/portals/national/os-open-rivers/os-open-rivers.geojson)
   - [feeds/portals/national/police-crime/police-crime.json](feeds/portals/national/police-crime/police-crime.json)
   - [feeds/portals/national/triage.json](feeds/portals/national/triage.json)
   - [feeds/portals/nomis/catalogue.json](feeds/portals/nomis/catalogue.json)
   - [feeds/portals/nomis/census2021-ts001-oa/census2021-ts001-oa.json](feeds/portals/nomis/census2021-ts001-oa/census2021-ts001-oa.json)
+  - [feeds/portals/nomis/census2021-ts002-oa/census2021-ts002-oa.json](feeds/portals/nomis/census2021-ts002-oa/census2021-ts002-oa.json)
   - [feeds/portals/nomis/census2021-ts003-oa/census2021-ts003-oa.json](feeds/portals/nomis/census2021-ts003-oa/census2021-ts003-oa.json)
   - [feeds/portals/nomis/census2021-ts004-oa/census2021-ts004-oa.json](feeds/portals/nomis/census2021-ts004-oa/census2021-ts004-oa.json)
+  - [feeds/portals/nomis/census2021-ts005-oa/census2021-ts005-oa.json](feeds/portals/nomis/census2021-ts005-oa/census2021-ts005-oa.json)
+  - [feeds/portals/nomis/census2021-ts006-oa/census2021-ts006-oa.json](feeds/portals/nomis/census2021-ts006-oa/census2021-ts006-oa.json)
+  - [feeds/portals/nomis/census2021-ts007-msoa/census2021-ts007-msoa.json](feeds/portals/nomis/census2021-ts007-msoa/census2021-ts007-msoa.json)
   - [feeds/portals/nomis/census2021-ts007a-oa/census2021-ts007a-oa.json](feeds/portals/nomis/census2021-ts007a-oa/census2021-ts007a-oa.json)
+  - [feeds/portals/nomis/census2021-ts008-oa/census2021-ts008-oa.json](feeds/portals/nomis/census2021-ts008-oa/census2021-ts008-oa.json)
+  - [feeds/portals/nomis/census2021-ts010-msoa/census2021-ts010-msoa.json](feeds/portals/nomis/census2021-ts010-msoa/census2021-ts010-msoa.json)
   - [feeds/portals/nomis/census2021-ts011-oa/census2021-ts011-oa.json](feeds/portals/nomis/census2021-ts011-oa/census2021-ts011-oa.json)
+  - [feeds/portals/nomis/census2021-ts013-msoa/census2021-ts013-msoa.json](feeds/portals/nomis/census2021-ts013-msoa/census2021-ts013-msoa.json)
+  - [feeds/portals/nomis/census2021-ts015-oa/census2021-ts015-oa.json](feeds/portals/nomis/census2021-ts015-oa/census2021-ts015-oa.json)
+  - [feeds/portals/nomis/census2021-ts016-oa/census2021-ts016-oa.json](feeds/portals/nomis/census2021-ts016-oa/census2021-ts016-oa.json)
   - [feeds/portals/nomis/census2021-ts017-oa/census2021-ts017-oa.json](feeds/portals/nomis/census2021-ts017-oa/census2021-ts017-oa.json)
+  - [feeds/portals/nomis/census2021-ts018-oa/census2021-ts018-oa.json](feeds/portals/nomis/census2021-ts018-oa/census2021-ts018-oa.json)
+  - [feeds/portals/nomis/census2021-ts019-oa/census2021-ts019-oa.json](feeds/portals/nomis/census2021-ts019-oa/census2021-ts019-oa.json)
+  - [feeds/portals/nomis/census2021-ts020-oa/census2021-ts020-oa.json](feeds/portals/nomis/census2021-ts020-oa/census2021-ts020-oa.json)
   - [feeds/portals/nomis/census2021-ts021-oa/census2021-ts021-oa.json](feeds/portals/nomis/census2021-ts021-oa/census2021-ts021-oa.json)
+  - [feeds/portals/nomis/census2021-ts022-msoa/census2021-ts022-msoa.json](feeds/portals/nomis/census2021-ts022-msoa/census2021-ts022-msoa.json)
+  - [feeds/portals/nomis/census2021-ts023-oa/census2021-ts023-oa.json](feeds/portals/nomis/census2021-ts023-oa/census2021-ts023-oa.json)
+  - [feeds/portals/nomis/census2021-ts025-oa/census2021-ts025-oa.json](feeds/portals/nomis/census2021-ts025-oa/census2021-ts025-oa.json)
+  - [feeds/portals/nomis/census2021-ts026-oa/census2021-ts026-oa.json](feeds/portals/nomis/census2021-ts026-oa/census2021-ts026-oa.json)
+  - [feeds/portals/nomis/census2021-ts027-oa/census2021-ts027-oa.json](feeds/portals/nomis/census2021-ts027-oa/census2021-ts027-oa.json)
+  - [feeds/portals/nomis/census2021-ts028-msoa/census2021-ts028-msoa.json](feeds/portals/nomis/census2021-ts028-msoa/census2021-ts028-msoa.json)
   - [feeds/portals/nomis/census2021-ts029-oa/census2021-ts029-oa.json](feeds/portals/nomis/census2021-ts029-oa/census2021-ts029-oa.json)
   - [feeds/portals/nomis/census2021-ts030-oa/census2021-ts030-oa.json](feeds/portals/nomis/census2021-ts030-oa/census2021-ts030-oa.json)
+  - [feeds/portals/nomis/census2021-ts031-msoa/census2021-ts031-msoa.json](feeds/portals/nomis/census2021-ts031-msoa/census2021-ts031-msoa.json)
+  - [feeds/portals/nomis/census2021-ts032-oa/census2021-ts032-oa.json](feeds/portals/nomis/census2021-ts032-oa/census2021-ts032-oa.json)
+  - [feeds/portals/nomis/census2021-ts033-oa/census2021-ts033-oa.json](feeds/portals/nomis/census2021-ts033-oa/census2021-ts033-oa.json)
+  - [feeds/portals/nomis/census2021-ts034-oa/census2021-ts034-oa.json](feeds/portals/nomis/census2021-ts034-oa/census2021-ts034-oa.json)
+  - [feeds/portals/nomis/census2021-ts035-oa/census2021-ts035-oa.json](feeds/portals/nomis/census2021-ts035-oa/census2021-ts035-oa.json)
+  - [feeds/portals/nomis/census2021-ts036-oa/census2021-ts036-oa.json](feeds/portals/nomis/census2021-ts036-oa/census2021-ts036-oa.json)
   - [feeds/portals/nomis/census2021-ts037-oa/census2021-ts037-oa.json](feeds/portals/nomis/census2021-ts037-oa/census2021-ts037-oa.json)
   - [feeds/portals/nomis/census2021-ts038-oa/census2021-ts038-oa.json](feeds/portals/nomis/census2021-ts038-oa/census2021-ts038-oa.json)
+  - [feeds/portals/nomis/census2021-ts039-oa/census2021-ts039-oa.json](feeds/portals/nomis/census2021-ts039-oa/census2021-ts039-oa.json)
+  - [feeds/portals/nomis/census2021-ts040-oa/census2021-ts040-oa.json](feeds/portals/nomis/census2021-ts040-oa/census2021-ts040-oa.json)
+  - [feeds/portals/nomis/census2021-ts041-oa/census2021-ts041-oa.json](feeds/portals/nomis/census2021-ts041-oa/census2021-ts041-oa.json)
   - [feeds/portals/nomis/census2021-ts044-oa/census2021-ts044-oa.json](feeds/portals/nomis/census2021-ts044-oa/census2021-ts044-oa.json)
   - [feeds/portals/nomis/census2021-ts045-oa/census2021-ts045-oa.json](feeds/portals/nomis/census2021-ts045-oa/census2021-ts045-oa.json)
+  - [feeds/portals/nomis/census2021-ts046-oa/census2021-ts046-oa.json](feeds/portals/nomis/census2021-ts046-oa/census2021-ts046-oa.json)
+  - [feeds/portals/nomis/census2021-ts047-msoa/census2021-ts047-msoa.json](feeds/portals/nomis/census2021-ts047-msoa/census2021-ts047-msoa.json)
+  - [feeds/portals/nomis/census2021-ts048-msoa/census2021-ts048-msoa.json](feeds/portals/nomis/census2021-ts048-msoa/census2021-ts048-msoa.json)
   - [feeds/portals/nomis/census2021-ts050-oa/census2021-ts050-oa.json](feeds/portals/nomis/census2021-ts050-oa/census2021-ts050-oa.json)
+  - [feeds/portals/nomis/census2021-ts051-oa/census2021-ts051-oa.json](feeds/portals/nomis/census2021-ts051-oa/census2021-ts051-oa.json)
+  - [feeds/portals/nomis/census2021-ts052-oa/census2021-ts052-oa.json](feeds/portals/nomis/census2021-ts052-oa/census2021-ts052-oa.json)
+  - [feeds/portals/nomis/census2021-ts053-oa/census2021-ts053-oa.json](feeds/portals/nomis/census2021-ts053-oa/census2021-ts053-oa.json)
   - [feeds/portals/nomis/census2021-ts054-oa/census2021-ts054-oa.json](feeds/portals/nomis/census2021-ts054-oa/census2021-ts054-oa.json)
+  - [feeds/portals/nomis/census2021-ts055-oa/census2021-ts055-oa.json](feeds/portals/nomis/census2021-ts055-oa/census2021-ts055-oa.json)
+  - [feeds/portals/nomis/census2021-ts056-oa/census2021-ts056-oa.json](feeds/portals/nomis/census2021-ts056-oa/census2021-ts056-oa.json)
   - [feeds/portals/nomis/census2021-ts058-oa/census2021-ts058-oa.json](feeds/portals/nomis/census2021-ts058-oa/census2021-ts058-oa.json)
+  - [feeds/portals/nomis/census2021-ts059-oa/census2021-ts059-oa.json](feeds/portals/nomis/census2021-ts059-oa/census2021-ts059-oa.json)
+  - [feeds/portals/nomis/census2021-ts060-msoa/census2021-ts060-msoa.json](feeds/portals/nomis/census2021-ts060-msoa/census2021-ts060-msoa.json)
   - [feeds/portals/nomis/census2021-ts061-oa/census2021-ts061-oa.json](feeds/portals/nomis/census2021-ts061-oa/census2021-ts061-oa.json)
   - [feeds/portals/nomis/census2021-ts062-oa/census2021-ts062-oa.json](feeds/portals/nomis/census2021-ts062-oa/census2021-ts062-oa.json)
+  - [feeds/portals/nomis/census2021-ts063-oa/census2021-ts063-oa.json](feeds/portals/nomis/census2021-ts063-oa/census2021-ts063-oa.json)
+  - [feeds/portals/nomis/census2021-ts064-msoa/census2021-ts064-msoa.json](feeds/portals/nomis/census2021-ts064-msoa/census2021-ts064-msoa.json)
+  - [feeds/portals/nomis/census2021-ts065-oa/census2021-ts065-oa.json](feeds/portals/nomis/census2021-ts065-oa/census2021-ts065-oa.json)
   - [feeds/portals/nomis/census2021-ts066-oa/census2021-ts066-oa.json](feeds/portals/nomis/census2021-ts066-oa/census2021-ts066-oa.json)
   - [feeds/portals/nomis/census2021-ts067-oa/census2021-ts067-oa.json](feeds/portals/nomis/census2021-ts067-oa/census2021-ts067-oa.json)
+  - [feeds/portals/nomis/census2021-ts068-oa/census2021-ts068-oa.json](feeds/portals/nomis/census2021-ts068-oa/census2021-ts068-oa.json)
+  - [feeds/portals/nomis/census2021-ts071-msoa/census2021-ts071-msoa.json](feeds/portals/nomis/census2021-ts071-msoa/census2021-ts071-msoa.json)
+  - [feeds/portals/nomis/census2021-ts072-msoa/census2021-ts072-msoa.json](feeds/portals/nomis/census2021-ts072-msoa/census2021-ts072-msoa.json)
+  - [feeds/portals/nomis/census2021-ts073-msoa/census2021-ts073-msoa.json](feeds/portals/nomis/census2021-ts073-msoa/census2021-ts073-msoa.json)
+  - [feeds/portals/nomis/census2021-ts074-msoa/census2021-ts074-msoa.json](feeds/portals/nomis/census2021-ts074-msoa/census2021-ts074-msoa.json)
+  - [feeds/portals/nomis/census2021-ts075-oa/census2021-ts075-oa.json](feeds/portals/nomis/census2021-ts075-oa/census2021-ts075-oa.json)
+  - [feeds/portals/nomis/census2021-ts077-msoa/census2021-ts077-msoa.json](feeds/portals/nomis/census2021-ts077-msoa/census2021-ts077-msoa.json)
+  - [feeds/portals/nomis/census2021-ts078-msoa/census2021-ts078-msoa.json](feeds/portals/nomis/census2021-ts078-msoa/census2021-ts078-msoa.json)
   - [feeds/portals/nomis/triage.json](feeds/portals/nomis/triage.json)
   - [feeds/portals/onsgeo/catalogue.json](feeds/portals/onsgeo/catalogue.json)
   - [feeds/portals/onsgeo/lsoa21-centroids/lsoa21-centroids.geojson](feeds/portals/onsgeo/lsoa21-centroids/lsoa21-centroids.geojson)
@@ -2869,7 +2970,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - `data/raw/portals/` (local, not committed)
 - Network: yes; deterministic: no; kind: fetch; after: nothing
 - Hand judgement: The scope lists, the zone place exceptions, the JUDGED tables (held from another source, coarser than the zone) and the HARVEST tables were set by hand from the first triage; the reasons are in the tables and in feeds/portals/README.md. Licences that read 'no restrictions' without naming a licence (the Tower Hamlets ArcGIS Hub) are not treated as open.
-- Faults: [F42](https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md#fault-register), [F43](https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md#fault-register), [F44](https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md#fault-register)
+- Faults: [F42](https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md#fault-register), [F43](https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md#fault-register), [F44](https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md#fault-register), [F45](https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/skills/docklands-data-curation/SKILL.md#fault-register)
 
 #### 89. `discover-feeds` (tools/discover-feeds.mjs)
 
@@ -3230,6 +3331,7 @@ Faults found in this project's joins and tools (F-numbers). Evidence and audit c
 | F42 | 2026-10-04 | meaning (licence metadata) | rule in use in `tools/walk-portals.mjs`: the licence is read per layer or dataset, never per service; the copy with a named open licence is taken; the OS INSPIRE end-user licence is restricted (`licenceClass`) | One dataset, two licence statements: the Tower Hamlets ArcGIS Hub "Planning Datasets" names no licence ("No special restrictions ... except that data scraping tools should not be used") while planning.data.gov.uk serves the same listed buildings, conservation areas, TPOs and Article 4 layers under OGL; the City of London INSPIRE map service states none, and its layers' INSPIRE records on data.gov.uk give OGL (35), the OS public-sector INSPIRE end-user licence (34) or nothing (94) | `walk-portals` |
 | F43 | 2026-10-04 | geometry (source) | rule in use in `tools/portals/boroughs.mjs`: features kept with `geometry: null` and `meta.geometry_withheld`; place them by address; when only `f=geojson` loses geometry, the `f=json` rings are converted | The City of London map service withholds geometry for the Cultural Spaces layer (MapServer/175): `f=geojson` and `f=json` both return features without geometry, while the box filter works (237 in the zone) | `walk-portals` |
 | F44 | 2026-10-04 | meaning (source column) | rule in use in `tools/portals/national.mjs`: an LSOA column is matched against 2011 and 2021 zone codes; the vintage is read from the values, not the column name | DfT STATS19 collisions 2021-2025: the column `lsoa_of_accident_location` holds 2021 LSOA codes; matched against 2011 codes only, 1,431 of 10,362 zone collisions were found | `walk-portals` |
+| F45 | 2026-10-04 | validity (source files) | rule in use in `tools/portals/nomis.mjs`: a 0-byte CSV is skipped and the next level is read (listed in `meta.empty_files_in_zip`); an unreadable zip is recorded as unavailable | Nomis Census 2021 bulk zips: in the TS010 (population density) zip the OA and LSOA CSVs are empty (0 bytes) while MSOA and coarser are filled; census2021-ts079.zip is not a readable zip (no end-of-central-directory, twice); the TS009 zip names one file `-ulta.csv` | `walk-portals` |
 
 ## Rebuild order
 

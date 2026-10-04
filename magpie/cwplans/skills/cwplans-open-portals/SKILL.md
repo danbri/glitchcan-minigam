@@ -13,7 +13,7 @@ description: >-
   "no restrictions" without a licence name is not open; GOV.UK/ONS site terms), the harvests in feeds/portals/ clipped
   to the 3D model box (listed buildings and outlines, Heritage at Risk, Article 4 areas, area TPOs, EA flood zones,
   section 106 agreements, City of London layers, Census 2021 OA tables, OA boundaries and lookups, traffic counts,
-  collision and crime aggregates, energy by small area), size rules for the repo, faults F42-F44, and the traps (Poplar is a tree, short slugs match prose,
+  collision and crime aggregates, energy by small area), size rules for the repo, faults F42-F45, and the traps (Poplar is a tree, short slugs match prose,
   safeguarding areas are not safeguarding of people, deleted records keep resources). Reach for it before you walk,
   re-triage or harvest any national or borough portal for cwplans, or answer "is dataset X open and in the zone?".
 ---
@@ -144,8 +144,10 @@ traffic or data.police.uk is `ogl-site-terms` (those sites state OGL v3.0 for th
 robots.txt disallows `/query/` and `/api/v01/dataset/`, `/codelist/`, `/concept/` for every agent: do not use the Nomis
 API. The Census 2021 bulk zips under `/output/census/2021/` are allowed: one per topic summary (74), each with CSVs
 for OA, LSOA, MSOA, LTLA, UTLA, region and country. `harvest` streams the OA CSV out of the zip (`unzip -p`) and keeps
-the zone OAs (1,509, from zone-codes.json `oa21`); a trailing empty header column is dropped. 20 tables harvested;
-the other 54 are listed. Join through `onsgeo/oa21-lookup`.
+the zone OAs (1,509, from zone-codes.json `oa21`); a trailing empty header column is dropped. Where a zip has no OA
+file (or an empty one: F45) the next level is read (LSOA, then MSOA: 75 zone MSOAs). 68 tables harvested (52 at OA,
+16 at MSOA); 5 are published from local authority up only; TS079's zip is unreadable. Zips are deleted after reading
+unless `--keep-raw` (disk). `--all` harvests every table. Join through `onsgeo/oa21-lookup`.
 
 ## ONS Open Geography
 
@@ -162,7 +164,9 @@ The sources of the brief are a hand-written list in `national.mjs` (`SOURCES`: A
 Harvests: DfT AADF (the CSV per zone local authority, count points in the box, every year); STATS19 collisions
 (streamed, aggregates only: LSOA x year x severity; the LSOA column holds 2021 codes, F44); police.uk (12 months, the box
 in 6 tiles because the API refuses over 10,000 crimes, aggregates by snap point x category and month x category, no
-crime ids); DESNZ electricity and gas workbooks (zone LSOA and MSOA rows, 2011 and 2021 codes; the header row is
+crime ids); OS Open Names (the GB CSV uses 20 km tiles: TQ26 and TQ28 hold the box; postcode entries left out, held
+from ONSPD) and OS Open Rivers (GeoPackage read with readGpkg from walk-london-datastore.mjs), downloads deleted after
+reading; DESNZ electricity and gas workbooks (zone LSOA and MSOA rows, 2011 and 2021 codes; the header row is
 the first short cell naming an LSOA/MSOA code, not the notes above it). Ofcom refuses scripts (403).
 
 ## Size rules

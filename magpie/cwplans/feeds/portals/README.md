@@ -13,15 +13,15 @@ method, counts) and a README. `index.json` has the counts per portal (`walk-port
 | data.gov.uk (CKAN) | `dgu/` | 2026-10-04 | 59,451 (25,492 in scope) | listed 1,257, deferred 1,990, not-relevant 9,035, not-open 4,809, unavailable 3,199, walked-elsewhere 5,113, sensitive 72, held 17 | through `national/` and `pdg/` | 4.2 MB catalogue and triage |
 | planning.data.gov.uk | `pdg/` | 2026-10-04 | 222 | harvested 26, held 11, not-relevant 79, unavailable 106 | 26 datasets: listed buildings and outlines, Heritage at Risk, Article 4 areas, area TPOs, EA flood zones, AQMAs, LNRs, NSIPs, section 106 (Greenwich), plan records | 7.2 MB |
 | zone borough portals | `boroughs/` | 2026-10-04 | 33,991 (City 176 layers, Tower Hamlets 8, Southwark 16,897 and Greenwich 16,898 observatory indicators, Lewisham 11, Newham 1) | harvested 28, held 11, listed 1, deferred 46, not-relevant 4, not-open 4,100, walked-elsewhere 29,801 | City of London layers (St Paul's Heights, Historic Land Use, cultural spaces, cycleways, stations, safeguarding areas...), Lewisham EV charge points | 1.9 MB |
-| Nomis Census 2021 bulk | `nomis/` | 2026-10-04 | 74 tables | harvested 20, listed 54 | 20 topic summaries at output area for the 1,509 zone OAs | 1.5 MB |
+| Nomis Census 2021 bulk | `nomis/` | 2026-10-04 | 74 tables | harvested 68, not-relevant 5, unavailable 1 | 68 topic summaries: 52 at output area (1,509 zone OAs), 16 at MSOA | 3.7 MB |
 | ONS Open Geography Portal | `onsgeo/` | 2026-10-04 | 2,630 items | harvested 6, held 3, listed 426, deferred 116, not-relevant 2,023, not-open 56 | OA 2021 polygons, OA and LSOA centroids, OA lookup, workplace zones 2011, wards May 2026 | 3.5 MB |
-| national sources | `national/` | 2026-10-04 | 18 sources | harvested 4, held 7, listed 2, deferred 1, not-relevant 1, not-open 2, unavailable 1 | DfT traffic counts, STATS19 aggregates, police.uk aggregates, DESNZ energy by LSOA/MSOA | 2.6 MB |
+| national sources | `national/` | 2026-10-04 | 19 sources | harvested 6, held 7, listed 2, deferred 1, not-relevant 1, not-open 2, unavailable 1 | DfT traffic counts, STATS19 aggregates, police.uk aggregates, DESNZ energy by LSOA/MSOA, OS Open Names (4,066 places), OS Open Rivers | 4.3 MB |
 
-Total committed under `feeds/portals/`: about 21 MB (harvests 14 MB, catalogues and triage 7 MB).
+Total committed under `feeds/portals/`: about 25 MB (harvests 18 MB, catalogues and triage 7 MB).
 
 **Notable for the zone**: 1,769 listed buildings (80 grade I) and 1,557 outlines; every Article 4 area of four
 boroughs; EA flood zones 2 and 3 cut to the box; the Thames Tideway, Silvertown Tunnel and Heat Main NSIP outlines;
-Greenwich's 370 section 106 agreements with 1,398 contributions; 20 Census 2021 tables for 1,509 output areas;
+Greenwich's 370 section 106 agreements with 1,398 contributions; 68 Census 2021 tables for the zone's 1,509 output areas or 75 MSOAs; 4,066 OS Open Names places;
 222 traffic count points with 26 years of flows; 10,363 injury collisions 2021-2025 by LSOA; 80,432 crimes by
 snap point; domestic and non-domestic energy by small area; the City's St Paul's Heights and Historic Land Use layers.
 

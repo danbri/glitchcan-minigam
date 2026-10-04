@@ -6666,7 +6666,8 @@
       "faults": [
         "F42",
         "F43",
-        "F44"
+        "F44",
+        "F45"
       ],
       "judgement": "The scope lists, the zone place exceptions, the JUDGED tables (held from another source, coarser than the zone) and the HARVEST tables were set by hand from the first triage; the reasons are in the tables and in feeds/portals/README.md. Licences that read 'no restrictions' without naming a licence (the Tower Hamlets ArcGIS Hub) are not treated as open.",
       "used": [
@@ -6856,6 +6857,16 @@
           "request": "national harvest dft-stats19"
         },
         {
+          "source": "op-nat-os-open-names",
+          "endpoint": "https://api.os.uk/downloads/v1/products/OpenNames/downloads?area=GB&format=CSV&redirect",
+          "request": "national harvest os-open-names"
+        },
+        {
+          "source": "op-nat-os-open-rivers",
+          "endpoint": "https://api.os.uk/downloads/v1/products/OpenRivers/downloads?area=GB&format=GeoPackage&redirect",
+          "request": "national harvest os-open-rivers"
+        },
+        {
           "source": "op-nat-police-crime",
           "endpoint": "https://data.police.uk/api/crimes-street/all-crime?poly=<6 tiles of the box>&date=<month>",
           "request": "national harvest police-crime"
@@ -6864,6 +6875,11 @@
           "source": "op-nomis-census2021-ts001-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts001-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts002-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts002-oa"
         },
         {
           "source": "op-nomis-census2021-ts003-oa",
@@ -6876,9 +6892,34 @@
           "request": "nomis harvest census2021-ts004-oa"
         },
         {
+          "source": "op-nomis-census2021-ts005-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts005-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts006-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts006-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts007-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts007-msoa"
+        },
+        {
           "source": "op-nomis-census2021-ts007a-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts007a-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts008-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts008-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts010-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts010-msoa"
         },
         {
           "source": "op-nomis-census2021-ts011-oa",
@@ -6886,14 +6927,74 @@
           "request": "nomis harvest census2021-ts011-oa"
         },
         {
+          "source": "op-nomis-census2021-ts013-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts013-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts015-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts015-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts016-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts016-oa"
+        },
+        {
           "source": "op-nomis-census2021-ts017-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts017-oa"
         },
         {
+          "source": "op-nomis-census2021-ts018-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts018-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts019-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts019-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts020-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts020-oa"
+        },
+        {
           "source": "op-nomis-census2021-ts021-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts021-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts022-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts022-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts023-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts023-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts025-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts025-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts026-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts026-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts027-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts027-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts028-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts028-msoa"
         },
         {
           "source": "op-nomis-census2021-ts029-oa",
@@ -6906,6 +7007,36 @@
           "request": "nomis harvest census2021-ts030-oa"
         },
         {
+          "source": "op-nomis-census2021-ts031-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts031-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts032-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts032-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts033-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts033-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts034-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts034-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts035-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts035-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts036-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts036-oa"
+        },
+        {
           "source": "op-nomis-census2021-ts037-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts037-oa"
@@ -6914,6 +7045,21 @@
           "source": "op-nomis-census2021-ts038-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts038-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts039-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts039-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts040-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts040-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts041-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts041-oa"
         },
         {
           "source": "op-nomis-census2021-ts044-oa",
@@ -6926,9 +7072,39 @@
           "request": "nomis harvest census2021-ts045-oa"
         },
         {
+          "source": "op-nomis-census2021-ts046-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts046-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts047-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts047-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts048-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts048-msoa"
+        },
+        {
           "source": "op-nomis-census2021-ts050-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts050-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts051-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts051-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts052-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts052-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts053-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts053-oa"
         },
         {
           "source": "op-nomis-census2021-ts054-oa",
@@ -6936,9 +7112,29 @@
           "request": "nomis harvest census2021-ts054-oa"
         },
         {
+          "source": "op-nomis-census2021-ts055-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts055-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts056-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts056-oa"
+        },
+        {
           "source": "op-nomis-census2021-ts058-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts058-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts059-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts059-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts060-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts060-msoa"
         },
         {
           "source": "op-nomis-census2021-ts061-oa",
@@ -6951,6 +7147,21 @@
           "request": "nomis harvest census2021-ts062-oa"
         },
         {
+          "source": "op-nomis-census2021-ts063-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts063-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts064-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts064-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts065-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts065-oa"
+        },
+        {
           "source": "op-nomis-census2021-ts066-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts066-oa"
@@ -6959,6 +7170,46 @@
           "source": "op-nomis-census2021-ts067-oa",
           "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
           "request": "nomis harvest census2021-ts067-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts068-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts068-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts071-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts071-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts072-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts072-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts073-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts073-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts074-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts074-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts075-oa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts075-oa"
+        },
+        {
+          "source": "op-nomis-census2021-ts077-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts077-msoa"
+        },
+        {
+          "source": "op-nomis-census2021-ts078-msoa",
+          "endpoint": "https://www.nomisweb.co.uk/sources/census_2021_bulk",
+          "request": "nomis harvest census2021-ts078-msoa"
         },
         {
           "source": "op-onsgeo-lsoa21-centroids",
@@ -7232,6 +7483,9 @@
           "file": "feeds/portals/dgu/catalogue.json"
         },
         {
+          "file": "feeds/portals/dgu/probe.json"
+        },
+        {
           "file": "feeds/portals/dgu/triage.json"
         },
         {
@@ -7250,6 +7504,12 @@
           "file": "feeds/portals/national/dft-stats19/dft-stats19.json"
         },
         {
+          "file": "feeds/portals/national/os-open-names/os-open-names.geojson"
+        },
+        {
+          "file": "feeds/portals/national/os-open-rivers/os-open-rivers.geojson"
+        },
+        {
           "file": "feeds/portals/national/police-crime/police-crime.json"
         },
         {
@@ -7262,22 +7522,76 @@
           "file": "feeds/portals/nomis/census2021-ts001-oa/census2021-ts001-oa.json"
         },
         {
+          "file": "feeds/portals/nomis/census2021-ts002-oa/census2021-ts002-oa.json"
+        },
+        {
           "file": "feeds/portals/nomis/census2021-ts003-oa/census2021-ts003-oa.json"
         },
         {
           "file": "feeds/portals/nomis/census2021-ts004-oa/census2021-ts004-oa.json"
         },
         {
+          "file": "feeds/portals/nomis/census2021-ts005-oa/census2021-ts005-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts006-oa/census2021-ts006-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts007-msoa/census2021-ts007-msoa.json"
+        },
+        {
           "file": "feeds/portals/nomis/census2021-ts007a-oa/census2021-ts007a-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts008-oa/census2021-ts008-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts010-msoa/census2021-ts010-msoa.json"
         },
         {
           "file": "feeds/portals/nomis/census2021-ts011-oa/census2021-ts011-oa.json"
         },
         {
+          "file": "feeds/portals/nomis/census2021-ts013-msoa/census2021-ts013-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts015-oa/census2021-ts015-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts016-oa/census2021-ts016-oa.json"
+        },
+        {
           "file": "feeds/portals/nomis/census2021-ts017-oa/census2021-ts017-oa.json"
         },
         {
+          "file": "feeds/portals/nomis/census2021-ts018-oa/census2021-ts018-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts019-oa/census2021-ts019-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts020-oa/census2021-ts020-oa.json"
+        },
+        {
           "file": "feeds/portals/nomis/census2021-ts021-oa/census2021-ts021-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts022-msoa/census2021-ts022-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts023-oa/census2021-ts023-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts025-oa/census2021-ts025-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts026-oa/census2021-ts026-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts027-oa/census2021-ts027-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts028-msoa/census2021-ts028-msoa.json"
         },
         {
           "file": "feeds/portals/nomis/census2021-ts029-oa/census2021-ts029-oa.json"
@@ -7286,10 +7600,37 @@
           "file": "feeds/portals/nomis/census2021-ts030-oa/census2021-ts030-oa.json"
         },
         {
+          "file": "feeds/portals/nomis/census2021-ts031-msoa/census2021-ts031-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts032-oa/census2021-ts032-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts033-oa/census2021-ts033-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts034-oa/census2021-ts034-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts035-oa/census2021-ts035-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts036-oa/census2021-ts036-oa.json"
+        },
+        {
           "file": "feeds/portals/nomis/census2021-ts037-oa/census2021-ts037-oa.json"
         },
         {
           "file": "feeds/portals/nomis/census2021-ts038-oa/census2021-ts038-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts039-oa/census2021-ts039-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts040-oa/census2021-ts040-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts041-oa/census2021-ts041-oa.json"
         },
         {
           "file": "feeds/portals/nomis/census2021-ts044-oa/census2021-ts044-oa.json"
@@ -7298,13 +7639,43 @@
           "file": "feeds/portals/nomis/census2021-ts045-oa/census2021-ts045-oa.json"
         },
         {
+          "file": "feeds/portals/nomis/census2021-ts046-oa/census2021-ts046-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts047-msoa/census2021-ts047-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts048-msoa/census2021-ts048-msoa.json"
+        },
+        {
           "file": "feeds/portals/nomis/census2021-ts050-oa/census2021-ts050-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts051-oa/census2021-ts051-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts052-oa/census2021-ts052-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts053-oa/census2021-ts053-oa.json"
         },
         {
           "file": "feeds/portals/nomis/census2021-ts054-oa/census2021-ts054-oa.json"
         },
         {
+          "file": "feeds/portals/nomis/census2021-ts055-oa/census2021-ts055-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts056-oa/census2021-ts056-oa.json"
+        },
+        {
           "file": "feeds/portals/nomis/census2021-ts058-oa/census2021-ts058-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts059-oa/census2021-ts059-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts060-msoa/census2021-ts060-msoa.json"
         },
         {
           "file": "feeds/portals/nomis/census2021-ts061-oa/census2021-ts061-oa.json"
@@ -7313,10 +7684,43 @@
           "file": "feeds/portals/nomis/census2021-ts062-oa/census2021-ts062-oa.json"
         },
         {
+          "file": "feeds/portals/nomis/census2021-ts063-oa/census2021-ts063-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts064-msoa/census2021-ts064-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts065-oa/census2021-ts065-oa.json"
+        },
+        {
           "file": "feeds/portals/nomis/census2021-ts066-oa/census2021-ts066-oa.json"
         },
         {
           "file": "feeds/portals/nomis/census2021-ts067-oa/census2021-ts067-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts068-oa/census2021-ts068-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts071-msoa/census2021-ts071-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts072-msoa/census2021-ts072-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts073-msoa/census2021-ts073-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts074-msoa/census2021-ts074-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts075-oa/census2021-ts075-oa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts077-msoa/census2021-ts077-msoa.json"
+        },
+        {
+          "file": "feeds/portals/nomis/census2021-ts078-msoa/census2021-ts078-msoa.json"
         },
         {
           "file": "feeds/portals/nomis/triage.json"

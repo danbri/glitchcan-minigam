@@ -238,7 +238,7 @@
    },
    "harvested_files": 0,
    "harvested_bytes": 0,
-   "catalogue_bytes": 4174074,
+   "catalogue_bytes": 4240685,
    "harvested": []
   },
   "national": {
@@ -247,7 +247,7 @@
    "datasets_seen": null,
    "in_scope": null,
    "counts": {
-    "harvested": 4,
+    "harvested": 6,
     "unavailable": 1,
     "not-open": 2,
     "held": 7,
@@ -255,9 +255,9 @@
     "not-relevant": 1,
     "deferred": 1
    },
-   "harvested_files": 4,
-   "harvested_bytes": 2607955,
-   "catalogue_bytes": 9837,
+   "harvested_files": 6,
+   "harvested_bytes": 4285876,
+   "catalogue_bytes": 10580,
    "harvested": [
     {
      "key": "desnz-energy",
@@ -281,6 +281,20 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "os-open-names",
+     "file": "national/os-open-names/os-open-names.geojson",
+     "bytes": 1662815,
+     "items": 4066,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "os-open-rivers",
+     "file": "national/os-open-rivers/os-open-rivers.geojson",
+     "bytes": 15106,
+     "items": 34,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "police-crime",
      "file": "national/police-crime/police-crime.json",
      "bytes": 245607,
@@ -295,17 +309,25 @@
    "datasets_seen": null,
    "in_scope": null,
    "counts": {
-    "harvested": 20,
-    "listed-for-harvest": 54
+    "harvested": 68,
+    "not-relevant": 5,
+    "unavailable": 1
    },
-   "harvested_files": 20,
-   "harvested_bytes": 1456095,
-   "catalogue_bytes": 34228,
+   "harvested_files": 68,
+   "harvested_bytes": 3377073,
+   "catalogue_bytes": 33680,
    "harvested": [
     {
      "key": "census2021-ts001-oa",
      "file": "nomis/census2021-ts001-oa/census2021-ts001-oa.json",
      "bytes": 39389,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts002-oa",
+     "file": "nomis/census2021-ts002-oa/census2021-ts002-oa.json",
+     "bytes": 95751,
      "items": 1509,
      "licence": "Open Government Licence v3.0"
     },
@@ -324,6 +346,27 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "census2021-ts005-oa",
+     "file": "nomis/census2021-ts005-oa/census2021-ts005-oa.json",
+     "bytes": 147638,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts006-oa",
+     "file": "nomis/census2021-ts006-oa/census2021-ts006-oa.json",
+     "bytes": 35486,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts007-msoa",
+     "file": "nomis/census2021-ts007-msoa/census2021-ts007-msoa.json",
+     "bytes": 33692,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "census2021-ts007a-oa",
      "file": "nomis/census2021-ts007a-oa/census2021-ts007a-oa.json",
      "bytes": 101753,
@@ -331,9 +374,44 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "census2021-ts008-oa",
+     "file": "nomis/census2021-ts008-oa/census2021-ts008-oa.json",
+     "bytes": 41773,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts010-msoa",
+     "file": "nomis/census2021-ts010-msoa/census2021-ts010-msoa.json",
+     "bytes": 8756,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "census2021-ts011-oa",
      "file": "nomis/census2021-ts011-oa/census2021-ts011-oa.json",
      "bytes": 50109,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts013-msoa",
+     "file": "nomis/census2021-ts013-msoa/census2021-ts013-msoa.json",
+     "bytes": 22922,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts015-oa",
+     "file": "nomis/census2021-ts015-oa/census2021-ts015-oa.json",
+     "bytes": 77786,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts016-oa",
+     "file": "nomis/census2021-ts016-oa/census2021-ts016-oa.json",
+     "bytes": 53973,
      "items": 1509,
      "licence": "Open Government Licence v3.0"
     },
@@ -345,10 +423,73 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "census2021-ts018-oa",
+     "file": "nomis/census2021-ts018-oa/census2021-ts018-oa.json",
+     "bytes": 98544,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts019-oa",
+     "file": "nomis/census2021-ts019-oa/census2021-ts019-oa.json",
+     "bytes": 47647,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts020-oa",
+     "file": "nomis/census2021-ts020-oa/census2021-ts020-oa.json",
+     "bytes": 33220,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "census2021-ts021-oa",
      "file": "nomis/census2021-ts021-oa/census2021-ts021-oa.json",
      "bytes": 123181,
      "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts022-msoa",
+     "file": "nomis/census2021-ts022-msoa/census2021-ts022-msoa.json",
+     "bytes": 76057,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts023-oa",
+     "file": "nomis/census2021-ts023-oa/census2021-ts023-oa.json",
+     "bytes": 50561,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts025-oa",
+     "file": "nomis/census2021-ts025-oa/census2021-ts025-oa.json",
+     "bytes": 47201,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts026-oa",
+     "file": "nomis/census2021-ts026-oa/census2021-ts026-oa.json",
+     "bytes": 50212,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts027-oa",
+     "file": "nomis/census2021-ts027-oa/census2021-ts027-oa.json",
+     "bytes": 99971,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts028-msoa",
+     "file": "nomis/census2021-ts028-msoa/census2021-ts028-msoa.json",
+     "bytes": 31707,
+     "items": 75,
      "licence": "Open Government Licence v3.0"
     },
     {
@@ -366,6 +507,48 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "census2021-ts031-msoa",
+     "file": "nomis/census2021-ts031-msoa/census2021-ts031-msoa.json",
+     "bytes": 16492,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts032-oa",
+     "file": "nomis/census2021-ts032-oa/census2021-ts032-oa.json",
+     "bytes": 2036,
+     "items": 0,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts033-oa",
+     "file": "nomis/census2021-ts033-oa/census2021-ts033-oa.json",
+     "bytes": 1533,
+     "items": 0,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts034-oa",
+     "file": "nomis/census2021-ts034-oa/census2021-ts034-oa.json",
+     "bytes": 1528,
+     "items": 0,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts035-oa",
+     "file": "nomis/census2021-ts035-oa/census2021-ts035-oa.json",
+     "bytes": 1526,
+     "items": 0,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts036-oa",
+     "file": "nomis/census2021-ts036-oa/census2021-ts036-oa.json",
+     "bytes": 1582,
+     "items": 0,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "census2021-ts037-oa",
      "file": "nomis/census2021-ts037-oa/census2021-ts037-oa.json",
      "bytes": 52721,
@@ -376,6 +559,27 @@
      "key": "census2021-ts038-oa",
      "file": "nomis/census2021-ts038-oa/census2021-ts038-oa.json",
      "bytes": 59854,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts039-oa",
+     "file": "nomis/census2021-ts039-oa/census2021-ts039-oa.json",
+     "bytes": 59219,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts040-oa",
+     "file": "nomis/census2021-ts040-oa/census2021-ts040-oa.json",
+     "bytes": 43201,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts041-oa",
+     "file": "nomis/census2021-ts041-oa/census2021-ts041-oa.json",
+     "bytes": 29822,
      "items": 1509,
      "licence": "Open Government Licence v3.0"
     },
@@ -394,9 +598,51 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "census2021-ts046-oa",
+     "file": "nomis/census2021-ts046-oa/census2021-ts046-oa.json",
+     "bytes": 71478,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts047-msoa",
+     "file": "nomis/census2021-ts047-msoa/census2021-ts047-msoa.json",
+     "bytes": 8698,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts048-msoa",
+     "file": "nomis/census2021-ts048-msoa/census2021-ts048-msoa.json",
+     "bytes": 11359,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "census2021-ts050-oa",
      "file": "nomis/census2021-ts050-oa/census2021-ts050-oa.json",
      "bytes": 47019,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts051-oa",
+     "file": "nomis/census2021-ts051-oa/census2021-ts051-oa.json",
+     "bytes": 62429,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts052-oa",
+     "file": "nomis/census2021-ts052-oa/census2021-ts052-oa.json",
+     "bytes": 50360,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts053-oa",
+     "file": "nomis/census2021-ts053-oa/census2021-ts053-oa.json",
+     "bytes": 50803,
      "items": 1509,
      "licence": "Open Government Licence v3.0"
     },
@@ -408,10 +654,38 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "census2021-ts055-oa",
+     "file": "nomis/census2021-ts055-oa/census2021-ts055-oa.json",
+     "bytes": 56909,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts056-oa",
+     "file": "nomis/census2021-ts056-oa/census2021-ts056-oa.json",
+     "bytes": 43882,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "census2021-ts058-oa",
      "file": "nomis/census2021-ts058-oa/census2021-ts058-oa.json",
      "bytes": 68217,
      "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts059-oa",
+     "file": "nomis/census2021-ts059-oa/census2021-ts059-oa.json",
+     "bytes": 58442,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts060-msoa",
+     "file": "nomis/census2021-ts060-msoa/census2021-ts060-msoa.json",
+     "bytes": 32898,
+     "items": 75,
      "licence": "Open Government Licence v3.0"
     },
     {
@@ -429,6 +703,27 @@
      "licence": "Open Government Licence v3.0"
     },
     {
+     "key": "census2021-ts063-oa",
+     "file": "nomis/census2021-ts063-oa/census2021-ts063-oa.json",
+     "bytes": 66793,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts064-msoa",
+     "file": "nomis/census2021-ts064-msoa/census2021-ts064-msoa.json",
+     "bytes": 32096,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts065-oa",
+     "file": "nomis/census2021-ts065-oa/census2021-ts065-oa.json",
+     "bytes": 42687,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
      "key": "census2021-ts066-oa",
      "file": "nomis/census2021-ts066-oa/census2021-ts066-oa.json",
      "bytes": 148520,
@@ -440,6 +735,62 @@
      "file": "nomis/census2021-ts067-oa/census2021-ts067-oa.json",
      "bytes": 60173,
      "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts068-oa",
+     "file": "nomis/census2021-ts068-oa/census2021-ts068-oa.json",
+     "bytes": 41155,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts071-msoa",
+     "file": "nomis/census2021-ts071-msoa/census2021-ts071-msoa.json",
+     "bytes": 4392,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts072-msoa",
+     "file": "nomis/census2021-ts072-msoa/census2021-ts072-msoa.json",
+     "bytes": 4635,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts073-msoa",
+     "file": "nomis/census2021-ts073-msoa/census2021-ts073-msoa.json",
+     "bytes": 3485,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts074-msoa",
+     "file": "nomis/census2021-ts074-msoa/census2021-ts074-msoa.json",
+     "bytes": 4716,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts075-oa",
+     "file": "nomis/census2021-ts075-oa/census2021-ts075-oa.json",
+     "bytes": 54302,
+     "items": 1509,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts077-msoa",
+     "file": "nomis/census2021-ts077-msoa/census2021-ts077-msoa.json",
+     "bytes": 4756,
+     "items": 75,
+     "licence": "Open Government Licence v3.0"
+    },
+    {
+     "key": "census2021-ts078-msoa",
+     "file": "nomis/census2021-ts078-msoa/census2021-ts078-msoa.json",
+     "bytes": 4867,
+     "items": 75,
      "licence": "Open Government Licence v3.0"
     }
    ]
