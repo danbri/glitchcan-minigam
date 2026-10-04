@@ -67,7 +67,9 @@ const LON = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 
 const dayOf = s => { if (!s) return null; const d = new Date(s.length === 10 ? s + 'T12:00:00Z' : s); if (isNaN(d)) return null; const p = LON.formatToParts(d); const g = t => p.find(x => x.type === t).value; return `${g('year')}-${g('month')}-${g('day')}`; };
 const LONG = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'long', day: 'numeric', month: 'long' });
 const dayName = d => LONG.format(new Date(d + 'T12:00:00Z'));
-const fmt = s => { if (!s) return ''; if (s.length === 10) return dayName(s); const d = new Date(s); return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(d); };
+const YEAR = new Date().getFullYear();
+const fmt = s => { if (!s) return ''; const d = new Date(s.length === 10 ? s + 'T12:00:00Z' : s); if (isNaN(d)) return s; const y = d.getFullYear() !== YEAR;
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: s.length === 10 && !y ? 'short' : undefined, day: 'numeric', month: 'short', year: y ? 'numeric' : undefined, hour: s.length === 10 ? undefined : '2-digit', minute: s.length === 10 ? undefined : '2-digit' }).format(d); };
 const addDays = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
 let data = null;
 const today = dayOf(new Date().toISOString());
