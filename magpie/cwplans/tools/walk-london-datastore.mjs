@@ -25,7 +25,7 @@ mkdirSync(join(RAWDIR, 'details'), { recursive: true }); mkdirSync(OUT, { recurs
 export const today = new Date().toISOString().slice(0, 10);
 const args = process.argv.slice(2);
 export const REFRESH = args.includes('--refresh');
-const BASE = 'https://data.london.gov.uk';
+export const BASE = 'https://data.london.gov.uk';
 if (process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY) console.warn('warning: HTTPS_PROXY is set but NODE_USE_ENV_PROXY is not; Node fetch will not use the proxy');
 
 // ---- polite fetch: one request at a time over the whole tool, >= 1 s apart, retries on 429 / 5xx / network errors
@@ -70,6 +70,17 @@ export function politeGet(url, { maxBytes = Infinity, minGapMs = 1100, tries = 4
   };
   const p = chain.then(run, run); chain = p.catch(() => {}); return p;
 }
+// bytes a..b of a file (HTTP Range) in the polite queue: a zip's central directory without the whole file
+export function politeRange(url, a, b) {
+  const run = async () => {
+    const wait = last + 1100 - Date.now(); if (wait > 0) await sleep(wait);
+    last = Date.now(); nReq++;
+    const r = await fetch(url, { headers: { 'User-Agent': UA, Range: `bytes=${a}-${b}` } });
+    if (r.status !== 206) throw new Error(`Range not honoured (${r.status}) ${url}`);
+    const buf = Buffer.from(await r.arrayBuffer()); last = Date.now(); return buf;
+  };
+  const p = chain.then(run, run); chain = p.catch(() => {}); return p;
+}
 export async function rawFile(name, url) {
   const f = join(RAWDIR, name);
   mkdirSync(dirname(f), { recursive: true });
@@ -77,7 +88,7 @@ export async function rawFile(name, url) {
   writeFileSync(f, await politeFetch(url));
   return { file: f, fetched: today, reused: false };
 }
-const readJson = f => JSON.parse(readFileSync(f, 'utf8'));
+export const readJson = f => JSON.parse(readFileSync(f, 'utf8'));
 
 // ================================================================== walk
 // granularity words and zone place names looked for in a dataset description (details walk)
@@ -246,12 +257,16 @@ const FINAL_RULES = [
   'F9 not-relevant: the metadata names only places outside the zone',
   'F10 deferred: the data could not be read (size cap, unreadable format, no readable resource)',
   'F11 deferred: open, coarse or unknown by metadata, not probed',
+  'F8b not-relevant: the rule-driven harvest (lds-harvest-auto.mjs, harvest-log.json) read every row and feature and found none in the zone (checked after F3b)',
+  'F10b deferred: the rule-driven harvest could not read any resource (harvest-log.json; checked after F3b); a zip of documents only is F7, a hand decision of the harvest is F3c',
 ];
 function triage() {
   const cat = readJson(join(OUT, 'catalogue.json')).datasets;
   const { has, unknownRefs } = projectHas(cat);
   const out = {}, counts = { state: {}, licence: {}, relevance: {}, relevance_final: {}, kind: {}, have: {}, themes: {}, sensitive: 0, open_relevant_new: 0 };
   const probed = existsSync(join(OUT, 'probe.json')) ? readJson(join(OUT, 'probe.json')).datasets : {};
+  // outcomes of the rule-driven harvest (tools/lds-harvest-auto.mjs): every row read, so the data decides
+  const hlog = existsSync(join(OUT, 'harvest-log.json')) ? readJson(join(OUT, 'harvest-log.json')).datasets : {};
   const inc = (o, k) => { o[k] = (o[k] || 0) + 1; };
   for (const d of cat) {
     const reasons = [];
@@ -320,6 +335,10 @@ function triage() {
     else if (!open) [state, rule, why] = ['not-open', 'F3', `licence ${d.licence || 'none stated'} (${lic})`];
     else if (JUDGED[d.id]) [state, rule, why] = [JUDGED[d.id][0], 'F3c', 'by hand: ' + JUDGED[d.id][1]];
     else if (have === 'excluded-before') [state, rule, why] = ['deferred', 'F3b', `excluded before by the project (${[...h.excluded].join(', ')}); not harvested without the owner`];
+    else if (hlog[d.id]?.outcome === 'no-zone-rows') [state, rule, why] = ['not-relevant', 'F8b', `harvest (${hlog[d.id].date}): ${hlog[d.id].evidence}`];
+    else if (hlog[d.id]?.outcome === 'documents-only') [state, rule, why] = ['deferred', 'F7', `harvest (${hlog[d.id].date}): ${hlog[d.id].evidence}`];
+    else if (hlog[d.id]?.outcome === 'deferred-by-hand') [state, rule, why] = ['deferred', 'F3c', `by hand (harvest ${hlog[d.id].date}): ${hlog[d.id].reason}`];
+    else if (hlog[d.id]?.outcome === 'not-readable') [state, rule, why] = ['deferred', 'F10b', `harvest (${hlog[d.id].date}): ${hlog[d.id].evidence || hlog[d.id].reason}`];
     else if (!d.resources.length) {
       const bad = d.links.filter(l => l.http && l.http >= 400);
       [state, rule, why] = d.links.length && bad.length === d.links.length ? ['unavailable', 'F4', `links only, every link failed the Datastore QA check: ${bad.map(l => 'HTTP ' + l.http).join(', ')}`]
@@ -411,9 +430,9 @@ const HARVEST = {
   'solar-opportunity':         { id: 'vdxyl', file: 'LSOM_by_TOID.csv', fmt: 'table', codes: ['toid'], theme: 'environment' },
 };
 // The zone: the 3D model box (tools/fetch-docklands.mjs BOX_BNG / BOX_WGS84); in_cw: the Canary Wharf registry box.
-const ZONE_BNG = { e0: 532400, e1: 539900, n0: 176700, n1: 182300 }, ZONE_WGS84 = [-0.0950, 51.4740, 0.0150, 51.5220];
-const CW_BOX = [-0.03, 51.498, -0.005, 51.51];
-const DROP_FIELD = /e-?mail|phone|tel(ephone)?$|^tel|contact|^fax|mobile|website_contact|^owner_?name|person/i;
+export const ZONE_BNG = { e0: 532400, e1: 539900, n0: 176700, n1: 182300 }, ZONE_WGS84 = [-0.0950, 51.4740, 0.0150, 51.5220];
+export const CW_BOX = [-0.03, 51.498, -0.005, 51.51];
+export const DROP_FIELD = /e-?mail|phone|tel(ephone)?$|^tel|contact|^fax|mobile|website_contact|^owner_?name|person/i;
 
 // ---- GeoPackage (node:sqlite) and WKB
 function readWkb(buf, off = 0) {
@@ -441,7 +460,7 @@ function gpkgGeom(b) {
   const env = (flags >> 1) & 7, envLen = [0, 32, 48, 48, 64][env] ?? 0;
   return readWkb(Buffer.from(b), 8 + envLen).geom;
 }
-async function readGpkg(file) {
+export async function readGpkg(file) {
   const { DatabaseSync } = await import('node:sqlite');
   const db = new DatabaseSync(file, { readOnly: true });
   const layers = db.prepare(`SELECT c.table_name t, g.column_name g, g.srs_id s FROM gpkg_contents c JOIN gpkg_geometry_columns g ON g.table_name = c.table_name WHERE c.data_type = 'features'`).all();
@@ -495,7 +514,7 @@ function readDbf(dbf, utf8) {
   }
   return rows;
 }
-function readShpZip(zipFile, { skipBad = false } = {}) {
+export function readShpZip(zipFile, { skipBad = false } = {}) {
   const names = execFileSync('unzip', ['-Z1', zipFile], { encoding: 'utf8' }).split('\n').filter(Boolean);
   const get = n => execFileSync('unzip', ['-p', zipFile, n], { maxBuffer: 1 << 30 });
   const out = [];
@@ -516,7 +535,7 @@ function readShpZip(zipFile, { skipBad = false } = {}) {
   return { layers: [...new Set(out.map(f => f.layer))].map(l => { const f = out.find(f => f.layer === l); return { table: l, srs: f.srs, ...(f.from ? { from: f.from } : {}) }; }), features: out };
 }
 // ---- RFC 4180 CSV
-function parseCsv(text) {
+export function parseCsv(text) {
   const rows = []; let row = [], cur = '', q = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -531,9 +550,9 @@ function parseCsv(text) {
 }
 
 // ---- geometry helpers: walk coordinates, test against the zone box, transform to WGS84
-const eachPt = (g, f) => { if (!g) return; if (g.type === 'GeometryCollection') return g.geometries.forEach(x => eachPt(x, f)); const w = c => typeof c[0] === 'number' ? f(c) : c.forEach(w); w(g.coordinates); };
-const mapPts = (g, f) => g.type === 'GeometryCollection' ? { ...g, geometries: g.geometries.map(x => mapPts(x, f)) } : { ...g, coordinates: (function m(c) { return typeof c[0] === 'number' ? f(c) : c.map(m); })(g.coordinates) };
-function bboxOf(g) { const b = [Infinity, Infinity, -Infinity, -Infinity]; eachPt(g, ([x, y]) => { if (x < b[0]) b[0] = x; if (y < b[1]) b[1] = y; if (x > b[2]) b[2] = x; if (y > b[3]) b[3] = y; }); return b; }
+export const eachPt = (g, f) => { if (!g) return; if (g.type === 'GeometryCollection') return g.geometries.forEach(x => eachPt(x, f)); const w = c => typeof c[0] === 'number' ? f(c) : c.forEach(w); w(g.coordinates); };
+export const mapPts = (g, f) => g.type === 'GeometryCollection' ? { ...g, geometries: g.geometries.map(x => mapPts(x, f)) } : { ...g, coordinates: (function m(c) { return typeof c[0] === 'number' ? f(c) : c.map(m); })(g.coordinates) };
+export function bboxOf(g) { const b = [Infinity, Infinity, -Infinity, -Infinity]; eachPt(g, ([x, y]) => { if (x < b[0]) b[0] = x; if (y < b[1]) b[1] = y; if (x > b[2]) b[2] = x; if (y > b[3]) b[3] = y; }); return b; }
 function segHitsBox(a, b, B) {           // Liang-Barsky
   let t0 = 0, t1 = 1; const dx = b[0] - a[0], dy = b[1] - a[1];
   for (const [p, q] of [[-dx, a[0] - B[0]], [dx, B[2] - a[0]], [-dy, a[1] - B[1]], [dy, B[3] - a[1]]]) {
@@ -542,28 +561,23 @@ function segHitsBox(a, b, B) {           // Liang-Barsky
   return true;
 }
 const ringsOf = g => !g ? [] : g.type === 'Polygon' ? g.coordinates : g.type === 'MultiPolygon' ? g.coordinates.flat() : g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : g.type === 'GeometryCollection' ? g.geometries.flatMap(ringsOf) : [];
-function pointInPolys(p, g) {
+export function pointInPolys(p, g) {
   const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : g.type === 'GeometryCollection' ? g.geometries.filter(x => /Polygon/.test(x.type)).flatMap(x => x.type === 'Polygon' ? [x.coordinates] : x.coordinates) : [];
   return polys.some(rings => rings.reduce((inside, r, i) => { let c = false; for (let a = 0, b = r.length - 1; a < r.length; b = a++) { if ((r[a][1] > p[1]) !== (r[b][1] > p[1]) && p[0] < (r[b][0] - r[a][0]) * (p[1] - r[a][1]) / (r[b][1] - r[a][1]) + r[a][0]) c = !c; } return i === 0 ? c : inside && !c; }, false));
 }
 // a geometry meets box B [x0, y0, x1, y1]: a vertex inside, an edge crossing, or the box inside a polygon
-function meets(g, B) {
+export function meets(g, B) {
   const bb = bboxOf(g); if (bb[2] < B[0] || bb[0] > B[2] || bb[3] < B[1] || bb[1] > B[3]) return false;
   let hit = false; eachPt(g, ([x, y]) => { if (x >= B[0] && x <= B[2] && y >= B[1] && y <= B[3]) hit = true; }); if (hit) return true;
   for (const r of ringsOf(g)) for (let i = 0; i + 1 < r.length; i++) if (segHitsBox(r[i], r[i + 1], B)) return true;
   return pointInPolys([(B[0] + B[2]) / 2, (B[1] + B[3]) / 2], g);
 }
-const r6 = v => Math.round(v * 1e6) / 1e6, r1 = v => Math.round(v * 10) / 10;
-const cleanProps = p => { const kept = {}, dropped = new Set(); for (const [k, v] of Object.entries(p)) { if (DROP_FIELD.test(k)) { dropped.add(k); continue; } kept[k] = typeof v === 'bigint' ? Number(v) : v instanceof Uint8Array ? null : v === '' ? null : v; } return { kept, dropped }; };
+export const r6 = v => Math.round(v * 1e6) / 1e6, r1 = v => Math.round(v * 10) / 10;
+export const cleanProps = p => { const kept = {}, dropped = new Set(); for (const [k, v] of Object.entries(p)) { if (DROP_FIELD.test(k)) { dropped.add(k); continue; } kept[k] = typeof v === 'bigint' ? Number(v) : v instanceof Uint8Array ? null : v === '' ? null : v; } return { kept, dropped }; };
 
 async function harvest(keys) {
-  const { bngProjector } = await import('./lib.mjs'); const proj4 = (await import('proj4')).default;
-  await bngProjector(); const P = proj4('EPSG:4326', 'BNG');
-  const toWgs = ([e, n]) => { const [lon, lat] = P.inverse([e, n]); return [r6(lon), r6(lat)]; }, toBng = ([lon, lat]) => P.forward([lon, lat]);
   const cat = new Map(readJson(join(OUT, 'catalogue.json')).datasets.map(d => [d.id, d]));
   const tri = readJson(join(OUT, 'triage.json')).datasets;
-  const BOXB = [ZONE_BNG.e0, ZONE_BNG.n0, ZONE_BNG.e1, ZONE_BNG.n1];
-  const CWB = (() => { const a = toBng([CW_BOX[0], CW_BOX[1]]), b = toBng([CW_BOX[2], CW_BOX[3]]); return [a[0], a[1], b[0], b[1]]; })();
   const summary = [];
   for (const key of keys.length ? keys : Object.keys(HARVEST)) {
     const H = HARVEST[key]; if (!H) throw new Error(`unknown harvest key ${key}`);
@@ -575,64 +589,84 @@ async function harvest(keys) {
     if (!pick.length) throw new Error(`${key}: no resource ${H.file || H.fmt} in ${H.id}`);
     const resources = H.all || H.files || Array.isArray(H.resource) ? pick : [pick.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0]];
     if (H.fmt === 'table') { summary.push(await harvestTable(key, H, d, T, resources)); continue; }
-    let feats = [], layers = [];
-    const used = [];
-    for (const r of resources) {
-      const url = r.url || `${BASE}/download/${H.id}/${r.id}/${r.file}`, name = decodeURIComponent(url.split('/').pop());
-      const raw = await rawFile(`${H.id}/${name}`, url);
-      used.push({ resource: r.id, file: name, url, size: r.size, resource_date: r.date, fetched: raw.fetched });
-      let got;
-      if (H.fmt === 'gpkg') got = await readGpkg(raw.file);
-      else if (H.fmt === 'shpzip') got = readShpZip(raw.file);
-      else if (H.fmt === 'geojson') { const j = readJson(raw.file); const crs = j.crs?.properties?.name || ''; const srs = /27700/.test(crs) ? 27700 : 4326; got = { layers: [{ table: name, srs, crs }], features: j.features.map(f => ({ layer: name, srs, geom: f.geometry, props: f.properties || {} })) }; }
-      else if (H.fmt === 'csv') {
-        const rows = parseCsv(readFileSync(raw.file, 'utf8'));
-        const cols = Object.keys(rows[0] || {});
-        const [cx, cy] = H.xy || [cols.find(c => /^(lon|lng|long|longitude|easting)$/i.test(c)), cols.find(c => /^(lat|latitude|northing)$/i.test(c))];
-        if (!cx || !cy) throw new Error(`${key}: no coordinate columns in ${cols.join(', ')}`);
-        // CRS per row: |x| <= 180 and |y| <= 90 -> WGS84 longitude/latitude, else BNG metres (registers mix both)
-        got = { layers: [{ table: name, srs: 'per row', columns: [cx, cy] }], features: rows.map(p => {
-          const x = +p[cx], y = +p[cy], ok = p[cx] !== '' && p[cy] !== '' && isFinite(x) && isFinite(y) && x && y, wgs = Math.abs(x) <= 180 && Math.abs(y) <= 90;
-          return { layer: name, srs: wgs ? 4326 : 27700, geom: ok ? { type: 'Point', coordinates: [x, y] } : null, props: p };
-        }) };
-      }
-      if (H.skipLayers) { got.features = got.features.filter(f => !H.skipLayers.test(f.layer)); got.layers = got.layers.filter(l => !H.skipLayers.test(l.table)); }
-      feats.push(...got.features.map(f => ({ ...f, resource: r.id }))); layers.push(...got.layers);
-    }
-    // to BNG for the zone test, then WGS84 for the output
-    const kept = [], dropped = new Set(); let noGeom = 0;
-    for (const f of feats) {
-      if (!f.geom) { noGeom++; continue; }
-      // WGS84 rows far outside the zone are skipped before any transform (the local OSTN15 grid covers only the London area)
-      if (f.srs === 4326) { const b = bboxOf(f.geom), m = 0.02; if (b[2] < ZONE_WGS84[0] - m || b[0] > ZONE_WGS84[2] + m || b[3] < ZONE_WGS84[1] - m || b[1] > ZONE_WGS84[3] + m) continue; }
-      const gB = f.srs === 4326 ? mapPts(f.geom, c => toBng(c)) : f.geom;
-      if (!meets(gB, BOXB)) continue;
-      const { kept: props, dropped: dr } = cleanProps(f.props); dr.forEach(x => dropped.add(x));
-      const bb = bboxOf(gB), inside = bb[0] >= BOXB[0] && bb[1] >= BOXB[1] && bb[2] <= BOXB[2] && bb[3] <= BOXB[3];
-      // a UPRN that a spreadsheet rounded (1E+11, 200000000000): 9 or more digits ending in 5 or more zeros, or an exponent
-      const uprnSuspect = Object.entries(props).some(([k, v]) => /uprn/i.test(k) && v != null && (/e\+/i.test(String(v)) || /^\d{4,}0{5,}$/.test(String(v))));
-      kept.push({ type: 'Feature', properties: { ...(layers.length > 1 ? { layer: f.layer } : {}), ...props, ...(uprnSuspect ? { uprn_suspect: true } : {}), in_cw: meets(gB, CWB), whole_in_zone: inside },
-        geometry: f.srs === 4326 ? mapPts(f.geom, ([x, y]) => [r6(x), r6(y)]) : mapPts(f.geom, toWgs) });
-    }
-    const lic = d.licence, licUrl = readJson(join(OUT, 'catalogue.json')).meta.licence_urls[lic] || null;
-    const meta = {
-      source: `London Datastore: ${d.title} (${d.publisher})`, dataset: H.id, page: `${BASE}/dataset/${d.slug}`, resources: used,
-      licence: lic, licence_url: licUrl,
-      attribution: (T.licence === 'ogl' ? `Contains public sector information licensed under the ${lic} (${d.publisher}).` : `${d.publisher}, ${lic}.`) + ' The GLA cannot warrant the quality or accuracy of the data (London Datastore terms).',
-      dataset_modified: d.modified, update_frequency: d.update_frequency, geo: d.geo, theme: H.theme,
-      layers, crs_source: [...new Set(layers.map(l => l.srs))].map(s => 'EPSG:' + s).join(', '), crs_output: 'EPSG:4326 (WGS84), 6 decimal places; BNG to WGS84 through the OS OSTN15 grid (lib.mjs bngProjector)',
-      method: `walk-london-datastore.mjs harvest ${key}: download ${H.all ? 'every ' + H.fmt + ' resource' : 'the newest matching resource'} (${H.fmt}); read every feature; keep a feature whose geometry meets the zone (the 3D model box, BNG E ${ZONE_BNG.e0}-${ZONE_BNG.e1}, N ${ZONE_BNG.n0}-${ZONE_BNG.n1}; WGS84 ${ZONE_WGS84.join(', ')}): a vertex inside, an edge crossing the box or the box inside a polygon. Whole geometries are kept (not cut at the box): whole_in_zone says whether all of it lies inside. in_cw: the geometry meets the Canary Wharf registry box ${CW_BOX.join(', ')}. Source attributes kept as published except fields matching ${DROP_FIELD.source}. uprn_suspect: a UPRN field that a spreadsheet rounded (an exponent, or 9+ digits ending in 5+ zeros); not a key (fault F22).${H.fmt === 'csv' ? ` Points from the columns ${(H.xy || ['longitude/easting', 'latitude/northing']).join(', ')}; a row is WGS84 when |x| <= 180 and |y| <= 90, else BNG; rows with no coordinates are counted as no_geometry.` : ''}`,
-      counts: { source_features: feats.length, no_geometry: noGeom, in_zone: kept.length, in_cw: kept.filter(f => f.properties.in_cw).length,
-        ...(kept.some(f => Object.keys(f.properties).some(k => /uprn/i.test(k))) ? { with_uprn: kept.filter(f => Object.entries(f.properties).some(([k, v]) => /^(os_addressbase_)?uprn$/i.test(k) && v)).length, uprn_suspect: kept.filter(f => f.properties.uprn_suspect).length } : {}) },
-      attributes_in_source: Object.keys(feats.find(f => f.geom)?.props || {}).filter(k => !/^(fid|objectid|shape_length|shape_area)$/i.test(k)).length ? 'yes' : 'none (geometry and object ids only)',
-      fields_dropped: [...dropped],
-    };
-    const dir = join(OUT, key); mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, key + '.geojson'), '{"type":"FeatureCollection","meta":' + JSON.stringify(meta, null, 1) + ',\n"features":[\n' + kept.map(f => JSON.stringify(f)).join(',\n') + '\n]}\n');
-    summary.push([key, H.id, lic, meta.counts]);
-    console.log(key, H.id, JSON.stringify(meta.counts));
+    summary.push(await harvestGeo(key, H, d, T, resources));
   }
   return summary;
+}
+
+// one spatial harvest (gpkg, shapefile zip, geojson, csv points): features that meet the zone, WGS84, a meta member.
+// H.fileAs(r): an optional reader override that returns { layers, features } (lds-harvest-auto.mjs: zip entries, sheets).
+let GEO_CTX = null;
+export async function geoCtx() {
+  if (GEO_CTX) return GEO_CTX;
+  const { bngProjector } = await import('./lib.mjs'); const proj4 = (await import('proj4')).default;
+  await bngProjector(); const P = proj4('EPSG:4326', 'BNG');
+  const toWgs = ([e, n]) => { const [lon, lat] = P.inverse([e, n]); return [r6(lon), r6(lat)]; }, toBng = ([lon, lat]) => P.forward([lon, lat]);
+  const BOXB = [ZONE_BNG.e0, ZONE_BNG.n0, ZONE_BNG.e1, ZONE_BNG.n1];
+  const CWB = (() => { const a = toBng([CW_BOX[0], CW_BOX[1]]), b = toBng([CW_BOX[2], CW_BOX[3]]); return [a[0], a[1], b[0], b[1]]; })();
+  return GEO_CTX = { toWgs, toBng, BOXB, CWB };
+}
+export async function harvestGeo(key, H, d, T, resources) {
+  const { toWgs, toBng, BOXB, CWB } = await geoCtx();
+  let feats = [], layers = [];
+  const used = [];
+  for (const r of resources) {
+    const url = r.url || `${BASE}/download/${H.id}/${r.id}/${r.file}`, name = decodeURIComponent(url.split('/').pop());
+    const raw = H.rawFile ? await H.rawFile(r, url, name) : await rawFile(`${H.id}/${name}`, url);
+    used.push({ resource: r.id, file: name, url, size: r.size, resource_date: r.date, fetched: raw.fetched });
+    let got;
+    if (H.reader) got = await H.reader(raw.file, name, r);              // lds-harvest-auto.mjs: zip entries, geojson variants
+    else if (H.fmt === 'gpkg') got = await readGpkg(raw.file);
+    else if (H.fmt === 'shpzip') got = readShpZip(raw.file);
+    else if (H.fmt === 'geojson') { const j = readJson(raw.file); const crs = j.crs?.properties?.name || ''; const srs = /27700/.test(crs) ? 27700 : 4326; got = { layers: [{ table: name, srs, crs }], features: j.features.map(f => ({ layer: name, srs, geom: f.geometry, props: f.properties || {} })) }; }
+    else if (H.fmt === 'csv') {
+      const rows = parseCsv(readFileSync(raw.file, 'utf8'));
+      const cols = Object.keys(rows[0] || {});
+      const [cx, cy] = H.xy || [cols.find(c => /^(lon|lng|long|longitude|easting)$/i.test(c)), cols.find(c => /^(lat|latitude|northing)$/i.test(c))];
+      if (!cx || !cy) throw new Error(`${key}: no coordinate columns in ${cols.join(', ')}`);
+      // CRS per row: |x| <= 180 and |y| <= 90 -> WGS84 longitude/latitude, else BNG metres (registers mix both)
+      got = { layers: [{ table: name, srs: 'per row', columns: [cx, cy] }], features: rows.map(p => {
+        const x = +p[cx], y = +p[cy], ok = p[cx] !== '' && p[cy] !== '' && isFinite(x) && isFinite(y) && x && y, wgs = Math.abs(x) <= 180 && Math.abs(y) <= 90;
+        return { layer: name, srs: wgs ? 4326 : 27700, geom: ok ? { type: 'Point', coordinates: [x, y] } : null, props: p };
+      }) };
+    }
+    if (H.skipLayers) { got.features = got.features.filter(f => !H.skipLayers.test(f.layer)); got.layers = got.layers.filter(l => !H.skipLayers.test(l.table)); }
+    for (const f of got.features) feats.push({ ...f, resource: r.id }); layers.push(...got.layers);
+  }
+  // to BNG for the zone test, then WGS84 for the output
+  const kept = [], dropped = new Set(); let noGeom = 0;
+  for (const f of feats) {
+    if (!f.geom) { noGeom++; continue; }
+    // WGS84 rows far outside the zone are skipped before any transform (the local OSTN15 grid covers only the London area)
+    if (f.srs === 4326) { const b = bboxOf(f.geom), m = 0.02; if (b[2] < ZONE_WGS84[0] - m || b[0] > ZONE_WGS84[2] + m || b[3] < ZONE_WGS84[1] - m || b[1] > ZONE_WGS84[3] + m) continue; }
+    const gB = f.srs === 4326 ? mapPts(f.geom, c => toBng(c)) : f.geom;
+    if (!meets(gB, BOXB)) continue;
+    const { kept: props, dropped: dr } = cleanProps(f.props); dr.forEach(x => dropped.add(x));
+    const bb = bboxOf(gB), inside = bb[0] >= BOXB[0] && bb[1] >= BOXB[1] && bb[2] <= BOXB[2] && bb[3] <= BOXB[3];
+    // a UPRN that a spreadsheet rounded (1E+11, 200000000000): 9 or more digits ending in 5 or more zeros, or an exponent
+    const uprnSuspect = Object.entries(props).some(([k, v]) => /uprn/i.test(k) && v != null && (/e\+/i.test(String(v)) || /^\d{4,}0{5,}$/.test(String(v))));
+    kept.push({ type: 'Feature', properties: { ...(layers.length > 1 ? { layer: f.layer } : {}), ...props, ...(uprnSuspect ? { uprn_suspect: true } : {}), in_cw: meets(gB, CWB), whole_in_zone: inside },
+      geometry: f.srs === 4326 ? mapPts(f.geom, ([x, y]) => [r6(x), r6(y)]) : mapPts(f.geom, toWgs) });
+  }
+  const lic = d.licence, licUrl = readJson(join(OUT, 'catalogue.json')).meta.licence_urls[lic] || null;
+  const meta = {
+    source: `London Datastore: ${d.title} (${d.publisher})`, dataset: H.id, page: `${BASE}/dataset/${d.slug}`, resources: used,
+    licence: lic, licence_url: licUrl,
+    attribution: (T.licence === 'ogl' ? `Contains public sector information licensed under the ${lic} (${d.publisher}).` : `${d.publisher}, ${lic}.`) + ' The GLA cannot warrant the quality or accuracy of the data (London Datastore terms).',
+    dataset_modified: d.modified, update_frequency: d.update_frequency, geo: d.geo, theme: H.theme,
+    layers, crs_source: [...new Set(layers.map(l => l.srs))].map(s => 'EPSG:' + s).join(', '), crs_output: 'EPSG:4326 (WGS84), 6 decimal places; BNG to WGS84 through the OS OSTN15 grid (lib.mjs bngProjector)',
+    method: H.method ? H.method : `walk-london-datastore.mjs harvest ${key}: download ${H.all ? 'every ' + H.fmt + ' resource' : 'the newest matching resource'} (${H.fmt}); read every feature; keep a feature whose geometry meets the zone (the 3D model box, BNG E ${ZONE_BNG.e0}-${ZONE_BNG.e1}, N ${ZONE_BNG.n0}-${ZONE_BNG.n1}; WGS84 ${ZONE_WGS84.join(', ')}): a vertex inside, an edge crossing the box or the box inside a polygon. Whole geometries are kept (not cut at the box): whole_in_zone says whether all of it lies inside. in_cw: the geometry meets the Canary Wharf registry box ${CW_BOX.join(', ')}. Source attributes kept as published except fields matching ${DROP_FIELD.source}. uprn_suspect: a UPRN field that a spreadsheet rounded (an exponent, or 9+ digits ending in 5+ zeros); not a key (fault F22).${H.fmt === 'csv' ? ` Points from the columns ${(H.xy || ['longitude/easting', 'latitude/northing']).join(', ')}; a row is WGS84 when |x| <= 180 and |y| <= 90, else BNG; rows with no coordinates are counted as no_geometry.` : ''}`,
+    counts: { source_features: feats.length, no_geometry: noGeom, in_zone: kept.length, in_cw: kept.filter(f => f.properties.in_cw).length,
+      ...(kept.some(f => Object.keys(f.properties).some(k => /uprn/i.test(k))) ? { with_uprn: kept.filter(f => Object.entries(f.properties).some(([k, v]) => /^(os_addressbase_)?uprn$/i.test(k) && v)).length, uprn_suspect: kept.filter(f => f.properties.uprn_suspect).length } : {}) },
+    attributes_in_source: Object.keys(feats.find(f => f.geom)?.props || {}).filter(k => !/^(fid|objectid|shape_length|shape_area)$/i.test(k)).length ? 'yes' : 'none (geometry and object ids only)',
+    fields_dropped: [...dropped],
+    ...(H.metaExtra || {}),
+  };
+  if (H.onKept) H.onKept(kept, meta);
+  const dir = join(OUT, key); mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, key + '.geojson'), '{"type":"FeatureCollection","meta":' + JSON.stringify(meta, null, 1) + ',\n"features":[\n' + kept.map(f => JSON.stringify(f)).join(',\n') + '\n]}\n');
+  console.log(key, H.id, JSON.stringify(meta.counts));
+  return [key, H.id, lic, meta.counts];
 }
 
 // ================================================================== refs: the zone's codes, postcodes and UPRNs
@@ -657,7 +691,7 @@ async function refs() {
         nRows++;
         if (!(a.east1m >= e0 && a.east1m <= e1 && a.north1m >= n0 && a.north1m <= n1)) continue;
         postcodes.push(a.pcds);
-        for (const k of ONSPD_CODES) if (a[k] && /^E0[0125]\d{6}$/.test(a[k])) add(k.replace(/cd$/, '').replace(/^wd26$/, 'ward2026').replace(/^wdstl05$/, 'ward_stat2005'), a[k]);
+        for (const k of ONSPD_CODES) if (a[k] && /^E0[0125]\d{6}$/.test(a[k])) add(k.replace(/cd$/, '').replace(/^wd26$/, 'ward2026'), a[k]);
       }
     }
     console.log('onspd', dist, ids.length, 'postcodes; zone so far', postcodes.length);
@@ -703,10 +737,12 @@ async function refs() {
     execFileSync('sh', ['-c', `unzip -p "$0" BLPU_UPRN_TopographicArea_TOID_5.csv | awk -F, 'NR==FNR {u[$1]=1; next} ($2 in u) {print $5}' "$1" - | sort -u > "$2"`, join(RAW, 'registry', lids), join(RAWDIR, 'zone-uprns.txt'), join(RAWDIR, 'zone-toids.txt')]);
     nT = readFileSync(join(RAWDIR, 'zone-toids.txt'), 'utf8').split('\n').filter(Boolean).length;
   } else console.warn('no OS LIDS UPRN-TOID zip in', join(RAW, 'registry'), '- zone TOID list not made');
+  // 5. old ward codes (2003 CAS wards wdcas03cd, 2005 statistical wards wdstl05cd, form 00BGGG) of the zone postcodes
+  await oldWards(codes);
   const meta = {
     made: today, tool: 'tools/walk-london-datastore.mjs refs',
     zone: 'the 3D model box, BNG E 532400-539900, N 176700-182300 (WGS84 -0.095, 51.474 to 0.015, 51.522)',
-    method: 'A code is a zone code when (a) a live or terminated postcode of ONSPD August 2026 whose grid reference (east1m, north1m) lies in the box carries it (oa/lsoa/msoa 2001, 2011, 2021; ward2026 = wd26cd; ward_stat2005 = wdstl05cd), or (b) its polygon in the London Datastore Statistical GIS Boundary Files (20od9) meets the box (vertex inside, edge crossing or box inside): LSOA and MSOA 2021, OA/LSOA/MSOA 2011 and wards 2011 (statistical-gis-boundaries-london.zip), wards 2014 and 2018. postcodes = ONSPD postcodes with the grid reference in the box (districts ' + ZONE_DISTRICTS.join(', ') + '). Zone UPRNs (OS Open UPRN 2026-09, X/Y in the box): ' + nU + '; zone TOIDs (OS LIDS UPRN to TopographicArea TOID of those UPRNs): ' + nT + '; both in the raw cache, not committed.',
+    method: 'A code is a zone code when (a) a live or terminated postcode of ONSPD August 2026 whose grid reference (east1m, north1m) lies in the box carries it (oa/lsoa/msoa 2001, 2011, 2021; ward2026 = wd26cd; ward2003 = the 2003 CAS ward codes wdcas03cd and 2005 statistical ward codes wdstl05cd, form 00BGGG, used by 2001 Census and 2000s ward tables), or (b) its polygon in the London Datastore Statistical GIS Boundary Files (20od9) meets the box (vertex inside, edge crossing or box inside): LSOA and MSOA 2021, OA/LSOA/MSOA 2011 and wards 2011 (statistical-gis-boundaries-london.zip), wards 2014 and 2018. postcodes = ONSPD postcodes with the grid reference in the box (districts ' + ZONE_DISTRICTS.join(', ') + '). Zone UPRNs (OS Open UPRN 2026-09, X/Y in the box): ' + nU + '; zone TOIDs (OS LIDS UPRN to TopographicArea TOID of those UPRNs): ' + nT + '; both in the raw cache, not committed.',
     sources: [{ name: 'ONS Postcode Directory (August 2026)', url: ONSPD, licence: 'Open Government Licence v3.0', attribution: 'Contains OS data (c) Crown copyright and database right 2026; Contains Royal Mail data (c) Royal Mail copyright and database right 2026; Source: Office for National Statistics licensed under the Open Government Licence v.3.0', rows_read: nRows },
       { name: 'Statistical GIS Boundary Files for London (London Datastore 20od9)', page: `${BASE}/dataset/statistical-gis-boundary-files-london-20od9`, licence: 'Open Government Licence v3.0', attribution: 'Contains National Statistics data (c) Crown copyright and database right; Contains OS data (c) Crown copyright and database right. The GLA cannot warrant the quality or accuracy of the data.', files: used },
       { name: 'OS Open UPRN (2026-09)', licence: 'Open Government Licence v3.0', note: 'zone UPRN list in the raw cache only' },
@@ -718,6 +754,35 @@ async function refs() {
   console.log(JSON.stringify(meta.counts));
 }
 
+// the zone's old ward codes (00BGGG form: 2003 CAS wards and 2005 statistical wards) from ONSPD, one query with
+// distinct values over the zone box; refs-old-wards adds them to an existing zone-codes.json (2026-10-04)
+async function oldWards(codes) {
+  const where = 'east1m>=532400 AND east1m<=539900 AND north1m>=176700 AND north1m<=182300';
+  const j = JSON.parse(await politeFetch(`${ONSPD}/query?where=${encodeURIComponent(where)}&outFields=wdstl05cd,wdcas03cd&returnDistinctValues=true&returnGeometry=false&f=json`));
+  if (j.exceededTransferLimit) throw new Error('ONSPD distinct old wards: transfer limit exceeded');
+  const set = codes.ward2003 = new Set();
+  for (const { attributes: a } of j.features || []) for (const v of [a.wdstl05cd, a.wdcas03cd]) if (v && /^\d\d[A-Z]{4}$/.test(v)) set.add(v);
+  // 2011 Census merged wards (E36, the ward unit of the 2011 Census ward tables): the merged wards of the zone's 2011 wards
+  // (ONS lookup WD11_CMWD11_LAD11_EW_LU)
+  const w11 = [...(codes.ward2011 || [])];
+  if (w11.length) {
+    const L = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/WD11_CMWD11_LAD11_EW_LU_e98db71f1e0444b59634405f30034c70/FeatureServer/0/query';
+    const jl = JSON.parse(await politeFetch(`${L}?where=${encodeURIComponent(`WD11CD IN (${w11.map(c => `'${c}'`).join(',')})`)}&outFields=WD11CD,CMWD11CD&returnGeometry=false&f=json`));
+    codes.cmwd2011 = new Set((jl.features || []).map(f => f.attributes.CMWD11CD).filter(v => /^E36\d{6}$/.test(v)));
+  }
+  return set;
+}
+async function refsOldWards() {
+  const f = join(OUT, 'zone-codes.json'), z = readJson(f), codes = { ward2011: new Set(z.codes.ward2011) };
+  const set = await oldWards(codes);
+  z.codes.ward2003 = [...set].sort(); z.meta.counts.ward2003 = set.size;
+  z.codes.cmwd2011 = [...codes.cmwd2011].sort(); z.meta.counts.cmwd2011 = codes.cmwd2011.size;
+  if (!/cmwd2011/.test(z.meta.method)) z.meta.method += ' cmwd2011 = the 2011 Census merged wards (E36) of the zone 2011 wards (ONS lookup WD11_CMWD11_LAD11_EW_LU); added 2026-10-04 by refs-old-wards.';
+  z.meta.method = z.meta.method.replace('ward_stat2005 = wdstl05cd', 'ward2003 = the 2003 CAS ward codes wdcas03cd and 2005 statistical ward codes wdstl05cd, form 00BGGG, used by 2001 Census and 2000s ward tables; added 2026-10-04 by refs-old-wards');
+  z.codes = Object.fromEntries(Object.entries(z.codes).sort());
+  writeFileSync(f, JSON.stringify(z, null, 0).replace(/\],"/g, '],\n"') + '\n');
+  console.log('ward2003', set.size);
+}
 // ================================================================== probe: area detection inside the data
 // For every open dataset whose metadata area is unknown, borough or London-wide: sample up to CAPS.perDataset
 // machine-readable resources within the size caps and classify the area found in the data (lds-probe.mjs).
@@ -871,7 +936,7 @@ async function harvestTable(key, H, d, T, resources) {
   console.log(key, H.id, JSON.stringify(meta.counts));
   return [key, H.id, lic, meta.counts];
 }
-function parseCsvLine(l) { const out = []; let cur = '', q = false; for (let i = 0; i < l.length; i++) { const c = l[i]; if (q) { if (c === '"') { if (l[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; } else if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = ''; } else cur += c; } out.push(cur); return out.map(v => v.replace(/^\uFEFF/, '')); }
+export function parseCsvLine(l) { const out = []; let cur = '', q = false; for (let i = 0; i < l.length; i++) { const c = l[i]; if (q) { if (c === '"') { if (l[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; } else if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = ''; } else cur += c; } out.push(cur); return out.map(v => v.replace(/^\uFEFF/, '')); }
 // a streamed GET in the polite queue: onText(chunk) per decoded chunk; nothing is kept but what the callback keeps
 export function politeStream(url, onText, { minGapMs = 1100 } = {}) {
   const run = async () => {
@@ -886,11 +951,13 @@ export function politeStream(url, onText, { minGapMs = 1100 } = {}) {
   const p = chain.then(run, run); chain = p.catch(() => {}); return p;
 }
 
-// ================================================================== main
-const cmd = args[0];
+// ================================================================== main (only when run as a script: lds-harvest-auto.mjs imports this file and runs on its own)
+const isMain = import.meta.url === (await import('url')).pathToFileURL(process.argv[1] || '').href;
+const cmd = isMain ? args[0] : null;
 if (cmd === 'walk') await walk();
 else if (cmd === 'triage') triage();
 else if (cmd === 'harvest') await harvest(args.slice(1).filter(a => !a.startsWith('--')));
 else if (cmd === 'refs') await refs();
+else if (cmd === 'refs-old-wards') await refsOldWards();
 else if (cmd === 'probe') await probe(args.slice(1).filter(a => !a.startsWith('--')));
-else { console.log('usage: walk-london-datastore.mjs walk [--details] [--refresh] | triage | harvest [key ...] [--refresh]\nharvest keys: ' + Object.keys(HARVEST).join(' ')); }
+else if (isMain) { console.log('usage: walk-london-datastore.mjs walk [--details] [--refresh] | triage | harvest [key ...] [--refresh]\nharvest keys: ' + Object.keys(HARVEST).join(' ')); }

@@ -3866,6 +3866,11 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-vdjgm",
      "dcat:accessURL": "https://data.london.gov.uk/download/vdjgm/<resource id>/<file>",
      "dct:description": "harvest urban-heat-island-2016: the resources named in HARVEST (GET)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ons-boundaries",
+     "dcat:accessURL": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/WD11_CMWD11_LAD11_EW_LU_e98db71f1e0444b59634405f30034c70/FeatureServer/0/query",
+     "dct:description": "refs-old-wards: WD11CD IN (the zone 2011 wards), outFields WD11CD, CMWD11CD"
     }
    ],
    "prov:generated": [
@@ -3981,7 +3986,7 @@
    "cwp:tool": {
     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/walk-london-datastore.mjs"
    },
-   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs probe [id ...] (needs npm install --no-save xlsx@0.18.5); node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]",
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk [--details] [--refresh]; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs-old-wards; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs probe [id ...]; node magpie/cwplans/tools/walk-london-datastore.mjs triage; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs harvest [key ...] [--refresh]",
    "cwp:kind": "fetch",
    "cwp:rule": [
     "Catalogue: publisher = organisation (logo title), else CKAN maintainer, else custom.author; geo = custom.geo (spatial granularity); update_frequency = custom.update_frequency; resource format = file extension; resource URL = https://data.london.gov.uk/download/{dataset}/{id}/{file}. Not kept: descriptions, contact names and emails, logos.",
@@ -3998,7 +4003,8 @@
     "Zone references (refs): a code is a zone code when a live or terminated ONSPD (August 2026) postcode whose grid reference lies in the 3D model box carries it, or when its polygon in the Datastore's Statistical GIS Boundary Files (20od9: LSOA/MSOA 2021, OA/LSOA/MSOA/wards 2011, wards 2014 and 2018) meets the box. Zone UPRNs: OS Open UPRN X/Y in the box; zone TOIDs: the LIDS TopographicArea TOIDs of those UPRNs (raw cache only).",
     "Area from the data (probe): every open, not sensitive dataset whose metadata relevance is unknown, london-borough or london-coarse (671) is opened: up to 3 readable resources (finer-area file names first, then csv/txt/json/xml, sheets, gpkg, zip; newest first; stop at the first zone signal). Caps: text formats the first 1 MB (HTTP Range); xlsx/xlsm/xls/ods whole up to 20 MB (SheetJS, 3,000 rows and 40 sheets read); zip whole up to 60 MB (shapefile record envelopes and dbf, inner csv/sheets/gpkg, 12 entries, zone borough and place names first); GeoPackage whole up to 100 MB (every geometry envelope). Documents (pdf, docx, images, audio) are not opened.",
     "Area class from the data, first match: D1 zone-point (a row's lat/lon or easting/northing, or a feature envelope, in or meeting the box; the value decides WGS84 or BNG); D2 zone-uprn (a zone UPRN in a UPRN column) or zone-postcode (3+ distinct zone postcodes; the postcode's letters must be one of the 121 UK areas); D3 zone-code (an OA/LSOA/MSOA/ward code in zone-codes.json); D4 zone-place (2+ distinct zone place names, 3+ cells); D5 london-fine (5+ London coordinates, small-area codes, 20+ postcodes, UPRN or TOID columns, no zone value in the sample); D6 borough-rows (zone borough code or name, nothing finer); D7 london-coarse (London, region, national, or other boroughs only); D8 none. The data class replaces the metadata relevance of a probed dataset.",
-    "Final state, first match (every dataset gets one): F1 sensitive; F2 harvested (held); F3 not-open (licence); F3b deferred (excluded before by the project); F4 links only (unavailable when every link failed the Datastore QA check, else deferred); F5 unavailable (every probe request failed); F6 listed-for-harvest (relevant with a machine-readable resource; reason and size); F7 deferred (relevant, documents only); F8 not-relevant (data: borough rows, London or coarser, none); F9 not-relevant (metadata names only places outside the zone); F10 deferred (data not readable: size cap, format, no readable resource); F11 deferred (not probed)."
+    "Final state, first match (every dataset gets one): F1 sensitive; F2 harvested (held); F3 not-open (licence); F3b deferred (excluded before by the project); F4 links only (unavailable when every link failed the Datastore QA check, else deferred); F5 unavailable (every probe request failed); F6 listed-for-harvest (relevant with a machine-readable resource; reason and size); F7 deferred (relevant, documents only); F8 not-relevant (data: borough rows, London or coarser, none); F9 not-relevant (metadata names only places outside the zone); F10 deferred (data not readable: size cap, format, no readable resource); F11 deferred (not probed).",
+    "Old ward codes (refs-old-wards, 2026-10-04): the 2003 CAS and 2005 statistical ward codes (00BGGG form, ONSPD wdcas03cd and wdstl05cd) of the postcodes in the box, one ONSPD query with distinct values; and the 2011 Census merged wards (E36) of the zone 2011 wards from the ONS lookup WD11_CMWD11_LAD11_EW_LU. Without them 2001- and 2011-Census ward tables read as having no zone rows."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -4014,6 +4020,59 @@
     "F31"
    ],
    "cwp:judgement": "The harvest shortlist (the HARVEST table in the tool) was chosen by hand from the ranked triage: open, relevant, new, machine-readable, not geometry-only where an alternative exists; the choices and the ranked backlog with reasons are in feeds/london-datastore/README.md. The probe rules (caps, thresholds of D2 and D4, the place list) were set by reading the first full run: one cell naming Deptford or one publisher postcode (City Hall) made a zone dataset of a payments list, so D2 needs 3 distinct zone postcodes and D4 2 names in 3 cells; census table ids (QS101EW) read as postcodes until the UK postcode area list was added. Fatal fires (24yo6, incident postcodes) was added to the sensitive titles by hand."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto",
+   "@type": "prov:Activity",
+   "rdfs:label": "lds-harvest-auto",
+   "dct:description": "Harvests the London Datastore datasets listed for harvest by written rules (resource choice, zone tests, readers); this first commit adds the tool and its name keys; the harvests follow in batches (register adds each dataset).",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/triage.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/catalogue.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-codes.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/town-centres/town-centres.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/opportunity-areas/opportunity-areas.geojson"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-stoppoint",
+     "dcat:accessURL": "https://api.tfl.gov.uk/StopPoint",
+     "dct:description": "zone-names: lat/lon of 6 centres, stopTypes NaptanMetroStation,NaptanRailStation, radius 2000"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-names.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/lds-harvest-auto.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/lds-harvest-auto.mjs plan [id ...]; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/lds-harvest-auto.mjs zone-names; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/lds-harvest-auto.mjs run [id ...] [--rank a-b] [--again]; node magpie/cwplans/tools/lds-harvest-auto.mjs register; node magpie/cwplans/tools/lds-harvest-auto.mjs index",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "See the tool header and harvest-log.json meta.rules (added with the first batch)."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+    }
+   ],
+   "cwp:area": "feeds",
+   "cwp:fault": [
+    "F27"
+   ],
+   "cwp:judgement": "Hand rules (HAND in the tool) choose resources where the general rules would read too much or the wrong file; each has its reason."
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/amend-uprns",
@@ -10337,7 +10396,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "the zone's area codes and postcodes: OA, LSOA and MSOA codes (2001, 2011, 2021), ward codes (2011, 2014, 2018, 2026, statistical 2005) of the areas that meet the 3D model box or hold a postcode whose ONSPD grid reference lies in it; the zone postcodes; ward and MSOA names",
+   "dct:title": "the zone's area codes and postcodes: OA, LSOA and MSOA codes (2001, 2011, 2021), ward codes (2011, 2014, 2018, 2026; 2003 CAS and 2005 statistical wards in the 00BGGG form; 2011 Census merged wards E36) of the areas that meet the 3D model box or hold a postcode whose ONSPD grid reference lies in it; the zone postcodes; ward and MSOA names",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/onspd"
@@ -10348,6 +10407,29 @@
    ],
    "prov:wasGeneratedBy": {
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-london-datastore"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/zone-names.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "names used as a weak zone key for London Datastore tables about town centres or stations (no codes): the 23 town centres and 11 Opportunity Areas whose polygons meet the 3D model box (from the town-centres and opportunity-areas harvests) and the 51 metro and rail station names in the box (TfL StopPoint, NaPTAN points)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e55z7"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-epr7z"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-stoppoint"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/lds-harvest-auto"
    },
    "cwp:osmUse": "none"
   },
@@ -12414,6 +12496,17 @@
    "dct:license": "OGL v3.0",
    "dcat:landingPage": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
    "cwp:attribution": "This uses Environment Agency flood and river level data from the real-time data API (Beta)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-stoppoint",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "TfL Unified API StopPoint (metro and rail stations by position)",
+   "dct:license": "TfL open data terms (Powered by TfL Open Data); station names and positions used as facts",
+   "dcat:landingPage": "https://api.tfl.gov.uk/StopPoint",
+   "cwp:attribution": "Powered by TfL Open Data"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-catalogue",
