@@ -4787,6 +4787,38 @@
         "F24"
       ],
       "judgement": "Licence classes per source (facts only for PLA, CRT and the operators' pages); the lock rules in feeds/river/locks-facts.json are read and paraphrased by hand (recorded with URL and date); the sonde plausibility thresholds; the choice of stations and sondes. Recorded in skills/cwplans-river-and-water/SKILL.md and feeds/river/README.md."
+    },
+    {
+      "id": "solve-photo-sun",
+      "tool": "tools/solve-photo-sun.mjs",
+      "command": "node magpie/cwplans/tools/solve-photo-sun.mjs [docklands/reference/day-2026-10-04/points.json]",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "docklands/reference/day-2026-10-04/points.json"
+        },
+        {
+          "file": "docklands/data/towers.json"
+        },
+        {
+          "file": "docklands/vendor/astronomy.browser.min.js"
+        }
+      ],
+      "generated": [],
+      "method": "Solves a daytime photo's camera and capture time: a pinhole camera fitted to tower tops of the model, shadows on a level deck back-projected through it, and the sun azimuth matched to a time with astronomy-engine. Prints JSON; the results are copied by hand into the photo folder's README and the docklands-sky skill.",
+      "rules": [
+        "Camera: heading (from grid north), tilt, roll and focal length by Nelder-Mead least squares on the landmark pixels; principal point fixed at the image centre; landmark = the apex (pyramid) or the centroid of the top tier at its top height in docklands/data/towers.json; a landmark with a null y is fitted in x only.",
+        "Shadow: the pixel of a post foot and of the shadow of its cap are back-projected to the plane 1.5 m below the eye; sun grid azimuth = bearing foot->shadow + 180 degrees; true azimuth = grid + grid_to_true_deg (1.54 here). The azimuth does not depend on the assumed camera height; the printed shadow lengths do (given for 1.3, 1.5, 1.7 m).",
+        "Time: astronomy-engine Equator(of date, aberration) + Horizon(refraction \"normal\") for the observer in the points file; bisection on the azimuth between 06:00 and 18:00 UTC of the date. Result = the time of the mean azimuth; range = the times of the smallest and largest azimuth.",
+        "The library is run in a vm context; times are passed as that realm's Date (its instanceof check fails on a Date of the main realm)."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "build-towers"
+      ],
+      "judgement": "The pixel positions in points.json are read by eye from 2x and 4x enlargements (which point is the foot of a post is a judgement: the base plate hides it); recorded in points.json and the README.",
+      "area": "sky"
     }
   ],
   "manual_activities": [

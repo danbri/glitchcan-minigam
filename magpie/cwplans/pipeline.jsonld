@@ -5254,6 +5254,45 @@
    "cwp:judgement": "Licence classes per source (facts only for PLA, CRT and the operators' pages); the lock rules in feeds/river/locks-facts.json are read and paraphrased by hand (recorded with URL and date); the sonde plausibility thresholds; the choice of stations and sondes. Recorded in skills/cwplans-river-and-water/SKILL.md and feeds/river/README.md."
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/solve-photo-sun",
+   "@type": "prov:Activity",
+   "rdfs:label": "solve-photo-sun",
+   "dct:description": "Solves a daytime photo's camera and capture time: a pinhole camera fitted to tower tops of the model, shadows on a level deck back-projected through it, and the sun azimuth matched to a time with astronomy-engine. Prints JSON; the results are copied by hand into the photo folder's README and the docklands-sky skill.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/points.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/towers.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/vendor/astronomy.browser.min.js"
+    }
+   ],
+   "prov:generated": [],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/solve-photo-sun.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/solve-photo-sun.mjs [docklands/reference/day-2026-10-04/points.json]",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Camera: heading (from grid north), tilt, roll and focal length by Nelder-Mead least squares on the landmark pixels; principal point fixed at the image centre; landmark = the apex (pyramid) or the centroid of the top tier at its top height in docklands/data/towers.json; a landmark with a null y is fitted in x only.",
+    "Shadow: the pixel of a post foot and of the shadow of its cap are back-projected to the plane 1.5 m below the eye; sun grid azimuth = bearing foot->shadow + 180 degrees; true azimuth = grid + grid_to_true_deg (1.54 here). The azimuth does not depend on the assumed camera height; the printed shadow lengths do (given for 1.3, 1.5, 1.7 m).",
+    "Time: astronomy-engine Equator(of date, aberration) + Horizon(refraction \"normal\") for the observer in the points file; bisection on the azimuth between 06:00 and 18:00 UTC of the date. Result = the time of the mean azimuth; range = the times of the smallest and largest azimuth.",
+    "The library is run in a vm context; times are passed as that realm's Date (its instanceof check fails on a Date of the main realm)."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-towers"
+    }
+   ],
+   "cwp:area": "sky",
+   "cwp:fault": [],
+   "cwp:judgement": "The pixel positions in points.json are read by eye from 2x and 4x enlargements (which point is the foot of a post is a judgement: the base plate hides it); recorded in points.json and the README."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
    "@type": "prov:Activity",
    "rdfs:label": "Published levels used as tunnel and structure controls",
@@ -10340,6 +10379,186 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/pier-wide-skyline.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's day photo (4 Oct 2026, Greenland Pier): wide view from the Greenland Pier pontoon across the Thames to the Isle of Dogs west shore and the Canary Wharf skyline (day reference; camera and photo time solved from it)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/zoom-one-canada-square-cranes-citi.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's day photo (4 Oct 2026, Greenland Pier): zoom: One Canada Square, the 30 Marsh Wall core with \"TIDE\" screens and two cranes, the \"25 CUBA\" wrap with Ballymore and Penta screens, the Citi sign",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/zoom-tide-core-cranes.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's day photo (4 Oct 2026, Greenland Pier): zoom on the 30 Marsh Wall core: floor numbers 24 to 31, two \"TIDE\" cranes, the 25 Cuba wrap in front, two more cranes behind on the left",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/zoom-one-canada-square-core.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's day photo (4 Oct 2026, Greenland Pier): One Canada Square with the 30 Marsh Wall core and cranes on its left",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/zoom-newfoundland-landmark-pinnacle.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's day photo (4 Oct 2026, Greenland Pier): Newfoundland (diagonal bracing) and Landmark Pinnacle",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/zoom-red-frame-riverside-block.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's day photo (4 Oct 2026, Greenland Pier): a red-framed riverside residential block on the Isle of Dogs west shore, towers behind",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/zoom-dark-tower-citi.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's day photo (4 Oct 2026, Greenland Pier): a dark residential tower with the Citigroup Centre behind",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/zoom-towers-pitched-roof-blocks.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's day photo (4 Oct 2026, Greenland Pier): residential blocks with pitched roofs in front of newer glass towers",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "where, when and in what conditions the owner took the day photos, their CC0 licence, what each shows, the works in progress seen, and the photo time solved from shadows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/day-2026-10-04/points.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "pixel measurements in pier-wide-skyline.jpg (tower tops, bitt post feet and their cap shadows) and the eye; input of tools/solve-photo-sun.mjs",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm",
    "@type": [
     "prov:Entity",
@@ -11557,6 +11776,15 @@
    ],
    "dct:title": "supplied by the repository owner",
    "dct:license": "owner's"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "photos taken by the repository owner (danbri) and dedicated to the public domain",
+   "dct:license": "CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/)"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/pla-ntm-live",

@@ -618,6 +618,17 @@ be specified within the data".
   twist still move; drawer scrolls; no console errors at 1600 x 900 and 390 x 844 DPR 3. Lessons and the phone-only list in
   the docklands-3d-page skill, "Credits and the window lock".
 
+## 2026-10-04 day photos and works in progress (construction agent)
+
+Owner, 2026-10-04: "Several newly taken photos from middle of Greenland Dock Surrey Quays clipper pier, blue skies, calm
+water, low wind, direct October sun. I am copyright holder but will CC0 them. Note the works in progress on far side of the
+central tower - do we have an index of these?"
+
+1. **Photos** (`docklands/reference/day-2026-10-04/`): the eight originals (no EXIF; exiftool shows the image size only),
+   README with place, conditions, the CC0 dedication quoted, what each shows. New source `owner-photos-cc0`. Photo time from
+   bitt shadows with `tools/solve-photo-sun.mjs` (new; camera fitted to four tower tops, rms 3.8 px, horizontal field 99.8°):
+   about 11:30 BST, 11:05 to 12:10 BST (sun 150° to 168° true). Method in the docklands-sky skill.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

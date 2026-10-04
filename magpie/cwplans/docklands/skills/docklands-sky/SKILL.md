@@ -91,6 +91,18 @@ plausible eyes is the error. Checks: limb 227° measured and computed, 46% lit. 
 visibility, 87% humidity; Thames −1.20 m OD at Greenland Pier, falling. To solve another photo: same steps; keep the
 eye on the wall, measure the moon by limb and cusps, and report the azimuth-time spread.
 
+### Photo time from shadows (day photos, 2026-10-04)
+
+`node magpie/cwplans/tools/solve-photo-sun.mjs` (input `docklands/reference/day-2026-10-04/points.json`) solves a day photo
+with the sun out of frame: a pinhole camera fitted to tower tops (`towers.json`), the foot of a vertical post and the shadow of
+its top back-projected onto a level deck, sun azimuth = shadow bearing + 180° (+ 1.54° grid to true), matched to
+astronomy-engine (the vendored browser build, run in a `vm` context; pass it that realm's `Date`, or its `instanceof Date`
+check throws). The azimuth does not depend on the assumed camera height; the shadow length does, so altitude needs a known
+object height. `pier-wide-skyline.jpg` (Greenland Pier, ultra-wide, fitted horizontal field 99.8°, rms 3.8 px): three bitt
+shadows give 150° to 168° true, **about 11:30 BST (10:29 UTC), 11:05 to 12:10 BST**. The error is reading the foot of a post
+(hidden by its base plate): 10 px moves the azimuth about 8°. Use long, thin, clearly footed shadows (lamp posts, railings)
+when a photo has them; lit and dark faces of towers with known orientation are a check, not a measure (glass reflects).
+
 ## Refresh the snapshots
 
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [clouds [2026-10-03T23:00Z]] [lcy] [--date 2026-10-03]
