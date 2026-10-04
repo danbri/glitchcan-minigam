@@ -129,7 +129,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
   <aside id="drawer" aria-label="Menu" aria-hidden="true">
     <div id="dHead"><b>Docklands 3D</b><button type="button" class="ib" id="drawerX" aria-label="Close the menu"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div id="dViews"><div class="chips" role="group" aria-label="Views">
-      <button type="button" data-view="area" aria-pressed="false">Whole area</button><button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button><button type="button" data-view="under" aria-pressed="false">Underground</button><button type="button" data-view="plan" aria-pressed="false">Plan</button><button type="button" data-view="rotherhithe" aria-pressed="false">Night from Rotherhithe</button><button type="button" data-view="pier" aria-pressed="false">Night at the pier</button><button type="button" id="digBtn" aria-pressed="false" aria-controls="gauge">Below ground</button>
+      <button type="button" data-view="area" aria-pressed="false">Whole area</button><button type="button" data-view="cw" aria-pressed="true">Canary Wharf</button><button type="button" data-view="under" aria-pressed="false">Underground</button><button type="button" data-view="plan" aria-pressed="false">Plan</button><button type="button" data-view="rotherhithe" aria-pressed="false">Night from Rotherhithe</button><button type="button" data-view="greenland" aria-pressed="false">Night from Greenland Pier</button><button type="button" data-view="pier" aria-pressed="false">Night at Canary Wharf Pier</button><button type="button" id="digBtn" aria-pressed="false" aria-controls="gauge">Below ground</button>
     </div></div>
     <nav id="dtabs" role="tablist" aria-label="Panels">
       <button type="button" role="tab" data-pane="paneLayers" aria-selected="false">Layers</button><button type="button" role="tab" data-pane="paneRoute" aria-selected="false">Route</button><button type="button" role="tab" data-pane="paneAbout" aria-selected="false">About</button>
@@ -567,8 +567,10 @@ const VIEWS = {
   // (degrees from grid north), tilt (degrees, up +) and horizontal field of view, fitted to the bearings of Newfoundland's
   // crown, Landmark Pinnacle, One Canada Square's pyramid and One Bank Street in the photos. The camera orbits a point
   // 1.2 km along the line of sight, so a drag turns round the skyline.
-  rotherhithe: eyeView([-886, 6.9, 1120], 44.2, -1, 43),   // the Thames path at Surrey Docks Farm, 1.6 m above the river wall (crest 5.3 m OD)
-  pier: eyeView([-740, 6, 140], 83.6, 11, 69),   // a boat on the river off Canary Wharf Pier, about 3.5 m above the water
+  // The owner took them "as Thames Clipper landed at Greenland Dock pier & shortly afterwards, a few metres west on promenade".
+  rotherhithe: eyeView([-896, 6.9, 1150], 43.3, -1, 42),   // the Thames path a few metres west of Greenland Pier, 1.6 m above the walk by the river wall (crest 5.3 m OD): promenade-skyline-railing.jpg
+  greenland: eyeView([-825, 5.3, 1160], 39.7, 3.5, 44),   // on Greenland Pier (x -830, z 1158 in the places list), 1.6 m above the pontoon deck: promenade-skyline-bollard.jpg
+  pier: eyeView([-740, 6, 140], 83.6, 11, 69),   // on board a Thames Clipper at Canary Wharf Pier, about 3.5 m above the water: clipper-canary-wharf-pier.jpg
 };
 function eyeView(E, az, lp, hfov, D = 1200) {
   const a = az * Math.PI / 180, p = lp * Math.PI / 180;
@@ -1841,7 +1843,7 @@ window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, re
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
 outs(); setView('cw');
-{ const vm = /[?&]view=(\w+)/.exec(location.search); if (vm && VIEWS[vm[1]]) setView(vm[1]); }   // ?view=rotherhithe, ?view=pier (and the other views)
+{ const vm = /[?&]view=(\w+)/.exec(location.search); if (vm && VIEWS[vm[1]]) setView(vm[1]); }   // ?view=rotherhithe, ?view=greenland, ?view=pier (and the other views)
 loadJSON('data/tex/facades.json').then(T => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok([T, im]); im.onerror = () => no(new Error('facades.jpg')); im.src = 'data/tex/facades.jpg'; })).then(([T, im]) => {
   FT = T; FT.slots = new Float32Array(32); for (const f of Object.values(T.buildings)) { FT.slots[2 * f.slot] = f.w_m; FT.slots[2 * f.slot + 1] = f.h_m; }
   const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
