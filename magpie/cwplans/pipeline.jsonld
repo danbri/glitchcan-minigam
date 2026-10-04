@@ -3454,6 +3454,16 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-flood-monitoring",
      "dcat:accessURL": "https://environment.data.gov.uk/flood-monitoring/id/measures/{station}-level-tidal_level-i-15_min-mAOD/readings",
      "dct:description": "stations 0007 Tower Pier, 0003 Charlton, 0001 Silvertown; startdate=DATE, enddate=DATE+2, _sorted, _limit=1000; plus /id/stations/{station} for the position"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/iau-wgsn",
+     "dcat:accessURL": "https://www.pas.rochester.edu/~emamajek/WGSN/IAU-CSN.txt",
+     "dct:description": "the whole IAU Catalog of Star Names, fixed-column text (UTF-8)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/heasarc-messier",
+     "dcat:accessURL": "https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3query.pl",
+     "dct:description": "tablehead=name=heasarc_messier, Action=Query, ResultMax=0, displaymode=BatchDisplay, Fields=All, Coordinates=Equatorial, Equinox=2000 (pipe-separated text)"
     }
    ],
    "prov:generated": [
@@ -3471,19 +3481,27 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/tide-2026-10-03.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/star-names.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/messier.json"
     }
    ],
    "cwp:tool": {
     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/fetch-sky.mjs"
    },
-   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [--date 2026-10-03]",
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [--date 2026-10-03]",
    "cwp:kind": "fetch",
    "cwp:rule": [
     "Stars: Bright Star Catalogue rows with a J2000 position and V <= 5.5 (2,887); columns from the CDS ReadMe: HR 1-4, RA 76-83, Dec 84-90, Vmag 103-107, B-V 110-114; RA and Dec to 0.001 degree, V and B-V to 0.01; a missing B-V becomes 0.6; sorted by V.",
     "Constellation lines: every line string kept; longitude turned into RA 0-360 degrees; coordinates rounded to 0.01 degree. The Milky Way outlines of the same repository are not fetched (no stated licence); the page computes the band from galactic coordinates.",
     "Satellites: the three requests merged, one record per NORAD catalogue number; OMM fields kept as published. CelesTrak keeps no history, so a snapshot holds the elements current at fetch time (run within a day or two of the date). One request per group per run (CelesTrak: at most one download per 2 hours).",
     "Weather: the forecast API's past hours (best_match model, UK Met Office UKV first for London; it has visibility, which the ERA5 archive lacks); values as published, hourly, London time.",
-    "Tide: 15-minute instantaneous readings in m AOD, UTC times, sorted; no gap filling; EA gives readings only, no predictions.",
+    "Tide: 15-minute instantaneous readings in m AOD, UTC times, sorted; no gap filling; EA gives readings only, no predictions. The page (sky.js cleanGauges) leaves out a reading whose difference from the nearest other gauge departs more than 0.45 m from the median of that difference over 2 h either side (fault F21), then interpolates linearly by chainage along data/river.json between the gauges. The EA has no tidal gauge between Tower Pier and Charlton (station search of 2026-10-04, 15 km round the estate).",
+    "Star names: rows of IAU-CSN whose designation is an HR number present in stars.json (324 of 451 names); columns found by the positions of the header titles (Name/Diacritics, Designation, Con), because names can hold spaces; the diacritic form is kept.",
+    "Messier: all 109 rows of the HEASARC table (M 102 is not in it); RA and Dec from sexagesimal J2000 to degrees (0.001); size = the larger dimension in arcmin; the notes column title-cased as the common name. OpenNGC was not used (CC BY-SA).",
     "Network: User-Agent glitchcan-cwplans/0.1; three retries 3, 6 and 9 s apart on timeouts and 5xx (the agent proxy drops connections now and then); 4xx is not retried; files overwritten on every run."
    ],
    "cwp:network": true,
@@ -6980,6 +6998,40 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/star-names.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "324 IAU-approved star names joined by HR number to the Bright Star Catalogue extract, with the constellation; labels on the 3D page's sky",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/iau-wgsn"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/messier.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "109 Messier objects: number, NGC, J2000 RA and Dec, V magnitude, largest size (arcmin), type, common name; labels on the 3D page's sky when the sky model shows them",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/heasarc-messier"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-sky"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/sky/sats-2026-10-03.json",
    "@type": [
     "prov:Entity",
@@ -8017,6 +8069,28 @@
    "dct:license": "public domain (NASA Astronomical Data Center); CDS asks that catalogues be cited",
    "dcat:landingPage": "https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50",
    "cwp:attribution": "Yale Bright Star Catalogue, 5th ed. (Hoffleit & Warren 1991), via CDS"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/iau-wgsn",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "IAU Catalog of Star Names (IAU-CSN), IAU Division C Working Group on Star Names (WGSN); plain-text edition kept by the WGSN secretary (E. Mamajek)",
+   "dct:license": "CC BY (the file: all IAU-produced products are released under Creative Commons Attribution, free to use as long as the source is mentioned); names are facts",
+   "dcat:landingPage": "https://www.pas.rochester.edu/~emamajek/WGSN/IAU-CSN.txt",
+   "cwp:attribution": "Star names: IAU Working Group on Star Names (WGSN)"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/heasarc-messier",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "HEASARC MESSIER table (NASA GSFC), compiled from Sky Catalog 2000.0 vol. 2 (Hirshfeld & Sinnott 1985)",
+   "dct:license": "NASA HEASARC service, US Government work: no copyright claimed (public domain); positions, sizes and magnitudes are facts",
+   "dcat:landingPage": "https://heasarc.gsfc.nasa.gov/W3Browse/all/messier.html",
+   "cwp:attribution": "Messier objects: NASA HEASARC"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/d3-celestial",

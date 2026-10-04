@@ -1719,14 +1719,16 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 
 #### 52. `fetch-sky` (tools/fetch-sky.mjs)
 
-- Command: `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [--date 2026-10-03]`
+- Command: `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [--date 2026-10-03]`
 - Method: Fetches the star catalogue, the constellation lines, satellite orbital elements, hourly weather and tide-gauge readings for the Sky panel of the 3D page (docklands/sky.js) and writes small JSON snapshots; the weather and tide files cover the London date given and the next day (the owner's photo evening, 3 October 2026).
 - Rules:
   - Stars: Bright Star Catalogue rows with a J2000 position and V <= 5.5 (2,887); columns from the CDS ReadMe: HR 1-4, RA 76-83, Dec 84-90, Vmag 103-107, B-V 110-114; RA and Dec to 0.001 degree, V and B-V to 0.01; a missing B-V becomes 0.6; sorted by V.
   - Constellation lines: every line string kept; longitude turned into RA 0-360 degrees; coordinates rounded to 0.01 degree. The Milky Way outlines of the same repository are not fetched (no stated licence); the page computes the band from galactic coordinates.
   - Satellites: the three requests merged, one record per NORAD catalogue number; OMM fields kept as published. CelesTrak keeps no history, so a snapshot holds the elements current at fetch time (run within a day or two of the date). One request per group per run (CelesTrak: at most one download per 2 hours).
   - Weather: the forecast API's past hours (best_match model, UK Met Office UKV first for London; it has visibility, which the ERA5 archive lacks); values as published, hourly, London time.
-  - Tide: 15-minute instantaneous readings in m AOD, UTC times, sorted; no gap filling; EA gives readings only, no predictions.
+  - Tide: 15-minute instantaneous readings in m AOD, UTC times, sorted; no gap filling; EA gives readings only, no predictions. The page (sky.js cleanGauges) leaves out a reading whose difference from the nearest other gauge departs more than 0.45 m from the median of that difference over 2 h either side (fault F21), then interpolates linearly by chainage along data/river.json between the gauges. The EA has no tidal gauge between Tower Pier and Charlton (station search of 2026-10-04, 15 km round the estate).
+  - Star names: rows of IAU-CSN whose designation is an HR number present in stars.json (324 of 451 names); columns found by the positions of the header titles (Name/Diacritics, Designation, Con), because names can hold spaces; the diacritic form is kept.
+  - Messier: all 109 rows of the HEASARC table (M 102 is not in it); RA and Dec from sexagesimal J2000 to degrees (0.001); size = the larger dimension in arcmin; the notes column title-cased as the common name. OpenNGC was not used (CC BY-SA).
   - Network: User-Agent glitchcan-cwplans/0.1; three retries 3, 6 and 9 s apart on timeouts and 5xx (the agent proxy drops connections now and then); 4xx is not retried; files overwritten on every run.
 - Inputs:
   - **yale-bsc5** (Yale Bright Star Catalogue, 5th revised edition, public domain (NASA Astronomical Data Center); CDS asks that catalogues be cited): https://cdsarc.cds.unistra.fr/ftp/V/50/catalog.gz; the whole catalogue, fixed-width text (gzip)
@@ -1734,12 +1736,16 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - **celestrak** (CelesTrak GP element sets, no licence stated; US Government (18 SDS / Space-Track) orbital data republished by CelesTrak; usage policy: download only when needed, at most once per 2 hours, check errors): https://celestrak.org/NORAD/elements/gp.php; CATNR=25544 (ISS), CATNR=48274 (Tiangong), GROUP=visual; FORMAT=json (OMM)
   - **open-meteo** (Open-Meteo weather API, CC BY 4.0 (data); API free for non-commercial use): https://api.open-meteo.com/v1/forecast; latitude=51.505, longitude=-0.02, start_date=DATE, end_date=DATE+1, hourly cloud cover (total, low, mid, high), visibility, humidity, dew point, precipitation, weather code, temperature, wind; timezone Europe/London; model best_match
   - **ea-flood-monitoring** (Environment Agency real-time flood-monitoring API: tidal level readings at Tower Pier, OGL v3.0): https://environment.data.gov.uk/flood-monitoring/id/measures/{station}-level-tidal_level-i-15_min-mAOD/readings; stations 0007 Tower Pier, 0003 Charlton, 0001 Silvertown; startdate=DATE, enddate=DATE+2, _sorted, _limit=1000; plus /id/stations/{station} for the position
+  - **iau-wgsn** (IAU Catalog of Star Names, CC BY (the file: all IAU-produced products are released under Creative Commons Attribution, free to use as long as the source is mentioned); names are facts): https://www.pas.rochester.edu/~emamajek/WGSN/IAU-CSN.txt; the whole IAU Catalog of Star Names, fixed-column text (UTF-8)
+  - **heasarc-messier** (HEASARC MESSIER table, NASA HEASARC service, US Government work: no copyright claimed (public domain); positions, sizes and magnitudes are facts): https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3query.pl; tablehead=name=heasarc_messier, Action=Query, ResultMax=0, displaymode=BatchDisplay, Fields=All, Coordinates=Equatorial, Equinox=2000 (pipe-separated text)
 - Outputs:
   - [docklands/data/sky/stars.json](docklands/data/sky/stars.json)
   - [docklands/data/sky/constellation-lines.json](docklands/data/sky/constellation-lines.json)
   - [docklands/data/sky/sats-2026-10-03.json](docklands/data/sky/sats-2026-10-03.json)
   - [docklands/data/sky/weather-2026-10-03.json](docklands/data/sky/weather-2026-10-03.json)
   - [docklands/data/sky/tide-2026-10-03.json](docklands/data/sky/tide-2026-10-03.json)
+  - [docklands/data/sky/star-names.json](docklands/data/sky/star-names.json)
+  - [docklands/data/sky/messier.json](docklands/data/sky/messier.json)
 - Network: yes; deterministic: no; kind: fetch; after: nothing
 - Hand judgement: Source choice and licence decisions (BSC5 as public domain, d3-celestial lines as BSD-3, CelesTrak with no stated licence and flagged for review, Vieira Milky Way outlines refused) are recorded in data-register.json sources and docklands/README.md "Sky, time, weather and tide".
 
@@ -2086,7 +2092,7 @@ All tool activities in an order that satisfies every "after" (the brands merge a
 49. `build-facade-atlas` (facades): `python3 magpie/cwplans/tools/build-facade-atlas.py`
 50. `build-splats` (splats): `node magpie/cwplans/tools/build-splats.mjs [--ground 4] [--cell 7.2] [--box x0,x1,z0,z1]`
 51. `build-river` (water): `node magpie/cwplans/tools/build-river.mjs`
-52. `fetch-sky` (sky, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [--date 2026-10-03]`
+52. `fetch-sky` (sky, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-sky.mjs [stars] [lines] [sats] [weather] [tide] [names] [messier] [--date 2026-10-03]`
 53. `fetch-trees` (trees, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-trees.mjs fetch [gla|osgs|tpo|tow ...]`
 54. `build-trees` (trees): `node --max-old-space-size=6000 magpie/cwplans/tools/build-trees.mjs`
 55. `check-feeds` (feeds, network): `node magpie/cwplans/feeds/check-feeds.mjs [source ids] [--json] [--live]`
