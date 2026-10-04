@@ -369,6 +369,22 @@ Owner instruction, 2026-10-04: "Wrap it all up into skills". Three new skills, e
   since 2d76be0); the atlas tile host answered curl through the proxy on 2026-10-04. README not edited (another agent's
   file today).
 
+## 2026-10-04 sky, time, weather and tide (sky agent)
+
+- Added `docklands/sky.js` (Menu > Sky, `?t=`, `?t=photo`): page clock; astronomy-engine 2.1.19 (MIT) sun, moon phase and
+  limb, planets, Jupiter's moons, rise/set, twilight; Bright Star Catalogue stars (public domain) with a London star limit;
+  d3-celestial constellation lines (BSD-3); a computed Milky Way band (Vieira outlines refused: no licence); CelesTrak
+  satellites with satellite.js 7.1.0 (MIT; CelesTrak states no licence, marked for review); Open-Meteo cloud and haze
+  (CC BY 4.0); EA tide readings interpolated along the Thames to the viewpoint (OGL), drawn through `setTidal`. Replaced
+  the old moon code in `index.html` with small hooks. Commits 7025728, 956f3e0.
+- Tool `tools/fetch-sky.mjs` (pipeline activity `fetch-sky`, new area "sky"); snapshots `docklands/data/sky/` for
+  3 October 2026; five sources and six files added to `data-register.json`; check exits 0 (142 registered).
+- Photo time solved from the moon: 3 October 2026 23:56 BST, about ±4 min (method and table in
+  `docklands/reference/night-2026-10-03/README.md`). Weather then 15% low cloud, 14 km; Thames −1.20 m OD, falling.
+- README "Sky, time, weather and tide" added; the two stale README lines fixed. Skill `docklands-sky` written.
+- Open: One Canada Square's model apex projects about 0.9° above the photo's apex in both photos (cause not found);
+  no tide predictions (no open source); CelesTrak licence to review before prototyping ends.
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)

@@ -35,7 +35,7 @@ before and after), and what is still open. The other cwplans skills write their 
 | `docklands-3d-page` | `magpie/cwplans/docklands/skills/` | editing `docklands/index.html`: programs and vertex formats, interface, styles, splats, Night mode and its calibration, the fp16 lesson, headless testing, shipping |
 | `cwplans-web-harvest` | `magpie/cwplans/skills/` | crawling entity websites, the headless render, store finders, JSON-LD repair, Factoidal and N-Quads, branch scopes, opening hours, the Chromium proxy CA fix |
 | `cwplans-public-registers` | `magpie/cwplans/skills/` | GIAS, CQC, ODS, charities, Ofsted, gambling, Active Places, FSA pubs: licences, fields dropped, the join and its traps (F17 to F20), rejected sources |
-| sky, time, weather and tide (pending) | not written yet | another agent is building it (`docklands/sky*.js`, `docklands/data/sky/`, `tools/fetch-sky.mjs`, README section "Sky, time, weather and tide"); write the skill from that code when it is committed |
+| `docklands-sky` | `magpie/cwplans/docklands/skills/` | the page clock and `?t=`, the sky (sun, moon phase and limb, planets, stars, constellation lines, Milky Way, satellites), Open-Meteo weather, EA tide at the time shown, the photo-time solution, `tools/fetch-sky.mjs` and the snapshots, their licences |
 
 ## Ship at once
 
