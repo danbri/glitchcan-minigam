@@ -24,3 +24,6 @@ data/raw/registers/
 
 # headless render cache (tools/render-structured-data.mjs)
 data/raw/rendered/
+
+# permits, works and closures downloads (tools/fetch-works.mjs)
+data/raw/works/

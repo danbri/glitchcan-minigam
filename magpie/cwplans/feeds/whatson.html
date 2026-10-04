@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Docklands what's on and what's closed</title>
+<meta name="description" content="Events, licence notices, street closures, road works and planned rail, bus and river closures across the Docklands zone, by date and place, from open public sources.">
+<style>
+:root{--bg:#0f1215;--panel:#15191d;--card:#181d22;--line:#323940;--fg:#e8eaec;--muted:#a9b1b9;--link:#9cc8ff;--ev:#c9a2ff;--road:#ffd26f;--rail:#7cc4ff;--mk:#6fd38f;--pl:#ff9f7a}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f6f7f8;--panel:#fff;--card:#fff;--line:#d5d9de;--fg:#16191c;--muted:#59626b;--link:#0b5fbf;--ev:#6b3fb8;--road:#8a5a00;--rail:#0b5fbf;--mk:#16794a;--pl:#b3461e}}
+:root[data-theme="dark"]{--bg:#0f1215;--panel:#15191d;--card:#181d22;--line:#323940;--fg:#e8eaec;--muted:#a9b1b9;--link:#9cc8ff}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}
+a{color:var(--link);overflow-wrap:anywhere}
+main{max-width:1000px;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;margin:.2em 0 .3em}
+h2{font-size:1.05rem;margin:1.3em 0 .3em;border-bottom:1px solid var(--line);padding-bottom:.2em;display:flex;gap:8px;align-items:baseline}
+h2 .n{color:var(--muted);font-weight:400;font-size:13px}
+.small{color:var(--muted);font-size:13px}
+.bar{position:sticky;top:0;background:var(--bg);padding:10px 0;display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);z-index:1}
+input[type=search],select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
+input[type=search]{flex:1 1 200px}
+label.chk{font-size:13px;display:flex;gap:5px;align-items:center;color:var(--muted)}
+ul.items{list-style:none;margin:0;padding:0}
+ul.items li{border-left:3px solid var(--line);background:var(--card);margin:6px 0;padding:6px 10px;border-radius:0 8px 8px 0}
+li.g-ev{border-left-color:var(--ev)}li.g-road{border-left-color:var(--road)}li.g-rail{border-left-color:var(--rail)}li.g-mk{border-left-color:var(--mk)}li.g-pl{border-left-color:var(--pl)}
+.k{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.g-ev .k{color:var(--ev)}.g-road .k{color:var(--road)}.g-rail .k{color:var(--rail)}.g-mk .k{color:var(--mk)}.g-pl .k{color:var(--pl)}
+.t{margin:2px 0;overflow-wrap:anywhere}
+.m{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 12px}
+details>summary{cursor:pointer;color:var(--muted);font-size:13px;margin:6px 0}
+footer{margin-top:2em;border-top:1px solid var(--line);padding-top:.6em}
+footer li{margin:.2em 0}
+</style>
+</head>
+<body>
+<main>
+<h1>What's on and what's closed: Docklands zone</h1>
+<p class="small">Events, licence notices (temporary event notices, premises licences), street events and closures, road works, traffic orders, planning applications for temporary events and structures, markets, and planned rail, bus and river closures, by date and place. Zone: the 3D model box (Tower Hamlets incl. Canary Wharf, the Isle of Dogs, Poplar, Limehouse and Wapping; Rotherhithe, Surrey Quays and Bermondsey; Deptford; Greenwich and North Greenwich; the east edge of the City) plus the Royal Docks and ExCeL. Snapshot data, not live: each source shows its fetch date below. Method and gaps: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/works/README.md">feeds/works/README.md</a>. Data: <a href="works/works.json">works.json</a>. Other catalogues: <a href="./">data feeds</a>.</p>
+<div class="bar">
+  <input type="search" id="q" placeholder="Search: street, station, route, borough…" aria-label="Search">
+  <select id="grp" aria-label="Type">
+    <option value="">Everything</option>
+    <option value="ev">Events and licences</option>
+    <option value="road">Roads: closures and works</option>
+    <option value="rail">Rail, bus and river</option>
+    <option value="mk">Markets</option>
+    <option value="pl">Planning (temporary events and structures)</option>
+  </select>
+  <select id="bor" aria-label="Borough"><option value="">All boroughs</option></select>
+  <label class="chk"><input type="checkbox" id="minor"> minor road works</label>
+</div>
+<div id="out"><p class="small">Loading…</p></div>
+<footer class="small">
+  <p><strong>Sources and attribution.</strong> Map data and markets: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL). Rail, bus and road disruptions: Powered by TfL Open Data. Contains public sector information licensed under the Open Government Licence v3.0 (DfT Street Manager, The Gazette, NaPTAN, ONS Postcode Directory). Licence notices and markets: London Borough of Tower Hamlets (facts and links). Planning: Planning London Datahub (facts and links).</p>
+  <ul id="src"></ul>
+</footer>
+</main>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const GROUP = k => /TEN|licen|street event|event \(road\)/i.test(k) ? 'ev' : /^market/.test(k) ? 'mk' : /^planning/.test(k) ? 'pl'
+  : /rail|service|bus|ferry|river/i.test(k) ? 'rail' : 'road';
+const MINOR = x => x.source === 'street-manager' && x.kind === 'roadworks';
+const LON = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' });
+const dayOf = s => { if (!s) return null; const d = new Date(s.length === 10 ? s + 'T12:00:00Z' : s); if (isNaN(d)) return null; const p = LON.formatToParts(d); const g = t => p.find(x => x.type === t).value; return `${g('year')}-${g('month')}-${g('day')}`; };
+const LONG = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'long', day: 'numeric', month: 'long' });
+const dayName = d => LONG.format(new Date(d + 'T12:00:00Z'));
+const fmt = s => { if (!s) return ''; if (s.length === 10) return dayName(s); const d = new Date(s); return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(d); };
+const addDays = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+let data = null;
+const today = dayOf(new Date().toISOString());
+function boroughOf(x) { const b = String(x.borough || '').replace(/^(LONDON BOROUGH OF|ROYAL BOROUGH OF|THE )\s*/i, '').replace(/\s*\(.*\)$/, '').trim(); return b ? b.replace(/\w\S*/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase()).replace(/ Of /g, ' of ') : ''; }
+function card(x) {
+  const g = GROUP(x.kind), when = x.recurring ? esc(x.recurring) : [x.start && fmt(x.start), x.end && x.end !== x.start && 'to ' + fmt(x.end)].filter(Boolean).join(' ');
+  const map = x.lat != null ? ` · <a href="https://www.openstreetmap.org/?mlat=${x.lat}&amp;mlon=${x.lon}#map=17/${x.lat}/${x.lon}">map</a>` : '';
+  return `<li class="g-${g}"><div class="k">${esc(x.kind)}</div><div class="t">${esc(x.title)}</div><div class="m"><span>${when}</span>${x.location ? `<span>${esc(x.location)}</span>` : ''}${boroughOf(x) ? `<span>${esc(boroughOf(x))}</span>` : ''}<span>${x.url ? `<a href="${esc(x.url)}">${esc(x.source)}</a>` : esc(x.source)}${map}</span></div></li>`;
+}
+function render() {
+  const q = $('q').value.trim().toLowerCase(), grp = $('grp').value, bor = $('bor').value, minor = $('minor').checked;
+  const xs = data.items.filter(x => (!grp || GROUP(x.kind) === grp) && (!bor || boroughOf(x) === bor) && (minor || !MINOR(x))
+    && (!q || [x.title, x.location, x.borough, x.kind, x.street, x.postcode].join(' ').toLowerCase().includes(q)));
+  const now = [], long = [], days = new Map(), later = [], undated = [], horizon = addDays(today, 21);
+  for (const x of xs) {
+    if (x.recurring || (!x.start && !x.end)) { undated.push(x); continue; }
+    const s = dayOf(x.start), e = dayOf(x.end) || s;
+    if (e && e < today) continue;
+    if (s && s <= today) { (e && e > addDays(today, 30) ? long : now).push(x); continue; }
+    if (s && s <= horizon) { if (!days.has(s)) days.set(s, []); days.get(s).push(x); } else later.push(x);
+  }
+  const sec = (title, list, open = true) => list.length ? (open
+    ? `<h2>${title} <span class="n">${list.length}</span></h2><ul class="items">${list.map(card).join('')}</ul>`
+    : `<h2>${title} <span class="n">${list.length}</span></h2><details><summary>Show ${list.length}</summary><ul class="items">${list.map(card).join('')}</ul></details>`) : '';
+  let h = sec('On now (started, ends within 30 days)', now);
+  for (const d of [...days.keys()].sort()) h += sec(dayName(d), days.get(d));
+  h += sec(`Later (after ${dayName(horizon)})`, later, false) + sec('Long-running (ends more than 30 days from today)', long, false) + sec('Markets and recurring', undated);
+  $('out').innerHTML = h || '<p class="small">Nothing matches.</p>';
+}
+fetch('works/works.json').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(j => {
+  data = j;
+  const bs = [...new Set(j.items.map(boroughOf).filter(Boolean))].sort();
+  $('bor').insertAdjacentHTML('beforeend', bs.map(b => `<option>${esc(b)}</option>`).join(''));
+  $('src').innerHTML = j.meta.sources.map(s => `<li><strong>${esc(s.id)}</strong>: ${s.items} items, fetched ${esc(s.fetched)}. ${esc(s.attribution || '')} Licence: ${esc(s.licence || '')}</li>`).join('')
+    + `<li>Built ${esc(j.meta.built)} by tools/fetch-works.mjs. Items with no position were placed by borough or line only.</li>`;
+  for (const id of ['q', 'grp', 'bor', 'minor']) $(id).addEventListener('input', render);
+  render();
+}).catch(e => { $('out').innerHTML = `<p class="small">Could not load works.json (${esc(e.message)}). Published page: <a href="https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/whatson.html">https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/whatson.html</a></p>`; });
+})();
+</script>
+</body>
+</html>
