@@ -639,6 +639,13 @@ central tower - do we have an index of these?"
    only) recorded in `facts.json`; the Tower Hamlets Idox register disallows crawling and was not fetched. New faults F32
    (commencements never closed), F33 (commencement lag, computed lapse dates), F34 (stale Wikidata "under construction"),
    F35 (point-marker polygons).
+3. **3D page** (https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?view=greenlandday&t=2026-10-04T11:30, Layers >
+   Works in progress): status-coloured footprints, approved-height frames of thin edges, NOTAM crane masts, the built heights of
+   30 Marsh Wall (core, about 115 m OD) and 25 Cuba Street (about 80 m OD) from the owner's photos; a record card per site; a
+   credits group. New view `?view=greenlandday` matching the wide photo: landmarks within 4.0 px of 2576 (table in the
+   docklands-3d-page skill). Tested headless: rotherhithe, greenland, pier, greenlandday and the default view at 1600 x 900
+   DPR 1 and 390 x 844 DPR 3, no console error. First drafts that failed: see-through walls stacked into orange blocks; the
+   built prism full-bright at night; a comment that cut a one-line block (caught by `node --check`).
 
 ## Open, in the order proposed
 

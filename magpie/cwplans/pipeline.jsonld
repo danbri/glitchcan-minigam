@@ -5279,7 +5279,8 @@
     "Camera: heading (from grid north), tilt, roll and focal length by Nelder-Mead least squares on the landmark pixels; principal point fixed at the image centre; landmark = the apex (pyramid) or the centroid of the top tier at its top height in docklands/data/towers.json; a landmark with a null y is fitted in x only.",
     "Shadow: the pixel of a post foot and of the shadow of its cap are back-projected to the plane 1.5 m below the eye; sun grid azimuth = bearing foot->shadow + 180 degrees; true azimuth = grid + grid_to_true_deg (1.54 here). The azimuth does not depend on the assumed camera height; the printed shadow lengths do (given for 1.3, 1.5, 1.7 m).",
     "Time: astronomy-engine Equator(of date, aberration) + Horizon(refraction \"normal\") for the observer in the points file; bisection on the azimuth between 06:00 and 18:00 UTC of the date. Result = the time of the mean azimuth; range = the times of the smallest and largest azimuth.",
-    "The library is run in a vm context; times are passed as that realm's Date (its instanceof check fails on a Date of the main realm)."
+    "The library is run in a vm context; times are passed as that realm's Date (its instanceof check fails on a Date of the main realm).",
+    "The 3D page view ?view=greenlandday uses the same four landmarks refitted with roll 0 (the page camera has no roll): heading 51.9, tilt 6.45, field 99.9, rms 2.7 px (fitted by a grid search in the session, numbers in the docklands-3d-page skill)."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
@@ -10731,6 +10732,20 @@
     }
    ],
    "cwp:osmUse": "counts"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/locate.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the 3D page's locate button (blue dot, accuracy circle, follow and heading modes); the position is not sent, stored or put in the URL",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm",

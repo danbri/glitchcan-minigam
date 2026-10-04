@@ -1836,6 +1836,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - Shadow: the pixel of a post foot and of the shadow of its cap are back-projected to the plane 1.5 m below the eye; sun grid azimuth = bearing foot->shadow + 180 degrees; true azimuth = grid + grid_to_true_deg (1.54 here). The azimuth does not depend on the assumed camera height; the printed shadow lengths do (given for 1.3, 1.5, 1.7 m).
   - Time: astronomy-engine Equator(of date, aberration) + Horizon(refraction "normal") for the observer in the points file; bisection on the azimuth between 06:00 and 18:00 UTC of the date. Result = the time of the mean azimuth; range = the times of the smallest and largest azimuth.
   - The library is run in a vm context; times are passed as that realm's Date (its instanceof check fails on a Date of the main realm).
+  - The 3D page view ?view=greenlandday uses the same four landmarks refitted with roll 0 (the page camera has no roll): heading 51.9, tilt 6.45, field 99.9, rms 2.7 px (fitted by a grid search in the session, numbers in the docklands-3d-page skill).
 - Inputs:
   - [docklands/reference/day-2026-10-04/points.json](docklands/reference/day-2026-10-04/points.json)
   - [docklands/data/towers.json](docklands/data/towers.json)

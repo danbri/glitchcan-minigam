@@ -91,7 +91,7 @@ colour mask and polygon offset at the start of every frame. After you edit a lon
 - **Pixel-art frame buffer.** `pixBegin()` unbinds the frame's own texture before drawing into it: a texture that is
   bound while it is the render target is a feedback loop, and every draw fails.
 
-URL switches: `?view=<name>` (any key of `VIEWS`: area, cw, under, plan, rotherhithe, greenland, pier), `?night`,
+URL switches: `?view=<name>` (any key of `VIEWS`: area, cw, under, plan, rotherhithe, greenland, pier, greenlandday), `?night`,
 `?pixel`, `?capture` (no overlays, photo colours: drone frames), `#music`, `#at=`.
 Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNight`, `setStyle`, `setSplatMode`,
 `setGround`, `captureMode`, `pickAt`, `selectBuilding`, `searchItems`, `route`, `setEye`/`clearEye`, `screenOf`,
@@ -405,6 +405,53 @@ Only a real phone can confirm: iOS Safari ignores `user-scalable=no` (since iOS 
 and the `gesture*` and `touchmove` listeners. The edge swipe back (iOS Safari, Android gesture navigation) is the operating
 system's and a page cannot stop it. Pull-to-refresh, the long-press callout, text selection loupes and the drop of a file
 from another app need a real device to see. The headless test shows the events are prevented, not what each OS does.
+
+## Works in progress and the day view from Greenland Pier (2026-10-04)
+
+Live: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?view=greenlandday&t=2026-10-04T11:30 (then Menu >
+Layers > Works in progress > Construction sites). Data and rules: skill `cwplans-construction`.
+
+- **Layer** (`ov_works`, off; `OVL.works` = `../registry/sources/construction/sites.json`, 1.75 MB, loaded on first tick):
+  `worksBuild()` inside `buildOverlays()`. Per site in the model box: the footprint as a ground ribbon (`ovRibbon`, `OV.flat`)
+  coloured by status (orange on site, yellow approved, green completed in 2 years, blue proposed, grey commenced long ago);
+  on site with a height: a frame of thin edges (outline at the top, four uprights at the outline's extreme points) when the
+  footprint is 6,000 m² or less, else a thin mast at the centre; NOTAM cranes matched to the site; the height built so far
+  (`current.top_m_od` from `facts.json`) as a grey prism, a core at 45% of the outline. Heights m OD: PLD `max_height` as
+  entered, else storeys x 3.2 m above the ground, else the developer's height above the ground (`worksTop`).
+  Measured (all on, 2026-10-04): 386 sites drawn, 74 frames, 10 cranes, 2 built prisms; no console error at 1600 x 900 DPR 1
+  and 390 x 844 DPR 3 from `?view=rotherhithe`, `greenland`, `pier`, `greenlandday` and the default view.
+- **What failed first:** see-through walls (`ovFence`, alpha 0.07) for the approved height: from the photo views the walls of
+  74 sites stacked into orange blocks over the skyline. Edges only now. The built prism in `OV.solid` was full-bright white at
+  night: it is in `OV.flat` (lit like the ground). A comment put at the end of a `prism(...)` call commented out the rest of
+  its one-line block (`node --check` caught it): the rule at the top of this skill again.
+- **Taps**: a hit point at the frame top (`OV.hits`) and the footprint as a ground polygon (`OV.polys`, priority 0, before the
+  London Datastore outlines). The card (`worksCard`): status with rule and confidence, dates with their source record,
+  approved figures (planning register and developer or press, with links), the frame height and where it came from, the built
+  height with its photo method, developer and contractor with sources, NOTAM cranes, Street Manager, OSM ids, Wikidata items
+  (not "low"), brownfield references, planning references linked to the borough register, the description, the footprint
+  source and a one-line source note; the full credits are in Menu > About > Credits ("Works in progress").
+- **`?view=greenlandday`** (no button): the owner's wide day photo `docklands/reference/day-2026-10-04/pier-wide-skyline.jpg`.
+  Eye (-830, 4.5 m OD, 1158), heading 51.9° from grid north, tilt 6.45°, horizontal field 99.9°, `night: false`. The camera of
+  `tools/solve-photo-sun.mjs` has a roll of +0.65° that `eyeView` cannot take; refitted with no roll over the same four tower
+  tops: rms 2.7 px. Add `&t=2026-10-04T11:30` for the day sky at the photo time (11:30 BST from the bitt shadows).
+- **Calibration against the photo** (render 1288 x 966 at DPR 2 = 2576 x 1932, the photo's size; landmark points projected
+  with `__docklands.CAM`; photo pixels read by eye):
+
+  | landmark | photo (px) | render (px) | dx, dy |
+  |---|---|---|---|
+  | Newfoundland crown top (cwb-0451) | 692, 856 | 688.5, 857.7 | -3.5, +1.7 |
+  | Landmark Pinnacle roof (cwb-0577) | 751, 807 | 752.9, 807.3 | +1.9, +0.3 |
+  | One Canada Square apex (cwb-0413) | 970, 903 | 974.0, 899.9 | +4.0, -3.1 |
+  | Citigroup Centre roof sign, x only (cwb-0520) | 1100 | 1097.4 | -2.6 |
+  | 22 Marsh Wall roof (cwb-0641, not in the fit) | 857, 917 | 856.9, 921.2 | -0.1, +4.2 |
+
+  Before the refit (tilt 6.8 from the camera with roll): dy +3.4 to +10.7 px. Tones (frames 1000 px wide): mean luma photo
+  0.466, render 0.462 (with `&t=` day sky); skyline band (rows 240 to 330) 0.558 and 0.540; sky top colour photo (49, 76, 128),
+  render (68, 115, 198): the drawn sky is lighter and more saturated than the photo's polarised blue.
+- **`?view=greenland` by day**: it is the night bollard photo's framing (heading 39.7°, field 44°), from an eye 5 m from the
+  wide photo's. The bearings agree: the four landmarks' bearings from the two eyes differ by at most 0.3°. Not changed.
+- What the model lacks in this view: buildings finished after the LiDAR (the red-brick tower in front of One Canada Square and
+  others) and every crane; the 30 Marsh Wall core and 25 Cuba Street are drawn only through this layer.
 
 ## Testing
 

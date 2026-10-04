@@ -221,6 +221,11 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
         <label><input type="checkbox" id="ov_cons"> Conservation areas</label><label><input type="checkbox" id="ov_dos"> Designated open space</label><label><input type="checkbox" id="ov_wharf"> Safeguarded wharves</label><label><input type="checkbox" id="ov_venues"> Cultural venues</label>
       </div>
       <p class="small" id="ovLdsNote">Outlines on the ground (violet conservation areas, green open space, blue wharves); cultural venues as gold markers. Tap inside an outline or on a marker for its record. Contains public sector information licensed under the Open Government Licence v3.0 (Greater London Authority, Planning Constraints Map and Cultural Infrastructure Map 2023). The GLA cannot warrant the quality or accuracy of the data.</p>
+      <h3>Works in progress</h3>
+      <div class="chips">
+        <label><input type="checkbox" id="ov_works"> Construction sites</label>
+      </div>
+      <p class="small" id="ovWorksNote">Sites from the planning register with their status: orange on site, yellow approved and not started, green completed in the last two years, blue proposed, grey commenced years ago and never closed. On site: the approved height as a faint frame, crane masts where a NOTAM gives one, and the height built so far where a source gives it (grey). Tap a site for its record. Index: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/construction/README.md">registry/sources/construction</a>.</p>
       <h3>Skyline by year (measured)</h3>
       <div class="ctl"><button type="button" id="skyPlay" aria-label="Play the years">▶</button><input id="skyYear" type="range" min="0" max="0" step="1" value="0" aria-label="Survey year"><output id="skyYearO">today</output></div>
       <p class="small" id="skyNote">Heights of the buildings on the estate and 300 m round it in each Environment Agency LiDAR survey (1999 to 2022). Today's OSM outlines are used, so buildings demolished before today do not appear.</p>
@@ -289,6 +294,10 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
         <li>Crime: <a href="https://data.police.uk/">police.uk</a>, <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>; air quality: London Air Quality Network (Environmental Research Group, Imperial College London); storm overflows: Thames Water (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)</li></ul>
       <h3>London Datastore</h3><ul class="small">
         <li>Conservation areas, designated open space, safeguarded wharves (GLA Planning Constraints Map; boundaries belong to the planning authorities) and the Cultural Infrastructure Map 2023: contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a> (Greater London Authority). The GLA cannot warrant the quality or accuracy of the data.</li></ul>
+      <h3>Works in progress</h3><ul class="small">
+        <li>Planning status and dates: Planning London Datahub (Greater London Authority and the London boroughs, with the London Development Database), facts and links only</li>
+        <li>Construction areas: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a> (ODbL); cranes: UK AIS (NATS), facts only; highway cranes and hoardings: DfT Street Manager, <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>; brownfield register and site allocations: GLA, OGL v3.0; buildings and projects: Wikidata, CC0</li>
+        <li>Developers, heights and dates of named schemes: their own pages and the press, facts only; built heights of 30 Marsh Wall and 25 Cuba Street measured in the owner's photos of 4 October 2026 (CC0 1.0)</li></ul>
       <h3>Music and software</h3><ul class="small">
         <li>Music: Kevin MacLeod (<a href="https://incompetech.com/">incompetech.com</a>), <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, streamed from Wikimedia Commons</li>
         <li><a href="https://github.com/mapbox/earcut">earcut</a> (ISC)</li></ul>
@@ -651,7 +660,11 @@ const VIEWS = {
   // The owner took them "as Thames Clipper landed at Greenland Dock pier & shortly afterwards, a few metres west on promenade".
   rotherhithe: eyeView([-896, 6.9, 1150], 43.3, -1, 42),   // the Thames path a few metres west of Greenland Pier, 1.6 m above the walk by the river wall (crest 5.3 m OD): promenade-skyline-railing.jpg
   greenland: eyeView([-825, 5.3, 1160], 39.7, 3.5, 44),   // on Greenland Pier (x -830, z 1158 in the places list), 1.6 m above the pontoon deck: promenade-skyline-bollard.jpg
-  pier: eyeView([-740, 6, 140], 83.6, 11, 69),   // on board a Thames Clipper at Canary Wharf Pier, about 3.5 m above the water: clipper-canary-wharf-pier.jpg
+  pier: eyeView([-740, 6, 140], 83.6, 11, 69),
+  // day, the owner's wide photo of 4 Oct 2026 (docklands/reference/day-2026-10-04/pier-wide-skyline.jpg): camera fitted by
+  // the same four tower tops as tools/solve-photo-sun.mjs, refitted with no roll (the page has none): heading 51.9, tilt 6.45,
+  // horizontal field 99.9 degrees, rms 2.7 px of 2576 (calibration in the docklands-3d-page skill)
+  greenlandday: { ...eyeView([-830, 4.5, 1158], 51.9, 6.45, 99.9), night: false },   // on board a Thames Clipper at Canary Wharf Pier, about 3.5 m above the water: clipper-canary-wharf-pier.jpg
 };
 function eyeView(E, az, lp, hfov, D = 1200) {
   const a = az * Math.PI / 180, p = lp * Math.PI / 180;
@@ -1497,6 +1510,7 @@ const OVL = {
   heli: { file: '../feeds/live/helicopters.json', river: true },
   cons: { file: '../feeds/london-datastore/conservation-areas/conservation-areas.geojson' }, dos: { file: '../feeds/london-datastore/designated-open-space/designated-open-space.geojson' },
   wharf: { file: '../feeds/london-datastore/safeguarded-wharves/safeguarded-wharves.geojson' }, venues: { file: '../feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.geojson' },
+  works: { file: '../registry/sources/construction/sites.json' },
 };
 const ovOn = k => { const el = $('ov_' + k); return !!(el && el.checked); };
 const inBox = (x, z, m = 0) => { const E = A.meta.extent; return x >= E.x0 - m && x <= E.x1 + m && z >= E.z0 - m && z <= E.z1 + m; };
@@ -1580,6 +1594,7 @@ async function buildOverlays() {
   if (D('venues')) { const d = OV.data.venues; n.venues = 0;
     for (const f of d.features) { if (!f.geometry || f.geometry.type !== 'Point') continue; const [lo, la] = f.geometry.coordinates, [x, z] = geo(lo, la); if (!inBox(x, z)) continue; const g = groundAt(x, z);
       stick(x, z, g, g + 14, 1, [.95, .82, .45]); stick(x, z, g + 14, g + 19, 5, [1, .78, .25]); n.venues++; hits.push({ x, y: g + 16, z, card: () => ldsCard('venues', d, f.properties) }); } }
+  if (D('works')) worksBuild(OV.data.works, S, G, F, tips, hits, polys, n, stick);
   OV.flat = F.n ? F.upload() : null; OV.solid = S.n ? S.upload() : null; OV.glass = G.n ? G.upload() : null; OV.tips = tips.length ? spriteBuf(tips) : null; OV.hits = hits; OV.polys = polys.sort((a, b) => a.pri - b.pri); OV.n = n; draw();
 }
 function ovRibbon(M, ring, w, col) {   // a closed outline as flat quads on the ground (0.7 m up), inside the model only
@@ -1597,6 +1612,75 @@ function ldsCard(k, d, P) {
   const link = P.website || (k === 'wharf' && P.source) || null;
   ovCard(`<b>${esc(P.sitename || P.name || LDSNAME[k])}</b> <span class="small">${LDSNAME[k]}</span><div>${rows.join(' · ')}</div>${P.notes ? `<div class="small">${esc(P.notes)}</div>` : ''}${link ? `<div class="small"><a href="${esc(link)}">${esc(String(link).replace(/^https?:\/\//, '').slice(0, 60))}</a></div>` : ''}` +
     `<div class="small" style="margin-top:6px">Source: <a href="${esc(m.page)}">${esc(m.source)}</a>${m.dataset_modified ? `, dataset updated ${esc(String(m.dataset_modified).slice(0, 10))}` : ''}. ${esc(m.attribution)} Licence: <a href="${esc(m.licence_url)}">${esc(m.licence)}</a>.</div>`);
+}
+// Works in progress (registry/sources/construction/sites.json, tools/build-construction-index.mjs, skill cwplans-construction).
+// The footprint as a ground ribbon coloured by status. On site: the approved height as a faint frame (see-through walls fading to
+// the ground and a bright band at the top) when the footprint is a building-sized plot (6,000 m2 or less), else a thin mast at its
+// centre; NOTAM cranes matched to the site; and the height built so far (grey; a core drawn at 45% of the outline) where a source
+// gives one (drawn in the ground-lit buffer OV.flat, so it darkens at night like the model). Frames are edges only. Heights are m OD: the PLD max_height as entered (m AOD in the descriptions checked), else storeys x 3.2 m above the
+// ground, else a developer's height above the ground.
+const WCOL = { on_site: [1, .55, .12], approved_not_started: [.95, .86, .3], completed_recently: [.45, .86, .6], proposed: [.62, .72, .98], commenced_stale: [.6, .6, .62] };
+const WNAME = { on_site: 'on site', approved_not_started: 'approved, not started', completed_recently: 'completed in the last two years', proposed: 'proposed (application or appeal undecided)', commenced_stale: 'commenced years ago, never marked complete' };
+const encRing = r => { const o = []; let px = 0, pz = 0; for (const [x, z] of r) { const X = Math.round(x * 10), Z = Math.round(z * 10); o.push(X - px, Z - pz); px = X; pz = Z; } return o; };
+function worksTop(s, g) {
+  const a = s.approved || {}, w = a.web || {};
+  if (a.max_height_m && a.max_height_m > g + 3) return { y: a.max_height_m, from: `${a.max_height_m} m (PLD max_height, ${esc(a.from || '')})` };
+  if (a.storeys_max) return { y: g + a.storeys_max * 3.2, from: `${a.storeys_max} storeys x 3.2 m (PLD, ${esc(a.from || '')})` };
+  if (w.height_m) return { y: g + w.height_m, from: `${w.height_m} m above the ground (${esc(w.height_meaning || 'developer or press')})` };
+  if (w.storeys) return { y: g + w.storeys * 3.2, from: `${w.storeys} storeys x 3.2 m (developer or press)` };
+  return null;
+}
+function worksRing(s) {
+  if (s.footprint.ring_wgs84) { const r = s.footprint.ring_wgs84.map(([lo, la]) => geo(lo, la)); if (r.length > 1 && r[0][0] === r.at(-1)[0] && r[0][1] === r.at(-1)[1]) r.pop(); return r; }
+  const [cx, cz] = geo(s.position.lon, s.position.lat), rr = s.footprint.circle_local.r, o = []; for (let k = 0; k < 24; k++) o.push([cx + rr * Math.cos(k / 24 * 2 * Math.PI), cz + rr * Math.sin(k / 24 * 2 * Math.PI)]); return o;
+}
+// a frame of thin edges, not walls (see-through walls over a whole skyline read as orange blocks from the photo views):
+// the outline at the top and four uprights at the outline's extreme points
+function worksFrame(S, ring, g, top, col) {
+  const w = 1.5, sh = col.map(v => v * .85);
+  for (let i = 0; i < ring.length; i++) { const p = ring[i], q = ring[(i + 1) % ring.length]; if (Math.hypot(q[0] - p[0], q[1] - p[1]) > .5) beam(S, [p[0], top, p[1]], [q[0], top, q[1]], w, w, col); }
+  const ex = [0, 1, 2, 3].map(k => ring.reduce((b, p) => ([p[0], p[1], -p[0], -p[1]][k] > [b[0], b[1], -b[0], -b[1]][k] ? p : b), ring[0]));
+  for (const p of new Set(ex)) beam(S, [p[0], groundAt(p[0], p[1]), p[1]], [p[0] + .01, top, p[1]], w, w, sh);
+}
+function worksBuild(d, S, G, F, tips, hits, polys, n, stick) {
+  n.works = 0; n.worksFrames = 0; n.worksCranes = 0; n.worksBuilt = 0;
+  for (const s of d.sites) { const col = WCOL[s.status]; if (!col) continue;
+    const ring = worksRing(s); if (ring.length < 3) continue;
+    const c = ring.reduce((a, p) => [a[0] + p[0] / ring.length, a[1] + p[1] / ring.length], [0, 0]); if (!inBox(c[0], c[1])) continue;
+    ovRibbon(F, ring, s.status === 'on_site' ? 3 : 2, col); n.works++;
+    const g = groundAt(c[0], c[1]), area = Math.abs(ring.reduce((a, p, i) => { const q = ring[(i + 1) % ring.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0) / 2), top = worksTop(s, g);
+    let ty = g + 14;
+    if (s.status === 'on_site' && top) { ty = top.y;
+      if (area <= 6000) worksFrame(S, ring, g, top.y, col);
+      else { stick(c[0], c[1], g, top.y, 1.5, col); beam(S, [c[0] - 8, top.y, c[1]], [c[0] + 8, top.y, c[1]], 1.5, 1.5, col); }
+      n.worksFrames++; }
+    if (s.current && s.current.top_m_od > g + 3) { const sc = /core/.test(s.current.what || '') ? .45 : 1, rr = ring.map(([x, z]) => [c[0] + (x - c[0]) * sc, c[1] + (z - c[1]) * sc]);
+      prism(F, { p: encRing(rr) }, g, s.current.top_m_od, [.66, .64, .6], false); n.worksBuilt++; ty = Math.max(ty, s.current.top_m_od); }
+    for (const cr of s.cranes || []) { const [x, z] = geo(cr.lon, cr.lat), gg = groundAt(x, z), t = cr.top_m_od; if (!t || t <= gg + 2 || !inBox(x, z)) continue;
+      stick(x, z, gg, t, 1.6, [.95, .78, .2]); beam(S, [x - 9, t - 1, z], [x + 22, t - 1, z], 1.4, 1.4, [.95, .78, .2]); n.worksCranes++;
+      if (cr.lit) tips.push({ x, y: t + .6, z, c: [1, .1, .06], i: 1, s: .8, px: pxr(1, 2), h: 3.2, sd: Math.random() }); }
+    const bb = ring.reduce((b, [x, z]) => [Math.min(b[0], x), Math.min(b[1], z), Math.max(b[2], x), Math.max(b[3], z)], [1e9, 1e9, -1e9, -1e9]);
+    const card = () => worksCard(s, d.meta, g); hits.push({ x: c[0], y: ty, z: c[1], card }); polys.push({ ring, bb, pri: 0, card }); }
+}
+function worksCard(s, m, g) {
+  const a = s.approved || {}, w = a.web || {}, top = worksTop(s, g), L = [], li = h => L.push(`<li>${h}</li>`), d = s.dates || {}, link = (u, t) => u ? `<a href="${esc(u)}">${esc(t)}</a>` : esc(t);
+  li(`Status: <b>${esc(WNAME[s.status] || s.status)}</b> (rule ${esc((s.status_rule || '').split(':')[0])}, ${esc(s.status_confidence || '')} confidence)${s.status_note ? ` · ${esc(s.status_note)}` : ''}`);
+  const dl = [d.decision && `approved ${esc(d.decision)}`, d.commenced && `commenced ${esc(d.commenced)}`, d.completed && `completed ${esc(d.completed)}`].filter(Boolean); if (dl.length) li(dl.join(' · ') + ` <span class="small">(${esc(d.from || '')})</span>`);
+  const ap = [a.storeys_max && `${a.storeys_max} storeys`, a.max_height_m && `${a.max_height_m} m`, a.units && `${a.units} homes or rooms`, a.non_res_gia_gained_m2 && `${Math.round(a.non_res_gia_gained_m2).toLocaleString('en-GB')} m² other floor space`].filter(Boolean);
+  if (ap.length) li('Approved (planning register): ' + ap.join(', '));
+  if (w.storeys || w.height_m) li(`Developer or press: ${[w.storeys && `${w.storeys} storeys`, w.height_m && `${w.height_m} m`, w.homes && `${w.homes} homes`, w.rooms && `${w.rooms} rooms`, w.architect && `architect ${esc(w.architect)}`, (w.expected_opening || w.expected_completion) && `due ${esc(w.expected_opening || w.expected_completion)}`].filter(Boolean).join(', ')} (${(w.sources || []).map(u => link(u, u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0])).join(', ')})`);
+  if (top && s.status === 'on_site') li(`Frame drawn to ${Math.round(top.y)} m OD: ${top.from}`);
+  if (s.current) li(`Built by ${esc(s.current.date)}: ${esc(s.current.what)}; top about ${s.current.top_m_od} m OD (±${s.current.top_m_od_uncertainty} m)${s.current.built_storeys_min ? `, at least ${s.current.built_storeys_min} floors` : ''}. ${esc(s.current.source || '')}`);
+  for (const k of ['developer', 'contractor']) if ((s[k] || []).length) li(`${k === 'developer' ? 'Developer' : 'Contractor'}: ` + s[k].map(x => `${esc(x.name)} (${esc(x.role)}; ${/^https?:/.test(x.source) ? link(x.source, x.source.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) : esc(x.source)})`).join('; '));
+  if ((s.cranes || []).length) li('Cranes (NOTAM): ' + s.cranes.map(c => `${esc(c.notam)} top ${c.top_amsl_ft} ft (${Math.round(c.top_m_od)} m), ${c.distance_m} m away, ${esc(c.confidence)}`).join('; '));
+  if ((s.street_activities || []).length) li('Street Manager: ' + s.street_activities.slice(0, 4).map(x => `${esc(x.type.replace(/_/g, ' '))} on ${esc(x.street || '')} ${esc(x.start)} to ${esc(x.end)} (${x.distance_m} m, ${esc(x.confidence)})`).join('; '));
+  if ((s.osm || []).length) li('OpenStreetMap: ' + s.osm.slice(0, 4).map(o => `<a href="https://www.openstreetmap.org/${esc(o.osm)}">${esc(o.osm)}</a> ${esc(Object.entries(o.tags).filter(([k]) => /^(name|landuse|building|construction)$/.test(k)).map(([k, v]) => `${k}=${v}`).join(' '))}`).join('; '));
+  const wdl = (s.wikidata || []).filter(x => x.confidence !== 'low').slice(0, 3); if (wdl.length) li('Wikidata: ' + wdl.map(x => `<a href="https://www.wikidata.org/wiki/${esc(x.qid)}">${esc(x.label || x.qid)}</a> (${esc(x.confidence)}${(x.state || []).includes('Q12377751') ? ', marked under construction' : ''})`).join(', '));
+  if ((s.brownfield || []).length) li('Brownfield register: ' + s.brownfield.map(b => `${esc(b.site_reference)} ${esc(b.planning_status || '')}`).join('; '));
+  const pl = (s.planning || []).slice(0, 6).map(p => `${p.url ? link(p.url, p.lpa_app_no) : esc(p.lpa_app_no)} <span class="small">${esc(p.status || p.decision || '')}${p.decision_date ? ' ' + esc(p.decision_date) : ''}${p.role === 'lead' ? ', lead' : ''}</span>`);
+  ovCard(`<b>${esc(s.name)}</b> <span class="small">construction site · ${esc(s.borough || '')}</span><div class="small">${esc(s.address || '')}</div><ul class="small" style="margin:4px 0 0 1em;padding:0">${L.join('')}</ul>` +
+    `<div class="small">Planning: ${pl.join(', ')}${s.planning_count > 6 ? ` and ${s.planning_count - 6} more` : ''}</div>${s.description ? `<div class="small">“${esc(s.description)}”</div>` : ''}<div class="small">Footprint: ${esc(s.footprint.from)}.</div>` +
+    `<div class="small" style="margin-top:6px">Index built ${esc(String(m.built || '').slice(0, 10))}. Source: Planning London Datahub (GLA and the London boroughs), facts and links only; other sources in Menu &gt; About &gt; Credits.</div>`);
 }
 // taps: a point within 22 CSS px on screen, nearest first; then (after the building pick) the ground outline under the tap
 function ovTapPoint(cx, cy) {
