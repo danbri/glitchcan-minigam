@@ -199,6 +199,11 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
         <label><input type="checkbox" id="showHeritage"> Heritage records</label><label><input type="checkbox" id="showQuality"> Quality issues</label><label><input type="checkbox" id="showCrime"> Crime, latest month (live)</label>
       </div>
       <p class="small" id="dataNote">Tap a building at Canary Wharf for its record.</p>
+      <h3>Live state (snapshot)</h3>
+      <div class="chips">
+        <label><input type="checkbox" id="ov_bikes"> Hire bike docks</label><label><input type="checkbox" id="ov_lifts"> Station lift outages</label><label><input type="checkbox" id="ov_cranes"> Cranes (NOTAMs)</label><label><input type="checkbox" id="ov_heli"> Helicopter route H4 and area EGR159</label>
+      </div>
+      <p class="small" id="ovLiveNote">Dated snapshots (4 October 2026), not live. Docks: column height is the number of docks, red standard bikes, amber e-bikes; a red ring is empty, a white ring full. Lift outages: a red badge over the station. Cranes: masts to their published height above sea level, the tip lit at night where the NOTAM says lit. H4: the band from 1,000 to 2,000 ft over the Thames; EGR159: the restricted area to 1,400 ft. Tap one for its record. Powered by TfL Open Data; UK AIS (NATS) facts.</p>
       <h3>Skyline by year (measured)</h3>
       <div class="ctl"><button type="button" id="skyPlay" aria-label="Play the years">▶</button><input id="skyYear" type="range" min="0" max="0" step="1" value="0" aria-label="Survey year"><output id="skyYearO">today</output></div>
       <p class="small" id="skyNote">Heights of the buildings on the estate and 300 m round it in each Environment Agency LiDAR survey (1999 to 2022). Today's OSM outlines are used, so buildings demolished before today do not appear.</p>
@@ -703,10 +708,11 @@ function render() {
   if ($('showFloors').checked) drawMesh(L.floors, 1);
   if ($('showWalls').checked) drawMesh(L.walls, 1);
   if ($('showTrees').checked && !PIX.on && L.treesN && !sOnly) { drawMesh(L.treesN, 1); if (nm && L.treesLit) { gl.uniform1f(uDim, .75); drawMesh(L.treesLit, 1); gl.uniform1f(uDim, nDim); } }   // night: trees by the lamps, up-lit
-  gl.uniform1f(uDim, 1); drawMesh(L.pins, 1); drawMesh(L.walk, 1); gl.uniform1f(uDim, nDim);
+  gl.uniform1f(uDim, 1); drawMesh(L.pins, 1); drawMesh(OV.solid, 1); drawMesh(L.walk, 1); gl.uniform1f(uDim, nDim);
   if (bm === 'solid' && !sOnly) drawFacades(L.bld, 1, P);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (bm === 'ghost' && !sOnly) drawFacades(L.bld, .22, P);
+  if (OV.glass) { gl.uniform1f(uDim, nm ? .5 : 1); drawMesh(OV.glass, 1); gl.uniform1f(uDim, nDim); }   // overlays: see-through prisms, fences and the H4 band
   // the cut removes structures; ground, greens and water stay as faint context so you can see where you are
   gl.uniform1f(uCut, 1e9);
   if (cutOn) { drawMesh(L.water, .35); drawMesh(L.tidal, .35); drawMesh(L.dockVol, .3); }
@@ -881,8 +887,9 @@ let tap = null;
 cv.addEventListener('pointerdown', e => { tap = { x: e.clientX, y: e.clientY, t: performance.now(), n: ptrs.size }; });
 cv.addEventListener('pointerup', e => {
   if (!tap || tap.n !== 1 || Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 6 || performance.now() - tap.t > 700) return;
-  const r = cv.getBoundingClientRect(), k = pickAt(e.clientX - r.left, e.clientY - r.top);
-  if (k >= 0 && AT && AT.buildings[k]) selectBuilding(k);
+  const r = cv.getBoundingClientRect(), cx = e.clientX - r.left, cy = e.clientY - r.top; if (ovTapPoint(cx, cy)) return;   // overlay points first, then buildings, then overlay outlines on the ground
+  const k = pickAt(cx, cy);
+  if (k >= 0 && AT && AT.buildings[k]) selectBuilding(k); else ovTapGround(cx, cy);
 });
 
 // opening hours: the occupant's own page (web facts, branch scope first) or its OSM tag; "open now" in London time
@@ -1375,7 +1382,7 @@ function drawLights(buf, refl, P) {
 function drawNight(P) {   // after the scene: lights with the depth test, then their reflections on the water pixels only
   if (!NIGHT.built) return;
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
-  gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.stencilFunc(gl.ALWAYS, 0, 255); drawLights(NIGHT.lights, false, P); ocsHalo(); drawLights(NIGHT.ocs, false, P);
+  gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.stencilFunc(gl.ALWAYS, 0, 255); drawLights(NIGHT.lights, false, P); ocsHalo(); drawLights(NIGHT.ocs, false, P); drawOverlayLights(P);
   gl.disable(gl.DEPTH_TEST); gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.EQUAL, 1, 255); drawLights(NIGHT.refl, true, P); drawLights(NIGHT.ocsR, true, P); const mg = moonGlitter(); if (mg) drawLights(mg, true, P);
   gl.enable(gl.DEPTH_TEST); gl.disable(gl.STENCIL_TEST); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
 }
@@ -1419,6 +1426,119 @@ function setNight(on) {
 $('nightMode').onchange = () => setNight($('nightMode').checked);
 $('crownDate').onchange = () => { CROWN.on = $('crownDate').checked; CROWN.key = ''; draw(); };
 
+// ---------- overlays (Layers > "Live state, snapshot" and "London Datastore"): dated files drawn on the model, a tap opens
+// the record card with the snapshot date and the source credit. Live: feeds/live/*.json (tools/fetch-live.mjs, skill
+// cwplans-live-state). Heights are metres above Ordnance Datum like the rest of the model; feet AMSL x 0.3048 (Newlyn
+// datum is mean sea level to about 0.1 m here). Solid parts go in OV.solid (opaque, drawn with the pins), see-through
+// parts in OV.glass (blended, no depth write), crane tip lights in OV.tips (Night). Taps: OV.hits are points tested on
+// screen (22 CSS px), OV.polys are ground outlines tested where the tap meets the ground (after the building pick).
+const FT2M = .3048;
+const OV = { data: {}, solid: null, glass: null, tips: null, hits: [], polys: [], n: {}, busy: 0,
+  stats() { return { n: { ...this.n }, hits: this.hits.length, polys: this.polys.length, solid: this.solid ? this.solid.count / 3 : 0, glass: this.glass ? this.glass.count / 3 : 0, tips: this.tips ? this.tips.count / 6 : 0 }; } };
+const OVL = {
+  bikes: { file: '../feeds/live/bikes.json' }, lifts: { file: '../feeds/live/lifts.json' }, cranes: { file: '../feeds/live/notams.json' },
+  heli: { file: '../feeds/live/helicopters.json', river: true },
+};
+const ovOn = k => { const el = $('ov_' + k); return !!(el && el.checked); };
+const inBox = (x, z, m = 0) => { const E = A.meta.extent; return x >= E.x0 - m && x <= E.x1 + m && z >= E.z0 - m && z <= E.z1 + m; };
+const londonTime = iso => { try { return new Date(iso).toLocaleString('en-GB', { timeZone: 'Europe/London', dateStyle: 'medium', timeStyle: 'short' }); } catch { return iso; } };
+async function ovData(k) {
+  if (OV.data[k]) return OV.data[k]; const o = OVL[k];
+  const [d, river] = await Promise.all([loadJSON(o.file), o.river ? loadJSON('data/river.json') : null]); OV.data[k] = d; if (river) OV.data[k].river = river; return d;
+}
+const ovCard = html => { info.innerHTML = html; openPane('paneInfo'); };
+const ovCredit = (m, extra) => `<div class="small" style="margin-top:6px">Snapshot ${esc(londonTime(m.fetched))} (London time; not live)${extra ? ' · ' + extra : ''}. ${esc(m.attribution || '')}. Licence: ${esc(m.licence || '')}.</div>`;
+// a polygon ring (lon, lat pairs) to model metres; arc centres that the AIP lists between two vertices (EGR159) become
+// the arc itself, clockwise from the vertex before to the vertex after (UK AIP ENR 5.1 wording "thence clockwise by the arc")
+function ovRing(lonlat, arcs) {
+  const out = [], isC = p => (arcs || []).find(a => Math.abs(a.centre[0] - p[0]) < 1e-5 && Math.abs(a.centre[1] - p[1]) < 1e-5);
+  for (let i = 0; i < lonlat.length; i++) { const p = lonlat[i], a = isC(p);
+    if (!a || !i || i === lonlat.length - 1) { out.push(geo(p[1], p[0])); continue; }
+    const [cx, cz] = geo(a.centre[1], a.centre[0]), [sx, sz] = out[out.length - 1], [ex, ez] = geo(lonlat[i + 1][1], lonlat[i + 1][0]);
+    const brg = (x, z) => Math.atan2(x - cx, -(z - cz)), b0 = brg(sx, sz); let b1 = brg(ex, ez); while (b1 <= b0) b1 += 2 * Math.PI;   // bearings from grid north, clockwise
+    const r = a.radius_nm * 1852, n = Math.max(4, Math.ceil((b1 - b0) / .08)); for (let k = 1; k < n; k++) { const b = b0 + (b1 - b0) * k / n; out.push([cx + r * Math.sin(b), cz - r * Math.cos(b)]); } }
+  if (out.length > 1 && Math.hypot(out[0][0] - out.at(-1)[0], out[0][1] - out.at(-1)[1]) < .5) out.pop(); return out;
+}
+// see-through walls along a ring from y0(x, z) to y1(x, z), and a brighter strip at the top
+function ovFence(G, ring, y0, y1, col, a, strip, a0 = a) {   // a at the top, a0 at the foot
+  for (let i = 0; i < ring.length; i++) { const p = ring[i], q = ring[(i + 1) % ring.length], b0 = y0(p[0], p[1]), b1 = y0(q[0], q[1]), t0 = y1(p[0], p[1]), t1 = y1(q[0], q[1]);
+    const v = [G.v(p[0], b0, p[1], col, a0), G.v(q[0], b1, q[1], col, a0), G.v(q[0], t1, q[1], col, a), G.v(p[0], t0, p[1], col, a)]; G.tri(v[0], v[1], v[2]); G.tri(v[0], v[2], v[3]);
+    if (strip) { const s = [G.v(p[0], t0 - strip, p[1], col, .9), G.v(q[0], t1 - strip, q[1], col, .9), G.v(q[0], t1, q[1], col, .9), G.v(p[0], t0, p[1], col, .9)]; G.tri(s[0], s[1], s[2]); G.tri(s[0], s[2], s[3]); } }
+}
+const pointIn = (ring, x, z) => { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, zi] = ring[i], [xj, zj] = ring[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
+async function buildOverlays() {
+  const my = ++OV.busy, want = Object.keys(OVL).filter(ovOn);
+  try { await Promise.all(want.map(ovData)); } catch (e) { note('An overlay file did not load: ' + e.message); }
+  if (my !== OV.busy) return;
+  for (const k of ['solid', 'glass', 'tips']) if (OV[k]) { OV[k].free(); OV[k] = null; }
+  const S = new Mesh(), G = new Mesh(), tips = [], hits = [], polys = [], n = {}, stick = (x, z, y0, y1, w, col) => beam(S, [x, y0, z], [x + .01, y1, z], w, w, col);
+  const D = k => ovOn(k) && OV.data[k];
+  if (D('bikes')) { const d = OV.data.bikes; n.bikes = 0;   // Santander Cycles docks: height = docks (0.5 m a dock), fill = bikes, e-bikes above them; ring = empty or full
+    for (const it of d.items) { const [x, z] = geo(it.position.lon, it.position.lat); if (!inBox(x, z)) continue; const v = it.values, g = groundAt(x, z), u = .6, docks = Math.max(1, v.docks || 0), sb = v.standard_bikes ?? v.bikes, eb = v.e_bikes || 0;
+      let y = g; const seg = (m, col) => { if (m > 0) { stick(x, z, y, y + m * u, 5, col); y += m * u; } };
+      seg(sb, [.93, .1, .12]); seg(eb, [1, .72, .2]); seg(v.empty_docks || 0, [.42, .46, .5]); seg(Math.max(0, docks - sb - eb - (v.empty_docks || 0)), [.16, .17, .19]);
+      const empty = !v.bikes, full = !v.empty_docks; if (empty || full) { const col = empty ? [1, .2, .2] : [.95, .95, 1]; for (let k = 0; k < 12; k++) { const a0 = k / 12 * 2 * Math.PI, a1 = (k + 1) / 12 * 2 * Math.PI; beam(S, [x + 7 * Math.cos(a0), g + .6, z + 7 * Math.sin(a0)], [x + 7 * Math.cos(a1), g + .6, z + 7 * Math.sin(a1)], 1.2, 1.2, col); } }
+      n.bikes++; hits.push({ x, y: g + docks * u * .5, z, card: () => ovCard(`<b>${esc(it.name)}</b> <span class="small">Santander Cycles dock · ${esc(it.id)}</span><div>${v.bikes} bikes (${sb} standard, ${eb} e-bikes) · ${v.empty_docks} empty docks · ${v.docks} docks${v.unavailable_docks ? ` · ${v.unavailable_docks} broken or blocked` : ''}${empty ? ' · <b>empty</b>' : full ? ' · <b>full</b>' : ''}${v.locked ? ' · locked' : ''}${v.temporary ? ' · temporary' : ''}</div><div class="small">Column: 0.6 m a dock; red standard bikes, amber e-bikes, grey empty docks, dark broken docks. Ring: red empty, white full. Dock updated ${esc(londonTime(it.time))}.</div>${ovCredit(d.meta)}`) }); } }
+  if (D('lifts')) { const d = OV.data.lifts; n.lifts = 0;   // station lift outages: a red badge on a white stem over the station
+    for (const it of d.items) { const [x, z] = geo(it.position.lon, it.position.lat); if (!inBox(x, z)) continue; const g = groundAt(x, z);
+      stick(x, z, g, g + 34, 1.2, [.92, .93, .95]); stick(x, z, g + 34, g + 44, 10, [.9, .12, .12]); beam(S, [x - 3.5, g + 39, z], [x + 3.5, g + 39, z], 2, 10.4, [1, 1, 1]);
+      n.lifts++; hits.push({ x, y: g + 39, z, card: () => ovCard(`<b>${esc(it.name)}</b> <span class="small">lift out of service · ${esc(it.id)}</span><div>${esc(it.values.message || '')}</div><div class="small">Lifts: ${esc((it.values.lifts_out || []).join(', '))}. No badge means no lift outage reported at the snapshot, for TfL-managed lifts only. <a href="${esc(it.url)}">Step-free access (TfL)</a></div>${ovCredit(d.meta)}`) }); }
+    if (!n.lifts) note(`No lift outage reported at TfL stations in the model at ${londonTime(d.meta.fetched)} (TfL-managed lifts only).`); }
+  if (D('cranes')) { const d = OV.data.cranes; n.cranes = 0;   // NOTAM obstacles (cranes): a thin mast from the ground to the published height above mean sea level, lit tip at night where the NOTAM says lit
+    for (const it of d.items) { const v = it.values; if (it.kind !== 'obstacle' || it.position.alt_ft == null) continue; const [x, z] = geo(it.position.lon, it.position.lat); if (!inBox(x, z)) continue;
+      const g = groundAt(x, z), top = it.position.alt_ft * FT2M; if (top <= g + 2) continue; stick(x, z, g, top, 1.6, [.95, .78, .2]); beam(S, [x - 9, top - 1, z], [x + 22, top - 1, z], 1.4, 1.4, [.95, .78, .2]);
+      if (v.lit === true) tips.push({ x, y: top + .6, z, c: [1, .1, .06], i: 1, s: .8, px: pxr(1, 2), h: 3.2, sd: Math.random() });
+      n.cranes++; hits.push({ x, y: top, z, card: () => ovCard(`<b>${esc(it.name)}</b> <span class="small">NOTAM ${esc(it.id)} · obstacle${v.crane ? ', crane' : ''}</span><div>Top ${it.position.alt_ft} ft above mean sea level (${Math.round(top)} m)${v.height_agl_ft != null ? `, ${v.height_agl_ft} ft (${Math.round(v.height_agl_ft * FT2M)} m) above the ground` : ''} · lighting: ${v.lit === true ? 'lit' : 'not stated in the NOTAM'} · from ${esc(v.start || '')} to ${esc(v.end || '')} · position from ${esc(v.position_from || '')}</div><div class="small">Facts only (identifier, position, height, times); the NOTAM text is not copied. Pre-flight bulletin issued ${esc(londonTime(d.meta.pib_issued))}.</div>${ovCredit(d.meta)}`) }); } }
+  if (D('heli')) { const d = OV.data.heli, hp = d.meta.h4_profile || {}, lo = (hp.suggested_min_ft || 1000) * FT2M, hi = (hp.vfr_max_ft || 2000) * FT2M; n.heli = 0;
+    // H4 along the Thames: drawn on the river centreline (data/river.json) from the model's west edge to the Isle-of-Dogs
+    // reporting point; the precise line is on the 1:50 000 chart, not copied. A band from 1000 to 2000 ft with its edges.
+    const pts = d.items.filter(i => i.kind === 'helicopter-reporting-point'), iod = pts.find(p => /Isle/.test(p.name)), C = d.river && d.river.thames;
+    const card = () => ovCard(`<b>Helicopter route H4</b> <span class="small">along the River Thames · UK AIP AD 2 EGLL 2.22</span><div>Single-engine helicopters keep to the river here. Altitudes: no lower than ${hp.suggested_min_ft} ft and at most ${hp.vfr_max_ft} ft above mean sea level (VFR); special VFR at most ${hp.svfr_max_ft} ft. Reporting points: ${pts.map(p => `${esc(p.name)} (${esc(p.values.reporting)})`).join(', ')}.</div><div class="small">Drawn along the river's centreline between ${Math.round(lo)} and ${Math.round(hi)} m; the route's precise line is on the 1:50 000 chart (not copied). No live helicopter positions: every ADS-B source checked is licensed against this use. AIP issue ${esc(d.meta.aip_issue || '')}. ${esc(hp.note || '')}</div>${ovCredit(d.meta)}`);
+    if (C && iod) { const [ix, iz] = geo(iod.position.lon, iod.position.lat); let end = 0, best = 1e18; C.forEach((p, i) => { const e = (p[0] - ix) ** 2 + (p[1] - iz) ** 2; if (e < best) { best = e; end = i; } });
+      const line = C.slice(0, end + 1).filter((p, i) => i % 3 === 0 || i === end), col = [.35, .85, 1];
+      for (let i = 0; i + 1 < line.length; i++) { const p = line[i], q = line[i + 1]; const v = [G.v(p[0], lo, p[1], col, .1), G.v(q[0], lo, q[1], col, .1), G.v(q[0], hi, q[1], col, .1), G.v(p[0], hi, p[1], col, .1)]; G.tri(v[0], v[1], v[2]); G.tri(v[0], v[2], v[3]);
+        beam(S, [p[0], lo, p[1]], [q[0], lo, q[1]], 3, 3, col); beam(S, [p[0], hi, p[1]], [q[0], hi, q[1]], 3, 3, col); if (i % 6 === 0) hits.push({ x: p[0], y: (lo + hi) / 2, z: p[1], card }); }
+      n.heli += line.length; }
+    for (const p of pts) { const [x, z] = geo(p.position.lon, p.position.lat); if (!inBox(x, z)) continue; stick(x, z, lo, hi, 5, [.35, .85, 1]); hits.push({ x, y: hi, z, card: () => ovCard(`<b>H4 reporting point: ${esc(p.name)}</b> <span class="small">${esc(p.values.reporting)} · ${esc(p.values.grid_ref)}</span><div>${esc(p.values.description)}</div>${ovCredit(d.meta)}`) }); }
+    for (const it of d.items) { if (it.kind !== 'restricted-area' || it.id !== 'EGR159') continue; const v = it.values, ring = ovRing(v.vertices, v.arcs), top = 1400 * FT2M, col = [1, .3, .55];
+      // EGR159 Isle of Dogs: a see-through prism from the surface to 1400 ft, its outline drawn at the top
+      ovFence(G, ring, (x, z) => groundAt(x, z), () => top, col, .09, 3, 0);   // walls fade out towards the ground; no lid (it tinted the whole island)
+      const c = ring.reduce((s, p) => [s[0] + p[0] / ring.length, s[1] + p[1] / ring.length], [0, 0]);
+      const rc = () => ovCard(`<b>${esc(it.id)} ${esc(it.name)}</b> <span class="small">restricted area · UK AIP ENR 5.1</span><div>From the surface to ${esc(v.upper)} (${Math.round(top)} m). Flight permitted by: ${esc((v.permitted || []).join('; '))}.${v.legal_basis ? ` Legal basis: SI ${esc(v.legal_basis)}.` : ''}</div><div class="small">Boundary as published: ${v.vertices.length - (v.arcs || []).length - 1} points and ${(v.arcs || []).length} clockwise arcs (radius ${(v.arcs || []).map(a => a.radius_nm + ' NM').join(', ')}).</div>${ovCredit(d.meta)}`);
+      hits.push({ x: c[0], y: top, z: c[1], card: rc }); polys.push({ ring, card: rc, pri: 9 }); n.egr159 = ring.length; } }
+  OV.solid = S.n ? S.upload() : null; OV.glass = G.n ? G.upload() : null; OV.tips = tips.length ? spriteBuf(tips) : null; OV.hits = hits; OV.polys = polys.sort((a, b) => a.pri - b.pri); OV.n = n; draw();
+}
+// taps: a point within 22 CSS px on screen, nearest first; then (after the building pick) the ground outline under the tap
+function ovTapPoint(cx, cy) {
+  if (!OV.hits.length || !MVP) return false; const w = cv.clientWidth, h = cv.clientHeight; let best = null, bd = 22 * 22;
+  for (const o of OV.hits) { const X = [o.x, o.y * VZ, o.z], c3 = MVP[3] * X[0] + MVP[7] * X[1] + MVP[11] * X[2] + MVP[15]; if (c3 <= 0) continue;
+    const sx = ((MVP[0] * X[0] + MVP[4] * X[1] + MVP[8] * X[2] + MVP[12]) / c3 * .5 + .5) * w, sy = (1 - ((MVP[1] * X[0] + MVP[5] * X[1] + MVP[9] * X[2] + MVP[13]) / c3 * .5 + .5)) * h, e = (sx - cx) ** 2 + (sy - cy) ** 2;
+    if (e < bd) { bd = e; best = o; } }
+  if (best) best.card(); return !!best;
+}
+function inv4(m) {   // inverse of a column-major 4 x 4 matrix
+  const a = m, o = new Float32Array(16), b00 = a[0] * a[5] - a[1] * a[4], b01 = a[0] * a[6] - a[2] * a[4], b02 = a[0] * a[7] - a[3] * a[4], b03 = a[1] * a[6] - a[2] * a[5], b04 = a[1] * a[7] - a[3] * a[5], b05 = a[2] * a[7] - a[3] * a[6],
+    b06 = a[8] * a[13] - a[9] * a[12], b07 = a[8] * a[14] - a[10] * a[12], b08 = a[8] * a[15] - a[11] * a[12], b09 = a[9] * a[14] - a[10] * a[13], b10 = a[9] * a[15] - a[11] * a[13], b11 = a[10] * a[15] - a[11] * a[14];
+  const det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06; if (!det) return null; const d = 1 / det;
+  o[0] = (a[5] * b11 - a[6] * b10 + a[7] * b09) * d; o[1] = (a[2] * b10 - a[1] * b11 - a[3] * b09) * d; o[2] = (a[13] * b05 - a[14] * b04 + a[15] * b03) * d; o[3] = (a[10] * b04 - a[9] * b05 - a[11] * b03) * d;
+  o[4] = (a[6] * b08 - a[4] * b11 - a[7] * b07) * d; o[5] = (a[0] * b11 - a[2] * b08 + a[3] * b07) * d; o[6] = (a[14] * b02 - a[12] * b05 - a[15] * b01) * d; o[7] = (a[8] * b05 - a[10] * b02 + a[11] * b01) * d;
+  o[8] = (a[4] * b10 - a[5] * b08 + a[7] * b06) * d; o[9] = (a[1] * b08 - a[0] * b10 - a[3] * b06) * d; o[10] = (a[12] * b04 - a[13] * b02 + a[15] * b00) * d; o[11] = (a[9] * b02 - a[8] * b04 - a[11] * b00) * d;
+  o[12] = (a[5] * b07 - a[4] * b09 - a[6] * b06) * d; o[13] = (a[0] * b09 - a[1] * b07 + a[2] * b06) * d; o[14] = (a[13] * b01 - a[12] * b03 - a[14] * b00) * d; o[15] = (a[8] * b03 - a[9] * b01 + a[10] * b00) * d; return o;
+}
+function groundUnder(cx, cy) {   // where the tap's ray meets the ground (model metres), or null
+  const I = MVP && inv4(MVP); if (!I) return null; const nx = cx / cv.clientWidth * 2 - 1, ny = 1 - cy / cv.clientHeight * 2;
+  const un = z => { const v = [0, 1, 2, 3].map(r => I[r] * nx + I[4 + r] * ny + I[8 + r] * z + I[12 + r]); return [v[0] / v[3], v[1] / v[3] / VZ, v[2] / v[3]]; };
+  const p0 = un(-1), p1 = un(1); let g = 2, hit = null;
+  for (let k = 0; k < 3; k++) { if ((p0[1] - g) * (p1[1] - g) > 0) return hit; const t = (p0[1] - g) / (p0[1] - p1[1]); hit = [p0[0] + (p1[0] - p0[0]) * t, p0[2] + (p1[2] - p0[2]) * t]; g = groundAt(hit[0], hit[1]); }
+  return hit;
+}
+function ovTapGround(cx, cy) {
+  if (!OV.polys.length) return false; const p = groundUnder(cx, cy); if (!p) return false;
+  const o = OV.polys.find(q => (!q.bb || (p[0] >= q.bb[0] && p[0] <= q.bb[2] && p[1] >= q.bb[1] && p[1] <= q.bb[3])) && pointIn(q.ring, p[0], p[1]) && !(q.holes || []).some(hr => pointIn(hr, p[0], p[1])));
+  if (o) o.card(); return !!o;
+}
+function drawOverlayLights(P) { if (OV.tips) drawLights(OV.tips, false, P); }
+
 // pins: heritage places, quality issues, live crime
 let crime = null;
 async function buildPins() {
@@ -1441,6 +1561,7 @@ async function buildPins() {
   }
   L.pins = M.n ? M.upload() : null; labels.sort((a, b) => b.pri - a.pri); draw();
 }
+document.querySelectorAll('input[id^="ov_"]').forEach(el => el.onchange = buildOverlays);
 ['showHeritage', 'showQuality', 'showCrime'].forEach(id => $(id).onchange = () => { if (!AT && id !== 'showCrime') { note('The atlas index is still loading.'); $(id).checked = false; return; } buildPins(); });
 
 // ground image: Sentinel-2 colours per terrain vertex (data/imagery.js, tools/build-imagery.mjs) or an EA image as a texture
@@ -1915,7 +2036,7 @@ if (/[?&]capture\b/.test(location.search)) captureMode(true);
 if (/[?&]night\b/.test(location.search)) setNight(true);
 // render one frame now (not on the next animation frame) and resolve when the GPU has finished it
 function renderNow() { queued = false; render(); gl.finish(); }
-window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText,
+window.__docklands = { cam, draw, setView, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder,
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,
   relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
