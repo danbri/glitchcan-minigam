@@ -25,7 +25,7 @@ import {
 // ---- written rules (the SKILL and harvest-log.json meta repeat them)
 export const AUTO_RULES = {
   formats: 'readable resource formats: gpkg, geojson, zip, csv, tsv, xlsx, xlsm, xls, ods; json and txt only when nothing else is readable. Documents, images, kml/kmz, rds and other binary formats are not read.',
-  dedupe: 'one resource per file stem (file name lower-cased, separators to "-", without the extension and without trailing format words shp, gpkg, geojson, csv, xlsx, xls, gis, data): gpkg > geojson > zip > csv > tsv > xlsx > xlsm > xls > ods > json > txt, then the newest; identical md5 = one resource.',
+  dedupe: 'one resource per file stem (file name lower-cased, separators to "-", without the extension and without trailing format words shp, gpkg, geojson, csv, xlsx, xls, gis, data, and the layout words long, wide; a wide file is taken before its long twin): gpkg > geojson > zip > csv > tsv > xlsx > xlsm > xls > ods > json > txt, then the newest; identical md5 = one resource.',
   caps: 'a resource over 1,200 MB is not read (disk); a dataset with more than 40 stems or 2,500 MB in total takes the newest 12 stems unless a hand rule (HAND) says otherwise. Raw files over 20 MB are deleted after reading.',
   names: 'datasets about town centres or stations (metadata geo Town Centres or Train Stations, or the title) also match names: a cell equal, after normalising (case, &, punctuation, words such as station, DLR, town centre), to the name of a zone town centre (town-centres harvest, polygon meets the box) or a zone station (TfL StopPoint, NaPTAN metro and rail stations in the box); keys town-centre:<name>, station:<name>; weaker than a code.',
   zone_row: 'a table row is a zone row when a cell is a zone OA/LSOA/MSOA/ward code (zone-codes.json, any vintage), a zone postcode (ONSPD grid reference in the 3D model box), a zone postcode sector (the sector of a zone postcode, in a sector column) , a zone UPRN in a UPRN column (OS Open UPRN in the box), a zone TOID in a TOID column, or its own coordinates lie in the box (lat/lon or easting/northing columns, judged by value). Ward tables: the City of London row (E09000001) is a zone row (the City is one ward-level unit there). The first matching key is recorded per row (zone_keys).',
@@ -55,6 +55,7 @@ export const HAND = {
   '2o8ng': { files: /custom_age_tool_/, why: 'the 2019-based tools; the 2016-based xls creators (54-57 MB) are superseded' },
   '2r48w': { files: /Emissions_Summary-NOxPMCO2|Emissions_Summary-OtherPollutants|Emissions_Summary_GIS|Concentrations_Data_CSV|RoadTrafficData_GIS|exceeding/i, thin: 20, why: 'LAEI 2016: grid emission summaries, the road traffic links (GIS), the 20 m concentration grid thinned to 100 m, population and schools exceeding; the per-link emission workbooks (217-447 MB) not read' },
   'e550x': { files: /Newham/, why: 'one zip per borough; Newham is the only zone borough in the dataset' },
+  '2wwq4': { sheets: /persons|components/i, why: 'the persons and components-of-change sheets of the three variants; the male and female sheets split the persons rows (13.8 MB with them, single year of age x ward x sex)' },
   '2zp76': { files: /^gla_2024_housing_led_(central|low|high)_(ward|msoa)\.xlsx$/, why: '2024-based central, low and high at ward and MSOA; the variant zips (0.7-1.5 GB), the borough-level files and the superseded 2022-based workbooks not read' },
   'v8o11': { files: /\.xlsx$/, why: 'the LSOA table; the GIS zip (214 MB) repeats it with geometry' },
   '2964y': { files: /\.xlsx$/, why: 'the summary workbooks (the RM long tables, 18-70 MB each, cross-tabulate the same counts)' },
@@ -72,8 +73,10 @@ export const HAND = {
   '2g1zq': { files: /ons-mye-(LSOA|MSOA)11\.csv|land-area/, why: '2011-geography mid-year estimates; the 2001-geography files and the custom age tools repeat them' },
   'ex9jd': { files: /WD22_London|population_msoa11_2010_to_2011\.csv/, why: 'the London ward series and the MSOA 2010-2011 file; LAD-level files have no zone rows; the LSOA 2010-2011 csv (746 MB) not read; rds not readable' },
   '2jxq0': { files: /^LDD Permissions for Datastore/, why: 'the permission-level extracts (permissions, non-residential floorspace and bedrooms); the unit-level approvals and completions (3 files, 22,417 zone rows, 40 MB of output) repeat the same permissions unit by unit' },
-  'exynl': { skip: 'AMR 14 (2018): its LDD extracts (approvals, starts, completions, pipeline) are earlier snapshots of the London Development Database, superseded by the 2020 extract (2jxq0, harvested) and the Planning London Datahub (tools/build-construction-index.mjs); the chapter tables are borough rows', outcome: 'deferred-by-hand' },
+  'exynl': { files: /Chapter/, why: 'AMR 14 (2018): the chapter tables (town centres, Opportunity Areas); its LDD extracts (approvals, starts, completions, pipeline) are earlier snapshots of the London Development Database, superseded by the 2020 extract (2jxq0) and the Planning London Datahub (tools/build-construction-index.mjs)' },
+  '204q6': { files: /Chapter/, why: 'AMR 15 (2019): the chapter tables; its LDD extracts are earlier snapshots of the London Development Database, superseded by the 2020 extract (2jxq0) and the Planning London Datahub' },
   'v8o0m': { skip: 'AMR 13 (2017): LDD pipeline and completions extracts, superseded by the 2020 extract (2jxq0, harvested) and the Planning London Datahub', outcome: 'deferred-by-hand' },
+  '2zwnk': { files: /_Lden_/, decimals: 5, why: 'Lden (day-evening-night) road and rail noise bands only, coordinates to 5 decimals (about 1 m); the LAeq16h and Lnight layers (20,000 more zone polygons, 15 MB in all) repeat the same contours for other periods; the 2018 maps (2017 data) are older than Defra round 4 (2022)' },
   'e55gn': { asTable: true, why: 'postcode rows with coordinates kept as a table (8,217 zone postcodes: 1.5 MB as rows, 11.8 MB as GeoJSON points)' },
   '2jkxd': { files: /\.xls$/, why: 'the workbooks (one row per area, years across); the CSVs (89 MB for LSOA) hold the same figures one row per area and year' },
   'ep8xy': { files: /Time Series/, why: 'the time series workbook; the five yearly model workbooks (2011-2015, 8.6 MB each) repeat it month by month' },
@@ -96,7 +99,8 @@ function refs() {
 
 // ---- resource choice
 const stemOf = f => decodeURIComponent(f || '').toLowerCase().replace(/\.[a-z0-9]{2,5}$/, '').replace(/[\s_.]+/g, '-').replace(/\(\d+\)$/, '')
-  .replace(/(-(shp|shapefile|gpkg|geopackage|geojson|csv|xlsx|xls|gis|data|esri))+$/g, '');
+  .replace(/(-(shp|shapefile|gpkg|geopackage|geojson|csv|xlsx|xls|gis|data|esri|long|wide))+$/g, '');
+const isLong = f => /[-_ ]long(\.[a-z0-9]+)?$/i.test(decodeURIComponent(f || ''));
 export function planDataset(d) {
   if (HAND[d.id]?.skip) return { skip: HAND[d.id].skip, picked: [] };
   let cands = d.resources.filter(r => READ.has(r.format));
@@ -108,7 +112,8 @@ export function planDataset(d) {
   cands = cands.filter(r => !big.includes(r));
   const byStem = new Map();
   for (const r of cands) { const s = stemOf(r.file || r.url); (byStem.get(s) || byStem.set(s, []).get(s)).push(r); }
-  let picked = [...byStem.values()].map(rs => rs.sort((a, b) => (ORDER.indexOf(a.format) - ORDER.indexOf(b.format)) || (b.date || '').localeCompare(a.date || ''))[0]);
+  // a "_wide" and a "_long" file of one table: the wide one (one row per area); then the format order; then the newest
+  let picked = [...byStem.values()].map(rs => rs.sort((a, b) => (isLong(a.file) - isLong(b.file)) || (ORDER.indexOf(a.format) - ORDER.indexOf(b.format)) || (b.date || '').localeCompare(a.date || ''))[0]);
   const dropped = cands.filter(r => !picked.includes(r)); if (dropped.length) notes.push(`${dropped.length} format variants of a picked stem not read`);
   const total = picked.reduce((a, r) => a + (r.size || 0), 0);
   if (!HAND[d.id]?.files && (picked.length > MAX_STEMS || total > MAX_TOTAL)) {
@@ -238,7 +243,10 @@ function filterTable(all, name) {
   // transposed: area codes across a row (3 or more in one of the first 15 rows): keep the label columns and the zone code columns
   for (let i = 0; i < Math.min(15, all.length); i++) {
     const r = all[i] || [], codeCols = r.map((v, j) => typeof v === 'string' && (ANY_AREA.test(v.trim()) || OLD_WARD.test(v.trim())) ? j : -1).filter(j => j >= 0);
-    if (codeCols.length < 3 || all.slice(i + 1, i + 30).some(x => (x || []).filter(v => typeof v === 'string' && ANY_AREA.test(v.trim())).length >= 1 && (x || []).indexOf((x || []).find(v => typeof v === 'string' && ANY_AREA.test(v.trim()))) < codeCols[0])) continue;
+    // a header of codes: 3 or more distinct codes, and below them numbers (a data row holding codes in a few cells is not one)
+    const below = all.slice(i + 1, i + 12).filter(x => x && x.some(v => v != null && v !== ''));
+    const numericBelow = codeCols.filter(j => below.length && below.filter(x => typeof x[j] === 'number').length >= below.length * .6).length;
+    if (new Set(codeCols.map(j => r[j])).size < 3 || numericBelow < codeCols.length * .8) continue;
     const zc = codeCols.filter(j => codeKey(r[j])); if (!zc.length) return { name, n: all.length - i - 1, rows: [], zone_keys: [], header_rows: [], transposed: true };
     const keep = [...Array(codeCols[0]).keys(), ...zc], sub = x => keep.map(j => normCell((x || [])[j]));
     return { name, transposed: true, n: all.length - i - 1, header_rows: all.slice(Math.max(0, i - 3), i + 1).map(sub), rows: all.slice(i + 1).filter(x => x && x.some(v => v != null && v !== '')).map(sub), zone_keys: zc.map(j => 'column ' + codeKey(r[j])), cols: {} };
@@ -258,7 +266,7 @@ function filterTable(all, name) {
 }
 
 // ---- readers
-let XLSX = null, ExcelJS = null, CUR_THIN = null, CUR_GRID = null, CUR_NAMES = null;
+let XLSX = null, ExcelJS = null, CUR_THIN = null, CUR_GRID = null, CUR_NAMES = null, CUR_SHEETS = null;
 async function sheetsOf(file, label, size) {
   const out = [];
   if (/\.(xlsx|xlsm)$/i.test(file) && size > KEEP_RAW) {
@@ -267,6 +275,7 @@ async function sheetsOf(file, label, size) {
     ExcelJS ||= (await import('exceljs')).default;
     const wb = new ExcelJS.stream.xlsx.WorkbookReader(file, { sharedStrings: 'cache', hyperlinks: 'ignore', worksheets: 'emit', styles: 'cache', entries: 'emit' });   // styles: dates come as Date only with the number formats
     for await (const ws of wb) {
+      if (CUR_SHEETS && ws.name && !CUR_SHEETS.test(ws.name)) { for await (const row of ws) { } continue; }   // a sheet a hand rule leaves out (read through: the stream must be drained)
       const t = []; let k = 0;
       for await (const row of ws) { const v = row.values; const a = []; for (let i = 1; i < v.length; i++) a.push(v[i] === undefined ? null : v[i]); t.push(a); k++; }
       const f = filterTable(t, `${label}#${ws.name || 'sheet' + ws.id}`); out.push(f);
@@ -275,7 +284,7 @@ async function sheetsOf(file, label, size) {
   }
   XLSX ||= (await import('xlsx'));
   const wb = XLSX.read(readFileSync(file), { type: 'buffer', dense: true, cellFormula: false, cellHTML: false, cellStyles: false, cellDates: true });
-  for (const sn of wb.SheetNames) out.push(filterTable(XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: true, defval: null, blankrows: false }), `${label}#${sn}`));
+  for (const sn of wb.SheetNames) if (!CUR_SHEETS || CUR_SHEETS.test(sn)) out.push(filterTable(XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: true, defval: null, blankrows: false }), `${label}#${sn}`));
   return out;
 }
 // CSV from a stream of text lines: the header is the first non-empty line; the rest filtered row by row
@@ -368,7 +377,8 @@ async function readZip(zip, label, out) {
 
 // ---- one dataset
 const DOCS = /\.(pdf|docx?|pptx?|rtf|html?|jpe?g|png|gif|tiff?|svg|mp[34]|wav|txt|md)$/i;
-const LOG = join(OUT, 'harvest-log.json');
+// LDS_HARVEST_LOG: write the log elsewhere while a long run goes on (the committed file is then made per batch)
+const LOG = process.env.LDS_HARVEST_LOG || join(OUT, 'harvest-log.json');
 export function loadLog() { return existsSync(LOG) ? readJson(LOG) : { meta: {}, datasets: {} }; }
 function saveLog(L) {
   L.meta = { made: today, tool: 'tools/lds-harvest-auto.mjs', rules: AUTO_RULES, counts: {} };
@@ -386,7 +396,7 @@ async function runDataset(d, T, L) {
   const plan = planDataset(d), key = HAND[d.id]?.key || keyOf(d);
   if (plan.skip) { L.datasets[d.id] = { title: d.title, key, outcome: HAND[d.id].outcome || 'not-readable', reason: plan.skip, date: today }; return; }
   const parts = [], notes = [...plan.notes];
-  CUR_THIN = HAND[d.id]?.thin || null; CUR_GRID = HAND[d.id]?.grid || null;
+  CUR_THIN = HAND[d.id]?.thin || null; CUR_GRID = HAND[d.id]?.grid || null; CUR_SHEETS = HAND[d.id]?.sheets || null;
   // name keys: only for datasets whose geography is town centres or stations (the metadata or the title says so)
   CUR_NAMES = d.geo === 'Town Centres' || /town centre|London Plan AMR/i.test(d.title) ? zoneNameMap('town_centres') : d.geo === 'Train Stations' || /\bstation|underground|signals passed/i.test(d.title) ? zoneNameMap('stations') : null;
   if (CUR_NAMES) notes.push(`name keys: ${CUR_NAMES.size} zone ${/station/.test([...CUR_NAMES.values()][0]) ? 'station' : 'town centre'} names (zone-names.json); a cell equal to one (normalised) is a zone row, a weaker key than a code`);
@@ -426,6 +436,8 @@ async function runDataset(d, T, L) {
     // the per-resource 'used' records of this module replace the walk tool's (streamed and deleted files say so)
     const gf = join(OUT, key, key + '.geojson'); const j = readJson(gf); j.meta.resources = geoParts.map(g => g.used);
     const tr = j.meta.layers.filter(l => l.rows_read != null); if (tr.length) { j.meta.counts.table_rows_read = tr.reduce((a, l) => a + l.rows_read, 0); j.meta.counts.note = 'features made from table rows: source_features counts the zone rows only; table_rows_read counts every row read'; }
+    // a hand rule may round the output to 5 decimals (about 1 m) for large polygon layers
+    if (HAND[d.id]?.decimals) { const k = 10 ** HAND[d.id].decimals, rd = c => typeof c[0] === 'number' ? c.map(v => Math.round(v * k) / k) : c.map(rd); for (const f of j.features) if (f.geometry?.coordinates) f.geometry.coordinates = rd(f.geometry.coordinates); j.meta.crs_output += `; rounded to ${HAND[d.id].decimals} decimals by a hand rule`; }
     if (!c.in_zone) rmSync(gf); else { writeFileSync(gf, '{"type":"FeatureCollection","meta":' + JSON.stringify(j.meta, null, 1) + ',\n"features":[\n' + j.features.map(f => JSON.stringify(f)).join(',\n') + '\n]}\n'); files.push(`${key}/${key}.geojson`); }
     counts.features_read = c.source_features + (j.meta.counts.table_rows_read ? j.meta.counts.table_rows_read - c.source_features : 0); counts.features_in_zone = c.in_zone; counts.in_cw = c.in_cw;
   }
@@ -502,7 +514,9 @@ function register(cat) {
   };
   const tidy = () => { for (let k = 0; k < lines.length - 1; k++) if (/,\s*$/.test(lines[k]) && /^\s*[\]}]/.test(lines[k + 1])) lines[k] = lines[k].replace(/,\s*$/, ''); };
   const pipeFile = join(CWD, 'pipeline.json'), pipe = readJson(pipeFile);
-  const used = [], generated = [{ file: 'feeds/london-datastore/harvest-log.json' }];
+  const used = [{ file: 'feeds/london-datastore/triage.json' }, { file: 'feeds/london-datastore/catalogue.json' }, { file: 'feeds/london-datastore/zone-codes.json' }, { file: 'feeds/london-datastore/town-centres/town-centres.geojson' }, { file: 'feeds/london-datastore/opportunity-areas/opportunity-areas.geojson' },
+    { source: 'tfl-stoppoint', endpoint: 'https://api.tfl.gov.uk/StopPoint', request: 'zone-names: lat/lon of 6 centres, stopTypes NaptanMetroStation,NaptanRailStation, radius 2000' }];
+  const generated = [{ file: 'feeds/london-datastore/harvest-log.json' }, { file: 'feeds/london-datastore/zone-names.json' }, { file: 'feeds/london-datastore/index.json' }];
   let nSrc = 0, nFile = 0;
   for (const [id, h] of Object.entries(L.datasets).sort()) {
     if (h.outcome !== 'harvested') continue;
@@ -522,6 +536,7 @@ function register(cat) {
     }
   }
   upsert('"path":"feeds/london-datastore/harvest-log.json"', `    ${JSON.stringify({ path: 'feeds/london-datastore/harvest-log.json', what: 'outcome of the rule-driven harvest for every dataset run (harvested with files and counts, no zone rows with the evidence, not readable, documents only, by hand, held for the owner); its meta repeats the rules', sources: ['lds-catalogue', 'own'], osm: { use: 'none' }, produced_by: 'tools/lds-harvest-auto.mjs run', shown_on: [] })}`, l => l.includes('"path":"feeds/london-datastore/') || l.includes('"path": "feeds/london-datastore/'));
+  upsert('"path":"feeds/london-datastore/index.json"', `    ${JSON.stringify({ path: 'feeds/london-datastore/index.json', what: 'index of every London Datastore folder harvested to the zone (both harvest tools): title, theme, licence and credit, dates, files with counts and sizes, and the final-state counts of the triage; loaded first by the atlas view "London Datastore"', sources: ['lds-catalogue', 'own'], osm: { use: 'none' }, produced_by: 'tools/lds-harvest-auto.mjs index', shown_on: ['atlas/index.html'] })}`, l => l.includes('"path":"feeds/london-datastore/') || l.includes('"path": "feeds/london-datastore/'));
   tidy();
   JSON.parse(lines.join('\n'));                                       // still JSON
   writeFileSync(regFile, lines.join('\n'));
@@ -574,9 +589,10 @@ function writeIndex(cat, tri) {
       fl.push({ path: `feeds/london-datastore/${key}/${f}`, kind: geo ? 'geojson' : 'table', bytes: statSync(join(dir, f)).size, ...(geo ? { features: j.features.length, geometry: types, in_cw: j.features.filter(x => x.properties?.in_cw).length } : { rows: j.tables.reduce((a, t) => a + t.rows.length, 0), tables: j.tables.length }), ...(/uprn-amended/.test(f) ? { note: 'copy with amended UPRNs (F22)' } : {}) });
     }
     const id = meta.dataset, d = cat.get(id), T = tri.datasets[id] || {};
+    if (meta.harvest_rules && L.datasets[id]?.outcome !== 'harvested') continue;   // a rule-driven folder not (yet) in the log
     const dates = (meta.resources || []).map(r => r.resource_date).filter(Boolean).sort();
     const theme = meta.theme || T.themes?.[0] || null;
-    out.push({ key, dataset: id, title: d?.title || meta.source, publisher: d?.publisher || null, theme, theme_name: THEME_NAMES[theme] || theme, geo: d?.geo || null,
+    out.push({ key, dataset: id, title: d?.title || meta.source, publisher: d?.publisher || null, theme, theme_name: THEME_NAMES[theme] || 'Other datasets', geo: d?.geo || null,
       licence: meta.licence, licence_url: meta.licence_url, attribution: meta.attribution, page: meta.page, dataset_modified: (meta.dataset_modified || '').slice(0, 10) || null,
       resource_dates: dates.length ? [dates[0], dates.at(-1)] : null, fetched: (meta.resources || []).map(r => r.fetched).filter(Boolean).sort().at(-1) || null,
       tool: L.datasets[id]?.outcome === 'harvested' ? 'lds-harvest-auto.mjs' : 'walk-london-datastore.mjs harvest', files: fl });

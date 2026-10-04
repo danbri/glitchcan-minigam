@@ -761,3 +761,12 @@ central tower - do we have an index of these?"
   (Silvertown Tunnel, Tideway, Heat Main), Greenwich section 106 agreements, plan records. Held 11, not-relevant 79,
   unavailable 106.
 - Next: borough portals, Nomis and ONS Open Geography, national APIs; a service probe for the data.gov.uk backlog.
+
+## 2026-10-04 — London Datastore: rule-driven harvest of the 219 listed datasets (batches)
+- New tool `tools/lds-harvest-auto.mjs` (plan, run, register, index, zone-names): resources picked by written rules,
+  every row read (CSV streamed, ExcelJS for large xlsx, SheetJS for xls/ods), zone rows by codes (any vintage, plus
+  00BGGG wards and E36 merged wards from `refs-old-wards`), postcodes and sectors in profiled columns, UPRNs, TOIDs,
+  coordinates, and station / town-centre names for datasets keyed by them; outcome per dataset in
+  `feeds/london-datastore/harvest-log.json`, which triage reads (F8b no zone rows, F10b unreadable, F7 documents).
+- Batch 1 (ranks 1-30): see the commit; sizes and outcomes in harvest-log.json. Big outputs cut by hand rules (housing-led
+  projections: persons and components sheets; noise: Lden only).
