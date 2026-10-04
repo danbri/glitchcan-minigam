@@ -99,7 +99,8 @@ Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNig
 
 ## Interface (owner, 2026-10-03: "The city is the star not our endless word buttons")
 
-- The screen holds the model, two round buttons at the top left (Menu, Search) and the attribution line.
+- The screen holds the model, two round buttons at the top left (Menu, Search) and the OSM credit, which folds to an (i)
+  button (see "Credits and the window lock"). Every other credit is in Menu > About > Credits.
 - **Drawer** (Menu): views, then tabs Layers, Route, About (the sky work adds a Sky tab). It closes with its cross, a
   tap on the dimmed map, Escape, or a swipe left of more than 70 px. On a phone (under 900 px) a view button closes it
   so the result shows; at 900 px and wider the map is not dimmed.
@@ -339,6 +340,71 @@ What went wrong first (and the rule):
 - H4 is drawn along `data/river.json`'s centreline from the model's west edge to the point nearest the Isle-of-Dogs
   reporting point; the AIP's precise line is on the 1:50 000 chart (not copied), and the card says so.
 - Cultural venue positions are drawn as published; F25 (a constant offset in 10 venue layers) is not corrected here.
+
+## Credits and the window lock (2026-10-04)
+
+Owner, 2026-10-04: "Move credits into main menus. Ensure user actions cant resize zoom dragdrop etc the containing os/app
+window". Commits 6064852 (3D page) and 4405c42 (atlas, What's on).
+
+### Credits
+
+- **Where they are.** Menu > About > "Credits and data licences" (`#credits`), grouped: map data; ground, heights and river;
+  buildings, occupants and registers; trees and facade photos; sky, weather and tide; live state and live data; London
+  Datastore; music and software. Each source has its licence and link. The spans that say what is shown now
+  (`#attribImg`, `#attribTrees`, `#attribFac`, `#attribSky`) live in its first line; `sky.js` finds `#attribSky` there and
+  does not append to the corner. `#facCredit` and `#attrib` (the `A.meta.sources` line) are in the section too.
+  A new layer or source adds its line here, not on the city. Record cards keep the credit of the record shown.
+- **The corner.** `#attribLine` holds only `© OpenStreetMap contributors` (linked to https://www.openstreetmap.org/copyright)
+  and "credits". `ATTR.start()` runs when the hud clears (the model is drawn); the line folds after 5 s, or at once on a
+  pointer down on the canvas or a label or a wheel, to the round (i) button `#attribI` in the same corner, which opens the
+  Credits section. Measured: shown from about 3 to 4 s after load to 7.5 to 9.5 s (headless, both sizes).
+- **The rule followed:** OSMF Licence/Attribution Guidelines, "Interactive maps"
+  (https://osmfoundation.org/wiki/Licence/Attribution_Guidelines, revision 14786 of 2026-09-10; adopted by the OSMF board
+  2021-06-25): "You may use a mechanism to fade/collapse the attribution under certain conditions: [...] automatically on
+  map interaction such as panning, clicking, or zooming; automatically after five seconds." and "If the attribution has
+  been collapsed, the user must still be able to find the licence information if they look for it, for example from an
+  '(i)' button in the corner of the map or an 'About' option in a menu." Text must be legible: the line is 11 px, #e8eaec
+  on #0d1013d9. Keep the OSM link in the page source: `check-data-register.mjs` looks for it.
+- **Other licences.** OGL v3.0 and CC BY ask for an attribution statement, not a place on the map: the Credits section is
+  enough. Toasts are over the city, so they carry no credit text (ground image, trees, crime: the credit stays in the
+  drawer note).
+- **Atlas** (https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#map): Leaflet's attribution shows the OSM
+  credit only (`setPrefix(false)`); it folds the same way to `#attrI` (map `movestart zoomstart click`, or 5 s); the (i)
+  shows it again. EA, UKHO, ONS, HMLR, FSA, Historic England, Wikidata and Leaflet are listed in "Data and licences".
+
+### Window lock
+
+The page's own gestures are pointer events on the canvas and the labels. Everything else must leave the window alone:
+
+- Viewport `width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover`.
+- `html`, `body` fixed at `100dvh`, overflow hidden, `overscroll-behavior: none` (no rubber-band, no pull-to-refresh, no
+  trackpad swipe-back in Chrome); `body` `touch-action: none`, `user-select: none`, `-webkit-touch-callout: none`;
+  inputs, selects and text areas get `user-select: text` back.
+- `touch-action: pan-y` on `#drawer`, `#drawerBody`, `#sheetBody`, `#qres` (native scroll; no pinch, no double-tap zoom).
+  A scroll container resets the ancestors' touch-action, so the list scrolls although `body` is `none` (measured: a touch
+  drag scrolled `#drawerBody` 467 px). Buttons and labels: `manipulation`.
+- Listeners: `wheel` with ctrl or meta, capture, `{passive: false}` prevented (the canvas's own wheel zoom still runs);
+  ctrl/meta + `+ = - _ 0` prevented; `gesturestart/change/end` prevented (Safari); `touchmove` with two fingers, or outside
+  the three scroll lists, prevented; `contextmenu`, `selectstart`, `dblclick`, `dragstart` prevented outside fields; images
+  and links `draggable=false`. `dragover` + `drop` on window always prevented; a dropped audio file goes to `vizStartFile`
+  like "Play your own file" (a drop is not a user activation, so a phone may need the mini player's ▶ tap).
+- A two-finger pinch on the open drawer closed it (the first finger's move read as a swipe left). The swipe now ignores a
+  non-primary pointer.
+- Atlas and What's on are documents: they keep page scroll (`touch-action: pan-x pan-y` on `html`, which forbids pinch and
+  double-tap zoom) and selectable text; the same listeners otherwise; the atlas map area is `touch-action: none` and
+  Leaflet keeps its own pinch zoom.
+
+Test (CDP `Input.dispatchTouchEvent`; `synthesizePinchGesture` and `synthesizeScrollGesture` do nothing in this headless
+Chromium, on the old page too, so they prove nothing): two fingers moving apart over the top bar, the corner credit and the
+drawer gave `visualViewport.scale` 5 on the old page and 1 on the new. On the canvas: drag yaw -0.72 rad, pinch distance x
+0.29, pinch with a finger starting on a label x 0.19, twist +0.50 rad, scale 1, `scrollY` 0. Ctrl+wheel over the city and
+the drawer: scale 1, `devicePixelRatio` and `innerWidth` unchanged. Desktop 1600 x 900 and phone 390 x 844 DPR 3: no
+console error.
+
+Only a real phone can confirm: iOS Safari ignores `user-scalable=no` (since iOS 10); the lock there rests on `touch-action`
+and the `gesture*` and `touchmove` listeners. The edge swipe back (iOS Safari, Android gesture navigation) is the operating
+system's and a page cannot stop it. Pull-to-refresh, the long-press callout, text selection loupes and the drop of a file
+from another app need a real device to see. The headless test shows the events are prevented, not what each OS does.
 
 ## Testing
 

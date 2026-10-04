@@ -606,6 +606,18 @@ be specified within the data".
 - Open: the backlog head in feeds/london-datastore/README.md; ask the owner about lift entrapment incidents (addresses)
   and the Assembly Member gifts register (named people); a streaming xlsx reader for workbooks over 20 MB.
 
+## 2026-10-04 credits into the menu, window lock (credits and lock agent)
+
+- 3D page: every credit over the city moved to Menu > About > "Credits and data licences" (grouped, licence and link each);
+  the corner keeps "© OpenStreetMap contributors", shown when the model draws and folded to an (i) after 5 s or the first
+  map interaction (OSMF Attribution Guidelines, interactive maps, revision 14786); toasts carry no credit. 6064852.
+- Window lock on the 3D page, the atlas and What's on: viewport no zoom; no pinch, double-tap, ctrl+wheel, ctrl+plus or
+  Safari gesture zoom; no pull-to-refresh or rubber-band; no drag-out; a dropped file never navigates (audio plays on the
+  3D page); 3D page also no selection, callout or context menu outside fields. Atlas map credit folds the same way. 4405c42.
+- Tests: CDP touch pinch on the old page gave visualViewport.scale 5, on the new 1; camera drag, pinch, pinch from a label and
+  twist still move; drawer scrolls; no console errors at 1600 x 900 and 390 x 844 DPR 3. Lessons and the phone-only list in
+  the docklands-3d-page skill, "Credits and the window lock".
+
 ## Open, in the order proposed
 
 1. (Done: F2, F3, VA-2.)
