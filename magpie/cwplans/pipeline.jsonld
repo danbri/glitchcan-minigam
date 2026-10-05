@@ -17742,6 +17742,9 @@
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-photos-cc0"
     }
    ],
    "cwp:osmUse": "none",

@@ -3,9 +3,7 @@
 One photo, `evening-thames-from-plane.jpg` (1195 x 689 px), taken by the owner (danbri) through an aircraft window and
 given to the project on 2026-10-05: "here is an evening view of nearby thames from a plane - can you reconstruct this view?"
 
-**Licence: owner-supplied. Ask the owner whether CC0 applies.** The owner dedicated his Greenland Dock day photos to the
-public domain ("I am copyright holder but will CC0 them", 2026-10-04); that statement was for those photos. Until the owner
-says so for this one, treat it as the owner's photo, kept for reference in this prototyping project. It has **no EXIF**
+**Licence: CC0 1.0 Universal** (https://creativecommons.org/publicdomain/zero/1.0/). Photographer and copyright holder: the owner, danbri, who dedicated it to the public domain on 2026-10-05: "Plane photo - yes cc0, record me as owner". It has **no EXIF**
 (no time, GPS or lens data). The date is not known: the solve assumes 4 or 5 October 2026 (the day it was shared).
 
 ## What it shows
