@@ -6529,6 +6529,44 @@
       "area": "sky"
     },
     {
+      "id": "solve-photo-view",
+      "tool": "../../tools/view-mcp/solve.mjs",
+      "command": "node tools/view-mcp/solve.mjs magpie/cwplans/docklands/reference/plane-2026-10/points.json [--k1] --out magpie/cwplans/docklands/reference/plane-2026-10/solution.json",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "docklands/reference/plane-2026-10/points.json"
+        },
+        {
+          "file": "docklands/data/towers.json"
+        },
+        {
+          "file": "docklands/data/area.js"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/reference/plane-2026-10/solution.json"
+        }
+      ],
+      "method": "Solves the camera of any photo of the zone, ground or air: a pinhole camera with eye position, heading, pitch, roll, focal length and optional radial distortion k1, fitted by Levenberg-Marquardt (numeric Jacobian) to landmark pixels (tower tops, named places, given coordinates), shoreline pixels (distance to the projected OSM water outline) and horizon pixels (the sea-level dip from the eye height). Reports rms, formal 1-sigma per parameter from the covariance, per-point residuals and hold-out residuals. Library tools/view-mcp/view-lib.mjs, also served as the docklands-view MCP (tools/view-mcp/server.mjs).",
+      "rules": [
+        "Model metres: x = E - 537550, z = -(N - 180300), y = m OD; WGS84 by the page's own quadratic fit (meta.geo) and its Newton inverse.",
+        "Tower landmark = the apex (towers.json top.apex) or the centroid of the top tier at its top height; place landmark = area.js places at its ground height.",
+        "Earth curvature is applied to every point (drop d^2/2R with refraction k = 0.13); the horizon target is the sea-level dip -sqrt(2h/R') with weight 0.5 (the visible horizon is hills 20 to 40 km away).",
+        "Hold-out points are projected but not fitted; the run restarts once from its own result.",
+        "The page view takes the fitted camera without k1 (the page has no lens distortion): eyeView(eye, heading, pitch, hfov) plus roll."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "build-docklands",
+        "build-towers"
+      ],
+      "judgement": "Pixel positions and which photo feature is which landmark are read by eye from grid enlargements; recorded in points.json and the photo folder's README (with the failed hold-out).",
+      "area": "sky"
+    },
+    {
       "id": "build-construction-index",
       "tool": "tools/build-construction-index.mjs",
       "command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-construction-index.mjs [--no-fetch] [--refresh]",

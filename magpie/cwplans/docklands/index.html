@@ -669,7 +669,11 @@ const VIEWS = {
   // day, the owner's wide photo of 4 Oct 2026 (docklands/reference/day-2026-10-04/pier-wide-skyline.jpg): camera fitted by
   // the same four tower tops as tools/solve-photo-sun.mjs, refitted with no roll (the page has none): heading 51.9, tilt 6.45,
   // horizontal field 99.9 degrees, rms 2.7 px of 2576 (calibration in the docklands-3d-page skill)
-  greenlandday: { ...eyeView([-830, 4.5, 1158], 51.9, 6.45, 99.9), night: false },   // on board a Thames Clipper at Canary Wharf Pier, about 3.5 m above the water: clipper-canary-wharf-pier.jpg
+  greenlandday: { ...eyeView([-830, 4.5, 1158], 51.9, 6.45, 99.9), night: false },
+  // from an aircraft over Poplar at about 800 m, looking south-west over the Thames, evening (the owner's photo,
+  // docklands/reference/plane-2026-10/): camera fitted by tools/view-mcp (2 tower tops, Greenland Pier, 32 shoreline pixels,
+  // the horizon; rms 4.8 px of 1195), with the aircraft's bank as roll. Calibration: the photo-view-reconstruction skill.
+  plane: { ...eyeView([211, 802, -845], 223.84, -13.56, 56.9), roll: 9.18, night: false },   // on board a Thames Clipper at Canary Wharf Pier, about 3.5 m above the water: clipper-canary-wharf-pier.jpg
 };
 function eyeView(E, az, lp, hfov, D = 1200) {
   const a = az * Math.PI / 180, p = lp * Math.PI / 180;
@@ -677,7 +681,7 @@ function eyeView(E, az, lp, hfov, D = 1200) {
 }
 const viewBtns = [...document.querySelectorAll('[data-view]')];
 function setView(k) {
-  const v = VIEWS[k]; delete cam.eye; delete cam.target; delete cam.fov; delete cam.hfov; Object.assign(cam, v); if (v.night && !NIGHT.on) setNight(true); inp.cut.value = v.cut; $('bmode').value = v.b; outs(); if (typeof syncGauge === 'function') { syncGauge(); syncBmode(); $('gauge').hidden = v.cut >= 250; $('digBtn').setAttribute('aria-pressed', String(v.cut < 250)); }
+  const v = VIEWS[k]; delete cam.eye; delete cam.target; delete cam.fov; delete cam.hfov; delete cam.roll; Object.assign(cam, v); if (v.night && !NIGHT.on) setNight(true); inp.cut.value = v.cut; $('bmode').value = v.b; outs(); if (typeof syncGauge === 'function') { syncGauge(); syncBmode(); $('gauge').hidden = v.cut >= 250; $('digBtn').setAttribute('aria-pressed', String(v.cut < 250)); }
   viewBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === k))); draw();
 }
 viewBtns.forEach(b => b.onclick = () => { setView(b.dataset.view); if (!wide()) openDrawer(false); });
@@ -686,6 +690,8 @@ function mul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++)
 function ortho(hw, hh, n, f) { const o = new Float32Array(16); o[0] = 1 / hw; o[5] = 1 / hh; o[10] = -2 / (f - n); o[14] = -(f + n) / (f - n); o[15] = 1; return o; }
 function persp(f, a, n, fa) { const t = 1 / Math.tan(f / 2), o = new Float32Array(16); o[0] = t / a; o[5] = t; o[10] = (fa + n) / (n - fa); o[11] = -1; o[14] = 2 * fa * n / (n - fa); return o; }
 const sub = (a, b) => a.map((v, i) => v - b[i]), dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0), cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], nrm = a => { const l = Math.hypot(...a); return a.map(v => v / l); };
+// a view with a roll (degrees, + = the horizon falls to the right: an aircraft's bank seen from its window): the up vector turned about the line of sight
+function rolledUp(e, t, deg) { const f = nrm(sub(t, e)), r = nrm(cross3(f, [0, 1, 0])), u = cross3(r, f), c = Math.cos(deg * Math.PI / 180), s = Math.sin(deg * Math.PI / 180); return [0, 1, 2].map(i => c * u[i] - s * r[i]); }
 function look(e, t, u) { const z = nrm(sub(e, t)), x = nrm(cross3(u, z)), y = cross3(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x, e), -dot(y, e), -dot(z, e), 1]); }
 let MVP = null, PROJ = null, VIEW = null, CAM = null, VZ = 1, satOn = false, ground = 'none', groundTex = null;
 
@@ -761,7 +767,7 @@ function render() {
   if (PIX.on) { const D = 6000, cp = Math.cos(cam.pitch); eye = [T[0] + D * Math.sin(cam.yaw) * cp, T[1] + D * Math.sin(cam.pitch), T[2] + D * Math.cos(cam.yaw) * cp]; }
   const fovY = cam.hfov ? 2 * Math.atan(Math.tan(cam.hfov / 2) / (w / h)) : cam.fov || .8;   // a view with a lens keeps its horizontal field on any screen
   CAM = { eye, target: T, fovY, aspect: w / h, w, h };
-  PROJ = PIX.on ? ortho(cam.dist * .42 * w / h, cam.dist * .42, 10, 14000) : persp(fovY, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000); VIEW = look(eye, T, [0, 1, 0]); MVP = mul(PROJ, VIEW);
+  PROJ = PIX.on ? ortho(cam.dist * .42 * w / h, cam.dist * .42, 10, 14000) : persp(fovY, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000); VIEW = look(eye, T, cam.roll ? rolledUp(eye, T, cam.roll) : [0, 1, 0]); MVP = mul(PROJ, VIEW);
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
   moonNow(nm); gl.uniform3fv(uMl, MOON.on ? MOON.g : [0, 0, 0]);
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); const nDim = nm ? (cutOn ? .6 : .12) : night ? .45 : 1; gl.uniform1f(uDim, nDim);
@@ -2256,11 +2262,11 @@ window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pick
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,
   relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
-  setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; delete cam.hfov; unview(); draw(); },
+  setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; delete cam.hfov; delete cam.roll; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
 outs(); setView('cw');
-{ const vm = /[?&]view=(\w+)/.exec(location.search); if (vm && VIEWS[vm[1]]) setView(vm[1]); }   // ?view=rotherhithe, ?view=greenland, ?view=pier (and the other views)
+{ const vm = /[?&]view=(\w+)/.exec(location.search); if (vm && VIEWS[vm[1]]) setView(vm[1]); }   // ?view=rotherhithe, ?view=greenland, ?view=pier, ?view=plane (and the other views)
 loadJSON('data/tex/facades.json').then(T => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok([T, im]); im.onerror = () => no(new Error('facades.jpg')); im.src = 'data/tex/facades.jpg'; })).then(([T, im]) => {
   FT = T; FT.slots = new Float32Array(32); for (const f of Object.values(T.buildings)) { FT.slots[2 * f.slot] = f.w_m; FT.slots[2 * f.slot + 1] = f.h_m; }
   const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);

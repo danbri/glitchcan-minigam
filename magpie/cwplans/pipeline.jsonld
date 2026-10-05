@@ -7011,6 +7011,53 @@
    "cwp:judgement": "The pixel positions in points.json are read by eye from 2x and 4x enlargements (which point is the foot of a post is a judgement: the base plate hides it); recorded in points.json and the README."
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/solve-photo-view",
+   "@type": "prov:Activity",
+   "rdfs:label": "solve-photo-view",
+   "dct:description": "Solves the camera of any photo of the zone, ground or air: a pinhole camera with eye position, heading, pitch, roll, focal length and optional radial distortion k1, fitted by Levenberg-Marquardt (numeric Jacobian) to landmark pixels (tower tops, named places, given coordinates), shoreline pixels (distance to the projected OSM water outline) and horizon pixels (the sea-level dip from the eye height). Reports rms, formal 1-sigma per parameter from the covariance, per-point residuals and hold-out residuals. Library tools/view-mcp/view-lib.mjs, also served as the docklands-view MCP (tools/view-mcp/server.mjs).",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/points.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/towers.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/solution.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../tools/view-mcp/solve.mjs"
+   },
+   "cwp:command": "node tools/view-mcp/solve.mjs magpie/cwplans/docklands/reference/plane-2026-10/points.json [--k1] --out magpie/cwplans/docklands/reference/plane-2026-10/solution.json",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Model metres: x = E - 537550, z = -(N - 180300), y = m OD; WGS84 by the page's own quadratic fit (meta.geo) and its Newton inverse.",
+    "Tower landmark = the apex (towers.json top.apex) or the centroid of the top tier at its top height; place landmark = area.js places at its ground height.",
+    "Earth curvature is applied to every point (drop d^2/2R with refraction k = 0.13); the horizon target is the sea-level dip -sqrt(2h/R') with weight 0.5 (the visible horizon is hills 20 to 40 km away).",
+    "Hold-out points are projected but not fitted; the run restarts once from its own result.",
+    "The page view takes the fitted camera without k1 (the page has no lens distortion): eyeView(eye, heading, pitch, hfov) plus roll."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-towers"
+    }
+   ],
+   "cwp:area": "sky",
+   "cwp:fault": [],
+   "cwp:judgement": "Pixel positions and which photo feature is which landmark are read by eye from grid enlargements; recorded in points.json and the photo folder's README (with the failed hold-out)."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-construction-index",
    "@type": "prov:Activity",
    "rdfs:label": "build-construction-index",
@@ -17639,6 +17686,75 @@
    ],
    "cwp:osmUse": "none",
    "cwp:review": "CC0 1.0 dedicated by the owner (2026-10-04, \"I am copyright holder but will CC0 them.\"); no EXIF"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/evening-thames-from-plane.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owner's photo through an aircraft window (evening, October 2026): Canary Wharf from above, the Thames, Rotherhithe with Greenland Dock, south London to the horizon (reference for ?view=plane; camera and time solved from it)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "owner-supplied; ask the owner whether CC0 applies (the CC0 statement of 2026-10-04 was for the Greenland Dock day photos); no EXIF; date not known (assumed 4-5 Oct 2026)"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "what the aircraft photo shows, its licence status, the solved camera with uncertainty and hold-outs, the time from the sun, the flight-path check and the page view",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "owner-supplied; ask the owner whether CC0 applies (the CC0 statement of 2026-10-04 was for the Greenland Dock day photos); no EXIF; date not known (assumed 4-5 Oct 2026)"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/points.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "pixel measurements in evening-thames-from-plane.jpg (tower tops, Greenland Pier, shoreline pixels, horizon pixels, hold-outs) and the initial camera; input of tools/view-mcp/solve.mjs",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "cwp:osmUse": "notes",
+   "cwp:review": "owner-supplied; ask the owner whether CC0 applies (the CC0 statement of 2026-10-04 was for the Greenland Dock day photos); no EXIF; date not known (assumed 4-5 Oct 2026)"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/solution.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the camera solved from points.json (eye, heading, pitch, roll, focal length, rms, per-point residuals, hold-outs)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/solve-photo-view"
+   },
+   "cwp:osmUse": "notes",
+   "cwp:review": "owner-supplied; ask the owner whether CC0 applies (the CC0 statement of 2026-10-04 was for the Greenland Dock day photos); no EXIF; date not known (assumed 4-5 Oct 2026)"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/construction/sites.json",
