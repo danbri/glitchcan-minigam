@@ -109,7 +109,11 @@ if (pipe) {
   for (const f of reg.files) if (/tools\/[\w-]+\.(mjs|py|sh)/.test(f.produced_by || '') && !made.has(f.path)) problems.push(`pipeline.json: no activity generates ${f.path} (register: produced by ${f.produced_by})`);
 }
 
-const size = p => { if (!existsSync(loc(p))) return (byPath.get(p) && hostedHere(byPath.get(p))) ? 'londat' : '(written below)'; const n = statSync(loc(p)).size; return n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.ceil(n / 1e3)} kB`; };
+// Without a londat checkout, a hosted file keeps the size its row had in the last DATA-REGISTER.md, so a --write from a
+// checkout with no londat does not rewrite every hosted row.
+const prevSize = new Map();
+if (!LONDAT && existsSync(join(CW, 'DATA-REGISTER.md'))) for (const l of readFileSync(join(CW, 'DATA-REGISTER.md'), 'utf8').split('\n')) { const m = /^\| `([^`]+)`[^|]*\| ([^|]+) \|/.exec(l); if (m) prevSize.set(m[1], m[2].trim()); }
+const size = p => { if (!existsSync(loc(p))) return (byPath.get(p) && hostedHere(byPath.get(p))) ? (prevSize.get(p) || 'londat') : '(written below)'; const n = statSync(loc(p)).size; return n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.ceil(n / 1e3)} kB`; };
 const osmRows = reg.files.filter(f => f.osm.use !== 'none');
 const reviews = reg.files.filter(f => f.review);
 const nHosted = reg.files.filter(hostedHere).length;
