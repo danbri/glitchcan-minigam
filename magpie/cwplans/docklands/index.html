@@ -769,7 +769,7 @@ function render() {
   if (PIX.on) { const D = 6000, cp = Math.cos(cam.pitch); eye = [T[0] + D * Math.sin(cam.yaw) * cp, T[1] + D * Math.sin(cam.pitch), T[2] + D * Math.cos(cam.yaw) * cp]; }
   const fovY = cam.hfov ? 2 * Math.atan(Math.tan(cam.hfov / 2) / (w / h)) : cam.fov || .8;   // a view with a lens keeps its horizontal field on any screen
   CAM = { eye, target: T, fovY, aspect: w / h, w, h };
-  PROJ = PIX.on ? ortho(cam.dist * .42 * w / h, cam.dist * .42, 10, 14000) : persp(fovY, w / h, cam.eye ? 1 : Math.max(2, cam.dist / 400), cam.eye ? 20000 : cam.dist * 6 + 6000); VIEW = look(eye, T, cam.roll ? rolledUp(eye, T, cam.roll) : [0, 1, 0]); MVP = mul(PROJ, VIEW);
+  PROJ = PIX.on ? ortho(cam.dist * .42 * w / h, cam.dist * .42, 10, 14000) : persp(fovY, w / h, cam.eye ? (cam.near || 1) : Math.max(2, cam.dist / 400), cam.eye ? (cam.far || 20000) : cam.dist * 6 + 6000); VIEW = look(eye, T, cam.roll ? rolledUp(eye, T, cam.roll) : [0, 1, 0]); MVP = mul(PROJ, VIEW);
   const bm = $('bmode').value, cutOn = P.cut < 250, cutY = cutOn ? P.cut : 1e9;
   moonNow(nm); gl.uniform3fv(uMl, MOON.on ? MOON.g : [0, 0, 0]);
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); const nDim = nm ? (cutOn ? .6 : .12) : night ? .45 : 1; gl.uniform1f(uDim, nDim);
@@ -2271,7 +2271,7 @@ if (globalThis.DocklandsRiver) DocklandsRiver.init({ Mesh, beam, shade, geo, gro
 if (globalThis.DocklandsShips) DocklandsShips.init({ Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovCredit, londonTime, loadJSON, draw, note, A, OV, labels, labelBox, info, buildOverlays, wl: () => tidalLevel ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level });
 // My KML (kml-layer.js, Layers > My KML): the helpers it draws with; it runs after this script as a module
 globalThis.DocklandsKMLctx = { Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovOn, dec, earcut, draw, toast, unview, A, OV, labels, labelBox, cam, get CAM() { return CAM; }, get VZ() { return VZ; }, get MVP() { return MVP; }, get PROJ() { return PROJ; }, gl, cv, sel: () => selected >= 0 && AT ? AT.buildings[selected] : null };
-window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder,
+window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder, tunnelY, par, get tidalField() { return tidalField; },
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,
   relight(l) { LIGHT.splice(0, 3, ...(l || LIGHT0)); if (!PIX.on) { if (ground === 'none') buildTerrain(null); buildGreens(); buildBld(); } draw(); }, get MVP() { return MVP; },
@@ -2298,5 +2298,6 @@ hud.textContent = ''; ATTR.start();
 <script src="locate.js"></script>
 <script type="module" src="kml-layer.js"></script>
 <script src="nav.js"></script>
+<script src="drone.js"></script>
 </body>
 </html>

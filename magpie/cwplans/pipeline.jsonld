@@ -19131,6 +19131,20 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/drone.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the 3D page's first-person Drone (copter, plane, boat, tube, walk, under) with autopilots; reads the page's own model data (buildings, terrain, water, rail tunnels, walking network) in the browser, stores and sends nothing",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/boroughs/catalogue.json",
    "@type": [
     "prov:Entity",

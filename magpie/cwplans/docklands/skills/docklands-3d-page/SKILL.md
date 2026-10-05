@@ -12,7 +12,7 @@ description: >-
   toDataURL, two sizes x two pixel ratios x the photo views, numbers not one look). Reach for it before you edit
   docklands/index.html, add a layer or a style, change a shader, judge a render, or push a page change. The sky,
   clock, weather and tide have their own skill (pending). Also the crown halo by date and the overlays (live state,
-  London Datastore: OV), and the locate button (blue dot, follow, compass heading, look through the phone; locate.js). Append to the curation skill's ACTIVITY-LOG.md.
+  London Datastore: OV), and the locate button (blue dot, follow, compass heading, look through the phone; locate.js), and the first-person Drone (drone.js: copter, plane, boat, tube, walk, under; autopilots, controls, ?drone=). Append to the curation skill's ACTIVITY-LOG.md.
 ---
 
 # The Docklands 3D page
@@ -843,6 +843,81 @@ Owner, 2026-10-05: "Also look into basic KML support". Live: https://danbri.gith
   1600 x 900 DPR 1 and 390 x 844 DPR 3. Atlas, both sizes: 10 layers (the hidden one filtered), drop of the KMZ, popups
   text only, export of the buildings layer (141 features at zoom 17 at 1600 px, OSM licence on each) and of a KML layer
   (11), no console error.
+
+## Drone (2026-10-05)
+
+Owner, 2026-10-05: "Create a first person view "virtual drone" that can fly in tunnels, operate as a boat or copter/plane
+etc. It must have sensible defaults, be highly automated but still respond to user input, and let us fly around
+underground or on boats with v fast acceleration if needed." Code: `docklands/drone.js`, loaded after `nav.js`. It uses
+the page only through `__docklands` (three new hooks: `tunnelY`, `par`, `tidalField`). Test hook: `DocklandsDrone`
+(`start(mode, pose)`, `stop()`, `state`, `manual()`, `step(seconds, fps)`, `keys([...])`, `stick(x, y)`, `boost()`,
+`goTo(x, z)`, `shareValue()`, `fromShare()`, and the model helpers `ground`, `surface`, `wdist`, `rails`, `buildings`,
+`roofAt`, `inside`).
+
+- **Entry.** Menu > views group > "Drone" (`#droneBtn`, after Below ground); `?drone=copter|plane|boat|tube|walk|under`;
+  Share this view adds `dr=mode,x,y,z,heading,look-pitch` (nav.js reads it after the camera and calls `fromShare`; the
+  shared link drops `?drone`). Leave with the cross, Esc, or any view button (the loop sees that `cam.eye` changed and
+  stops without moving the camera).
+- **The camera.** The drone writes `cam.eye`, `cam.target`, `cam.fov` and two new keys, `cam.near` and `cam.far`, that
+  `render()` reads only when `cam.eye` is set (default 1 m and 20 km, as before). Near: copter clearance / 6 (0.5 to 4 m),
+  plane 2, boat 1, tube and under 0.3, walk 0.25; far 6 km underground. Vertical field per vehicle (70 to 85 degrees),
+  x 1.25 on a portrait screen. Roll only in the plane, and none with `prefers-reduced-motion`.
+- **Physics.** Fixed steps of 1/120 s with an accumulator; the camera is put between the last two steps. A frame longer
+  than 1 s is cut to 1 s (SwiftShader at about 0.5 frames a second runs slow, not wrong). Measured: 20 s of autopilot
+  and input stepped at 2 and at 60 frames a second end at the same point (difference 0) for copter, plane, boat, tube.
+- **Autopilot and the visitor.** The autopilot's share is 0 while any input is non-zero and for 3 s after, then back over
+  1 s (`state.wa`). Looking around does not count as input: the path vehicles keep moving, and their look offset drifts
+  back after 3 s. Auto button (or P) turns it off: the copter then holds position, the boat stops. A short tap on the city
+  sets the target (`groundUnder`; walk: `vertexAt`); a search result picked while flying sets it where the page's fly-to ends.
+- **Vehicles** (keys 1 to 6; speeds in m/s; boost x 10 for 2 s with a smooth ramp, capped at 300 m/s; x 4 with reduced motion):
+  - Copter (30): stick = move and strafe, right drag = look and turn, lever or two fingers or Q/E = up/down (springs back),
+    Space = brake to hover. Autopilot: a 450 m circle round One Canada Square at 70 m above ground, or to the target and
+    hover 40 m over it; height = highest roof within 25 m of four points up to 130 m ahead + 25 m. Buildings: prisms from
+    `A.buildings` (outline, holes, base + mh to base + h) in a 50 m grid; within 14 m the speed into a wall is cut in
+    proportion and the rest slides; a step that enters the 2 m radius is pushed out (or onto the roof). Ground: soft wall
+    1.5 m over the bilinear DTM; push down 0.6 s = pass Below ground (gauge open, cut at street level - 1 m), push up
+    0.6 s from under = back up, like nav.js. Start: 300 m from the view target along the view, at least 25 m over the
+    roofs within 60 m (the first start beside a 159 m tower pinned the copter at the wall).
+  - Under (30): the copter below the street. Ceiling 1.5 m under the DTM, floor -60 m OD, no building collision.
+    Autopilot: a 150 m circle round where it went under, at that depth.
+  - Plane (22 to 80, never slower): stick x = bank (to 43 degrees), stick y or Q/E = climb, lever = speed. Turn rate
+    g tan(bank) / V. Autopilot: a 1,300 m circle round the Isle of Dogs at 260 m (pure pursuit 300 m ahead), or a 400 m
+    circle round the target. Pulls up when a roof or the ground within 320 m ahead is less than 40 m below.
+  - Boat (10): stick y = throttle, stick x = rudder, lever = cruise speed (steering alone keeps it). An 8 m raster of
+    `A.water` (scanline fill, the later polygon wins), lock gates (tidal next to impounded, or a level step over 0.5 m)
+    count as bank, chamfer distance to the bank, connected bodies. Autopilot: keeps 0.45 x the body's widest distance
+    (5 to 40 m) from the bank with the bank to starboard, so it follows the river or the dock round and turns at the
+    model's edge; to a target it descends a breadth-first distance field over the water. Never closer than 5 m to the
+    bank: it slides along it or stops. Height: the water surface (`surface`: the live tide or the sky.js tide field on
+    tidal water, else the LiDAR level) + 2 m eye. No portage through locks yet: a boat stops at the gate.
+  - Tube (25): rides every rail, subway and light-rail chain of `A.lines` (tunnels at `tunnelY` + 3 m, the centre of the
+    6 m tunnel box; open lines on their smoothed deck + 3.5 m). Chain ends link when within 12 m and 8 m in height.
+    Stick x = the turn at the next junction (remembered 6 s, else the straightest, else towards the target), stick y or
+    lever = speed setting, Space = brake. Brakes to stop at a dead end and reverses after 2 s under autopilot. Below the
+    street the model is cut 1.5 m above the eye (the tunnel floor and walls, and other tunnels and basements, show; the
+    sky shows above). Starts on the nearest Jubilee tunnel (else any rail tunnel) within 1.5 km, eastward first.
+  - Walk (1.4; 3 with the lever): the walking network (`data/indoor.js`) at 1.6 m eye, stairs 0.6, escalators 0.75,
+    lifts 1.2 m/s. Autopilot: the page's `route()` from "Westbound platform 1" (Jubilee, level -3) to "Rituals" (Jubilee
+    Place, level -2) when the view is at Canary Wharf, else the nearest platform; then 3 s, and back. Stick forward
+    walks the edge nearest the look direction; back = turn round. Cut 2.6 m above the eye below the street.
+- **Controls on the screen** (`#drone`, z-index 2 over the canvas and labels, under the top buttons and the drawer): a
+  floating stick under a thumb in the lower left 70% of the left half; drag elsewhere to look (a mouse always looks); two
+  fingers up or down on the right = the lever; the lever at the right edge; Boost at the bottom right (the locate
+  buttons hide in drone mode); vehicle select, Auto and the cross at top right, 60 px down (the first build put them at
+  8 px, under `#top`, which is full width on a phone: the cross could not be tapped). HUD at the bottom left: vehicle,
+  auto / you (auto in N s) / manual, speed, height above ground, or m OD and depth below the street, or the water level.
+  Keys: WASD / arrows (A/D strafe in the copter, arrows turn), Q/E up/down, Shift boost, Space brake, 1 to 6, P, Esc.
+  Gamepad (standard mapping): left stick, right stick look, triggers up/down, A boost, B brake.
+- **Measured** 2026-10-05 (headless Chromium, SwiftShader WebGL; 1600 x 900 DPR 1 and 390 x 844 DPR 3 touch): see
+  the activity log for the numbers (each vehicle moves under autopilot; override and resume; boat 60 s on the water;
+  tube within 1 m; walk route; no building entered; boost; 2 vs 60 fps; share round trip; touch stick, look, two-finger
+  lift, boost, tap to go, pinch scale 1; views with the drone off unchanged).
+- **Only a real phone can confirm**: how the stick and look feel at 60 to 120 frames a second and with a thumb; that the
+  lever and Boost are reachable one-handed; the gamepad (not testable headless); depth precision with a 0.25 m near plane
+  on a phone GPU (24-bit depth assumed; a 16-bit depth buffer would z-fight far away underground); `navigator.vibrate` on
+  the pass (Android only); the frame cost of the 8 m water raster build (about 0.1 to 0.3 s once, on the first boat).
+- **Not done**: lock portage for the boat; tunnel wall texture or rings (the inside of a tunnel box is flat colour, so
+  speed is hard to feel); a wake; a stop at stations for the tube.
 
 ## Testing
 

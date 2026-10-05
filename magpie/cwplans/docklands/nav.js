@@ -199,12 +199,13 @@ function shareState() {
   for (const [k, a] of [['on', on], ['off', offs], ['r', rad], ['s', sel], ['g', rng]]) if (a.length) o.push([k, a.join(',')]);
   if (sheetOpen()) { if (lastPick) o.push(['id', lastPick.wd || 'l:' + lastPick.name]); else if (D.selected >= 0 && D.AT) o.push(['id', D.AT.buildings[D.selected].id]); }
   if (document.body.classList.contains('capture')) o.push(['cap', '1']);
+  const Dr = globalThis.DocklandsDrone; if (Dr && Dr.on && !follow) o.push(['dr', Dr.shareValue()]);   // drone.js: vehicle and pose
   return { pairs: o, follow };
 }
 const enc = v => encodeURIComponent(v).replace(/%2C/g, ',').replace(/%3A/g, ':').replace(/%20/g, '+');
 function shareUrl() {
   const { pairs, follow } = shareState(), u = new URL(location.href);
-  for (const k of ['view', 't', 'night', 'pixel']) u.searchParams.delete(k);   // the hash carries these
+  for (const k of ['view', 't', 'night', 'pixel', 'drone']) u.searchParams.delete(k);   // the hash carries these
   u.hash = pairs.map(([k, v]) => k + '=' + enc(v)).join('&');
   return { url: u.href, hash: u.hash, follow };
 }
@@ -269,6 +270,7 @@ async function restore(m) {
       const e = (m.e || '').split(',').map(num); if (e.length === 6 && e.every(x => x != null)) { cam.eye = e.slice(0, 3); cam.target = e.slice(3); cam.fov = cam.fov || .8; }
       if (!m.vw) document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', 'false'));
     }
+    if (m.dr && globalThis.DocklandsDrone) await globalThis.DocklandsDrone.fromShare(m.dr);   // drone.js: dr=mode,x,y,z,heading,look
     D.draw();
     if (m.id) {
       if (/^cwb-\d+$/.test(m.id)) { if (await until(() => D.AT, 60000)) { const k = D.AT.buildings.findIndex(b => b.id === m.id); if (k >= 0) D.selectBuilding(k); } }

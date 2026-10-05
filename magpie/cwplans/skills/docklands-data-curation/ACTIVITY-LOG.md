@@ -936,3 +936,23 @@ central tower - do we have an index of these?"
   `cache/zone.gpkg`, `live-cache.js`; pipeline activities cache-londat and build-zone-gpkg; HOSTED_DIRS `cache/`.
   Skill: cwplans-londat-cache.
 
+## 2026-10-05 — Drone (drone agent)
+- Owner: a first-person "virtual drone" that flies in tunnels, works as a boat, copter or plane, with sensible defaults,
+  autopilots that give way to input, and very fast acceleration. New `docklands/drone.js` (six vehicles: copter, plane,
+  boat, tube, walk, under); `docklands/index.html`: hooks `tunnelY`, `par`, `tidalField`, and `cam.near` / `cam.far` read
+  only when `cam.eye` is set; `docklands/nav.js`: Share this view carries `dr=`. Menu > "Drone"; `?drone=<mode>`.
+- Measured (headless Chromium, SwiftShader WebGL, simulated time): every vehicle moves under autopilot from the Canary
+  Wharf view (20 s: copter 206 m, plane 655 m, boat 94 m, tube 246 m on the Jubilee line, walk 28 m, under 130 m);
+  input sets the autopilot share to 0, it stays 0 for 3 s and is back at 1 after 4 s; boat 60 s: height error 0.000 m
+  from the water surface + 2 m, never closer than 24 m to the bank; tube 60 s: at most 0.001 m from the tunnel centre
+  line (the page's tunnelY + 3 m), cut set to -11 m OD with the gauge open; walk Westbound platform 1 (level -3) to Rituals
+  (Jubilee Place, level -2) in 155 s; copter flown at One Canada Square at 80 m with boost and dived at its roof: 0 of
+  700 samples inside a building, stopped at the wall and at roof + 2 m; boost 32 -> 295 m/s in 2 s, back to 32 by 7 s;
+  2 vs 60 fps: the same end point to 0.000 m for copter, plane, boat, tube; share round trip: boat restored to 0.05 m.
+  Phone 390 x 844 DPR 3 (CDP touch): stick forward 28 m/s, look drag turns, two-finger lift climbs, Boost x 9.3 after 1 s,
+  a tap sets the target, pinch scale 1, the select switches to boat, the cross exits. Reduced motion: no roll, boost
+  x 3.75 of 4. Views with the drone off (drone.js blocked vs loaded; rotherhithe, greenland, plane, cw at 800 x 500):
+  mean absolute difference 0.3 to 1.1 of 255 (live layers and the clock). No console errors.
+- Fixed while testing: the copter started 0 to 14 m from a 159 m tower and could not move forward (start now 25 m over
+  the roofs within 60 m); the drone's top bar sat under `#top` on a phone (moved 60 px down). Skill: docklands-3d-page,
+  "Drone". Register: `docklands/drone.js` (code).
