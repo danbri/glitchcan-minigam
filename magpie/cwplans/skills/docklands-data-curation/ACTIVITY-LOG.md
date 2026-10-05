@@ -967,3 +967,18 @@ central tower - do we have an index of these?"
 - GeoPackage split: zone-core.gpkg 16.9 MB (17 layers), zone-lds.gpkg 38.0 MB (82), zone-portals.gpkg 13.2 MB (64);
   validate_gpkg.py passes on all three. The single zone.gpkg was removed (it stays in londat history, about 65 MB).
 - check-data-register.mjs: a `*` may stand in a folder name; `"may_be_empty": true` for a family with no file yet.
+
+## 2026-10-05 — what people built from TfL's axonometric station diagrams (research agent)
+- Owner: "Do a deeper search to see what people have done (even if license unclear) using these resources as a
+  baseline" (the 2015 FOI axonometric sheets; we hold Canada Water and Canary Wharf in londat third_party/tfl/am3d).
+- New `feeds/underground/axonometric-uses.json` (54 entries) and `feeds/underground/AXONOMETRIC-USES.md` (ranked table,
+  what it means for our modelling, gaps, sites not read). Links and facts only; no model or image copied.
+- Found: no open 3D model, glTF or game level says it was made from the sheets. The only derived data: two OSM platform
+  ways at Gloucester Road tagged `source=TfL axonometric` (changeset 178320189, 2026-02-09); one Baker Street note cites
+  the redacted sheet. Canada Water has real OSM indoor mapping (Weltstaat 2018: corridors, rooms, doors; platforms at
+  levels -2 and -3); Canary Wharf has platforms, 26 lifts and 114 step ways but no indoor ticket hall. Independent 3D
+  work: Andrew Godwin's Station Viewer (2012, 8 stations incl. Shadwell, West Silvertown; CC BY-NC-SA), Station Master's
+  surveyed 3D maps of all 270 Tube stations (app, all rights reserved), LT Museum JLE models of both our stations.
+- Not read (robots.txt or a challenge): ianvisits.co.uk, architectsjournal.co.uk, brixtonbuzz.com, railforums.co.uk,
+  x.com, reddit.com, skyscrapercity.com (robots.txt); whatdotheyknow.com, archpaper.com, tfl.gov.uk (challenge).
+- Register: source `axo-uses-search-20261005`; both files `osm.use: ids`. check-data-register exit 0.

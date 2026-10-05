@@ -13249,6 +13249,53 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/axonometric-uses.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "catalogue of 54 projects built from or alongside TfL's axonometric station diagrams (FOI 2015 and later): URL, author, date, kind, stations with zone flags, format, licence as stated and licence class, relation to the sheets, usefulness",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/axo-uses-search-20261005"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-quotes"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "cwp:osmUse": "ids",
+   "cwp:review": "short quotes from copyright pages; facts marked search-snippet were not read on the page; re-check before production"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/AXONOMETRIC-USES.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the axonometric-uses catalogue as a ranked table, with what it means for our station modelling, gaps and the sites not read",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/axo-uses-search-20261005"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-quotes"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "cwp:osmUse": "ids"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/README.md",
    "@type": [
     "prov:Entity",
@@ -25402,6 +25449,15 @@
    "dct:license": "OGL v3.0 (data); service MIT",
    "dcat:landingPage": "https://postcodes.io/",
    "cwp:attribution": "Contains OS data © Crown copyright and database right; Contains Royal Mail data © Royal Mail copyright and database right; Source: Office for National Statistics licensed under the Open Government Licence v3.0"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/axo-uses-search-20261005",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "web search and crawl for scoping, 2026-10-05: what people built from or alongside TfL's axonometric station diagrams (search results, direct fetches where robots.txt allows, Sketchfab API v3, GitHub search and raw files, ArcGIS Hub API, HTTP HEAD on foi.tfl.gov.uk)",
+   "dct:license": "each site's terms; facts, URLs and short quotes only, no models or images copied"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own",
