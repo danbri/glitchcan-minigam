@@ -737,19 +737,18 @@ Owner, 2026-10-05: "Also look into basic KML support". Live: https://danbri.gith
   signature, not by its name. Encrypted entries and methods other than stored and deflate are refused.
 - **3D drawing** (`featureMesh`): positions only through the page's `geo()`; heights in m OD: clampToGround = `groundAt` (+1 m
   for lines and outlines, +0.8 m for fills), relativeToGround = ground + altitude, absolute = altitude (KML "absolute" is
-  above sea level; ODN is within about a metre of it here). Points: a white stick 22 m (x IconStyle scale) with a head in
-  the icon colour, and a bar at the altitude when it is not on the ground. Lines: `beam` segments, width 2 m per KML pixel
-  (2.5 to 30 m), clamped lines re-sampled every 15 m along the ground. A clamped polygon fill is **draped**: one quad per
-  20 m terrain cell whose centre is inside the outer ring and outside the holes (an earcut fill at ground height crossed the
-  ground on slopes and banks); a shape smaller than a cell falls back to earcut. Polygons in the air: earcut at their
-  altitudes, extrude = walls to the ground. Fills take the PolyStyle alpha (vertex alpha, the `pr` program multiplies it);
-  a file with no style is drawn yellow, as in Google Earth.
+  above sea level; ODN is within about a metre of it here). Points and lines are **not** 3D meshes any more (see "Visible at
+  any zoom" below). A clamped polygon fill is **draped**: one quad per 20 m terrain cell whose centre is inside the outer
+  ring and outside the holes (an earcut fill at ground height crossed the ground on slopes and banks); a shape smaller than a
+  cell falls back to earcut. Polygons in the air: earcut at their altitudes, extrude = walls to the ground. Fill alpha is the
+  PolyStyle alpha held to 0.15 to 0.35 (a whole-box wards file at 0.4 yellow tinted the whole city); a file with no style is
+  drawn yellow, as in Google Earth.
 - **The model box.** Segments are clipped to `A.meta.extent` (Liang-Barsky); a point outside, or a shape with nothing
   inside, is not drawn. The file note and the toast say "n outside the model box (not drawn), n partly outside (cut at the
   edge)". Do not draw past the box: `groundAt` clamps to the grid edge, so outside shapes float (the overlay lesson above).
 - **Taps.** One anchor per feature in `OV.hits` (`kml: true`) and each polygon in `OV.polys` (in front, so your own shape
   answers a ground tap first). `buildOverlays()` replaces both arrays: a 1 s timer (`sync`) puts them back, as the ships
-  layer does. Names become `.lb.kml` labels (pri 3).
+  layer does. Names are drawn on the KML canvas (below), not as `.lb` labels.
 - **Camera.** KML Camera to the page: eye = `geo(lon, lat)` at the altitude, heading = -yaw, tilt 90 = level, so the page's
   orbit point is 1.2 km along the line of sight (as `eyeView`); `ty` takes the vertical exaggeration into account. A Camera
   with no gx:horizFov gets 60° horizontal (Google Earth's default); without it a portrait phone showed 22°. LookAt: target,
@@ -769,9 +768,71 @@ Owner, 2026-10-05: "Also look into basic KML support". Live: https://danbri.gith
   `copy` for a file item that is KML, has no type, or is XML or zip) and take `.kml`/`.kmz` drops; audio still goes to the
   player. `?kml=<url>` (http or https; the server must allow CORS) loads on open; a document view is taken, else the
   camera frames the drawn features.
-- **Example KML** (Menu > Layers > My KML, a `details` under the file list): 11 buttons that fetch open-licensed,
-  zone-clipped copies from danbri/londat (`EXAMPLES` in kml-layer.js; a file already open gives a toast). Where KML for
-  the zone is found, and why most layers are copies: skill cwplans-open-portals, "KML sources".
+- **Visible at any zoom** (owner, 2026-10-05, iPhone: "in the default view of a newly loaded KML view it is pretty hard to
+  see anything at all"). Measured before (390 x 844 DPR 3, the fitted view, pixels changed by the file): Thames Path 0.14%,
+  river piers 0.001% (16 pixels), listed buildings 0.10%, heritage at risk 0.07%. A 2.5 m beam is under a pixel at 12 km.
+  - **Lines and outlines are screen-space ribbons** (`drawGL`, own WebGL program on the page's context, hook after
+    `drawGlow()` in `render()`, then `gl.useProgram(pr)`): one segment = 6 vertices of [x y z | other end | side | metres |
+    rgba] (36 bytes); the vertex shader projects both ends and offsets across the screen direction by
+    max(2.5 CSS px x canvas DPR, KML width in metres x px per metre / w), plus a 1.25 px dark halo; square caps. Two passes:
+    all halos, then all cores, so a halo never covers another line. Depth test on, depth write off, after the ground; each end
+    is pulled towards the eye by min(d/2, 0.5 m + 0.4% of d) so the line wins over the ground it lies on but not over a tower
+    in front. Ends behind the camera are moved to w = 0.05 (the photo views stand at street level). Clamped lines are
+    resampled every 30 m along `groundAt`. The shader's `mode` is `uniform mediump float` in both stages: a highp vertex
+    uniform with the same name as a mediump fragment one fails to link ("Precisions of uniform differ"). The program saves and
+    restores the enabled vertex arrays 0 to 5, blend and depth mask.
+  - **Colour**: the file's colour, its hue kept, lifted towards white until relative luminance is at least 0.42 (`vivid`);
+    the dark halo gives contrast on light ground (satellite) and water.
+  - **Points are pins on a 2D canvas** `#kmlOv` (over `#c`, under `#labels`, pointer-events none, hidden in `?capture`),
+    redrawn by `DocklandsKML.after()` at the end of `render()`: 24 CSS px tall, tip at the point (at its altitude, with a stem
+    to the ground), dark outline, white rim. **Clusters**: pins of one file in the same 48 CSS px screen cell are one circle
+    (9 to 16 px radius by log2 n) with the count. A tap: the page's `ovTapPoint` finds the nearest anchor (22 px); a pin opens
+    its card, a cluster flies in to its members, or lists them when they share one spot (under 25 m apart).
+  - **Names** (no DOM labels any more: 1,732 buttons for listed buildings): on the canvas, white with a dark stroke; pins'
+    names only when 40 or fewer single pins are on screen; line and area names at their anchor; greedy, no overlap, at most
+    40, not under the top bar or the bottom controls; off with Layers > Labels.
+  - Measured after (same views): Thames Path 2.3%, river piers 3.0% (9 pins, 1 cluster, 4 names), listed buildings 12% (53
+    clusters, 7 pins, 1,649 on screen), conservation areas 10% lines + 5.7% names, wards 21% + 4.1%; 1600 x 900 DPR 1: 0.4%
+    to 18% for every source. No KML: `?view=rotherhithe|greenland|pier&t=photo` and `?night` give the same mean luma as the
+    old page to 4 decimals (0.0663, 0.0778, 0.0781, 0.0914; the sampled mean difference 0.1 to 0.8 of 255 is the moving water).
+- **Fly to fit** (`fitCam`, `flyCam`): after a load (picker, drop, `?kml=`, the sources panel) the camera flies (0.9 s, eased,
+  time-based) to the drawn features' box, unless the file has its own Camera or LookAt (then that view; "Fit" in the file
+  row flies to the features). `DocklandsNav.stop()` first; any pointerdown or wheel ends the flight; reduced motion jumps.
+  The fit projects the box corners with the page's own camera model (fovY 0.8, aspect of the canvas) and finds the distance
+  by bisection so they sit inside the screen less 16 px at the sides, 12% at the top (search bar) and 13% at the bottom
+  (locate, credit); three passes re-centre the target. Pitch: at least 0.95 on a tall screen, 0.72 on a wide one. The turn
+  is kept unless a quarter turn needs 15% less distance (a long box on a tall screen). The page stops at 16 km: the whole
+  model box on a 390 px portrait screen needs more, so whole-box files end at 16 km, slightly cut at the sides.
+- **Show** (owner, 2026-10-05: "make all the KML visuals from a layer become bigger, colour cycle, jiggle, float or extrude
+  upwards when a "show" button is pressed, then shrink back quickish to their location(s)"). `show(F)`: 2.2 s; 0.3 s in,
+  hold, 0.4 s ease-out (cubic) back; every value from `performance.now()` (`emph`), so 2 and 120 frames a second end alike,
+  and at the end the state is dropped and the next frame is the normal one. Pins and lines grow to x 2.6, colours turn about
+  the grey axis (0.9 turns a second, scaled by the envelope so they unwind), the file floats up 60 to 150 m (1.2% of the view
+  distance), a 3 px jiggle at 3.5 Hz; polygon outlines rise on translucent walls (`WP` program, wall quads built with the
+  outlines, drawn only during Show). Reduced motion: 1.2 s, grow x 1.6 and brighten 45% towards white, no movement. Runs
+  once by itself after the fly-to ends; "Show" in the load toast and in each file row (it flies there first if none of the
+  file is on screen); "Fit" next to it. Measured: mid-animation 98k to 221k canvas pixels changed; after it, 1 to 7 pixels
+  against 0 to 15 between two frames with no change (the water), feature positions identical, no console error, both sizes.
+- **Toast**: shorter ("TfL River Piers in the zone: 12 shown, 3 outside the model." + a Show button); the cut and hidden
+  counts are in the file row. On a phone it sits 48 px above the bottom and is at most 100vw - 124 px wide, clear of the
+  locate buttons and the (i): measured at 390 x 844 toast [62, 717, 328, 796], locate [338, 762, 380, 804], (i)
+  [358, 814, 384, 840], credit line from y 821.
+- **KML sources panel** (Menu > Layers > My KML > "KML sources", replaces the 11 example buttons): `../feeds/kml/catalogue.json`
+  (42 KB) fetched when the `details` first opens. Rows sorted Open, Link only, Not usable, then by features in the zone. Open =
+  an open licence class (ogl, cc-by, odc-by, public-domain, cc0), `open_link` and `cors: yes`: it loads as a picked file
+  does (closes the drawer on a phone, flies, Show); a file already open is shown again. Link only = share-alike: the publisher
+  page in a new tab, never loaded (project rule). Not usable: the catalogue's reason (robots, no KML, no licence,
+  restricted, ArcGIS on request). Filter chips are buttons with `aria-pressed`, not inputs, so "Share this view" does not
+  carry them; text filter on title, publisher, licence and note; catalogue date and the README link. Rows flow in the drawer
+  (no inner scroller: it scrolls with `#drawerBody`, touch-action pan-y). Measured: 40 rows (15 Open, 5 Link only), chips
+  All 40 / Open licence 20 / Share-alike 5 / No licence 8 / Restricted 3 / Other 4, filter "historic" 5; no element wider
+  than the 390 px screen; a touch drag scrolled the drawer 168 -> 977 px, visual viewport scale 1; all 15 Open rows loaded,
+  drew and flew at 390 x 844 DPR 3 and 1600 x 900 DPR 1 (the native GLA schools KMZ, wards KML and BIDs zip too), no
+  console error.
+- **The 404 on first load** was `https://danbri.github.io/favicon.ico` (the page had no icon; seen on the live page with
+  headless Chromium). `<link rel="icon" href="data:,">` in the head.
+- **Only a real phone can confirm**: line widths at DPR 3 on a phone GPU (the shader uses highp in the vertex stage, which
+  WebGL 1 guarantees there), the feel of the flight and of Show at 60 to 120 frames a second, and pin taps with a finger.
 - **Measured** (2026-10-05, SwiftShader; fixtures in the scratchpad, not committed: 11 placemarks in 4 folders, 1 hidden, 1
   outside, 1 half outside, a polygon with a hole, an extruded polygon at 120 m, a StyleMap, Data and SchemaData, a Camera, a
   LookAt, a NetworkLink, a GroundOverlay; the same file as a KMZ): picker and drop both 9 drawn, 1 cut at the edge, 1

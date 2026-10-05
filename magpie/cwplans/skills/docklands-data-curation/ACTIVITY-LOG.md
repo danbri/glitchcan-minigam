@@ -903,3 +903,16 @@ central tower - do we have an index of these?"
   (no KML), BGS and Open Plaques (robots.txt). `tools/londat.mjs` HOSTED_DIRS gains `feeds/kml/` (catalogue and README
   stay here). Skill: cwplans-open-portals, "KML sources".
 
+## 2026-10-05 — 3D page: KML visible at any zoom, fly to fit, Show, KML sources panel (kmlvis agent)
+- Owner (iPhone): "in general in the default view of a newly loaded KML view it is pretty hard to see anything at all. Can we
+  pull the KML table of datasources function into the app too?" and later the "Show" request.
+- `docklands/kml-layer.js`: lines and outlines as screen-space ribbons (at least 2.5 CSS px, dark halo, colour lifted for
+  contrast); points as constant-size pins with clusters on a 2D canvas; names on the canvas when few; fills 0.15 to 0.35.
+  Fly to fit after every load; Show (grow, colour cycle, float, walls) once after the flight and from the toast and the file
+  row. Toast shorter and clear of the locate button. KML sources panel from `feeds/kml/catalogue.json` (Open / Link only /
+  Not usable, licence chips, text filter). `docklands/index.html`: two hooks in `render()`, `gl`, `cv`, `MVP`, `PROJ` in the
+  KML context, toast CSS, `<link rel="icon" href="data:,">` (the load-time 404 was /favicon.ico).
+- Measured (fitted view, 390 x 844 DPR 3): pixels changed by a file went from 0.001% to 0.14% (piers, Thames Path) to 2% to
+  3%; listed buildings 0.10% to 12% (clusters). No-KML photo views and Night: same mean luma as before. Skill:
+  docklands-3d-page, "KML". No new data files.
+
