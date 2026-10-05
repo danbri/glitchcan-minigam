@@ -860,3 +860,8 @@ central tower - do we have an index of these?"
 - Page: `VIEWS.plane` with a roll (`rolledUp`); https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?view=plane&t=2026-10-05T17:40
 - New skill `photo-view-reconstruction` (docklands/skills/), MCP server `docklands-view` (`tools/view-mcp/server.mjs`, .mcp.json;
   `node tools/view-mcp/test.mjs` passes 17 checks); pipeline activity `solve-photo-view`; register entries for the 5 files.
+
+## 2026-10-05 — 3D page navigation: momentum (step 1 of 3)
+- `docklands/nav.js` (new, loaded after `locate.js`): momentum after a drag, pinch or twist; time-based decay (TAU 0.35 s);
+  stopped by a touch, the wheel, reduced motion, the locate follow modes and any other camera mover. Skill
+  docklands-3d-page, "Navigation: momentum, ground limit, share". Tests 7/7 (1600 x 900) and 8/8 (390 x 844 DPR 3, touch).

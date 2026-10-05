@@ -617,6 +617,29 @@ records placed in the building, each with key and confidence; data `registry/sou
 Credits, "London Datastore". Tested headless (SwiftShader): rotherhithe, greenland, pier x 1600x900 DPR 1 and 390x844
 DPR 3, no console error; the card of cwb-0413 shows heat, solar and the LSOA context.
 
+## Navigation: momentum, ground limit, share (2026-10-05)
+
+Owner, 2026-10-05: "Also pls add momentum to visual navigation". Code: `docklands/nav.js`, loaded after `locate.js`. It
+reaches the page through `__docklands` only, plus listeners added after the page's own (window capture to take a camera
+snapshot before a move, `cv` and `#labels` bubble listeners to read the result after it). Test hook: `DocklandsNav`
+(`state`, `fling(v, t)`, `tick(now)`, `stop()`; `state.manual = true` stops the rAF loop so a test can step time).
+
+- **Momentum** (drag, pinch, twist; map and pixel art): the release velocity is the camera's own motion (tx, tz, yaw,
+  pitch, ln dist) over the last 80 ms of moves, from `event.timeStamp`. No momentum when the finger was still for more than
+  60 ms before it lifted, or when a part is slow (pan under 0.25 view distances a second, turn or tilt under 0.3 rad/s, zoom
+  under 0.4 ln/s); caps 3 distances/s, 5 rad/s, 2 rad/s, 3 ln/s. Decay is by time: each part follows s0 + v TAU (1 - e^(-t/TAU)),
+  TAU 0.35 s, ended 3.2 s after the release, so a frame rate of 2 (SwiftShader) and 120 (a phone) end in the same place.
+  Stopped by any pointerdown (anywhere), a wheel, Escape, a hidden tab, `prefers-reduced-motion: reduce` (no momentum at
+  all), the locate button's follow modes (centred, heading, eye: `fling` refuses), a free camera (`cam.eye`), and anything
+  else that moves the camera (a view, a search, a flight, the locate follow loop): each step compares the camera with what
+  it last set, the same rule `locate.js` uses. Two fingers that lift within 80 ms of each other keep the pinch's velocity.
+- **Measured** (headless, SwiftShader; CDP input with explicit `timestamp`s, because at 2 frames a second each
+  un-timed `page.mouse.move` waits about 3 s for a frame and every gesture reads as slow): one fling stepped at 2, 60 and
+  120 steps a second ends within 2e-12 of the closed form; a fast drag flings (yaw -5 rad/s, capped) and a press stops it
+  dead; hold 200 ms before release and a slow drag: no fling; a two-finger twist plus spread flings yaw and zoom (touch);
+  `setView` during a fling stops it; in locate `centred` mode `fling` returns false and the follow still reaches the fix;
+  reduced motion: no fling. 1600 x 900 DPR 1 (mouse) 7/7 and 390 x 844 DPR 3 (touch) 8/8, no console error.
+
 ## Testing
 
 Headless Chromium with SwiftShader (repo `CLAUDE.md`, "Headless browser"), from a local server (fetch needs http):
