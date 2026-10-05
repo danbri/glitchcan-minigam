@@ -12912,6 +12912,20 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/stations-layer.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the 3D page's Station models layer (Canary Wharf and Canada Water station boxes from docklands/data/stations.json; tap cards; cut-outs of the page's own tunnels and OSM indoor floors inside the boxes; OSM level to m OD inside the boxes for the walking network)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/atlas/kml-atlas.js",
    "@type": [
     "prov:Entity",

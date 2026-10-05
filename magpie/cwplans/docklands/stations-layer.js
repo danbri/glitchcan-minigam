@@ -8,8 +8,8 @@ const $ = id => document.getElementById(id), on = () => { const e = $('showStati
 const S = { doc: null, solid: null, glass: null, hits: [], loading: null, error: null };
 // colour and opacity by element class; opaque classes go to S.solid, the rest to S.glass (drawn blended, no depth write)
 const STYLE = {
-  platform: ['--plat', 1], escalator: ['#7fe3ff', 1], stair: ['#3fb0d8', 1], lift: ['#8fa8ff', 1], entrance: ['#ff6a5c', 1],
-  track: ['#4a4f57', 1], tunnel: ['--jub', 1], hall: ['#9fc7d8', .32], canopy: ['#bfe6ff', .4], box: ['#e8ecf0', .1]
+  platform: ['--plat', 1], escalator: ['#ffd23f', 1], stair: ['#f2dcb0', 1], lift: ['#ececec', 1], entrance: ['#ff6a5c', 1],
+  track: ['#4a4f57', 1], tunnel: ['--jub', 1], hall: ['#cbbfae', .32], canopy: ['#e6e6e6', .35], box: ['#e8ecf0', .1]
 };
 const NAME = { box: 'Station box (structure)', track: 'Track', tunnel: 'Tunnel', platform: 'Platform', hall: 'Ticket hall / concourse',
   escalator: 'Escalator', stair: 'Stairs', lift: 'Lift', canopy: 'Canopy', entrance: 'Entrance' };

@@ -1021,3 +1021,14 @@ central tower - do we have an index of these?"
   (the stations are hidden or a few pixels in those views); a mouse click and a touch tap on a station part open its
   card. Close views: see the skill. Register entry `docklands/data/stations.json`, pipeline activity `station-mesh`;
   check-data-register exit 0.
+
+## 2026-10-05 — Blue only for water on the 3D page (Opus)
+- Owner (screenshot of Canary Wharf, cut at 39 m OD): "What are the delicate light blue / cyan lines?", then "Yes please and
+  do try to keep blues for water-related". They were OSM ways with a level tag drawn in the indoor-corridor colour, most of
+  them outdoor deck paths.
+- `tools/build-docklands.mjs`: indoor items get `out: 1` for outdoor level-tagged paths and steps (580 of 1,689); rebuilt
+  `docklands/data/under.js` (only that field and the build date changed; `area.js` left as it was, only its date differed).
+- Page colours: indoor corridors pale lilac, outdoor level paths sand, network lifts grey, glow Shops lime and Sport tan,
+  building ramp magma, station-model parts warm or grey. Details: skill docklands-3d-page, "Colours: blue is for water".
+- Tests (SwiftShader): owner's view cyan pixels 63,455 -> 0; rotherhithe, greenland, pier, ?night, default x 1600 x 900
+  DPR 1 and 390 x 844 DPR 3: no console error, photo-view luma unchanged to 3 decimals.

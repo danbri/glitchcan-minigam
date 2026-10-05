@@ -278,8 +278,11 @@ for (const w of allW) {
   const pts = w.refs.map(xz).filter(Boolean);
   const g = DTM(p0[0], p0[1]);
   const kind = t.railway === 'platform' || t.public_transport === 'platform' ? 'platform' : t.highway === 'steps' ? 'steps' : t.highway === 'elevator' ? 'lift' : t.indoor === 'room' || t.shop ? 'room' : t.highway ? 'corridor' : 'area';
-  if (closed) { const m = poly([pts]); if (m) indoor.push({ kind, lv, g: r1(g), ...m, ...(t.name ? { name: t.name } : {}) }); }
-  else indoor.push({ kind, lv, g: r1(g), line: enc(pts.flat()), ...(t.name ? { name: t.name } : {}) });
+  // out: 1 = an outdoor path that only carries a level tag (podium decks, bridges, quay walks): not indoor, not underground
+  const indoorTags = (t.indoor && t.indoor !== 'no') || ['yes', 'building_passage'].includes(t.tunnel) || t.covered === 'yes' || t.highway === 'corridor' || t.highway === 'elevator' || lv.every(l => l < 0);
+  const out = (kind === 'corridor' || kind === 'steps') && !indoorTags ? { out: 1 } : {};
+  if (closed) { const m = poly([pts]); if (m) indoor.push({ kind, lv, g: r1(g), ...m, ...out, ...(t.name ? { name: t.name } : {}) }); }
+  else indoor.push({ kind, lv, g: r1(g), line: enc(pts.flat()), ...out, ...(t.name ? { name: t.name } : {}) });
 }
 // points: stations, entrances, shops and halls with a level
 const pois = [];

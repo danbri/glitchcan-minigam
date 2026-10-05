@@ -919,6 +919,19 @@ the page only through `__docklands` (three new hooks: `tunnelY`, `par`, `tidalFi
 - **Not done**: lock portage for the boat; tunnel wall texture or rings (the inside of a tunnel box is flat colour, so
   speed is hard to feel); a wake; a stop at stations for the tube.
 
+## Colours: blue is for water (2026-10-05)
+
+Owner, 2026-10-05: "do try to keep blues for water-related". Blue and cyan in the city now mean water (the docks, the river,
+the river layer's labels). Changed: indoor corridors and steps `--corr` #3fd0ff -> #e7d6ff (pale lilac); outdoor paths with a
+level tag (podium decks, bridges: `out: 1` in `data/under.js`, set by `build-docklands.mjs` when a highway way or steps has a
+level but no indoor, tunnel, covered or corridor tag and not every level is below 0: 580 of 1,689) `--path` #d8c49a (sand);
+walking-network lifts light grey; glow chips Shops lime, Sport tan; "Colour buildings by" ramp magma (purple to pale yellow)
+instead of blue to red; the station models' escalators, stairs, lifts, halls and canopies warm or grey. Kept: the DLR line
+colour (TfL brand teal), the locate blue dot (phone-map convention), measured or photo facade colours, police vehicles,
+UI chrome. Measured in the owner's screenshot view (Canary Wharf, cut 39 m OD, 390 x 844 DPR 3): cyan pixels 63,455 -> 0.
+Two comments added at the end of a statement in long one-line code (`rampCol`, `buildUnder`) broke the script: `node --check`
+caught both. Put no comment inside a one-line function.
+
 ## Station models (2026-10-05)
 
 Layers > Show > "Station models" (on): the Blender boxes of Canary Wharf and Canada Water, `docklands/stations-layer.js` +
