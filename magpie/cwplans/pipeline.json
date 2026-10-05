@@ -8000,6 +8000,131 @@
           "note": "per portal: the raw catalogue (data.gov.uk all.jsonl.gz, 59,451 compact records), service capabilities, national downloads streamed for zone rows (gitignored; reused unless --refresh)"
         }
       ]
+    },
+    {
+      "id": "cache-londat",
+      "area": "feeds",
+      "tool": "tools/cache-londat.mjs",
+      "command": "NODE_USE_ENV_PROXY=1 LONDAT_DIR=../londat node magpie/cwplans/tools/cache-londat.mjs [--no-fetch] [--themes=bikes,lifts,...] [--vacuum]",
+      "kind": "fetch",
+      "method": "Runs a subset of the existing fetch tools as child processes with their own politeness (fetch-live.mjs bikes lifts crowding ukpn overflows notams; fetch-river.mjs levels river-bus; fetch-ais.mjs --listen=0), asks two small endpoints itself (TfL line status by mode, Open-Meteo current weather; one request each), reads the snapshot JSON the tools wrote and appends it to an SQLite file per UTC month in the londat checkout (node:sqlite, WITHOUT ROWID tables with primary keys on the source's fetch or reading time). Then writes cache/latest.json: per theme the newest fetch in compact columns and a 24 h series. --no-fetch appends from the snapshots already in the checkout. Planned to run hourly from a GitHub Actions workflow in danbri/londat (skill cwplans-londat-cache).",
+      "rules": [
+        "Idempotent: every table has a primary key with the fetch time of the snapshot (meta.fetched) or the reading time (tide, AIS positions, weather); INSERT OR IGNORE, so a second run on the same snapshots adds no rows.",
+        "Politeness is the fetch tools' own (one request at a time per host, >= 1.5 s for TfL, >= 1 s for EA, >= 2 s and no stream for Open Waters); the tool adds two requests per run with up to two retries 3 and 6 s apart.",
+        "Facts only, as the snapshots: no NOTAM text, no customer letter text from UK Power Networks, no JamCam images.",
+        "Small private craft are never listed: the AIS filter of fetch-ais.mjs is repeated (ITU type 36/37, class B without a type are dropped) and their count is kept in ais_fetches.private_counted.",
+        "Places (docks, stations, overflows, piers, gauges) are stored once in places and updated in place; state rows hold only ids and numbers.",
+        "A run goes into the month of its newest snapshot; tide readings within 48 h of a month boundary can appear in two month files.",
+        "No VACUUM per run (an appended file deltas well in git); --vacuum when a month is closed."
+      ],
+      "judgement": "Which sources are cached (the live ones the pages show or ask for) and which are not: LAQN air quality (no open licence found), police.uk crime (monthly; the page asks on demand), JamCam images (TfL serves them), helicopter structure (static). Recorded in the skill cwplans-londat-cache.",
+      "decisions_recorded_in": [
+        "skills/cwplans-londat-cache/SKILL.md"
+      ],
+      "used": [
+        {
+          "file": "feeds/live/bikes.json"
+        },
+        {
+          "file": "feeds/live/lifts.json"
+        },
+        {
+          "file": "feeds/live/crowding.json"
+        },
+        {
+          "file": "feeds/live/ukpn.json"
+        },
+        {
+          "file": "feeds/live/overflows.json"
+        },
+        {
+          "file": "feeds/live/notams.json"
+        },
+        {
+          "file": "feeds/river/ais.json"
+        },
+        {
+          "file": "feeds/river/levels.json"
+        },
+        {
+          "file": "feeds/river/river-bus.json"
+        },
+        {
+          "source": "tfl-live-feeds",
+          "endpoint": "https://api.tfl.gov.uk/Line/Mode/tube,dlr,elizabeth-line,overground,river-bus,cable-car/Status",
+          "request": "one request per run"
+        },
+        {
+          "source": "open-meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast?latitude=51.505&longitude=-0.02&current=...",
+          "request": "one request per run"
+        },
+        {
+          "local": "data/raw/cache/ (the two responses; --no-fetch reads them)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "cache/live-*.sqlite"
+        },
+        {
+          "file": "cache/latest.json"
+        }
+      ],
+      "network": true,
+      "deterministic": false,
+      "after": [
+        "fetch-live",
+        "fetch-ais"
+      ]
+    },
+    {
+      "id": "build-zone-gpkg",
+      "area": "feeds",
+      "tool": "tools/build-zone-gpkg.mjs",
+      "command": "LONDAT_DIR=../londat node magpie/cwplans/tools/build-zone-gpkg.mjs [--core]",
+      "kind": "build",
+      "method": "Writes the static zone layers to one GeoPackage for GIS users with GDAL ogr2ogr: the 3D model's buildings (with base, height and the atlas cwb- id), water, greens, roads and railways and EA flood defences in EPSG:27700 (area.js coordinates are x = E - 537550, z = -(N - 180300)); registry building outlines (atlas.json), construction sites and river snapshot points in EPSG:4326; every London Datastore and portal GeoJSON already in londat in its own CRS. Each layer's gpkg_contents.description carries its licence and attribution from data-register.json (ODbL first where OSM data is in it); a table layer_licences lists layer, file, sources, licences and OSM use. Empty geometries are set to NULL (validate_gpkg.py Req 152), then VACUUM.",
+      "rules": [
+        "Licences come from data-register.json, never typed by hand; a layer whose file uses OSM (osm.use raw or derived) starts its description with the ODbL notice.",
+        "No reprojection of published layers: each London Datastore and portal layer keeps the CRS of its GeoJSON.",
+        "No personal fields beyond what the source files already hold; OSM user names and uids are not read (the model and atlas hold none).",
+        "Validate with GDAL's validate_gpkg.py (python3.12 here) and ogrinfo before committing; rebuild only when an input changes (each rebuild adds about 68 MB to londat history)."
+      ],
+      "used": [
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "atlas/data/atlas.json"
+        },
+        {
+          "file": "registry/sources/construction/sites.json"
+        },
+        {
+          "file": "feeds/river/osm-river.json"
+        },
+        {
+          "file": "feeds/river/locks.json"
+        },
+        {
+          "file": "data-register.json"
+        },
+        {
+          "local": "the londat checkout: feeds/london-datastore/**/*.geojson and feeds/portals/**/*.geojson(.gz)"
+        }
+      ],
+      "generated": [
+        {
+          "file": "cache/zone.gpkg"
+        }
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "fetch-river",
+        "build-construction-index"
+      ]
     }
   ],
   "manual_activities": [

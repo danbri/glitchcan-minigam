@@ -50,3 +50,7 @@ data/raw/ais/
 
 # open-data portal walks (tools/walk-portals.mjs): catalogues, probes and national downloads; only zone extracts are committed
 data/raw/portals
+
+# londat cache: the two small responses of tools/cache-londat.mjs, and the GeoJSON that tools/build-zone-gpkg.mjs writes for ogr2ogr
+data/raw/cache/
+data/raw/gpkg/

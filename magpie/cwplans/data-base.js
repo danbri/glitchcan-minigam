@@ -1,5 +1,6 @@
 // Base URL of the bulk open-data extracts that live in the danbri/londat repository (owner, 2026-10-05): the folders
-// feeds/london-datastore/ and feeds/portals/ (data files only; code and READMEs stay here). One constant, DATA_BASE:
+// feeds/london-datastore/ and feeds/portals/ (data files only; code and READMEs stay here), and cache/ (live history and
+// cache/latest.json, the latest live state that the pages read first: tools/cache-londat.mjs, skill cwplans-londat-cache). One constant, DATA_BASE:
 // switch it to PAGES when https://danbri.github.io/londat/ answers (GitHub Pages on for londat). raw.githubusercontent.com
 // sends Access-Control-Allow-Origin: *. Tools use tools/londat.mjs; rule and file list: skill docklands-data-curation,
 // "Data hosted in danbri/londat".
@@ -9,7 +10,7 @@
   const PAGES = 'https://danbri.github.io/londat/cwplans/';
   const RAW = 'https://raw.githubusercontent.com/danbri/londat/main/cwplans/';
   const DATA_BASE = RAW;
-  const HOSTED = /^feeds\/(london-datastore|portals)\//, KEEP = /(^|\/)README\.md$|\.js$/;
+  const HOSTED = /^(feeds\/(london-datastore|portals)\/|cache\/)/, KEEP = /(^|\/)README\.md$|\.js$/;
   // this page's own base (the magpie/cwplans folder), for a path that is not hosted in londat
   const here = (document.currentScript && document.currentScript.src) ? new URL('.', document.currentScript.src).href : '';
   const hosted = path => HOSTED.test(path) && !KEEP.test(path);
