@@ -1,19 +1,20 @@
 ---
 name: cwplans-londat-cache
 description: >-
-  The cache of magpie/cwplans in the danbri/londat repository: an append-only SQLite history of live state in the
-  Docklands zone (cwplans/cache/live-YYYY-MM.sqlite, one file per UTC month: Santander Cycles docks, lift outages,
+  The cache of magpie/cwplans in the danbri/londat repository: an append-only history of live state in the
+  Docklands zone (one small gzip JSON run file per hourly run in cwplans/cache/runs/<day>/, replayed into
+  cwplans/cache/live-YYYY-MM.sqlite once when the month closes: Santander Cycles docks, lift outages,
   station crowding, UK Power Networks power cuts, Thames Water storm overflows, NOTAM cranes and areas, AIS vessels
   without small private craft, EA tide and river levels, TfL line status, river-bus arrival counts, Open-Meteo weather,
   plus sources and runs tables), the compact cwplans/cache/latest.json ("latest + last 24 h" per theme) that the atlas
-  and the 3D page read before any third-party API (live-cache.js, CwLive), and cwplans/cache/zone.gpkg, an OGC
-  GeoPackage of 163 static zone layers for QGIS and GDAL (3D model buildings with heights and cwb- ids, water, greens,
+  and the 3D page read before any third-party API (live-cache.js, CwLive), and three OGC GeoPackages
+  (cwplans/cache/zone-core.gpkg, zone-lds.gpkg, zone-portals.gpkg; 163 static zone layers) for QGIS and GDAL (3D model buildings with heights and cwb- ids, water, greens,
   roads, flood defences, registry buildings, construction sites, river points, every London Datastore and portal
   GeoJSON) with the licence of each layer in gpkg_contents. Covers the tools tools/cache-londat.mjs and
   tools/build-zone-gpkg.mjs, the schema, the hourly GitHub Actions workflow in londat (.github/workflows/cache-live.yml),
   sizes and git growth measured, why JSON and not sql.js-httpvfs for the pages, the request counts before and after,
-  the register rule for a monthly file family (cache/live-*.sqlite), and how to validate and open zone.gpkg. Reach for
-  it before you add a theme to the cache, change the pages' live panels, rebuild zone.gpkg, or answer "do we keep a
+  the register rule for a monthly file family (cache/live-*.sqlite), and how to validate and open the GeoPackages. Reach for
+  it before you add a theme to the cache, change the pages' live panels, rebuild the GeoPackages, or answer "do we keep a
   history of X?" or "can I open this in QGIS?".
 ---
 
@@ -27,9 +28,12 @@ the register, `tools/londat.mjs`, `data-base.js`): skill `docklands-data-curatio
 
 | file (londat) | what | written by | refresh |
 |---|---|---|---|
-| https://github.com/danbri/londat/blob/main/cwplans/cache/live-2026-10.sqlite (`cache/live-*.sqlite`) | append-only history, one file per UTC month | `tools/cache-londat.mjs` | hourly (workflow) |
+| https://github.com/danbri/londat/tree/main/cwplans/cache/runs (`cache/runs/*/live-*.json.gz`) | the rows each run added, one gzip JSON file per run, one folder per UTC day | `tools/cache-londat.mjs` | hourly (workflow) |
+| `cache/live-*.sqlite` (first: live-2026-10.sqlite, written by the first run in November) | the closed month as one SQLite, VACUUMed; that month's run files are then removed | `tools/cache-londat.mjs` | once a month |
 | https://github.com/danbri/londat/blob/main/cwplans/cache/latest.json | newest fetch per theme + 24 h series | `tools/cache-londat.mjs` | each run |
-| https://github.com/danbri/londat/blob/main/cwplans/cache/zone.gpkg | 163 GIS layers, GeoPackage | `tools/build-zone-gpkg.mjs` | by hand, when an input changes |
+| https://github.com/danbri/londat/blob/main/cwplans/cache/zone-core.gpkg | 17 layers: 3D model, registry, construction, river (16.9 MB) | `tools/build-zone-gpkg.mjs` | by hand, when an input changes |
+| https://github.com/danbri/londat/blob/main/cwplans/cache/zone-lds.gpkg | 82 London Datastore layers (38.0 MB) | `tools/build-zone-gpkg.mjs` | by hand |
+| https://github.com/danbri/londat/blob/main/cwplans/cache/zone-portals.gpkg | 64 open-portal layers (13.2 MB) | `tools/build-zone-gpkg.mjs` | by hand |
 | https://github.com/danbri/londat/blob/main/.github/workflows/cache-live.yml | the hourly job | by hand | - |
 
 Pages read `latest.json` at `https://raw.githubusercontent.com/danbri/londat/main/cwplans/cache/latest.json`
@@ -40,8 +44,8 @@ Pages read `latest.json` at `https://raw.githubusercontent.com/danbri/londat/mai
     NODE_USE_ENV_PROXY=1 LONDAT_DIR=/home/user/londat node magpie/cwplans/tools/cache-londat.mjs        # fetch + append (about 6 min)
     LONDAT_DIR=/home/user/londat node magpie/cwplans/tools/cache-londat.mjs --no-fetch                  # append the snapshots in this checkout
     options: --themes=bikes,tide,...  --dry  --vacuum (when a month is closed)
-    LONDAT_DIR=/home/user/londat node magpie/cwplans/tools/build-zone-gpkg.mjs [--core]                 # needs ogr2ogr (apt-get install -y gdal-bin)
-    python3.12 /usr/lib/python3/dist-packages/osgeo_utils/samples/validate_gpkg.py /home/user/londat/cwplans/cache/zone.gpkg
+    LONDAT_DIR=/home/user/londat node magpie/cwplans/tools/build-zone-gpkg.mjs [--part=core,lds,portals]   # needs ogr2ogr (apt-get install -y gdal-bin)
+    python3.12 /usr/lib/python3/dist-packages/osgeo_utils/samples/validate_gpkg.py /home/user/londat/cwplans/cache/zone-core.gpkg
 
 `cache-londat.mjs` runs `fetch-live.mjs bikes lifts crowding ukpn overflows notams`, `fetch-river.mjs levels river-bus`
 and `fetch-ais.mjs --listen=0` as child processes (their politeness unchanged), then asks two endpoints itself: TfL
@@ -55,6 +59,25 @@ fresh snapshots. About 120 requests per run; the crowding loop (65 stations, 1.5
 Node 22.22 has `node:sqlite` without a flag (it prints an ExperimentalWarning; the tool removes the warning listener
 before the import). No npm dependency, so the workflow needs only the three libraries the fetch tools import (proj4,
 geotiff, earcut). SQLite 3.50. `better-sqlite3` was not needed.
+
+## How the history is stored (coordinator, 2026-10-05)
+
+A binary file committed every hour is a new git blob every hour: the first design (one growing SQLite per month,
+committed each run) could add several GB a month if the server does not delta it. So no binary file is committed per
+run. Each run:
+
+1. closes every earlier month that still has run files: replays them into `cache/live-YYYY-MM.sqlite`, VACUUM, removes
+   that month's `cache/runs/YYYY-MM-DD/` folders;
+2. replays this month's run files into a working SQLite (`data/raw/cache/work-YYYY-MM.sqlite`, gitignored, deleted
+   at the end);
+3. inserts the new snapshots and records each row that changed (`changes` > 0);
+4. writes those rows as `cache/runs/<day>/live-<run time>.json.gz`: `{format: 1, run_time, tool, statements: [[sql,
+   rows], ...]}`; replaying the statements in file order rebuilds the database. No new rows: no file;
+5. writes `latest.json` from the working SQLite and the previous month's SQLite (`UNION`).
+
+Places are recorded only when they change, except in the first run of a month, which records them all, so each month's
+SQLite stands alone. The first SQLite of 2026-10 (two runs) became the seed run file
+`runs/2026-10-05/live-2026-10-05T1607Z.json.gz` (47 kB).
 
 ## Schema (schema version 1, table `meta`)
 
@@ -90,17 +113,22 @@ Example: `SELECT datetime(fetch_time,'unixepoch') t, sum(bikes) FROM bikes GROUP
 
 ## Sizes and growth (measured 2026-10-05)
 
-- First file: 565 kB after two runs (the 4 October snapshots replayed with `--no-fetch`, and one live run). The first
-  run of each kind adds 2,000 to 3,000 tide rows (48 h); later runs add about 350 rows.
-- 48 simulated hourly runs (the real rows repeated with new times): about 22 kB per run, so about 0.5 MB a day and
-  16 MB a month per file. In git, with one commit per run, the 48 versions packed to 683 kB in all (`git gc
-  --aggressive`): SQLite appends change few pages, so deltas are small. Do not VACUUM each run: it rewrites pages and
-  spoils the deltas. Expected londat growth: about 10 MB a month for the SQLite and a few MB for `latest.json`.
+- One real hourly run (17:41 UTC): 387 new rows (139 bikes, 112 tide readings, 35 AIS positions, 25 line statuses, …),
+  run file 10.1 kB. Objects that the commit added (`git count-objects -v` after `git gc`, loose and zlib-compressed):
+  latest.json 13.9 kB, the run file 10.1 kB, three trees and the commit 1 kB: about 25 kB a run.
+- 30 days, hourly: 720 x 25 kB = about 18 MB, before any pack delta (latest.json and the trees delta well, so less).
+  The day folders keep each tree to 24 entries (one flat folder would have reached 720 entries, about 30 kB a tree).
+  Plus the closed month's SQLite once: a SQLite grows about 22 kB a run (simulated), about 16 MB a month, about 8 MB
+  in git (zlib). So about 25 MB a month in all; about 300 MB a year.
+- The first design, for the record: 48 simulated commits of the growing SQLite packed to 683 kB after `git gc
+  --aggressive`, but each push and the server's storage are not guaranteed that delta (worst case 720 x the mean size,
+  several GB a month).
 - Not git LFS: raw.githubusercontent.com serves the pointer, not the file, and the free quota is 1 GB.
 - `latest.json`: 46 kB, 13 kB gzipped.
-- `zone.gpkg`: 67.9 MB, 163 layers (17 from the main repository, 146 London Datastore and portal GeoJSON). GitHub warns
-  above 50 MB and refuses above 100 MB. Each rebuild adds about 65 MB to londat history: rebuild only when an input
-  changes. `--core` (the 17 main-repository layers) is 16.9 MB if a split is ever needed.
+- GeoPackages: zone-core 16.9 MB (17 layers), zone-lds 38.0 MB (82), zone-portals 13.2 MB (64). GitHub warns above
+  50 MB and refuses above 100 MB: the first single `zone.gpkg` (67.9 MB, commit 2a2a891) stays in londat history (about
+  65 MB). Each rebuild adds about 68 MB: rebuild only when an input changes. Not zipped: QGIS and GDAL open a .gpkg
+  directly from a download, and a zip would save little on WKB coordinates.
 
 ## Pages: JSON, not sql.js-httpvfs
 
@@ -132,28 +160,32 @@ In the container, Open-Meteo sometimes fails CORS through the proxy with Live ti
 `.github/workflows/cache-live.yml` in londat: cron `17 * * * *` and `workflow_dispatch`; sparse checkout of
 `magpie/cwplans/tools`, `feeds/live`, `feeds/river` and `data-register.json` from glitchcan-minigam master (verified to
 be enough by running the tools in such a checkout), `npm install` of proj4, geotiff and earcut, the tool, then a commit
-of `cache/live-*.sqlite` and `cache/latest.json` with three pull-rebase-push tries; `concurrency` stops overlap. The
+of `cache/runs/`, `cache/latest.json` and any new `cache/live-*.sqlite` with three pull-rebase-push tries; `concurrency` stops overlap. The
 session could push the workflow file to londat (2026-10-05) but could not start it by API (403 "Resource not accessible
 by integration"): the first run is the first cron after the push. Check the Actions tab of londat. A Claude Routine is
 not used for this.
 
 ## Register
 
-- `data-register.json` has hosted entries for `cache/live-*.sqlite` (a family: `check-data-register.mjs` matches a `*`
-  in the file name against the londat folder and needs at least one file; a new month needs no edit), `cache/latest.json`
-  and `cache/zone.gpkg` (osm use "derived"; 177 sources, the union of its inputs). AIS rows carry the AIS review note.
+- `data-register.json` has hosted entries for `cache/runs/*/live-*.json.gz` and `cache/live-*.sqlite` (families:
+  `check-data-register.mjs` matches `*` in folder and file names against the londat checkout and needs at least one file
+  unless the entry has `"may_be_empty": true`, as the monthly SQLite has until November; a new day or month needs no
+  edit), `cache/latest.json`, and `cache/zone-core.gpkg`, `zone-lds.gpkg` (osm use "derived") and `zone-portals.gpkg`,
+  each with the union of its inputs' sources. AIS rows carry the AIS review note.
 - `pipeline.json` activities `cache-londat` and `build-zone-gpkg` (area feeds).
 - `tools/londat.mjs` `HOSTED_DIRS` includes `cache/`; `data-base.js` treats `cache/` as hosted.
 - Run `LONDAT_DIR=/home/user/londat node magpie/cwplans/tools/check-data-register.mjs --write` and read the exit code.
 
-## zone.gpkg in QGIS and GDAL
+## The GeoPackages in QGIS and GDAL
 
+Download a file from the links above (the "Download raw file" button on GitHub, or
+`https://raw.githubusercontent.com/danbri/londat/main/cwplans/cache/zone-core.gpkg`). The pages do not load them.
 QGIS: Layer > Add Layer > Add Vector Layer, choose the file (or drag it into the window), pick layers. `model_*`
 layers are EPSG:27700 (British National Grid; area.js x = E - 537550, z = -(N - 180300)); the others EPSG:4326; London
 Datastore and portal layers keep the CRS of their GeoJSON. Licence and attribution per layer: Layer Properties >
 Information (the gpkg_contents description, written from the register; ODbL first where the file uses OSM), and the
-attribute table `layer_licences`. GDAL: `ogrinfo -so zone.gpkg model_buildings`. R-tree indexes on all 162 spatial
-layers.
+attribute table `layer_licences` in each file. GDAL: `ogrinfo -so zone-core.gpkg model_buildings`. R-tree indexes on every
+spatial layer; `validate_gpkg.py` passes on all three (2026-10-05).
 
 Traps found while building it:
 - area.js tunnels have `pts` ([x, z, y, along, …]) and no `q`.

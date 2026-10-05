@@ -8065,7 +8065,7 @@
       ],
       "generated": [
         {
-          "file": "cache/runs/live-*.json.gz"
+          "file": "cache/runs/*/live-*.json.gz"
       },
       {
         "file": "cache/live-*.sqlite"
@@ -8087,12 +8087,12 @@
       "tool": "tools/build-zone-gpkg.mjs",
       "command": "LONDAT_DIR=../londat node magpie/cwplans/tools/build-zone-gpkg.mjs [--core]",
       "kind": "build",
-      "method": "Writes the static zone layers to one GeoPackage for GIS users with GDAL ogr2ogr: the 3D model's buildings (with base, height and the atlas cwb- id), water, greens, roads and railways and EA flood defences in EPSG:27700 (area.js coordinates are x = E - 537550, z = -(N - 180300)); registry building outlines (atlas.json), construction sites and river snapshot points in EPSG:4326; every London Datastore and portal GeoJSON already in londat in its own CRS. Each layer's gpkg_contents.description carries its licence and attribution from data-register.json (ODbL first where OSM data is in it); a table layer_licences lists layer, file, sources, licences and OSM use. Empty geometries are set to NULL (validate_gpkg.py Req 152), then VACUUM.",
+      "method": "Writes the static zone layers to three GeoPackages for GIS users (zone-core, zone-lds, zone-portals; each under GitHub's 50 MB warning) with GDAL ogr2ogr: the 3D model's buildings (with base, height and the atlas cwb- id), water, greens, roads and railways and EA flood defences in EPSG:27700 (area.js coordinates are x = E - 537550, z = -(N - 180300)); registry building outlines (atlas.json), construction sites and river snapshot points in EPSG:4326; every London Datastore and portal GeoJSON already in londat in its own CRS. Each layer's gpkg_contents.description carries its licence and attribution from data-register.json (ODbL first where OSM data is in it); a table layer_licences lists layer, file, sources, licences and OSM use. Empty geometries are set to NULL (validate_gpkg.py Req 152), then VACUUM.",
       "rules": [
         "Licences come from data-register.json, never typed by hand; a layer whose file uses OSM (osm.use raw or derived) starts its description with the ODbL notice.",
         "No reprojection of published layers: each London Datastore and portal layer keeps the CRS of its GeoJSON.",
         "No personal fields beyond what the source files already hold; OSM user names and uids are not read (the model and atlas hold none).",
-        "Validate with GDAL's validate_gpkg.py (python3.12 here) and ogrinfo before committing; rebuild only when an input changes (each rebuild adds about 68 MB to londat history)."
+        "Validate with GDAL's validate_gpkg.py (python3.12 here) and ogrinfo before committing; rebuild only when an input changes (each rebuild adds about 68 MB to londat history: 17 + 38 + 13 MB)."
       ],
       "used": [
         {
@@ -8119,7 +8119,13 @@
       ],
       "generated": [
         {
-          "file": "cache/zone.gpkg"
+          "file": "cache/zone-core.gpkg"
+      },
+      {
+        "file": "cache/zone-lds.gpkg"
+      },
+      {
+        "file": "cache/zone-portals.gpkg"
         }
       ],
       "network": false,

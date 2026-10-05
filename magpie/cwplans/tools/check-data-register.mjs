@@ -18,7 +18,7 @@
 // Why the register exists: CLAUDE.md, Data ethics, the magpie/cwplans exception.
 import { readFileSync, writeFileSync, existsSync, statSync, readdirSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join, dirname, basename } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LONDAT_DIR, LONDAT_CW, londatPresent, isHostedPath } from './londat.mjs';
 
@@ -44,9 +44,10 @@ const isPattern = p => p.includes('*');
 const patRe = p => new RegExp('^' + p.split('*').map(x => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*') + '$');
 const patterns = reg.files.filter(f => isPattern(f.path)).map(f => [patRe(f.path), f]);
 const entryOf = p => byPath.get(p) || (patterns.find(([re]) => re.test(p)) || [])[1];
-const filesOf = p => { if (!isPattern(p)) return existsSync(loc(p)) ? [loc(p)] : [];
-  const dir = join(LONDAT_CW, dirname(p)), re = patRe(basename(p));
-  return existsSync(dir) ? readdirSync(dir).filter(n => re.test(n)).map(n => join(dir, n)) : []; };
+const filesOf = p => { if (!isPattern(p)) return existsSync(loc(p)) ? [loc(p)] : [];   // a * may stand in a folder name too (cache/runs/*/live-*.json.gz)
+  const base = p.slice(0, p.indexOf('*')).replace(/[^/]*$/, ''), re = patRe(p), dir = join(LONDAT_CW, base);
+  const walk = (d, rel) => readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(join(d, e.name), rel + e.name + '/') : [rel + e.name]);
+  return existsSync(dir) ? walk(dir, base).filter(r => re.test(r)).map(r => join(LONDAT_CW, r)) : []; };
 
 for (const p of tracked.filter(isData)) if (!byPath.has(p)) problems.push(`not in the register: ${p}`);
 for (const f of reg.files) {

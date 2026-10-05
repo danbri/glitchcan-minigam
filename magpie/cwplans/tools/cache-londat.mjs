@@ -13,7 +13,7 @@
 // The fetch tools rewrite their snapshot files in this checkout (feeds/live, feeds/river), as they always do.
 //
 // Out (LONDAT_DIR, tools/londat.mjs):
-//   cwplans/cache/runs/live-<run time>.json.gz   the rows this run added (a few kB; one small new file per run, so git
+//   cwplans/cache/runs/<day>/live-<run time>.json.gz   the rows this run added (one folder per UTC day keeps each git tree small) (a few kB; one small new file per run, so git
 //                                                history grows by the new rows only, not by a new copy of a database)
 //   cwplans/cache/latest.json                    latest state + last 24 h series, per theme
 //   cwplans/cache/live-YYYY-MM.sqlite            written once, by the first run of the next month: the month's run
@@ -134,17 +134,17 @@ const times = Object.values(snaps).filter(Boolean).map(s => ep(s.meta.fetched)).
 const RUN_T = times.length ? Math.max(...times) : Math.round(STARTED / 1000);
 const MONTH = iso(RUN_T).slice(0, 7);
 // run files: cache/runs/live-2026-10-05T1606Z.json.gz = {format: 1, run_time, statements: [[sql, rows], ...]}
-const runFiles = m => readdirSync(RUNS).filter(n => n.startsWith(`live-${m}-`) && n.endsWith('.json.gz')).sort();
+const runFiles = m => readdirSync(RUNS).filter(d => d.startsWith(m + '-')).sort().flatMap(d => readdirSync(join(RUNS, d)).filter(n => /^live-.*\.json\.gz$/.test(n)).sort().map(n => `${d}/${n}`));
 const replay = (d, f) => { const r = JSON.parse(gunzipSync(readFileSync(join(RUNS, f)))); for (const [sql, rows] of r.statements) { const st = d.prepare(sql); for (const row of rows) st.run(...row); } };
 const openDb = file => { if (existsSync(file)) rmSync(file); const d = new DatabaseSync(file); d.exec('PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA page_size=4096;' + SCHEMA); return d; };
 // close every earlier month that still has run files: one SQLite per month, VACUUMed, then its run files removed
-const months = [...new Set(readdirSync(RUNS).map(n => (n.match(/^live-(\d{4}-\d{2})-/) || [])[1]).filter(Boolean))].sort();
+const months = [...new Set(readdirSync(RUNS).map(n => (n.match(/^(\d{4}-\d{2})-\d{2}$/) || [])[1]).filter(Boolean))].sort();
 for (const m of months.filter(m => m < MONTH)) {
   if (DRY) continue;
   const f = join(OUT, `live-${m}.sqlite`), files = runFiles(m), d = openDb(f + '.tmp');
   d.exec('BEGIN'); for (const r of files) replay(d, r); d.exec('COMMIT'); d.exec('PRAGMA journal_mode=DELETE; VACUUM'); d.close();
   rmSync(f, { force: true }); writeFileSync(f, readFileSync(f + '.tmp')); rmSync(f + '.tmp');
-  for (const r of files) rmSync(join(RUNS, r));
+  for (const d of readdirSync(RUNS).filter(d => d.startsWith(m + '-'))) rmSync(join(RUNS, d), { recursive: true });
   console.log(`closed ${m}: ${files.length} run files -> live-${m}.sqlite (${statSync(f).size} bytes)`);
 }
 const WORK = join(RAWDIR, `work-${MONTH}.sqlite`), db = openDb(DRY ? ':memory:' : WORK);
@@ -162,7 +162,7 @@ const metaRows = [
   ['zone', 'model box WGS84 -0.095, 51.474 to 0.015, 51.522; east margin 0.015, 51.495 to 0.085, 51.522; Lea strip -0.025, 51.522 to 0.01, 51.528 (river and AIS)']];
 const sourceRows = THEMES.map(t => { const [k, pol] = SRC[t], s = REG[k] || {}, m = snaps[t]?.meta || {};
   return [t, k, m.url || s.url || null, m.licence || s.licence || null, m.attribution || s.attribution || null, pol, t === 'ais' ? 'AISHub and aisstream.io events: accepted for scoping only (owner, 2026-10-04); review before scaling or commercial use. Small private craft are counted, never listed.' : (s.review || null)]; });
-const place = upsert('INSERT INTO places VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, name=excluded.name, lat=excluded.lat, lon=excluded.lon, zone=excluded.zone WHERE (kind, name, lat, lon, zone) IS NOT (excluded.kind, excluded.name, excluded.lat, excluded.lon, excluded.zone)');
+const place = upsert('INSERT INTO places VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, name=excluded.name, lat=excluded.lat, lon=excluded.lon, zone=excluded.zone' + (nReplayed ? ' WHERE (kind, name, lat, lon, zone) IS NOT (excluded.kind, excluded.name, excluded.lat, excluded.lon, excluded.zone)' : ''));   // the first run of a month records every place, so each month stands alone
 const placeOf = (i, kind) => place.run(i.id, kind || i.kind, i.name || i.values?.name || null, r5(i.position?.lat), r5(i.position?.lon), i.zone || i.position?.zone || null);
 
 let s;
@@ -210,7 +210,7 @@ if (rowsTotal) {   // meta, sources and the run's own row go into the run file o
 }
 db.exec('COMMIT');
 if (rowsTotal && !DRY) {
-  runFile = `live-${iso(RUN_T).slice(0, 16).replace(':', '')}Z.json.gz`;
+  runFile = `${iso(RUN_T).slice(0, 10)}/live-${iso(RUN_T).slice(0, 16).replace(':', '')}Z.json.gz`; mkdirSync(join(RUNS, iso(RUN_T).slice(0, 10)), { recursive: true });
   const gz = gzipSync(JSON.stringify({ format: 1, run_time: iso(RUN_T), tool: 'magpie/cwplans/tools/cache-londat.mjs', statements: [...REC] }), { level: 9 });
   writeFileSync(join(RUNS, runFile), gz);
 }
@@ -222,38 +222,38 @@ if (!DRY) writeLatest(); db.close(); if (!DRY) rmSync(WORK, { force: true });
 function writeLatest() {
   const prev = join(OUT, `live-${iso(ep(MONTH + '-01T00:00:00Z') - 86400).slice(0, 7)}.sqlite`);
   if (existsSync(prev)) db.exec(`ATTACH '${prev.replace(/'/g, "''")}' AS p`);
-  const both = tbl => existsSync(prev) ? `(SELECT * FROM main.${tbl} UNION ALL SELECT * FROM p.${tbl})` : `main.${tbl}`;
+  const both = tbl => existsSync(prev) ? `(SELECT * FROM main.${tbl} UNION SELECT * FROM p.${tbl})` : `main.${tbl}`;
   const all = (sql, ...a) => db.prepare(sql).all(...a), one = (sql, ...a) => db.prepare(sql).get(...a);
   const last = tbl => one(`SELECT max(fetch_time) t FROM ${both(tbl)}`).t;
-  const P = new Map(all('SELECT * FROM places').map(p => [p.id, p]));
+  const P = new Map(all(`SELECT * FROM ${both('places')}`).map(p => [p.id, p]));   // this month's rows come last and win
   const src = Object.fromEntries(all('SELECT * FROM sources').map(r => [r.theme, { licence: r.licence, attribution: r.attribution, url: r.url, ...(r.review ? { review: r.review } : {}) }]));
   const out = { about: 'Latest live state of the Canary Wharf / Docklands zone and the last 24 hours, written by magpie/cwplans/tools/cache-londat.mjs (danbri/glitchcan-minigam) from the history in this folder. Times: ISO UTC. Each theme keeps the licence of its source (sources).',
-    written: iso(Math.round(Date.now() / 1000)), history: `cache/runs/live-${MONTH}-*.json.gz (this month, one file per run); cache/live-YYYY-MM.sqlite (closed months)`, sources: src, themes: {} };
-  const T = out.themes, nm = id => P.get(id)?.name ?? null, pos = id => P.get(id) ? [P.get(id).lat, P.get(id).lon] : null;
+    written: iso(Math.round(Date.now() / 1000)), history: `cache/runs/${MONTH}-DD/live-*.json.gz (this month, one file per run); cache/live-YYYY-MM.sqlite (closed months)`, sources: src, themes: {} };
+  const T = out.themes, nm = id => P.get(id)?.name ?? null, pos = id => P.get(id) ? [P.get(id).lat, P.get(id).lon] : [null, null];
   let t;
-  if ((t = last('bikes'))) T.bikes = { fetched: iso(t), cols: ['id', 'name', 'lat', 'lon', 'bikes', 'e_bikes', 'empty_docks', 'docks'], rows: all('SELECT * FROM bikes WHERE fetch_time = ?', t).map(r => [r.id, nm(r.id), ...pos(r.id), r.bikes, r.e_bikes, r.empty_docks, r.docks]),
+  if ((t = last('bikes'))) T.bikes = { fetched: iso(t), cols: ['id', 'name', 'lat', 'lon', 'bikes', 'e_bikes', 'empty_docks', 'docks'], rows: all(`SELECT * FROM ${both('bikes')} WHERE fetch_time = ?`, t).map(r => [r.id, nm(r.id), ...pos(r.id), r.bikes, r.e_bikes, r.empty_docks, r.docks]),
     series: { cols: ['time', 'bikes', 'e_bikes', 'empty_docks', 'empty_stations'], rows: all(`SELECT fetch_time, sum(bikes) b, sum(e_bikes) e, sum(empty_docks) d, sum(bikes = 0) z FROM ${both('bikes')} WHERE fetch_time >= ? GROUP BY fetch_time ORDER BY fetch_time`, t - 86400).map(r => [iso(r.fetch_time), r.b, r.e, r.d, r.z]) } };
-  if ((t = last('lifts_fetches'))) T.lifts = { fetched: iso(t), cols: ['id', 'name', 'lat', 'lon', 'lifts_out'], rows: all('SELECT * FROM lifts WHERE fetch_time = ?', t).map(r => [r.id, nm(r.id), ...pos(r.id), r.lifts_out]),
+  if ((t = last('lifts_fetches'))) T.lifts = { fetched: iso(t), cols: ['id', 'name', 'lat', 'lon', 'lifts_out'], rows: all(`SELECT * FROM ${both('lifts')} WHERE fetch_time = ?`, t).map(r => [r.id, nm(r.id), ...pos(r.id), r.lifts_out]),
     series: { cols: ['time', 'stations_out'], rows: all(`SELECT fetch_time, stations_out FROM ${both('lifts_fetches')} WHERE fetch_time >= ? ORDER BY fetch_time`, t - 86400).map(r => [iso(r.fetch_time), r.stations_out]) } };
-  if ((t = last('crowding'))) T.crowding = { fetched: iso(t), cols: ['id', 'name', 'pct_baseline'], rows: all('SELECT * FROM crowding WHERE fetch_time = ?', t).map(r => [r.id, nm(r.id), r.pct_baseline]),
+  if ((t = last('crowding'))) T.crowding = { fetched: iso(t), cols: ['id', 'name', 'pct_baseline'], rows: all(`SELECT * FROM ${both('crowding')} WHERE fetch_time = ?`, t).map(r => [r.id, nm(r.id), r.pct_baseline]),
     series: { cols: ['time', 'mean_pct_baseline', 'stations'], rows: all(`SELECT fetch_time, avg(pct_baseline) m, count(*) n FROM ${both('crowding')} WHERE fetch_time >= ? GROUP BY fetch_time ORDER BY fetch_time`, t - 86400).map(r => [iso(r.fetch_time), Math.round(r.m * 1000) / 1000, r.n]) } };
-  if ((t = last('power_cut_fetches'))) T.power_cuts = { fetched: iso(t), cols: ['id', 'type', 'customers_affected', 'created', 'estimated_restoration', 'lat', 'lon'], rows: all('SELECT * FROM power_cuts WHERE fetch_time = ?', t).map(r => [r.id, r.type, r.customers_affected, iso(r.created), iso(r.estimated_restoration), r.lat, r.lon]) };
-  if ((t = last('overflows'))) { const rows = all('SELECT * FROM overflows WHERE fetch_time = ?', t);
+  if ((t = last('power_cut_fetches'))) T.power_cuts = { fetched: iso(t), cols: ['id', 'type', 'customers_affected', 'created', 'estimated_restoration', 'lat', 'lon'], rows: all(`SELECT * FROM ${both('power_cuts')} WHERE fetch_time = ?`, t).map(r => [r.id, r.type, r.customers_affected, iso(r.created), iso(r.estimated_restoration), r.lat, r.lon]) };
+  if ((t = last('overflows'))) { const rows = all(`SELECT * FROM ${both('overflows')} WHERE fetch_time = ?`, t);
     T.overflows = { fetched: iso(t), cols: ['id', 'receiving_water', 'lat', 'lon', 'status', 'latest_event_start', 'latest_event_end'], rows: rows.map(r => [r.id, nm(r.id), ...pos(r.id), r.status, iso(r.latest_event_start), iso(r.latest_event_end)]),
       counts: { monitored: rows.length, discharging: rows.filter(r => r.status === 1).length, not_discharging: rows.filter(r => r.status === 0).length, offline: rows.filter(r => r.status === -1).length },
       series: { cols: ['time', 'discharging', 'offline'], rows: all(`SELECT fetch_time, sum(status = 1) d, sum(status = -1) o FROM ${both('overflows')} WHERE fetch_time >= ? GROUP BY fetch_time ORDER BY fetch_time`, t - 86400).map(r => [iso(r.fetch_time), r.d, r.o]) } }; }
-  if ((t = last('notams'))) T.notams = { fetched: iso(t), cols: ['id', 'kind', 'name', 'lat', 'lon', 'height_amsl_ft', 'start', 'end', 'crane', 'lit'], rows: all('SELECT * FROM notams WHERE fetch_time = ?', t).map(r => [r.id, r.kind, r.name, r.lat, r.lon, r.height_amsl_ft, iso(r.start), iso(r.end_time), r.crane, r.lit]) };
-  if ((t = last('ais_fetches'))) { const f = one('SELECT * FROM ais_fetches WHERE fetch_time = ?', t);
+  if ((t = last('notams'))) T.notams = { fetched: iso(t), cols: ['id', 'kind', 'name', 'lat', 'lon', 'height_amsl_ft', 'start', 'end', 'crane', 'lit'], rows: all(`SELECT * FROM ${both('notams')} WHERE fetch_time = ?`, t).map(r => [r.id, r.kind, r.name, r.lat, r.lon, r.height_amsl_ft, iso(r.start), iso(r.end_time), r.crane, r.lit]) };
+  if ((t = last('ais_fetches'))) { const f = one(`SELECT * FROM ${both('ais_fetches')} WHERE fetch_time = ?`, t);
     T.ais = { fetched: iso(t), counts: { listed: f.vessels_listed, private_counted: f.private_counted }, cols: ['mmsi', 'name', 'ship_type_group', 'time', 'lat', 'lon', 'sog_kn', 'cog', 'heading', 'source'],
-      rows: all(`SELECT v.mmsi, v.name, v.ship_type_group, a.time, a.lat, a.lon, a.sog_kn, a.cog, a.heading, a.source FROM ais_positions a JOIN ais_vessels v USING (mmsi) WHERE a.fetch_time = ? AND a.time = (SELECT max(time) FROM ais_positions b WHERE b.mmsi = a.mmsi)`, t).map(r => [r.mmsi, r.name, r.ship_type_group, iso(r.time), r.lat, r.lon, r.sog_kn, r.cog, r.heading, r.source]),
+      rows: all(`SELECT v.mmsi, v.name, v.ship_type_group, a.time, a.lat, a.lon, a.sog_kn, a.cog, a.heading, a.source FROM ${both('ais_positions')} a JOIN ${both('ais_vessels')} v USING (mmsi) WHERE a.fetch_time = ? AND a.time = (SELECT max(time) FROM ${both('ais_positions')} b WHERE b.mmsi = a.mmsi) GROUP BY a.mmsi`, t).map(r => [r.mmsi, r.name, r.ship_type_group, iso(r.time), r.lat, r.lon, r.sog_kn, r.cog, r.heading, r.source]),
       series: { cols: ['time', 'listed', 'private_counted'], rows: all(`SELECT * FROM ${both('ais_fetches')} WHERE fetch_time >= ? ORDER BY fetch_time`, t - 86400).map(r => [iso(r.fetch_time), r.vessels_listed, r.private_counted]) } }; }
   const tideNewest = one(`SELECT max(time) t FROM ${both('tide')}`).t, since = (tideNewest || 0) - 86400;
   const tideIds = all(`SELECT DISTINCT station FROM ${both('tide')} WHERE time >= ?`, since).map(r => r.station);
   if (tideIds.length) T.tide = { fetched: iso(Math.max(...tideIds.map(id => one(`SELECT max(time) t FROM ${both('tide')} WHERE station = ?`, id).t))), unit: 'see station id (mAOD, mASD, m difference, m3/s)',
     stations: Object.fromEntries(tideIds.map(id => [id, { name: nm(id), pos: pos(id), latest: (r => r && [iso(r.time), r.value])(one(`SELECT time, value FROM ${both('tide')} WHERE station = ? ORDER BY time DESC LIMIT 1`, id)),
       series: /^ea-level:000[1367]-/.test(id) ? all(`SELECT time, value FROM ${both('tide')} WHERE station = ? AND time >= ? ORDER BY time`, id, since).map(r => [iso(r.time), r.value]) : undefined }])) };
-  if ((t = last('line_status'))) T.line_status = { fetched: iso(t), cols: ['line', 'severity', 'status', 'reason'], rows: all('SELECT * FROM line_status WHERE fetch_time = ? ORDER BY line_id', t).map(r => [r.line_id, r.severity, r.status, r.reason]) };
-  if ((t = last('river_bus'))) T.river_bus = { fetched: iso(t), cols: ['pier', 'name', 'line', 'arrivals', 'next_s'], rows: all('SELECT * FROM river_bus WHERE fetch_time = ?', t).map(r => [r.pier_id, nm('tfl-pier:' + r.pier_id) ?? nm(r.pier_id), r.line_id, r.arrivals, r.next_s]) };
+  if ((t = last('line_status'))) T.line_status = { fetched: iso(t), cols: ['line', 'severity', 'status', 'reason'], rows: all(`SELECT * FROM ${both('line_status')} WHERE fetch_time = ? ORDER BY line_id`, t).map(r => [r.line_id, r.severity, r.status, r.reason]) };
+  if ((t = last('river_bus'))) T.river_bus = { fetched: iso(t), cols: ['pier', 'name', 'line', 'arrivals', 'next_s'], rows: all(`SELECT * FROM ${both('river_bus')} WHERE fetch_time = ?`, t).map(r => [r.pier_id, nm('tfl-pier:' + r.pier_id) ?? nm(r.pier_id), r.line_id, r.arrivals, r.next_s]) };
   if ((t = last('weather'))) { const w = one(`SELECT * FROM ${both('weather')} ORDER BY time DESC LIMIT 1`);
     T.weather = { fetched: iso(w.fetch_time), time: iso(w.time), current: { temp_c: w.temp_c, humidity_pct: w.humidity_pct, wind_kmh: w.wind_kmh, gust_kmh: w.gust_kmh, wind_dir: w.wind_dir, cloud_pct: w.cloud_pct, precip_mm: w.precip_mm, weather_code: w.weather_code },
       series: { cols: ['time', 'temp_c', 'wind_kmh', 'cloud_pct', 'precip_mm'], rows: all(`SELECT * FROM ${both('weather')} WHERE time >= ? ORDER BY time`, w.time - 86400).map(r => [iso(r.time), r.temp_c, r.wind_kmh, r.cloud_pct, r.precip_mm]) } }; }

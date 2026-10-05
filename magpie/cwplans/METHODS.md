@@ -3089,7 +3089,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - **open-meteo** (Open-Meteo weather API, CC BY 4.0 (data); API free for non-commercial use): https://api.open-meteo.com/v1/forecast?latitude=51.505&longitude=-0.02&current=...; one request per run
   - `data/raw/cache/ (the two responses; --no-fetch reads them)` (local, not committed)
 - Outputs:
-  - [cache/runs/live-*.json.gz](cache/runs/live-*.json.gz)
+  - [cache/runs/*/live-*.json.gz](cache/runs/*/live-*.json.gz)
   - [cache/live-*.sqlite](cache/live-*.sqlite)
   - [cache/latest.json](cache/latest.json)
 - Network: yes; deterministic: no; kind: fetch; after: `fetch-live`, `fetch-ais`
@@ -3099,12 +3099,12 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 #### 72. `build-zone-gpkg` (tools/build-zone-gpkg.mjs)
 
 - Command: `LONDAT_DIR=../londat node magpie/cwplans/tools/build-zone-gpkg.mjs [--core]`
-- Method: Writes the static zone layers to one GeoPackage for GIS users with GDAL ogr2ogr: the 3D model's buildings (with base, height and the atlas cwb- id), water, greens, roads and railways and EA flood defences in EPSG:27700 (area.js coordinates are x = E - 537550, z = -(N - 180300)); registry building outlines (atlas.json), construction sites and river snapshot points in EPSG:4326; every London Datastore and portal GeoJSON already in londat in its own CRS. Each layer's gpkg_contents.description carries its licence and attribution from data-register.json (ODbL first where OSM data is in it); a table layer_licences lists layer, file, sources, licences and OSM use. Empty geometries are set to NULL (validate_gpkg.py Req 152), then VACUUM.
+- Method: Writes the static zone layers to three GeoPackages for GIS users (zone-core, zone-lds, zone-portals; each under GitHub's 50 MB warning) with GDAL ogr2ogr: the 3D model's buildings (with base, height and the atlas cwb- id), water, greens, roads and railways and EA flood defences in EPSG:27700 (area.js coordinates are x = E - 537550, z = -(N - 180300)); registry building outlines (atlas.json), construction sites and river snapshot points in EPSG:4326; every London Datastore and portal GeoJSON already in londat in its own CRS. Each layer's gpkg_contents.description carries its licence and attribution from data-register.json (ODbL first where OSM data is in it); a table layer_licences lists layer, file, sources, licences and OSM use. Empty geometries are set to NULL (validate_gpkg.py Req 152), then VACUUM.
 - Rules:
   - Licences come from data-register.json, never typed by hand; a layer whose file uses OSM (osm.use raw or derived) starts its description with the ODbL notice.
   - No reprojection of published layers: each London Datastore and portal layer keeps the CRS of its GeoJSON.
   - No personal fields beyond what the source files already hold; OSM user names and uids are not read (the model and atlas hold none).
-  - Validate with GDAL's validate_gpkg.py (python3.12 here) and ogrinfo before committing; rebuild only when an input changes (each rebuild adds about 68 MB to londat history).
+  - Validate with GDAL's validate_gpkg.py (python3.12 here) and ogrinfo before committing; rebuild only when an input changes (each rebuild adds about 68 MB to londat history: 17 + 38 + 13 MB).
 - Inputs:
   - [docklands/data/area.js](docklands/data/area.js)
   - [atlas/data/atlas.json](atlas/data/atlas.json)
@@ -3114,7 +3114,9 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - [data-register.json](data-register.json)
   - `the londat checkout: feeds/london-datastore/**/*.geojson and feeds/portals/**/*.geojson(.gz)` (local, not committed)
 - Outputs:
-  - [cache/zone.gpkg](cache/zone.gpkg)
+  - [cache/zone-core.gpkg](cache/zone-core.gpkg)
+  - [cache/zone-lds.gpkg](cache/zone-lds.gpkg)
+  - [cache/zone-portals.gpkg](cache/zone-portals.gpkg)
 - Network: no; deterministic: yes; kind: build; after: `fetch-river`, `build-construction-index`
 
 #### 92. `discover-feeds` (tools/discover-feeds.mjs)

@@ -8667,7 +8667,7 @@
    ],
    "prov:generated": [
     {
-     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/runs/live-*.json.gz"
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/runs/*/live-*.json.gz"
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/live-*.sqlite"
@@ -8708,7 +8708,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-zone-gpkg",
    "@type": "prov:Activity",
    "rdfs:label": "build-zone-gpkg",
-   "dct:description": "Writes the static zone layers to one GeoPackage for GIS users with GDAL ogr2ogr: the 3D model's buildings (with base, height and the atlas cwb- id), water, greens, roads and railways and EA flood defences in EPSG:27700 (area.js coordinates are x = E - 537550, z = -(N - 180300)); registry building outlines (atlas.json), construction sites and river snapshot points in EPSG:4326; every London Datastore and portal GeoJSON already in londat in its own CRS. Each layer's gpkg_contents.description carries its licence and attribution from data-register.json (ODbL first where OSM data is in it); a table layer_licences lists layer, file, sources, licences and OSM use. Empty geometries are set to NULL (validate_gpkg.py Req 152), then VACUUM.",
+   "dct:description": "Writes the static zone layers to three GeoPackages for GIS users (zone-core, zone-lds, zone-portals; each under GitHub's 50 MB warning) with GDAL ogr2ogr: the 3D model's buildings (with base, height and the atlas cwb- id), water, greens, roads and railways and EA flood defences in EPSG:27700 (area.js coordinates are x = E - 537550, z = -(N - 180300)); registry building outlines (atlas.json), construction sites and river snapshot points in EPSG:4326; every London Datastore and portal GeoJSON already in londat in its own CRS. Each layer's gpkg_contents.description carries its licence and attribution from data-register.json (ODbL first where OSM data is in it); a table layer_licences lists layer, file, sources, licences and OSM use. Empty geometries are set to NULL (validate_gpkg.py Req 152), then VACUUM.",
    "prov:used": [
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
@@ -8734,7 +8734,13 @@
    ],
    "prov:generated": [
     {
-     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/zone.gpkg"
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/zone-core.gpkg"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/zone-lds.gpkg"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/zone-portals.gpkg"
     }
    ],
    "cwp:tool": {
@@ -8746,7 +8752,7 @@
     "Licences come from data-register.json, never typed by hand; a layer whose file uses OSM (osm.use raw or derived) starts its description with the ODbL notice.",
     "No reprojection of published layers: each London Datastore and portal layer keeps the CRS of its GeoJSON.",
     "No personal fields beyond what the source files already hold; OSM user names and uids are not read (the model and atlas hold none).",
-    "Validate with GDAL's validate_gpkg.py (python3.12 here) and ogrinfo before committing; rebuild only when an input changes (each rebuild adds about 68 MB to londat history)."
+    "Validate with GDAL's validate_gpkg.py (python3.12 here) and ogrinfo before committing; rebuild only when an input changes (each rebuild adds about 68 MB to londat history: 17 + 38 + 13 MB)."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
@@ -9311,7 +9317,7 @@
    "cwp:review": "AIS rows from AISHub and aisstream.io: Accepted for scoping only (owner, 2026-10-04: \"Accept AISHub (and perhaps aisstream) events for scoping. Sounds fine. Flag it somewhere for review as we scale.\"). Review before scaling or any commercial use: AISHub permission is a private letter reported by Open Waters, 'revocable at will'; aisstream.io has no published terms; the Open Waters hosted service is free for personal use, commercial use needs its paid tier or our own receiver"
   },
   {
-   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/runs/live-*.json.gz",
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/runs/*/live-*.json.gz",
    "@type": [
     "prov:Entity",
     "dcat:Distribution"
@@ -9401,12 +9407,12 @@
    "cwp:review": "AIS rows from AISHub and aisstream.io: Accepted for scoping only (owner, 2026-10-04: \"Accept AISHub (and perhaps aisstream) events for scoping. Sounds fine. Flag it somewhere for review as we scale.\"). Review before scaling or any commercial use: AISHub permission is a private letter reported by Open Waters, 'revocable at will'; aisstream.io has no published terms; the Open Waters hosted service is free for personal use, commercial use needs its paid tier or our own receiver"
   },
   {
-   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/zone.gpkg",
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/zone-core.gpkg",
    "@type": [
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "GeoPackage of the static zone layers for GIS users (163 layers on 2026-10-05): the 3D model's buildings with heights and cwb- ids, water, greens, roads and railways, flood defences (EPSG:27700); registry buildings, construction sites and river snapshot points (EPSG:4326); every London Datastore and portal GeoJSON in londat; table layer_licences; licence and attribution of each layer in gpkg_contents.description",
+   "dct:title": "GeoPackage for GIS users (17 layers): the 3D model's buildings with base, height and cwb- ids, water, greens, roads and railways, EA flood defences (EPSG:27700); registry buildings, construction sites and river snapshot points (EPSG:4326); table layer_licences; licence and attribution of each layer in gpkg_contents.description",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
@@ -9503,12 +9509,33 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-flood-monitoring"
-    },
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-zone-gpkg"
+   },
+   "cwp:osmUse": "derived",
+   "cwp:review": "Some layers carry sources marked for review: registry/sources/construction/sites.json"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/zone-lds.gpkg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "GeoPackage of every London Datastore GeoJSON in londat (82 layers, each in the CRS of its GeoJSON), table layer_licences; licence of each layer in gpkg_contents.description",
+   "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23n41"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-ostn15"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2gy3r"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2og9g"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-23jxk"
@@ -9526,6 +9553,9 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/os-open-uprn"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e195k"
     },
     {
@@ -9536,6 +9566,9 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2g90r"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jxpm"
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-e1r5k"
@@ -9746,7 +9779,21 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-em9mg"
-    },
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-zone-gpkg"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/zone-portals.gpkg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "GeoPackage of every open-portal GeoJSON in londat (64 layers: data.gov.uk, planning.data.gov.uk, borough portals, ONS, national sources), table layer_licences; licence of each layer in gpkg_contents.description; 59 empty geometries of portal_pdg_flood_risk_zone stored as NULL",
+   "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-bor-city-airport-safeguarding-area"
     },
@@ -9943,8 +9990,7 @@
    "prov:wasGeneratedBy": {
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-zone-gpkg"
    },
-   "cwp:osmUse": "derived",
-   "cwp:review": "Some layers carry sources marked for review: registry/sources/construction/sites.json"
+   "cwp:osmUse": "none"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/README.md",

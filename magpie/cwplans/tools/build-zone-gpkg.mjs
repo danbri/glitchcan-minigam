@@ -2,14 +2,15 @@
 // Write the static zone layers of magpie/cwplans into one GeoPackage in the danbri/londat checkout, for GIS users (QGIS,
 // GDAL). Needs GDAL's ogr2ogr on the PATH (apt-get install -y gdal-bin).
 //
-//   node magpie/cwplans/tools/build-zone-gpkg.mjs            # every layer
-//   node magpie/cwplans/tools/build-zone-gpkg.mjs --core     # the 3D model, registry, construction and river layers only
+//   node magpie/cwplans/tools/build-zone-gpkg.mjs                        # all three files
+//   node magpie/cwplans/tools/build-zone-gpkg.mjs --part=core,lds,portals   # some of them
 //
 // In:  docklands/data/area.js (model buildings, water, greens, roads and railways, flood defences; EPSG:27700 by its
 //      origin), atlas/data/atlas.json (registry building outlines with cwb- ids), registry/sources/construction/sites.json,
 //      feeds/river/*.json (points), and every GeoJSON in londat feeds/london-datastore/ and feeds/portals/ (as published,
 //      their own CRS). Licences per layer come from data-register.json (the authority).
-// Out: LONDAT_DIR/cwplans/cache/zone.gpkg: one layer per input, the licence and attribution in gpkg_contents.description,
+// Out: LONDAT_DIR/cwplans/cache/zone-core.gpkg (3D model, registry, construction, river), zone-lds.gpkg (London Datastore),
+//      zone-portals.gpkg (other portals): three files, so that each stays under GitHub's 50 MB warning. One layer per input, the licence and attribution in gpkg_contents.description,
 //      an attribute table layer_licences (layer, file, sources, licence, OSM use), R-tree spatial indexes (GDAL default).
 // Temp: data/raw/gpkg/ (GeoJSON written for ogr2ogr, deleted at the end).
 // Layers, how to open it in QGIS and the licence rules: skill cwplans-londat-cache.
@@ -19,19 +20,19 @@ import { execFileSync } from 'node:child_process';
 import { TOOLS, RAW } from './lib.mjs';
 import { LONDAT_CW, warnIfNoLondat } from './londat.mjs';
 
-const CW = join(TOOLS, '..'), TMP = join(RAW, 'gpkg'), OUT = join(LONDAT_CW, 'cache', 'zone.gpkg');
-const CORE = process.argv.includes('--core');
+const CW = join(TOOLS, '..'), TMP = join(RAW, 'gpkg');
+const PARTS = ((process.argv.find(a => a.startsWith('--part=')) || '--part=core,lds,portals').split('=')[1]).split(',');
+let OUT;
 warnIfNoLondat();
 mkdirSync(TMP, { recursive: true }); mkdirSync(join(LONDAT_CW, 'cache'), { recursive: true });
-if (existsSync(OUT)) rmSync(OUT);
 const reg = JSON.parse(readFileSync(join(CW, 'data-register.json'), 'utf8')), byPath = new Map(reg.files.map(f => [f.path, f]));
 const licText = path => { const f = byPath.get(path); if (!f) throw new Error(`not in the register: ${path}`);
   const odbl = f.osm && !['none', 'ids', 'counts', 'notes'].includes(f.osm.use);
   return (odbl ? 'Contains OpenStreetMap data, © OpenStreetMap contributors, ODbL 1.0 (https://www.openstreetmap.org/copyright). ' : '') +
     'Sources: ' + f.sources.map(k => reg.sources[k] ? `${reg.sources[k].name.split(' (')[0]} (${reg.sources[k].licence}${reg.sources[k].attribution ? '; ' + reg.sources[k].attribution : ''})` : k).join('; ') +
     (f.review ? ` REVIEW: ${f.review}` : '') + ` Register: magpie/cwplans/data-register.json, ${path}.`; };
-const licRows = [];
-let nLayers = 0;
+let licRows = [], nLayers = 0;
+const startPart = name => { OUT = join(LONDAT_CW, 'cache', `zone-${name}.gpkg`); if (existsSync(OUT)) rmSync(OUT); licRows = []; nLayers = 0; };
 function ogr(srcFile, layer, { srs, desc, file, nlt = 'PROMOTE_TO_MULTI' }) {
   const a = ['-f', 'GPKG', OUT, srcFile, '-nln', layer, '-lco', `DESCRIPTION=${desc.slice(0, 3800)}`, '-lco', `IDENTIFIER=${layer}`, '-nlt', nlt, '-skipfailures', '--config', 'OGR_GEOJSON_MAX_OBJ_SIZE', '0', '--config', 'CPL_VSIL_GZIP_WRITE_PROPERTIES', 'NO'];   // no .properties sidecar next to a .gz in londat
   if (srs) a.push('-a_srs', srs);
@@ -43,6 +44,7 @@ function ogr(srcFile, layer, { srs, desc, file, nlt = 'PROMOTE_TO_MULTI' }) {
 }
 const fc = (name, features) => { const p = join(TMP, name + '.geojson'); writeFileSync(p, JSON.stringify({ type: 'FeatureCollection', features })); return p; };
 
+if (PARTS.includes('core')) { startPart('core');
 // ---- 1. the 3D model (area.js): x = E - 537550, z = -(N - 180300), so EPSG:27700 directly
 globalThis.DOCKLANDS_AREA = undefined; await import(join(CW, 'docklands/data/area.js'));
 const A = globalThis.DOCKLANDS_AREA, E0 = A.meta.origin.E0, N0 = A.meta.origin.N0;
@@ -87,15 +89,22 @@ for (const name of ['locks', 'eden-dock', 'royal-docks', 'ea-sondes', 'ea-wims',
   ogr(fc('river_' + name, feats), 'river_' + name.replace(/-/g, '_'), { srs: 'EPSG:4326', file: rel, desc: `River snapshot ${name} (fetched ${d.meta.fetched}): ${feats.length} positioned items, id, kind, name, time. From magpie/cwplans/${rel}. EPSG:4326. ${licText(rel)}` });
 }
 
-// ---- 5. the London Datastore and portal extracts already in londat (GeoJSON, own CRS)
-if (!CORE) for (const f of reg.files.filter(f => f.hosted === 'londat' && /\.geojson(\.gz)?$/.test(f.path))) {
+finish(); }
+
+// ---- 5. the London Datastore and portal extracts already in londat (GeoJSON, own CRS), one file each
+for (const [part, prefix] of [['lds', 'feeds/london-datastore/'], ['portals', 'feeds/portals/']]) { if (!PARTS.includes(part)) continue; startPart(part);
+for (const f of reg.files.filter(f => f.hosted === 'londat' && f.path.startsWith(prefix) && /\.geojson(\.gz)?$/.test(f.path))) {
   const src = join(LONDAT_CW, f.path); if (!existsSync(src)) { console.error(`missing in londat: ${f.path}`); continue; }
   const base = f.path.replace(/^feeds\/london-datastore\//, 'lds_').replace(/^feeds\/portals\//, 'portal_').replace(/\.geojson(\.gz)?$/, '').split('/');
   let layer = (base.length > 1 && base.at(-1) === base.at(-2) ? base.slice(0, -1) : base).join('_').replace(/[^A-Za-z0-9_]/g, '_').toLowerCase().slice(0, 60);
   ogr(f.path.endsWith('.gz') ? '/vsigzip/' + src : src, layer, { file: f.path, desc: `${f.what}. londat cwplans/${f.path}. ${licText(f.path)}` });
 }
 
-// ---- 6. the licence table (attributes only)
+finish(); }
+rmSync(TMP, { recursive: true, force: true });
+
+// ---- 6. the licence table (attributes only), empty geometries, VACUUM
+function finish() {
 const csv = [Object.keys(licRows[0]).join(','), ...licRows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
 writeFileSync(join(TMP, 'layer_licences.csv'), csv);
 execFileSync('ogr2ogr', ['-update', '-f', 'GPKG', OUT, join(TMP, 'layer_licences.csv'), '-nln', 'layer_licences', '-lco', 'DESCRIPTION=One row per layer of this GeoPackage: the file it was made from (path relative to magpie/cwplans in danbri/glitchcan-minigam, or to cwplans/ in danbri/londat), the register source keys, their licences and the OSM use. The register is the authority: https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data-register.json']);
@@ -107,5 +116,5 @@ for (const m of sqlOut('SELECT table_name || \':\' || column_name AS x FROM gpkg
   if (n) { sqlOut(`UPDATE "${m[1]}" SET "${m[2]}" = NULL WHERE "${m[2]}" IS NOT NULL AND ST_IsEmpty("${m[2]}")`); console.log(`${m[1]}: ${n} empty geometries set to NULL`); }
 }
 execFileSync('ogrinfo', [OUT, '-sql', 'VACUUM'], { stdio: 'ignore' });
-rmSync(TMP, { recursive: true, force: true });
-console.log(`zone.gpkg: ${nLayers} layers, ${(statSync(OUT).size / 1e6).toFixed(1)} MB -> ${OUT}`);
+console.log(`${OUT.split('/').pop()}: ${nLayers} layers, ${(statSync(OUT).size / 1e6).toFixed(1)} MB -> ${OUT}`);
+}

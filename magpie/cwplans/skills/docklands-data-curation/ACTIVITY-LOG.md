@@ -956,3 +956,14 @@ central tower - do we have an index of these?"
 - Fixed while testing: the copter started 0 to 14 m from a 159 m tower and could not move forward (start now 25 m over
   the roofs within 60 m); the drone's top bar sat under `#top` on a phone (moved 60 px down). Skill: docklands-3d-page,
   "Drone". Register: `docklands/drone.js` (code).
+
+
+## 2026-10-05 — londat cache: sizes fixed after the coordinator's check (cache agent)
+- Coordinator: a growing binary SQLite committed hourly could add several GB a month; zone.gpkg (68 MB) is over GitHub's
+  50 MB warning. Changed: each run now writes only its new rows as `cache/runs/<day>/live-<time>.json.gz` (10.1 kB on a
+  real run; about 25 kB a commit with latest.json, measured with `git count-objects`); the month's SQLite is written
+  once by the first run of the next month (tested on a copy) and its run files removed. Projection: about 18 MB per 30
+  days of hourly commits plus about 8 MB for the closed month. The first live-2026-10.sqlite became a seed run file.
+- GeoPackage split: zone-core.gpkg 16.9 MB (17 layers), zone-lds.gpkg 38.0 MB (82), zone-portals.gpkg 13.2 MB (64);
+  validate_gpkg.py passes on all three. The single zone.gpkg was removed (it stays in londat history, about 65 MB).
+- check-data-register.mjs: a `*` may stand in a folder name; `"may_be_empty": true` for a family with no file yet.
