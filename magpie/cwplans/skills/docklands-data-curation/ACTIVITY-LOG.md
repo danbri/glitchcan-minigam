@@ -865,3 +865,13 @@ central tower - do we have an index of these?"
 - `docklands/nav.js` (new, loaded after `locate.js`): momentum after a drag, pinch or twist; time-based decay (TAU 0.35 s);
   stopped by a touch, the wheel, reduced motion, the locate follow modes and any other camera mover. Skill
   docklands-3d-page, "Navigation: momentum, ground limit, share". Tests 7/7 (1600 x 900) and 8/8 (390 x 844 DPR 3, touch).
+
+## 2026-10-05 — KML and KMZ on the 3D page and the atlas
+- Owner: "Also look into basic KML support". New: `docklands/kml.js` (shared reader and writer, no dependency: DOMParser,
+  zip central directory + DecompressionStream for KMZ, plain-text descriptions), `docklands/kml-layer.js` (3D page: Menu >
+  Layers > My KML; file picker, drop, `?kml=`; record cards; Go to view; Export view as KML) and `atlas/kml-atlas.js`
+  (Layers box: open, drop, export the layer in the map window). Three one-line hooks in `docklands/index.html`, one in
+  `atlas/index.html`. Register entries added. Supported subset, limits and test numbers: skill docklands-3d-page, "KML".
+- Exports carry their credits in the Document description; OSM-derived geometry (building outlines, OSM construction
+  footprints, OSM river positions) is marked "© OpenStreetMap contributors, ODbL 1.0" per placemark. AIS ships are not
+  exported (licence under review). Nothing is uploaded: visitors' files stay in the browser.

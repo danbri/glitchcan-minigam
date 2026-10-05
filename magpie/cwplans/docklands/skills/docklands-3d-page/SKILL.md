@@ -640,6 +640,84 @@ snapshot before a move, `cv` and `#labels` bubble listeners to read the result a
   `setView` during a fling stops it; in locate `centred` mode `fling` returns false and the follow still reaches the fix;
   reduced motion: no fling. 1600 x 900 DPR 1 (mouse) 7/7 and 390 x 844 DPR 3 (touch) 8/8, no console error.
 
+## KML (2026-10-05)
+
+Owner, 2026-10-05: "Also look into basic KML support". Live: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/
+(Menu > Layers > My KML) and https://danbri.github.io/glitchcan-minigam/magpie/cwplans/atlas/#map (Layers box, "KML").
+
+- **Files.** `docklands/kml.js`: an ES module with no dependencies, shared by both pages (`readKml`, `parseKml`, `writeKml`,
+  `toGeoJSON`, `placemarksFromGeoJSON`, `kmlColor`, `download`). `docklands/kml-layer.js`: the 3D page's layer, a module.
+  `atlas/kml-atlas.js`: the atlas side. index.html has three hooks only: the module tag after `locate.js`; the line
+  `globalThis.DocklandsKMLctx = {...helpers}` before `window.__docklands` (the page script is an IIFE, so a module can reach
+  its helpers only this way; modules run after it, so the object exists when the layer starts); one draw line after
+  `OV.glass` that draws `OV.kml` with the depth mask on and `OV.kmlA` (see-through) with it off. The atlas has one module tag.
+- **Supported** (KML 2.2, any namespace, by local name): Placemark with Point, LineString, LinearRing, Polygon (outer and
+  every inner boundary), MultiGeometry, gx:Track and gx:MultiTrack (as lines); name; description and Snippet as plain text;
+  ExtendedData (Data with displayName, SchemaData/SimpleData with the Schema's displayName); Style and StyleMap by id (the
+  "normal" pair), inline Style, LineStyle colour and width, PolyStyle colour, fill and outline, IconStyle colour and scale;
+  colours are `aabbggrr`; Document and Folder nesting (the path shows on the card); `visibility` 0 on a feature or an ancestor
+  (counted, not drawn); altitudeMode clampToGround, relativeToGround, absolute (gx: seafloor modes as ground); extrude for
+  polygons and lines above the ground (walls); Camera and LookAt on the Document or a feature, with gx:horizFov; KMZ.
+- **Not supported** (counted in the file's note): NetworkLink (listed with its href, never fetched), GroundOverlay,
+  ScreenOverlay, PhotoOverlay, Tour, Model, Region and LOD, BalloonStyle templates, styles in another file
+  (`other.kml#id`), icons from the file (a pin in the icon colour instead), time (TimeSpan, gx:Track `when`), ListStyle.
+- **Parsing.** `DOMParser` with `application/xml`; a `parsererror` element means the file is refused with its first line in
+  the toast. Only the coordinates text is split (white space between tuples, commas inside; a space after a comma is
+  allowed). **Descriptions:** KML allows HTML, often in CDATA. `plainText()` parses it in a `text/html` document from
+  `DOMParser`, which is inert (scripts do not run, images do not load), removes script, style, iframe, object, keeps line
+  breaks for `br` and block elements and adds a link's URL in brackets; every card and popup puts text in with `textContent`.
+  Tested: `<script>`, `<img onerror>` and escaped `&lt;script&gt;` in descriptions, names and data values: nothing ran, no
+  element was made, the text shows. A description with no `<` is already plain (the XML parser decoded the entities): do not
+  run it through the HTML parser, or its line breaks collapse (they did in the first round trip).
+- **KMZ** without a library: the zip's end-of-central-directory record, the central directory, the local header, then
+  `DecompressionStream('deflate-raw')` (Chrome 80, Safari 16.4, Firefox 113 and later; older browsers get "unzip it and
+  open doc.kml"). The document is the `.kml` at the shallowest depth, `doc.kml` first. A file is a KMZ by its `PK\3\4`
+  signature, not by its name. Encrypted entries and methods other than stored and deflate are refused.
+- **3D drawing** (`featureMesh`): positions only through the page's `geo()`; heights in m OD: clampToGround = `groundAt` (+1 m
+  for lines and outlines, +0.8 m for fills), relativeToGround = ground + altitude, absolute = altitude (KML "absolute" is
+  above sea level; ODN is within about a metre of it here). Points: a white stick 22 m (x IconStyle scale) with a head in
+  the icon colour, and a bar at the altitude when it is not on the ground. Lines: `beam` segments, width 2 m per KML pixel
+  (2.5 to 30 m), clamped lines re-sampled every 15 m along the ground. A clamped polygon fill is **draped**: one quad per
+  20 m terrain cell whose centre is inside the outer ring and outside the holes (an earcut fill at ground height crossed the
+  ground on slopes and banks); a shape smaller than a cell falls back to earcut. Polygons in the air: earcut at their
+  altitudes, extrude = walls to the ground. Fills take the PolyStyle alpha (vertex alpha, the `pr` program multiplies it);
+  a file with no style is drawn yellow, as in Google Earth.
+- **The model box.** Segments are clipped to `A.meta.extent` (Liang-Barsky); a point outside, or a shape with nothing
+  inside, is not drawn. The file note and the toast say "n outside the model box (not drawn), n partly outside (cut at the
+  edge)". Do not draw past the box: `groundAt` clamps to the grid edge, so outside shapes float (the overlay lesson above).
+- **Taps.** One anchor per feature in `OV.hits` (`kml: true`) and each polygon in `OV.polys` (in front, so your own shape
+  answers a ground tap first). `buildOverlays()` replaces both arrays: a 1 s timer (`sync`) puts them back, as the ships
+  layer does. Names become `.lb.kml` labels (pri 3).
+- **Camera.** KML Camera to the page: eye = `geo(lon, lat)` at the altitude, heading = -yaw, tilt 90 = level, so the page's
+  orbit point is 1.2 km along the line of sight (as `eyeView`); `ty` takes the vertical exaggeration into account. A Camera
+  with no gx:horizFov gets 60° horizontal (Google Earth's default); without it a portrait phone showed 22°. LookAt: target,
+  `dist = range` (80 to 16,000 m), pitch = 90 - tilt. Roll is not used (the page has no roll in this mode). Back: the drawn
+  camera `CAM` (eye and target; y / VZ), lon and lat from the **inverse of `geo()`** by Newton steps (`lonLatOf`; no second
+  transform), heading from north, tilt from straight down, gx:horizFov from `fovY` and the aspect.
+- **Export** ("Export view as KML", a Blob download, no network): the camera as a KML Camera (absolute); the selected
+  building (each model part's OSM outline at its LiDAR roof, absolute, extruded); works-in-progress sites in the box when
+  that layer is on (status colour, dates and rule as ExtendedData; footprints from OSM marked ODbL); river items of the
+  river layers that are on (points; OSM-derived positions marked ODbL); your own KML. The Document description holds the
+  credits and licences of what is in the file (from the data's own `meta.sources` / `meta.attribution`). AIS ships are not
+  exported (licence under review). Atlas: "Export <layer> as KML" writes the layer's features in the map window (Leaflet
+  `toGeoJSON`, names from the tooltip, colours from the path options, `#333` short hex read too) with a LookAt of the map;
+  the buildings layer is marked OSM. Leaflet `bindTooltip(string)` is HTML: the atlas gives KML names as text nodes.
+- **Drop.** The window lock's `dragover` sets `dropEffect = 'none'` for anything but audio, and a drop with that effect never
+  fires. The KML modules add their own `dragover` and `drop` listeners after the lock's (registration order: theirs set
+  `copy` for a file item that is KML, has no type, or is XML or zip) and take `.kml`/`.kmz` drops; audio still goes to the
+  player. `?kml=<url>` (http or https; the server must allow CORS) loads on open; a document view is taken, else the
+  camera frames the drawn features.
+- **Measured** (2026-10-05, SwiftShader; fixtures in the scratchpad, not committed: 11 placemarks in 4 folders, 1 hidden, 1
+  outside, 1 half outside, a polygon with a hole, an extruded polygon at 120 m, a StyleMap, Data and SchemaData, a Camera, a
+  LookAt, a NetworkLink, a GroundOverlay; the same file as a KMZ): picker and drop both 9 drawn, 1 cut at the edge, 1
+  outside, 1 hidden, NetworkLink and GroundOverlay reported; colours read as red ff0000ff -> (1, 0, 0, 1), blue 7fff0000 ->
+  (0, 0, 1, 0.498); the document Camera came back from the page camera exactly (lon, lat, alt, heading, tilt); export ->
+  import of the Rotherhithe view: lon and lat within 4e-8°, alt, heading, tilt and field equal; a broken file gives a toast;
+  `?kml=` from another origin (CORS) and a KMZ by URL work; a tap on a pin's top opens its card; no console error at
+  1600 x 900 DPR 1 and 390 x 844 DPR 3. Atlas, both sizes: 10 layers (the hidden one filtered), drop of the KMZ, popups
+  text only, export of the buildings layer (141 features at zoom 17 at 1600 px, OSM licence on each) and of a KML layer
+  (11), no console error.
+
 ## Testing
 
 Headless Chromium with SwiftShader (repo `CLAUDE.md`, "Headless browser"), from a local server (fetch needs http):

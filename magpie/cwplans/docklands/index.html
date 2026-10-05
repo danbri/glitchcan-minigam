@@ -796,6 +796,7 @@ function render() {
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (bm === 'ghost' && !sOnly) drawFacades(L.bld, .22, P);
   if (OV.glass) { gl.uniform1f(uDim, nm ? .5 : 1); drawMesh(OV.glass, 1); gl.uniform1f(uDim, nDim); }   // overlays: see-through prisms, fences and the H4 band
+  if (OV.kml || OV.kmlA) { gl.uniform1f(uDim, Math.max(nDim, .35)); gl.depthMask(true); drawMesh(OV.kml, 1); gl.depthMask(false); drawMesh(OV.kmlA, 1); gl.uniform1f(uDim, nDim); }   // My KML (kml-layer.js): your own file, lit like the ground
   // the cut removes structures; ground, greens and water stay as faint context so you can see where you are
   gl.uniform1f(uCut, 1e9);
   if (cutOn) { drawMesh(L.water, .35); drawMesh(L.tidal, .35); drawMesh(L.dockVol, .3); }
@@ -2258,6 +2259,8 @@ function renderNow() { queued = false; render(); gl.finish(); }
 if (globalThis.DocklandsRiver) DocklandsRiver.init({ Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovCredit, londonTime, loadJSON, draw, note, A, OV, labels, labelBox, info, buildOverlays, wl: () => tidalLevel ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level });
 // Ships (AIS) layer (ships-layer.js, Layers > River > Ships (AIS), on): the same helpers
 if (globalThis.DocklandsShips) DocklandsShips.init({ Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovCredit, londonTime, loadJSON, draw, note, A, OV, labels, labelBox, info, buildOverlays, wl: () => tidalLevel ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level });
+// My KML (kml-layer.js, Layers > My KML): the helpers it draws with; it runs after this script as a module
+globalThis.DocklandsKMLctx = { Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovOn, dec, earcut, draw, toast, unview, A, OV, labels, labelBox, cam, get CAM() { return CAM; }, get VZ() { return VZ; }, sel: () => selected >= 0 && AT ? AT.buildings[selected] : null };
 window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder,
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,
@@ -2282,6 +2285,7 @@ hud.textContent = ''; ATTR.start();
 })();
 </script>
 <script src="locate.js"></script>
+<script type="module" src="kml-layer.js"></script>
 <script src="nav.js"></script>
 </body>
 </html>
