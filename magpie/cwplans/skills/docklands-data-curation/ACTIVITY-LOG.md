@@ -982,3 +982,17 @@ central tower - do we have an index of these?"
 - Not read (robots.txt or a challenge): ianvisits.co.uk, architectsjournal.co.uk, brixtonbuzz.com, railforums.co.uk,
   x.com, reddit.com, skyscrapercity.com (robots.txt); whatdotheyknow.com, archpaper.com, tfl.gov.uk (challenge).
 - Register: source `axo-uses-search-20261005`; both files `osm.use: ids`. check-data-register exit 0.
+
+## 2026-10-05 — Blender station box models of Canada Water and Canary Wharf (Blender agent, Opus)
+- Owner: "Use the sheets as a layout guide to model the station boxes ... Use Blender via its MCP running in your
+  virtual machine. Take a screenshot of your work every 10 seconds ...".
+- Blender 4.0.2 (apt) under Xvfb with the blender-mcp add-on (mcp-for-blender 2.1.8, MIT); every step sent through
+  the MCP's execute_blender_code from `tools/blender-stations/`. New skill `blender-station-models`.
+- Models: one collection per station, 67 and 78 objects, materials by class, `uncertainty` on every object.
+  Levels: Canary Wharf JL rail -15.6 (TfL FOI), platforms -14.6, hall -3.1 and mezzanine 3.0 (judged), street 8.4
+  (sheet 23.0 m); Canada Water JL rail -13.3 (TfL FOI; sheet and Wikipedia recorded), ELL platforms -5.6
+  (Wikipedia 11 m, the page control; sheet 8.0 m), hall 0.9 (judged), drum 25 m centred on the OSM arc.
+- Deliverables in danbri/londat `third_party/tfl/am3d/models/` (stations-blend.zip, stations-exports.zip with glb,
+  obj, fbx, stl, usdc; making_of.zip with 102 captures, timelapse, contact sheet, scripts); index
+  `feeds/underground/station-models.json`; register: source `tfl-am3d`, pipeline activity `blender-station-models`.
+  check-data-register exit 0. No 3D page layer (no glTF loader in the WebGL1 page; skipped).

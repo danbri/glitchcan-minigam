@@ -8768,6 +8768,62 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/blender-station-models",
+   "@type": "prov:Activity",
+   "rdfs:label": "blender-station-models",
+   "dct:description": "Models the Canada Water and Canary Wharf station boxes in Blender 4.0.2, driven only through the blender-mcp MCP server (execute_blender_code per step). extract-osm.mjs decodes the 3D page's OSM-derived data near each station; each step builds one element group (boxes, platforms, halls, escalators, lifts, stairs, canopies, labels) from OSM positions, published sizes and levels, and the TfL sheets' topology; then saves stations.blend and exports glb, obj, fbx, stl and (via usd-core) usdc.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/under.js"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/indoor.js"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data/sourced-levels.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/facts.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-am3d",
+     "dct:description": "the Canada Water and Canary Wharf axonometric sheets in danbri/londat third_party/tfl/am3d/stations/, read by eye as a layout guide"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/station-models.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/blender-stations/step.sh"
+   },
+   "cwp:command": "BLENDER_STATIONS_WORK=<work> magpie/cwplans/tools/blender-stations/step.sh <work>/steps/NN-*.py (Blender GUI under Xvfb with the blender-mcp add-on; see skill blender-station-models)",
+   "cwp:kind": "build",
+   "cwp:rule": [
+    "Frame: Blender X = E - 537550, Y = N - 180300, Z = m OD; glTF/OBJ/FBX Y up = the page frame.",
+    "Positions and plan shapes from OSM where OSM has them; published sizes (facts.json) placed on the OSM track axis; the sheets give counts, numbering and which elements exist, never positions or sizes.",
+    "Levels: TfL FOI rail levels first, then the 3D page's sourced controls, then the sheets; every level a parameter with its alternatives and reason in the collection's params property.",
+    "Every object has element_class, uncertainty (OSM / sheet / published / judged) and basis custom properties; materials by element class.",
+    "Escalator and stair direction from indoor.js oriented edges (Canary Wharf) or from the levels of the ways touching each end (Canada Water)."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-indoor"
+    }
+   ],
+   "cwp:area": "underground",
+   "cwp:fault": []
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
    "@type": "prov:Activity",
    "rdfs:label": "Published levels used as tunnel and structure controls",
@@ -13294,6 +13350,36 @@
     }
    ],
    "cwp:osmUse": "ids"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/station-models.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "index of the Blender station box models of Canada Water and Canary Wharf held in danbri/londat (third_party/tfl/am3d/models): files, sizes, hashes, URLs, frame, levels chosen and their sources and alternatives, contents",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-am3d"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-foi"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-quotes"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-lidar"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/blender-station-models"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "TfL sheet basis is not an open licence: re-check before the models leave the prototyping phase"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/underground/README.md",
@@ -25458,6 +25544,15 @@
    ],
    "dct:title": "web search and crawl for scoping, 2026-10-05: what people built from or alongside TfL's axonometric station diagrams (search results, direct fetches where robots.txt allows, Sketchfab API v3, GitHub search and raw files, ArcGIS Hub API, HTTP HEAD on foi.tfl.gov.uk)",
    "dct:license": "each site's terms; facts, URLs and short quotes only, no models or images copied"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-am3d",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "TfL axonometric station diagrams (FOI release 2015; Canada Water and Canary Wharf sheets, supplied by the owner, held in danbri/londat third_party/tfl/am3d)",
+   "dct:license": "Transport for London, RPSI re-use; not an open licence"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own",

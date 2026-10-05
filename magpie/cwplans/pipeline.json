@@ -8134,6 +8134,54 @@
         "fetch-river",
         "build-construction-index"
       ]
+    },
+    {
+      "id": "blender-station-models",
+      "area": "underground",
+      "tool": "tools/blender-stations/step.sh",
+      "command": "BLENDER_STATIONS_WORK=<work> magpie/cwplans/tools/blender-stations/step.sh <work>/steps/NN-*.py (Blender GUI under Xvfb with the blender-mcp add-on; see skill blender-station-models)",
+      "kind": "build",
+      "used": [
+        {
+          "file": "docklands/data/under.js"
+        },
+        {
+          "file": "docklands/data/area.js"
+        },
+        {
+          "file": "docklands/data/indoor.js"
+        },
+        {
+          "file": "data/sourced-levels.json"
+        },
+        {
+          "file": "docklands/facts.json"
+        },
+        {
+          "source": "tfl-am3d",
+          "request": "the Canada Water and Canary Wharf axonometric sheets in danbri/londat third_party/tfl/am3d/stations/, read by eye as a layout guide"
+        }
+      ],
+      "generated": [
+        {
+          "file": "feeds/underground/station-models.json",
+          "note": "index, written by hand from the build; the models themselves are in danbri/londat third_party/tfl/am3d/models/"
+        }
+      ],
+      "method": "Models the Canada Water and Canary Wharf station boxes in Blender 4.0.2, driven only through the blender-mcp MCP server (execute_blender_code per step). extract-osm.mjs decodes the 3D page's OSM-derived data near each station; each step builds one element group (boxes, platforms, halls, escalators, lifts, stairs, canopies, labels) from OSM positions, published sizes and levels, and the TfL sheets' topology; then saves stations.blend and exports glb, obj, fbx, stl and (via usd-core) usdc.",
+      "rules": [
+        "Frame: Blender X = E - 537550, Y = N - 180300, Z = m OD; glTF/OBJ/FBX Y up = the page frame.",
+        "Positions and plan shapes from OSM where OSM has them; published sizes (facts.json) placed on the OSM track axis; the sheets give counts, numbering and which elements exist, never positions or sizes.",
+        "Levels: TfL FOI rail levels first, then the 3D page's sourced controls, then the sheets; every level a parameter with its alternatives and reason in the collection's params property.",
+        "Every object has element_class, uncertainty (OSM / sheet / published / judged) and basis custom properties; materials by element class.",
+        "Escalator and stair direction from indoor.js oriented edges (Canary Wharf) or from the levels of the ways touching each end (Canada Water)."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "build-docklands",
+        "build-indoor"
+      ]
     }
   ],
   "manual_activities": [
