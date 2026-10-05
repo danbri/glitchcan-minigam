@@ -6547,6 +6547,9 @@
       "generated": [
         {
           "file": "docklands/reference/plane-2026-10/solution.json"
+        },
+        {
+          "file": "docklands/reference/plane-2026-10/compare-photo-render.jpg"
         }
       ],
       "method": "Solves the camera of any photo of the zone, ground or air: a pinhole camera with eye position, heading, pitch, roll, focal length and optional radial distortion k1, fitted by Levenberg-Marquardt (numeric Jacobian) to landmark pixels (tower tops, named places, given coordinates), shoreline pixels (distance to the projected OSM water outline) and horizon pixels (the sea-level dip from the eye height). Reports rms, formal 1-sigma per parameter from the covariance, per-point residuals and hold-out residuals. Library tools/view-mcp/view-lib.mjs, also served as the docklands-view MCP (tools/view-mcp/server.mjs).",

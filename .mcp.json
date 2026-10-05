@@ -8,6 +8,12 @@
       "args": [
         "tools/game-mcp/server.mjs"
       ]
+    },
+    "docklands-view": {
+      "command": "node",
+      "args": [
+        "tools/view-mcp/server.mjs"
+      ]
     }
   }
 }

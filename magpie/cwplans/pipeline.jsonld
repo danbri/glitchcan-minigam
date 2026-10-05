@@ -7029,6 +7029,9 @@
    "prov:generated": [
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/solution.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/compare-photo-render.jpg"
     }
    ],
    "cwp:tool": {
@@ -17755,6 +17758,30 @@
    },
    "cwp:osmUse": "notes",
    "cwp:review": "owner-supplied; ask the owner whether CC0 applies (the CC0 statement of 2026-10-04 was for the Greenland Dock day photos); no EXIF; date not known (assumed 4-5 Oct 2026)"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/reference/plane-2026-10/compare-photo-render.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the owner's aircraft photo beside the 3D page's render of ?view=plane&t=2026-10-05T17:40 (1195 x 689 each, SwiftShader WebGL, map style)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/owner-supplied"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-lidar"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/solve-photo-view"
+   },
+   "cwp:osmUse": "derived",
+   "cwp:review": "owner-supplied photo; ask the owner whether CC0 applies; the render half carries the page's OSM attribution in the README"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/construction/sites.json",

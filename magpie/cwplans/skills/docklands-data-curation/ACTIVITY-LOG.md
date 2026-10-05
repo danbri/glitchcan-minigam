@@ -844,3 +844,19 @@ central tower - do we have an index of these?"
   repository edits, not because of the move (not committed).
 - Not done: gzip of the 40 London Datastore files over 1 MB (their tools read plain JSON). History not rewritten
   (owner decision): the old blobs stay in the pack.
+
+## 2026-10-05 — photo view reconstruction: the owner's aircraft photo, ?view=plane, the docklands-view MCP (plane-view agent)
+
+- The owner's evening photo through an aircraft window (`docklands/reference/plane-2026-10/`, owner-supplied; CC0 not yet
+  asked; no EXIF; date assumed 4-5 Oct). Identified by overlaying the model's OSM water outlines on the photo: Canary Wharf
+  from above (Newfoundland, Landmark Pinnacle, One Bank Street), Limehouse Reach, Greenland Pier, Greenland Dock, the South
+  Dock marina, the Surrey Quays car park, the Rotherhithe north shore at the right edge.
+- Camera solved (new `tools/view-mcp/solve.mjs`, Levenberg-Marquardt on 2 tower tops, Greenland Pier, 32 shoreline pixels as
+  distances to the projected outlines, 12 horizon pixels): eye 51.5125 N 0.0161 W over Poplar, about 800 m (+-50), line of
+  sight 225.3° true, pitch -13.6°, roll +9.2°, horizontal field 56.9°, rms 4.8 px. Hold-outs: right-edge shore rms 7.7 px
+  (pass); Greenland Dock west end 16 px; Sir John McDougall Gardens 41 px (fail: misidentified, left out).
+- Time from the bright sky under cloud: about 17:40 BST +-40 min if 4-5 Oct. Not on the LCY runway 09 final (360 m too high,
+  650 m north); fits a westbound aircraft's left window, unproven.
+- Page: `VIEWS.plane` with a roll (`rolledUp`); https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?view=plane&t=2026-10-05T17:40
+- New skill `photo-view-reconstruction` (docklands/skills/), MCP server `docklands-view` (`tools/view-mcp/server.mjs`, .mcp.json;
+  `node tools/view-mcp/test.mjs` passes 17 checks); pipeline activity `solve-photo-view`; register entries for the 5 files.

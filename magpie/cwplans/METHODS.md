@@ -1910,6 +1910,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - [docklands/data/area.js](docklands/data/area.js)
 - Outputs:
   - [docklands/reference/plane-2026-10/solution.json](docklands/reference/plane-2026-10/solution.json)
+  - [docklands/reference/plane-2026-10/compare-photo-render.jpg](docklands/reference/plane-2026-10/compare-photo-render.jpg)
 - Network: no; deterministic: yes; kind: derive; after: `build-docklands`, `build-towers`
 - Hand judgement: Pixel positions and which photo feature is which landmark are read by eye from grid enlargements; recorded in points.json and the photo folder's README (with the failed hold-out).
 

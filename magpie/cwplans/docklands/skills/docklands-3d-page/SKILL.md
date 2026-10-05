@@ -7,7 +7,7 @@ description: >-
   gestures (labels must still join a pinch), music and the phone audio rules, the styles (map, isometric pixel art
   with materials, photo facades with mip LOD, Gaussian splats including the trained set, glow chips), Night mode
   (lit windows by use, the Air Navigation Order aviation-light rule, riverside lamps, glitter-path reflections,
-  bloom, the photo views ?view=rotherhithe|greenland|pier and their calibration against the owner's photos), the
+  bloom, the photo views ?view=rotherhithe|greenland|pier|greenlandday|plane and their calibration against the owner's photos; a view may carry a roll), the
   fp16 / highp fault that left phones dark, and how to test a visual change headless (SwiftShader, renderNow and
   toDataURL, two sizes x two pixel ratios x the photo views, numbers not one look). Reach for it before you edit
   docklands/index.html, add a layer or a style, change a shader, judge a render, or push a page change. The sky,
@@ -475,6 +475,26 @@ Layers > Works in progress > Construction sites). Data and rules: skill `cwplans
   render (68, 115, 198): the drawn sky is lighter and more saturated than the photo's polarised blue.
 - **`?view=greenland` by day**: it is the night bollard photo's framing (heading 39.7°, field 44°), from an eye 5 m from the
   wide photo's. The bearings agree: the four landmarks' bearings from the two eyes differ by at most 0.3°. Not changed.
+- **`?view=plane`** (no button; 2026-10-05): the owner's evening photo from an aircraft window,
+  `docklands/reference/plane-2026-10/evening-thames-from-plane.jpg` (1195 x 689). Eye (211, 802 m OD, -845) over Poplar,
+  heading 223.84° from grid north, pitch -13.56°, **roll +9.18°** (the first view with a roll: `cam.roll`, applied by
+  `rolledUp` to the look-at up vector; `setView` and `setEye` clear it), horizontal field 56.9°, `night: false`. Add
+  `&t=2026-10-05T17:40` for the evening sky. Solved with `tools/view-mcp/solve.mjs` (skill `photo-view-reconstruction`):
+
+  | evidence | photo (px) | camera / page (px) | error |
+  |---|---|---|---|
+  | Newfoundland crown (cwb-0451) | 363, 600 | 356.3, 596.0 / 356.2, 595.7 | 7.8 |
+  | Landmark Pinnacle roof (cwb-0577) | 301, 506 | 302.3, 517.0 | 11.1 |
+  | Greenland Pier pontoon (weight 0.5) | 280, 421 | 274.9, 423.5 | 5.7 |
+  | 32 shoreline pixels (Thames, Greenland Dock) | | distance to the OSM outline | 0.1 to 11.6 |
+  | hold-out: Rotherhithe north shore, 7 pixels | | fitted without them | rms 7.7 |
+  | hold-out: Greenland Dock west end | 578, 383 | 560.9, 382.8 | 16 |
+  | hold-out: Sir John McDougall Gardens (fails: misidentified) | 107, 497 | 147.5, 493.3 | 41 |
+
+  rms 4.8 px over 43 observations. The page's own MVP agrees with the solver to 0.2 px. Tones (1195 x 689, DPR 1, map style,
+  `&t=` evening sky): mean luma photo 0.507, render 0.555; top third 0.651 and 0.850 (south London beyond the model box,
+  4.5 km south of the eye, is the page's sky colour); lower two thirds 0.434 and 0.408. Side by side:
+  `reference/plane-2026-10/compare-photo-render.jpg`. No console errors at 1600 x 900 DPR 1, 390 x 844 DPR 3, 1195 x 689.
 - What the model lacks in this view: buildings finished after the LiDAR (the red-brick tower in front of One Canada Square and
   others) and every crane; the 30 Marsh Wall core and 25 Cuba Street are drawn only through this layer.
 

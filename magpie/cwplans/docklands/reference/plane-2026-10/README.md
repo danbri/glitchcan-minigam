@@ -78,3 +78,5 @@ Cross): in this view the south edge is about 4.5 km from the eye, so everything 
 London to the horizon, 5 to 40 km) is not modelled; the page's day sky fills it. Comparison (1195 x 689, DPR 1, map style,
 SwiftShader WebGL): mean luma photo 0.507, render 0.555; top third 0.651 and 0.850 (the sky colour where London should be);
 lower two thirds 0.434 and 0.408. Landmark errors are those of the camera (table above): the page reproduces it.
+Side by side: `compare-photo-render.jpg` (the render shows OpenStreetMap data, © OpenStreetMap contributors, ODbL; LiDAR
+heights © Environment Agency, OGL).
