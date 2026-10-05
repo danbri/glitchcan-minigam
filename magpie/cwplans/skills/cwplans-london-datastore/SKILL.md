@@ -35,6 +35,13 @@ Checked against the tool and the files on 2026-10-04.
 
 ## Run
 
+**Where the files are (2026-10-05):** the data files of `feeds/london-datastore/` live in the repository
+https://github.com/danbri/londat, under `cwplans/feeds/london-datastore/` (same relative paths); `lds-building.js` and
+`README.md` stay here. The tools write to the londat checkout (`LONDAT_DIR`, default `../londat` next to this
+repository's folder; `tools/londat.mjs`); commit and push the data there, the register and tools here. A new register
+line has `"hosted": "londat"` (`lds-harvest-auto.mjs register` writes it). Pages read the files through `data-base.js`
+(`CwData.url`). Rule and checks: `docklands-data-curation`, "Data hosted in danbri/londat".
+
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk          # catalogue.json (2 requests)
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs walk --details   # + 1,305 detail records (~35 min)
     NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/walk-london-datastore.mjs refs          # zone-codes.json (ONSPD, 20od9; ~3 min)

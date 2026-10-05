@@ -17,10 +17,12 @@ import { join, dirname } from 'path';
 import { createGunzip, gzipSync, gunzipSync } from 'zlib';
 import { createInterface } from 'readline';
 import { RAW, UA, TOOLS } from './lib.mjs';
+import { LONDAT_CW, warnIfNoLondat } from './londat.mjs';
 import { loadRefs, ZONE_WGS, ZONE_BNG, ZONE_PLACE_NAMES } from './lds-probe.mjs';
 
 export const CW = join(TOOLS, '..');
-export const OUT = join(CW, 'feeds', 'portals');
+export const OUT = join(LONDAT_CW, 'feeds', 'portals');   // hosted in danbri/londat (tools/londat.mjs)
+warnIfNoLondat();
 export const RAWP = join(RAW, 'portals');
 export const today = new Date().toISOString().slice(0, 10);
 const args = process.argv.slice(2);
@@ -109,7 +111,7 @@ export const ZONE = ZONE_WGS;                        // [-0.095, 51.474, 0.015, 
 export const CW_BOX = [-0.03, 51.498, -0.005, 51.51];
 export const LONDON = [-0.52, 51.28, 0.34, 51.70];
 export const ZONE_TEXT = 'the 3D model box, BNG E 532400-539900, N 176700-182300 (WGS84 -0.095, 51.474 to 0.015, 51.522)';
-export const zoneRefs = () => loadRefs(join(CW, 'feeds', 'london-datastore', 'zone-codes.json'), join(RAW, 'london-datastore', 'zone-uprns.txt'));
+export const zoneRefs = () => loadRefs(join(LONDAT_CW, 'feeds', 'london-datastore', 'zone-codes.json'), join(RAW, 'london-datastore', 'zone-uprns.txt'));
 export const ZONE_BOROUGHS = { 'tower hamlets': 'E09000030', southwark: 'E09000028', lewisham: 'E09000023', greenwich: 'E09000011', newham: 'E09000025', 'city of london': 'E09000001' };
 export const OTHER_LONDON = ['barking', 'dagenham', 'barnet', 'bexley', 'brent', 'bromley', 'camden', 'croydon', 'ealing', 'enfield', 'hackney', 'hammersmith', 'fulham', 'haringey', 'harrow', 'havering', 'hillingdon', 'hounslow', 'islington', 'kensington', 'chelsea', 'kingston', 'lambeth', 'merton', 'redbridge', 'richmond', 'sutton', 'waltham forest', 'wandsworth', 'westminster'];
 // a place name in the zone, as a whole word ("thames" alone is not one: it runs through half of England)

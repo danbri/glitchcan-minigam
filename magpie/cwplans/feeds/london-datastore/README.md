@@ -1,5 +1,7 @@
 # London Datastore walk (2026-10-04)
 
+**The data files of this folder are in https://github.com/danbri/londat/tree/main/cwplans/feeds/london-datastore (moved 2026-10-05; same relative paths). This README and the code stay here.**
+
 A recorded walk through the whole London Datastore (https://data.london.gov.uk/, Greater London Authority) for the
 Docklands zone: the catalogue, a triage of every dataset by written rules, and a harvest of 31 open datasets clipped
 to the zone. Owner, 2026-10-04: "Can we work our way through open data London portal?" Second walk, same day: "No

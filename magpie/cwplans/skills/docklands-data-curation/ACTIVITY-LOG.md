@@ -817,3 +817,30 @@ central tower - do we have an index of these?"
 - National: IMD 2025 (File 7) for the 318 zone LSOAs.
 - Coordinator's size rule applied: files over 1 MB now written gzipped by the tool; six existing files converted
   (dgu catalogue and triage, DESNZ energy, OS Open Names, EA flood zones, listed building outlines: 9.0 MB to 1.7 MB).
+
+## 2026-10-05 — Bulk extracts moved to danbri/londat
+- The owner created https://github.com/danbri/londat for bulk open-data extracts (main repository near the GitHub
+  Pages 1 GB limit). Moved 400 data files, 189.7 MB: `feeds/london-datastore/` (237 files, 172.1 MB) and
+  `feeds/portals/` (163 files, 17.7 MB), same paths under `cwplans/` in londat. `.js` code and READMEs stay here.
+  Other files over 1 MB stay (first-load page data, owner photos, registry inputs): rule in the curation skill,
+  "Data hosted in danbri/londat".
+- londat has a README (licences per folder, "The GLA cannot warrant the quality or accuracy of the data", OSM
+  attribution for the two cultural-infrastructure UPRN files), LICENSE-DATA.md (no blanket licence), `.nojekyll`
+  and `cwplans/data-register.json` (copy of the 400 hosted entries and 383 sources, written by the check tool).
+- Register: `"hosted": "londat"` on the 400 entries; `check-data-register.mjs` checks them in the londat checkout
+  (`LONDAT_DIR`). Tools: `tools/londat.mjs` (`cwPath`); walk-london-datastore, lds-harvest-auto, join-lds, amend-uprns,
+  build-construction-index and walk-portals read and write the londat checkout. Pages: `data-base.js` (`CwData.url`,
+  one constant `DATA_BASE`), used by the atlas and the 3D page.
+- Base in use: https://raw.githubusercontent.com/danbri/londat/main/cwplans/ (GitHub Pages is not on for londat;
+  https://danbri.github.io/londat/ gave 404 on 2026-10-05). Switch `DATA_BASE` to Pages when it answers.
+- Tests (headless Chromium, SwiftShader, local server, 390x844 @2 and 1280x800 @1): 3D page overlays from londat
+  (wharves 10, open space 623, conservation areas 118, venues 662), building card cwb-0001 with heat, solar, 2021
+  Census and the GLA statement; atlas London Datastore view 214 datasets, 229 file links to londat, the "Heritage and
+  views" theme mapped (4 layers), dossier cwb-0001 with heat, solar, Census. No HTTP errors, no console errors, no
+  request to the old paths. All 400 files answer 200 on the raw base.
+- Offline tool check: `lds-harvest-auto.mjs index` and `walk-portals.mjs index` rebuilt identical indexes in the londat
+  checkout (only the date changed; not committed). `walk-london-datastore.mjs triage` reads the same file set as
+  before; its output differs from the committed triage.json in `have` counts because that file is older than later
+  repository edits, not because of the move (not committed).
+- Not done: gzip of the 40 London Datastore files over 1 MB (their tools read plain JSON). History not rewritten
+  (owner decision): the old blobs stay in the pack.

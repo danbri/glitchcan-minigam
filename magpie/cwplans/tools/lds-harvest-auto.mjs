@@ -17,6 +17,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, rmSync, c
 import { join, dirname } from 'path';
 import { execFileSync, spawn } from 'child_process';
 import { createInterface } from 'readline';
+import { CW } from './londat.mjs';
 import {
   OUT, RAWDIR, BASE, today, rawFile, politeStream, politeFetch, politeRange, readJson, readGpkg, readShpZip, harvestGeo, ZONE_BNG, ZONE_WGS84,
   parseCsvLine, DROP_FIELD, bboxOf as bboxOfG,
@@ -522,7 +523,7 @@ export async function autoHarvest(argv) {
 // ---- register: one source line lds-<id> and one file line per output in data-register.json; the activity in pipeline.json
 const LIC = { 'Open Government Licence v3': 'OGL v3.0', 'Open Government Licence v2': 'OGL v2.0', 'Creative Commons Attribution': 'CC BY (version not stated by the Datastore)', 'Creative Commons Attribution 4.0': 'CC BY 4.0', 'Open Data Commons Attribution License': 'ODC-By 1.0', 'Public Domain': 'Public Domain', 'Open Data Commons Public Domain Dedication and License (PDDL)': 'PDDL' };
 function register(cat) {
-  const L = loadLog(), CWD = join(OUT, '..', '..');
+  const L = loadLog(), CWD = CW;   // data-register.json and pipeline.json stay here; OUT is in the londat checkout
   const regFile = join(CWD, 'data-register.json'); let lines = readFileSync(regFile, 'utf8').split('\n');
   const upsert = (key, line, anchor) => {            // key: a string that only that line holds; anchor: insert after the last line matching it
     const i = lines.findIndex(l => l.includes(key));
@@ -556,12 +557,12 @@ function register(cat) {
         : `${d.title}: ${c.zone_rows} zone rows of ${c.rows_read} in ${c.tables_read} tables (keys: ${Object.entries(c.zone_rows_by_key || {}).map(([k, v]) => `${k} ${v}`).join(', ')}); JSON tables with zone_keys and a meta member (rule-driven harvest)`;
       const sources = [`lds-${id}`, ...(geo ? ['os-ostn15'] : []), ...(!geo && Object.keys(c.zone_rows_by_key || {}).some(k => /postcode|sector|ward2003/.test(k)) ? ['onspd'] : []), ...(Object.keys(c.zone_rows_by_key || {}).some(k => /uprn|toid/.test(k)) ? ['os-open-uprn'] : [])];
       const path = `feeds/london-datastore/${f}`;
-      upsert(`"path":"${path}"`, `    ${JSON.stringify({ path, what, sources, osm: { use: 'none' }, produced_by: `tools/lds-harvest-auto.mjs run ${id}`, shown_on: [] })}`, l => l.includes('"path":"feeds/london-datastore/') || l.includes('"path": "feeds/london-datastore/')); nFile++;
+      upsert(`"path":"${path}"`, `    ${JSON.stringify({ path, hosted: 'londat', what, sources, osm: { use: 'none' }, produced_by: `tools/lds-harvest-auto.mjs run ${id}`, shown_on: [] })}`, l => l.includes('"path":"feeds/london-datastore/') || l.includes('"path": "feeds/london-datastore/')); nFile++;
       generated.push({ file: path });
     }
   }
-  upsert('"path":"feeds/london-datastore/harvest-log.json"', `    ${JSON.stringify({ path: 'feeds/london-datastore/harvest-log.json', what: 'outcome of the rule-driven harvest for every dataset run (harvested with files and counts, no zone rows with the evidence, not readable, documents only, by hand, held for the owner); its meta repeats the rules', sources: ['lds-catalogue', 'own'], osm: { use: 'none' }, produced_by: 'tools/lds-harvest-auto.mjs run', shown_on: [] })}`, l => l.includes('"path":"feeds/london-datastore/') || l.includes('"path": "feeds/london-datastore/'));
-  upsert('"path":"feeds/london-datastore/index.json"', `    ${JSON.stringify({ path: 'feeds/london-datastore/index.json', what: 'index of every London Datastore folder harvested to the zone (both harvest tools): title, theme, licence and credit, dates, files with counts and sizes, and the final-state counts of the triage; loaded first by the atlas view "London Datastore"', sources: ['lds-catalogue', 'own'], osm: { use: 'none' }, produced_by: 'tools/lds-harvest-auto.mjs index', shown_on: ['atlas/index.html'] })}`, l => l.includes('"path":"feeds/london-datastore/') || l.includes('"path": "feeds/london-datastore/'));
+  upsert('"path":"feeds/london-datastore/harvest-log.json"', `    ${JSON.stringify({ path: 'feeds/london-datastore/harvest-log.json', hosted: 'londat', what: 'outcome of the rule-driven harvest for every dataset run (harvested with files and counts, no zone rows with the evidence, not readable, documents only, by hand, held for the owner); its meta repeats the rules', sources: ['lds-catalogue', 'own'], osm: { use: 'none' }, produced_by: 'tools/lds-harvest-auto.mjs run', shown_on: [] })}`, l => l.includes('"path":"feeds/london-datastore/') || l.includes('"path": "feeds/london-datastore/'));
+  upsert('"path":"feeds/london-datastore/index.json"', `    ${JSON.stringify({ path: 'feeds/london-datastore/index.json', hosted: 'londat', what: 'index of every London Datastore folder harvested to the zone (both harvest tools): title, theme, licence and credit, dates, files with counts and sizes, and the final-state counts of the triage; loaded first by the atlas view "London Datastore"', sources: ['lds-catalogue', 'own'], osm: { use: 'none' }, produced_by: 'tools/lds-harvest-auto.mjs index', shown_on: ['atlas/index.html'] })}`, l => l.includes('"path":"feeds/london-datastore/') || l.includes('"path": "feeds/london-datastore/'));
   tidy();
   JSON.parse(lines.join('\n'));                                       // still JSON
   writeFileSync(regFile, lines.join('\n'));

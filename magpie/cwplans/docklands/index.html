@@ -317,6 +317,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
 <script src="sky.js"></script>
 <script src="river-layer.js"></script>
 <script src="ships-layer.js"></script>
+<script src="../data-base.js"></script>
 <script src="../feeds/london-datastore/lds-building.js"></script>
 <script>
 (() => {
@@ -1517,8 +1518,8 @@ const OV = { data: {}, solid: null, glass: null, tips: null, hits: [], polys: []
 const OVL = {
   bikes: { file: '../feeds/live/bikes.json' }, lifts: { file: '../feeds/live/lifts.json' }, cranes: { file: '../feeds/live/notams.json' },
   heli: { file: '../feeds/live/helicopters.json', river: true },
-  cons: { file: '../feeds/london-datastore/conservation-areas/conservation-areas.geojson' }, dos: { file: '../feeds/london-datastore/designated-open-space/designated-open-space.geojson' },
-  wharf: { file: '../feeds/london-datastore/safeguarded-wharves/safeguarded-wharves.geojson' }, venues: { file: '../feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.geojson' },
+  cons: { file: CwData.url('feeds/london-datastore/conservation-areas/conservation-areas.geojson') }, dos: { file: CwData.url('feeds/london-datastore/designated-open-space/designated-open-space.geojson') },
+  wharf: { file: CwData.url('feeds/london-datastore/safeguarded-wharves/safeguarded-wharves.geojson') }, venues: { file: CwData.url('feeds/london-datastore/cultural-infrastructure/cultural-infrastructure.geojson') },
   works: { file: '../registry/sources/construction/sites.json' },
 };
 const ovOn = k => { const el = $('ov_' + k); return !!(el && el.checked); };

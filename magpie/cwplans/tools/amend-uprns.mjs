@@ -16,6 +16,7 @@ import { execFileSync, spawn } from 'child_process';
 import { createInterface } from 'readline';
 import { gunzipSync } from 'zlib';
 import { RAW, UA, TOOLS, bngProjector, pointIn, joinRings } from './lib.mjs';
+import { cwPath, LONDAT_CW } from './londat.mjs';
 
 const CW = join(TOOLS, '..');
 const RAWDIR = join(RAW, 'uprn-amend');
@@ -192,7 +193,7 @@ function nameMatch(a, b) {
 async function prepareRecipe(R) {
   const refsA = [];
   if (R.datastore) {
-    const cj = JSON.parse(readFileSync(join(CW, R.datastore.catalogue), 'utf8')), cat = cj.datasets || cj;
+    const cj = JSON.parse(readFileSync(cwPath(R.datastore.catalogue), 'utf8')), cat = cj.datasets || cj;
     for (const id of R.datastore.datasets) {
       const d = cat.find(x => x.id === id); if (!d) throw new Error(`dataset ${id} not in ${R.datastore.catalogue}`);
       if (!/Open Government Licence/i.test(d.licence || '')) throw new Error(`dataset ${id}: licence ${d.licence}; not used`);
@@ -218,9 +219,9 @@ async function prepareRecipe(R) {
     }
   }
   return {
-    in: join(CW, R.in), out: join(CW, R.out), amendments: join(CW, R.amendments), uprnField: R.uprnField, idField: R.idField,
-    nameField: R.nameField, groupField: R.groupField, refsA, refsC: R.refC.map(f => ({ file: join(CW, f), label: f, source: f })),
-    openUprn: join(CW, R.openUprn), footprints: join(CW, R.footprints), registry: R.registry && join(CW, R.registry), zoneBng: R.zoneBng, sameRelease: R.sameRelease,
+    in: cwPath(R.in), out: cwPath(R.out), amendments: cwPath(R.amendments), uprnField: R.uprnField, idField: R.idField,
+    nameField: R.nameField, groupField: R.groupField, refsA, refsC: R.refC.map(f => ({ file: cwPath(f), label: f, source: f })),
+    openUprn: cwPath(R.openUprn), footprints: cwPath(R.footprints), registry: R.registry && cwPath(R.registry), zoneBng: R.zoneBng, sameRelease: R.sameRelease,
   };
 }
 function prepareArgs() {
@@ -452,7 +453,7 @@ const counts = {
   distinct_venues_rounded: new Set(suspects.map(s => norm(s.name))).size,
   distinct_venues_amended: new Set(suspects.filter(s => s.amended).map(s => norm(s.name))).size,
 };
-const rel = f => relative(CW, f);
+const rel = f => f.startsWith(LONDAT_CW + '/') ? relative(LONDAT_CW, f) : relative(CW, f);   // paths relative to magpie/cwplans, also for files in the londat checkout
 const meta = {
   input: rel(P.in), input_untouched: true, output: rel(P.out), tool: 'tools/amend-uprns.mjs' + (recipeKey ? ` ${recipeKey}` : ''), date: today,
   column: P.uprnField, row_id: P.idField.join('#'),

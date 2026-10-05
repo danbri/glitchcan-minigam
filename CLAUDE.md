@@ -71,6 +71,7 @@ restrictions on personal org and address data while in the scoping, planning and
   as the file, then run `node magpie/cwplans/tools/check-data-register.mjs --write`; it fails on an
   unregistered file and on a page that shows OSM data without the "© OpenStreetMap contributors" link.
   Readable view: https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md
+- Bulk extracts live in danbri/londat (owner, 2026-10-05: created londat repo). Rule, tools and base URL: the `docklands-data-curation` skill, "Data hosted in danbri/londat".
 - The exception ends when the project leaves the prototyping phase; the owner says when.
   It does not apply to any other directory. The Bristol trees rule above is unchanged.
 

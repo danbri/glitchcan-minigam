@@ -8414,6 +8414,10 @@
   ],
   "libraries": [
     {
+      "tool": "tools/londat.mjs",
+      "provides": "Where the files hosted in danbri/londat are on disk: LONDAT_DIR (env, default a londat clone next to the main repository), LONDAT_CW, HOSTED_DIRS (feeds/london-datastore/, feeds/portals/; code and README.md stay here), isHostedPath(rel), cwPath(rel). Used by walk-london-datastore, lds-harvest-auto, join-lds, amend-uprns, build-construction-index, walk-portals and check-data-register."
+    },
+    {
       "tool": "tools/lib.mjs",
       "provides": "HTTP get with the project User-Agent; QLever (paced, one call at a time, retried on 429 and 5xx) and query.wikidata.org SPARQL helpers; EA LiDAR WCS URLs; WGS84 to BNG through the OSTN15 grid (reads data/raw/uk_os_OSTN15_NTv2_OSGBtoETRS.tif); LiDAR tile mosaics; polygon helpers (area, point in polygon, box clip, cells, earcut mesh, ring joining, Douglas-Peucker, delta encoding); applyControls (published levels from data/sourced-levels.json as tunnel controls)."
     },

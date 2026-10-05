@@ -17,9 +17,11 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSy
 import { join, dirname } from 'path';
 import { execFileSync } from 'child_process';
 import { RAW, UA, TOOLS } from './lib.mjs';
+import { LONDAT_CW, warnIfNoLondat, cwPath } from './londat.mjs';
 
 export const CW = join(TOOLS, '..');
-export const OUT = join(CW, 'feeds', 'london-datastore');
+export const OUT = join(LONDAT_CW, 'feeds', 'london-datastore');   // hosted in danbri/londat (tools/londat.mjs)
+warnIfNoLondat();
 export const RAWDIR = join(RAW, 'london-datastore');
 mkdirSync(join(RAWDIR, 'details'), { recursive: true }); mkdirSync(OUT, { recursive: true });
 export const today = new Date().toISOString().slice(0, 10);
@@ -204,13 +206,15 @@ const RELEVANCE_W = { 'zone-place': 5, 'zone-borough': 4, 'london-fine': 3, 'lon
 
 // what the project already has: dataset ids and slugs in the committed files, by role
 function projectHas(cat) {
-  const files = execFileSync('git', ['ls-files', '--cached', '--', '.'], { cwd: CW, encoding: 'utf8' }).split('\n').filter(Boolean)
+  // the committed files here plus the files hosted in the londat checkout (feeds/portals/; tools/londat.mjs)
+  const inLondat = (d, rel) => existsSync(d) ? readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? inLondat(join(d, e.name), rel + e.name + '/') : [rel + e.name]) : [];
+  const files = [...new Set([...execFileSync('git', ['ls-files', '--cached', '--', '.'], { cwd: CW, encoding: 'utf8' }).split('\n').filter(Boolean), ...inLondat(join(LONDAT_CW, 'feeds', 'portals'), 'feeds/portals/')])]
     .filter(p => !p.startsWith('feeds/london-datastore/') && /\.(json|md|mjs|js)$/.test(p) && !/^(METHODS|DATA-REGISTER)\.md$|pipeline\.jsonld$/.test(p));
   const ids = new Set(cat.map(d => d.id)), bySlug = new Map(cat.map(d => [d.slug, d.id]));
   const has = new Map(), unknownRefs = new Set();
   const add = (id, role, where) => { const h = has.get(id) || { held: new Set(), listed: new Set(), excluded: new Set() }; h[role].add(where); has.set(id, h); };
   for (const p of files) {
-    const text = readFileSync(join(CW, p), 'utf8');
+    const text = readFileSync(cwPath(p), 'utf8');
     if (!text.includes('data.london.gov.uk')) continue;
     // role of the file: data held (register, tools, data files) / a catalogue entry (feeds) / a source left out
     const roleOf = (idx) => {

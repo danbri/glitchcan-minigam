@@ -21,6 +21,7 @@ import { createRequire } from 'node:module';
 import { Writable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
 import { TOOLS, RAW, UA, qlever, bngProjector, pointIn, polyArea } from './lib.mjs';
+import { cwPath } from './londat.mjs';
 import { BOX_WGS84 } from './fetch-docklands.mjs';
 
 const CW = join(TOOLS, '..');
@@ -33,7 +34,7 @@ const addYears = (iso, y) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCF
 // status windows (written rules; see the skill)
 const RECENT_COMPLETION = addYears(TODAY, -2), STALE_COMMENCEMENT = addYears(TODAY, -7), RECENT_DECISION = addYears(TODAY, -5);
 const PLD = 'https://planningdata.london.gov.uk/api-guest/applications/_search';
-const readJ = p => JSON.parse(readFileSync(join(CW, p), 'utf8'));
+const readJ = p => JSON.parse(readFileSync(cwPath(p), 'utf8'));   // cwPath: London Datastore files are in the londat checkout
 const r6 = v => Math.round(v * 1e6) / 1e6, r1 = v => Math.round(v * 10) / 10;
 const dmy = s => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s || ''); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
 const cut = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };

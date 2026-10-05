@@ -283,6 +283,47 @@ visible "© OpenStreetMap contributors" link to https://www.openstreetmap.org/co
 same commit as the file. `skills/` directories (at any depth, so `docklands/skills/`
 too) and `vendor/` are not data and are not registered.
 
+## Data hosted in danbri/londat
+
+Owner, 2026-10-05: created the repository https://github.com/danbri/londat for the bulk open-data extracts, because the
+main repository (about 1.5 GB tracked in all directories, pack about 1 GB) and its Pages site (1 GB limit) were at
+their limits. Old blobs stay in this repository's history: do not rewrite history (owner decision).
+
+- **Rule.** A file moves to londat when it is a data file (not `.js` code, not a `README.md`) in `feeds/london-datastore/`
+  or `feeds/portals/`. Those folders are bulk, clipped open-data extracts that no page needs on its first load. Their
+  `.js` code and READMEs stay here. Other files over 1 MB stay here because a page loads them at first load
+  (`docklands/data/area.js`, `trees.json`, `atlas/data/atlas.json`, `registry/buildings.json`, `postcodes/postcodes.json`,
+  textures, splats), or they are the owner's photos (`docklands/reference/`), or they are registry inputs that
+  `build-registry.mjs` and the atlas read (`registry/companies-by-postcode.json`, `registry/sources/museums/records-open.json`,
+  `registry/sources/web/site-facts.json`, `registry/sources/landregistry/inspire-canary-wharf.geojson`,
+  `registry/sources/construction/sites.json`, `data/raw/osm-map.json.gz`; about 13 MB). Move one of those only together
+  with every tool that reads it.
+- **First move (2026-10-05):** 400 files, 189.7 MB: 237 in `feeds/london-datastore/` (172.1 MB) and 163 in
+  `feeds/portals/` (17.7 MB). The same relative path under `cwplans/` in londat:
+  `feeds/london-datastore/heat-demand/heat-demand.json` is
+  https://github.com/danbri/londat/blob/main/cwplans/feeds/london-datastore/heat-demand/heat-demand.json.
+- **Register.** Each moved file keeps its entry in `data-register.json` (the authority) with `"hosted": "londat"`.
+  `check-data-register.mjs` checks a hosted file in the londat checkout (`LONDAT_DIR`, default `../londat` next to this
+  repository's folder), fails when a hosted file is still tracked here, when a file in a londat folder has no
+  `hosted`, or when a file in the londat checkout has no entry; without a checkout it says how many it did not check.
+  `--write` also writes the londat copy `cwplans/data-register.json` (the hosted entries, their sources and OSM extracts).
+  londat also has a README (licences per folder, the GLA statement, OSM attribution), `LICENSE-DATA.md` (no blanket
+  licence: each file keeps its source licence) and `.nojekyll`.
+- **Tools** find the files through `tools/londat.mjs` (`LONDAT_DIR`, `LONDAT_CW`, `HOSTED_DIRS`, `isHostedPath`,
+  `cwPath`): `walk-london-datastore.mjs` and `walk-portals.mjs` (their `OUT`), `lds-harvest-auto.mjs` (writes register
+  lines with `hosted`), `join-lds.mjs`, `amend-uprns.mjs`, `build-construction-index.mjs`. Commit the data in londat,
+  and the register and tools here. Push londat in batches well under 500 MB; no file over 100 MB.
+- **Pages** read the files through `data-base.js`: one constant, `DATA_BASE`; `CwData.url(path)` and `CwData.json(path)`
+  (a `.gz` name is gunzipped with DecompressionStream). The atlas (London Datastore view, its map layers and file links)
+  and the 3D page (overlays: conservation areas, designated open space, safeguarded wharves, cultural venues) use it.
+  The building cards (heat, solar, Census) read `registry/sources/lds/`, which stays here.
+  Base in use: `https://raw.githubusercontent.com/danbri/londat/main/cwplans/` (sends `Access-Control-Allow-Origin: *`)
+  until GitHub Pages is on for londat; then set `DATA_BASE = PAGES` (`https://danbri.github.io/londat/cwplans/`, same
+  origin as the site). Check that https://danbri.github.io/londat/README.md answers 200 first.
+- **Not done yet:** London Datastore files over 1 MB (40 files, the largest about 10 MB; check with `find`) are not gzipped in londat, because its tools read and
+  write plain JSON. Gzip them only together with a `.gz`-aware reader in those tools (as `readOut` in walk-portals.mjs).
+  The portal files keep their own rule (`writeOut`: over 1 MB as `.gz`).
+
 ## Pages and tests
 
 - The atlas (`atlas/index.html`) loads `atlas/data/atlas.json` first and the detail files on demand. Hash

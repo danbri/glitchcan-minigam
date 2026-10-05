@@ -1,5 +1,7 @@
 # Open-data portals walked for the zone (other than the London Datastore)
 
+**The data files of this folder are in https://github.com/danbri/londat/tree/main/cwplans/feeds/portals (moved 2026-10-05; same relative paths). This README and the code stay here.**
+
 The London Datastore has its own walk (`../london-datastore/`). This folder holds the walks of the other catalogues
 that cover the Docklands zone (the 3D model box, BNG E 532400-539900, N 176700-182300). One adapter per portal in
 `tools/portals/`, one entry point `tools/walk-portals.mjs`; method, rules, licences and traps in

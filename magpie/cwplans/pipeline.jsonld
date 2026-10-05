@@ -13730,6 +13730,20 @@
    "cwp:osmUse": "none"
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data-base.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the one base URL (DATA_BASE) of the files hosted in danbri/londat (feeds/london-datastore/, feeds/portals/); CwData.url(path) and CwData.json(path) for the atlas and the 3D page",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/lds/area-context.json",
    "@type": [
     "prov:Entity",

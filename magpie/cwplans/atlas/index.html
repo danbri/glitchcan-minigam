@@ -348,6 +348,7 @@ svg .muted { fill: var(--muted); }
   addEventListener('drop', no); })();
 </script>
 <script src="../docklands/opening-hours.js"></script>
+<script src="../data-base.js"></script>
 <script src="../feeds/london-datastore/lds-building.js"></script>
 <script>
 'use strict';
@@ -374,7 +375,7 @@ const P = {
   records: '../registry/sources/museums/records-open.json', apa: '../registry/sources/museums/apa_greater_london.geojson',
   companies: '../registry/companies-by-postcode.json', homes: '../registry/homes-by-postcode.json', queries: '../postcodes/queries.json',
   register: '../data-register.json', levels: '../data/sourced-levels.json', quality: '../quality/issues.json',
-  lds: '../feeds/london-datastore/index.json',
+  lds: CwData.url('feeds/london-datastore/index.json'),   // hosted in danbri/londat (../data-base.js)
 };
 let A = null, REG = null, regById = new Map();
 const B = new Map(); // atlas building index by id
@@ -1075,7 +1076,7 @@ async function ldsMap(path, on = true) {
   if (!map) { location.hash = 'map'; show('map'); await new Promise(r => setTimeout(r, 120)); }
   let Lr = ldsLayers.get(path);
   if (on && !Lr) {
-    const gj = await load('../' + path), col = LDSC[x.theme] || '#475569', canvas = L.canvas({ padding: .3 });
+    const gj = await load(CwData.url(path), /\.gz$/.test(path)), col = LDSC[x.theme] || '#475569', canvas = L.canvas({ padding: .3 });
     Lr = L.geoJSON(gj, { renderer: canvas, style: () => ({ color: col, weight: 1.2, fillOpacity: .08 }), pointToLayer: (f, ll) => L.circleMarker(ll, { renderer: canvas, radius: 4, color: '#222', weight: .5, fillColor: col, fillOpacity: .85 }),
       onEachFeature: (f, l) => l.on('click', e => L.popup({ maxWidth: 340 }).setLatLng(e.latlng).setContent(ldsPopup(x, f)).openOn(map)) });
     ldsLayers.set(path, Lr);
@@ -1105,7 +1106,7 @@ INIT.lds = async () => {
     const by = {}; for (const d of rows) (by[d.theme_name] ||= []).push(d);
     $('ldsList').innerHTML = Object.entries(by).sort().map(([t, ds]) => `<h2>${esc(t)} (${ds.length}) <a href="#" class="small" data-ldstheme="${esc(t)}">map this theme</a></h2><div class="cards">${ds.map(d => `<div class="card"><div class="k"><span style="color:${LDSC[d.theme] || '#475569'}">■</span> ${esc(d.dataset)} · ${esc(d.licence || '')}</div><p><b>${esc(d.title)}</b></p>
       <p class="small">${esc(d.publisher || '')}${d.geo ? ' · ' + esc(d.geo) : ''} · updated ${esc(d.dataset_modified || '?')}${d.resource_dates ? ` · files ${esc(d.resource_dates[0])}${d.resource_dates[1] !== d.resource_dates[0] ? ' to ' + esc(d.resource_dates[1]) : ''}` : ''} · fetched ${esc(d.fetched || '?')}</p>
-      <p class="small">${d.files.map(f => `${f.kind === 'geojson' ? `${N(f.features)} features${f.in_cw ? ` (${N(f.in_cw)} at Canary Wharf)` : ''}` : `${N(f.rows)} zone rows in ${N(f.tables)} tables`} <span class="tag">${kb(f.bytes)}</span>${f.note ? ` <span class="tag">${esc(f.note)}</span>` : ''} ${a('../' + f.path, 'file')}${f.kind === 'geojson' ? ` <a href="#" data-ldsmap="${esc(f.path)}">map</a>` : ''}`).join('<br>')}</p>
+      <p class="small">${d.files.map(f => `${f.kind === 'geojson' ? `${N(f.features)} features${f.in_cw ? ` (${N(f.in_cw)} at Canary Wharf)` : ''}` : `${N(f.rows)} zone rows in ${N(f.tables)} tables`} <span class="tag">${kb(f.bytes)}</span>${f.note ? ` <span class="tag">${esc(f.note)}</span>` : ''} ${a(CwData.url(f.path), 'file')}${f.kind === 'geojson' ? ` <a href="#" data-ldsmap="${esc(f.path)}">map</a>` : ''}`).join('<br>')}</p>
       <div class="links small">${a(d.page, 'Datastore page')}</div></div>`).join('')}</div>`).join('');
   };
   $('ldsTheme').onclick = e => { const c = e.target.closest('[data-t]'); if (!c) return; th = c.dataset.t; $('ldsTheme').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c))); draw(); };

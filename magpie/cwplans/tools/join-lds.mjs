@@ -13,8 +13,9 @@ import { gunzipSync } from 'zlib';
 import { join } from 'path';
 import { execFileSync } from 'child_process';
 import { TOOLS, RAW, pointIn, joinRings } from './lib.mjs';
+import { LONDAT_CW } from './londat.mjs';
 
-const CW = join(TOOLS, '..'), LDS = join(CW, 'feeds', 'london-datastore'), OUTD = join(CW, 'registry', 'sources', 'lds');
+const CW = join(TOOLS, '..'), LDS = join(LONDAT_CW, 'feeds', 'london-datastore'), OUTD = join(CW, 'registry', 'sources', 'lds');
 mkdirSync(OUTD, { recursive: true });
 const today = new Date().toISOString().slice(0, 10);
 const readJ = f => JSON.parse(readFileSync(f, 'utf8'));

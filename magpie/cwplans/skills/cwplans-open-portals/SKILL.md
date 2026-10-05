@@ -179,6 +179,13 @@ only under the size cap (6,000 features, 1.5 MB on disk). 384 probed on 2026-10-
 
 ## Size rules
 
+**Where the files are (2026-10-05):** the data files of `feeds/portals/` live in the repository
+https://github.com/danbri/londat, under `cwplans/feeds/portals/` (same relative paths); the READMEs stay here.
+`walk-portals.mjs` writes to the londat checkout (`OUT`; `LONDAT_DIR`, default `../londat` next to this repository's
+folder; `tools/londat.mjs`). Register entries have `"hosted": "londat"`. Commit and push the data there, the register,
+READMEs and tools here. Rule and checks: `docklands-data-curation`, "Data hosted in danbri/londat". The size rules
+below still apply in londat (its Pages site has the same 1 GB limit).
+
 Coordinator, 2026-10-04: the repository (531 MB tracked, 1 GB pack) and the Pages site (1 GB limit) are near their
 limits. `writeOut` in walk-portals.mjs writes any output over 1 MB gzipped (`<file>.gz`; pages read it with
 DecompressionStream) and removes the plain file; `outExists` and `readOut` read either. Commit only compact zone
