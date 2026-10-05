@@ -886,3 +886,20 @@ central tower - do we have an index of these?"
   Night, clock, Below ground, every Menu checkbox, radio, select and range not at its default, and the record on the card;
   system share sheet on touch devices, else copied with a toast. Restored on load; `#at=` unchanged; the visitor's
   location is never put in the link. Hook in index.html: `__docklands.selected`. Tests 9/9 at both sizes.
+
+## 2026-10-05 — KML sources for the zone (kmlsrc agent)
+
+- Owner question: "Can you find any kml resources for the area?" New tool `tools/find-kml.mjs`; catalogue of 40
+  entries in `feeds/kml/catalogue.json` and `feeds/kml/README.md`: 8 native KML/KMZ files, 12 zone-clipped copies,
+  20 looked at and not usable (reason per entry). Licence classes: 18 OGL, 2 CC BY, 5 share-alike, 3 restricted,
+  8 none, 4 per item.
+- Native, open by URL (CORS *): GLA schools 2016 KMZ (163 in the model box), GLA wards 2014 KML (66), BIDs 2024 KML zip
+  (7), Curio Canopy (share-alike: link only). Copies in danbri/londat `cwplans/feeds/kml/` (OGL): TfL cycle routes,
+  river piers, river services; National Cycle Network (contains OSM, registered osm derived); CRT locks; Thames Path;
+  listed buildings; World Heritage Sites; Heritage at Risk; parks and gardens; conservation areas; wards in the zone.
+- All 17 `?kml=` links tested on the live page headless (390 x 844): every file opened and drew. Example KML buttons
+  added to My KML (kml-layer.js), tested at 390 x 844 DPR 3 and 1600 x 900 DPR 1, no console error.
+- Blocked: ArcGIS Hub KML downloads (generated on request, 202/404), hosted feature layers (no KML), planning.data.gov.uk
+  (no KML), BGS and Open Plaques (robots.txt). `tools/londat.mjs` HOSTED_DIRS gains `feeds/kml/` (catalogue and README
+  stay here). Skill: cwplans-open-portals, "KML sources".
+

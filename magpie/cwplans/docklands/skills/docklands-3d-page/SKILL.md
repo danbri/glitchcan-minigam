@@ -769,6 +769,9 @@ Owner, 2026-10-05: "Also look into basic KML support". Live: https://danbri.gith
   `copy` for a file item that is KML, has no type, or is XML or zip) and take `.kml`/`.kmz` drops; audio still goes to the
   player. `?kml=<url>` (http or https; the server must allow CORS) loads on open; a document view is taken, else the
   camera frames the drawn features.
+- **Example KML** (Menu > Layers > My KML, a `details` under the file list): 11 buttons that fetch open-licensed,
+  zone-clipped copies from danbri/londat (`EXAMPLES` in kml-layer.js; a file already open gives a toast). Where KML for
+  the zone is found, and why most layers are copies: skill cwplans-open-portals, "KML sources".
 - **Measured** (2026-10-05, SwiftShader; fixtures in the scratchpad, not committed: 11 placemarks in 4 folders, 1 hidden, 1
   outside, 1 half outside, a polygon with a hole, an extruded polygon at 120 m, a StyleMap, Data and SchemaData, a Camera, a
   LookAt, a NetworkLink, a GroundOverlay; the same file as a KMZ): picker and drop both 9 drawn, 1 cut at the edge, 1

@@ -177,6 +177,39 @@ everywhere with no error is not-relevant (T7b), a count triples the score. `dgu 
 layers with the box (WFS GeoJSON in EPSG:4326, ArcGIS f=geojson), cuts polygons and lines at the box, and keeps a file
 only under the size cap (6,000 features, 1.5 MB on disk). 384 probed on 2026-10-04 (876 requests, about 90 minutes).
 
+## KML sources (2026-10-05)
+
+Owner, 2026-10-05: "Can you find any kml resources for the area?" Tool `tools/find-kml.mjs` (copy, probe, all); results
+`feeds/kml/catalogue.json` and `feeds/kml/README.md` (https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/README.md);
+copies in danbri/londat `cwplans/feeds/kml/` (in `HOSTED_DIRS`; the catalogue and README stay in this repository).
+
+- **Where KML is.** Search our own catalogues first: London Datastore `catalogue.json` (resource `format` kml/kmz; 11
+  of 11,348 resources) and the raw data.gov.uk walk `data/raw/portals/dgu/all.jsonl.gz` (4,499 of 59,451 datasets have a
+  KML resource: 2,367 ONS, 1,002 Northern Ireland, 237 NSTA; for London only the GLA, Lambeth with no licence, BGS
+  and two national boundary zips). Native KML in the zone that opens by URL: the GLA files (schools 2016, wards 2014,
+  BIDs, Curio Canopy share-alike). data.london.gov.uk downloads send `Access-Control-Allow-Origin: *`.
+- **What is not KML.** ArcGIS Online hosted feature layers answer JSON, GeoJSON and PBF only (no `f=kmz`;
+  `supportedExportFormats` kml needs an export job with a login). ArcGIS Server map services here (City of London INSPIRE)
+  list JSON and geoJSON only. ArcGIS Hub `api/download/v1/items/<id>/kml` generates on request: 202 "being generated",
+  one 3-polygon item stayed "PagingData" for over 15 minutes, TfL items 404 "Layer does not exist": never give a `?kml=`
+  link to it (the page would read a JSON message). planning.data.gov.uk has no `entity.kml` (404). OS OpenData,
+  GeoNames, EA flood maps: no KML.
+- **So we copy.** Open layers (OGL, CC BY) are fetched as GeoJSON with an envelope query (or read from our harvests),
+  cut to the zone and written with the page's own `writeKml` (one shared Style, names and a few fields, source, licence
+  and attribution in the Document description). raw.githubusercontent.com sends CORS `*`, so
+  `https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?kml=<encoded raw URL>` works.
+- **Licences.** Share-alike (Curio Canopy, Wikimapia, Wikipedia "Attached KML") is never copied; Curio Canopy opens by
+  link only and is not an example. The National Cycle Network layer is OGL but the publisher says it contains OSM: its
+  copy is registered `osm: derived` with "osm" in its sources. Items with no licence text (TfL stations, Tower Hamlets
+  Canary Wharf Area, Lambeth) are metadata only. Restricted: Saturday Walkers Club KML (non-commercial), Google My Maps.
+- **robots.txt.** ogc.bgs.ac.uk and openplaques.org disallow all agents: not fetched by the tool. (One manual curl of the
+  two BGS files on 2026-10-05 came before the robots check; they hold NetworkLinks only. Check robots.txt first.)
+- **Testing.** Node: kml.js runs with a DOMParser from `@xmldom/xmldom` (XML; it has `children`) and `linkedom` for
+  description HTML (`KML_DOM_DIR`). linkedom alone parses XML into the XHTML namespace: do not use it for the KML.
+  Then every `open_link` in the live page headless (Chromium, SwiftShader): wait for `DocklandsKML.S.files[0].n` and keep
+  drawn / cut / outside as `page_test` in the catalogue (`probe` keeps it). 17 of 17 opened on 2026-10-05.
+- **Example KML** buttons in Menu > Layers > My KML (`EXAMPLES` in `docklands/kml-layer.js`): open-licensed copies only.
+
 ## Size rules
 
 **Where the files are (2026-10-05):** the data files of `feeds/portals/` live in the repository

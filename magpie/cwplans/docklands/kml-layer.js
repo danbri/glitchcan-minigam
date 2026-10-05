@@ -284,6 +284,7 @@ function injectUi() {
       <label><input type="checkbox" id="kx_works" checked> Works in progress (when on)</label><label><input type="checkbox" id="kx_river" checked> River items (layers on)</label>
       <label><input type="checkbox" id="kx_mine" checked> My KML</label></div></details>
     <div id="kmlList"></div>
+    <details id="kmlEx"><summary class="small">Example KML (open data)</summary><div class="chips" id="kmlExList"></div><p class="small">Open-licensed layers clipped to the zone (TfL, Walk Wheel Cycle Trust, Canal &amp; River Trust, Natural England, Historic England, GLA; the licence and credits are in each file). More, with the licences and the files that cannot be opened here: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/README.md" target="_blank" rel="noopener">KML sources</a>.</p></details>
     <p class="small" id="kmlNote">Open a KML or KMZ file, or drop one on the city: points, lines and polygons (with holes), folders, styles, descriptions (as text) and data tables; a KML Camera or LookAt gives "Go to view". The file stays in this browser: nothing is uploaded or stored.</p>`;
   const pane = $('paneLayers'), first = pane && pane.querySelector('h3'); if (first) first.insertAdjacentHTML('beforebegin', html); else if (pane) pane.insertAdjacentHTML('afterbegin', html);
   const inp = $('kmlFile');
@@ -296,16 +297,27 @@ function injectUi() {
   addEventListener('dragover', e => { const it = [...((e.dataTransfer && e.dataTransfer.items) || [])]; if (it.some(i => i.kind === 'file' && (isKmlType(i.type) || !i.type || /xml|zip/.test(i.type)))) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
   addEventListener('drop', e => { const fs = [...((e.dataTransfer && e.dataTransfer.files) || [])].filter(f => isKmlName(f.name) || isKmlType(f.type)); if (!fs.length) return; e.preventDefault(); openFiles(fs, 'drop'); });
 }
+// examples: open-licensed, zone-clipped copies in danbri/londat (CORS *); the list and the licences: feeds/kml/catalogue.json
+const EXAMPLE_BASE = 'https://raw.githubusercontent.com/danbri/londat/main/cwplans/feeds/kml/';
+const EXAMPLES = [['Thames Path', 'ne-thames-path'], ['Cycle routes (TfL)', 'tfl-cycle-routes'], ['National Cycle Network', 'sustrans-ncn'], ['River piers (TfL)', 'tfl-river-piers'],
+  ['River services (TfL)', 'tfl-river-services'], ['Locks (CRT)', 'crt-locks'], ['World Heritage Sites', 'he-world-heritage'], ['Listed buildings', 'he-listed-buildings'],
+  ['Heritage at Risk', 'he-heritage-at-risk'], ['Conservation areas', 'gla-conservation-areas'], ['Wards (2014)', 'lds-wards-2016-zone']];
+function examples() {
+  const el = $('kmlExList'); if (!el) return;
+  for (const [t, id] of EXAMPLES) el.append(E('button', { type: 'button', text: t, on: () => { if (S.files.some(F => F.file === id + '.kml')) return C.toast(`${t} is open already (My KML).`); loadUrl(EXAMPLE_BASE + id + '.kml'); } }));
+}
 async function fromUrl() {
   const m = /[?&]kml=([^&#]+)/.exec(location.search); if (!m) return;
-  const u = decodeURIComponent(m[1].replace(/\+/g, ' '));
+  return loadUrl(decodeURIComponent(m[1].replace(/\+/g, ' ')));
+}
+async function loadUrl(u) {
   try { const url = new URL(u, location.href); if (!/^https?:$/.test(url.protocol)) throw new Error('only http(s) addresses');
     const r = await fetch(url, { credentials: 'omit' }); if (!r.ok) throw new Error('HTTP ' + r.status);
     await open(await r.arrayBuffer(), decodeURIComponent(url.pathname.split('/').pop() || 'KML'), 'url'); }
-  catch (e) { C.toast(`?kml= did not load (${e.message}). The server must allow this site to read it (CORS).`); }
+  catch (e) { C.toast(`The KML link did not load (${e.message}). The server must allow this site to read it (CORS).`); }
 }
 if (C) {
-  injectUi(); setInterval(sync, 1000);
+  injectUi(); examples(); setInterval(sync, 1000);
   globalThis.DocklandsKML = { open, openFiles, rebuild, exportView, currentView, goView, lonLatOf, get S() { return S; } };
   fromUrl();
 }

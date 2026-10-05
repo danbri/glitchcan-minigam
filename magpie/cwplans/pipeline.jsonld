@@ -8,6 +8,116 @@
  },
  "@graph": [
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml",
+   "@type": "prov:Activity",
+   "rdfs:label": "find-kml",
+   "dct:description": "Answers the owner's question 'Can you find any kml resources for the area?' (2026-10-05). A hand list of candidates, found by searching the project's own catalogues (London Datastore resources with format kml/kmz, the raw data.gov.uk walk: 4,499 of 59,451 datasets have a KML resource) and the open-data hubs of TfL, Walk Wheel Cycle Trust and Canal & River Trust, is fetched as the 3D page would fetch it (Origin header of the Pages site) and read with the page's own reader docklands/kml.js (a DOMParser from @xmldom/xmldom, description HTML through linkedom). For each: HTTP status, https, the CORS header, the counts of placemarks in the zone and in the model box, unsupported elements. Open layers that cannot be opened by URL (no KML, or a whole-London file) are written as zone-clipped KML with the page's writer into the londat checkout (cwplans/feeds/kml/), with the source, licence and attribution in the Document description. Result: feeds/kml/catalogue.json and README.md.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-tfl-gis-hub"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-sustrans-ncn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-crt-locks"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jx1l"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/dgu/national-trails-england3/national-trails-england3.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/listed-building/listed-building.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/world-heritage-site/world-heritage-site.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/world-heritage-site-buffer-zone/world-heritage-site-buffer-zone.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/heritage-at-risk/heritage-at-risk.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/pdg/park-and-garden/park-and-garden.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/london-datastore/conservation-areas/conservation-areas.geojson"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/kml.js"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/catalogue.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/tfl-cycle-routes.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/tfl-river-piers.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/tfl-river-services.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/sustrans-ncn.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/crt-locks.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/ne-thames-path.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/he-listed-buildings.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/he-world-heritage.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/he-heritage-at-risk.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/he-parks-gardens.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/gla-conservation-areas.kml"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/lds-wards-2016-zone.kml"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/find-kml.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 KML_DOM_DIR=<dir with @xmldom/xmldom and linkedom> node magpie/cwplans/tools/find-kml.mjs <copy [id ...]|probe|all>",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Politeness: one request at a time, at least 1.1 s apart, robots.txt read per host with walk-portals.mjs allowed() and obeyed, the project User-Agent.",
+    "Licence class as walk-portals.mjs licenceClass; only ogl, cc-by, odc-by and public-domain layers are copied or offered as examples; share-alike (except OSM content inside an open layer, marked odbl and osm derived), restricted and no-licence resources are listed with the reason.",
+    "cors yes = HTTP 200 over https and Access-Control-Allow-Origin * or https://danbri.github.io; a ?kml= link is made only for a file the reader parsed with at least one placemark in the zone.",
+    "Zone = the model box plus the Royal Docks and the Thames Barrier, WGS84 -0.095, 51.47, 0.08, 51.53; copies keep features that meet the box (polygons whole, lines cut at the box edge with one vertex beyond), the names and a few fields.",
+    "The copies are pushed to danbri/londat before the probe, which then reads them from raw.githubusercontent.com; the headless page test of every ?kml= link is stored in the catalogue as page_test."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/walk-portals"
+    }
+   ],
+   "cwp:area": "feeds",
+   "cwp:fault": [],
+   "cwp:judgement": "The candidate list, the fields kept in each copy and the colours are chosen by hand in the tool; the reasons for each listed (not usable) resource are in the tool and in feeds/kml/README.md."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/fetch-works",
    "@type": "prov:Activity",
    "rdfs:label": "fetch-works",
@@ -8997,6 +9107,233 @@
     "skills/cwplans-crown-lighting/SKILL.md"
    ],
    "cwp:gap": "The pixel measurements were run from the session scratchpad (a 10-line Pillow script: crop, sort by brightness, mean of the top fraction); the boxes are in no committed file."
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/catalogue.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML and KMZ resources for the Docklands zone: 40 entries (8 native files, 12 zone-clipped copies, 20 looked at), each with publisher, URL, licence words and class, HTTP status, CORS header, the page reader's counts (placemarks in the zone and the model box, unsupported elements), a ready ?kml= link of the 3D page when it works, and the headless page test",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-catalogue"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/tfl-cycle-routes.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: TfL Cycle Routes (Cycleways, Quietways, Superhighways) in the zone, 420 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-tfl-gis-hub"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/tfl-river-piers.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: TfL River Piers in the zone, 15 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-tfl-gis-hub"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/tfl-river-services.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: TfL River Services (with stops) in the zone, 11 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-tfl-gis-hub"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/sustrans-ncn.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: National Cycle Network (Walk Wheel Cycle Trust, formerly Sustrans) in the zone, 350 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-sustrans-ncn"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/crt-locks.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: Canal & River Trust locks in the zone, 13 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-crt-locks"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/ne-thames-path.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: Thames Path National Trail in the model box, 1 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-dgu-national-trails-england3"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/he-listed-buildings.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: Listed buildings in the model box (Historic England, via planning.data.gov.uk), 1769 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-listed-building"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/he-world-heritage.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: World Heritage Sites and buffer zone in the model box (Tower of London, Maritime Greenwich), 3 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-world-heritage-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-world-heritage-site-buffer-zone"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/he-heritage-at-risk.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: Heritage at Risk in the model box, 58 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-heritage-at-risk"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/he-parks-gardens.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: Registered parks and gardens in the model box, 6 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/op-pdg-park-and-garden"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/gla-conservation-areas.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: Conservation areas in the model box (GLA Planning Constraints Map), 107 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-emqwg"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/lds-wards-2016-zone.kml",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML for the 3D page ?kml= link: London wards 2014 (GLA ward KML) in the zone, 92 placemarks (zone-clipped copy; source, licence and attribution in the Document description)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jx1l"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/find-kml"
+   },
+   "cwp:osmUse": "none"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/data/cwplans-data.js",
@@ -25981,6 +26318,57 @@
    "dct:title": "National sources of the brief, checked by hand (DfT, police.uk, DESNZ, Ofcom, Nomis API, HMLR, FSA, Historic England, EA, OS, Coal Authority, BGS, EPC)",
    "dct:license": "per source, recorded in feeds/portals/national/catalogue.json",
    "dcat:landingPage": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/portals/national/README.md"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-catalogue",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "KML and KMZ candidates for the zone (London Datastore, data.gov.uk walk, ArcGIS hubs, BGS, walking sites, Wikipedia/Wikimapia/Open Plaques looked at)",
+   "dct:license": "metadata only (titles, URLs, licence words, HTTP status, CORS header, feature counts); each resource keeps its own licence, recorded per entry",
+   "dcat:landingPage": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/feeds/kml/README.md"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-tfl-gis-hub",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Transport for London GIS Open Data Hub feature layers (Cycle Routes, River Piers, River Services with stops)",
+   "dct:license": "Open Government Licence v3.0 (the licence of each ArcGIS item)",
+   "dcat:landingPage": "https://gis-tfl.opendata.arcgis.com/",
+   "cwp:attribution": "Contains Transport for London data licensed under the Open Government Licence v3.0. Powered by TfL Open Data."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-sustrans-ncn",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "National Cycle Network (Public), Walk Wheel Cycle Trust (formerly Sustrans), ArcGIS feature layer",
+   "dct:license": "Open Government Licence v3.0 (item licence); contains OS data (Crown copyright 2018) and OpenStreetMap contributions (ODbL)",
+   "dcat:landingPage": "https://data-sustrans-uk.opendata.arcgis.com/datasets/Sustrans-UK::national-cycle-network-public-1/about"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-crt-locks",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Canal & River Trust locks (Canal_And_River_Trust_Locks_View, ArcGIS feature layer)",
+   "dct:license": "Open Government Licence (item licence)",
+   "dcat:landingPage": "https://data-canalrivertrust.opendata.arcgis.com/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/lds-2jx1l",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "London Datastore: Create your own mapping templates (Excel add-in): ward-map-kml.kml",
+   "dct:license": "Open Government Licence v2",
+   "dcat:landingPage": "https://data.london.gov.uk/dataset/create-your-own-mapping-templates-excel-add-in-2jx1l"
   }
  ]
 }
