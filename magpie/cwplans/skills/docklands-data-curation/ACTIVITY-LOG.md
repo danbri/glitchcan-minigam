@@ -919,3 +919,20 @@ central tower - do we have an index of these?"
 
 ## 2026-10-05 — KML sources button (coordinator)
 - Owner: "Button". Added a "KML sources" button in the menu's views group (after "Share this view") and in the My KML row; both open the drawer on Layers, open the KML sources list and scroll to it (kml-layer.js). First attempt inserted before #shareOut, which is not a child of the button's parent: the module threw and DocklandsKML was undefined; the headless test caught it. Tested 390x844 DPR3 and 1600x900: list open, 40 rows, no console errors.
+
+## 2026-10-05 — londat cache: SQLite history, latest.json for the pages, zone.gpkg (cache agent)
+- Owner: "Now we have londata repo are we caching more fetches there and preloading? If not, we should! Sqlite files would
+  be a simple start. Keep trying". New tools `tools/cache-londat.mjs` (runs fetch-live, fetch-river levels/river-bus,
+  fetch-ais --listen=0 with their politeness, plus TfL line status and Open-Meteo current; appends to an SQLite per
+  UTC month with node:sqlite) and `tools/build-zone-gpkg.mjs` (ogr2ogr; 163 layers, licences from the register).
+- In londat: https://github.com/danbri/londat/blob/main/cwplans/cache/live-2026-10.sqlite (565 kB: 4 Oct snapshots
+  and one live run on 5 Oct), `cache/latest.json` (46 kB, 13 kB gzipped), `cache/zone.gpkg` (67.9 MB; validate_gpkg.py
+  passes after 59 empty geometries were set to NULL), and `.github/workflows/cache-live.yml` (hourly at :17; the push
+  was accepted; starting it by API answered 403).
+- Measured: about 22 kB per hourly run; 48 simulated commits packed to 683 kB. Pages: `live-cache.js` (CwLive); the 3D
+  page and atlas live panels read the cache first, with a "Live" tick box for the publishers' APIs; third-party
+  requests on "Load live data" 7 to 2 (3D page) and 6 to 2 (atlas). No console errors at 390 x 844 DPR 3 and 1600 x 900.
+- Register: hosted entries `cache/live-*.sqlite` (check-data-register.mjs now accepts a `*` family), `cache/latest.json`,
+  `cache/zone.gpkg`, `live-cache.js`; pipeline activities cache-londat and build-zone-gpkg; HOSTED_DIRS `cache/`.
+  Skill: cwplans-londat-cache.
+

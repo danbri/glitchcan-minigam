@@ -255,9 +255,9 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
       <h3>How to use it</h3><p class="small">One finger: rotate. Two fingers: move, zoom, and twist to turn. Tap a building or label: its record. Press and hold: route from or to that point. The menu (top left) has the views, the layers, the route finder and this page. "Below ground" in the menu shows the depth gauge on the left: drag it down to cut away everything above that level.</p><p class="small">Isometric pixel art (Layers, Style): drag to move, pinch or wheel to zoom, twist two fingers to turn, move two fingers up or down to tilt. With a mouse: right or Shift drag turns and tilts. The arrows at the top right turn the view by a quarter.</p>
       <h3>Your location</h3><p class="small">The round button at the bottom right shows where you are, as in a phone's map app. Tap it once to centre the view on you (the browser asks first), again to turn the view with your phone's compass, again to stop turning; drag the map and it stops following. The eye button that then shows puts the view at your eye height, and you look round by turning the phone. Hold the button to turn location off. <b>Your position and heading stay on this device</b>: the page sends them nowhere, stores them nowhere and does not put them in the address.</p>
       <details id="liveBox"><summary>Live data</summary>
-        <p class="small">Nothing is fetched until you press the button. The data comes straight from each publisher's open API (no key); the full catalogue of checked sources is at <a href="../feeds/">feeds</a>.</p>
+        <p class="small">Nothing is fetched until you press the button. By default the tide, weather, lines and storm overflows come from the hourly <a href="https://github.com/danbri/londat/tree/main/cwplans/cache">londat cache</a> (one file, no request to the publishers; each line gives its fetch time) and traffic camera positions from the last snapshot; air quality always comes from the London Air Quality Network. Tick "Live" to ask each publisher's open API directly (no key); a theme older than an hour in the cache is also asked directly. The full catalogue of checked sources is at <a href="../feeds/">feeds</a>.</p>
         <div class="row"><button type="button" id="liveGo">Load live data</button></div>
-        <div class="row chips"><label><input type="checkbox" id="liveTide" disabled> Tidal Thames at the Tower Pier level</label><label><input type="checkbox" id="liveCams" disabled checked> Traffic cameras</label></div>
+        <div class="row chips"><label><input type="checkbox" id="liveTide" disabled> Tidal Thames at the Tower Pier level</label><label><input type="checkbox" id="liveCams" disabled checked> Traffic cameras</label><label title="Off: the hourly londat cache (no third-party request except air quality). On: ask each source now."><input type="checkbox" id="liveDirect"> Live: ask the sources directly</label></div>
         <div id="liveOut" class="small" aria-live="polite"></div>
       </details>
       <details><summary>Canary Wharf below ground (text)</summary><div id="ugText" class="small tw"></div></details>
@@ -319,6 +319,7 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
 <script src="river-layer.js"></script>
 <script src="ships-layer.js"></script>
 <script src="../data-base.js"></script>
+<script src="../live-cache.js"></script>
 <script src="../feeds/london-datastore/lds-building.js"></script>
 <script>
 (() => {
@@ -875,36 +876,42 @@ const getJSON = async (url, timeoutMs = 20000) => { const c = new AbortControlle
 const when = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }); };
 const camLabels = [];
 async function loadLive() {
-  const out = $('liveOut'), parts = {}; $('liveGo').disabled = true; out.textContent = 'Loading…';
+  const out = $('liveOut'), parts = {}, direct = $('liveDirect').checked; $('liveGo').disabled = true; out.textContent = 'Loading…';
   const show = () => { out.innerHTML = ['tide', 'weather', 'air', 'lines', 'overflows', 'cams'].map(k => parts[k] ? `<p>${parts[k]}</p>` : '').join(''); };
   const job = async (k, fn) => { try { parts[k] = await fn(); } catch (e) { parts[k] = `<span class="warn">${esc(k)}: ${esc(e.message || e)}</span>`; } show(); };
   await Promise.all([
     job('tide', async () => {
-      const g = async id => (await getJSON(`https://environment.data.gov.uk/flood-monitoring/id/stations/${id}/readings?latest`)).items[0];
-      const [tp, sv] = await Promise.all([g('0007'), g('0001')]);
-      tidalLevel = tp.value; tidalField = null; $('liveTide').disabled = false;
+      // londat cache first (cache/latest.json, ../live-cache.js), the EA API when "Live" is ticked or the cache is over an hour old
       const crests = (A.defences || []).map(d => d.c).sort((a, b) => a - b), lo = crests[0], med = crests[crests.length >> 1];
-      return `<b>Thames level</b> (Environment Agency tide gauges, m above Ordnance Datum): Tower Pier ${tp.value.toFixed(2)} m at ${when(tp.dateTime)}, Silvertown ${sv.value.toFixed(2)} m at ${when(sv.dateTime)}. The model's river is the LiDAR pass, about ${A.water.filter(w => w.tidal && !w.n).map(w => w.level)[0] ?? '2'} m. ${crests.length ? `The EA tidal flood walls in the box have surveyed crests from ${lo.toFixed(2)} m (median ${med.toFixed(2)} m), so the water is ${(lo - tp.value).toFixed(2)} m below the lowest crest.` : ''} <a href="https://environment.data.gov.uk/flood-monitoring/id/stations/0007">Tower Pier station record</a>`;
+      const say = (tp, sv) => { tidalLevel = tp.value; tidalField = null; $('liveTide').disabled = false;
+        return `<b>Thames level</b> (Environment Agency tide gauges, m above Ordnance Datum): Tower Pier ${tp.value.toFixed(2)} m at ${when(tp.dateTime)}, Silvertown ${sv.value.toFixed(2)} m at ${when(sv.dateTime)}. The model's river is the LiDAR pass, about ${A.water.filter(w => w.tidal && !w.n).map(w => w.level)[0] ?? '2'} m. ${crests.length ? `The EA tidal flood walls in the box have surveyed crests from ${lo.toFixed(2)} m (median ${med.toFixed(2)} m), so the water is ${(lo - tp.value).toFixed(2)} m below the lowest crest.` : ''} <a href="https://environment.data.gov.uk/flood-monitoring/id/stations/0007">Tower Pier station record</a>`; };
+      return (await CwLive.pick('tide', t => { const st = id => { const k = Object.keys(t.stations).find(x => x.startsWith(`ea-level:${id}-`)), l = k && t.stations[k].latest; if (!l) throw new Error('no reading'); return { value: l[1], dateTime: l[0] }; }; return say(st('0007'), st('0001')); },
+        async () => { const g = async id => (await getJSON(`https://environment.data.gov.uk/flood-monitoring/id/stations/${id}/readings?latest`)).items[0]; const [tp, sv] = await Promise.all([g('0007'), g('0001')]); return say(tp, sv); }, direct)).html;
     }),
     job('weather', async () => {
-      const d = await getJSON('https://api.open-meteo.com/v1/forecast?latitude=51.505&longitude=-0.02&current=temperature_2m,wind_speed_10m,wind_direction_10m,cloud_cover,precipitation&timezone=Europe/London');
-      const c = d.current; return `<b>Weather</b> at Canary Wharf (Open-Meteo model, ${esc(String(c.time).replace('T', ' '))} London time): ${c.temperature_2m} °C, wind ${c.wind_speed_10m} km/h from ${c.wind_direction_10m}°, cloud ${c.cloud_cover}%, precipitation ${c.precipitation} mm.`;
+      const say = c => `<b>Weather</b> at Canary Wharf (Open-Meteo model, ${esc(String(c.time).replace('T', ' '))}): ${c.temperature_2m} °C, wind ${c.wind_speed_10m} km/h from ${c.wind_direction_10m}°, cloud ${c.cloud_cover}%, precipitation ${c.precipitation} mm.`;
+      return (await CwLive.pick('weather', t => say({ time: when(t.time) + ' London time', temperature_2m: t.current.temp_c, wind_speed_10m: t.current.wind_kmh, wind_direction_10m: t.current.wind_dir, cloud_cover: t.current.cloud_pct, precipitation: t.current.precip_mm }),
+        async () => { const c = (await getJSON('https://api.open-meteo.com/v1/forecast?latitude=51.505&longitude=-0.02&current=temperature_2m,wind_speed_10m,wind_direction_10m,cloud_cover,precipitation&timezone=Europe/London')).current; return say({ ...c, time: c.time + ' London time' }); }, direct)).html;
     }),
     job('air', async () => {
       const d = await getJSON('https://api.erg.ic.ac.uk/AirQuality/Hourly/MonitoringIndex/SiteCode=TH4/Json'), site = d.HourlyAirQualityIndex.LocalAuthority.Site, sp = [].concat(site.species || []);
       return `<b>Air quality</b>, ${esc(site['@SiteName'])} (London Air Quality Network, ${esc(site['@BulletinDate'])}): ` + sp.map(x => `${esc(x['@SpeciesCode'])} ${x['@AirQualityBand'] === 'No data' ? 'no data' : `index ${esc(x['@AirQualityIndex'])} (${esc(x['@AirQualityBand'])})`}`).join(', ') + '.';
     }),
     job('lines', async () => {
-      const d = await getJSON('https://api.tfl.gov.uk/Line/jubilee,dlr,elizabeth,windrush,london-cable-car/Status');
-      return '<b>Lines</b> (TfL): ' + d.map(l => `${esc(l.name)}: ${esc(l.lineStatuses.map(s => s.statusSeverityDescription).join(' / '))}`).join(' · ') + '.';
+      const ids = ['jubilee', 'dlr', 'elizabeth', 'windrush', 'london-cable-car'], NAME = { jubilee: 'Jubilee', dlr: 'DLR', elizabeth: 'Elizabeth line', windrush: 'Windrush', 'london-cable-car': 'London Cable Car' };
+      return (await CwLive.pick('line_status', t => '<b>Lines</b> (TfL): ' + ids.map(id => { const st = CwLive.rowsOf(t).filter(r => r.line === id); if (!st.length) throw new Error(`no status for ${id}`); return `${esc(NAME[id])}: ${esc(st.map(r => r.status).join(' / '))}`; }).join(' · ') + '.',
+        async () => '<b>Lines</b> (TfL): ' + (await getJSON('https://api.tfl.gov.uk/Line/jubilee,dlr,elizabeth,windrush,london-cable-car/Status')).map(l => `${esc(l.name)}: ${esc(l.lineStatuses.map(s => s.statusSeverityDescription).join(' / '))}`).join(' · ') + '.', direct)).html;
     }),
     job('overflows', async () => {
-      const d = await getJSON("https://services2.arcgis.com/g6o32ZDQ33GpCIu3/arcgis/rest/services/Thames_Water_Storm_Overflow_Activity_(Production)_view/FeatureServer/0/query?geometry=-0.095%2C51.474%2C0.015%2C51.522&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=Id%2CStatus%2CReceivingWaterCourse%2CLatestEventStart%2CLatestEventEnd&returnGeometry=false&f=json");
-      const f = d.features.map(x => x.attributes), n = v => f.filter(a => a.Status === v).length, on = f.filter(a => a.Status === 1);
-      return `<b>Storm overflows</b> in the box (Thames Water, Status 1 discharging, 0 not, -1 offline): ${f.length} monitored, ${n(1)} discharging, ${n(0)} not discharging, ${n(-1)} offline.` + (on.length ? ' Discharging now: ' + on.map(a => `${esc(a.Id)} into ${esc(a.ReceivingWaterCourse)}`).join('; ') + '.' : '');
+      const say = f => { const n = v => f.filter(a => a.Status === v).length, on = f.filter(a => a.Status === 1);
+        return `<b>Storm overflows</b> in the box (Thames Water, Status 1 discharging, 0 not, -1 offline): ${f.length} monitored, ${n(1)} discharging, ${n(0)} not discharging, ${n(-1)} offline.` + (on.length ? ' Discharging now: ' + on.map(a => `${esc(a.Id)} into ${esc(a.ReceivingWaterCourse)}`).join('; ') + '.' : ''); };
+      return (await CwLive.pick('overflows', t => say(CwLive.rowsOf(t).filter(r => r.lon <= 0.015 && r.lat >= 51.474 && r.lat <= 51.522 && r.lon >= -0.095).map(r => ({ Id: r.id, Status: r.status, ReceivingWaterCourse: r.receiving_water }))),
+        async () => say((await getJSON("https://services2.arcgis.com/g6o32ZDQ33GpCIu3/arcgis/rest/services/Thames_Water_Storm_Overflow_Activity_(Production)_view/FeatureServer/0/query?geometry=-0.095%2C51.474%2C0.015%2C51.522&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=Id%2CStatus%2CReceivingWaterCourse%2CLatestEventStart%2CLatestEventEnd&returnGeometry=false&f=json")).features.map(x => x.attributes)), direct)).html;
     }),
     job('cams', async () => {
-      const d = await getJSON('https://api.tfl.gov.uk/Place?type=JamCam&lat=51.497&lon=-0.04&radius=4500'), places = d.places || d;
+      // camera positions: the committed snapshot (feeds/live/jamcams.json) unless "Live" is ticked; the stills always come from TfL, on a tap
+      const places = direct ? (d => d.places || d)(await getJSON('https://api.tfl.gov.uk/Place?type=JamCam&lat=51.497&lon=-0.04&radius=4500'))
+        : (await getJSON('../feeds/live/jamcams.json')).items.map(i => ({ id: i.id, commonName: i.name, lat: i.position.lat, lon: i.position.lon, additionalProperties: [{ key: 'imageUrl', value: i.values.image_url }, { key: 'videoUrl', value: i.values.video_url }, { key: 'view', value: i.values.view }] }));
       for (const c of places) {
         const [x, z] = geo(c.lon, c.lat); if (x < A.meta.extent.x0 || x > A.meta.extent.x1 || z < A.meta.extent.z0 || z > A.meta.extent.z1) continue;
         const prop = k => (c.additionalProperties.find(p => p.key === k) || {}).value;

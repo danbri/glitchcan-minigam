@@ -9249,6 +9249,20 @@
    "cwp:gap": "The pixel measurements were run from the session scratchpad (a 10-line Pillow script: crop, sort by brightness, mean of the top fraction); the boxes are in no committed file."
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/live-cache.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: CwLive, the reader of the londat cache (cache/latest.json) for the live panels of the atlas and the 3D page: cache first, the publisher's API when Live is ticked or the cached theme is over an hour old",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/live-*.sqlite",
    "@type": [
     "prov:Entity",
