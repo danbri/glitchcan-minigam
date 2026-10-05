@@ -480,7 +480,7 @@ function injectUi() {
   css.textContent = '#kmlOv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}body.capture #kmlOv{display:none!important}#toast .kmlShow{margin-left:6px;padding:3px 10px;font-size:12px}.lb.kml{border:1px solid #ffd000;border-radius:5px;background:#0d1013cc;color:#fff3b0;padding:0 3px}.kmlFile{border-top:1px solid #ffffff22;padding:6px 0}.kmlDesc{white-space:pre-wrap;overflow-wrap:anywhere}#kmlCard table td{vertical-align:top;overflow-wrap:anywhere}#kmlCard table td:first-child{color:#aab;padding-right:8px}#kmlSrc summary{cursor:pointer;padding:6px 0;font-size:13px}#kmlSrcList{border-top:1px solid #ffffff22}.ksRow{display:flex;gap:8px;align-items:flex-start;padding:7px 2px;border-bottom:1px solid #ffffff14}.ksRow>div{flex:1;min-width:0}.ksRow b{font-size:13px;font-weight:600;overflow-wrap:anywhere}.ksRow .small{display:block;overflow-wrap:anywhere}.ksRow button,.ksRow a.ksAct{flex:none;font-size:12px;padding:6px 10px;white-space:nowrap}.ksRow a.ksAct{border:1px solid #59616a;border-radius:8px;color:inherit;text-decoration:none}.ksB{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-right:4px;vertical-align:1px;background:#3d4650;color:#e8eaec}.ksB.open{background:#2f6b45}.ksB.sa{background:#7a5a1e}.ksB.no{background:#6b2f35}.ksWhy{color:#c9a9ad}#kmlSrcF{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}#kmlSrcF button{font-size:12px;padding:5px 10px;border-radius:14px}#kmlSrcF button[aria-pressed=true]{background:#3d5a48;border-color:var(--acc);color:#fff}#kmlSrcQ{width:100%;box-sizing:border-box;margin:2px 0 6px;padding:7px 9px;font-size:14px}';
   document.head.appendChild(css);
   const html = `<h3>My KML</h3>
-    <div class="row"><button type="button" id="kmlOpen">Open KML/KMZ</button><button type="button" id="kmlExport">Export view as KML</button>
+    <div class="row"><button type="button" id="kmlOpen">Open KML/KMZ</button><button type="button" id="kmlExport">Export view as KML</button><button type="button" id="kmlSrcBtn">KML sources</button>
     <input type="file" id="kmlFile" accept=".kml,.kmz,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz" multiple hidden></div>
     <details><summary class="small">What the export holds</summary><div class="chips">
       <label><input type="checkbox" checked disabled> The camera (KML Camera)</label><label><input type="checkbox" id="kx_sel" checked> The selected building</label>
@@ -566,6 +566,12 @@ async function loadUrl(u) {
 }
 if (C) {
   injectUi(); setInterval(sync, 1000); { const d = $('kmlSrc'); if (d) d.addEventListener('toggle', () => { if (d.open) sources(); }); }
+  // the KML sources list from a button: in My KML and in the menu's views group (owner, 2026-10-05: "Button")
+  { const showSrc = () => { const d = $('kmlSrc'); if (!d) return; if (globalThis.openDrawer) openDrawer(true); if (globalThis.openPane) openPane('paneLayers');
+      d.open = true; requestAnimationFrame(() => d.scrollIntoView({ block: 'start', behavior: 'smooth' })); };
+    const k = $('kmlSrcBtn'); if (k) k.onclick = showSrc;
+    const sb = $('shareBtn'), m = document.createElement('button'); m.type = 'button'; m.id = 'kmlSrcMenu'; m.textContent = 'KML sources'; m.title = 'Open data for the zone as KML: open a file on the city'; m.onclick = showSrc;
+    if (sb) sb.after(m); else if ($('dViews')) $('dViews').appendChild(m); }
   globalThis.DocklandsKML = { open, openFiles, rebuild, sources, openSource, KS, exportView, currentView, goView, lonLatOf, loadUrl, frame, fitCam, show, emph, drawGL, after, get S() { return S; } };
   fromUrl();
 }

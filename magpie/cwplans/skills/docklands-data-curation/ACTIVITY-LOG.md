@@ -916,3 +916,6 @@ central tower - do we have an index of these?"
   3%; listed buildings 0.10% to 12% (clusters). No-KML photo views and Night: same mean luma as before. Skill:
   docklands-3d-page, "KML". No new data files.
 
+
+## 2026-10-05 — KML sources button (coordinator)
+- Owner: "Button". Added a "KML sources" button in the menu's views group (after "Share this view") and in the My KML row; both open the drawer on Layers, open the KML sources list and scroll to it (kml-layer.js). First attempt inserted before #shareOut, which is not a child of the button's parent: the module threw and DocklandsKML was undefined; the headless test caught it. Tested 390x844 DPR3 and 1600x900: list open, 40 rows, no console errors.
