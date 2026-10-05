@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Docklands 3D</title>
 <style>
@@ -75,7 +76,7 @@ button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
 #grip::before{content:"";width:44px;height:5px;border-radius:3px;background:#59616a}
 #sheetBody{flex:1;overflow:auto;padding:0 16px 14px;overscroll-behavior:contain}
 .pane{display:none}.pane.on{display:block}#sheet .pane{display:block}
-#toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs) + var(--safe) + 22px);width:max-content;max-width:min(calc(100vw - 32px),560px);box-sizing:border-box;background:#1b2128f2;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;z-index:4;display:none}
+#toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs) + var(--safe) + 48px);width:max-content;max-width:min(calc(100vw - 124px),560px);box-sizing:border-box;background:#1b2128f2;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;z-index:4;display:none}
 #attribLine{position:absolute;right:6px;bottom:calc(var(--tabs) + var(--safe) + 4px);font-size:11px;color:#e8eaec;background:#0d1013d9;padding:2px 7px;border-radius:5px;max-width:70vw;text-align:right;transition:opacity .4s}
 #attribLine a{color:#e8eaec}
 #attribLine.off{opacity:0;pointer-events:none}
@@ -86,7 +87,7 @@ button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
 #press button{text-align:left;padding:10px 14px}
 @media (min-width:900px){
   #sheet{left:auto;right:12px;width:440px;bottom:10px;border-radius:14px;border:1px solid var(--line)}
-  #toast{bottom:14px}
+  #toast{bottom:14px;max-width:min(calc(100vw - 32px),560px)}
   #gauge{left:auto;right:64px;top:110px;bottom:120px}
   #scrim.on{display:none}
 }
@@ -809,10 +810,12 @@ function render() {
   if (nm) { drawNight(P); if (BL.on) bloom(w, h); }
   if (PIX.on) { gl.uniform1f(uCut, 1e9); gl.disable(gl.BLEND); drawMesh(L.trees, 1); drawMesh(PIX.ents, 1); gl.enable(gl.BLEND); }
   drawGlow();
+  if (globalThis.DocklandsKML && DocklandsKML.drawGL(w, h)) gl.useProgram(pr);   // My KML (kml-layer.js): screen-space lines over the ground
   if (L.hi || L.route) { gl.disable(gl.DEPTH_TEST); drawMesh(L.hi, .9); drawMesh(L.route, .95); gl.enable(gl.DEPTH_TEST); }
   if (PIX.on) pixEnd(w, h);
   placeLabels(); if (globalThis.DocklandsSky) DocklandsSky.after({ MVP, VZ, cssW: cv.clientWidth, cssH: cv.clientHeight, pix: PIX.on });
   if (globalThis.DocklandsLocate) DocklandsLocate.after({ MVP, VZ, cssW: cv.clientWidth, cssH: cv.clientHeight, pix: PIX.on });   // locate.js: the blue dot
+  if (globalThis.DocklandsKML) DocklandsKML.after({ MVP, VZ, cssW: cv.clientWidth, cssH: cv.clientHeight, pix: PIX.on });   // My KML: pins, clusters and names
 }
 
 // ---------- input: drag rotates, right/shift/two-finger drag pans, wheel/pinch zooms, two-finger twist turns.
@@ -2260,7 +2263,7 @@ if (globalThis.DocklandsRiver) DocklandsRiver.init({ Mesh, beam, shade, geo, gro
 // Ships (AIS) layer (ships-layer.js, Layers > River > Ships (AIS), on): the same helpers
 if (globalThis.DocklandsShips) DocklandsShips.init({ Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovCredit, londonTime, loadJSON, draw, note, A, OV, labels, labelBox, info, buildOverlays, wl: () => tidalLevel ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level });
 // My KML (kml-layer.js, Layers > My KML): the helpers it draws with; it runs after this script as a module
-globalThis.DocklandsKMLctx = { Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovOn, dec, earcut, draw, toast, unview, A, OV, labels, labelBox, cam, get CAM() { return CAM; }, get VZ() { return VZ; }, sel: () => selected >= 0 && AT ? AT.buildings[selected] : null };
+globalThis.DocklandsKMLctx = { Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovOn, dec, earcut, draw, toast, unview, A, OV, labels, labelBox, cam, get CAM() { return CAM; }, get VZ() { return VZ; }, get MVP() { return MVP; }, get PROJ() { return PROJ; }, gl, cv, sel: () => selected >= 0 && AT ? AT.buildings[selected] : null };
 window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder,
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,

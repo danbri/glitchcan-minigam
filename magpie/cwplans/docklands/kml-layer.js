@@ -9,7 +9,7 @@ import { readKml, writeKml, download, isKmlName, isKmlType, cssColor } from './k
 
 const C = globalThis.DocklandsKMLctx;
 const $ = id => document.getElementById(id);
-const S = { files: [], seq: 0, hits: [], polys: [], labels: [], n: {} };
+const S = { files: [], seq: 0, hits: [], polys: [], pins: [], names: [], cl: new Map(), vis: {}, n: {}, lines: null, fly: 0 };
 const R2D = 180 / Math.PI, D2R = Math.PI / 180;
 const DEF = { line: [1, .8, 0, 1], poly: [1, .8, 0, .4], icon: [1, .8, 0, 1] };   // no style in the file: yellow, as a pin in Google Earth
 
@@ -26,7 +26,16 @@ function lonLatOf(x, z) {
 const heightAt = (x, z, alt, mode, lift) => mode === 'absolute' ? alt : /^relativeTo/.test(mode || '') ? C.groundAt(x, z) + (alt || 0) : C.groundAt(x, z) + lift;
 
 // ---------- drawing
+// Lines and outlines are screen-space ribbons (drawGL): at least LINE_PX CSS px wide at any zoom with a dark halo, and as wide
+// as the KML width (2 m per KML pixel) when that is wider; pins, clusters and names are drawn on a 2D canvas over the city
+// (after). Fills, walls and extrusions stay in the 3D meshes OV.kmlA. Rules and measurements: skill docklands-3d-page, "KML".
+const LINE_PX = 2.5, HALO_PX = 1.25, PIN = 24, CLUSTER_PX = 48;
 const quadA = (M, p, col, a) => { const s = C.shade(col, 0, 1, 0), i = M.v(...p[0], s, a), j = M.v(...p[1], s, a), k = M.v(...p[2], s, a), l = M.v(...p[3], s, a); M.tri(i, j, k); M.tri(i, k, l); };
+function vivid(c) {   // keep the file's hue, lift a dark colour until it reads on the dark map (relative luminance >= 0.42)
+  let [r, g, b] = c; const Y = (r, g, b) => .2126 * r + .7152 * g + .0722 * b;
+  for (let k = 0; k < 12 && Y(r, g, b) < .42; k++) { r += (1 - r) * .12; g += (1 - g) * .12; b += (1 - b) * .12; }
+  return [r, g, b, c[3] == null ? 1 : c[3]];
+}
 function pointIn(ring, x, z) { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, zi] = ring[i], [xj, zj] = ring[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; }
 function clipSeg(a, b) {   // Liang-Barsky: the part of a segment inside the model box, or null
   const E = C.A.meta.extent, d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; let t0 = 0, t1 = 1;
@@ -34,30 +43,41 @@ function clipSeg(a, b) {   // Liang-Barsky: the part of a segment inside the mod
     if (p === 0) { if (q < 0) return null; continue; } const r = q / p; if (p < 0) { if (r > t1) return null; if (r > t0) t0 = r; } else { if (r < t0) return null; if (r < t1) t1 = r; } }
   const at = t => [a[0] + d[0] * t, a[1] + d[1] * t, a[2] + d[2] * t]; return t1 - t0 > 1e-9 ? [at(t0), at(t1)] : null;
 }
-function lineOn(M, pts, w, col, clamp, st) {   // pts: [x, y, z]; a clamped line follows the ground every 15 m
+// one segment = 6 vertices of [x y z | other end x y z | side | metres wide | rgba bytes] (36 bytes)
+function segOut(L, a, b, wm, col) {
+  const f = L.f, u = L.u, put = (p, o, s) => { const i = L.n * 9; f[i] = p[0]; f[i + 1] = p[1]; f[i + 2] = p[2]; f[i + 3] = o[0]; f[i + 4] = o[1]; f[i + 5] = o[2]; f[i + 6] = s; f[i + 7] = wm; u.set(col, i * 4 + 32); L.n++; };
+  if ((L.n + 6) * 9 > f.length) { const g = new Float32Array(f.length * 2); g.set(f); L.f = g; L.u = new Uint8Array(g.buffer); return segOut(L, a, b, wm, col); }
+  put(a, b, 1); put(a, b, -1); put(b, a, -1); put(a, b, 1); put(b, a, -1); put(b, a, 1);
+}
+function wallOut(Wl, a, b, col) {   // a wall quad under an outline, [x y z top | rgba]: its top rises only while Show runs
+  if ((Wl.n + 6) * 5 > Wl.f.length) { const g = new Float32Array(Wl.f.length * 2); g.set(Wl.f); Wl.f = g; Wl.u = new Uint8Array(g.buffer); }
+  const put = (p, k) => { const i = Wl.n * 5; Wl.f[i] = p[0]; Wl.f[i + 1] = p[1]; Wl.f[i + 2] = p[2]; Wl.f[i + 3] = k; Wl.u.set(col, i * 4 + 16); Wl.n++; };
+  put(a, 0); put(b, 0); put(b, 1); put(a, 0); put(b, 1); put(a, 1);
+}
+function lineOn(L, pts, wm, col, clamp, st, wall) {   // pts: [x, y, z]; a clamped line follows the ground every 30 m
+  const cb = vivid(col).map(v => Math.round(Math.max(0, Math.min(1, v)) * 255)); cb[3] = 255;
   for (let i = 1; i < pts.length; i++) {
     let a = pts[i - 1], b = pts[i]; if (!C.inBox(a[0], a[2]) || !C.inBox(b[0], b[2])) { const c = clipSeg(a, b); st.clipped = true; if (!c) continue; [a, b] = c; }
-    const L = Math.hypot(b[0] - a[0], b[2] - a[2]), n = clamp ? Math.max(1, Math.ceil(L / 15)) : 1; let p = a;
+    const Ln = Math.hypot(b[0] - a[0], b[2] - a[2]), n = clamp ? Math.max(1, Math.ceil(Ln / 30)) : 1; let p = clamp ? [a[0], C.groundAt(a[0], a[2]) + 1, a[2]] : a;
     for (let k = 1; k <= n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, z = a[2] + (b[2] - a[2]) * t, q = [x, clamp ? C.groundAt(x, z) + 1 : a[1] + (b[1] - a[1]) * t, z];
-      C.beam(M, p, q, w, 1.2, col); p = q; }
-    st.drawn = true;
+      segOut(L, p, q, wm, cb); if (wall) wallOut(L.w, p, q, cb); st.box(p[0], p[2]); p = q; }
+    st.box(b[0], b[2]); st.drawn = true;
   }
 }
-function featureMesh(f, MO, MA, st) {
+function featureMesh(f, LS, MA, st) {
   const sty = f.style, set = sty.set || {};
   const lineCol = set.line ? sty.line : DEF.line, polyCol = set.poly ? sty.poly : DEF.poly, iconCol = set.icon ? sty.icon : DEF.icon;
-  const w = Math.max(2.5, Math.min(30, (sty.width || 1) * 2));
+  const w = Math.max(2.5, Math.min(30, (sty.width || 1) * 2));   // metres: the width when the camera is close
   for (const g of f.geoms) {
     const mode = g.altitudeMode || 'clampToGround', clamp = !/^(absolute|relativeTo)/.test(mode);
-    if (g.type === 'Point') {
+    if (g.type === 'Point') {   // a pin of constant screen size (after); the tip at the point, on the ground or at its altitude
       const [x, z] = C.geo(g.coords[0], g.coords[1]); if (!C.inBox(x, z)) { st.clipped = true; continue; }
-      const gy = C.groundAt(x, z), y = clamp ? gy : heightAt(x, z, g.coords[2], mode, 0), top = Math.max(y, gy) + 22 * Math.max(.6, Math.min(2.5, sty.scale || 1));
-      C.beam(MO, [x, gy, z], [x + .01, top, z], 1.6, 1.6, [.92, .93, .95]); C.beam(MO, [x, top, z], [x + .01, top + 8, z], 8, 8, iconCol.slice(0, 3));
-      if (!clamp && Math.abs(y - gy) > 2) C.beam(MO, [x - 4, y, z], [x + 4, y, z], 1.5, 1.5, iconCol.slice(0, 3));   // the altitude itself, on the stick
-      st.drawn = true; st.anchor = st.anchor || [x, top + 6, z]; st.labelAt = st.labelAt || [x, top + 10, z];
+      const gy = C.groundAt(x, z), y = clamp ? gy : heightAt(x, z, g.coords[2], mode, 0);
+      st.pins.push({ x, y, z, gy, col: vivid(iconCol), sc: Math.max(.8, Math.min(1.4, sty.scale || 1)) }); st.box(x, z);
+      st.drawn = true; st.anchor = st.anchor || [x, y, z];
     } else if (g.type === 'LineString') {
       const pts = g.coords.map(c => { const [x, z] = C.geo(c[0], c[1]); return [x, heightAt(x, z, c[2], mode, 1), z]; });
-      lineOn(MO, pts, w, lineCol.slice(0, 3), clamp, st);
+      lineOn(LS, pts, w, lineCol.slice(0, 3), clamp, st);
       if (g.extrude && !clamp) for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; if (!C.inBox(a[0], a[2]) || !C.inBox(b[0], b[2])) continue;
         quadA(MA, [[a[0], C.groundAt(a[0], a[2]), a[2]], [b[0], C.groundAt(b[0], b[2]), b[2]], [b[0], b[1], b[2]], [a[0], a[1], a[2]]], lineCol, .35); }
       const m = pts[pts.length >> 1]; if (C.inBox(m[0], m[2])) st.anchor = st.anchor || [m[0], m[1] + 4, m[2]];
@@ -67,7 +87,7 @@ function featureMesh(f, MO, MA, st) {
       if (!outer.some(p => C.inBox(p[0], p[1]))) { st.clipped = true; continue; }
       if (!inAll) st.clipped = true;
       const bb = outer.reduce((b, [x, z]) => [Math.min(b[0], x), Math.min(b[1], z), Math.max(b[2], x), Math.max(b[3], z)], [1e9, 1e9, -1e9, -1e9]);
-      const r2 = r => r.map(p => [p[0], p[1]]);
+      const r2 = r => r.map(p => [p[0], p[1]]), fc = [...polyCol.slice(0, 3), Math.max(.15, Math.min(.35, polyCol[3]))];
       if (sty.fill !== false) {
         if (clamp) {   // drape the fill over the ground: every terrain cell whose centre is inside (holes out); small shapes by earcut
           const T = C.A.terrain, i0 = Math.max(0, Math.floor((bb[0] - T.x0) / T.cell)), i1 = Math.min(T.nx - 2, Math.ceil((bb[2] - T.x0) / T.cell)),
@@ -75,17 +95,17 @@ function featureMesh(f, MO, MA, st) {
           const H = (i, j) => T.dm[j * T.nx + i] / 10 + .8, P = (i, j) => [T.x0 + i * T.cell, H(i, j), T.z0 + j * T.cell];
           const R0 = r2(outer), RH = holes.map(r2);
           for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const cx = T.x0 + (i + .5) * T.cell, cz = T.z0 + (j + .5) * T.cell;
-            if (!pointIn(R0, cx, cz) || RH.some(h => pointIn(h, cx, cz))) continue; quadA(MA, [P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], polyCol, polyCol[3]); cells++; }
-          if (!cells) earcutFill(MA, rings, (x, z) => C.groundAt(x, z) + .8, polyCol);
-        } else earcutFill(MA, rings, (x, z, a) => heightAt(x, z, a, mode, 0), polyCol);
+            if (!pointIn(R0, cx, cz) || RH.some(h => pointIn(h, cx, cz))) continue; quadA(MA, [P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], fc, fc[3]); cells++; }
+          if (!cells) earcutFill(MA, rings, (x, z) => C.groundAt(x, z) + .8, fc);
+        } else earcutFill(MA, rings, (x, z, a) => heightAt(x, z, a, mode, 0), fc);
       }
       if (sty.outline !== false || sty.fill === false) for (const r of rings) {
         const pts = r.map(([x, z, a]) => [x, clamp ? C.groundAt(x, z) + 1 : heightAt(x, z, a, mode, 0), z]); if (pts.length > 1) pts.push(pts[0]);
-        lineOn(MO, pts, Math.max(2, w * .7), lineCol.slice(0, 3), clamp, st);
+        lineOn(LS, pts, Math.max(2, w * .7), lineCol.slice(0, 3), clamp, st, true);
       }
       if (g.extrude && !clamp) for (const r of rings) for (let i = 0; i < r.length; i++) { const a = r[i], b = r[(i + 1) % r.length]; if (!C.inBox(a[0], a[1]) || !C.inBox(b[0], b[1])) continue;
         quadA(MA, [[a[0], C.groundAt(a[0], a[1]), a[1]], [b[0], C.groundAt(b[0], b[1]), b[1]], [b[0], heightAt(b[0], b[1], b[2], mode, 0), b[1]], [a[0], heightAt(a[0], a[1], a[2], mode, 0), a[1]]], polyCol, Math.max(.25, polyCol[3])); }
-      st.drawn = true;
+      st.drawn = true; for (const p of outer) if (C.inBox(p[0], p[1])) st.box(p[0], p[1]);
       const c = [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2], cy = clamp ? C.groundAt(c[0], c[1]) : heightAt(c[0], c[1], outer[0][2], mode, 0);
       if (C.inBox(c[0], c[1])) st.anchor = st.anchor || [c[0], cy + 3, c[1]];
       st.polys.push({ ring: r2(outer), holes: holes.map(r2), bb });
@@ -102,32 +122,166 @@ function earcutFill(M, rings, yOf, col) {
 
 function rebuild() {
   const OV = C.OV; for (const k of ['kml', 'kmlA']) if (OV[k]) { OV[k].free(); OV[k] = null; }
-  for (const l of S.labels.splice(0)) { l.el.remove(); const i = C.labels.indexOf(l); if (i >= 0) C.labels.splice(i, 1); }
-  S.hits = []; S.polys = []; const MO = new C.Mesh(), MA = new C.Mesh(), n = { files: 0, features: 0, drawn: 0, clipped: 0, outside: 0, hidden: 0 };
+  S.hits = []; S.polys = []; S.pins = []; S.names = []; S.cl = new Map();
+  for (const B of S.lines || []) { C.gl.deleteBuffer(B.b); if (B.wb) C.gl.deleteBuffer(B.wb); } S.lines = [];
+  const MA = new C.Mesh(), n = { files: 0, features: 0, drawn: 0, clipped: 0, outside: 0, hidden: 0 };
   for (const F of S.files) { if (!F.on) continue; n.files++;
-    F.n = { drawn: 0, clipped: 0, outside: 0, hidden: 0 };
+    const LS = { f: new Float32Array(9 * 6 * 256), n: 0, w: { f: new Float32Array(5 * 6 * 256), n: 0 } }; LS.u = new Uint8Array(LS.f.buffer); LS.w.u = new Uint8Array(LS.w.f.buffer);
+    F.n = { drawn: 0, clipped: 0, outside: 0, hidden: 0 }; F.bb = [1e9, 1e9, -1e9, -1e9];
     F.doc.features.forEach((f, i) => {
       if (f.removed) return; n.features++; if (!f.visible) { F.n.hidden++; return; }
-      const st = { drawn: false, clipped: false, anchor: null, labelAt: null, polys: [] }; featureMesh(f, MO, MA, st);
+      const st = { drawn: false, clipped: false, anchor: null, polys: [], pins: [], bb: [1e9, 1e9, -1e9, -1e9] };
+      st.box = (x, z) => { const b = st.bb; if (x < b[0]) b[0] = x; if (z < b[1]) b[1] = z; if (x > b[2]) b[2] = x; if (z > b[3]) b[3] = z; };
+      featureMesh(f, LS, MA, st);
       if (!st.drawn) { F.n.outside++; return; } F.n.drawn++; if (st.clipped) F.n.clipped++;
+      f.bb = st.bb; F.bb = [Math.min(F.bb[0], st.bb[0]), Math.min(F.bb[1], st.bb[1]), Math.max(F.bb[2], st.bb[2]), Math.max(F.bb[3], st.bb[3])];
       const card = () => featureCard(F, f);
-      if (st.anchor) S.hits.push({ x: st.anchor[0], y: st.anchor[1], z: st.anchor[2], kml: true, card });
+      for (const p of st.pins) S.pins.push({ ...p, F, f, name: f.name ? String(f.name).slice(0, 48) : '' });
+      if (st.anchor) S.hits.push({ x: st.anchor[0], y: st.anchor[1], z: st.anchor[2], kml: true, card: st.pins.length ? () => tapPin(F, f) : card });
       for (const p of st.polys) S.polys.push({ ...p, pri: -1, kml: true, card });
-      if (f.name && st.labelAt) addLabel(f.name, ...st.labelAt, card, f.style);
+      if (f.name && st.anchor && !st.pins.length) S.names.push({ x: st.anchor[0], y: st.anchor[1], z: st.anchor[2], name: String(f.name).slice(0, 48) });
     });
     for (const k of ['drawn', 'clipped', 'outside', 'hidden']) n[k] += F.n[k];
+    if (LS.n) { const gl = C.gl, up = a => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, a, gl.STATIC_DRAW); return b; };
+      S.lines.push({ F, b: up(LS.f.subarray(0, LS.n * 9)), n: LS.n, wb: LS.w.n ? up(LS.w.f.subarray(0, LS.w.n * 5)) : null, wn: LS.w.n }); }
   }
-  OV.kml = MO.n ? MO.upload() : null; OV.kmlA = MA.n ? MA.upload() : null; S.n = n; sync(); list(); C.labels.sort((a, b) => b.pri - a.pri); C.draw();
+  OV.kmlA = MA.n ? MA.upload() : null; S.n = n; sync(); list(); C.draw();
 }
 function sync() {   // buildOverlays() replaces OV.hits and OV.polys: put ours back (in front, so your own shapes answer a tap first)
   const OV = C.OV;
   if (S.hits.length ? !OV.hits.some(o => o.kml) || OV.hits.filter(o => o.kml).length !== S.hits.length : OV.hits.some(o => o.kml)) OV.hits = OV.hits.filter(o => !o.kml).concat(S.hits);
   if (S.polys.length ? !OV.polys.some(o => o.kml) || OV.polys.filter(o => o.kml).length !== S.polys.length : OV.polys.some(o => o.kml)) OV.polys = S.polys.concat(OV.polys.filter(o => !o.kml));
 }
-function addLabel(name, x, y, z, card, sty) {
-  const l = { name: String(name).slice(0, 60), x, y, z, pri: 3, cls: 'kml' }, el = document.createElement('button');
-  el.type = 'button'; el.className = 'lb kml'; el.textContent = l.name; el.onclick = card; if (sty && sty.set && sty.set.icon) el.style.borderColor = cssColor(sty.icon);
-  C.labelBox.appendChild(el); l.el = el; C.labels.push(l); S.labels.push(l);
+
+// ---------- Show: emphasise one file for SHOW_MS (grow, hue cycle, float and jiggle, polygons rise as walls), then ease back.
+// Time-based: every value comes from performance.now(), so 2 frames a second and 120 end the same; at the end the state is
+// dropped and the features are drawn exactly as before. Reduced motion: a brief grow and brighten, no movement.
+const SHOW_MS = 2200, SHOW_IN = 300, SHOW_OUT = 400;
+function emph(F, now = performance.now()) {   // { e 0..1, grow, hue (rad), lift (m), jig (CSS px), white } or null
+  const X = S.show; if (!X || X.F !== F) return null; const t = now - X.t0;
+  if (t >= X.ms) return null;
+  const sm = k => k * k * (3 - 2 * k), k = t < SHOW_IN ? sm(t / SHOW_IN) : t > X.ms - SHOW_OUT ? Math.pow((X.ms - t) / SHOW_OUT, 3) : 1;   // in, hold, ease-out back
+  if (X.reduce) return { e: k, grow: 1 + .6 * k, hue: 0, lift: 0, jig: 0, white: .45 * k, t };
+  return { e: k, grow: 1 + 1.6 * k, hue: k * t / 1000 * 2 * Math.PI * .9, lift: k * Math.max(60, Math.min(150, C.cam.dist * .012)), jig: k * 3 * Math.sin(t / 1000 * 2 * Math.PI * 3.5), white: 0, t };
+}
+function show(F) {
+  if (!F || !F.on) return; const reduce = !!(matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  S.show = { F, t0: performance.now(), ms: reduce ? 1200 : SHOW_MS, reduce }; const id = S.show;
+  const tick = () => { if (S.show !== id) return; if (performance.now() - id.t0 >= id.ms) { S.show = null; C.draw(); return; } C.draw(); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+function hueRot(c, a) {   // rotate a colour's hue about the grey axis (the same matrix as the shader)
+  const k = 1 / Math.sqrt(3), co = Math.cos(a), si = Math.sin(a), d = (c[0] + c[1] + c[2]) * k * k * (1 - co);
+  return [0, 1, 2].map(i => { const j = (i + 1) % 3, l = (i + 2) % 3; return Math.max(0, Math.min(1, c[i] * co + k * (c[l] - c[j]) * si + d)); });
+}
+
+// ---------- screen-space lines (WebGL, the page's context): drawn after the ground, depth-tested against the buildings
+const HUE = `vec3 hue(vec3 c,float a){const float k=.57735;float co=cos(a),si=sin(a);return c*co+cross(vec3(k),c)*si+vec3(k)*dot(vec3(k),c)*(1.-co);}`;
+const LVS = `attribute vec3 p;attribute vec3 o;attribute float s;attribute float wm;attribute vec4 c;
+uniform mat4 m;uniform float vz;uniform vec2 vp;uniform vec3 eye;uniform float minPx,halo,pxm,lift,jig,hu,wh;uniform mediump float mode;varying vec4 vc;varying float vk,va;${HUE}
+vec3 pull(vec3 q){vec3 t=eye-q;float d=length(t);return q+t/max(d,1e-3)*min(d*.5,.5+d*.004);}
+void main(){vec4 a=m*vec4(pull(vec3(p.x,(p.y+lift)*vz,p.z)),1.),b=m*vec4(pull(vec3(o.x,(o.y+lift)*vz,o.z)),1.);const float E=.05;
+if(a.w<E&&b.w<E){gl_Position=vec4(0.,0.,2.,1.);return;}
+if(b.w<E)b=mix(a,b,(a.w-E)/(a.w-b.w));if(a.w<E)a=mix(b,a,(b.w-E)/(b.w-a.w));
+vec2 sa=a.xy/a.w*vp*.5,sb=b.xy/b.w*vp*.5,d=sb-sa;float l=length(d);d=l>1e-4?d/l:vec2(1.,0.);vec2 n=vec2(-d.y,d.x);
+float w=max(minPx,wm*pxm/a.w)*.5,h=w+(mode<.5?halo:0.);
+gl_Position=a+vec4((n*s*h-d*h+vec2(0.,jig))/(vp*.5)*a.w,0.,0.);vc=vec4(mix(hu!=0.?clamp(hue(c.rgb,hu),0.,1.):c.rgb,vec3(1.),wh),1.);vk=s;va=w/h;}`;
+const LFS = `precision mediump float;varying vec4 vc;varying float vk,va;uniform float mode;
+void main(){if(mode<.5)gl_FragColor=vec4(.03,.04,.05,.82);else gl_FragColor=vc;}`;
+const WVS = `attribute vec3 p;attribute float k;attribute vec4 c;uniform mat4 m;uniform float vz,lift,hu,al;varying vec4 vc;${HUE}
+void main(){gl_Position=m*vec4(p.x,(p.y+k*lift)*vz,p.z,1.);vc=vec4(clamp(hue(c.rgb,hu),0.,1.),al*(.25+.55*k));}`;
+const WFS = `precision mediump float;varying vec4 vc;void main(){gl_FragColor=vc;}`;
+let LP = null, WP = null;
+function prog(gl, vs, fs, attrs, unis) {
+  const sh = (t, src) => { const x = gl.createShader(t); gl.shaderSource(x, src); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
+  const pg = gl.createProgram(); gl.attachShader(pg, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pg, sh(gl.FRAGMENT_SHADER, fs));
+  attrs.forEach((a, i) => gl.bindAttribLocation(pg, i, a)); gl.linkProgram(pg);
+  if (!gl.getProgramParameter(pg, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pg));
+  const U = {}; for (const u of unis) U[u] = gl.getUniformLocation(pg, u); return { pg, U };
+}
+function drawGL(w, h) {   // called by render() after the ground and the splats; the page restores its own program afterwards
+  if (!S.lines || !S.lines.length || !C.MVP || !C.CAM) return false; const gl = C.gl;
+  try { LP = LP || prog(gl, LVS, LFS, ['p', 'o', 's', 'wm', 'c'], ['m', 'vz', 'vp', 'eye', 'minPx', 'halo', 'pxm', 'mode', 'lift', 'jig', 'hu', 'wh']);
+    WP = WP || prog(gl, WVS, WFS, ['p', 'k', 'c'], ['m', 'vz', 'lift', 'hu', 'al']); } catch (e) { console.warn('KML lines', e); S.lines = []; return false; }
+  const en = [0, 1, 2, 3, 4, 5].map(i => gl.getVertexAttrib(i, gl.VERTEX_ATTRIB_ARRAY_ENABLED)), blend = gl.isEnabled(gl.BLEND), dm = gl.getParameter(gl.DEPTH_WRITEMASK);
+  const dpx = w / Math.max(1, C.cv.clientWidth), K = C.CAM, now = performance.now();
+  for (let i = 0; i < 5; i++) gl.enableVertexAttribArray(i);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.enable(gl.DEPTH_TEST);
+  // Show: the walls under the outlines of the file being shown
+  for (const B of S.lines) { const X = emph(B.F, now); if (!X || !B.wb || !X.lift) continue; const U = WP.U;
+    gl.useProgram(WP.pg); gl.uniformMatrix4fv(U.m, false, C.MVP); gl.uniform1f(U.vz, C.VZ || 1); gl.uniform1f(U.lift, X.lift); gl.uniform1f(U.hu, X.hue); gl.uniform1f(U.al, X.e);
+    gl.disableVertexAttribArray(3); gl.disableVertexAttribArray(4); gl.bindBuffer(gl.ARRAY_BUFFER, B.wb);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 20, 12); gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 20, 16);
+    gl.drawArrays(gl.TRIANGLES, 0, B.wn); gl.enableVertexAttribArray(3); gl.enableVertexAttribArray(4); }
+  const U = LP.U; gl.useProgram(LP.pg); gl.uniformMatrix4fv(U.m, false, C.MVP); gl.uniform1f(U.vz, C.VZ || 1); gl.uniform2f(U.vp, w, h); gl.uniform3f(U.eye, K.eye[0], K.eye[1], K.eye[2]);
+  gl.uniform1f(U.halo, HALO_PX * dpx); gl.uniform1f(U.pxm, C.PROJ[5] * h / 2);
+  for (const mode of [0, 1]) { gl.uniform1f(U.mode, mode);   // halos first, so a halo never covers another line
+    for (const B of S.lines) { const X = emph(B.F, now);
+      gl.uniform1f(U.minPx, LINE_PX * dpx * (X ? X.grow : 1)); gl.uniform1f(U.lift, X ? X.lift : 0); gl.uniform1f(U.jig, X ? X.jig * dpx : 0); gl.uniform1f(U.hu, X ? X.hue : 0); gl.uniform1f(U.wh, X ? X.white : 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, B.b);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 36, 0); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 36, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 36, 24);
+      gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 36, 28); gl.vertexAttribPointer(4, 4, gl.UNSIGNED_BYTE, true, 36, 32);
+      gl.drawArrays(gl.TRIANGLES, 0, B.n); } }
+  en.forEach((on, i) => on ? gl.enableVertexAttribArray(i) : gl.disableVertexAttribArray(i)); if (!blend) gl.disable(gl.BLEND); gl.depthMask(dm);
+  return true;
+}
+
+// ---------- pins, clusters and names: a 2D canvas over the city, redrawn after every frame
+let OVC = null;
+function overlay() {
+  if (OVC) return OVC; const c = document.createElement('canvas'); c.id = 'kmlOv'; c.setAttribute('aria-hidden', 'true');
+  C.cv.insertAdjacentElement('afterend', c); return (OVC = c);
+}
+const rgb = (c, a = 1) => `rgba(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)},${a})`;
+function pinPath(g, x, y, s) {   // a map pin: its tip at (x, y), the head 2s/3 across
+  const r = s * .34, cy = y - s + r; g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x - r * .25, y - r * .9, x - r, cy + r * .75, x - r, cy); g.arc(x, cy, r, Math.PI, 0); g.bezierCurveTo(x + r, cy + r * .75, x + r * .25, y - r * .9, x, y); g.closePath(); return cy;
+}
+function after(ctx) {
+  const has = S.pins.length || S.names.length;
+  if (!has || !ctx.MVP) { if (OVC && OVC.width) { OVC.width = 0; OVC.height = 0; } S.vis = { pins: 0, clusters: 0, names: 0, lines: 0 }; return; }
+  const c = overlay(), dpr = devicePixelRatio || 1, W = ctx.cssW, H = ctx.cssH, M = ctx.MVP, VZ = ctx.VZ;
+  if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const proj = (x, y, z) => { const w = M[3] * x + M[7] * y * VZ + M[11] * z + M[15]; if (w <= .5) return null; return [((M[0] * x + M[4] * y * VZ + M[8] * z + M[12]) / w * .5 + .5) * W, (1 - ((M[1] * x + M[5] * y * VZ + M[9] * z + M[13]) / w * .5 + .5)) * H]; };
+  // bin the pins on screen; a bin with more than one pin of a file is a cluster at the mean position
+  const bins = new Map(); S.cl = new Map(); let onScreen = 0;
+  const now = performance.now(), EM = new Map(S.files.map(F => [F, emph(F, now)])), look = (p, X) => X ? { col: X.white ? p.col.map((v, i) => i < 3 ? v + (1 - v) * X.white : v) : [...hueRot(p.col, X.hue), 1], sc: p.sc * X.grow } : p;
+  for (const p of S.pins) { const X = EM.get(p.F), q = proj(p.x, p.y + (X ? X.lift : 0), p.z); if (q && X) q[0] += X.jig; if (!q || q[0] < -20 || q[0] > W + 20 || q[1] < -4 || q[1] > H + PIN) continue; onScreen++;
+    const k = p.F.id + ':' + Math.floor(q[0] / CLUSTER_PX) + ':' + Math.floor(q[1] / CLUSTER_PX); let b = bins.get(k); if (!b) bins.set(k, b = { m: [], sx: 0, sy: 0 }); b.m.push([p, q]); b.sx += q[0]; b.sy += q[1]; }
+  const singles = [], clusters = [];
+  for (const b of bins.values()) { if (b.m.length === 1) singles.push(b.m[0]); else { const X = EM.get(b.m[0][0].F), cl = { n: b.m.length, x: b.sx / b.m.length, y: b.sy / b.m.length, col: look(b.m[0][0], X).col, g: X ? X.grow : 1, m: b.m.map(e => e[0]) }; clusters.push(cl); for (const [p] of b.m) S.cl.set(p.f, cl); } }
+  // stems for pins above the ground, then the pins and clusters
+  g.lineJoin = 'round';
+  for (const [p, q] of singles) { const X = EM.get(p.F); if (Math.abs(p.y + (X ? X.lift : 0) - p.gy) <= 2) continue; const q0 = proj(p.x, p.gy, p.z); if (!q0) continue; g.strokeStyle = '#ffffffb0'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(q0[0], q0[1]); g.lineTo(q[0], q[1]); g.stroke(); }
+  for (const [p0, q] of singles) { const p = look(p0, EM.get(p0.F)), s = PIN * p.sc, cy = pinPath(g, q[0], q[1], s);
+    g.lineWidth = 3.5; g.strokeStyle = 'rgba(6,8,11,.85)'; g.stroke(); g.fillStyle = rgb(p.col); g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#fff'; g.stroke();
+    g.beginPath(); g.arc(q[0], cy, s * .11, 0, 7); g.fillStyle = 'rgba(6,8,11,.8)'; g.fill(); }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const cl of clusters) { const r = Math.min(16, 9 + 1.5 * Math.log2(cl.n)) * cl.g;
+    g.beginPath(); g.arc(cl.x, cl.y, r + 1.75, 0, 7); g.fillStyle = 'rgba(6,8,11,.85)'; g.fill();
+    g.beginPath(); g.arc(cl.x, cl.y, r, 0, 7); g.fillStyle = rgb(cl.col); g.fill(); g.lineWidth = 2; g.strokeStyle = '#fff'; g.stroke();
+    const Y = .2126 * cl.col[0] + .7152 * cl.col[1] + .0722 * cl.col[2]; g.fillStyle = Y > .55 ? '#0b0e12' : '#fff'; g.font = `700 ${cl.n > 99 ? 10 : 11}px system-ui,sans-serif`; g.fillText(cl.n > 9999 ? '9k+' : String(cl.n), cl.x, cl.y + .5); }
+  // names: unclustered pins when few are on screen, and the names of lines and areas; greedy, no overlaps
+  let nn = 0; const labelsOn = !document.getElementById('showLabels') || document.getElementById('showLabels').checked;
+  if (labelsOn) {
+    const placed = clusters.map(cl => { const r = 22; return [cl.x - r, cl.y - r, cl.x + r, cl.y + r]; }).concat(singles.map(([p, q]) => [q[0] - 9, q[1] - PIN * p.sc, q[0] + 9, q[1]]));
+    const free = r => r[0] > 2 && r[2] < W - 2 && r[1] > 60 && r[3] < H - 50 && !placed.some(o => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1]);
+    g.font = '600 12px system-ui,sans-serif'; g.textAlign = 'left'; g.lineWidth = 3; g.strokeStyle = 'rgba(6,8,11,.9)'; g.fillStyle = '#fff';
+    const text = (t, x, y) => { g.strokeText(t, x, y); g.fillText(t, x, y); nn++; };
+    if (singles.length <= 40) for (const [p, q] of singles) { if (!p.name) continue; const tw = g.measureText(p.name).width, r = [q[0] + 10, q[1] - PIN * p.sc * .7 - 8, q[0] + 14 + tw, q[1] - PIN * p.sc * .7 + 8];
+      if (free(r)) { placed.push(r); text(p.name, r[0] + 2, (r[1] + r[3]) / 2); } }
+    let ln = 0; g.textAlign = 'center';
+    for (const l of S.names) { if (ln >= 40) break; const q = proj(l.x, l.y, l.z); if (!q) continue; const tw = g.measureText(l.name).width, r = [q[0] - tw / 2 - 3, q[1] - 9, q[0] + tw / 2 + 3, q[1] + 9];
+      if (free(r)) { placed.push(r); text(l.name, q[0], q[1]); ln++; } }
+  }
+  S.vis = { pins: singles.length, clusters: clusters.length, onScreen, names: nn, lines: S.lines ? S.lines.n / 6 : 0 };
+}
+function tapPin(F, f) {   // a pin opens its card; a cluster flies in (or lists its members when they share one spot)
+  const cl = S.cl.get(f); if (!cl) return featureCard(F, f);
+  const b = cl.m.reduce((b, p) => [Math.min(b[0], p.x), Math.min(b[1], p.z), Math.max(b[2], p.x), Math.max(b[3], p.z)], [1e9, 1e9, -1e9, -1e9]);
+  if (Math.hypot(b[2] - b[0], b[3] - b[1]) > 25 && C.cam.dist > 200) return flyFit(b, { min: 120 });
+  C.ovCard('<div id="kmlCard"></div>'); const box = $('kmlCard'); box.append(E('b', { text: `${cl.n} places here` }), ' ', E('span', { class: 'small', text: `My KML · ${F.name}` }));
+  const ul = E('div', { class: 'chips' }); for (const p of cl.m.slice(0, 60)) ul.append(E('button', { type: 'button', text: p.name || '(no name)', on: () => featureCard(p.F, p.f) })); box.append(ul);
 }
 
 // ---------- record card: every text from the file goes in with textContent (a <script> in a description is text)
@@ -149,6 +303,7 @@ function featureCard(F, f) {
 
 // ---------- camera: KML Camera / LookAt to the page camera and back
 function goView(v) {
+  S.fly++; if (globalThis.DocklandsNav) DocklandsNav.stop();
   const cam = C.cam, VZ = C.VZ || 1, [x, z] = C.geo(v.lon, v.lat);
   const alt = v.altitudeMode === 'absolute' ? v.alt : /^relativeTo/.test(v.altitudeMode) ? C.groundAt(x, z) + v.alt : C.groundAt(x, z) + (v.type === 'Camera' ? Math.max(1.6, v.alt || 0) : 0);
   delete cam.eye; delete cam.target; delete cam.fov; delete cam.hfov;
@@ -169,13 +324,52 @@ function currentView() {   // the camera as drawn (CAM): eye in m OD, heading fr
   const [lon, lat] = lonLatOf(e[0], e[2]), heading = ((Math.atan2(d[0], -d[2]) * R2D) % 360 + 360) % 360, tilt = 90 + Math.atan2(d[1], Math.hypot(d[0], d[2])) * R2D;
   return { type: 'Camera', lon, lat, alt: e[1], heading, tilt, roll: 0, altitudeMode: 'absolute', horizFov: 2 * Math.atan(Math.tan(K.fovY / 2) * K.aspect) * R2D };
 }
-function frame(F) {   // fit the camera to a file's drawn features (keeps the turn and the tilt)
-  let b = [1e9, 1e9, -1e9, -1e9];
-  for (const f of F.doc.features) if (!f.removed && f.visible) for (const g of f.geoms) for (const c of g.type === 'Point' ? [g.coords] : g.type === 'LineString' ? g.coords : g.rings[0]) {
-    const [x, z] = C.geo(c[0], c[1]); if (!C.inBox(x, z)) continue; b = [Math.min(b[0], x), Math.min(b[1], z), Math.max(b[2], x), Math.max(b[3], z)]; }
-  if (b[0] > b[2]) return false; const cam = C.cam, cx = (b[0] + b[2]) / 2, cz = (b[1] + b[3]) / 2;
-  delete cam.eye; delete cam.target; delete cam.fov; delete cam.hfov;
-  Object.assign(cam, { tx: cx, ty: C.groundAt(cx, cz), tz: cz, dist: Math.max(300, Math.min(16000, 1.5 * Math.hypot(b[2] - b[0], b[3] - b[1]) + 200)) }); C.unview(); C.draw(); return true;
+// fly to fit: a camera that shows a box of the model (x0, z0, x1, z1) inside the screen, clear of the top bar and the bottom
+// controls; keeps the turn, tilts to look down more on a tall screen; the momentum is stopped first (nav.js)
+function fitCam(b, o = {}) {   // the turn that needs the least distance of: as now, and a quarter turn either way (a wide box on a tall screen)
+  if (o.yaw == null) { const y0 = C.cam.yaw, c = [0, Math.PI / 2, -Math.PI / 2].map(d => fitCam(b, { ...o, yaw: y0 + d })); let best = c[0]; for (const k of c.slice(1)) if (k.need < best.need * .85) best = k; return best; }
+  const cv = C.cv, W = cv.clientWidth || innerWidth, H = cv.clientHeight || innerHeight, asp = W / H, VZ = C.VZ || 1, cam = C.cam, t = Math.tan(.4);
+  const yaw = o.yaw, pitch = Math.max(asp < .8 ? .95 : .72, Math.min(1.25, cam.eye ? .8 : cam.pitch));
+  const pad = [16, Math.min(90, H * .12), 16, Math.min(100, H * .13)];   // left, top, right, bottom (CSS px)
+  const xs = [b[0], b[2]], zs = [b[1], b[3]], pts = []; for (const x of xs) for (const z of zs) pts.push([x, C.groundAt(x, z), z]);
+  pts.push([(b[0] + b[2]) / 2, C.groundAt((b[0] + b[2]) / 2, (b[1] + b[3]) / 2), (b[1] + b[3]) / 2]);
+  let tx = (b[0] + b[2]) / 2, tz = (b[1] + b[3]) / 2, dist = 1000;
+  const shot = (tx, tz, d) => { const ty = C.groundAt(tx, tz), T = [tx, ty * VZ, tz], ce = Math.cos(pitch), e = [T[0] + d * Math.sin(yaw) * ce, T[1] + d * Math.sin(pitch), T[2] + d * Math.cos(yaw) * ce];
+    const f = [T[0] - e[0], T[1] - e[1], T[2] - e[2]], fl = Math.hypot(...f); f.forEach((v, i) => f[i] = v / fl);
+    let r = [-f[2], 0, f[0]]; const rl = Math.hypot(...r); r = r.map(v => v / rl); const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+    return pts.map(([x, y, z]) => { const v = [x - e[0], y * VZ - e[1], z - e[2]], zc = v[0] * f[0] + v[1] * f[1] + v[2] * f[2]; if (zc <= 1) return null;
+      return [((v[0] * r[0] + v[1] * r[1] + v[2] * r[2]) / (zc * t * asp) * .5 + .5) * W, (1 - ((v[0] * u[0] + v[1] * u[1] + v[2] * u[2]) / (zc * t) * .5 + .5)) * H]; }); };
+  const fits = (tx, tz, d) => shot(tx, tz, d).every(q => q && q[0] >= pad[0] && q[0] <= W - pad[2] && q[1] >= pad[1] && q[1] <= H - pad[3]);
+  const lo0 = o.min || 150;
+  for (let it = 0; it < 4; it++) {
+    let lo = lo0, hi = 40000; if (fits(tx, tz, lo)) hi = lo; else { for (let k = 0; k < 24; k++) { const m = Math.sqrt(lo * hi); if (fits(tx, tz, m)) hi = m; else lo = m; } }
+    dist = hi; const q = shot(tx, tz, dist).filter(Boolean); if (!q.length) break;
+    const cx = (Math.min(...q.map(v => v[0])) + Math.max(...q.map(v => v[0]))) / 2, cy = (Math.min(...q.map(v => v[1])) + Math.max(...q.map(v => v[1]))) / 2;
+    const ox = cx - (pad[0] + W - pad[2]) / 2, oy = cy - (pad[1] + H - pad[3]) / 2, mpp = 2 * dist * t / H;   // metres per CSS px at the target
+    if (Math.abs(ox) < 3 && Math.abs(oy) < 3) break;
+    const dx = ox * mpp, dy = oy * mpp / Math.max(.3, Math.sin(pitch)), c = Math.cos(yaw), s = Math.sin(yaw);
+    tx += c * dx + s * dy; tz += -s * dx + c * dy;   // screen right is (cos yaw, -sin yaw); screen down (towards the eye) is (sin yaw, cos yaw)
+  }
+  const need = dist; dist = Math.max(lo0, Math.min(16000, dist)); return { tx, ty: C.groundAt(tx, tz), tz, yaw, pitch, dist, need };   // need: the distance that fits (the page stops at 16 km)
+}
+function flyCam(to, ms = 900, done) {   // the page camera from where it is to `to`, eased; a touch, a wheel or another view ends it
+  const cam = C.cam; if (globalThis.DocklandsNav) DocklandsNav.stop();
+  delete cam.eye; delete cam.target; delete cam.fov; delete cam.hfov; delete cam.roll; C.unview();
+  const s0 = { tx: cam.tx, ty: cam.ty, tz: cam.tz, yaw: cam.yaw, pitch: cam.pitch, ld: Math.log(cam.dist) }, t0 = performance.now(), id = ++S.fly;
+  let dy = to.yaw - s0.yaw; dy -= Math.round(dy / (2 * Math.PI)) * 2 * Math.PI;
+  const reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const step = now => { if (S.fly !== id) return; const t = reduce ? 1 : Math.min(1, (now - t0) / ms), k = t * t * (3 - 2 * t);
+    Object.assign(cam, { tx: s0.tx + (to.tx - s0.tx) * k, ty: s0.ty + (to.ty - s0.ty) * k, tz: s0.tz + (to.tz - s0.tz) * k, yaw: s0.yaw + dy * k, pitch: s0.pitch + (to.pitch - s0.pitch) * k, dist: Math.exp(s0.ld + (Math.log(to.dist) - s0.ld) * k) });
+    C.draw(); if (t < 1) requestAnimationFrame(step); else { S.fly++; if (done) done(); } };
+  requestAnimationFrame(step); return to;
+}
+addEventListener('pointerdown', () => { S.fly++; }, true); addEventListener('wheel', () => { S.fly++; }, { capture: true, passive: true });
+function flyFit(b, o, done) { if (!b || b[0] > b[2]) return false; const m = 20; return flyCam(fitCam([b[0] - m, b[1] - m, b[2] + m, b[3] + m], o), 900, done); }
+function frame(F, done) {   // fly to a file's drawn features, then done()
+  if (!F.bb || F.bb[0] > F.bb[2]) return false;
+  if (globalThis.__docklands && __docklands.PIX && __docklands.PIX.on) { const b = F.bb, cam = C.cam, cx = (b[0] + b[2]) / 2, cz = (b[1] + b[3]) / 2;
+    Object.assign(cam, { tx: cx, ty: C.groundAt(cx, cz), tz: cz, dist: Math.max(300, Math.min(16000, 1.2 * Math.hypot(b[2] - b[0], b[3] - b[1]) + 200)) }); C.unview(); C.draw(); if (done) done(); return true; }
+  return flyFit(F.bb, { min: F.n && F.n.drawn === 1 && F.bb[2] - F.bb[0] < 50 ? 400 : 150 }, done);
 }
 
 // ---------- import
@@ -183,9 +377,10 @@ async function open(src, name, how) {
   try {
     const doc = await readKml(src, name); const F = { id: ++S.seq, name: doc.name || name, file: name, doc, on: true, how };
     S.files.push(F); rebuild();
-    const v = doc.view || (doc.features.length === 1 && doc.features[0].view); if (v) goView(v); else frame(F);
-    const sk = Object.entries(doc.skipped).map(([k, n]) => `${n} ${k}`).join(', ');
-    C.toast(`${F.name}: ${F.n.drawn} of ${doc.features.length} features drawn${F.n.outside ? `, ${F.n.outside} outside the model` : ''}${F.n.clipped ? `, ${F.n.clipped} cut at its edge` : ''}${F.n.hidden ? `, ${F.n.hidden} hidden in the file` : ''}${sk ? `; not supported: ${sk}` : ''}.`);
+    const v = doc.view || (doc.features.length === 1 && doc.features[0].view); if (v) { goView(v); show(F); } else frame(F, () => show(F));
+    const short = F.name.length > 34 ? F.name.slice(0, 32).replace(/\s+\S*$/, '') + '…' : F.name, d = F.n.drawn, out = doc.features.length - d - F.n.hidden;
+    C.toast(d ? `${short}: ${d.toLocaleString('en-GB')} shown${out > 0 ? `, ${out.toLocaleString('en-GB')} outside the model` : ''}${v ? ' (the file’s own view)' : ''}.` : `${short}: nothing inside the model.`);
+    const tb = $('toast'); if (d && tb) tb.append(' ', E('button', { type: 'button', class: 'kmlShow', text: 'Show', on: () => showOrFly(F) }));
     return F;
   } catch (e) { C.toast(`${name}: not opened (${e.message})`); console.warn('KML', name, e); return null; }
 }
@@ -200,12 +395,20 @@ function list() {
     row.append(E('div', { class: 'small', text: `${live} features: ${n.drawn || 0} drawn${n.outside ? `, ${n.outside} outside the model box (not drawn)` : ''}${n.clipped ? `, ${n.clipped} partly outside (cut at the edge)` : ''}${n.hidden ? `, ${n.hidden} hidden in the file (visibility 0)` : ''}${d.folders.n ? `; ${d.folders.n} folders` : ''}${d.kmz ? `; KMZ (${d.kmz.entry})` : ''}${sk ? `; not supported: ${sk}` : ''}.` }));
     if (d.description) row.append(E('div', { class: 'small kmlDesc', text: d.description.slice(0, 400) }));
     const r = E('div', { class: 'row' });
-    r.append(E('button', { type: 'button', text: 'Show', on: () => frame(F) || C.toast('Nothing of this file is inside the model.') }));
+    r.append(E('button', { type: 'button', text: 'Show', title: 'Make this file’s features jump out for two seconds', on: () => { closeOnPhone(); showOrFly(F); } }));
+    r.append(E('button', { type: 'button', text: 'Fit', title: 'Fly to fit this file’s features', on: () => { closeOnPhone(); frame(F) || C.toast('Nothing of this file is inside the model.'); } }));
     if (d.view) r.append(E('button', { type: 'button', text: 'Go to view', on: () => goView(d.view) }));
     r.append(E('button', { type: 'button', text: 'Remove', on: () => { S.files.splice(S.files.indexOf(F), 1); rebuild(); } }));
     row.append(r); el.append(row);
   }
 }
+const closeOnPhone = () => { if (innerWidth < 900 && $('drawerX') && $('drawer') && $('drawer').classList.contains('open')) $('drawerX').click(); };
+function onScreen(F) {   // is any of the file's box (corners, centre) on the screen now?
+  const M = C.MVP, b = F.bb; if (!M || !b || b[0] > b[2]) return false; const VZ = C.VZ || 1;
+  return [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]], [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]].some(([x, z]) => { const y = C.groundAt(x, z) * VZ, w = M[3] * x + M[7] * y + M[11] * z + M[15]; if (w <= .5) return false;
+    const X = (M[0] * x + M[4] * y + M[8] * z + M[12]) / w, Y = (M[1] * x + M[5] * y + M[9] * z + M[13]) / w; return Math.abs(X) < 1 && Math.abs(Y) < 1; });
+}
+function showOrFly(F) { if (!F.on) { F.on = true; rebuild(); } if (onScreen(F)) show(F); else frame(F, () => show(F)) || C.toast('Nothing of this file is inside the model.'); }
 async function openFiles(files, how) { const out = []; for (const f of files) if (isKmlName(f.name) || isKmlType(f.type)) out.push(await open(f, f.name, how)); return out; }
 
 // ---------- export
@@ -274,7 +477,7 @@ function exportView(opts = {}) {
 // ---------- the page's side
 function injectUi() {
   const css = document.createElement('style');
-  css.textContent = '.lb.kml{border:1px solid #ffd000;border-radius:5px;background:#0d1013cc;color:#fff3b0;padding:0 3px}.kmlFile{border-top:1px solid #ffffff22;padding:6px 0}.kmlDesc{white-space:pre-wrap;overflow-wrap:anywhere}#kmlCard table td{vertical-align:top;overflow-wrap:anywhere}#kmlCard table td:first-child{color:#aab;padding-right:8px}';
+  css.textContent = '#kmlOv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}body.capture #kmlOv{display:none!important}#toast .kmlShow{margin-left:6px;padding:3px 10px;font-size:12px}.lb.kml{border:1px solid #ffd000;border-radius:5px;background:#0d1013cc;color:#fff3b0;padding:0 3px}.kmlFile{border-top:1px solid #ffffff22;padding:6px 0}.kmlDesc{white-space:pre-wrap;overflow-wrap:anywhere}#kmlCard table td{vertical-align:top;overflow-wrap:anywhere}#kmlCard table td:first-child{color:#aab;padding-right:8px}';
   document.head.appendChild(css);
   const html = `<h3>My KML</h3>
     <div class="row"><button type="button" id="kmlOpen">Open KML/KMZ</button><button type="button" id="kmlExport">Export view as KML</button>
@@ -318,6 +521,6 @@ async function loadUrl(u) {
 }
 if (C) {
   injectUi(); examples(); setInterval(sync, 1000);
-  globalThis.DocklandsKML = { open, openFiles, rebuild, exportView, currentView, goView, lonLatOf, get S() { return S; } };
+  globalThis.DocklandsKML = { open, openFiles, rebuild, exportView, currentView, goView, lonLatOf, loadUrl, frame, fitCam, show, emph, drawGL, after, get S() { return S; } };
   fromUrl();
 }
