@@ -274,7 +274,7 @@ function after(ctx) {
     for (const l of S.names) { if (ln >= 40) break; const q = proj(l.x, l.y, l.z); if (!q) continue; const tw = g.measureText(l.name).width, r = [q[0] - tw / 2 - 3, q[1] - 9, q[0] + tw / 2 + 3, q[1] + 9];
       if (free(r)) { placed.push(r); text(l.name, q[0], q[1]); ln++; } }
   }
-  S.vis = { pins: singles.length, clusters: clusters.length, onScreen, names: nn, lines: S.lines ? S.lines.n / 6 : 0 };
+  S.vis = { pins: singles.length, clusters: clusters.length, onScreen, names: nn, lines: (S.lines || []).reduce((a, B) => a + B.n / 6, 0) };
 }
 function tapPin(F, f) {   // a pin opens its card; a cluster flies in (or lists its members when they share one spot)
   const cl = S.cl.get(f); if (!cl) return featureCard(F, f);
@@ -477,7 +477,7 @@ function exportView(opts = {}) {
 // ---------- the page's side
 function injectUi() {
   const css = document.createElement('style');
-  css.textContent = '#kmlOv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}body.capture #kmlOv{display:none!important}#toast .kmlShow{margin-left:6px;padding:3px 10px;font-size:12px}.lb.kml{border:1px solid #ffd000;border-radius:5px;background:#0d1013cc;color:#fff3b0;padding:0 3px}.kmlFile{border-top:1px solid #ffffff22;padding:6px 0}.kmlDesc{white-space:pre-wrap;overflow-wrap:anywhere}#kmlCard table td{vertical-align:top;overflow-wrap:anywhere}#kmlCard table td:first-child{color:#aab;padding-right:8px}';
+  css.textContent = '#kmlOv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}body.capture #kmlOv{display:none!important}#toast .kmlShow{margin-left:6px;padding:3px 10px;font-size:12px}.lb.kml{border:1px solid #ffd000;border-radius:5px;background:#0d1013cc;color:#fff3b0;padding:0 3px}.kmlFile{border-top:1px solid #ffffff22;padding:6px 0}.kmlDesc{white-space:pre-wrap;overflow-wrap:anywhere}#kmlCard table td{vertical-align:top;overflow-wrap:anywhere}#kmlCard table td:first-child{color:#aab;padding-right:8px}#kmlSrc summary{cursor:pointer;padding:6px 0;font-size:13px}#kmlSrcList{border-top:1px solid #ffffff22}.ksRow{display:flex;gap:8px;align-items:flex-start;padding:7px 2px;border-bottom:1px solid #ffffff14}.ksRow>div{flex:1;min-width:0}.ksRow b{font-size:13px;font-weight:600;overflow-wrap:anywhere}.ksRow .small{display:block;overflow-wrap:anywhere}.ksRow button,.ksRow a.ksAct{flex:none;font-size:12px;padding:6px 10px;white-space:nowrap}.ksRow a.ksAct{border:1px solid #59616a;border-radius:8px;color:inherit;text-decoration:none}.ksB{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-right:4px;vertical-align:1px;background:#3d4650;color:#e8eaec}.ksB.open{background:#2f6b45}.ksB.sa{background:#7a5a1e}.ksB.no{background:#6b2f35}.ksWhy{color:#c9a9ad}#kmlSrcF{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}#kmlSrcF button{font-size:12px;padding:5px 10px;border-radius:14px}#kmlSrcF button[aria-pressed=true]{background:#3d5a48;border-color:var(--acc);color:#fff}#kmlSrcQ{width:100%;box-sizing:border-box;margin:2px 0 6px;padding:7px 9px;font-size:14px}';
   document.head.appendChild(css);
   const html = `<h3>My KML</h3>
     <div class="row"><button type="button" id="kmlOpen">Open KML/KMZ</button><button type="button" id="kmlExport">Export view as KML</button>
@@ -487,7 +487,7 @@ function injectUi() {
       <label><input type="checkbox" id="kx_works" checked> Works in progress (when on)</label><label><input type="checkbox" id="kx_river" checked> River items (layers on)</label>
       <label><input type="checkbox" id="kx_mine" checked> My KML</label></div></details>
     <div id="kmlList"></div>
-    <details id="kmlEx"><summary class="small">Example KML (open data)</summary><div class="chips" id="kmlExList"></div><p class="small">Open-licensed layers clipped to the zone (TfL, Walk Wheel Cycle Trust, Canal &amp; River Trust, Natural England, Historic England, GLA; the licence and credits are in each file). More, with the licences and the files that cannot be opened here: <a href="https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/README.md" target="_blank" rel="noopener">KML sources</a>.</p></details>
+    <details id="kmlSrc"><summary>KML sources <span class="small">(open data for the zone)</span></summary><div id="kmlSrcBody"><p class="small">Loading the catalogue…</p></div></details>
     <p class="small" id="kmlNote">Open a KML or KMZ file, or drop one on the city: points, lines and polygons (with holes), folders, styles, descriptions (as text) and data tables; a KML Camera or LookAt gives "Go to view". The file stays in this browser: nothing is uploaded or stored.</p>`;
   const pane = $('paneLayers'), first = pane && pane.querySelector('h3'); if (first) first.insertAdjacentHTML('beforebegin', html); else if (pane) pane.insertAdjacentHTML('afterbegin', html);
   const inp = $('kmlFile');
@@ -500,14 +500,59 @@ function injectUi() {
   addEventListener('dragover', e => { const it = [...((e.dataTransfer && e.dataTransfer.items) || [])]; if (it.some(i => i.kind === 'file' && (isKmlType(i.type) || !i.type || /xml|zip/.test(i.type)))) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
   addEventListener('drop', e => { const fs = [...((e.dataTransfer && e.dataTransfer.files) || [])].filter(f => isKmlName(f.name) || isKmlType(f.type)); if (!fs.length) return; e.preventDefault(); openFiles(fs, 'drop'); });
 }
-// examples: open-licensed, zone-clipped copies in danbri/londat (CORS *); the list and the licences: feeds/kml/catalogue.json
-const EXAMPLE_BASE = 'https://raw.githubusercontent.com/danbri/londat/main/cwplans/feeds/kml/';
-const EXAMPLES = [['Thames Path', 'ne-thames-path'], ['Cycle routes (TfL)', 'tfl-cycle-routes'], ['National Cycle Network', 'sustrans-ncn'], ['River piers (TfL)', 'tfl-river-piers'],
-  ['River services (TfL)', 'tfl-river-services'], ['Locks (CRT)', 'crt-locks'], ['World Heritage Sites', 'he-world-heritage'], ['Listed buildings', 'he-listed-buildings'],
-  ['Heritage at Risk', 'he-heritage-at-risk'], ['Conservation areas', 'gla-conservation-areas'], ['Wards (2014)', 'lds-wards-2016-zone']];
-function examples() {
-  const el = $('kmlExList'); if (!el) return;
-  for (const [t, id] of EXAMPLES) el.append(E('button', { type: 'button', text: t, on: () => { if (S.files.some(F => F.file === id + '.kml')) return C.toast(`${t} is open already (My KML).`); loadUrl(EXAMPLE_BASE + id + '.kml'); } }));
+// KML sources: the catalogue (feeds/kml/catalogue.json, made by tools/find-kml.mjs), fetched when the panel is first opened.
+// One row per resource: Open (a file the page reads: open licence, CORS, at least one feature in the zone), Link only
+// (share-alike: the publisher's page in a new tab, never loaded here), or Not usable with the reason.
+const CATALOGUE = '../feeds/kml/catalogue.json', README = 'https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/README.md';
+const OPEN_CLASSES = new Set(['ogl', 'cc-by', 'odc-by', 'public-domain', 'cc0']);
+const KS = { rows: [], cls: 'all', q: '' };
+function srcAction(e) {
+  const cls = String(e.licence_class || 'none').toLowerCase();
+  if (e.url && e.open_link && e.cors === 'yes' && OPEN_CLASSES.has(cls)) return { kind: 'open' };
+  if (cls === 'share-alike') return { kind: 'link', href: e.page || e.url, why: 'Share-alike licence: opens the publisher’s page; not loaded into this page (project rule).' };
+  const why = e.reason || (e.cors && e.cors !== 'yes' ? `the server does not let this page read it (${e.cors})` : !OPEN_CLASSES.has(cls) ? `licence: ${e.licence || cls}` : 'not readable here');
+  return { kind: 'no', href: e.page || (/^https?:/.test(e.url || '') && !/[<>]/.test(e.url) ? e.url : null), why };
+}
+const clsGroup = c => { c = String(c || 'none').toLowerCase(); return OPEN_CLASSES.has(c) ? 'open' : c === 'share-alike' ? 'share-alike' : c === 'none' ? 'none' : c === 'restricted' ? 'restricted' : 'other'; };
+async function sources() {
+  const body = $('kmlSrcBody'); if (!body || KS.loaded) return; KS.loaded = true;
+  try { const r = await fetch(CATALOGUE, { cache: 'no-cache' }); if (!r.ok) throw new Error('HTTP ' + r.status); const cat = await r.json();
+    const rank = { open: 0, link: 1, no: 2 };
+    KS.rows = (cat.resources || []).map(e => ({ e, a: srcAction(e), g: clsGroup(e.licence_class) }))
+      .sort((x, y) => rank[x.a.kind] - rank[y.a.kind] || (y.e.zone_features ?? -1) - (x.e.zone_features ?? -1) || String(x.e.title).localeCompare(y.e.title));
+    const n = k => KS.rows.filter(r => r.a.kind === k).length, m = cat.meta || {};
+    body.textContent = '';
+    body.append(E('p', { class: 'small', text: `${KS.rows.length} resources checked on ${m.probed || '?'}: ${n('open')} open here, ${n('link')} by link only, ${n('no')} not usable. The page draws only inside the model box; “in zone” counts the wider zone (to the Royal Docks). ` }, E('a', { href: README, target: '_blank', rel: 'noopener', text: 'Method and licences (README)' })));
+    const f = E('div', { id: 'kmlSrcF', role: 'group', 'aria-label': 'Filter by licence class' });
+    for (const [k, t] of [['all', 'All'], ['open', 'Open licence'], ['share-alike', 'Share-alike'], ['none', 'No licence'], ['restricted', 'Restricted'], ['other', 'Other']]) {
+      const c = KS.rows.filter(r => k === 'all' || r.g === k).length; if (!c) continue;
+      const b = E('button', { type: 'button', 'aria-pressed': String(KS.cls === k), 'data-k': k, text: `${t} ${c}` }); b.onclick = () => { KS.cls = k; f.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); srcList(); }; f.append(b); }
+    const q = E('input', { type: 'search', id: 'kmlSrcQ', placeholder: 'Filter: title, publisher, licence', 'aria-label': 'Filter KML sources', autocomplete: 'off' }); q.oninput = () => { KS.q = q.value.trim().toLowerCase(); srcList(); };
+    body.append(f, q, E('div', { id: 'kmlSrcList' }));
+    srcList();
+  } catch (err) { KS.loaded = false; body.textContent = ''; body.append(E('p', { class: 'small', text: `The catalogue did not load (${err.message}). ` }, E('a', { href: README, target: '_blank', rel: 'noopener', text: 'KML sources (README)' }))); }
+}
+function srcList() {
+  const el = $('kmlSrcList'); if (!el) return; el.textContent = ''; let shown = 0;
+  for (const { e, a, g } of KS.rows) {
+    if (KS.cls !== 'all' && g !== KS.cls) continue;
+    if (KS.q && !`${e.title} ${e.publisher} ${e.licence} ${e.licence_class} ${e.note || ''}`.toLowerCase().includes(KS.q)) continue;
+    const z = e.zone_features, mb = e.model_box_features, badge = E('span', { class: 'ksB ' + (g === 'open' ? 'open' : g === 'share-alike' ? 'sa' : g === 'none' || g === 'restricted' ? 'no' : ''), text: e.licence_class || 'none' });
+    const info = E('div', {}, E('b', { text: e.title }), E('span', { class: 'small' }, badge, `${e.publisher || ''}${z != null ? ` · ${z.toLocaleString('en-GB')} in zone, ${(mb ?? 0).toLocaleString('en-GB')} in the model` : ''}${e.kind === 'copy' ? ' · our zone copy' : ''}`));
+    if (a.why) info.append(E('span', { class: 'small ksWhy', text: a.why.length > 220 ? a.why.slice(0, 218) + '…' : a.why }));
+    const row = E('div', { class: 'ksRow' }, info);
+    if (a.kind === 'open') row.append(E('button', { type: 'button', text: 'Open', title: `Load ${e.title} into the page`, on: () => openSource(e) }));
+    else if (a.kind === 'link' && a.href) row.append(E('a', { class: 'ksAct', href: a.href, target: '_blank', rel: 'noopener', text: 'Link only ↗' }));
+    else row.append(a.href ? E('a', { class: 'ksAct', href: a.href, target: '_blank', rel: 'noopener', text: 'Not usable ↗', title: 'The resource page (not loaded here)' }) : E('span', { class: 'small', text: 'Not usable' }));
+    el.append(row); shown++;
+  }
+  if (!shown) el.append(E('p', { class: 'small', text: 'No source matches.' }));
+}
+async function openSource(e) {
+  const F0 = S.files.find(F => F.src === e.url || F.file === decodeURIComponent(new URL(e.url).pathname.split('/').pop()));
+  if (innerWidth < 900 && $('drawerX') && $('drawer') && $('drawer').classList.contains('open')) $('drawerX').click();
+  if (F0) { C.toast(`${e.title.slice(0, 40)} is open already: showing it.`); return showOrFly(F0); }
+  const F = await loadUrl(e.url); if (F) F.src = e.url;
 }
 async function fromUrl() {
   const m = /[?&]kml=([^&#]+)/.exec(location.search); if (!m) return;
@@ -516,11 +561,11 @@ async function fromUrl() {
 async function loadUrl(u) {
   try { const url = new URL(u, location.href); if (!/^https?:$/.test(url.protocol)) throw new Error('only http(s) addresses');
     const r = await fetch(url, { credentials: 'omit' }); if (!r.ok) throw new Error('HTTP ' + r.status);
-    await open(await r.arrayBuffer(), decodeURIComponent(url.pathname.split('/').pop() || 'KML'), 'url'); }
-  catch (e) { C.toast(`The KML link did not load (${e.message}). The server must allow this site to read it (CORS).`); }
+    return await open(await r.arrayBuffer(), decodeURIComponent(url.pathname.split('/').pop() || 'KML'), 'url'); }
+  catch (e) { C.toast(`The KML link did not load (${e.message}). The server must allow this site to read it (CORS).`); return null; }
 }
 if (C) {
-  injectUi(); examples(); setInterval(sync, 1000);
-  globalThis.DocklandsKML = { open, openFiles, rebuild, exportView, currentView, goView, lonLatOf, loadUrl, frame, fitCam, show, emph, drawGL, after, get S() { return S; } };
+  injectUi(); setInterval(sync, 1000); { const d = $('kmlSrc'); if (d) d.addEventListener('toggle', () => { if (d.open) sources(); }); }
+  globalThis.DocklandsKML = { open, openFiles, rebuild, sources, openSource, KS, exportView, currentView, goView, lonLatOf, loadUrl, frame, fitCam, show, emph, drawGL, after, get S() { return S; } };
   fromUrl();
 }
