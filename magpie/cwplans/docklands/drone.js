@@ -386,7 +386,7 @@ V.tube = {
 // between levels; the autopilot follows the page's own route (Dijkstra in seconds) to a place
 const EYE = 1.6, SPEED = { steps: .6, escalator: .75, lift: 1.2 };
 const NV = () => D.NET, storey = () => +($('storey') || { value: 4 }).value;
-const vpos = v => { const N = NV().D.nodes; return [N[4 * v], N[4 * v + 3] + N[4 * v + 2] * storey(), N[4 * v + 1]]; };
+const vpos = v => { const N = NV().D.nodes, lv = N[4 * v + 2], g = N[4 * v + 3], ST = lv < 0 && globalThis.DocklandsStations, y = ST ? ST.levelY(N[4 * v], N[4 * v + 1], lv, g) : null; return [N[4 * v], y ?? g + lv * storey(), N[4 * v + 1]]; };   // station models: measured floors
 const findPlace = re => NV().P.find(p => re.test(p.name));
 V.walk = {
   async prepare() { await D.loadNet(); },

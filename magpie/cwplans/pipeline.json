@@ -8182,6 +8182,37 @@
         "build-docklands",
         "build-indoor"
       ]
+    },
+    {
+      "id": "station-mesh",
+      "area": "underground",
+      "tool": "tools/build-station-mesh.mjs",
+      "command": "node magpie/cwplans/tools/build-station-mesh.mjs --glb <londat>/third_party/tfl/am3d/models/stations-exports.zip",
+      "kind": "build",
+      "used": [
+        {
+          "source": "tfl-am3d",
+          "request": "danbri/londat third_party/tfl/am3d/models/stations-exports.zip (stations.glb), the Blender station models"
+        }
+      ],
+      "generated": [
+        {
+          "file": "docklands/data/stations.json"
+        }
+      ],
+      "note": "skill blender-station-models, \"On the 3D page\"",
+      "method": "Reads stations.glb from the export zip (GLB JSON and binary chunks, no library), merges the per-face vertices of each object to positions in cm relative to the object's origin, drops the text labels and the street reference plane, and writes the minimum-area plan rectangle (+1.5 m) of each structural box and an OSM level to m OD table per station taken from named model floors.",
+      "rules": [
+        "Positions stay in the 3D page frame (glTF Y up: x = E - 537550, y = m OD, z = -(N - 180300)); a node rotation or scale stops the tool.",
+        "Labels and the ground plane are left out: the page has its own labels and ground.",
+        "Cut-out rectangles come from the objects of class box (station boxes and hall volumes).",
+        "Level table: -3 platform, -2 ticket hall (Canary Wharf) or Windrush level concourse (Canada Water), -1 mezzanine or hall; level 0 stays the page's ground."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "blender-station-models"
+      ]
     }
   ],
   "manual_activities": [

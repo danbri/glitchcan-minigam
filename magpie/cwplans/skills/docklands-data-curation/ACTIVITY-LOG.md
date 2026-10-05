@@ -996,3 +996,28 @@ central tower - do we have an index of these?"
   obj, fbx, stl, usdc; making_of.zip with 102 captures, timelapse, contact sheet, scripts); index
   `feeds/underground/station-models.json`; register: source `tfl-am3d`, pipeline activity `blender-station-models`.
   check-data-register exit 0. No 3D page layer (no glTF loader in the WebGL1 page; skipped).
+
+## 2026-10-05 — Station models on the 3D page; making-of again at 5 s (Opus)
+- Owner: "Please redo zips but making of can be every 5 seconds", then "I expected you to create or use the relevant
+  loader / converter. Full and correct integration may require iterative tweaking of the model and its scaling".
+- Zips made again (londat f94783a): the same step scripts replayed through the MCP with a 5 s capture loop (68 captures,
+  19:45 to 19:51 UTC). Geometry equal to the first build (same triangle counts, 0.000 m vertex difference in the STLs).
+  `feeds/underground/station-models.json` has the new sizes and hashes.
+- New converter `tools/build-station-mesh.mjs` (GLB read with no library) -> `docklands/data/stations.json` (127 parts,
+  22,480 triangles; text labels, 79,572 triangles, left out; 416 kB, 86 kB gzipped). New layer `docklands/stations-layer.js`
+  (Layers > Show > Station models, on), drawn with the page's own program `pr` and `Mesh` (flat shaded by `shade()`).
+- Measured against the page: Jubilee rail levels agree (Canary Wharf -15.6 both; Canada Water page -13.5, model -13.3).
+  The page's OSM indoor floors are at level x storey: Canary Wharf platforms -1.7 m OD against the model's -14.6
+  (12.9 m high); Canada Water -9.4 and -6.6 against -12.3. So, with the models on, the page cuts its own tunnels
+  (Liang-Barsky) and OSM indoor floors out of five rectangles (station boxes and hall volumes, +1.5 m), and the walking
+  network (`vY`) and drone Walk (`vpos`) take OSM levels -3/-2/-1 to the model's floors inside the boxes. Drone Walk on
+  the Canary Wharf platform: eye -13.0 m OD (was -0.7). Model tunnel stubs are not drawn: the page's tunnels run to the
+  box faces.
+- Finding, not fixed: `data/sourced-levels.json` `cw-ell-platform` is a platform depth (Wikipedia 11 m) but the page uses
+  it as the Windrush tunnel floor (rail), so the page's Windrush tunnel there is about 1 m high against the model (rail
+  -6.6, platform -5.6). A step of about 0.8 m shows at the slot ends.
+- Tests (headless Chromium, SwiftShader WebGL): rotherhithe, greenland, pier, ?night and the default view at
+  1600 x 900 DPR 1 and 390 x 844 DPR 3 touch: no console error; mean luma equal with the layer on and off to 4 decimals
+  (the stations are hidden or a few pixels in those views); a mouse click and a touch tap on a station part open its
+  card. Close views: see the skill. Register entry `docklands/data/stations.json`, pipeline activity `station-mesh`;
+  check-data-register exit 0.

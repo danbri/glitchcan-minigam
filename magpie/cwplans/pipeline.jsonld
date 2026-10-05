@@ -8824,6 +8824,43 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/station-mesh",
+   "@type": "prov:Activity",
+   "rdfs:label": "station-mesh",
+   "dct:description": "Reads stations.glb from the export zip (GLB JSON and binary chunks, no library), merges the per-face vertices of each object to positions in cm relative to the object's origin, drops the text labels and the street reference plane, and writes the minimum-area plan rectangle (+1.5 m) of each structural box and an OSM level to m OD table per station taken from named model floors.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-am3d",
+     "dct:description": "danbri/londat third_party/tfl/am3d/models/stations-exports.zip (stations.glb), the Blender station models"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/stations.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/build-station-mesh.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/build-station-mesh.mjs --glb <londat>/third_party/tfl/am3d/models/stations-exports.zip",
+   "cwp:kind": "build",
+   "cwp:rule": [
+    "Positions stay in the 3D page frame (glTF Y up: x = E - 537550, y = m OD, z = -(N - 180300)); a node rotation or scale stops the tool.",
+    "Labels and the ground plane are left out: the page has its own labels and ground.",
+    "Cut-out rectangles come from the objects of class box (station boxes and hall volumes).",
+    "Level table: -3 platform, -2 ticket hall (Canary Wharf) or Windrush level concourse (Canada Water), -1 mezzanine or hall; level 0 stays the page's ground."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/blender-station-models"
+    }
+   ],
+   "cwp:area": "underground",
+   "cwp:fault": []
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
    "@type": "prov:Activity",
    "rdfs:label": "Published levels used as tunnel and structure controls",
@@ -13379,6 +13416,39 @@
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/blender-station-models"
    },
    "cwp:osmUse": "none",
+   "cwp:review": "TfL sheet basis is not an open licence: re-check before the models leave the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/stations.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the Blender station box models of Canary Wharf and Canada Water converted for the 3D page: positions and triangles of 127 parts (no text labels), each part's class, level, uncertainty and basis; cut-out rectangles where the page leaves out its own tunnels and OSM indoor floors; OSM level to m OD table per station for the walking network",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-am3d"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-foi"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-quotes"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-lidar"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/station-mesh"
+   },
+   "cwp:osmUse": "derived",
    "cwp:review": "TfL sheet basis is not an open licence: re-check before the models leave the prototyping phase"
   },
   {

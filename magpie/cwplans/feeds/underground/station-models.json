@@ -11,16 +11,16 @@
  "files": [
   {
    "file": "stations-blend.zip",
-   "bytes": 1842599,
-   "sha256": "b97f1638dbb21ba004b07ff74f0a338abc7a6d8bac4a8ba238948f9450906262",
+   "bytes": 1841025,
+   "sha256": "ce3c3f40660a64eacaea8cae6f2054bd8c420507c5e4c4b4e4ffd826fe132ff4",
    "contains": [
     "stations.blend"
    ]
   },
   {
    "file": "stations-exports.zip",
-   "bytes": 8858154,
-   "sha256": "499cb94f4420f838fc952b75809079095f37c37e713eb6aca2545669559381d2",
+   "bytes": 8898451,
+   "sha256": "7637b3e80e19a93066c9ae503274d06b3db3a3014590e02225d2075e8ce924ac",
    "contains": [
     "stations.glb",
     "canary-wharf.glb",
@@ -35,10 +35,10 @@
   },
   {
    "file": "making_of.zip",
-   "bytes": 8317012,
-   "sha256": "8c970aba5c3abb8e8866c0bb579daa2cf02e0cd00515f23dc3c389c55734115f",
+   "bytes": 6345917,
+   "sha256": "a2587aa67dbe9e0208b6b55988eb401789d9f48947446b680073c7e5434bd673",
    "contains": [
-    "screenshots (102, every 10 s)",
+    "screenshots (68, every 5 s, scripted rebuild of 2026-10-05 19:45-19:51 UTC; the 102 10-second captures of the authoring session are in londat commit 0077caa)",
     "timelapse.mp4",
     "contact-sheet.jpg",
     "stills",
@@ -116,5 +116,11 @@
    "contents": "JL box 150 x 23 x 22 m and ELL slot 130 m x 13 m deep (Wikipedia), OSM JL platforms 135.4 m, ELL platforms 3 and 4 (judged), OSM hall, ELL-level concourse, glass drum 25 m (centre fitted to OSM), 12 escalators (8 OSM + 4 judged middles), 22 OSM stair flights, lifts 1-4 and escape stair 3 (sheet), 5 entrances, tracks and tunnel stubs"
   }
  },
- "made_by": "magpie/cwplans/tools/blender-stations/ (Blender 4.0.2 + mcp-for-blender 2.1.8)"
+ "made_by": "magpie/cwplans/tools/blender-stations/ (Blender 4.0.2 + mcp-for-blender 2.1.8)",
+ "on_3d_page": {
+  "data": "magpie/cwplans/docklands/data/stations.json",
+  "tool": "magpie/cwplans/tools/build-station-mesh.mjs",
+  "layer": "magpie/cwplans/docklands/stations-layer.js",
+  "page": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?view=under (Menu > Layers > Show > Station models)"
+ }
 }

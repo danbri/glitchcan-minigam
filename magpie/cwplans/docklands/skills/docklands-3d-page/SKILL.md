@@ -919,6 +919,14 @@ the page only through `__docklands` (three new hooks: `tunnelY`, `par`, `tidalFi
 - **Not done**: lock portage for the boat; tunnel wall texture or rings (the inside of a tunnel box is flat colour, so
   speed is hard to feel); a wake; a stop at stations for the tube.
 
+## Station models (2026-10-05)
+
+Layers > Show > "Station models" (on): the Blender boxes of Canary Wharf and Canada Water, `docklands/stations-layer.js` +
+`data/stations.json`. Hooks in index.html: the script tag; `DocklandsStations.draw(0)` after `L.under` and `draw(1)` after
+`OV.glass`; `init(...)` before `window.__docklands`; `buildTunnels`/`buildUnder` cut the station rectangles out
+(`outside()`, `inside()`, keys with `hideKey()`); `vY` asks `levelY()` for negative levels. drone.js `vpos` too. Details,
+measurements and the open Windrush-level finding: skill `blender-station-models`, section 8.
+
 ## Testing
 
 Headless Chromium with SwiftShader (repo `CLAUDE.md`, "Headless browser"), from a local server (fetch needs http):
