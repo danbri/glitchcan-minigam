@@ -9109,6 +9109,20 @@
    "cwp:gap": "The pixel measurements were run from the session scratchpad (a 10-line Pillow script: crop, sort by brightness, mean of the top fraction); the boxes are in no committed file."
   },
   {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/README.md",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "KML sources for the zone: the best open-licensed resources with ready ?kml= links of the 3D page, the ones that open by link only, those looked at and not usable with the reason, counts by licence class (made from catalogue.json)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kml-catalogue"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/kml/catalogue.json",
    "@type": [
     "prov:Entity",
