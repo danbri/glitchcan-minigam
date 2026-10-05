@@ -1,5 +1,5 @@
 // Docklands 3D page: navigation helpers. Momentum after a drag, pinch or twist; the ground limit (a soft wall 1 m from
-// the ground or water at the eye, a haptic click and a pass into Below ground when the push goes on).
+// the ground or water at the eye, a haptic click and a pass into Below ground when the push goes on); Share this view.
 // Loaded after locate.js; talks to the page only through window.__docklands. Why each choice was made and the
 // tests: skill docklands-3d-page, "Navigation: momentum, ground limit, share".
 (() => {
@@ -162,8 +162,126 @@ cv.addEventListener('wheel', e => { if (!S.wsnap) return; const s0 = S.wsnap; S.
   guard(s0, true, Math.min(120, Math.abs(e.deltaY)) * .6, e.timeStamp); if (S.hold) S.holdW = e.timeStamp; }, { passive: true });
 for (const ty of ['pointerup', 'pointercancel']) addEventListener(ty, () => { if (!S.ptrs.size) S.hold = false; });   // bubble phase: after the release above
 
+// ---------- Share this view (Menu, under the views): a link whose #hash holds the camera, style, Night, clock, Below
+// ground, every layer switch that differs from the page's default and the record on the card. Short keys, rounded
+// numbers, v=1. The hash is written only when the visitor taps Share. The locate button's position is never read: while
+// the view follows the visitor's location, the link leaves the camera out.
+const r1 = x => Math.round(x * 10) / 10, r4 = x => Math.round(x * 1e4) / 1e4;
+const VIEW_IDS = new Set(['nightMode', 'liveTide', 'liveCams', 'bmode']);   // carried by n= and r=, or live-only
+const inputs = () => [...document.querySelectorAll('#drawer input, #drawer select')].filter(el => !el.disabled && !(el.id && /^(viz|r(From|To)$|q$)/.test(el.id)) && el.type !== 'file' && el.type !== 'text' && el.type !== 'search');
+const keyOf = el => el.id || (el.dataset.glow ? 'glow-' + el.dataset.glow : '');
+const byKey = k => k.startsWith('glow-') ? document.querySelector(`[data-glow="${CSS.escape(k.slice(5))}"]`) : $(k);
+const selDefault = el => { const o = [...el.options].find(o => o.defaultSelected) || el.options[0]; return o ? o.value : ''; };
+let lastPick = null;   // the label whose record is on the card (a tap on the model or a search clears it)
+if (labelBox) labelBox.addEventListener('click', e => { const b = e.target.closest('button'); const l = b && D.labels.find(x => x.el === b); if (l && !l.camEl) lastPick = l; });
+cv.addEventListener('pointerup', () => { lastPick = null; }); const qres = $('qres'); if (qres) qres.addEventListener('click', () => { lastPick = null; }, true);
+const sheetOpen = () => { const sh = $('sheet'); return !!sh && sh.getBoundingClientRect().height > 40; };
+function shareState() {
+  const o = [['v', '1']], L = globalThis.DocklandsLocate, follow = followMode();
+  if (!follow) {
+    if (cam.eye && cam.target) o.push(['e', [...cam.eye, ...cam.target].map(r1).join(',')]);
+    o.push(['c', [r1(cam.tx), r1(cam.tz), r1(cam.ty || 0), Math.round(cam.dist), r4(cam.yaw), r4(cam.pitch)].join(',')]);
+    if (cam.hfov) o.push(['f', 'h' + r4(cam.hfov)]); else if (cam.fov) o.push(['f', String(r4(cam.fov))]);
+    if (cam.roll) o.push(['rl', String(r4(cam.roll))]);   // degrees, a view from an aircraft (?view=plane)
+  }
+  const vb = document.querySelector('[data-view][aria-pressed=true]'); if (vb && !follow) o.push(['vw', vb.dataset.view]);
+  o.push(['n', D.NIGHT.on ? '1' : '0']);
+  const K = globalThis.DocklandsSky; if (K && K.S) o.push(['t', K.S.live || !K.S.drive ? 'now' : K.isoL(K.t)]);
+  o.push(['u', $('gauge') && !$('gauge').hidden ? '1' : '0']);
+  const on = [], offs = [], rad = [], sel = [], rng = [];
+  for (const el of inputs()) {
+    const k = keyOf(el); if (!k || VIEW_IDS.has(k)) continue;
+    if (el.type === 'checkbox') { if (el.checked !== el.defaultChecked) (el.checked ? on : offs).push(k); }
+    else if (el.type === 'radio') { if (el.checked && !el.defaultChecked) rad.push(el.name + ':' + el.value); }
+    else if (el.type === 'range') { const dv = k === 'skyYear' ? el.max : el.defaultValue; if (el.value !== dv) rng.push(k + ':' + el.value); }
+    else if (el.tagName === 'SELECT') { if (el.value !== selDefault(el)) sel.push(k + ':' + el.value); }
+  }
+  for (const [k, a] of [['on', on], ['off', offs], ['r', rad], ['s', sel], ['g', rng]]) if (a.length) o.push([k, a.join(',')]);
+  if (sheetOpen()) { if (lastPick) o.push(['id', lastPick.wd || 'l:' + lastPick.name]); else if (D.selected >= 0 && D.AT) o.push(['id', D.AT.buildings[D.selected].id]); }
+  if (document.body.classList.contains('capture')) o.push(['cap', '1']);
+  return { pairs: o, follow };
+}
+const enc = v => encodeURIComponent(v).replace(/%2C/g, ',').replace(/%3A/g, ':').replace(/%20/g, '+');
+function shareUrl() {
+  const { pairs, follow } = shareState(), u = new URL(location.href);
+  for (const k of ['view', 't', 'night', 'pixel']) u.searchParams.delete(k);   // the hash carries these
+  u.hash = pairs.map(([k, v]) => k + '=' + enc(v)).join('&');
+  return { url: u.href, hash: u.hash, follow };
+}
+async function share() {
+  const { url, hash, follow } = shareUrl(), out = $('shareOut');
+  try { history.replaceState(history.state, '', location.pathname + location.search + hash); } catch { /* sandboxed */ }
+  if (out) { out.hidden = false; out.textContent = url; }
+  const note = follow ? ' The view follows your location, so the link has no camera: drag the map first to share a place.' : '';
+  S.shared = url;
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+    try { await navigator.share({ title: document.title, url }); if (note) D.toast(note.trim()); return url; } catch (e) { if (e && e.name === 'AbortError') return url; }
+  }
+  let copied = false;
+  try { await navigator.clipboard.writeText(url); copied = true; } catch {
+    try { const ta = document.createElement('textarea'); ta.value = url; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); copied = document.execCommand('copy'); ta.remove(); } catch { /* no clipboard */ }
+  }
+  D.toast((copied ? 'Link to this view copied.' : 'Copy the link from the menu (under Share this view).') + note);
+  return url;
+}
+// the button and the link under it, in the views group of the menu
+{ const dig = $('digBtn'), b = document.createElement('button'); b.type = 'button'; b.id = 'shareBtn'; b.textContent = 'Share this view';
+  b.title = 'A link that opens this view, style, time and layers'; b.onclick = () => { share(); };
+  if (dig && dig.parentNode) dig.after(b); else ($('dViews') || document.body).appendChild(b);
+  const out = document.createElement('div'); out.id = 'shareOut'; out.className = 'small'; out.hidden = true; out.style.cssText = 'user-select:text;-webkit-user-select:text;word-break:break-all;margin:4px 2px 0;opacity:.85';
+  const grp = b.closest('#dViews') || b.parentNode; grp.appendChild(out); }
+
+// ---------- open a shared link: read the hash once at load. Unknown keys are ignored; a bad value keeps the default.
+const num = v => { const n = +v; return v !== '' && isFinite(n) ? n : null; };
+function parseHash(h) {
+  const m = {}; for (const part of String(h || '').replace(/^#/, '').split('&')) { const i = part.indexOf('='); if (i > 0) { try { m[part.slice(0, i)] = decodeURIComponent(part.slice(i + 1).replace(/\+/g, ' ')); } catch { /* bad escape */ } } }
+  return m.v === '1' ? m : null;
+}
+const until = (f, ms = 20000) => new Promise(ok => { const t0 = performance.now(); (function w() { let v = false; try { v = f(); } catch { v = false; } if (v || performance.now() - t0 > ms) ok(v); else setTimeout(w, 100); })(); });
+const fire = (el, type) => el.dispatchEvent(new Event(type, { bubbles: true }));
+async function restore(m) {
+  S.restoring = true;
+  try {
+    if (m.vw && document.querySelector(`[data-view="${CSS.escape(m.vw)}"]`)) D.setView(m.vw);
+    const K = globalThis.DocklandsSky;
+    if (K && m.t) { if (m.t === 'now') { if (!K.S.live && K.S.drive) K.setTime(Date.now(), { live: true, noUrl: true }); } else { const t = K.fromLondon(m.t); if (isFinite(t)) K.setTime(t, { noUrl: true }); } }
+    const pairs = k => (m[k] || '').split(',').filter(Boolean).map(x => { const i = x.indexOf(':'); return i > 0 ? [x.slice(0, i), x.slice(i + 1)] : [x, null]; });
+    for (const [name, val] of pairs('r')) {   // style first: pixel art saves and replaces the camera
+      const el = [...document.querySelectorAll(`#drawer input[type=radio][name="${CSS.escape(name)}"]`)].find(x => x.value === val);
+      if (el && !el.checked) { el.checked = true; fire(el, 'change'); if (name === 'style') await until(() => D.PIX.on === (val === 'pixel')); }
+    }
+    for (const [k] of pairs('on')) { const el = byKey(k); if (el && el.type === 'checkbox' && !el.checked) { el.checked = true; fire(el, 'change'); } }
+    for (const [k] of pairs('off')) { const el = byKey(k); if (el && el.type === 'checkbox' && el.checked) { el.checked = false; fire(el, 'change'); } }
+    for (const [k, val] of pairs('s')) { const el = $(k); if (el && el.tagName === 'SELECT' && [...el.options].some(o => o.value === val)) { el.value = val; fire(el, 'change'); } }
+    const under = m.u === '1', gauge = $('gauge');
+    if (gauge && under === gauge.hidden) { if (under) $('digBtn').click(); else $('gaugeX').click(); }
+    for (const [k, val] of pairs('g')) { const el = $(k), n = num(val); if (!el || el.type !== 'range' || n == null) continue;
+      if (k === 'skyYear') await until(() => +el.max > 0, 8000);
+      el.value = String(clamp(n, +el.min, +el.max)); fire(el, 'input'); }
+    if (m.n === '1' || m.n === '0') { if (!!D.NIGHT.on !== (m.n === '1')) D.setNight(m.n === '1'); }
+    if (m.cap === '1' && !document.body.classList.contains('capture')) D.captureMode(true);
+    const c = (m.c || '').split(',').map(num);
+    if (c.length >= 6 && c.slice(0, 6).every(x => x != null)) {
+      delete cam.eye; delete cam.target; delete cam.fov; delete cam.hfov; delete cam.roll;
+      Object.assign(cam, { tx: c[0], tz: c[1], ty: c[2], dist: clamp(c[3], DMIN, DMAX), yaw: c[4], pitch: clamp(c[5], D.PIX.on ? .2 : PMIN_UNDER, PMAX) });
+      const f = m.f || ''; if (/^h[\d.]+$/.test(f) && num(f.slice(1)) > .05 && num(f.slice(1)) < 3.1) cam.hfov = +f.slice(1); else if (num(f) > .05 && num(f) < 3.1) cam.fov = +f;
+      const rl = num(m.rl); if (rl != null && Math.abs(rl) < 90) cam.roll = rl;
+      const e = (m.e || '').split(',').map(num); if (e.length === 6 && e.every(x => x != null)) { cam.eye = e.slice(0, 3); cam.target = e.slice(3); cam.fov = cam.fov || .8; }
+      if (!m.vw) document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', 'false'));
+    }
+    D.draw();
+    if (m.id) {
+      if (/^cwb-\d+$/.test(m.id)) { if (await until(() => D.AT, 60000)) { const k = D.AT.buildings.findIndex(b => b.id === m.id); if (k >= 0) D.selectBuilding(k); } }
+      else { const key = m.id.startsWith('l:') ? m.id.slice(2) : m.id, l = D.labels.find(x => (x.wd && x.wd === key) || x.name === key); if (l && l.el) l.el.click(); }
+    }
+    S.restored = m;
+  } catch (e) { console.warn('shared view', e); } finally { S.restoring = false; }
+}
+const shared = parseHash(location.hash);
+if (shared) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(() => restore(shared), 0)); else setTimeout(() => restore(shared), 0); }
+
 const NAV = globalThis.DocklandsNav = {
-  state: S, fling, stop, tick, pitchMin, guard, clearance: () => clr(get()), isUnder,
+  state: S, fling, stop, tick, pitchMin, guard, clearance: () => clr(get()), isUnder, share, shareUrl, shareState, parseHash, restore,
   afterMove(s0, e) { const p = S.xy.get(e.pointerId), dpx = p ? Math.hypot(e.clientX - p[0], e.clientY - p[1]) : 0; S.xy.set(e.pointerId, [e.clientX, e.clientY]); if (S.hold) { put({ ...get(), pitch: s0.pitch, ld: s0.ld, ty: s0.ty }); return; } guard(s0, true, dpx, e.timeStamp); },
   afterStep(s0, v) { const g = guard(s0, false); if (g.r < 1) { v.pitch *= g.r; v.ld *= g.r; } if (g.blocked) { v.pitch = 0; v.ld = 0; } },
 };

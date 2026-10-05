@@ -665,6 +665,42 @@ snapshot before a move, `cv` and `#labels` bubble listeners to read the result a
   WebKit), so iPhones get the ring and the line only; Android Chrome vibrates only after a user gesture on the page and
   not in battery saver or with touch vibration off in the system settings. Headless Chromium returns true and does nothing.
   Also how the soft wall feels at 60 to 120 frames a second, and whether 0.6 s is the right push.
+- **Share this view** (owner, 2026-10-05: "add a share view action in side menu so we can share url with #blahblah").
+  Menu > views group > "Share this view" (`#shareBtn`, injected after "Below ground"; the link is also shown under it,
+  `#shareOut`, selectable). On a touch device with `navigator.share` the system share sheet opens; else the link is copied
+  (`navigator.clipboard`, then `execCommand('copy')`) and a toast says so. The page URL's hash is replaced
+  (`history.replaceState`) only when Share is tapped; nothing rewrites it while the camera moves. The shared URL drops
+  `?view`, `?t`, `?night` and `?pixel` (the hash carries them) and keeps other parameters (`?capture`).
+  Hash, `v=1` first, keys in this order, unknown keys ignored on load:
+
+  | key | holds |
+  |---|---|
+  | `c` | target x, z, y (m, 0.1), distance (m), yaw, pitch (rad, 4 decimals) |
+  | `f` | `h` + horizontal field (a photo view's lens) or the vertical field, rad |
+  | `rl` | roll in degrees (`?view=plane`) |
+  | `e` | free camera eye x,y,z and target x,y,z (drone flights; never the locate eye mode) |
+  | `vw` | the view button that was pressed, applied first (its night, cut and building mode) |
+  | `n` | Night 1/0; `t` the page clock (`2026-10-04T23:56`, London time) or `now`; `u` Below ground (gauge open) 1/0 |
+  | `on`, `off` | every Menu checkbox whose state differs from its HTML default (id; Glow chips as `glow-<kind>`), so layers added later (KML, river, ships) are carried with no change here |
+  | `r` | radio groups not at their default, `name:value` (style, ground image, buildings, splats) |
+  | `s` | selects not at their default, `id:value` (colour by, splat set) |
+  | `g` | ranges not at their default, `id:value` (cut, vertical scale, storey, ...; `skyYear` against its max) |
+  | `id` | the record on the card: a `cwb-` id, a label's Wikidata id, or `l:` + label name |
+  | `cap` | `?capture` look |
+
+  Example (1600 x 900 test): `https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/#v=1&c=-512.3,321.1,12.3,2345,1.1235,0.4321&f=0.9&n=1&t=2026-10-04T23:56&u=1&on=showTrees,glow-finance,ov_works&off=crownDate,showLabels&s=colourBy:height&g=cut:-5,vz:2&id=cwb-0413`.
+  On load (`DOMContentLoaded`, after sky.js) the order is: view, clock, radios (waits for pixel art, which saves and
+  replaces the camera), checkboxes, selects, gauge, ranges, Night, capture, camera, then the record (waits for the
+  atlas). A bad number keeps the default; ranges are clamped to their min and max. `#at=x,z[,dist]` still works (no
+  `v=1`: nav.js leaves it to the page). **Never the visitor's location**: `locate.js` state is not read except its mode;
+  while the view follows the location (centred, heading, eye) the link has no camera and the toast says why.
+- **Measured** (share test): the round trip restores camera to the rounding (0.05 m, 5e-5 rad), every Menu input,
+  Night, gauge, clock and record; sharing the restored page gives the same hash; mean luma 41.04 and 41.13 (of 255),
+  mean absolute difference 0.95 (live ships and rounding); `?view=plane` keeps its roll 9.18 and field; a hash of bad
+  values (`c=abc`, `vz:999`, unknown keys, `cwb-99999`) loads with no error (camera default, vz 5); follow mode gives no
+  `c=`. 1600 x 900 DPR 1 and 390 x 844 DPR 3.
+- **Only a real phone can confirm**: the share sheet (`navigator.share` needs a secure context and a user tap; headless
+  has none, so the clipboard path is what was tested), and clipboard permission prompts in Safari and Firefox.
 
 ## KML (2026-10-05)
 

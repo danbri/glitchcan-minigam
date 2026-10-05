@@ -880,3 +880,9 @@ central tower - do we have an index of these?"
 - `docklands/nav.js`: the eye stays 1 m above the LiDAR ground or water at its own position (soft wall, momentum damped);
   a push of 0.6 s or 480 px clicks (vibrate 15 ms; a ring and a line on iOS) and passes into Below ground; the same back up.
   One hook in index.html: the drag's pitch limit is `DocklandsNav.pitchMin()` (-1.35 below ground). Tests 8/8 at both sizes.
+
+## 2026-10-05 — 3D page navigation: Share this view (step 3 of 3)
+- `docklands/nav.js`: Menu > "Share this view" builds a link whose hash (v=1) holds the camera, field and roll, view,
+  Night, clock, Below ground, every Menu checkbox, radio, select and range not at its default, and the record on the card;
+  system share sheet on touch devices, else copied with a toast. Restored on load; `#at=` unchanged; the visitor's
+  location is never put in the link. Hook in index.html: `__docklands.selected`. Tests 9/9 at both sizes.

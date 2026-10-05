@@ -2268,6 +2268,7 @@ window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pick
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; delete cam.hfov; delete cam.roll; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
+Object.defineProperty(window.__docklands, 'selected', { get: () => selected });   // nav.js: Share this view names the building on the card
 outs(); setView('cw');
 { const vm = /[?&]view=(\w+)/.exec(location.search); if (vm && VIEWS[vm[1]]) setView(vm[1]); }   // ?view=rotherhithe, ?view=greenland, ?view=pier, ?view=plane (and the other views)
 loadJSON('data/tex/facades.json').then(T => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok([T, im]); im.onerror = () => no(new Error('facades.jpg')); im.src = 'data/tex/facades.jpg'; })).then(([T, im]) => {
