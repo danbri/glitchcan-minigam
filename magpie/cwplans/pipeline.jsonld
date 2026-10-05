@@ -8622,7 +8622,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cache-londat",
    "@type": "prov:Activity",
    "rdfs:label": "cache-londat",
-   "dct:description": "Runs a subset of the existing fetch tools as child processes with their own politeness (fetch-live.mjs bikes lifts crowding ukpn overflows notams; fetch-river.mjs levels river-bus; fetch-ais.mjs --listen=0), asks two small endpoints itself (TfL line status by mode, Open-Meteo current weather; one request each), reads the snapshot JSON the tools wrote and appends it to an SQLite file per UTC month in the londat checkout (node:sqlite, WITHOUT ROWID tables with primary keys on the source's fetch or reading time). Then writes cache/latest.json: per theme the newest fetch in compact columns and a 24 h series. --no-fetch appends from the snapshots already in the checkout. Planned to run hourly from a GitHub Actions workflow in danbri/londat (skill cwplans-londat-cache).",
+   "dct:description": "Runs a subset of the existing fetch tools as child processes with their own politeness (fetch-live.mjs bikes lifts crowding ukpn overflows notams; fetch-river.mjs levels river-bus; fetch-ais.mjs --listen=0), asks two small endpoints itself (TfL line status by mode, Open-Meteo current weather; one request each), reads the snapshot JSON the tools wrote, replays this month's run files (cache/runs/) into a working SQLite (node:sqlite, WITHOUT ROWID tables with primary keys on the source's fetch or reading time), inserts the new snapshots and writes only the rows that were new as one small gzip JSON run file. The first run of a new month replays the previous month's run files into cache/live-YYYY-MM.sqlite (VACUUM) and removes them. Then writes cache/latest.json: per theme the newest fetch in compact columns and a 24 h series. --no-fetch appends from the snapshots already in the checkout. Planned to run hourly from a GitHub Actions workflow in danbri/londat (skill cwplans-londat-cache).",
    "prov:used": [
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/feeds/live/bikes.json"
@@ -8667,6 +8667,9 @@
    ],
    "prov:generated": [
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/runs/live-*.json.gz"
+    },
+    {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/live-*.sqlite"
     },
     {
@@ -8685,7 +8688,7 @@
     "Small private craft are never listed: the AIS filter of fetch-ais.mjs is repeated (ITU type 36/37, class B without a type are dropped) and their count is kept in ais_fetches.private_counted.",
     "Places (docks, stations, overflows, piers, gauges) are stored once in places and updated in place; state rows hold only ids and numbers.",
     "A run goes into the month of its newest snapshot; tide readings within 48 h of a month boundary can appear in two month files.",
-    "No VACUUM per run (an appended file deltas well in git); --vacuum when a month is closed."
+    "Git size (coordinator, 2026-10-05): no binary file is committed per run; each run adds one run file (measured size in the skill) and latest.json; the monthly SQLite is committed once."
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
@@ -9268,7 +9271,52 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "SQLite history of live state in the zone, one file per UTC month (live-2026-10.sqlite first): Santander Cycles docks, lift outages, station crowding, power cuts, storm overflows, NOTAM cranes and areas (facts), AIS vessel positions (small private craft counted only), EA tide and river level readings, TfL line status, river-bus arrival counts, Open-Meteo current weather; tables sources and runs. Times are Unix seconds; schema in skill cwplans-londat-cache",
+   "dct:title": "SQLite history of live state in the zone, one file per closed UTC month (the first, live-2026-10.sqlite, is written by the first run in November): the month's run files (cache/runs/) replayed and VACUUMed. Santander Cycles docks, lift outages, station crowding, power cuts, storm overflows, NOTAM cranes and areas (facts), AIS vessel positions (small private craft counted only), EA tide and river level readings, TfL line status, river-bus arrival counts, Open-Meteo current weather; tables sources and runs. Times are Unix seconds; schema in skill cwplans-londat-cache",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ukpn-live-faults"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/thames-water-storm-overflows"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/nats-pib"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-ais"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/aishub-via-openwaters"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/aisstream-via-openwaters"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openwaters-volunteer-cc0"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-flood-monitoring"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/open-meteo"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cache-londat"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "AIS rows from AISHub and aisstream.io: Accepted for scoping only (owner, 2026-10-04: \"Accept AISHub (and perhaps aisstream) events for scoping. Sounds fine. Flag it somewhere for review as we scale.\"). Review before scaling or any commercial use: AISHub permission is a private letter reported by Open Waters, 'revocable at will'; aisstream.io has no published terms; the Open Waters hosted service is free for personal use, commercial use needs its paid tier or our own receiver"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/cache/runs/live-*.json.gz",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the rows each hourly run of tools/cache-londat.mjs added, one gzip JSON file per run ({format, run_time, statements: [[sql, rows]]}, a few kB to 47 kB for the seed); replayed into the working SQLite at each run and into cache/live-YYYY-MM.sqlite when the month closes, then removed",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-live-feeds"

@@ -3066,7 +3066,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 #### 71. `cache-londat` (tools/cache-londat.mjs)
 
 - Command: `NODE_USE_ENV_PROXY=1 LONDAT_DIR=../londat node magpie/cwplans/tools/cache-londat.mjs [--no-fetch] [--themes=bikes,lifts,...] [--vacuum]`
-- Method: Runs a subset of the existing fetch tools as child processes with their own politeness (fetch-live.mjs bikes lifts crowding ukpn overflows notams; fetch-river.mjs levels river-bus; fetch-ais.mjs --listen=0), asks two small endpoints itself (TfL line status by mode, Open-Meteo current weather; one request each), reads the snapshot JSON the tools wrote and appends it to an SQLite file per UTC month in the londat checkout (node:sqlite, WITHOUT ROWID tables with primary keys on the source's fetch or reading time). Then writes cache/latest.json: per theme the newest fetch in compact columns and a 24 h series. --no-fetch appends from the snapshots already in the checkout. Planned to run hourly from a GitHub Actions workflow in danbri/londat (skill cwplans-londat-cache).
+- Method: Runs a subset of the existing fetch tools as child processes with their own politeness (fetch-live.mjs bikes lifts crowding ukpn overflows notams; fetch-river.mjs levels river-bus; fetch-ais.mjs --listen=0), asks two small endpoints itself (TfL line status by mode, Open-Meteo current weather; one request each), reads the snapshot JSON the tools wrote, replays this month's run files (cache/runs/) into a working SQLite (node:sqlite, WITHOUT ROWID tables with primary keys on the source's fetch or reading time), inserts the new snapshots and writes only the rows that were new as one small gzip JSON run file. The first run of a new month replays the previous month's run files into cache/live-YYYY-MM.sqlite (VACUUM) and removes them. Then writes cache/latest.json: per theme the newest fetch in compact columns and a 24 h series. --no-fetch appends from the snapshots already in the checkout. Planned to run hourly from a GitHub Actions workflow in danbri/londat (skill cwplans-londat-cache).
 - Rules:
   - Idempotent: every table has a primary key with the fetch time of the snapshot (meta.fetched) or the reading time (tide, AIS positions, weather); INSERT OR IGNORE, so a second run on the same snapshots adds no rows.
   - Politeness is the fetch tools' own (one request at a time per host, >= 1.5 s for TfL, >= 1 s for EA, >= 2 s and no stream for Open Waters); the tool adds two requests per run with up to two retries 3 and 6 s apart.
@@ -3074,7 +3074,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - Small private craft are never listed: the AIS filter of fetch-ais.mjs is repeated (ITU type 36/37, class B without a type are dropped) and their count is kept in ais_fetches.private_counted.
   - Places (docks, stations, overflows, piers, gauges) are stored once in places and updated in place; state rows hold only ids and numbers.
   - A run goes into the month of its newest snapshot; tide readings within 48 h of a month boundary can appear in two month files.
-  - No VACUUM per run (an appended file deltas well in git); --vacuum when a month is closed.
+  - Git size (coordinator, 2026-10-05): no binary file is committed per run; each run adds one run file (measured size in the skill) and latest.json; the monthly SQLite is committed once.
 - Inputs:
   - [feeds/live/bikes.json](feeds/live/bikes.json)
   - [feeds/live/lifts.json](feeds/live/lifts.json)
@@ -3089,6 +3089,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
   - **open-meteo** (Open-Meteo weather API, CC BY 4.0 (data); API free for non-commercial use): https://api.open-meteo.com/v1/forecast?latitude=51.505&longitude=-0.02&current=...; one request per run
   - `data/raw/cache/ (the two responses; --no-fetch reads them)` (local, not committed)
 - Outputs:
+  - [cache/runs/live-*.json.gz](cache/runs/live-*.json.gz)
   - [cache/live-*.sqlite](cache/live-*.sqlite)
   - [cache/latest.json](cache/latest.json)
 - Network: yes; deterministic: no; kind: fetch; after: `fetch-live`, `fetch-ais`

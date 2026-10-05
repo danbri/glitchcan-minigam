@@ -12,12 +12,18 @@
 // Open-Meteo current weather. Those two are written to data/raw/cache/ (gitignored) so --no-fetch can read them again.
 // The fetch tools rewrite their snapshot files in this checkout (feeds/live, feeds/river), as they always do.
 //
-// Out (LONDAT_DIR, tools/londat.mjs):  cwplans/cache/live-YYYY-MM.sqlite   (one file per UTC month of the run)
-//                                      cwplans/cache/latest.json           (latest state + last 24 h series, per theme)
-// Idempotent: every table has a primary key with the source's own fetch time (or reading time); a second run on the
-// same snapshots adds no rows. Schema, sizes, refresh plan and licences: skill cwplans-londat-cache
+// Out (LONDAT_DIR, tools/londat.mjs):
+//   cwplans/cache/runs/live-<run time>.json.gz   the rows this run added (a few kB; one small new file per run, so git
+//                                                history grows by the new rows only, not by a new copy of a database)
+//   cwplans/cache/latest.json                    latest state + last 24 h series, per theme
+//   cwplans/cache/live-YYYY-MM.sqlite            written once, by the first run of the next month: the month's run
+//                                                files replayed into one SQLite, VACUUMed; then those run files are removed
+// Each run rebuilds the current month in a working SQLite (data/raw/cache/, gitignored) from the run files, adds its own
+// rows and records the ones that were new. Idempotent: every table has a primary key with the source's own fetch time
+// (or reading time); a second run on the same snapshots adds no rows and writes no run file. Schema, sizes, refresh plan and licences: skill cwplans-londat-cache
 // (magpie/cwplans/skills/cwplans-londat-cache/SKILL.md).
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync, rmSync } from 'node:fs';
+import { gzipSync, gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TOOLS, RAW, UA } from './lib.mjs';
@@ -26,13 +32,13 @@ import { LONDAT_CW, warnIfNoLondat } from './londat.mjs';
 process.removeAllListeners('warning');   // node:sqlite prints an ExperimentalWarning in Node 22; nothing else is hidden
 const { DatabaseSync } = await import('node:sqlite');
 
-const CW = join(TOOLS, '..'), OUT = join(LONDAT_CW, 'cache'), RAWDIR = join(RAW, 'cache');
+const CW = join(TOOLS, '..'), OUT = join(LONDAT_CW, 'cache'), RUNS = join(OUT, 'runs'), RAWDIR = join(RAW, 'cache');
 const args = process.argv.slice(2), NOFETCH = args.includes('--no-fetch'), DRY = args.includes('--dry');
 const THEMES = ['bikes', 'lifts', 'crowding', 'power_cuts', 'overflows', 'notams', 'ais', 'tide', 'line_status', 'river_bus', 'weather'];
 const want = new Set(((args.find(a => a.startsWith('--themes=')) || '').split('=')[1] || THEMES.join(',')).split(','));
 for (const t of want) if (!THEMES.includes(t)) { console.error(`unknown theme ${t}; themes: ${THEMES.join(' ')}`); process.exit(2); }
 warnIfNoLondat();
-mkdirSync(OUT, { recursive: true }); mkdirSync(RAWDIR, { recursive: true });
+mkdirSync(RUNS, { recursive: true }); mkdirSync(RAWDIR, { recursive: true });
 const STARTED = new Date(), errors = [];
 const ep = s => { if (s == null || s === '' || s === 'PERM') return null; const v = Date.parse(s); return isFinite(v) ? Math.round(v / 1000) : null; };
 const iso = t => t == null ? null : new Date(t * 1000).toISOString().replace('.000Z', 'Z');
@@ -126,20 +132,37 @@ if (want.has('weather')) snaps.weather = rawSnap('weather', 'open-meteo-current.
 // the month of the newest snapshot (in --no-fetch the snapshots may be days old: they go into their own month)
 const times = Object.values(snaps).filter(Boolean).map(s => ep(s.meta.fetched)).filter(Boolean);
 const RUN_T = times.length ? Math.max(...times) : Math.round(STARTED / 1000);
-const MONTH = iso(RUN_T).slice(0, 7), FILE = join(OUT, `live-${MONTH}.sqlite`);
-const bytesBefore = existsSync(FILE) ? statSync(FILE).size : 0;
-const db = new DatabaseSync(DRY ? ':memory:' : FILE);
-db.exec('PRAGMA journal_mode=DELETE; PRAGMA page_size=4096;' + SCHEMA);
-const put = (sql, rows) => { const st = db.prepare(sql); let n = 0; for (const r of rows) n += Number(st.run(...r).changes); return n; };
+const MONTH = iso(RUN_T).slice(0, 7);
+// run files: cache/runs/live-2026-10-05T1606Z.json.gz = {format: 1, run_time, statements: [[sql, rows], ...]}
+const runFiles = m => readdirSync(RUNS).filter(n => n.startsWith(`live-${m}-`) && n.endsWith('.json.gz')).sort();
+const replay = (d, f) => { const r = JSON.parse(gunzipSync(readFileSync(join(RUNS, f)))); for (const [sql, rows] of r.statements) { const st = d.prepare(sql); for (const row of rows) st.run(...row); } };
+const openDb = file => { if (existsSync(file)) rmSync(file); const d = new DatabaseSync(file); d.exec('PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA page_size=4096;' + SCHEMA); return d; };
+// close every earlier month that still has run files: one SQLite per month, VACUUMed, then its run files removed
+const months = [...new Set(readdirSync(RUNS).map(n => (n.match(/^live-(\d{4}-\d{2})-/) || [])[1]).filter(Boolean))].sort();
+for (const m of months.filter(m => m < MONTH)) {
+  if (DRY) continue;
+  const f = join(OUT, `live-${m}.sqlite`), files = runFiles(m), d = openDb(f + '.tmp');
+  d.exec('BEGIN'); for (const r of files) replay(d, r); d.exec('COMMIT'); d.exec('PRAGMA journal_mode=DELETE; VACUUM'); d.close();
+  rmSync(f, { force: true }); writeFileSync(f, readFileSync(f + '.tmp')); rmSync(f + '.tmp');
+  for (const r of files) rmSync(join(RUNS, r));
+  console.log(`closed ${m}: ${files.length} run files -> live-${m}.sqlite (${statSync(f).size} bytes)`);
+}
+const WORK = join(RAWDIR, `work-${MONTH}.sqlite`), db = openDb(DRY ? ':memory:' : WORK);
+db.exec('BEGIN'); const nReplayed = runFiles(MONTH).length; for (const r of runFiles(MONTH)) replay(db, r); db.exec('COMMIT');
+const bytesBefore = DRY ? 0 : statSync(WORK).size;
+const REC = new Map();   // sql -> the rows this run changed
+const rec = (sql, row) => { if (!REC.has(sql)) REC.set(sql, []); REC.get(sql).push(row); };
+const put = (sql, rows) => { const st = db.prepare(sql); let n = 0; for (const r of rows) { const c = Number(st.run(...r).changes); if (c) rec(sql, r); n += c; } return n; };
+const upsert = sql => { const st = db.prepare(sql); return { run: (...r) => { const c = Number(st.run(...r).changes); if (c) rec(sql, r); return c; } }; };
 const counts = {};
 db.exec('BEGIN');
-put('INSERT OR REPLACE INTO meta VALUES (?, ?)', [
+const metaRows = [
   ['schema', '1'], ['month', MONTH], ['about', 'History of live state in the Canary Wharf / Docklands zone, appended by magpie/cwplans/tools/cache-londat.mjs in https://github.com/danbri/glitchcan-minigam. Times are Unix seconds (UTC). Skill: magpie/cwplans/skills/cwplans-londat-cache/SKILL.md'],
   ['licence', 'No blanket licence: each table keeps the licence of its source (table sources). AIS rows from AISHub and aisstream.io are accepted for scoping only (owner, 2026-10-04) and marked review.'],
-  ['zone', 'model box WGS84 -0.095, 51.474 to 0.015, 51.522; east margin 0.015, 51.495 to 0.085, 51.522; Lea strip -0.025, 51.522 to 0.01, 51.528 (river and AIS)']]);
-put('INSERT OR REPLACE INTO sources VALUES (?, ?, ?, ?, ?, ?, ?)', THEMES.map(t => { const [k, pol] = SRC[t], s = REG[k] || {}, m = snaps[t]?.meta || {};
-  return [t, k, m.url || s.url || null, m.licence || s.licence || null, m.attribution || s.attribution || null, pol, t === 'ais' ? 'AISHub and aisstream.io events: accepted for scoping only (owner, 2026-10-04); review before scaling or commercial use. Small private craft are counted, never listed.' : (s.review || null)]; }));
-const place = db.prepare('INSERT INTO places VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, name=excluded.name, lat=excluded.lat, lon=excluded.lon, zone=excluded.zone');
+  ['zone', 'model box WGS84 -0.095, 51.474 to 0.015, 51.522; east margin 0.015, 51.495 to 0.085, 51.522; Lea strip -0.025, 51.522 to 0.01, 51.528 (river and AIS)']];
+const sourceRows = THEMES.map(t => { const [k, pol] = SRC[t], s = REG[k] || {}, m = snaps[t]?.meta || {};
+  return [t, k, m.url || s.url || null, m.licence || s.licence || null, m.attribution || s.attribution || null, pol, t === 'ais' ? 'AISHub and aisstream.io events: accepted for scoping only (owner, 2026-10-04); review before scaling or commercial use. Small private craft are counted, never listed.' : (s.review || null)]; });
+const place = upsert('INSERT INTO places VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, name=excluded.name, lat=excluded.lat, lon=excluded.lon, zone=excluded.zone WHERE (kind, name, lat, lon, zone) IS NOT (excluded.kind, excluded.name, excluded.lat, excluded.lon, excluded.zone)');
 const placeOf = (i, kind) => place.run(i.id, kind || i.kind, i.name || i.values?.name || null, r5(i.position?.lat), r5(i.position?.lon), i.zone || i.position?.zone || null);
 
 let s;
@@ -160,7 +183,7 @@ if ((s = snaps.notams)) { const t = ep(s.meta.fetched), v = i => i.values;
 if ((s = snaps.ais)) { const t = ep(s.meta.fetched);
   // fetch-ais.mjs never lists small private craft; this filter repeats its type rule so that a change there cannot leak them here
   const listed = s.items.filter(i => i.mmsi && ![36, 37].includes(i.ship_type) && !(i.class === 'B' && !i.ship_type));
-  const vs = db.prepare(`INSERT INTO ais_vessels VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(mmsi) DO UPDATE SET name=coalesce(excluded.name, name), callsign=coalesce(excluded.callsign, callsign), imo=coalesce(excluded.imo, imo),
+  const vs = upsert(`INSERT INTO ais_vessels VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(mmsi) DO UPDATE SET name=coalesce(excluded.name, name), callsign=coalesce(excluded.callsign, callsign), imo=coalesce(excluded.imo, imo),
     ship_type=coalesce(excluded.ship_type, ship_type), ship_type_group=coalesce(excluded.ship_type_group, ship_type_group), class=coalesce(excluded.class, class), flag=coalesce(excluded.flag, flag),
     length_m=coalesce(excluded.length_m, length_m), beam_m=coalesce(excluded.beam_m, beam_m), first_seen=min(first_seen, excluded.first_seen), last_seen=max(last_seen, excluded.last_seen)`);
   for (const i of listed) vs.run(i.mmsi, i.name || null, i.callsign || null, i.imo || null, i.ship_type ?? null, i.ship_type_group || null, i.class || null, i.flag || null, i.length_m ?? null, i.beam_m ?? null, ep(i.time) || t, ep(i.time) || t);
@@ -177,17 +200,25 @@ if ((s = snaps.line_status)) { const t = ep(s.meta.fetched);
   counts.line_status = put('INSERT OR IGNORE INTO line_status VALUES (?, ?, ?, ?, ?)', s.body.flatMap(l => (l.lineStatuses || []).map(st => [t, l.id, st.statusSeverity, st.statusSeverityDescription, st.reason ? st.reason.replace(/\s+/g, ' ').slice(0, 300) : null]))); }
 if ((s = snaps.weather)) { const c = s.body.current || {};
   counts.weather = put('INSERT OR IGNORE INTO weather VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [[ep(c.time + 'Z'), ep(s.meta.fetched), c.temperature_2m, c.relative_humidity_2m, c.wind_speed_10m, c.wind_gusts_10m, c.wind_direction_10m, c.cloud_cover, c.precipitation, c.weather_code]]); }
-db.exec('COMMIT');
-if (args.includes('--vacuum')) db.exec('VACUUM');
 const rowsTotal = Object.values(counts).reduce((a, b) => a + b, 0);
-const bytesAfter = DRY ? 0 : statSync(FILE).size;
-if (!DRY) { db.prepare('INSERT INTO runs (started, finished, tool, mode, counts, errors, bytes_before, bytes_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-  .run(Math.round(STARTED / 1000), Math.round(Date.now() / 1000), 'cache-londat.mjs', NOFETCH ? 'no-fetch' : 'fetch', JSON.stringify(counts), JSON.stringify(errors), bytesBefore, bytesAfter); }
-console.log(`${DRY ? '(dry) ' : ''}live-${MONTH}.sqlite: +${rowsTotal} rows ${JSON.stringify(counts)}; ${bytesBefore} -> ${bytesAfter} bytes`);
+let runFile = null;
+if (rowsTotal) {   // meta, sources and the run's own row go into the run file only when the run added data
+  put('INSERT OR REPLACE INTO meta VALUES (?, ?)', metaRows);
+  put('INSERT OR REPLACE INTO sources VALUES (?, ?, ?, ?, ?, ?, ?)', sourceRows);
+  put('INSERT INTO runs (started, finished, tool, mode, counts, errors, bytes_before, bytes_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [[Math.round(STARTED / 1000), Math.round(Date.now() / 1000), 'cache-londat.mjs', NOFETCH ? 'no-fetch' : 'fetch', JSON.stringify(counts), JSON.stringify(errors), nReplayed, null]]);
+}
+db.exec('COMMIT');
+if (rowsTotal && !DRY) {
+  runFile = `live-${iso(RUN_T).slice(0, 16).replace(':', '')}Z.json.gz`;
+  const gz = gzipSync(JSON.stringify({ format: 1, run_time: iso(RUN_T), tool: 'magpie/cwplans/tools/cache-londat.mjs', statements: [...REC] }), { level: 9 });
+  writeFileSync(join(RUNS, runFile), gz);
+}
+console.log(`${DRY ? '(dry) ' : ''}${MONTH}: ${nReplayed} run files replayed; +${rowsTotal} rows ${JSON.stringify(counts)}; ${runFile ? `cache/runs/${runFile} ${statSync(join(RUNS, runFile)).size} bytes` : 'no run file (nothing new)'}`);
 if (errors.length) console.error('errors: ' + JSON.stringify(errors));
 
 // ---------------- 3. latest.json: per theme the newest fetch (compact) and a 24 h series, from this month's file and the one before
-if (!DRY) writeLatest(); db.close();
+if (!DRY) writeLatest(); db.close(); if (!DRY) rmSync(WORK, { force: true });
 function writeLatest() {
   const prev = join(OUT, `live-${iso(ep(MONTH + '-01T00:00:00Z') - 86400).slice(0, 7)}.sqlite`);
   if (existsSync(prev)) db.exec(`ATTACH '${prev.replace(/'/g, "''")}' AS p`);
@@ -196,8 +227,8 @@ function writeLatest() {
   const last = tbl => one(`SELECT max(fetch_time) t FROM ${both(tbl)}`).t;
   const P = new Map(all('SELECT * FROM places').map(p => [p.id, p]));
   const src = Object.fromEntries(all('SELECT * FROM sources').map(r => [r.theme, { licence: r.licence, attribution: r.attribution, url: r.url, ...(r.review ? { review: r.review } : {}) }]));
-  const out = { about: 'Latest live state of the Canary Wharf / Docklands zone and the last 24 hours, written by magpie/cwplans/tools/cache-londat.mjs (danbri/glitchcan-minigam) from the SQLite history in this folder. Times: ISO UTC. Each theme keeps the licence of its source (sources).',
-    written: iso(Math.round(Date.now() / 1000)), history: `cache/live-${MONTH}.sqlite`, sources: src, themes: {} };
+  const out = { about: 'Latest live state of the Canary Wharf / Docklands zone and the last 24 hours, written by magpie/cwplans/tools/cache-londat.mjs (danbri/glitchcan-minigam) from the history in this folder. Times: ISO UTC. Each theme keeps the licence of its source (sources).',
+    written: iso(Math.round(Date.now() / 1000)), history: `cache/runs/live-${MONTH}-*.json.gz (this month, one file per run); cache/live-YYYY-MM.sqlite (closed months)`, sources: src, themes: {} };
   const T = out.themes, nm = id => P.get(id)?.name ?? null, pos = id => P.get(id) ? [P.get(id).lat, P.get(id).lon] : null;
   let t;
   if ((t = last('bikes'))) T.bikes = { fetched: iso(t), cols: ['id', 'name', 'lat', 'lon', 'bikes', 'e_bikes', 'empty_docks', 'docks'], rows: all('SELECT * FROM bikes WHERE fetch_time = ?', t).map(r => [r.id, nm(r.id), ...pos(r.id), r.bikes, r.e_bikes, r.empty_docks, r.docks]),

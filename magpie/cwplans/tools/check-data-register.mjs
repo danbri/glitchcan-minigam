@@ -38,7 +38,8 @@ const hostedHere = f => f.hosted === 'londat';
 const loc = p => ((byPath.get(p) ? hostedHere(byPath.get(p)) : isHostedPath(p)) ? join(LONDAT_CW, p) : join(CW, p));
 let hostedUnchecked = 0;
 // A hosted entry may name a family of files with a * in its file name (cache/live-*.sqlite: one SQLite per month, added by
-// the londat workflow with no edit here). It covers every such file in that londat folder; at least one must exist.
+// the londat workflow with no edit here). It covers every such file in that londat folder; at least one must exist unless
+// the entry has "may_be_empty": true (the monthly SQLite before the first month is closed).
 const isPattern = p => p.includes('*');
 const patRe = p => new RegExp('^' + p.split('*').map(x => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*') + '$');
 const patterns = reg.files.filter(f => isPattern(f.path)).map(f => [patRe(f.path), f]);
@@ -53,7 +54,7 @@ for (const f of reg.files) {
   if (hostedHere(f)) {
     if (trackedSet.has(f.path)) problems.push(`${f.path}: hosted in londat but still tracked in this repository`);
     if (!LONDAT) hostedUnchecked++;
-    else if (!filesOf(f.path).length) problems.push(`register entry has no file in the londat checkout: ${f.path} (${LONDAT_DIR})`);
+    else if (!filesOf(f.path).length && !(isPattern(f.path) && f.may_be_empty)) problems.push(`register entry has no file in the londat checkout: ${f.path} (${LONDAT_DIR})`);
   } else if (!existsSync(join(CW, f.path))) problems.push(`register entry has no file: ${f.path}`);
   if (isHostedPath(f.path) !== hostedHere(f)) problems.push(`${f.path}: ${isHostedPath(f.path) ? 'in a londat folder (tools/londat.mjs HOSTED_DIRS) but has no "hosted": "londat"' : 'has "hosted": "londat" but is not in a londat folder (tools/londat.mjs HOSTED_DIRS)'}`);
   for (const s of f.sources) if (!reg.sources[s]) problems.push(`${f.path}: unknown source "${s}"`);
@@ -102,7 +103,7 @@ if (pipe) {
     for (const f of a.faults || []) if (!faultIds.has(f)) problems.push(`pipeline.json ${what} ${a.id}: fault ${f} is not in the fault register (${SKILL_PATH})`);
   }
   for (const m of manual) for (const u of [...(m.used || []), ...(m.generated || [])]) {
-    if (u.file && !(LONDAT || !isHostedPath(u.file) ? filesOf(u.file).length > 0 : true)) problems.push(`pipeline.json manual activity ${m.id}: no committed file ${u.file}`);
+    if (u.file && !(LONDAT || !isHostedPath(u.file) ? (filesOf(u.file).length > 0 || !!byPath.get(u.file)?.may_be_empty) : true)) problems.push(`pipeline.json manual activity ${m.id}: no committed file ${u.file}`);
     if (u.source && !reg.sources[u.source]) problems.push(`pipeline.json manual activity ${m.id}: unknown source ${u.source}`);
   }
   const made = new Set();
@@ -110,7 +111,7 @@ if (pipe) {
     if (!existsSync(join(CW, a.tool))) problems.push(`pipeline.json ${a.id}: no tool ${a.tool}`);
     for (const d of a.after || []) if (!ids.has(d)) problems.push(`pipeline.json ${a.id}: after names unknown activity ${d}`);
     for (const u of [...(a.used || []), ...(a.generated || [])]) {
-      if (u.file && !(LONDAT || !isHostedPath(u.file) ? filesOf(u.file).length > 0 : true)) problems.push(`pipeline.json ${a.id}: no committed file ${u.file}`);
+      if (u.file && !(LONDAT || !isHostedPath(u.file) ? (filesOf(u.file).length > 0 || !!byPath.get(u.file)?.may_be_empty) : true)) problems.push(`pipeline.json ${a.id}: no committed file ${u.file}`);
       if (u.source && !reg.sources[u.source]) problems.push(`pipeline.json ${a.id}: unknown source ${u.source}`);
     }
     for (const g of a.generated || []) if (g.file) made.add(g.file);
