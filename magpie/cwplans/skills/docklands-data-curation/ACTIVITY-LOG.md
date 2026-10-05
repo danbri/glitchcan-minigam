@@ -875,3 +875,8 @@ central tower - do we have an index of these?"
 - Exports carry their credits in the Document description; OSM-derived geometry (building outlines, OSM construction
   footprints, OSM river positions) is marked "© OpenStreetMap contributors, ODbL 1.0" per placemark. AIS ships are not
   exported (licence under review). Nothing is uploaded: visitors' files stay in the browser.
+
+## 2026-10-05 — 3D page navigation: ground limit and pass into Below ground (step 2 of 3)
+- `docklands/nav.js`: the eye stays 1 m above the LiDAR ground or water at its own position (soft wall, momentum damped);
+  a push of 0.6 s or 480 px clicks (vibrate 15 ms; a ring and a line on iOS) and passes into Below ground; the same back up.
+  One hook in index.html: the drag's pitch limit is `DocklandsNav.pitchMin()` (-1.35 below ground). Tests 8/8 at both sizes.

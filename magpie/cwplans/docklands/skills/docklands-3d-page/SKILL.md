@@ -639,6 +639,32 @@ snapshot before a move, `cv` and `#labels` bubble listeners to read the result a
   dead; hold 200 ms before release and a slow drag: no fling; a two-finger twist plus spread flings yaw and zoom (touch);
   `setView` during a fling stops it; in locate `centred` mode `fling` returns false and the follow still reaches the fix;
   reduced motion: no fling. 1600 x 900 DPR 1 (mouse) 7/7 and 390 x 844 DPR 3 (touch) 8/8, no console error.
+- **Ground limit** (owner, 2026-10-05: "forbid view to very casually spin upside down so we look up from below at a place.
+  But we will want to be able to force past that for looking at pools, docks, tube, underground mall"). The eye
+  (`ty + dist sin(pitch) / vz`, at x, z of the orbit) stays 1 m above `groundAt` at its own x, z (the LiDAR DTM: the
+  ground, a deck, or the water surface the LiDAR saw; a live tide above that is not used). Only a move that brings the eye
+  closer is changed: within max(6 m, 2% of the distance) of the wall the tilt and zoom part is scaled by
+  (clearance - 1 m) / zone (at least 0.06), and a move that would cross is cut at 1 m by bisection; pan and turn keep
+  going unless they alone run into rising ground. Momentum meets the same wall and loses its tilt and zoom speed there.
+  Views that start under 1 m (none of the photo views do) are left alone until a move goes further down.
+  The page's drag clamp calls `DocklandsNav.pitchMin()`: -0.6 above ground (as before), -1.35 below ground, 0.2 in pixel art.
+- **Pass-through**: a push against the wall for 0.6 s (3 or more blocked moves) or 480 px of blocked finger travel
+  clicks: `navigator.vibrate(15)` where the browser has it, a ring in the middle of the screen that fills while the push
+  lasts and snaps, a line "Below ground. Push up to come back.", and a `docklands-nav-pass` event (`detail.to`). Going
+  down it does what the Below ground button does: opens the depth gauge and, if no level is set, cuts the model at the
+  street level under the eye minus 1 m; the eye is put 1.5 m under the surface (pitch towards -1.35; the target moves
+  down only when the pitch cannot reach). The rest of that gesture does not tilt or zoom on (`S.hold` until the fingers
+  lift, or 400 ms with no wheel). Below ground the wall is 1 m under the surface and the same push brings the eye 1.5 m
+  above it and closes the gauge (its cross takes the cut away). "Below ground" turned on from the menu with the eye
+  above the surface: the eye goes down through the surface with no click (the visitor already chose it).
+- **Measured** (`DocklandsNav.clearance()`, `isUnder()`, `state.passes`): a 300 px drag up in 0.3 s stops at clearance
+  1.00 m, pitch 0.0041, no pass (19 blocked moves); 1.2 s more push: one pass, one event, gauge open, cut 4 m OD,
+  clearance -1.5 m; a fling at -2 rad/s stops at 1.00 m; six wheel notches in: 2.29 m; a two-finger pinch with one finger
+  on the "Limehouse" label: distance 1500 to 443 and no card opened. 1600 x 900 DPR 1 (mouse) and 390 x 844 DPR 3 (touch).
+- **Only a real phone can confirm**: the click. `navigator.vibrate` is not in iOS Safari (any iOS browser: they all use
+  WebKit), so iPhones get the ring and the line only; Android Chrome vibrates only after a user gesture on the page and
+  not in battery saver or with touch vibration off in the system settings. Headless Chromium returns true and does nothing.
+  Also how the soft wall feels at 60 to 120 frames a second, and whether 0.6 s is the right push.
 
 ## KML (2026-10-05)
 
