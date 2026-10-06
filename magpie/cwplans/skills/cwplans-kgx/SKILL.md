@@ -100,8 +100,9 @@ an earlier build (15 graphs, 659 blocks); on this one the same entity reads 60 b
   (the in-memory parse). Run it after a rebuild with new data and after a Factoidal upgrade.
 - An independent engine as a third opinion: pyoxigraph in a venv, `Store.bulk_load(path=…, format=RdfFormat.N_QUADS,
   lenient=True)`. Strict loading refuses one IRI in our data (F49).
-- Report to Factoidal (store granularity, zone-key order, subqueries, manifest cost; not filed by us, the owner posts it):
-  `factoidal-issue-2026-10-06-store.md` in this folder.
+- Reported to Factoidal as https://github.com/danbri/factoidal/issues/697 (store granularity, zone-key order, subqueries,
+  manifest cost; text in `factoidal-issue-2026-10-06-store.md`). `tools/check-factoidal.mjs` re-tests its points after
+  an upgrade (STILL or FIXED); when one is FIXED, review the parts and the query rule above.
 
 ## The search page (`kg/`)
 

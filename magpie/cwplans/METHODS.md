@@ -1406,10 +1406,10 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 #### 65. `check-factoidal` (tools/check-factoidal.mjs)
 
 - Command: `node magpie/cwplans/tools/check-factoidal.mjs`
-- Method: Re-tests the known @factoidal/core faults and behaviours on tiny in-memory datasets and prints STILL or FIXED for each: BNODE() labels with a colon, serialize() dropping their quads, parse() of toNQuads() dropping lines, SELECT BNODE() values with a _: prefix, blank nodes renamed per query, no default-graph view of named graphs.
+- Method: Re-tests the known @factoidal/core faults and behaviours on tiny in-memory datasets and prints STILL or FIXED for each: BNODE() labels with a colon, serialize() dropping their quads, parse() of toNQuads() dropping lines, SELECT BNODE() values with a _: prefix, blank nodes renamed per query, no default-graph view of named graphs. Also the store points of Factoidal issue 697: one block per (predicate, graph), zone keys sorted by length first, a COUNT over a subquery planning every block (small stores packed in a temporary folder and removed), the unexported README import path, and an IRI with several "#" accepted.
 - Rules:
   - Run after every Factoidal upgrade; remove a workaround in web-idioms.mjs or elsewhere only when its line says FIXED.
-  - No network and no files written.
+  - No network; the store checks pack small stores in a temporary folder and remove it; nothing in the repository is written.
 - Inputs:
   - **factoidal** (@factoidal/core 0.7.1, Apache-2.0): npm @factoidal/core (local); parse, query (SELECT, CONSTRUCT), serialize, toNQuads on tiny in-memory cases
 - Outputs: none (prints only)

@@ -1,3 +1,5 @@
+Filed by the owner on 2026-10-06 as https://github.com/danbri/factoidal/issues/697 (this file is the text as posted).
+
 Title: Shardborough ibk5: one block per (predicate, graph), so zone maps only work if the data is split into extra named graphs; zone keys sort by length first; subqueries plan every block; every call re-parses the manifest
 
 Package: @factoidal/core 0.7.1 (npm), Lean engine `l4-assets/l4factoidal.js` (Node 22.22.0, Linux; the same engine in Chromium in a Web Worker).

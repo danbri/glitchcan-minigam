@@ -1203,3 +1203,5 @@ Owner: "don't waste good info by burying it in our chatlogs".
   `skills/cwplans-kgx/factoidal-issue-2026-10-06-store.md`.
 - New `tools/check-kgx-store.mjs` (store against in-memory, on every rebuild or upgrade). New fault F49 (an HTML-escaped
   URL in the CWG directory, an invalid IRI).
+- Owner filed the store report: https://github.com/danbri/factoidal/issues/697. `tools/check-factoidal.mjs` now re-tests
+  its points (12 checks in all, 2 s; all STILL with 0.7.1).

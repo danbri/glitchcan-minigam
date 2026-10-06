@@ -7219,7 +7219,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-factoidal",
    "@type": "prov:Activity",
    "rdfs:label": "check-factoidal",
-   "dct:description": "Re-tests the known @factoidal/core faults and behaviours on tiny in-memory datasets and prints STILL or FIXED for each: BNODE() labels with a colon, serialize() dropping their quads, parse() of toNQuads() dropping lines, SELECT BNODE() values with a _: prefix, blank nodes renamed per query, no default-graph view of named graphs.",
+   "dct:description": "Re-tests the known @factoidal/core faults and behaviours on tiny in-memory datasets and prints STILL or FIXED for each: BNODE() labels with a colon, serialize() dropping their quads, parse() of toNQuads() dropping lines, SELECT BNODE() values with a _: prefix, blank nodes renamed per query, no default-graph view of named graphs. Also the store points of Factoidal issue 697: one block per (predicate, graph), zone keys sorted by length first, a COUNT over a subquery planning every block (small stores packed in a temporary folder and removed), the unexported README import path, and an IRI with several \"#\" accepted.",
    "prov:used": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
@@ -7235,7 +7235,7 @@
    "cwp:kind": "check",
    "cwp:rule": [
     "Run after every Factoidal upgrade; remove a workaround in web-idioms.mjs or elsewhere only when its line says FIXED.",
-    "No network and no files written."
+    "No network; the store checks pack small stores in a temporary folder and remove it; nothing in the repository is written."
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
