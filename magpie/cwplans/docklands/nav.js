@@ -197,7 +197,7 @@ function shareState() {
     else if (el.tagName === 'SELECT') { if (el.value !== selDefault(el)) sel.push(k + ':' + el.value); }
   }
   for (const [k, a] of [['on', on], ['off', offs], ['r', rad], ['s', sel], ['g', rng]]) if (a.length) o.push([k, a.join(',')]);
-  if (sheetOpen()) { if (lastPick) o.push(['id', lastPick.wd || 'l:' + lastPick.name]); else if (D.selected >= 0 && D.AT) o.push(['id', D.AT.buildings[D.selected].id]); }
+  if (sheetOpen()) { if (lastPick) o.push(['id', lastPick.wd || 'l:' + lastPick.name]); else if (D.selected >= 0 && D.AT) o.push(['id', D.AT.buildings[D.selected].id]); else if (globalThis.DocklandsKeys && DocklandsKeys.sel) o.push(['id', 'osm:' + DocklandsKeys.sel]); }
   if (document.body.classList.contains('capture')) o.push(['cap', '1']);
   const Dr = globalThis.DocklandsDrone; if (Dr && Dr.on && !follow) o.push(['dr', Dr.shareValue()]);   // drone.js: vehicle and pose
   return { pairs: o, follow };
@@ -274,6 +274,7 @@ async function restore(m) {
     D.draw();
     if (m.id) {
       if (/^cwb-\d+$/.test(m.id)) { if (await until(() => D.AT, 60000)) { const k = D.AT.buildings.findIndex(b => b.id === m.id); if (k >= 0) D.selectBuilding(k); } }
+      else if (/^osm:[wr]\d+$/.test(m.id)) { if (globalThis.DocklandsKeys) await globalThis.DocklandsKeys.selectId(m.id.slice(4)); }
       else { const key = m.id.startsWith('l:') ? m.id.slice(2) : m.id, l = D.labels.find(x => (x.wd && x.wd === key) || x.name === key); if (l && l.el) l.el.click(); }
     }
     S.restored = m;

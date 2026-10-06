@@ -58,11 +58,23 @@ Data: https://github.com/danbri/londat/tree/main/kgx (README). Graph, store and 
 | `lift-activity-log` | 1 | cwplans-dataflow | the log (less log lifts and packs) → `log` |
 | `pack-shardborough` | 1 | cwplans-kgx | parts + `meta` + `log` → a store generation, `gen-<sha256(store input)[0:16]>` |
 | `lift-imagery-coverage` | 1 | docklands-data-curation | coverage answer files (`tools/probe-imagery-coverage.mjs`) → `coverage-imagery` |
+| `rectify-facade-patches`, `lift-contrib-photos` (2), `cut-facade-tiles` | 1 | docklands-data-curation | contributed photos + photos.json (`tools/contrib-photos.mjs`) → `facade-patches-<set>`, `photos-<set>`, `facade-tiles-<set>` |
+| `key-model-buildings` | 2 | docklands-3d-page | area.js + the OSM clip + the Greater London extract + atlas.json → `model-building-keys` (not in the store) and its projection `docklands/data/building-keys.json` |
+| `compose-facade-atlas` | 1 | docklands-3d-page | registry atlas + `facade-tiles-*` + `model-building-keys` + area.js → `facade-atlas` and `docklands/data/tex/facades.jpg/.json` |
 
 **Composition across tools.** A tool other than `build-kgx.mjs` runs its own operations with a `Flow` on the same
 londat `kgx/` folder (same log) and names its output version in `kgx/external-heads.json` (graph name → version IRI).
 `build-kgx.mjs` reads that file and treats those versions like its own lifts: partition, describe, pack. It fails if a
-named version is not in `log/versions.jsonl` or its file is missing.
+named version is not in `log/versions.jsonl` or its file is missing. A value `{ "iri": ..., "store": false }` is a head,
+is described in `meta` and is in `current.nq.gz`, but is not packed into the browser store: `model-building-keys`
+(183,485 triples, more than the rest of kgx; a query in the browser gains little from model indices).
+
+**Side files** (a page file, tiles, an atlas) are written inside an operation's body, so a run that the log already has
+does not write them again. Write a projection of the output graph outside the body when it can be (building-keys.json
+is remade on every run); otherwise bump the operation version if a side file is lost.
+
+**A comment at the end of a one-line statement** cut off the `writeFileSync` after it (`key-model-buildings.mjs`,
+2026-10-06; the 3D page skill's rule): the external head was not written. Put a comment on its own line.
 
 ## Rules learned
 

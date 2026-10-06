@@ -78,14 +78,17 @@ colour mask and polygon offset at the start of every frame. After you edit a lon
   outline ring on walls and `-(1 + height)` on roofs, so the shader tells walls (`u >= 0`) from roofs and roofs of
   buildings under 40 m (`u > -41`) take the ground image.
 - **The alpha byte of a building vertex is not opacity** (`alOf`): 255 plain; `100 + slot` a photo facade tile (slots
-  0 to 15); `200 + 8 x material` in pixel art (0 brick, 1 render, 2 glass, 3 ribbon windows, 4 metal, 5 glass with a
+  0 to 31 since 2026-10-06); `200 + 8 x material` in pixel art (0 brick, 1 render, 2 glass, 3 ribbon windows, 4 metal, 5 glass with a
   measured facade colour). Opacity is the uniform `a` only.
 - **`g` = [centre x, centre z, base m OD, night kind]** per vertex. The music deformation uses x, z and base. Night
   kind `g.w` = use x 1000 + roof top in m OD; use 0 unknown, 1 homes, 2 offices, 3 hotel, 4 Newfoundland (cwb-0451),
   5 One Canada Square (cwb-0413). Building use reaches the shader only through `g.w`, never through the alpha byte.
-- **Picking.** `buildPick()` draws every building off screen in a colour that encodes its registry ordinal + 1;
-  `pickAt(x, y)` reads the pixel. The cut-away applies, so a tap can reach underground. 28 model buildings belong to
-  two registry records, and the pick answers with the later one (README "Drone flight").
+- **Picking.** `buildPick()` draws every building off screen in a colour that encodes its **model index** + 1 (24 bits:
+  16.7 million buildings); `pickAt(x, y)` reads the pixel and returns the model index, or -1. `selectModel(i)` opens the
+  registry card when `regOf[i] >= 0` (`selectBuilding(k)`), else the OpenStreetMap card (`building-keys.js`). Until
+  2026-10-06 the colour was the registry ordinal, so a building outside the registry (all of Rotherhithe, Canada Water,
+  Limehouse) could not be tapped. The cut-away applies, so a tap can reach underground. 28 model buildings belong to
+  two registry records, and the registry card answers with the later one (README "Drone flight").
 - **Coordinates.** Local metres x = E - 537550, z = -(N - 180300), y = m OD (README "Area and coordinates"). The page
   accepts `#at=x,z[,dist]`; the atlas links here that way.
 - **Pixel-art frame buffer.** `pixBegin()` unbinds the frame's own texture before drawing into it: a texture that is
@@ -94,7 +97,7 @@ colour mask and polygon offset at the start of every frame. After you edit a lon
 URL switches: `?view=<name>` (any key of `VIEWS`: area, cw, under, plan, rotherhithe, greenland, pier, greenlandday), `?night`,
 `?pixel`, `?capture` (no overlays, photo colours: drone frames), `#music`, `#at=`.
 Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNight`, `setStyle`, `setSplatMode`,
-`setGround`, `captureMode`, `pickAt`, `selectBuilding`, `searchItems`, `route`, `setEye`/`clearEye`, `screenOf`,
+`setGround`, `captureMode`, `pickAt` (model index), `selectBuilding`, `selectModel`, `MFP`, `modelAt`, `FT`, `searchItems`, `route`, `setEye`/`clearEye`, `screenOf`,
 `NIGHT`, `AVL`, `BL`, `PIX`, `VIZ`, `SPL`, `AT`, `AUDst`, and `setTidal`, `relight` for sky.js).
 
 ## Interface (owner, 2026-10-03: "The city is the star not our endless word buttons")
@@ -142,10 +145,11 @@ Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNig
   small buildings become speckle). Colours come from **materials**, not height: a height ramp read as a heat map
   (owner, 2026-10-03). Measured facade colours snap to the palette's building colours, never to a tree green. Night
   is off in pixel art.
-- **Photo facades**: `data/tex/facades.jpg` is 2048 x 1024, 8 x 4 tiles of 256 px, 16 towers today;
-  `data/tex/facades.json` gives each building its slot and the tile size on the wall in metres (`w_m`, `h_m`). Built by
-  `tools/build-facade-atlas.py`, which cuts whole floors by whole bays so the tile repeats (photos and measurement:
-  hub skill, "Trees and facades"). Without mipmaps the far towers speckle. `fract()` on the tile coordinate makes the
+- **Photo facades**: `data/tex/facades.jpg` is 2048 x 1024, 8 x 4 tiles of 256 px: slots 0 to 15 the registry towers
+  (`facades-registry.jpg/.json`, built by `tools/build-facade-atlas.py`, which cuts whole floors by whole bays so the
+  tile repeats; photos and measurement: hub skill, "Trees and facades"), then contributed tiles (see "Building keys").
+  `data/tex/facades.json` gives each building its slot and the tile size on the wall in metres (`w_m`, `h_m`); the
+  shader reads the sizes from `uniform vec4 fslot[16]` (two slots a row: `.xy` even, `.zw` odd). Without mipmaps the far towers speckle. `fract()` on the tile coordinate makes the
   implicit mip level jump at every seam, so the level comes from `dFdx`/`dFdy` of the unwrapped coordinate
   (`texture2DLodEXT`); 256 px tiles in a power-of-two atlas keep every mip level inside its tile (level 8 is the tile's
   mean colour); the lookup is inset by half a texel of the level. Without `FLOD` the page falls back to plain
@@ -968,6 +972,56 @@ Layers > Show > "Station models" (on): the Blender boxes of Canary Wharf and Can
 `OV.glass`; `init(...)` before `window.__docklands`; `buildTunnels`/`buildUnder` cut the station rectangles out
 (`outside()`, `inside()`, keys with `hideKey()`); `vY` asks `levelY()` for negative levels. drone.js `vpos` too. Details,
 measurements and the open Windrush-level finding: skill `blender-station-models`, section 8.
+
+## Building keys: any building by OSM id or position (2026-10-06)
+
+Owner, 2026-10-06 (after the Canada Water photos): "change the 3D page to find buildings by OSM id or position? ... Yes,
+do our whole area and be mindful of possible future expansion". Live (tap any building, or search "Ontario Point"):
+https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/#v=1&c=-2040.8,823.4,0,249,2.0799,0.6315&n=0&u=0&id=osm:w204580680
+
+- **The keys.** `tools/key-model-buildings.mjs` (operation `key-model-buildings`, skill `cwplans-dataflow`) gives every
+  one of the 41,803 model buildings its OSM way or relation, exactly: each OSM outline of `osm-clip.json.gz` goes through
+  build-docklands.mjs's own steps (`polysOf`, `toRings` with the focus-box tolerance, `poly`) and the encoded outline is
+  compared with the model's. 85 outlines are equal for two elements (a multipolygon's outer that is also a building way,
+  parts drawn twice): the build's order (outlines without parts, then parts) aligns them; 25 build outlines are not in
+  the model (its height filter) and are passed over. Tags come from the full extract with `osmium getid` (the clip keeps
+  no `addr:*`, so "Ontario Point", an `addr:housename`, was missing at first). Measured: 41,803 of 41,803 aligned, 42,464
+  OSM elements, 4,022 names, 3,054 house names, 23,607 addresses; 5 min (Flow writes 183,485 triples).
+- **`data/building-keys.json`** (2.6 MB, 448 kB gzip; loaded by `building-keys.js` on the first tap on a building with no
+  registry record, the first search, or a link with `id=osm:`): `ids` (comma-joined, index-aligned with area.js),
+  `osm[id]` = { n name, h house name, a house number and street, pc postcode, b building type other than yes, l levels,
+  wd Wikidata, p parent of a part }, and `model` = { sha256, fp }. **`MFP`** (in the page) and `fp` are the same string,
+  `<count>:<first 6 numbers of building 0's outline>:<same for the last>`: when they differ the keys are for another
+  area.js and the page says so instead of naming the wrong building.
+- **The OSM card**: name (OSM name, else house name, else the parent's for a part, else the address, else the type), OSM
+  type and id, address, model height and its source, roof and ground in m OD, OSM levels, the facade tile if any,
+  "No registry record", route buttons, OSM and Wikidata links. A part stands for its parent: every part is outlined.
+  **Search** adds OSM names, house names and addresses of buildings with no registry record (at most 40, then the page's
+  sort and cut at 14). **Share**: `id=osm:w204580680` (nav.js), restored after the keys load.
+- **Facades for any building.** `tools/compose-facade-atlas.mjs` (operation `compose-facade-atlas`) writes the page's
+  `facades.jpg/.json` from `facades-registry.*` plus every contributed tile set (`facade-tiles-<set>` graphs from
+  `tools/contrib-photos.mjs`, operation `cut-facade-tiles`; hub skill, "Contributed photos"). A contributed entry is keyed
+  `osm:w<id>` and carries `mi` (model indices, parts included), `model_fp` and `at` (a WGS84 point inside the building).
+  The page uses `mi` when `model_fp === MFP`, else `modelAt(at)` (the highest model building whose outer ring holds the
+  point; 13 to 17 ms each). Measured: the five cwlibrary entries give the same index both ways.
+- **The first hook was wrong**: `Object.assign(window.__docklands, { get FT() {...} })` copies the getter's value (null)
+  once. Use `Object.defineProperty` for a live value, as `selected` does.
+- **Measured** (headless Chromium, SwiftShader, 2026-10-06): tap on Ontario Point at 1400 x 1000 DPR 1 and 390 x 844 DPR 3
+  -> model index 6448 -> its card; search "regina" -> "Regina House (Regina Point)"; a registry building still gets its
+  registry card; the share link round trip opens the same card; `check-fp16-shaders.mjs`: prF still 25 fragment uniform
+  rows; ?view=rotherhithe, greenland, pier: mean luma equal to the old page to 1e-4 at both sizes; no console error.
+
+**Future expansion** (rules, so a larger area or more photos need no new design):
+- Keys are global (OSM type + id, WGS84 points); model indices are only a cache for one area.js, checked by `MFP`. After
+  any rebuild of area.js run `key-model-buildings.mjs`, then `compose-facade-atlas.mjs`. If the model is ever split into
+  tiles, write one ids list per tile with its own fingerprint; `osm` facts stay keyed by id.
+- The key tool needs the clip area.js was built from: it stops when a model building has no OSM outline in it.
+- Slots: 32 in the atlas and the shader (16 rows of `vec4`, the same rows the 16 `vec2` used). The compose step stops at
+  33. Past 32: put the tile size into the vertex data (the `u` coordinate already carries metres along the wall), or a
+  second 2048 x 1024 atlas page with its own sampler (one more texture unit), and check `check-fp16-shaders.mjs`.
+- Pick colours hold 24 bits: room for 16.7 million buildings.
+- A contributed set adds tiles without code: photos.json `tiles` (photo cut or vector pattern, metres, a point per
+  building), then `contrib-photos.mjs <set>`, `compose-facade-atlas.mjs`, `build-kgx.mjs`.
 
 ## Testing
 

@@ -380,7 +380,7 @@ textures for their 3D models."
   which way the camera looked. Overpass may answer 504: use the local extract.
 - **Floor counts:** count on a rectified patch, not on the photo (perspective). A repeat can hold two floors: Ontario
   Point's thick band comes every two floors (its side balconies, one a floor, are half the repeat at the same height,
-  and 12 repeats x 2 + ground = 25 levels, 76.5 m by LiDAR).
+  and 12 repeats x 2 + ground = 25 levels; LiDAR 82.2 m above the ground, roof frame included).
 - **Measured periods need judgement:** the autocorrelation picks the strongest repeat, which may be a glazing bar (The
   Founding: 13 px, the floor is 82 px), a mesh (the library: 5 and 11 px) or a two-floor unit. Write the judged
   pattern in `photos.json`.
@@ -390,11 +390,24 @@ textures for their 3D models."
   library's mesh plus its sloped roof edge gave a skewed result): a narrower ROI on flat wall worked for the library;
   for the balcony face only judged facts were kept.
 - **Model:** match an OSM centroid to the model outline that contains it (`area().buildings`, `dec(p)` is already in
-  metres). The station drum has no model outline of its own. The Founding's model height comes from its levels (it is
+  metres), or better, the OSM key (`docklands/data/building-keys.json`). In `area.js`, `b` is the ground in m OD and `h` the
+  height above it: the roof is `b + h` m OD. The first cwlibrary notes gave `h` as the roof level and 76.5 m (82.2 - 5.7)
+  as Ontario Point's height; corrected the same day. The station drum has no model outline of its own. The Founding's model height comes from its levels (it is
   newer than the 2022 LiDAR); the page's default colouring draws heights from levels (`s` 1) or newer buildings (`s` 4)
   in `C.bldlv` (amber), others in `C.bld`.
-- **Not done:** the page draws photo facades only for registry towers (`facSlot`: atlas cwb ids). Facades for
-  OSM-keyed buildings outside the registry need a key from OSM way (or position) to model building.
+- **Tiles** (photos.json `tiles`; operation `cut-facade-tiles` in `contrib-photos.mjs`, helper `tools/facade-tile.py`):
+  a 256 px tile per building that repeats on every wall, with its size on the wall in metres (`w_m`, `h_m`) and a WGS84
+  point inside each building it is for. Three kinds: a cut of a rectified patch (whole bays by whole floors, from the
+  middle of one band or pier to the next); a mirrored half (`mirror_right_half`) when the face is symmetric and the photo
+  shows one half cleanly (Ontario Point); a **vector pattern** drawn in metres (`rects`, PNG and SVG) when the photo gives
+  the sizes but not the colours (Columbia and Regina Point, against the sun: colours judged, both written down). Leave
+  out what does not repeat (the library's window boxes: mesh only). Metres: a known size first (the OSM face width, the
+  floor from levels and the LiDAR height), the metric aspect from the vanishing points (`registry/sources/facades/tools/
+  metric.py`) only where nothing else is known; on Ontario Point it was 10% from the known sizes.
+- **Atlas:** `FACADE_PY=<venv python> node magpie/cwplans/tools/compose-facade-atlas.mjs` puts the tiles into slots 16 on
+  of `docklands/data/tex/facades.jpg/.json`, keyed by OSM id with model indices from `key-model-buildings.mjs`. The page
+  draws them on any building (skill `docklands-3d-page`, "Building keys"). Order after new photos: `contrib-photos.mjs
+  <set>`, `compose-facade-atlas.mjs`, `build-kgx.mjs`; after a model rebuild: `key-model-buildings.mjs` first.
 
 ## Pages and tests
 

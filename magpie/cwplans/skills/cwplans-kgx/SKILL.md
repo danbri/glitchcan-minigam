@@ -36,7 +36,8 @@ an operation on immutable named graphs (the `cwplans-dataflow` skill).
   (`cwk:MallUnit` with outline, `cwk:Facility` points: lifts, escalators, ramps, stairs, entrances, toilets,
   defibrillators), `storeguide` (`cwk:GuideEntry` with `cwk:gridRef`), `pipeline` (pipeline.jsonld lifted),
   `coverage-imagery` (from `tools/probe-imagery-coverage.mjs` through `kgx/external-heads.json`: `cwk:CoverageCount` per
-  imagery source and study area), `meta`
+  imagery source and study area), `photos-<set>`, `facade-patches-<set>`, `facade-tiles-<set>` (contributed photos),
+  `facade-atlas`, `model-building-keys` (every model building's OSM key; not in the store), `meta`
   (`void:Dataset` per version and part; heads as `graph/<name> cwk:current <version>`), `log` (the activities).
   Counts: the londat README.
 - Joins across sources go through `s:sameAs` to the CWG entity IRI (`https://canarywharf.com/<kind>/<slug>/#entity`),
@@ -44,9 +45,10 @@ an operation on immutable named graphs (the `cwplans-dataflow` skill).
 
 ## The store (Shardborough, `factoidal pack --layout ibk5`)
 
-Build of 2026-10-06 (night): 107,891 triples, 18 graphs, 44 parts, 743 blocks, generation `gen-78dd2364aa7ffb08`,
-4,460 files, 20.6 MB (blocks 14.6 MB; the rest are sidecar indexes and Merkle files). The table below was measured on
-an earlier build (15 graphs, 659 blocks); on this one the same entity reads 60 blocks out and 59 in, about 1.1 MB each.
+Build of 2026-10-06 (late night): 292,259 triples in 21 graphs, of which 108,774 in the browser store (46 parts, 774
+blocks, generation `gen-f330e7f03b06d9d9`, 4,646 files, 20.8 MB; blocks 14.7 MB): `model-building-keys` (183,485) is a
+head but not in the store (`external-heads.json` `store: false`). The table below was measured on an earlier build (15
+graphs, 659 blocks); on this one the same entity reads 60 blocks out and 59 in, about 1.1 MB each.
 
 - **Blocks** are cut per predicate per graph. `--batch-bytes` does not change the count. So a big graph gives big
   blocks whose subject ranges cover everything, and zone maps skip nothing.

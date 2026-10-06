@@ -3883,10 +3883,10 @@
    ],
    "prov:generated": [
     {
-     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.jpg"
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades-registry.jpg"
     },
     {
-     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.json"
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades-registry.json"
     }
    ],
    "cwp:tool": {
@@ -7453,6 +7453,12 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/contrib-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/key-model-buildings"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/compose-facade-atlas"
     }
    ],
    "cwp:area": "structured",
@@ -7591,7 +7597,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/contrib-photos",
    "@type": "prov:Activity",
    "rdfs:label": "contrib-photos",
-   "dct:description": "Operation rectify-facade-patches: for each facade region in photos.json, facade.py rectifies it (LSD segments, RANSAC vanishing points, homography) and measure.py cuts the measuring box and gives bay and floor periods (autocorrelation) and three colours (k-means in Lab); the patch is written to rect/<id>.jpg. Operation lift-contrib-photos: photos.json (identifications with evidence and confidence, judged facade notes, model heights) and the patch graph give a schema.org Photograph per photo and a node per building. Both graphs are named in kgx/external-heads.json.",
+   "dct:description": "Operation rectify-facade-patches: for each facade region in photos.json, facade.py rectifies it (LSD segments, RANSAC vanishing points, homography) and measure.py cuts the measuring box and gives bay and floor periods (autocorrelation) and three colours (k-means in Lab); the patch is written to rect/<id>.jpg. Operation lift-contrib-photos: photos.json (identifications with evidence and confidence, judged facade notes, model heights) and the patch graph give a schema.org Photograph per photo and a node per building. Both graphs are named in kgx/external-heads.json. Operation cut-facade-tiles: the photos.json tiles (a cut of a rectified patch, a mirrored half for a symmetric face, or a vector pattern in metres with judged colours) -> 256 px PNG tiles (and SVG for a pattern) in tiles/ and the graph facade-tiles-<set>.",
    "prov:used": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/contrib-photos"
@@ -7604,6 +7610,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/tools/measure.py"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/facade-tile.py"
     }
    ],
    "prov:generated": [
@@ -7624,6 +7633,119 @@
    "cwp:network": false,
    "cwp:deterministic": true,
    "cwp:after": [],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/key-model-buildings",
+   "@type": "prov:Activity",
+   "rdfs:label": "key-model-buildings",
+   "dct:description": "Operation key-model-buildings: every OSM building and building:part outline of the clip is put through the build's own steps (build-docklands.mjs polysOf, toRings with the focus-box tolerance, poly) and its encoded outline compared with the model's; the build's order (outlines without parts, then parts) aligns the model list with the OSM elements, so equal outlines (a multipolygon's outer that is also a building way) get the right element. Tags come from the full extract (osmium getid; the clip keeps no addresses). The graph holds, per OSM element, its OSM page, model indices, parent building of a part, registry link from the atlas, and the OSM name, house name, address, postcode, building type other than yes, levels and Wikidata item. building-keys.json is its projection for the page, with the SHA-256 of area.js and a fingerprint the page checks.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/docklands/osm-clip.json.gz"
+    },
+    {
+     "@id": "urn:cwplans:local:data/raw/docklands/greater_london-latest.osm.pbf"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/atlas/data/atlas.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/building-keys.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/key-model-buildings.mjs"
+   },
+   "cwp:command": "node --max-old-space-size=6000 magpie/cwplans/tools/key-model-buildings.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Fails when a model building has no OSM outline in the clip (the clip is not the one area.js was built from).",
+    "Rerun after build-docklands.mjs: the indices are for one area.js."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-docklands"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-atlas"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/compose-facade-atlas",
+   "@type": "prov:Activity",
+   "rdfs:label": "compose-facade-atlas",
+   "dct:description": "Operation compose-facade-atlas: the registry atlas (slots 0 to 15) and every contributed tile in the next slots (32 in all); each contributed tile's buildings are keyed by OSM id with the model indices of this area.js (from model-building-keys, parts included) and a WGS84 point inside the building for a rebuilt model.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades-registry.jpg"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades-registry.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/area.js"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/facade-tile.py"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/contrib-photos"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.jpg"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/compose-facade-atlas.mjs"
+   },
+   "cwp:command": "FACADE_PY=<python with Pillow> node magpie/cwplans/tools/compose-facade-atlas.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Fails past 32 slots (the atlas and the shader hold 32).",
+    "Rerun after build-facade-atlas.py, contrib-photos.mjs or key-model-buildings.mjs."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-facade-atlas"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/contrib-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/key-model-buildings"
+    }
+   ],
    "cwp:area": "structured",
    "cwp:fault": []
   },
@@ -13039,12 +13161,12 @@
    "cwp:osmUse": "none"
   },
   {
-   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.jpg",
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades-registry.jpg",
    "@type": [
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "facade texture atlas: 16 tiles of 256 px, each cut from an open photo of one tower (whole floors and bays) for its walls on the 3D page",
+   "dct:title": "registry facade atlas (the base of facades.jpg): 16 tiles of 256 px in slots 0 to 15, each cut from an open photo of one tower (whole floors and bays)",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
@@ -13057,12 +13179,12 @@
    "cwp:review": "derived from CC BY 2.0 / 4.0 photos: the attribution (author, licence, building) is in docklands/data/tex/facades.json and shown in About"
   },
   {
-   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.json",
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades-registry.json",
    "@type": [
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "slot, tile size in metres, source photo, author and licence of each facade tile; the attribution line",
+   "dct:title": "slot, tile size in metres, source photo, author and licence of each registry facade tile (the base of facades.json); the attribution line",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
@@ -13074,6 +13196,87 @@
    "prov:wasGeneratedBy": {
     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-facade-atlas"
    },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.jpg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "facade texture atlas the 3D page loads: the 16 registry tower tiles (facades-registry.jpg) and, from slot 16, the tiles of contributed photo sets (cwlibrary: Canada Water Library mesh, a vector pattern for Columbia and Regina Point, Ontario Point, The Founding); 32 slots of 256 px",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/contrib-photos"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/compose-facade-atlas"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "registry tiles derived from CC BY 2.0 / 4.0 photos (attribution in facades.json, shown in About); contributed tiles CC0"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/tex/facades.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "slot and tile size in metres of each facade tile: registry towers by cwb id, contributed tiles by OSM id with the model indices of this area.js (mi, model_fp) and a WGS84 point inside the building; the attribution line",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/contrib-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/compose-facade-atlas"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/data/building-keys.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the OpenStreetMap key of every building of the 3D model (index-aligned with area.js, with its SHA-256 and a fingerprint) and the OSM name, house name, address, building type, levels and Wikidata item by id; the record card, search and share links of buildings with no registry record",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/key-model-buildings"
+   },
+   "cwp:osmUse": "derived"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/building-keys.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the 3D page's OSM record card, search by OSM name or address, and id=osm: share links for any model building",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
    "cwp:osmUse": "none"
   },
   {
@@ -14093,6 +14296,48 @@
     "dcat:Distribution"
    ],
    "dct:title": "code, not data: contributed photos (londat data/images/contrib/<set>/) as two logged operations: rectify-facade-patches (facade.py, measure.py) and lift-contrib-photos; kgx graphs facade-patches-<set> and photos-<set>",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/key-model-buildings.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the OSM key of every model building, by the build's own outline encoding (operation key-model-buildings): kgx graph model-building-keys and docklands/data/building-keys.json",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/compose-facade-atlas.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the page facade atlas from the registry atlas and the contributed tile sets (operation compose-facade-atlas)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/facade-tile.py",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: cuts a facade tile from a rectified patch, draws a vector pattern tile (PNG and SVG), or composes the atlas (Pillow)",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"

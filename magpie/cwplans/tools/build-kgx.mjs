@@ -189,17 +189,21 @@ Object.assign(versions, await flow.run(LIFT('lift-registry-occupants', 'registry
     return { pipeline: { quads: g.quads, about: { title: 'Provenance of the earlier cwplans pipeline: every tool as a prov:Activity with the files it used and made (pipeline.jsonld), each file tied to its content at this build', licence: 'CC0 (descriptions of tools and files)' } } };
   })); }
 
-// ---- graph versions made by other tools' operations: kgx/external-heads.json maps a name to a version in the log
+// ---- graph versions made by other tools' operations: kgx/external-heads.json maps a name to a version in the log, or
+// to { iri, store: false } for a version that is a head and in meta and current.nq.gz but not in the browser store
+// (too large for what a query there gains: model-building-keys)
+const offStore = new Set();
 { const ehF = join(OUT, 'external-heads.json');
-  if (existsSync(ehF)) for (const [name, iri] of Object.entries(JSON.parse(readFileSync(ehF, 'utf8')))) {
-    const v = flow.versions.get(iri);
+  if (existsSync(ehF)) for (const [name, e] of Object.entries(JSON.parse(readFileSync(ehF, 'utf8')))) {
+    const iri = typeof e === 'string' ? e : e.iri, v = flow.versions.get(iri);
     if (!v || !existsSync(join(OUT, v.file))) throw new Error(`external head ${name}: ${iri} is not in log/versions.jsonl or its file is missing`);
-    versions[name] = v;
+    versions[name] = v; if (typeof e === 'object' && e.store === false) offStore.add(name);
   } }
 
 // ---- partition every source version by subject key for the store (blocks with narrow, disjoint zone maps)
 const PART = 3000, parts = {};
 for (const v of Object.values(versions)) {
+  if (offStore.has(v.name)) continue;
   // drop the graph term: it is the last term and an IRI has no space, so it starts at the last ' <' (a regex from the
   // first ' <' cut literals such as "layer < 0")
   const lines = flow.read(v).split('\n').filter(Boolean).map(l => l.slice(0, l.lastIndexOf(' <')) + ' .');

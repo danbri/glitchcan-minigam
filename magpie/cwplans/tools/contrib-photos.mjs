@@ -1,11 +1,14 @@
-// Contributed photos in danbri/londat data/images/contrib/<set>/ (photos + a hand-made photos.json) as two logged
+// Contributed photos in danbri/londat data/images/contrib/<set>/ (photos + a hand-made photos.json) as three logged
 // operations (kgx-ops Flow; log in londat kgx/log):
 //  1. rectify-facade-patches: the photos (by SHA-256) and the patch regions of photos.json -> rectified patches
 //     (rect/<id>.jpg beside the photos) with periods and colours, by registry/sources/facades/tools/facade.py and
 //     measure.py (OpenCV) -> graph version facade-patches-<set>;
 //  2. lift-contrib-photos: photos.json + the photos + that version -> graph version photos-<set> (photographs, what
-//     each depicts, the buildings with their evidence, judged facade notes and model heights).
-// Both are named in kgx/external-heads.json, so build-kgx.mjs packs them.
+//     each depicts, the buildings with their evidence, judged facade notes and model heights);
+//  3. cut-facade-tiles: photos.json `tiles` + the rectified patches -> 256 px tiles (tiles/<id>.png; a vector pattern
+//     also as tiles/<id>.svg) by tools/facade-tile.py -> graph version facade-tiles-<set>, which
+//     tools/compose-facade-atlas.mjs puts into the 3D page's facade atlas.
+// All three are named in kgx/external-heads.json, so build-kgx.mjs packs them.
 //   FACADE_PY=<python with numpy, opencv-python-headless, scikit-learn> node magpie/cwplans/tools/contrib-photos.mjs <set>
 // Skills: docklands-data-curation ("Contributed photos"), cwplans-dataflow, photo-view-reconstruction.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, mkdtempSync, rmSync } from 'fs';
@@ -64,7 +67,7 @@ const v1 = (await flow.run(op1, [...photoFiles, ...facadeTools], { set, patches 
 }))[`facade-patches-${set}`];
 
 // ---- 2. the photos, what they depict and the buildings, from the hand-made photos.json
-const op2 = { id: 'lift-contrib-photos', version: 1, skill: 'docklands-data-curation', tool: 'magpie/cwplans/tools/contrib-photos.mjs',
+const op2 = { id: 'lift-contrib-photos', version: 2, skill: 'docklands-data-curation', tool: 'magpie/cwplans/tools/contrib-photos.mjs',
   about: 'photos.json (identifications, evidence, judged facade notes, model heights) + photos + facade patches -> schema.org Photograph per photo with what it depicts, and a building node per identified building' };
 const v2 = (await flow.run(op2, [specFile, ...photoFiles, v1], { set }, async () => {
   const g = G(), patchLines = flow.read(v1).split('\n');
@@ -75,7 +78,7 @@ const v2 = (await flow.run(op2, [specFile, ...photoFiles, v1], { set }, async ()
     g.lit(s, V + 'confidence', b.confidence); for (const e of b.identified_by || []) g.lit(s, V + 'evidence', e);
     for (const [k, v] of Object.entries(b.osm_tags || {})) g.lit(s, V + 'osmTag', `${k}=${v}`);
     if (b.footprint) g.lit(s, V + 'footprintNote', b.footprint); if (b.published) g.lit(s, V + 'publishedNote', b.published);
-    if (b.model) { if (b.model.index != null) g.lit(s, V + 'modelIndex', b.model.index); g.lit(s, V + 'modelTopMetresOD', b.model.top_m_od); g.lit(s, V + 'modelBaseMetresOD', b.model.base_m_od); g.lit(s, V + 'modelHeightSource', b.model.height_source); g.lit(s, V + 'modelNote', b.model.note); g.lit(s, V + 'modelBuilt', '2026-10-03', 'date'); }
+    if (b.model) { if (b.model.index != null) g.lit(s, V + 'modelIndex', b.model.index); g.lit(s, V + 'modelTopMetresOD', b.model.top_m_od); g.lit(s, V + 'modelHeightMetres', b.model.height_m); g.lit(s, V + 'modelBaseMetresOD', b.model.base_m_od); g.lit(s, V + 'modelHeightSource', b.model.height_source); g.lit(s, V + 'modelNote', b.model.note); g.lit(s, V + 'modelBuilt', '2026-10-03', 'date'); }
     for (const [k, v] of Object.entries(b.facade || {})) { if (k === 'how') continue; const t = typeof v === 'string' ? v : Object.entries(v).map(([a, c]) => `${a}: ${c}`).join('; '); g.lit(s, V + 'facadeNote', `${k}: ${t}`); }
     if (b.facade?.how) g.lit(s, V + 'facadeNoteHow', b.facade.how);
     for (const l of patchLines) { const m = l.match(/^<([^>]+)> <https:\/\/danbri\.github\.io\/londat\/kgx\/vocab#building> <([^>]+)>/); if (m && m[2] === s) g.add(s, V + 'facadePatch', m[1]); }
@@ -93,6 +96,31 @@ const v2 = (await flow.run(op2, [specFile, ...photoFiles, v1], { set }, async ()
   return { [`photos-${set}`]: { quads: g.quads, about: { title: `Contributed photos "${set}" (${spec.date}, ${spec.licence}): what each shows and how the buildings were identified`, licence: 'CC0 (photos and descriptions); OSM names and tags quoted are © OpenStreetMap contributors, ODbL 1.0', osm: true } } };
 }))[`photos-${set}`];
 
+// ---- 3. facade tiles for the 3D page: a cut of a rectified patch, or a vector pattern drawn from the sizes in photos.json
+const tiles = spec.tiles || [], TOOL = join(TOOLS, 'facade-tile.py');
+const op3 = { id: 'cut-facade-tiles', version: 1, skill: 'docklands-data-curation', tool: 'magpie/cwplans/tools/contrib-photos.mjs (facade-tile.py)',
+  about: 'photos.json tiles + rectified patches -> 256 px facade tiles (photo cut, mirrored half for a symmetric face, or a vector pattern in metres with judged colours) with their size on the wall in metres, the buildings they are for and a point inside each' };
+const patchFiles = [...new Set(tiles.filter(t => t.patch).map(t => t.patch))].map(id => flow.file(join(DIR, 'rect', id + '.jpg'), `danbri/londat data/images/contrib/${set}/rect/${id}.jpg`));
+const v3 = tiles.length ? (await flow.run(op3, [specFile, ...patchFiles, flow.file(TOOL, 'magpie/cwplans/tools/facade-tile.py')], { set }, async () => {
+  const g = G(); mkdirSync(join(DIR, 'tiles'), { recursive: true });
+  for (const t of tiles) {
+    const png = join(DIR, 'tiles', t.id + '.png'), svg = t.method === 'pattern' ? join(DIR, 'tiles', t.id + '.svg') : null;
+    const job = t.method === 'photo' ? { method: 'photo', src: join(DIR, 'rect', t.patch + '.jpg'), crop: t.crop, mirror_right_half: !!t.mirror_right_half }
+      : { method: 'pattern', w_m: t.w_m, h_m: t.h_m, background: t.background, rects: t.rects, svg, title: t.what, desc: `${t.how} Licence: CC0 1.0.` };
+    execFileSync(PY, [TOOL, 'tile', JSON.stringify(job), png]);
+    const s = `${ID}facade-tile/${set}/${t.id}`;
+    g.add(s, T, V + 'FacadeTile'); g.lit(s, S + 'name', t.what); g.lit(s, 'http://www.w3.org/2000/01/rdf-schema#comment', t.how); g.lit(s, V + 'method', t.method);
+    g.lit(s, V + 'widthMetres', t.w_m); g.lit(s, V + 'heightMetres', t.h_m); g.add(s, S + 'license', spec.licence_url);
+    g.lit(s, V + 'file', `data/images/contrib/${set}/tiles/${t.id}.png`); g.add(s, S + 'contentUrl', `${RAWURL}tiles/${t.id}.png`); g.lit(s, V + 'sha256', sha(readFileSync(png)));
+    if (svg) { g.add(s, V + 'vectorSource', `${RAWURL}tiles/${t.id}.svg`); g.lit(s, V + 'svgSha256', sha(readFileSync(svg))); }
+    if (t.patch) { g.add(s, S + 'isBasedOn', `${ID}facade-patch/${set}/${t.patch}`); g.lit(s, V + 'crop', t.crop.join(' ')); if (t.mirror_right_half) g.lit(s, V + 'mirroredHalf', 'true', 'boolean'); }
+    for (const [k, c] of Object.entries(t.colours?.judged || {})) g.lit(s, V + 'judgedColour', `${k} ${c}`);
+    for (const [b, at] of Object.entries(t.at)) { const bi = buildingIri(b), r = `${s}/for/${b}`; g.add(s, V + 'forBuilding', bi); g.add(s, V + 'placement', r); g.add(r, V + 'building', bi); g.lit(r, V + 'at', at.join(' ')); }
+    g.lit(s, V + 'page', `https://github.com/danbri/londat/tree/main/data/images/contrib/${set}`);
+  }
+  return { [`facade-tiles-${set}`]: { quads: g.quads, about: { title: `Facade tiles from the contributed photos "${set}" (photo cuts and vector patterns, CC0) with their size on the wall`, licence: 'CC0' } } };
+}))[`facade-tiles-${set}`] : null;
+
 const ehF = join(LONDAT_DIR, 'kgx', 'external-heads.json'), eh = existsSync(ehF) ? JSON.parse(readFileSync(ehF, 'utf8')) : {};
-eh[`facade-patches-${set}`] = v1.iri; eh[`photos-${set}`] = v2.iri; writeFileSync(ehF, JSON.stringify(eh, null, 1) + '\n');
-console.log(JSON.stringify({ set, patches: v1.iri, patch_triples: v1.triples, photos: v2.iri, photo_triples: v2.triples, new: flow.ran.length }));
+eh[`facade-patches-${set}`] = v1.iri; eh[`photos-${set}`] = v2.iri; if (v3) eh[`facade-tiles-${set}`] = v3.iri; writeFileSync(ehF, JSON.stringify(eh, null, 1) + '\n');
+console.log(JSON.stringify({ set, patches: v1.iri, patch_triples: v1.triples, photos: v2.iri, photo_triples: v2.triples, tiles: v3?.iri, tile_triples: v3?.triples, new: flow.ran.length }));

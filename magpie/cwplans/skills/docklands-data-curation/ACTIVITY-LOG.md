@@ -1205,3 +1205,28 @@ Owner: "don't waste good info by burying it in our chatlogs".
   URL in the CWG directory, an invalid IRI).
 - Owner filed the store report: https://github.com/danbri/factoidal/issues/697. `tools/check-factoidal.mjs` now re-tests
   its points (12 checks in all, 2 s; all STILL with 0.7.1).
+
+## 2026-10-06 (night): any building by OSM id or position; facades for any building
+
+- Owner: "Yes, do our whole area and be mindful of possible future expansion" (to: change the 3D page to find buildings
+  by OSM id or position, so the Canada Water patterns show on the models).
+- New `tools/key-model-buildings.mjs` (operation `key-model-buildings`): all 41,803 model buildings keyed to their OSM
+  way or relation by the build's own outline encoding, aligned in build order (85 equal outlines resolved; 25 build
+  outlines not in the model); tags from the full extract with osmium (the clip has no addresses). kgx graph
+  `model-building-keys` (183,485 triples, a head but not in the browser store: `external-heads.json` now takes
+  `{iri, store: false}`) and the page file `docklands/data/building-keys.json` (448 kB gzip, loaded on demand).
+- 3D page: the pick colour is the model index (it was the registry ordinal, so no building outside the registry could be
+  tapped); `selectModel`; new `docklands/building-keys.js` (OSM card, search by OSM name, house name or address, share
+  `id=osm:`); facade slots 16 to 31 usable (`uniform vec4 fslot[16]`, same 25 fragment rows); facades keyed by OSM id
+  with model indices and a point fallback (`MFP`, `modelAt`).
+- Facades: `contrib-photos.mjs` operation `cut-facade-tiles` (helper `tools/facade-tile.py`): Ontario Point (south-west
+  face, mirrored half), The Founding (dark part), Canada Water Library (mesh only), Columbia and Regina Point (a vector
+  pattern, PNG and SVG, colours judged: the photo is against the sun). New `tools/compose-facade-atlas.mjs` (operation
+  `compose-facade-atlas`): `facades.jpg/.json` = `facades-registry.*` (renamed from the old facades.*, written by
+  build-facade-atlas.py) + the contributed tiles in slots 16 to 19.
+- Tests (headless Chromium, SwiftShader): tap, card, search, share round trip at 1400 x 1000 DPR 1 and 390 x 844 DPR 3;
+  the three photo views at 1600 x 900 DPR 1 and 390 x 844 DPR 3 unchanged against the committed page (mean luma to 1e-4);
+  no console error.
+- Corrections in this work: Ontario Point's model height is 82.2 m above the ground (roof 87.9 m OD), not 76.5 m (I had
+  subtracted the ground twice; `h` in area.js is the height above `b`); the OSM extract is the openstreetmap.fr Greater
+  London file (data of 2026-10-01), not Geofabrik as two notes said. Both fixed in photos.json, the README and the skill.

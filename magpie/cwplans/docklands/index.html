@@ -391,7 +391,7 @@ const FLOD = !!(gl.getExtension('EXT_shader_texture_lod') && gl.getExtension('OE
 // (Apple's at least) run mediump as fp16, so no window lit there (README "Night", 2026-10-04)
 const HIP = '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n';
 const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension GL_OES_standard_derivatives : enable\n#define TEXL(s,u,l) texture2DLodEXT(s,u,l)\n#define LODOF(t) clamp(log2(max(max(length(dFdx(t)),length(dFdy(t))),1e-4)),0.,8.)\n#define FWID(t) max(fwidth(t).x,fwidth(t).y)\n#define FW2(t) fwidth(t)\n'
-  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n#define FWID(t) (dist/700.)\n#define FW2(t) vec2(dist/700.)\n') + HIP + 'varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform vec4 night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec2 fslot[16];uniform float ftex;varying vec4 gk;varying vec3 wq;varying vec3 ev;uniform vec3 md;uniform vec3 mlc;' +
+  : '#define TEXL(s,u,l) texture2D(s,u)\n#define LODOF(t) 0.\n#define FWID(t) (dist/700.)\n#define FW2(t) vec2(dist/700.)\n') + HIP + 'varying vec4 v;varying float wy;varying float uu;varying vec2 uv;varying float dist;uniform float a;uniform float cut;uniform vec4 night;uniform float roofTex;uniform float win;uniform float pxm;uniform sampler2D tx;uniform sampler2D ftx;uniform vec4 fslot[16];uniform float ftex;varying vec4 gk;varying vec3 wq;varying vec3 ev;uniform vec3 md;uniform vec3 mlc;' +
   'float h(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}' +
   'float vn(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+1.),f.x),f.y);}' +
   // night (map style): dark walls; lit windows by the building's use (registry homes and occupant types): homes warm
@@ -415,13 +415,13 @@ const ffs = (FLOD ? '#extension GL_EXT_shader_texture_lod : enable\n#extension G
   'if(win<-.5)col=base*.6;' +   // a data colour mode: keep its colours readable
   'return mix(col,vec3(.085,.07,.058),(1.-exp(-dist/5200.))*.6);}' +   // haze in the colour of the sky glow
   'void main(){if(wy>cut)discard;vec3 col=v.rgb;float lum=dot(v.rgb,vec3(.33));' +
-  'if(night.x>.5&&pxm==0.){float ab=v.a*255.,ph=0.;vec3 b=col;if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tile, dark
+  'if(night.x>.5&&pxm==0.){float ab=v.a*255.,ph=0.;vec3 b=col;if(uu>=0.&&ftex>.5&&ab>99.5&&ab<131.5){float sl=floor(ab-100.+.5),hs=floor(sl*.5);vec4 S4=vec4(10.);for(int i=0;i<16;i++)if(float(i)==hs)S4=fslot[i];vec2 S=sl-2.*hs<.5?S4.xy:S4.zw;' +   // photo facade: the tile, dark
   'vec2 tc=vec2(uu/S.x,wy/S.y),q=fract(tc),st=vec2(mod(sl,8.),floor(sl/8.));float lod=LODOF(tc*256.),e=.5*exp2(floor(lod)+1.);b=TEXL(ftx,vec2(st.x*256.+e+q.x*(256.-2.*e),st.y*256.+e+(1.-q.y)*(256.-2.*e))/vec2(2048.,1024.),lod).rgb;ph=1.;}' +
   'float mk=0.;if(mlc.b>0.){' + (FLOD ? 'vec3 N=normalize(cross(dFdx(wq),dFdy(wq)));if(dot(N,ev)<0.)N=-N;mk=max(dot(N,md),0.);' : 'mk=uu<0.?max(md.y,0.):.32*sqrt(max(0.,1.-md.y*md.y));') + '}' +
   'gl_FragColor=vec4(nightCol(b,ph,mk),a);return;}' +
   'if(pxm>0.)col=min(vec3(1.),col*1.3);' +   // pixel art: brighter walls, windows on the art-pixel grid
   'float ab=v.a*255.;' +
-  'if(uu>=0.&&ftex>.5&&ab>99.5&&ab<115.5){float sl=floor(ab-100.+.5);vec2 S=vec2(10.);for(int i=0;i<16;i++)if(float(i)==sl)S=fslot[i];' +   // photo facade: the tower's tile, repeated by its size in metres
+  'if(uu>=0.&&ftex>.5&&ab>99.5&&ab<131.5){float sl=floor(ab-100.+.5),hs=floor(sl*.5);vec4 S4=vec4(10.);for(int i=0;i<16;i++)if(float(i)==hs)S4=fslot[i];vec2 S=sl-2.*hs<.5?S4.xy:S4.zw;' +   // photo facade: the tower's tile, repeated by its size in metres
   'vec2 tc=vec2(uu/S.x,wy/S.y),q=fract(tc),st=vec2(mod(sl,8.),floor(sl/8.));float lod=LODOF(tc*256.),e=.5*exp2(floor(lod)+1.);' +
   'col=TEXL(ftx,vec2(st.x*256.+e+q.x*(256.-2.*e),st.y*256.+e+(1.-q.y)*(256.-2.*e))/vec2(2048.,1024.),lod).rgb*(.45+.75*lum);if(night.x>.5)col*=.35;}' +
   'else if(uu>=0.&&win>.5&&pxm>0.&&pxm<1.5){float fl=wy/(pxm*4.),fy=fract(fl),fx=floor(gl_FragCoord.x),m=v.a<.99?floor((v.a*255.-200.)/8.+.5):3.;' +   // pixel art: a pattern per material on the art-pixel grid (no moire)
@@ -569,7 +569,7 @@ const notFlown = i => SKY && skyIdx >= 0 && SKY.buildings[i] && SKY.buildings[i]
 // place of one prism per OSM outline for the towers of 100 m and over. Only for today's skyline (the year slider uses prisms).
 let TOWERS = null, FAC = null, FT = null, FTX = null;   // FT: data/tex/facades.json (photo facade tiles, tools/build-facade-atlas.py), FTX: its texture
 // the photo tile of model building i, when photo facades are on and the colours mean "what it looks like"
-const facSlot = i => { if (!FTX || !$('showPhotos').checked || PHOTO || (!PIX.on && $('colourBy').value !== 'source') || skyIdx >= 0) return null; const k = regOf[i]; if (k < 0 || !AT) return null; const f = FT.buildings[AT.buildings[k].id]; return f ? f.slot : null; };   // FAC: registry/sources/facades/facades.json buildings, by cwb id
+const facSlot = i => { if (!FTX || !$('showPhotos').checked || PHOTO || (!PIX.on && $('colourBy').value !== 'source') || skyIdx >= 0) return null; const fm = FT.byModel && FT.byModel.get(i); if (fm != null) return fm; const k = regOf[i]; if (k < 0 || !AT) return null; const f = FT.buildings[AT.buildings[k].id]; return f ? f.slot : null; };   // FAC: registry/sources/facades/facades.json buildings, by cwb id
  const towerOf = new Map();   // model building index -> tower record
 const encRings = rings => { const p = [], holes = []; let px = 0, pz = 0, n = 0; rings.forEach((r, k) => { if (k) holes.push(n); for (const [x, z] of r) { const X = Math.round(x * 10), Z = Math.round(z * 10); p.push(X - px, Z - pz); px = X; pz = Z; n++; } }); return { p, holes }; };
 function towerF(M, t, col, mat) {
@@ -748,7 +748,7 @@ function drawFacades(M, alpha, P) {
   gl.uniform1f(fu.pxm, PIX.on ? cam.dist * .84 / PIX.fh : 0); { const hc = crownNow(); gl.uniform4f(fu.night, nightOn() || ground === 'night2012' ? (hc.pyr ? 2 : 1) : 0, hc.c[0], hc.c[1], hc.c[2]); } const ML = MOON.on ? MOON.c : [0, 0, 0]; gl.uniform3fv(fu.mlc, ML); gl.uniform3fv(fu.md, MOON.dir); gl.uniform1f(fu.win, $('colourBy').value !== 'source' ? -1 : $('showWindows').checked ? 1 : 0);
   const rt = !!groundTex && ground !== 'night2012' && ground !== 'intensity2020'; gl.uniform1f(fu.roofTex, rt ? 1 : 0);
   if (TEXIDX) { const B = TEXIDX.box; gl.uniform4f(fu.box, B.x0, B.z0, B.x1 - B.x0, B.z1 - B.z0); } gl.uniform1i(fu.tx, 0); if (rt) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, groundTex); }
-  gl.uniform1f(fu.ftex, FTX ? 1 : 0); if (FTX) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FTX); gl.uniform1i(fu.ftx, 1); gl.uniform2fv(fu.fslot, FT.slots); gl.activeTexture(gl.TEXTURE0); }
+  gl.uniform1f(fu.ftex, FTX ? 1 : 0); if (FTX) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FTX); gl.uniform1i(fu.ftx, 1); gl.uniform4fv(fu.fslot, FT.slots); gl.activeTexture(gl.TEXTURE0); }
   const V = VIZ.on && PIX.on, F = A.meta.focus; gl.uniform1f(fu.viz, V ? 1 : 0); if (V) { gl.uniform1fv(fu.bands, VIZ.bands); gl.uniform4f(fu.vbox, F.x0, F.x1, F.z0, F.z1); gl.uniform3f(fu.vk, VIZ.stretch, VIZ.noise, VIZ.swirl); gl.uniform1f(fu.time, performance.now() / 1000 % 1000); }
   if (M.gb) { gl.enableVertexAttribArray(3); gl.bindBuffer(gl.ARRAY_BUFFER, M.gb); gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 16, 0); } else { gl.disableVertexAttribArray(3); gl.vertexAttrib4f(3, 0, 0, 0, 0); }
   gl.enableVertexAttribArray(fa.u);
@@ -937,6 +937,14 @@ $('liveCams').onchange = draw;
 // ../atlas/data/atlas.json (index, loaded at start), ../registry/buildings.json and ../quality/issues.json (on demand)
 let AT = null, REG = null, QI = null, selected = -1;
 const regOf = new Int32Array(A.buildings.length).fill(-1);
+// model fingerprint: data/building-keys.json and data/tex/facades.json say which area.js their model indices are for (tools/key-model-buildings.mjs makes the same string)
+const MFP = `${A.buildings.length}:${Array.from(A.buildings[0].p.slice(0, 6)).join('.')}:${Array.from(A.buildings.at(-1).p.slice(0, 6)).join('.')}`;
+// the model building at a WGS84 point [lon, lat] (the highest whose outer ring holds it): the fallback when model indices are for another area.js
+function modelAt(at) {
+  if (!at) return []; const [x, z] = geo(at[0], at[1]); let best = -1, bh = -1;
+  A.buildings.forEach((b, i) => { const f = dec(b.p), n = b.holes && b.holes.length ? b.holes[0] : f.length / 2; if (Math.abs(f[0] - x) > 400 || Math.abs(f[1] - z) > 400) return; let c = false; for (let k = 0, j = n - 1; k < n; j = k++) { const ax = f[2 * k], az = f[2 * k + 1], bx = f[2 * j], bz = f[2 * j + 1]; if ((az > z) !== (bz > z) && x < (bx - ax) * (z - az) / (bz - az) + ax) c = !c; } if (c && b.b + b.h > bh) { bh = b.b + b.h; best = i; } });
+  return best >= 0 ? [best] : [];
+}
 const loadJSON = u => fetch(u).then(r => { if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.json(); });
 const getReg = () => REG || (REG = loadJSON('../registry/buildings.json').then(d => new Map(d.buildings.map(b => [b.id, b]))));
 let CATS_ = null; const getCats = () => CATS_ || (CATS_ = loadJSON('../registry/categories.json'));
@@ -959,7 +967,7 @@ function prismId(M, o, y0, y1, id) {
     const k2 = k + 1 < starts[r + 1] ? k + 1 : starts[r], i = M.vr(f[2 * k], y0, f[2 * k + 1], packed), j = M.vr(f[2 * k2], y0, f[2 * k2 + 1], packed), kk = M.vr(f[2 * k2], y1, f[2 * k2 + 1], packed), l = M.vr(f[2 * k], y1, f[2 * k + 1], packed); M.tri(i, j, kk); M.tri(i, kk, l);
   }
 }
-function buildPick() { if (L.pick) L.pick.free(); const M = new Mesh(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismId(M, b, b.b + (b.mh || 0), b.b + h, regOf[i] + 1); }); L.pick = M.upload(); }
+function buildPick() { if (L.pick) L.pick.free(); const M = new Mesh(); A.buildings.forEach((b, i) => { const h = heightOf(b, i); if (h > 0) prismId(M, b, b.b + (b.mh || 0), b.b + h, i + 1); }); L.pick = M.upload(); }
 let fbo = null, fboTex = null, fboDepth = null, fboW = 0, fboH = 0;
 function pickAt(cx, cy) {
   if (!L.pick || !MVP) return -1;
@@ -987,9 +995,11 @@ cv.addEventListener('pointerdown', e => { tap = { x: e.clientX, y: e.clientY, t:
 cv.addEventListener('pointerup', e => {
   if (!tap || tap.n !== 1 || Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 6 || performance.now() - tap.t > 700) return;
   const r = cv.getBoundingClientRect(), cx = e.clientX - r.left, cy = e.clientY - r.top; if (ovTapPoint(cx, cy)) return;   // overlay points first, then buildings, then overlay outlines on the ground
-  const k = pickAt(cx, cy);
-  if (k >= 0 && AT && AT.buildings[k]) selectBuilding(k); else ovTapGround(cx, cy);
+  const i = pickAt(cx, cy);
+  if (i >= 0) selectModel(i); else ovTapGround(cx, cy);
 });
+// a model building: its registry record when it has one, else its OpenStreetMap record (building-keys.js)
+function selectModel(i) { const k = regOf[i]; if (k >= 0 && AT && AT.buildings[k]) return selectBuilding(k); if (globalThis.DocklandsKeys) return DocklandsKeys.select(i); }
 
 // opening hours: the occupant's own page (web facts, branch scope first) or its OSM tag; "open now" in London time
 const ohOf = o => o.web && o.web.opening_hours && o.web.scope !== 'chain' ? { h: o.web.opening_hours, src: 'its web page', page: o.web.page } : o.opening_hours ? { h: o.opening_hours, src: 'OSM' } : o.web && o.web.opening_hours ? { h: o.web.opening_hours, src: 'the chain\'s web page (all branches)', page: o.web.page } : null;
@@ -1005,7 +1015,7 @@ function outline(M, o, y0, y1, col) {
   for (let r = 0; r < starts.length - 1; r++) for (let i = starts[r]; i < starts[r + 1]; i++) { const j = i + 1 < starts[r + 1] ? i + 1 : starts[r]; for (const y of [y0, y1]) beam(M, [f[2 * i], y, f[2 * i + 1]], [f[2 * j], y, f[2 * j + 1]], 1.2, 1.2, col); if (i % 3 === 0) beam(M, [f[2 * i], y0, f[2 * i + 1]], [f[2 * i] + .01, y1, f[2 * i + 1]], 1, 1, col); }
 }
 let occLabels = [];
-function clearSelection() { if (L.hi) { L.hi.free(); L.hi = null; } for (const l of occLabels) { l.el.remove(); labels.splice(labels.indexOf(l), 1); } occLabels = []; selected = -1; }
+function clearSelection() { if (globalThis.DocklandsKeys) DocklandsKeys.sel = null; if (L.hi) { L.hi.free(); L.hi = null; } for (const l of occLabels) { l.el.remove(); labels.splice(labels.indexOf(l), 1); } occLabels = []; selected = -1; }
 async function selectBuilding(k) {
   clearSelection(); selected = k; const ab = AT.buildings[k], M = new Mesh();
   for (const i of ab.mi) { const b = A.buildings[i]; outline(M, b, b.b + (b.mh || 0), b.b + b.h + .5, [1, .25, .65]); }
@@ -2186,6 +2196,7 @@ function searchItems(q) {
   if (AT) AT.buildings.forEach((b, k) => { if (has(b.n) || b.id === q) out.push({ t: b.n || b.id, k: 'building', go: () => { selectBuilding(k); flyTo(b.x, b.z, Math.max(350, Math.min(cam.dist, 900))); } }); });
   for (const l of labels) if (!l.pin && !l.camEl && l.cls !== 'occ' && has(l.name)) out.push({ t: l.name, k: l.cls === 'st' ? 'station' : l.cls === 'wt' ? 'water' : l.cls === 'src' ? 'published level' : 'place', go: () => { showInfo(l); flyTo(l.x, l.z, Math.max(400, Math.min(cam.dist, 1200))); } });
   if (NET) for (const p of NET.P) if (has(p.name)) out.push({ t: p.name, k: `${p.kind}, level ${p.lv}`, go: () => showPlace(p) });
+  if (globalThis.DocklandsKeys) out.push(...DocklandsKeys.search(q, has));
   out.sort((a, b) => (a.t.toLowerCase().startsWith(q) ? 0 : 1) - (b.t.toLowerCase().startsWith(q) ? 0 : 1)); return out.slice(0, 14);
 }
 function runSearch() {
@@ -2194,7 +2205,7 @@ function runSearch() {
 }
 $('findBtn').onclick = () => { const on = qIn.hidden; qIn.hidden = !on; if (on) qIn.focus(); else { qRes.style.display = 'none'; qIn.value = ''; } };
 qIn.addEventListener('blur', () => setTimeout(() => { if (!qIn.value && document.activeElement !== qIn) qIn.hidden = true; }, 200));
-qIn.addEventListener('input', runSearch); qIn.addEventListener('focus', () => { loadNet().then(runSearch).catch(() => {}); });
+qIn.addEventListener('input', runSearch); qIn.addEventListener('focus', () => { loadNet().then(runSearch).catch(() => {}); if (globalThis.DocklandsKeys) DocklandsKeys.load().then(runSearch).catch(() => {}); });
 qIn.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = qRes.querySelector('button'); if (b) b.click(); } if (e.key === 'Escape') { qRes.style.display = 'none'; qIn.blur(); } });
 cv.addEventListener('pointerdown', () => { qRes.style.display = 'none'; if (document.activeElement === qIn) qIn.blur(); });
 // route ends picked on the model are network vertices; typed ends are looked up by name (findPlace)
@@ -2279,6 +2290,7 @@ if (globalThis.DocklandsStations) DocklandsStations.init({ Mesh, shade, norm3, e
 // Plotter SVG (plotter-svg.js, Menu > views > Plotter SVG of this view): the data and camera it draws from
 globalThis.DocklandsPlotCtx = { A, dec, earcut, heightOf, towerOf, groundAt, tunnelY, par, toast, MVP: () => MVP, VZ: () => VZ, CAM: () => CAM, TOWERS: () => TOWERS };
 globalThis.DocklandsKMLctx = { Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovOn, dec, earcut, draw, toast, unview, A, OV, labels, labelBox, cam, get CAM() { return CAM; }, get VZ() { return VZ; }, get MVP() { return MVP; }, get PROJ() { return PROJ; }, gl, cv, sel: () => selected >= 0 && AT ? AT.buildings[selected] : null };
+globalThis.DocklandsKeysCtx = { A, MFP, dec, Mesh, L, outline, heightOf, clearSelection, resetInfo, openPane, info, routeBtns, flyTo, cam, toast, draw, esc, regOf, facadeOf: idx => { if (!FT || !FT.byModel) return null; for (const i of idx) { const s = FT.byModel.get(i); if (s != null) return Object.values(FT.buildings).find(f => f.slot === s) || null; } return null; } };   // building-keys.js
 window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder, tunnelY, par, get tidalField() { return tidalField; },
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
   setTidal(v, field) { tidalLevel = v; tidalField = v == null ? null : field || null; const sk = v == null ? null : v - .8; if ((sk == null) !== (terrainSink == null) || (sk != null && Math.abs(sk - terrainSink) > .25)) { terrainSink = sk; buildTerrain(terrainLast); } buildTidal(); NIGHT.wl = (v ?? (A.water.find(w => w.tidal && !w.n) || { level: 2.4 }).level) + .1; draw(); }, get tidalLevel() { return tidalLevel; }, get MOON() { return MOON; }, horizon,
@@ -2286,14 +2298,15 @@ window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pick
   setEye(eye, target, fovY) { cam.eye = eye; cam.target = target; cam.fov = fovY || .8; delete cam.hfov; delete cam.roll; unview(); draw(); },
   clearEye() { delete cam.eye; delete cam.target; delete cam.fov; draw(); },
   screenOf(v) { const st = par().storey, X = vX(v), y = vY(v, st) * VZ, Z = vZ(v), c3 = MVP[3] * X + MVP[7] * y + MVP[11] * Z + MVP[15]; return [((MVP[0] * X + MVP[4] * y + MVP[8] * Z + MVP[12]) / c3 * .5 + .5) * cv.clientWidth, (1 - ((MVP[1] * X + MVP[5] * y + MVP[9] * Z + MVP[13]) / c3 * .5 + .5)) * cv.clientHeight]; } };
-Object.defineProperty(window.__docklands, 'selected', { get: () => selected });   // nav.js: Share this view names the building on the card
+Object.defineProperty(window.__docklands, 'selected', { get: () => selected });
+Object.assign(window.__docklands, { selectModel, MFP, modelAt }); Object.defineProperty(window.__docklands, 'FT', { get: () => FT });   // building-keys.js, tests   // nav.js: Share this view names the building on the card
 outs(); setView('cw');
 { const vm = /[?&]view=(\w+)/.exec(location.search); if (vm && VIEWS[vm[1]]) setView(vm[1]); }   // ?view=rotherhithe, ?view=greenland, ?view=pier, ?view=plane (and the other views)
 loadJSON('data/tex/facades.json').then(T => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok([T, im]); im.onerror = () => no(new Error('facades.jpg')); im.src = 'data/tex/facades.jpg'; })).then(([T, im]) => {
-  FT = T; FT.slots = new Float32Array(32); for (const f of Object.values(T.buildings)) { FT.slots[2 * f.slot] = f.w_m; FT.slots[2 * f.slot + 1] = f.h_m; }
+  FT = T; FT.slots = new Float32Array(64); FT.byModel = new Map(); for (const [key, f] of Object.entries(T.buildings)) { FT.slots[2 * f.slot] = f.w_m; FT.slots[2 * f.slot + 1] = f.h_m; if (!/^cwb-/.test(key)) for (const i of (f.model_fp === MFP && f.mi ? f.mi : modelAt(f.at))) FT.byModel.set(i, f.slot); }
   const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
   for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-  gl.generateMipmap(gl.TEXTURE_2D); gl.activeTexture(gl.TEXTURE0); FTX = t; $('facCredit').textContent = 'Facade photos (tiles cut from them): ' + T.attribution + '.'; $('attribFac').textContent = ' · facade photos (CC BY)';
+  gl.generateMipmap(gl.TEXTURE_2D); gl.activeTexture(gl.TEXTURE0); FTX = t; $('facCredit').textContent = 'Facade photos (tiles cut from them): ' + T.attribution + '.'; $('attribFac').textContent = ` · facade photos (${T.licences || 'CC BY'})`;
   const go = () => { if (!AT) return setTimeout(go, 400); buildBld(); draw(); }; go();
 }).catch(e => console.warn('facade textures', e));
 loadJSON('data/towers.json').then(T => { TOWERS = Object.values(T.buildings).filter(t => t.tiers && t.tiers.length && t.status === 'fitted'); for (const t of TOWERS) for (const mi of t.model_buildings) towerOf.set(mi, t); buildBld(); if (NIGHT.built) buildNightLights(); draw(); }).catch(e => console.warn('towers.json', e));
@@ -2304,6 +2317,7 @@ hud.textContent = ''; ATTR.start();
 })();
 </script>
 <script src="locate.js"></script>
+<script src="building-keys.js"></script>
 <script type="module" src="kml-layer.js"></script>
 <script src="nav.js"></script>
 <script src="drone.js"></script>
