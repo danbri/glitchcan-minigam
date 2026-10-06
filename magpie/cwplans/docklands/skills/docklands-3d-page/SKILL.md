@@ -932,6 +932,35 @@ UI chrome. Measured in the owner's screenshot view (Canary Wharf, cut 39 m OD, 3
 Two comments added at the end of a statement in long one-line code (`rampCol`, `buildUnder`) broke the script: `node --check`
 caught both. Put no comment inside a one-line function.
 
+## Plotter SVG (2026-10-06)
+
+Owner, 2026-10-06: "Can you next make a vectorised version in SVG that I can send to my plotter?". Menu > views group >
+"Plotter SVG of this view" with a paper select (A4, A3 default, A2); the orientation follows the screen. Code:
+`docklands/plotter-svg.js`; index.html gives it `globalThis.DocklandsPlotCtx` (A, dec, earcut, heightOf, towerOf, groundAt,
+tunnelY, par, toast and getters for MVP, VZ, CAM, TOWERS) and one script tag after drone.js. Test hook:
+`DocklandsPlot.make({ paper, minMm })` returns `{ svg, stats, ms, raster, occluders, paper }`.
+
+- **What is drawn** (one Inkscape layer per pen; colours: buildings black, water blue, greens green, roads grey, railways
+  red, paths with a level brown, underground orange): building and tower edges (roof and base rings, a vertical edge at a
+  corner over about 26 degrees, pyramid edges), water and green outlines, both kerbs of each road, open railway centre
+  lines, level-tagged paths (the page's heights, station floors inside the boxes); with the cut on, tunnel centre lines
+  (cut out of the station boxes) and the station models' feature edges (a boundary, or faces more than 30 degrees apart).
+  A credit text (OSM, EA LiDAR) is its own layer. No fills, stroke 0.3 mm, mm units.
+- **Hidden lines**: a CPU z-buffer at 2 x the CSS size (long side at most 2,400 px) of the solids: building and tower
+  walls and roofs, the terrain (only with the cut off; with the cut on the page draws the ground faint), and the opaque
+  station parts. Triangles are clipped to the cut level and the near plane. Each edge is sampled every 0.75 px; its depth
+  is that of the edge moved towards the eye by max(0.35 m, 0.3% of the distance), so an edge on a face wins against that
+  face. Uses the page's own MVP, so photo views with a lens, roll and pixel art (orthographic) work too.
+- **Plotter tidy**: runs joined end to start (0.6 px), Douglas-Peucker 0.08 mm, lines under 0.25 mm dropped, greedy
+  nearest-end order per layer (less pen-up travel), shared walls drawn once. A building under 1 mm on the paper hides but is
+  not drawn; under 3 mm only its roof outline (the first wide view was solid ink far away: 40,962 lines, 30 s; now 23,739,
+  7.6 s, 987 kB).
+- **Measured** (headless Chromium, 1600 x 900 DPR 1, A3): default view 23,739 building lines, 7.6 s; owner's cut view at
+  39 m OD 1,608 + 1,754 underground, 2.6 s; Canary Wharf below ground 0.6 s; ?view=rotherhithe 563, 2.6 s, 19 kB.
+  390 x 844 DPR 3: portrait A4 from ?view=greenland through the button and a real download, 489 lines, 16 kB; no console
+  error. xmllint: well formed. Not tested on a real plotter: pen order and speed, and whether the plotter software reads
+  Inkscape layers (AxiDraw and vpype do).
+
 ## Station models (2026-10-05)
 
 Layers > Show > "Station models" (on): the Blender boxes of Canary Wharf and Canada Water, `docklands/stations-layer.js` +

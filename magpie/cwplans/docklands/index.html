@@ -2276,6 +2276,8 @@ if (globalThis.DocklandsShips) DocklandsShips.init({ Mesh, beam, shade, geo, gro
 // Station models (stations-layer.js, Layers > Underground > Station models, on)
 if (globalThis.DocklandsStations) DocklandsStations.init({ Mesh, shade, norm3, esc, drawMesh, ovCard, loadJSON, draw, OV, rebuildUnder: () => { tunnelKey = underKey = walkKey = ''; draw(); } });
 // My KML (kml-layer.js, Layers > My KML): the helpers it draws with; it runs after this script as a module
+// Plotter SVG (plotter-svg.js, Menu > views > Plotter SVG of this view): the data and camera it draws from
+globalThis.DocklandsPlotCtx = { A, dec, earcut, heightOf, towerOf, groundAt, tunnelY, par, toast, MVP: () => MVP, VZ: () => VZ, CAM: () => CAM, TOWERS: () => TOWERS };
 globalThis.DocklandsKMLctx = { Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovOn, dec, earcut, draw, toast, unview, A, OV, labels, labelBox, cam, get CAM() { return CAM; }, get VZ() { return VZ; }, get MVP() { return MVP; }, get PROJ() { return PROJ; }, gl, cv, sel: () => selected >= 0 && AT ? AT.buildings[selected] : null };
 window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder, tunnelY, par, get tidalField() { return tidalField; },
   // sky.js: the Thames at a measured level (null: the LiDAR level), and the light from a direction (null: the default)
@@ -2305,5 +2307,6 @@ hud.textContent = ''; ATTR.start();
 <script type="module" src="kml-layer.js"></script>
 <script src="nav.js"></script>
 <script src="drone.js"></script>
+<script src="plotter-svg.js"></script>
 </body>
 </html>

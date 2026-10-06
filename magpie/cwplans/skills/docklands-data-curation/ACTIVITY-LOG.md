@@ -1032,3 +1032,12 @@ central tower - do we have an index of these?"
   building ramp magma, station-model parts warm or grey. Details: skill docklands-3d-page, "Colours: blue is for water".
 - Tests (SwiftShader): owner's view cyan pixels 63,455 -> 0; rotherhithe, greenland, pier, ?night, default x 1600 x 900
   DPR 1 and 390 x 844 DPR 3: no console error, photo-view luma unchanged to 3 decimals.
+
+## 2026-10-06 — Plotter SVG export on the 3D page (Opus)
+- Owner: "Can you next make a vectorised version in SVG that I can send to my plotter?". New `docklands/plotter-svg.js`:
+  Menu > views > "Plotter SVG of this view" (A4/A3/A2): edges rebuilt from the page's data, hidden lines removed with a
+  CPU z-buffer, one Inkscape layer per pen (blue only for water), mm units, credit layer (OSM ODbL, EA LiDAR OGL).
+- Measured: default wide view 23,739 building lines in 7.6 s (987 kB) after a size rule (under 1 mm on paper: not drawn;
+  under 3 mm: roof outline only; first version 40,962 lines, 30 s); Rotherhithe photo view 563 lines; phone download
+  through the button, portrait A4. Details: skill docklands-3d-page, "Plotter SVG". Register entry for the script;
+  check-data-register exit 0.

@@ -1,6 +1,6 @@
 # Data register: magpie/cwplans
 
-Generated from `data-register.json` by `tools/check-data-register.mjs --write` on 2026-10-05. Edit the JSON, not this file.
+Generated from `data-register.json` by `tools/check-data-register.mjs --write` on 2026-10-06. Edit the JSON, not this file.
 
 ## Policy
 
@@ -311,6 +311,7 @@ Outside this project; listed so that the ODbL review sees the whole repository. 
 | `docklands/sky.js` | 64 kB | code, not data: the page clock, the sky (sun, moon, planets, Jupiter's moons, stars, constellation lines, Milky Way band, satellites, cloud and haze), weather and tide for the time shown, and the Sky panel | written or computed in this project (repository licence) |
 | `docklands/ships-layer.js` | 13 kB | code, not data: the 3D page's Ships (AIS) layer (vessel markers from feeds/river/ais.json, then live Open Waters AIS snapshots fetched by the browser every 60 s while visible; small private craft not shown) | written or computed in this project (repository licence) |
 | `docklands/stations-layer.js` | 9 kB | code, not data: the 3D page's Station models layer (Canary Wharf and Canada Water station boxes from docklands/data/stations.json; tap cards; cut-outs of the page's own tunnels and OSM indoor floors inside the boxes; OSM level to m OD inside the boxes for the walking network) | written or computed in this project (repository licence) |
+| `docklands/plotter-svg.js` | 20 kB | code, not data: the 3D page's Plotter SVG export (line drawing of the current view with hidden lines removed, pen layers, mm on A4/A3/A2; drawn in the browser from the page's own data, nothing sent) | written or computed in this project (repository licence) |
 | `atlas/kml-atlas.js` | 13 kB | code, not data: the atlas map's KML import (file picker, drop) and Export layer as KML (features in the map window, with credits; OSM outlines marked ODbL) | written or computed in this project (repository licence) |
 | `docklands/kml.js` | 22 kB | code, not data: KML 2.2 / KMZ reader and KML writer shared by the 3D page and the atlas (DOMParser, zip central directory + DecompressionStream, plain-text descriptions, GeoJSON conversion, Blob download) | written or computed in this project (repository licence) |
 | `docklands/kml-layer.js` | 61 kB | code, not data: the 3D page's My KML layer (open a visitor's KML/KMZ from the file picker, a drop or ?kml=; record cards; Go to view; Export view as KML with the camera, the selected building outline, works sites, river items and the credits; nothing uploaded) | written or computed in this project (repository licence) |
