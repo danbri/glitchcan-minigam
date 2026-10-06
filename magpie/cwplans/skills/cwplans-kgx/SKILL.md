@@ -44,7 +44,7 @@ an operation on immutable named graphs (the `cwplans-dataflow` skill).
 
 ## The store (Shardborough, `factoidal pack --layout ibk5`)
 
-Build of 2026-10-06 (evening): 107,408 triples, 18 graphs, 44 parts, 743 blocks, generation `gen-f77d3378dffd7b81`,
+Build of 2026-10-06 (night): 107,891 triples, 18 graphs, 44 parts, 743 blocks, generation `gen-78dd2364aa7ffb08`,
 4,460 files, 20.6 MB (blocks 14.6 MB; the rest are sidecar indexes and Merkle files). The table below was measured on
 an earlier build (15 graphs, 659 blocks); on this one the same entity reads 60 blocks out and 59 in, about 1.1 MB each.
 
@@ -69,6 +69,12 @@ an earlier build (15 graphs, 659 blocks); on this one the same entity reads 60 b
 - **Query rule: one `GRAPH` block per subject.** Two subjects can be in different parts. Measured:
   `GRAPH ?g { ?place s:openingHoursSpecification ?h . ?h s:opens ?o }` 130 rows; with `GRAPH ?g1 {…} GRAPH ?g2 {…}`
   2,519. There is no default-graph view of the named graphs (a pattern outside `GRAPH` plans no blocks).
+  **This is SPARQL, not a Factoidal fault:** a `GRAPH ?g { … }` block matches inside one named graph at a time, and the
+  parts are separate named graphs. Checked 2026-10-06 on the store's own input (107,408 quads, 46 graphs): 18 queries
+  through the store handle, the in-memory engine and Oxigraph 0.5.11 gave identical rows (6,910); the one-block join
+  gives 130 on the parts and 2,519 with one graph per source in all three. The rule is the price of the parts, which
+  exist because ibk5 cannot cut one (predicate, graph) into several blocks: one graph per source plans 61 of 283 blocks
+  and 4.9 MB for one entity, the parts 60 of 743 and 1.1 MB.
 - **Caps:** the stateless `storeQuery` (what `npx factoidal query` uses) reads at most 64 artifacts, 8,388,608 bytes
   and 100,000 rows per call, and refuses a bigger plan ("the plan selects 81 artifacts, the cap is 64"). A **store
   handle** (`storeOpen` / `openStoreHandle`) has no artifact cap: at most 8 handles and 128 MiB held in all
@@ -85,6 +91,17 @@ an earlier build (15 graphs, 659 blocks); on this one the same entity reads 60 b
   Shardborough; both were dropped from kgx (in git history). `tools/check-factoidal.mjs` re-tests the faults.
 - Package paths: `@factoidal/core/engine` (`loadEngine`) and `@factoidal/core/store` (`openStore`, `openStoreHandle`);
   the README's `@factoidal/core/bin/engine.mjs` is not exported.
+
+## Checks
+
+- `node magpie/cwplans/tools/check-kgx-store.mjs [--write]`: every `queries/*.rq` and the joins through the store and
+  through the in-memory engine on the store's own input; exits 1 on any difference; `--write` puts the result in londat
+  `kgx/checks/store-vs-memory.json`. It refuses when the store was not packed from the current versions. Several minutes
+  (the in-memory parse). Run it after a rebuild with new data and after a Factoidal upgrade.
+- An independent engine as a third opinion: pyoxigraph in a venv, `Store.bulk_load(path=…, format=RdfFormat.N_QUADS,
+  lenient=True)`. Strict loading refuses one IRI in our data (F49).
+- Report to Factoidal (store granularity, zone-key order, subqueries, manifest cost; not filed by us, the owner posts it):
+  `factoidal-issue-2026-10-06-store.md` in this folder.
 
 ## The search page (`kg/`)
 

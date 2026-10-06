@@ -7494,6 +7494,45 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-kgx-store",
+   "@type": "prov:Activity",
+   "rdfs:label": "check-kgx-store",
+   "dct:description": "Rebuilds the store's input from the part versions, meta and log (its SHA-256 prefix must equal the generation name), runs every kgx/queries/*.rq and cross-subject joins through a store handle and through the in-memory engine, and compares the solution multisets; the joins also on the data with one graph per source.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
+     "dcat:accessURL": "npm @factoidal/core (local)",
+     "dct:description": "parse, query (in memory); openStore, openStoreHandle"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/check-kgx-store.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/check-kgx-store.mjs [--write]",
+   "cwp:kind": "check",
+   "cwp:rule": [
+    "Exit 1 on any difference between the store and the in-memory engine.",
+    "Refuses a store that was not packed from the current versions."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-kgx"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-imagery-coverage",
    "@type": "prov:Activity",
    "rdfs:label": "probe-imagery-coverage",
@@ -14012,6 +14051,20 @@
     "dcat:Distribution"
    ],
    "dct:title": "code, not data: asks the kgx Shardborough store one SPARQL query through a store handle and prints tab-separated rows",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/check-kgx-store.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: differential check of the kgx Shardborough store against the Factoidal in-memory engine on the store's own input (every queries/*.rq and cross-subject joins)",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"

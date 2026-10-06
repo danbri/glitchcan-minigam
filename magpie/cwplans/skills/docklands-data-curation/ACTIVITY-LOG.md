@@ -1188,3 +1188,18 @@ Owner: "don't waste good info by burying it in our chatlogs".
   recedes to the right); the full-width patch gave the symmetric pattern (12 panes, 3 louvre strips). The drum is about
   30 m across, not 25 m as first written; the lake is OSM relation 18015947, not a way.
 - Not done: the 3D page draws photo facades only for registry towers (cwb ids).
+
+## 2026-10-06 (late evening): was the GRAPH-join behaviour a Factoidal fault? No; report prepared
+
+- Owner, on the earlier note "cross-subject joins inside a single GRAPH block can break across partitions": "This sounds
+  like a terrible bug in factoidal indexing ... Prepare a copy-paste bug report text and url to post to".
+- Checked: on the store's own input (SHA-256 prefix = the generation name), 18 queries through the store handle, the
+  in-memory engine and Oxigraph 0.5.11 gave identical rows (6,910). The one-block join gives 130 on the parts and 2,519
+  with one graph per source in every engine: SPARQL GRAPH semantics on our split data, not an index fault. My earlier
+  wording ("can break") was wrong and is corrected in the cwplans-kgx skill.
+- Real Factoidal points found, with a repro that runs as written: one block per (predicate, graph) and no way to cut
+  it; zone keys sort by length first (README claim about sorted files does not hold for IRIs of different lengths); a
+  COUNT over a subquery plans every block; every call re-parses the manifest. Text:
+  `skills/cwplans-kgx/factoidal-issue-2026-10-06-store.md`.
+- New `tools/check-kgx-store.mjs` (store against in-memory, on every rebuild or upgrade). New fault F49 (an HTML-escaped
+  URL in the CWG directory, an invalid IRI).
