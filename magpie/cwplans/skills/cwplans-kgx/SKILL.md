@@ -100,7 +100,7 @@ graphs, 659 blocks); on this one the same entity reads 60 blocks out and 59 in, 
   through the in-memory engine on the store's own input; exits 1 on any difference; `--write` puts the result in londat
   `kgx/checks/store-vs-memory.json`. It refuses when the store was not packed from the current versions. It reads only the graphs
   the store holds (a head kept out of the store is skipped: with `model-building-keys` the parse took over 15 minutes).
-  About 8 minutes (the in-memory parse). Result of 2026-10-06 (gen-f330e7f03b06d9d9): 17 of 17 the same. Run it after a rebuild with new data and after a Factoidal upgrade.
+  Several minutes (the in-memory parse; not timed). Result of 2026-10-06 (gen-f330e7f03b06d9d9): 17 of 17 the same. Run it after a rebuild with new data and after a Factoidal upgrade.
 - An independent engine as a third opinion: pyoxigraph in a venv, `Store.bulk_load(path=…, format=RdfFormat.N_QUADS,
   lenient=True)`. Strict loading refuses one IRI in our data (F49).
 - Reported to Factoidal as https://github.com/danbri/factoidal/issues/697 (store granularity, zone-key order, subqueries,
