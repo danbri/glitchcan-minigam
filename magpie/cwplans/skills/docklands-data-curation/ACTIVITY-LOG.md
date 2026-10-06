@@ -1083,3 +1083,16 @@ central tower - do we have an index of these?"
 - Trap found: this container's `.git/info/exclude` ignores `magpie/cwplans/registry/sources/`, although files there are
   tracked. The previous commit (2d83b25e) said it held `cwg-directory-typed.json` and `.nq`, but they were left out;
   they are added now with `git add -f`. After `git add`, check `git status` for every new file under registry/sources/.
+
+## 2026-10-06 (end): what was only in chat is now in the repo
+
+Owner: "don't waste good info by burying it in our chatlogs".
+- Reports committed and served: `reports/schema-org/index.html` (snapshot) and `reports/hours-and-plans/` (template,
+  `build.cjs`, built `index.html`). Their Pages and artifact URLs are in `cwplans-web-harvest`, "Reports".
+- Factoidal: the unfiled issue text is `skills/cwplans-web-harvest/factoidal-issue-2026-10-06.md`;
+  `tools/check-factoidal.mjs` re-tests the six known faults and behaviours (all STILL on 0.7.1). CLAUDE.md's RDF
+  section points to both.
+- `cwplans-web-harvest`: new "What the markup is for" (the first report's findings on entities and target search
+  features), "Reports", and "Open (2026-10-06)" with the next steps; the description was cut to 860 characters
+  (it was 1,652, over the 1,024 limit, and the listing truncated it).
+- This skill, "Ship at once": the `.git/info/exclude` trap and how to check for it.

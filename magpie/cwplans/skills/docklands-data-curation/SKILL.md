@@ -33,7 +33,7 @@ before and after), and what is still open. The other cwplans skills write their 
 |---|---|---|
 | `docklands-data-curation` (this one) | `magpie/cwplans/skills/` | policy, catalogue first, the fault register, joins, rebuild order, methods, provenance, the data register |
 | `docklands-3d-page` | `magpie/cwplans/docklands/skills/` | editing `docklands/index.html`: programs and vertex formats, interface, styles, splats, Night mode and its calibration, the fp16 lesson, headless testing, shipping |
-| `cwplans-web-harvest` | `magpie/cwplans/skills/` | crawling entity websites, the headless render, store finders, JSON-LD repair, Factoidal and N-Quads, branch scopes, opening hours, the Chromium proxy CA fix |
+| `cwplans-web-harvest` | `magpie/cwplans/skills/` | crawling entity websites, the headless render, store finders, JSON-LD repair, Factoidal and N-Quads (known faults, `tools/check-factoidal.mjs`), idioms, sameAs groups, the typed CWG directory, site search, opening hours by mall, mall plans, what the markup is for, the reports, the Chromium proxy CA fix |
 | `cwplans-public-registers` | `magpie/cwplans/skills/` | GIAS, CQC, ODS, charities, Ofsted, gambling, Active Places, FSA pubs: licences, fields dropped, the join and its traps (F17 to F20), rejected sources |
 | `cwplans-london-datastore` | `magpie/cwplans/skills/` | the London Datastore walk: the v3 export API and terms, `tools/walk-london-datastore.mjs` (walk, triage, harvest), the triage rules, the rule-driven harvest of the listed datasets (`tools/lds-harvest-auto.mjs`, harvest-log.json, F36 to F41), the joins to the registry (`tools/join-lds.mjs`), the ranked backlog, F22 and F23; amending rounded UPRNs in a copy (`tools/amend-uprns.mjs`, F22, F25) |
 | `cwplans-open-portals` | `magpie/cwplans/skills/` | the other open-data portals (data.gov.uk, planning.data.gov.uk, borough portals, Nomis / ONS, national APIs): `tools/walk-portals.mjs`, licence classes, triage states, harvests in `feeds/portals/`, size rules |
@@ -51,6 +51,12 @@ way to see progress." Commit and push each working change to master as soon as i
 load with no page errors, `check-data-register.mjs`), then confirm the live file matches the commit
 (https://danbri.github.io/glitchcan-minigam/ + path). Do not hold finished work back to bundle it with other work.
 The page-side recipe and the lesson behind "re-read the whole line" are in `docklands-3d-page`.
+
+**Check that git took every new file.** A container can carry a local `.git/info/exclude` that ignores
+`magpie/cwplans/registry/sources/` (seen 2026-10-06), although files there are tracked. `git add <dir>` then skips new
+files silently, and `check-data-register.mjs` still passes (it checks the disk, not git). Commit 2d83b25e said it held
+`cwg-directory-typed.json` and `.nq` and did not. After `git add`, run `git status --short` and look for each new
+file; `git check-ignore -v <file>` names the rule; add a needed file with `git add -f <file>`.
 
 ## Catalogue first
 

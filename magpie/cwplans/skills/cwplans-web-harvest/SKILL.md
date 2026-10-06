@@ -1,17 +1,14 @@
 ---
 name: cwplans-web-harvest
 description: >-
-  Crawl the web pages that the Canary Wharf / Docklands registry links to (occupant websites, chain store pages, the
-  Canary Wharf Group directory, charity sites) and turn their schema.org structured data into facts: the plain crawl
-  (tools/crawl-sites.mjs), the headless Chromium render (render-structured-data.mjs with the in-page extractor
-  structured-dom.mjs), store-finder searches with a UK postcode (the owner's exception and its limits), robots.txt
-  and politeness, the JSON-LD repair classes (jsonld-clean.mjs), Factoidal (@factoidal/core: what it parses, and why
-  microdata and RDFa are converted to N-Triples first), the N-Quads dataset with one named graph per page, what may be
-  committed in third_party/cwplans-structured-data (no full pages), the branch / chain / organisation scopes of
-  extract-structured-data.mjs, the keys of join-web-facts.mjs, and the OSM opening_hours subset that
-  docklands/opening-hours.js reads. Reach for it before you crawl or render any site for magpie/cwplans, add a store
-  finder, change how a page fact is attributed to a branch, or read opening hours or phone numbers from the web. Also
-  has the fix for Chromium failing every HTTPS page behind the agent proxy (ERR_CERT_AUTHORITY_INVALID).
+  Web pages the Canary Wharf / Docklands registry links to (occupant sites, chain store pages, the Canary Wharf Group
+  directory) and their schema.org data: crawl and headless render (robots.txt, politeness, the Chromium proxy CA fix),
+  store finders with a UK postcode, JSON-LD repair, the N-Quads dataset, @factoidal/core and its known faults
+  (tools/check-factoidal.mjs), branch / chain / organisation scopes, descriptive idioms (ShEx) and the canonical layer,
+  sameAs groups, the typed CWG directory and its hours, site search (SearchAction), opening hours by mall and area,
+  how far mall plans can be rebuilt from CWG and OSM, what the markup is for, and the reports. Reach for it before
+  you crawl or render a site for magpie/cwplans, add a store finder, attribute a page fact to a branch, read hours or
+  phone numbers from the web, or do RDF work on the harvest.
 ---
 
 # Web harvest for magpie/cwplans
@@ -156,7 +153,12 @@ if needed" (also in the repo CLAUDE.md). What we learned with `@factoidal/core` 
   a relative label (`<Branch>`) fails with "could not decode schema". Value sets, `EXTRA`, `@ref`, `|` alternatives,
   cardinalities and regex facets (`LITERAL /^https?:/`) work. A focus can be the RDF/JS term from a SPARQL binding,
   blank nodes included. About 30 ms a check on a page graph (16,143 checks in 9.5 minutes).
-- **Fault (issue text for danbri/factoidal written 2026-10-06; this session could not post it):** in a CONSTRUCT, a
+- **Check after any Factoidal upgrade:** `node magpie/cwplans/tools/check-factoidal.mjs` prints each fault below as
+  STILL or FIXED (all STILL on 0.7.1, 2026-10-06). Remove a workaround only when its line says FIXED.
+- **Fault, not yet filed:** the issue text is `factoidal-issue-2026-10-06.md` in this skill's folder. The session of
+  2026-10-06 could not reach danbri/factoidal (add_repo refused); post it at https://github.com/danbri/factoidal/issues/new
+  or ask the owner. Then write the issue URL here.
+- **The fault itself:** in a CONSTRUCT, a
   blank node made by `BNODE()` gets a label like `p1__:fxbn…` (a colon, not a valid N-Quads label). `serialize()` drops
   every quad that uses it, silently, in nquads, ntriples and turtle; `toNQuads()` keeps them but writes the invalid
   label, and `parse()` of that output drops those lines, also silently. In a SELECT, a `BNODE()` term's `value` starts
@@ -265,6 +267,36 @@ outlines are not in any source we hold.
   index.commoncrawl.org reset every connection from the container (agent-proxy `ws_closed_mid_exchange`); fetch it
   first next time.
 
+## What the markup is for (report of 2026-10-06)
+
+Read before you decide what to extract or how much to trust a field. Counts from the rdflib pass of 2026-10-06.
+- 65,566 quads from 824 pages (455 live pages on 378 sites, 369 archived canarywharf.com pages). JSON-LD carries almost
+  all schema.org content (695 pages); microdata is mostly theme markup (WPHeader, SiteNavigationElement); RDFa is
+  Open Graph, with schema.org in RDFa on one page only.
+- Most nodes are site furniture written by SEO plugins: WebSite, WebPage, BreadcrumbList, SearchAction, ImageObject.
+  They give a site name, page dates and a section path, little about the business.
+- The useful entities: Organization (161 sites: name, url, logo, sameAs on 83 to 96% of nodes, an address on only 10%)
+  and LocalBusiness with its subtypes (109 sites, 209 place descriptions). Only 69 of the 209 have name, structured
+  address, telephone and hours together. Events are almost absent (1 site).
+- What each pattern is written for, and whether it still pays (platform documentation as known on 2026-10-06; check
+  before you depend on it): SearchAction is for the Google sitelinks search box, retired late 2024, still written by
+  plugins (111 sites). BreadcrumbList: breadcrumb trail, desktop only since early 2025. Organization with logo and
+  sameAs: logo and knowledge panel. LocalBusiness with address, geo, hours, telephone: local details, a secondary
+  signal behind Google Business Profile. Self-published AggregateRating on a business: not shown by Google since 2019.
+  FAQPage: limited to government and health sites since 2023. Product and Offer: product snippets.
+- So: trust LocalBusiness facts as the publisher's own statement, expect plugin defaults (F47), and treat ratings and
+  FAQs as marketing.
+
+## Reports
+
+| Report | On the site | Private artifact (owner) | How it is made |
+|---|---|---|---|
+| schema.org data: entities, search features, idioms, same-thing groups | https://danbri.github.io/glitchcan-minigam/magpie/cwplans/reports/schema-org/ | https://claude.ai/artifact/8syFhnR1EaJEmJJQdqLmn5 | a snapshot (`reports/schema-org/index.html`), not rebuilt |
+| site search, opening hours by mall, mall plans | https://danbri.github.io/glitchcan-minigam/magpie/cwplans/reports/hours-and-plans/ | https://claude.ai/artifact/HX1DxWzvEvkXTnTauGGWFC | `node magpie/cwplans/reports/hours-and-plans/build.cjs` from the committed JSON (template.html + build.cjs) |
+
+After a rebuild, republish the artifact with the Artifact tool, passing the artifact URL above as `url` (read it
+first); the repo copy is the source. The report pages are not in the atlas or the 3D page.
+
 ## What is committed (`third_party/cwplans-structured-data/`)
 
 **No full pages.** `pages/<host>.jsonl` (one line per rendered page: URL, final URL, status, method, title, lang,
@@ -337,7 +369,15 @@ Fix (`apt-get install -y libnss3-tools` if `certutil` is missing):
 A new container can bring a new CA file: add it again under a new nickname. Chromium takes the proxy from the
 environment.
 
-## Open (2026-10-04)
+## Open (2026-10-06)
 
-A check for web hours that disagree with OSM `opening_hours`; store finders for the 100 brands with no finder link
-and the 50 finders with no postcode box; verify the 61 discovered feeds.
+- Fetch https://canarywharf.com/maps/ (an Internet Archive or Common Crawl copy): it may hold the mall plans. On
+  2026-10-06 both hosts reset every connection from the container; check the agent-proxy status first.
+- Crawl the 48 site-search hits that are not in the harvest (`search/probe.json`, `hits_new`), branch pages first.
+- Mall plans without a new source: snap each placed point to the nearest corridor on its level and order shops along
+  each corridor (a schematic plan, which shop is next to which).
+- F47 rule: do not use a web value of exactly 09:00-17:00 every day when another source gives other hours.
+- File the Factoidal issue (above) and write its URL here.
+- From 2026-10-04: store finders for the 100 brands with no finder link and the 50 finders with no postcode box;
+  verify the 61 discovered feeds. Done 2026-10-06: the check for web hours that disagree with OSM
+  (`hours-by-place.json`, `agreement`).
