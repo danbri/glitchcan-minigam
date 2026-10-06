@@ -939,31 +939,80 @@ caught both. Put no comment inside a one-line function.
 ## Plotter SVG (2026-10-06)
 
 Owner, 2026-10-06: "Can you next make a vectorised version in SVG that I can send to my plotter?". Menu > views group >
-"Plotter SVG of this view" with a paper select (A4, A3 default, A2); the orientation follows the screen. Code:
-`docklands/plotter-svg.js`; index.html gives it `globalThis.DocklandsPlotCtx` (A, dec, earcut, heightOf, towerOf, groundAt,
-tunnelY, par, toast and getters for MVP, VZ, CAM, TOWERS) and one script tag after drone.js. Test hook:
-`DocklandsPlot.make({ paper, minMm })` returns `{ svg, stats, ms, raster, occluders, paper }`.
+"Plotter SVG of this view" with a paper select (A4, A3 default, "A2 (larger than an A3 plotter)"); the orientation follows
+the screen. Code: `docklands/plotter-svg.js`; index.html gives it `globalThis.DocklandsPlotCtx` (A, dec, earcut, heightOf,
+towerOf, groundAt, tunnelY, par, toast and getters for MVP, VZ, CAM, TOWERS) and one script tag after drone.js. Test hook:
+`DocklandsPlot.make({ paper, minMm })` returns `{ svg, stats, ms, raster, occluders, paper }`; `stats` counts the lines
+(pen lifts) per layer and of the credit.
 
-- **What is drawn** (one Inkscape layer per pen; colours: buildings black, water blue, greens green, roads grey, railways
-  red, paths with a level brown, underground orange): building and tower edges (roof and base rings, a vertical edge at a
-  corner over about 26 degrees, pyramid edges), water and green outlines, both kerbs of each road, open railway centre
-  lines, level-tagged paths (the page's heights, station floors inside the boxes); with the cut on, tunnel centre lines
-  (cut out of the station boxes) and the station models' feature edges (a boundary, or faces more than 30 degrees apart).
-  A credit text (OSM, EA LiDAR) is its own layer. No fills, stroke 0.3 mm, mm units.
+- **What is drawn** (one numbered Inkscape layer per pen, each a top-level `<g>` carrying its own stroke: "1 Buildings
+  and credit" black, "2 Water" blue, "3 Parks and greens" green, "4 Roads" grey, "5 Railways" red, "6 Paths with a level"
+  brown, "7 Underground (tunnels, stations)" orange; the numbers stay fixed when a layer is empty): building and tower
+  edges (roof and base rings, a vertical edge at a corner over about 26 degrees, pyramid edges), water and green
+  outlines, both kerbs of each road, open railway centre lines, level-tagged paths (the page's heights, station floors
+  inside the boxes); with the cut on, tunnel centre lines (cut out of the station boxes) and the station models' feature
+  edges (a boundary, or faces more than 30 degrees apart). The credit (date, OSM ODbL, EA LiDAR OGL) is drawn in layer 1
+  as single-stroke text, Hershey Roman Simplex, cap height 2.2 mm, one row or two when one is too wide (portrait A4). The
+  `<desc>` repeats it as text. No fills, stroke 0.3 mm, mm units, no `<text>` element.
 - **Hidden lines**: a CPU z-buffer at 2 x the CSS size (long side at most 2,400 px) of the solids: building and tower
   walls and roofs, the terrain (only with the cut off; with the cut on the page draws the ground faint), and the opaque
   station parts. Triangles are clipped to the cut level and the near plane. Each edge is sampled every 0.75 px; its depth
   is that of the edge moved towards the eye by max(0.35 m, 0.3% of the distance), so an edge on a face wins against that
   face. Uses the page's own MVP, so photo views with a lens, roll and pixel art (orthographic) work too.
-- **Plotter tidy**: runs joined end to start (0.6 px), Douglas-Peucker 0.08 mm, lines under 0.25 mm dropped, greedy
-  nearest-end order per layer (less pen-up travel), shared walls drawn once. A building under 1 mm on the paper hides but is
-  not drawn; under 3 mm only its roof outline (the first wide view was solid ink far away: 40,962 lines, 30 s; now 23,739,
-  7.6 s, 987 kB).
-- **Measured** (headless Chromium, 1600 x 900 DPR 1, A3): default view 23,739 building lines, 7.6 s; owner's cut view at
-  39 m OD 1,608 + 1,754 underground, 2.6 s; Canary Wharf below ground 0.6 s; ?view=rotherhithe 563, 2.6 s, 19 kB.
-  390 x 844 DPR 3: portrait A4 from ?view=greenland through the button and a real download, 489 lines, 16 kB; no console
-  error. xmllint: well formed. Not tested on a real plotter: pen order and speed, and whether the plotter software reads
-  Inkscape layers (AxiDraw and vpype do).
+- **Lines on the ground are draped** on the same triangles as the terrain occluder (`surfY`): a point every half cell
+  (10 m), at the line's own height or on the ground if that is higher (bridges keep theirs), plus 0.3 m (water 0.1 m).
+  Before this, straight water, green, road and rail edges crossed many 20 m cells and the ground hid them where it bulged
+  above the chord: in `?view=rotherhithe` 0.01 m of water edge was drawn, now 0.80 m (the far bank under the towers and
+  the near river wall). `groundAt` on the page is the nearest cell, not these triangles; do not use it for draping.
+- **Road kerbs are mitred**: the kerb point at a bend lies on the mean of the two segment normals, at most 2 w out, so the
+  two kerb pieces meet (one stroke, no notch or overlap).
+- **Plotter tidy**: runs joined end to start (0.6 px), Douglas-Peucker 0.08 mm; then `join()`: line ends within 0.15 mm of
+  a cluster's first end form one node, lines are edges, and Euler trails (odd nodes paired by virtual edges, Hierholzer,
+  cut at the virtual edges) cover each part with max(1, odd / 2) trails. A bridge is at most 0.3 mm, the pen width, so it
+  does not show. Then lines under 0.25 mm dropped, greedy nearest-end order per layer, shared walls drawn once. A building
+  under 1 mm on the paper hides but is not drawn; under 3 mm only its roof outline.
+- **Measured** with the kerbs and the draping, default A3 view: 29,501 -> 20,232 lines (pen lifts); buildings 23,739 ->
+  16,760, roads 4,400 -> 2,415. Rotherhithe 570 -> 428. Canada Water phone view 454 -> 351 (buildings only -9%: few
+  touching ends; roads -58%). Union-find clusters, with no bound on the bridge, gave buildings -58% in a simulation, but
+  with bridges of any length. The greedy order is as good as the vendor's own reordering (its "full" reordering saves 2 to
+  3% more travel).
+
+### The owner's plotter: iDraw 2.0 A3 (DrawCore V2.0), and how to test against its software
+
+Owner, 2026-10-06: "verify that your plotter functionality is optimal for" an iDraw 2.0: DrawCore V2.0 board, GRBL
+compatible, "iDraw 2.0 Control", working area 420 x 297 mm, 0.01 mm precision, 445 nm diode laser (fixed focus, PWM
+S0-S1000, engraving 0-5,000 mm/min), writing 0-12,000 mm/min, 115200 baud.
+
+- **The vendor path is SVG**: Inkscape 1.2+ with UUNA TEK's "iDraw 2.0 Control" extension (`idraw2_0.inx`; laser:
+  `idraw2_0_laser.inx`, same SVG code with PWM). It is a fork of the AxiDraw extension (internals say 3.9.5), sending a
+  GRBL dialect. A public copy of the shipped extension, with an analysis of every firmware command, is in
+  https://github.com/TLausZ/plotter-studio (`extensions/`, "iDraw Extension Analysis 2026-09-02.md"; GPL-3, used only as a
+  test tool, not committed). Model 2 (A3) has 430 x 297 mm of travel; a portrait page is turned (`auto_rotate`). A2
+  pages are clipped ("iDraw movement was limited by its physical range of motion").
+- **What it does with our SVG** (read in `digest_svg.py` and `path_objects.py`): only stroked paths plot; `<text>` and
+  images are skipped with a warning (the first version's credit was text: it never plotted); a layer is a
+  `groupmode="layer"` group met while no other layer is open; "plot layer N" needs a name that starts with N ("1 ...";
+  our first names had none, so that tab plotted nothing); `%` names are never plotted; `!` pauses; `+s`, `+h`, `+d` set
+  speed, height and delay per layer. Default `reordering = 0` (our order is used; ends within 0.2 mm joined, no reversal).
+- **Run it headless** (no plotter needed): copy `extensions/`, delete `idraw_deps/lxml` (built for CPython 3.7), make a
+  venv with lxml, pyserial, requests and mpmath, `cd` into the copy (it finds `idraw_deps` from the working directory),
+  then `python idraw2_0_control.py --mode=plot --preview=true --model=2 --report_time=true file.svg > preview.svg`;
+  `--mode=layers --layer=N` plots one layer; `--reordering=2` is its best ordering. It prints the estimated time, pen-down
+  and pen-up distance, and every warning.
+- **Its time estimate ignores pen lifts**: `raise_time` and `lower_time` stay 0 (the timing code is commented out). So 31%
+  fewer pen lifts did not change the estimate (default A3 view 1:43:47 -> 1:44:08, with the credit's 169 strokes and the
+  draped lines added). On the machine each lift moves the pen 4.5 mm down and up (Z at 5,000 mm/min by default), so the
+  count of lines is the measure to use. Real plotting time is not measured; there is no plotter here.
+- vpype (`vpype read x.svg stat`, 1.15) read the first version as one layer (the layers were inside a styling `<g>`); it
+  reads the numbered top-level layers as layers.
+- **Not done, on purpose**: a G-code export. The board takes GRBL G-code (UGS, LaserGRBL), but its axes are swapped and
+  negated against the page (document x -> machine -Y, y -> -X, home rear right; from the extension's code) and the pen is a
+  Z height; a file that is wrong on a machine nobody here can test can drive the pen into the paper edge. The vendor's
+  extension takes the SVG and handles both.
+- Measured after these changes (headless Chromium, A3 unless stated): default view at 1600 x 900 DPR 1: 20,232 lines + 170
+  credit strokes, 7.2 s, 1.1 MB; `?view=rotherhithe` 428 lines; `?view=under`, layer 7 alone plots 8.3 m; 390 x 844 DPR 3
+  portrait A4 from `?view=greenland` through the button and a real download, 465 lines, 33 kB, credit on two rows. No
+  console error; xmllint well formed; no warnings from the vendor preview on A3 and A4.
 
 ## Station models (2026-10-05)
 

@@ -1,14 +1,20 @@
-// Plotter SVG of the 3D page's current view (Menu > views > "Plotter SVG"): lines only, hidden lines removed, one pen
-// layer per kind of line, millimetres on A4/A3/A2 paper. Edges are rebuilt from the page's data; visibility comes from a
-// CPU z-buffer of the same solids. index.html calls DocklandsPlot.init(ctx). Skill: docklands-3d-page, "Plotter SVG".
+// Plotter SVG of the 3D page's current view (Menu > views > "Plotter SVG"): lines only, hidden lines removed, one
+// numbered pen layer per kind of line ("1 Buildings and credit" ...: the iDraw and AxiDraw "plot layer N" convention),
+// millimetres on A4/A3/A2 paper, the credit in single-stroke text. Edges are rebuilt from the page's data; visibility
+// comes from a CPU z-buffer of the same solids. index.html calls DocklandsPlot.init(ctx).
+// Skill: docklands-3d-page, "Plotter SVG" (and what the iDraw 2.0 software does with the file).
+// The credit font is Hershey Roman Simplex (futural.jhf). The Hershey Fonts were originally created by Dr. A. V. Hershey
+// while working at the U. S. National Bureau of Standards. The format of the Font data in this distribution was
+// originally created by James Hurt, Cognition, Inc., 900 Technology Park Drive, Billerica, MA 01821.
 (() => {
 let C = null;
 const $ = id => document.getElementById(id);
 const PAPER = { A4: [297, 210], A3: [420, 297], A2: [594, 420] }, MARGIN = 12, PEN = 0.3;
-const LAYERS = [   // id, label, stroke colour (blue only for water)
-  ['bld', 'Buildings', '#000000'], ['water', 'Water', '#1f5fbf'], ['green', 'Parks and greens', '#2e8b3a'],
-  ['road', 'Roads', '#777777'], ['rail', 'Railways', '#c0392b'], ['path', 'Paths with a level', '#a0784a'],
-  ['under', 'Underground (tunnels, stations)', '#d35400']];
+// id, layer number and label, stroke colour (blue only for water); the numbers stay the same when a layer is empty
+const LAYERS = [
+  ['bld', '1 Buildings and credit', '#000000'], ['water', '2 Water', '#1f5fbf'], ['green', '3 Parks and greens', '#2e8b3a'],
+  ['road', '4 Roads', '#777777'], ['rail', '5 Railways', '#c0392b'], ['path', '6 Paths with a level', '#a0784a'],
+  ['under', '7 Underground (tunnels, stations)', '#d35400']];
 
 // ---------- camera
 function camera(W, H) {
@@ -83,17 +89,44 @@ function scene(P, cam, minPx) {
   if (cutY === Infinity) { const G = C.A.terrain, h = (i, j) => G.dm[j * G.nx + i] / 10;
     for (let j = 0; j < G.nz - 1; j++) for (let i = 0; i < G.nx - 1; i++) { const x0 = G.x0 + i * G.cell, z0 = G.z0 + j * G.cell, x1 = x0 + G.cell, z1 = z0 + G.cell;
       const a = [x0, h(i, j), z0], b = [x1, h(i + 1, j), z0], c = [x0, h(i, j + 1), z1], d = [x1, h(i + 1, j + 1), z1]; tri(a, b, c); tri(b, d, c); } }
+  // Lines on the ground (water and green outlines, kerbs, railways) are draped on the same triangles as the terrain
+  // occluder: a point every half cell, at its own height or on the ground if that is higher (bridges keep theirs), plus a
+  // lift. Straight lines across many 20 m cells were cut into dashes where the ground bulged above them.
+  const G = C.A.terrain, gh = (i, j) => G.dm[Math.max(0, Math.min(G.nz - 1, j)) * G.nx + Math.max(0, Math.min(G.nx - 1, i))] / 10;
+  const surfY = (x, z) => {
+    const u = (x - G.x0) / G.cell, v = (z - G.z0) / G.cell, i = Math.floor(u), j = Math.floor(v), fx = u - i, fz = v - j;
+    if (fx + fz <= 1) return gh(i, j) + (gh(i + 1, j) - gh(i, j)) * fx + (gh(i, j + 1) - gh(i, j)) * fz;
+    return gh(i + 1, j + 1) + (gh(i, j + 1) - gh(i + 1, j + 1)) * (1 - fx) + (gh(i + 1, j) - gh(i + 1, j + 1)) * (1 - fz);
+  };
+  const along = (a, b, out) => { const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[2] - a[2]) / (G.cell / 2)));
+    for (let s = out.length ? 1 : 0; s <= n; s++) out.push(lerp(a, b, s / n)); return out; };
+  const onGround = (p, lift) => [p[0], Math.max(p[1], surfY(p[0], p[2])) + lift, p[2]];
+  const polyline = (L, P, lift) => { for (let i = 1; i < P.length; i++) seg(L, onGround(P[i - 1], lift), onGround(P[i], lift)); };
   // water and greens: outlines on the surface
-  const outline = (L, o, yf) => { for (const ring of ringsOf(C.dec(o.p), o.holes)) for (let i = 0; i < ring.length; i++) { const p = ring[i], q = ring[(i + 1) % ring.length]; if (p[1] === q[1] && p[0] === q[0]) continue; seg(L, [p[0], yf(p[0], p[1]), p[1]], [q[0], yf(q[0], q[1]), q[1]]); } };
-  for (const w of C.A.water) outline('water', w, () => w.level + .1);
-  for (const g of C.A.greens) outline('green', g, (x, z) => C.groundAt(x, z) + .3);
-  // roads (both kerbs) and open railways (centre line)
+  const outline = (L, o, y0, lift) => { for (const ring of ringsOf(C.dec(o.p), o.holes)) for (let i = 0; i < ring.length; i++) { const p = ring[i], q = ring[(i + 1) % ring.length];
+    if (p[1] === q[1] && p[0] === q[0]) continue; polyline(L, along([p[0], y0, p[1]], [q[0], y0, q[1]], []), lift); } };
+  for (const w of C.A.water) outline('water', w, w.level, .1);
+  for (const g of C.A.greens) outline('green', g, -1e4, .3);
+  // roads (both kerbs) and open railways (centre line). A kerb point at a bend lies on the mitre (the mean of the two
+  // segment normals, at most 2 w out), so the kerb pieces of the two segments meet there: one pen stroke, no notch
+  const nrm = (a, b) => { const dx = b[0] - a[0], dz = b[2] - a[2], n = Math.hypot(dx, dz) || 1; return [-dz / n, dx / n]; };
   for (const l of C.A.lines) if (!l.tunnel) { const q = C.dec(l.q, 3), road = l.k === 'road', w = road ? [0, 10, 7, 4][l.c] / 2 : 0;
     if (road && !w) continue;
-    for (let i = 3; i < q.length; i += 3) { const a = [q[i - 3], q[i - 1] + .3, q[i - 2]], b = [q[i], q[i + 2] + .3, q[i + 1]];
-      if (!road) { seg('rail', a, b); continue; }
-      const dx = b[0] - a[0], dz = b[2] - a[2], n = Math.hypot(dx, dz) || 1, ox = -dz / n * w, oz = dx / n * w;
-      seg('road', [a[0] + ox, a[1], a[2] + oz], [b[0] + ox, b[1], b[2] + oz]); seg('road', [a[0] - ox, a[1], a[2] - oz], [b[0] - ox, b[1], b[2] - oz]); } }
+    const V0 = [];
+    for (let i = 0; i < q.length; i += 3) { const p = [q[i], q[i + 2], q[i + 1]], o = V0[V0.length - 1]; if (!o || o[0] !== p[0] || o[2] !== p[2]) V0.push(p); }
+    if (V0.length < 2) continue;
+    const V = []; for (let i = 1; i < V0.length; i++) along(V0[i - 1], V0[i], V);
+    if (!road) { polyline('rail', V, .3); continue; }
+    const off = V.map((p, i) => {
+      const n1 = i ? nrm(V[i - 1], p) : null, n2 = i < V.length - 1 ? nrm(p, V[i + 1]) : null;
+      if (!n1 || !n2) { const n = n1 || n2; return [n[0] * w, n[1] * w]; }
+      const mx = n1[0] + n2[0], mz = n1[1] + n2[1], ml = Math.hypot(mx, mz);
+      if (ml < 1e-6) return [n1[0] * w, n1[1] * w];
+      const s = w / Math.max(.5, (mx * n1[0] + mz * n1[1]) / ml) / ml;
+      return [mx * s, mz * s];
+    });
+    for (const sg of [1, -1]) polyline('road', V.map((p, i) => [p[0] + sg * off[i][0], p[1], p[2] + sg * off[i][1]]), .3);
+  }
   // paths and corridors with a level tag, at the page's heights (station models: measured floors)
   const ST = globalThis.DocklandsStations, U = globalThis.DOCKLANDS_UNDER;
   if (U && $('showUnder') && $('showUnder').checked) for (const o of U.indoor) if (o.line) { const f = C.dec(o.line);
@@ -152,6 +185,71 @@ function simplify(pts, tol) {   // Douglas-Peucker
     if (best > 0) { keep[best] = 1; st.push([i, best], [best, j]); } }
   return pts.filter((_, k) => keep[k]);
 }
+// Fewer pen lifts: lines whose ends lie near the same point become one trail. Nodes are clusters of line ends (every end
+// within r of the cluster's first end, so a bridge drawn with the pen down is at most 2 r: the pen width); edges are the
+// lines. Each connected part needs max(1, odd nodes / 2) trails: the odd nodes are paired by virtual edges, an Euler
+// circuit is walked (Hierholzer), and the circuit is cut at the virtual edges.
+function join(lines, r) {
+  const cell = new Map(), lead = [];
+  const node = p => {
+    const cx = Math.floor(p[0] / r), cy = Math.floor(p[1] / r); let best = -1, bd = r;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const k of cell.get((cx + dx) + ',' + (cy + dy)) || []) {
+      const d = Math.hypot(p[0] - lead[k][0], p[1] - lead[k][1]); if (d <= bd) { bd = d; best = k; } }
+    if (best < 0) { best = lead.length; lead.push(p); const key = cx + ',' + cy; (cell.get(key) || cell.set(key, []).get(key)).push(best); }
+    return best;
+  };
+  const E = lines.map(L => [node(L[0]), node(L[L.length - 1])]), n = lead.length, nl = lines.length;
+  const par = Int32Array.from({ length: n }, (_, i) => i), find = a => { while (par[a] !== a) a = par[a] = par[par[a]]; return a; };
+  const deg = new Int32Array(n);
+  for (const [u, v] of E) { par[find(u)] = find(v); deg[u]++; deg[v]++; }
+  const oddOf = new Map();
+  for (let v = 0; v < n; v++) if (deg[v] & 1) { const c = find(v), o = oddOf.get(c); if (o == null) oddOf.set(c, v); else { E.push([o, v]); oddOf.delete(c); } }
+  const adj = Array.from({ length: n }, () => []);
+  E.forEach(([u, v], e) => { adj[u].push(e); adj[v].push(e); });
+  const used = new Uint8Array(E.length), ptr = new Int32Array(n), out = [];
+  for (let s = 0; s < n; s++) {
+    const st = [[s, -1, 0]], cir = [];
+    while (st.length) {
+      const top = st[st.length - 1], v = top[0]; let e = -1;
+      while (ptr[v] < adj[v].length) { const c = adj[v][ptr[v]++]; if (!used[c]) { e = c; break; } }
+      if (e < 0) { st.pop(); if (top[1] >= 0) cir.push(top); continue; }
+      used[e] = 1; const fwd = E[e][0] === v; st.push([fwd ? E[e][1] : E[e][0], e, fwd ? 0 : 1]);
+    }
+    if (!cir.length) continue;
+    cir.reverse();
+    const k0 = cir.findIndex(c => c[1] >= nl), seq = k0 < 0 ? cir : [...cir.slice(k0 + 1), ...cir.slice(0, k0 + 1)];
+    let cur = null;
+    for (const [, e, rev] of seq) {
+      if (e >= nl) { cur = null; continue; }
+      const pts = rev ? lines[e].slice().reverse() : lines[e];
+      if (!cur) { out.push(cur = pts.slice()); continue; }
+      const a = cur[cur.length - 1];
+      for (let i = a[0] === pts[0][0] && a[1] === pts[0][1] ? 1 : 0; i < pts.length; i++) cur.push(pts[i]);
+    }
+  }
+  return out;
+}
+
+// Single-stroke text in Hershey Roman Simplex (futural.jhf, ASCII 32 to 127; acknowledgement in the header): one string
+// per glyph, its left and right edges then x y pairs, each a character minus 'R'; " R" lifts the pen. Cap height 21 units,
+// baseline at y = 9.
+const HERSHEY = ["JZ","MWRFRT RRYQZR[SZRY","JZNFNM RVFVM","H]SBLb RYBRb RLOZO RKUYU","H\\PBP_ RTBT_ RYIWGTFPFMGKIKKLMMNOOUQWRXSYUYXWZT[P[MZKX","F^[FI[ RNFPHPJOLMMKMIKIIJGLFNFPGSHVHYG[F RWTUUTWTYV[X[ZZ[X[VYTWT","E_\\O\\N[MZMYNXPVUTXRZP[L[JZIYHWHUISJRQNRMSKSIRGPFNGMIMKNNPQUXWZY[[[\\Z\\Y","MWRHQGRFSGSIRKQL","KYVBTDRGPKOPOTPYR]T`Vb","KYNBPDRGTKUPUTTYR]P`Nb","JZRLRX RMOWU RWOMU","E_RIR[ RIR[R","NVSWRXQWRVSWSYQ[","E_IR[R","NVRVQWRXSWRV","G][BIb","H\\QFNGLJKOKRLWNZQ[S[VZXWYRYOXJVGSFQF","H\\NJPISFS[","H\\LKLJMHNGPFTFVGWHXJXLWNUQK[Y[","H\\MFXFRNUNWOXPYSYUXXVZS[P[MZLYKW","H\\UFKTZT RUFU[","H\\WFMFLOMNPMSMVNXPYSYUXXVZS[P[MZLYKW","H\\XIWGTFRFOGMJLOLTMXOZR[S[VZXXYUYTXQVOSNRNOOMQLT","H\\YFO[ RKFYF","H\\PFMGLILKMMONSOVPXRYTYWXYWZT[P[MZLYKWKTLRNPQOUNWMXKXIWGTFPF","H\\XMWPURRSQSNRLPKMKLLINGQFRFUGWIXMXRWWUZR[P[MZLX","NVROQPRQSPRO RRVQWRXSWRV","NVROQPRQSPRO RSWRXQWRVSWSYQ[","F^ZIJRZ[","E_IO[O RIU[U","F^JIZRJ[","I[LKLJMHNGPFTFVGWHXJXLWNVORQRT RRYQZR[SZRY","E`WNVLTKQKOLNMMPMSNUPVSVUUVS RQKOMNPNSOUPV RWKVSVUXVZV\\T]Q]O\\L[JYHWGTFQFNGLHJJILHOHRIUJWLYNZQ[T[WZYYZX RXKWSWUXV","I[RFJ[ RRFZ[ RMTWT","G\\KFK[ RKFTFWGXHYJYLXNWOTP RKPTPWQXRYTYWXYWZT[K[","H]ZKYIWGUFQFOGMILKKNKSLVMXOZQ[U[WZYXZV","G\\KFK[ RKFRFUGWIXKYNYSXVWXUZR[K[","H[LFL[ RLFYF RLPTP RL[Y[","HZLFL[ RLFYF RLPTP","H]ZKYIWGUFQFOGMILKKNKSLVMXOZQ[U[WZYXZVZS RUSZS","G]KFK[ RYFY[ RKPYP","NVRFR[","JZVFVVUYTZR[P[NZMYLVLT","G\\KFK[ RYFKT RPOY[","HYLFL[ RL[X[","F^JFJ[ RJFR[ RZFR[ RZFZ[","G]KFK[ RKFY[ RYFY[","G]PFNGLIKKJNJSKVLXNZP[T[VZXXYVZSZNYKXIVGTFPF","G\\KFK[ RKFTFWGXHYJYMXOWPTQKQ","G]PFNGLIKKJNJSKVLXNZP[T[VZXXYVZSZNYKXIVGTFPF RSWY]","G\\KFK[ RKFTFWGXHYJYLXNWOTPKP RRPY[","H\\YIWGTFPFMGKIKKLMMNOOUQWRXSYUYXWZT[P[MZKX","JZRFR[ RKFYF","G]KFKULXNZQ[S[VZXXYUYF","I[JFR[ RZFR[","F^HFM[ RRFM[ RRFW[ R\\FW[","H\\KFY[ RYFK[","I[JFRPR[ RZFRP","H\\YFK[ RKFYF RK[Y[","KYOBOb RPBPb ROBVB RObVb","KYKFY^","KYTBTb RUBUb RNBUB RNbUb","JZRDJR RRDZR","I[Ib[b","NVSKQMQORPSORNQO","I\\XMX[ RXPVNTMQMONMPLSLUMXOZQ[T[VZXX","H[LFL[ RLPNNPMSMUNWPXSXUWXUZS[P[NZLX","I[XPVNTMQMONMPLSLUMXOZQ[T[VZXX","I\\XFX[ RXPVNTMQMONMPLSLUMXOZQ[T[VZXX","I[LSXSXQWOVNTMQMONMPLSLUMXOZQ[T[VZXX","MYWFUFSGRJR[ ROMVM","I\\XMX]W`VaTbQbOa RXPVNTMQMONMPLSLUMXOZQ[T[VZXX","I\\MFM[ RMQPNRMUMWNXQX[","NVQFRGSFREQF RRMR[","MWRFSGTFSERF RSMS^RaPbNb","IZMFM[ RWMMW RQSX[","NVRFR[","CaGMG[ RGQJNLMOMQNRQR[ RRQUNWMZM\\N]Q][","I\\MMM[ RMQPNRMUMWNXQX[","I\\QMONMPLSLUMXOZQ[T[VZXXYUYSXPVNTMQM","H[LMLb RLPNNPMSMUNWPXSXUWXUZS[P[NZLX","I\\XMXb RXPVNTMQMONMPLSLUMXOZQ[T[VZXX","KXOMO[ ROSPPRNTMWM","J[XPWNTMQMNNMPNRPSUTWUXWXXWZT[Q[NZMX","MYRFRWSZU[W[ ROMVM","I\\MMMWNZP[S[UZXW RXMX[","JZLMR[ RXMR[","G]JMN[ RRMN[ RRMV[ RZMV[","J[MMX[ RXMM[","JZLMR[ RXMR[P_NaLbKb","J[XMM[ RMMXM RM[X[","KYTBRCQDPFPHQJRKSMSOQQ RRCQEQGRISJTLTNSPORSTTVTXSZR[Q]Q_Ra RQSSUSWRYQZP\\P^Q`RaTb","NVRBRb","KYPBRCSDTFTHSJRKQMQOSQ RRCSESGRIQJPLPNQPURQTPVPXQZR[S]S_Ra RSSQUQWRYSZT\\T^S`RaPb","F^IUISJPLONOPPTSVTXTZS[Q RISJQLPNPPQTTVUXUZT[Q[O","JZJFJ[K[KFLFL[M[MFNFN[O[OFPFP[Q[QFRFR[S[SFTFT[U[UFVFV[W[WFXFX[Y[YFZFZ["];
+// polylines in mm for one line of text: x0 left, y0 baseline, cap height in mm; "©" is a circle round a small c
+function strokeText(str, x0, y0, cap) {
+  const s = cap / 21, lines = []; let x = x0;
+  const glyph = (g, gx, gy, gs) => { const L = g.charCodeAt(0) - 82; let cur = null;
+    for (let i = 2; i < g.length; i += 2) { if (g[i] === ' ' && g[i + 1] === 'R') { cur = null; continue; }
+      if (!cur) lines.push(cur = []); cur.push([gx + (g.charCodeAt(i) - 82 - L) * gs, gy + (g.charCodeAt(i + 1) - 82 - 9) * gs]); }
+    return (g.charCodeAt(1) - 82 - L) * gs; };
+  for (const ch of str) {
+    if (ch === '©') { const R = 11, cx = x + (R + 2) * s, cy = y0 - 10.5 * s, ring = [];
+      for (let i = 0; i <= 24; i++) ring.push([cx + R * s * Math.cos(i * Math.PI / 12), cy + R * s * Math.sin(i * Math.PI / 12)]);
+      lines.push(ring); glyph(HERSHEY[67], cx - 5.4 * s, cy + 4.2 * s, s * .6); x += (2 * R + 4) * s; continue; }
+    x += glyph(HERSHEY[ch.charCodeAt(0) - 32] || HERSHEY[0], x, y0, s);
+  }
+  return { lines, width: x - x0 };
+}
+
 function order(lines) {   // greedy nearest start (either end) to cut pen-up travel
   const out = [], left = lines.slice(); let at = [0, 0];
   while (left.length) { let bi = 0, bd = Infinity, rev = false;
@@ -174,20 +272,27 @@ function make(opts = {}) {
     let cp = poly.map(p => cam.clip(...p)); if (cp.every(c => c[0] > c[3]) || cp.every(c => c[0] < -c[3]) || cp.every(c => c[1] > c[3]) || cp.every(c => c[1] < -c[3])) continue;
     cp = clipPoly(cp, c => c[2] + c[3] >= 1e-6, (a, b) => { const da = a[2] + a[3], db = b[2] + b[3]; return lerp(a, b, da / (da - db)); }); if (cp.length < 3) continue;
     const sp = cp.map(cam.scr); for (let i = 1; i < sp.length - 1; i++) { rasterTri(Z, sp[0], sp[i], sp[i + 1]); nTri++; } }
-  // edges -> visible polylines, in mm on the paper
-  const tol = .08 / k, stats = {}, groups = [];
-  for (const [id, label, col] of LAYERS) { const runs = [], segs = E[id];
+  // edges -> visible polylines -> trails (ends within the pen width joined, fewer pen lifts) -> nearest-end order, mm on the paper
+  const tol = .08 / k, stats = {}, out = {}, len = L => L.reduce((a, p, i) => i ? a + Math.hypot(p[0] - L[i - 1][0], p[1] - L[i - 1][1]) : 0, 0);
+  for (const [id] of LAYERS) {
+    const runs = [], segs = E[id];
     for (let i = 0; i < segs.length; i += 2) visibleRuns(Z, cam, cutY, segs[i], segs[i + 1], runs);
-    const lines = order(chain(runs).map(L => simplify(L, tol)).filter(L => L.length > 1 && L.reduce((a, p, i) => i ? a + Math.hypot(p[0] - L[i - 1][0], p[1] - L[i - 1][1]) : 0, 0) * k > .25));
-    stats[id] = lines.length; if (!lines.length) continue;
-    const d = lines.map(L => 'M' + L.map(p => `${(ox + p[0] * k).toFixed(2)} ${(oy + p[1] * k).toFixed(2)}`).join('L')).join('');
-    groups.push(`<g id="${id}" inkscape:groupmode="layer" inkscape:label="${label}" stroke="${col}"><path d="${d}"/></g>`); }
+    const lines = order(join(chain(runs).map(L => simplify(L, tol)).filter(L => L.length > 1), PEN / 2 / k).filter(L => len(L) * k > .25));
+    stats[id] = lines.length; out[id] = lines.map(L => L.map(p => [ox + p[0] * k, oy + p[1] * k]));
+  }
+  // the credit in single-stroke text, in layer 1 (plotter software skips SVG text): one row, or two when one is too wide
   const when = new Date().toISOString().slice(0, 16).replace('T', ' ');
-  const credit = `Docklands 3D, ${when} UTC. © OpenStreetMap contributors (ODbL). Heights: Environment Agency LiDAR (OGL v3.0).`;
+  const parts = [`Docklands 3D, ${when} UTC.`, '© OpenStreetMap contributors (ODbL).', 'Heights: Environment Agency LiDAR (OGL v3.0).'], credit = parts.join(' ');
+  const room = PW - 2 * MARGIN, rows = strokeText(credit, 0, 0, 2.2).width > room ? [parts[0], parts.slice(1).join(' ')] : [credit];
+  const cap = 2.2 * Math.min(1, room / Math.max(...rows.map(t => strokeText(t, 0, 0, 2.2).width)));
+  const creditLines = rows.flatMap((t, i) => strokeText(t, MARGIN, PH - MARGIN + 1 - (rows.length - 1 - i) * cap * 1.6, cap).lines);
+  stats.credit = creditLines.length;
+  const d = ls => ls.map(L => 'M' + L.map(p => `${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join('L')).join('');
+  const groups = LAYERS.filter(([id]) => out[id].length || id === 'bld').map(([id, label, col]) =>
+    `<g id="${id}" inkscape:groupmode="layer" inkscape:label="${label}" fill="none" stroke="${col}" stroke-width="${PEN}" stroke-linecap="round" stroke-linejoin="round">` +
+    (out[id].length ? `<path d="${d(out[id])}"/>` : '') + (id === 'bld' ? `<path id="credit" d="${d(creditLines)}"/>` : '') + '</g>');
   const svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${PW}mm" height="${PH}mm" viewBox="0 0 ${PW} ${PH}">\n` +
-    `<title>Docklands 3D: plotter drawing of the current view</title><desc>${credit} Hidden lines removed.</desc>\n` +
-    `<g fill="none" stroke-width="${PEN}" stroke-linecap="round" stroke-linejoin="round">\n${groups.join('\n')}\n</g>\n` +
-    `<g id="credit" inkscape:groupmode="layer" inkscape:label="Credit" fill="#000"><text x="${MARGIN}" y="${PH - MARGIN + 2}" font-family="sans-serif" font-size="3">${credit.replace(/&/g, '&amp;')}</text></g>\n</svg>\n`;
+    `<title>Docklands 3D: plotter drawing of the current view</title><desc>${credit.replace(/&/g, '&amp;')} Hidden lines removed.</desc>\n${groups.join('\n')}\n</svg>\n`;
   return { svg, stats, ms: Math.round(performance.now() - t0), raster: [W, H], occluders: nTri, paper: [PW, PH] };
 }
 function download() {
@@ -200,7 +305,7 @@ function download() {
 function injectUi() {
   const sb = $('shareOut') || $('shareBtn'); if (!sb) return false;
   const row = document.createElement('div'); row.id = 'plotRow'; row.className = 'row';
-  row.innerHTML = '<button type="button" id="plotBtn">Plotter SVG of this view</button> <select id="plotPaper" aria-label="Paper size"><option>A4</option><option selected>A3</option><option>A2</option></select>';
+  row.innerHTML = '<button type="button" id="plotBtn">Plotter SVG of this view</button> <select id="plotPaper" aria-label="Paper size"><option>A4</option><option selected>A3</option><option value="A2">A2 (larger than an A3 plotter)</option></select>';
   sb.after(row); $('plotBtn').onclick = download; return true;
 }
 function init(ctx) { C = ctx; if (!injectUi()) document.addEventListener('DOMContentLoaded', injectUi, { once: true }); }

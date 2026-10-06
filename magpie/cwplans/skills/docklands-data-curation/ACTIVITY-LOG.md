@@ -1230,3 +1230,20 @@ Owner: "don't waste good info by burying it in our chatlogs".
 - Corrections in this work: Ontario Point's model height is 82.2 m above the ground (roof 87.9 m OD), not 76.5 m (I had
   subtracted the ground twice; `h` in area.js is the height above `b`); the OSM extract is the openstreetmap.fr Greater
   London file (data of 2026-10-01), not Geofabrik as two notes said. Both fixed in photos.json, the README and the skill.
+
+## 2026-10-06 (night): Plotter SVG checked against the owner's iDraw 2.0 A3 (Opus)
+- Owner: "verify that your plotter functionality is optimal for" an iDraw 2.0 (DrawCore V2.0, GRBL compatible, iDraw 2.0
+  Control, 420 x 297 mm, 0.01 mm, 445 nm laser). Ran our SVGs through UUNA TEK's own Inkscape extension in preview mode
+  (public copy in TLausZ/plotter-studio; scratchpad only) and through vpype 1.15.
+- Found: the credit was SVG text, which the extension skips (it never plotted); layer names had no numbers, so "plot
+  layer N" plotted nothing; the layers sat inside a styling group, so vpype saw one layer; A2 overruns the A3 machine's
+  travel; straight ground lines across 20 m terrain cells were hidden where the ground bulged (Rotherhithe view: 0.01 m
+  of water edge drawn); about 29,500 separate lines (pen lifts) in the default A3 view.
+- Fixed in `docklands/plotter-svg.js`: numbered top-level layers ("1 Buildings and credit" ... "7 Underground"); the
+  credit in single-stroke Hershey Roman Simplex in layer 1 (glyph table from futural.jhf; acknowledgement in the header
+  and the register); line ends within the pen width (0.3 mm) joined by Euler trails; mitred road kerbs; ground lines
+  draped on the terrain triangles; the A2 option labelled "larger than an A3 plotter". Default A3 view 29,501 -> 20,232
+  lines; Rotherhithe water edge 0.01 -> 0.80 m. Vendor preview: no warnings on A3/A4; every layer number plots its layer.
+- The vendor's time estimate counts a pen lift as 0 s (its timing code is commented out), so it did not fall. Not tested
+  on a real plotter. No G-code export (axes swapped and negated on the DrawCore; untestable here). Details: skill
+  docklands-3d-page, "Plotter SVG" and "The owner's plotter". Register entry updated; check-data-register run.

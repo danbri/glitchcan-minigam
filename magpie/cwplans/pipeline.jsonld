@@ -14678,13 +14678,14 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "code, not data: the 3D page's Plotter SVG export (line drawing of the current view with hidden lines removed, pen layers, mm on A4/A3/A2; drawn in the browser from the page's own data, nothing sent)",
+   "dct:title": "code, not data: the 3D page's Plotter SVG export (line drawing of the current view with hidden lines removed, numbered pen layers for iDraw/AxiDraw layer plotting, line ends within the pen width joined, mm on A4/A3/A2, the credit in single-stroke text; drawn in the browser from the page's own data, nothing sent). Holds the glyph table of Hershey Roman Simplex (futural.jhf, 96 glyphs) for the credit text",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
-   "cwp:osmUse": "none"
+   "cwp:osmUse": "none",
+   "cwp:review": "Hershey font data: free for any use if the acknowledgement goes with the data (the Hershey Fonts were originally created by Dr. A. V. Hershey while working at the U. S. National Bureau of Standards; the format of the font data was originally created by James Hurt, Cognition, Inc.); the acknowledgement is in the file header. Not share-alike. The OFL-licensed EMS Hershey SVG fonts were not used."
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/atlas/kml-atlas.js",
