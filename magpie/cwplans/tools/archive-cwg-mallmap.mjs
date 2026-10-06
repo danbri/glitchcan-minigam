@@ -22,6 +22,8 @@ const API = 'https://map-api.prod.livingmap.com', CDN = 'https://prod.cdn.living
 const GAP = { 'prod.cdn.livingmap.com': 500 };            // a static CDN (CloudFront, s-maxage forever); 1100 ms elsewhere
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const man = existsSync(MAN) ? JSON.parse(readFileSync(MAN, 'utf8')) : { files: {} };
+// answers that failed (4xx other than 404, 5xx, network) are dropped and asked again; a URL no longer asked stays out
+for (const [u, r] of Object.entries(man.files)) if (r.status == null || (r.status >= 400 && r.status !== 404)) delete man.files[u];
 const save = () => { man.about = 'Living Map data behind https://map.canarywharf.com/ (Canary Wharf Group), archived as served for reference. See README.md.'; man.updated = new Date().toISOString(); writeFileSync(MAN, JSON.stringify(man, null, 1) + '\n'); };
 let saved = 0;
 // one queue per host: one request at a time, GAP apart
@@ -63,7 +65,9 @@ const media = new Set();
 if (!only || only === 'api' || only === 'media') {
   for (const [path, file] of [['feature-objects', 'feature-objects.json'], ['feature-names', 'feature-names.json'], ['geofences', 'geofences.json'], ['styles/styles.json', 'styles.json']])
     jobs.push(get(`${API}/v1/maps/${P}/${path}?lang=${LANG}`, 'api/' + file));
-  for (const t of cfg.search_tags || []) jobs.push(get(`${API}/v1/maps/${P}/search/tag/${t.id}?latitude=${cfg.center.latitude}&longitude=${cfg.center.longitude}&limit=1000`, `api/search-tag/${t.id}.json`));
+  // the tag search needs latitude, longitude and floor_id together: one answer per tag and floor
+  for (const t of cfg.search_tags || []) for (const f of cfg.floors || [])
+    jobs.push(get(`${API}/v1/maps/${P}/search/tag/${t.id}?latitude=${cfg.center.latitude}&longitude=${cfg.center.longitude}&floor_id=${f.id}&limit=100`, `api/search-tag/${t.id}/floor-${f.id}.json`));
   jobs.push(get(`${CDN}/styles/${P}/icons.json`, 'sprite/icons.json'), get(`${CDN}/styles/${P}/icons.png`, 'sprite/icons.png'),
     get(`${CDN}/styles/${P}/icons@2x.json`, 'sprite/icons@2x.json'), get(`${CDN}/styles/${P}/icons@2x.png`, 'sprite/icons@2x.png'),
     get(`https://languages.livingmap.com/prod/lmp/${LANG}.json`, `languages/${LANG}.json`));
@@ -71,7 +75,8 @@ if (!only || only === 'api' || only === 'media') {
   const seen = new Set();
   for (const n of names) {
     const s = slug(n), file = `api/features-by-name/${seen.has(s) ? s + '-' + createHash('sha1').update(n).digest('hex').slice(0, 6) : s}.json`; seen.add(s);
-    jobs.push(get(`${API}/v1/maps/${P}/features?long_name=${encodeURIComponent(n)}&lang=${LANG}&latitude=${cfg.center.latitude}&longitude=${cfg.center.longitude}`, file).then(rec => {
+    // without a position: latitude, longitude and floor_id must be sent together or not at all (HTTP 400)
+    jobs.push(get(`${API}/v1/maps/${P}/features?long_name=${encodeURIComponent(n)}&lang=${LANG}`, file).then(rec => {
       const walk = o => { if (Array.isArray(o)) o.forEach(walk); else if (o && typeof o === 'object') Object.values(o).forEach(walk); else if (typeof o === 'string' && /^https:\/\/\S+\.(jpe?g|png|webp|gif|svg)$/i.test(o)) media.add(o); };
       walk(json(rec));
     }));

@@ -311,6 +311,13 @@ a React app on Mapbox GL; its data comes from Living Map (livingmap.com):
   manifest with SHA-256 per URL). Indoor tiles zoom 0-19 and basemap zoom 0-16 over the config extents (5,747 tile
   URLs), API answers, sprite, popup images, the app. The basemap is OSM-derived (ODbL). Not archived: Gotham glyphs
   (commercial font), usage-logging POSTs. Restartable; `--only=tiles|api|media|app`.
+- **GitHub push protection** refused the archive: `api/maps.json` holds the page's Mapbox `access_token`, flagged as
+  a "Mapbox Secret Access Token". The committed copy has that one value replaced by a note (text replacement, every
+  other byte as served); the manifest keeps `sha256_as_served` and `bytes_as_served`. The owner can allow the original
+  through the unblock link GitHub prints. A `git push -q` in a retry loop hid this refusal: read push output.
+- The archive ended with 6,515 URLs: 1,493 indoor tiles with data, 4,101 empty (204), 152 basemap tiles, one basemap
+  tile (zoom 7) that answered 503 on three runs, 520 API answers, 237 images, 240 MB. `tools/cwg-mallmap-tmi.mjs`
+  normalises it into `_TMI/mallmap/` (GeoJSON per floor, whole geometries for 10,088 of 10,092 features).
 - The style's indoor source declares `maxzoom` 19; the page opens at zoom 16. A z17 tile over Canada Square is
   420 kB, a z19 tile about 11 kB.
 

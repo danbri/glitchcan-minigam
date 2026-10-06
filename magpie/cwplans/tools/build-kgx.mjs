@@ -119,28 +119,37 @@ const TP = join(ROOT, 'third_party', 'cwplans-structured-data');
     for (const q of qs) { g.add(q.subject, q.predicate, q.object); for (const t of [q.subject, q.object]) { const d = desc.get(t.value); if (d) { g.lit(t, iri('s', 'name'), d.name); if (/^https?:/.test(d.page)) g.add(t, iri('s', 'subjectOf'), d.page); g.lit(t, iri('cwk', 'descriptionKind'), d.kind); } } } }
 }
 
-// 7. Living Map mall units (when the archive exists): one node per named indoor polygon, highest zoom that has it
-const MM = join(LONDAT_DIR, 'third_party', 'cwg', 'mallmap');
-if (existsSync(join(MM, 'tiles', 'indoor'))) {
-  const { VectorTile } = await import('@mapbox/vector-tile'); const Protobuf = (await import('pbf')).default;
-  const g = graph('mallmap', { title: 'Mall units and facilities from the Living Map data behind map.canarywharf.com: name, class, mall, floor, opening times, position, outline',
-    source: ['danbri/londat third_party/cwg/mallmap/tiles/indoor (zoom 17)'], licence: 'Canary Wharf Group / Living Map; archived at the owner\'s request 2026-10-06, scoping only', tool: 'magpie/cwplans/tools/build-kgx.mjs' });
-  const Z = 17, dir = join(MM, 'tiles', 'indoor', String(Z)), best = new Map();
-  for (const x of existsSync(dir) ? readdirSync(dir) : []) for (const yf of readdirSync(join(dir, x))) {
-    const t = new VectorTile(new Protobuf(readFileSync(join(dir, x, yf)))); const lay = t.layers.indoor; if (!lay) continue;
-    for (let i = 0; i < lay.length; i++) { const f = lay.feature(i), p = f.properties; if (!p.name || f.type !== 3) continue;
-      const gj = f.toGeoJSON(+x, +yf.replace('.pbf', ''), Z), area = JSON.stringify(gj.geometry.coordinates).length; const prev = best.get(p.uid); if (!prev || prev.area < area) best.set(p.uid, { p, gj, area }); }
-  }
-  for (const { p, gj } of best.values()) {
-    const s = ID + 'unit/' + p.uid; g.add(s, TYPE, iri('cwk', 'MallUnit')); g.lit(s, iri('s', 'name'), p.name); g.lit(s, iri('cwk', 'unitClass'), p.class); g.lit(s, iri('cwk', 'unitType'), p.type);
+// 7. Living Map mall units and facilities, from the normalised GeoJSON (third_party/cwg/_TMI/mallmap, made by
+// cwg-mallmap-tmi.mjs: whole outlines) or, without it, from the zoom-17 tiles (largest piece per unit)
+const MM = join(LONDAT_DIR, 'third_party', 'cwg', 'mallmap'), TMI = join(LONDAT_DIR, 'third_party', 'cwg', '_TMI', 'mallmap');
+const wktOf = gm => { const ring = r => '(' + r.map(([lo, la]) => `${lo.toFixed(7)} ${la.toFixed(7)}`).join(', ') + ')';
+  return gm.type === 'Point' ? `POINT(${gm.coordinates[0].toFixed(7)} ${gm.coordinates[1].toFixed(7)})`
+    : gm.type === 'Polygon' ? 'POLYGON(' + gm.coordinates.map(ring).join(', ') + ')'
+    : gm.type === 'MultiPolygon' ? 'MULTIPOLYGON(' + gm.coordinates.map(p => '(' + p.map(ring).join(', ') + ')').join(', ') + ')' : null; };
+const centreOf = gm => { const r = gm.type === 'Point' ? [gm.coordinates] : gm.type === 'Polygon' ? gm.coordinates[0] : gm.coordinates[0][0];
+  return [r.reduce((a, c) => a + c[0], 0) / r.length, r.reduce((a, c) => a + c[1], 0) / r.length]; };
+let mallFeatures = [];
+if (existsSync(join(TMI, 'summary.json'))) {
+  for (const f of readdirSync(TMI).filter(f => /^indoor-floor-.*\.geojson$/.test(f))) mallFeatures.push(...JSON.parse(readFileSync(join(TMI, f), 'utf8')).features);
+} else if (existsSync(join(MM, 'tiles', 'indoor', '17'))) {
+  const { VectorTile } = await import('@mapbox/vector-tile'); const Protobuf = (await import('pbf')).default; const best = new Map(), dir = join(MM, 'tiles', 'indoor', '17');
+  for (const x of readdirSync(dir)) for (const yf of readdirSync(join(dir, x))) { const l = new VectorTile(new Protobuf(readFileSync(join(dir, x, yf)))).layers.indoor; if (!l) continue;
+    for (let i = 0; i < l.length; i++) { const f = l.feature(i); const gj = f.toGeoJSON(+x, +yf.replace('.pbf', ''), 17); const k = f.properties.uid + ':' + f.type, a = JSON.stringify(gj.geometry).length; if (!best.has(k) || best.get(k).a < a) best.set(k, { a, f: { properties: f.properties, geometry: gj.geometry } }); } }
+  mallFeatures = [...best.values()].map(v => v.f);
+}
+if (mallFeatures.length) {
+  const g = graph('mallmap', { title: 'Mall units and facilities (lifts, escalators, ramps, stairs, entrances, toilets, defibrillators and more) from the Living Map data behind map.canarywharf.com: name, class, type, mall, floor, opening times, outline or position',
+    source: ['danbri/londat third_party/cwg/_TMI/mallmap (from third_party/cwg/mallmap tiles)'], licence: "Canary Wharf Group / Living Map; archived at the owner's request 2026-10-06 for reference and accessibility design study, scoping only", tool: 'magpie/cwplans/tools/cwg-mallmap-tmi.mjs, build-kgx.mjs' });
+  for (const { properties: p, geometry: gm } of mallFeatures) {
+    const poly = /Polygon/.test(gm.type), point = gm.type === 'Point';
+    if (!(poly && p.name) && !(point && p.type !== 'arrow')) continue;
+    const s = ID + (poly ? 'unit/' : 'facility/') + p.uid; g.add(s, TYPE, iri('cwk', poly ? 'MallUnit' : 'Facility'));
+    g.lit(s, iri('s', 'name'), p.name); g.lit(s, iri('cwk', 'unitClass'), p.class); g.lit(s, iri('cwk', 'unitType'), p.type);
     g.lit(s, iri('cwk', 'mall'), p.location_name); g.lit(s, iri('cwk', 'floorName'), p.floor_name); g.lit(s, iri('cwk', 'floorLevel'), Number(p.floor_level));
     g.lit(s, iri('cwk', 'openingTimesText'), p.opening_times); g.lit(s, iri('s', 'telephone'), p.tel_number); g.lit(s, iri('s', 'address'), p.street_address);
     if (/^https?:\/\//.test(p.url || '')) g.add(s, iri('s', 'url'), p.url);
-    const polys = gj.geometry.type === 'Polygon' ? [gj.geometry.coordinates] : gj.geometry.coordinates;
-    const wkt = (polys.length > 1 ? 'MULTIPOLYGON(' : 'POLYGON') + polys.map(r => '(' + r.map(ring => '(' + ring.map(([lo, la]) => `${lo.toFixed(7)} ${la.toFixed(7)}`).join(', ') + ')').join(', ') + ')').join(', ') + (polys.length > 1 ? ')' : '');
-    const geom = s + '/geometry'; g.add(s, iri('geo', 'hasGeometry'), geom); g.add(geom, TYPE, iri('geo', 'Geometry')); g.add(geom, iri('geo', 'asWKT'), F.literal(polys.length > 1 ? wkt : wkt.replace(/^POLYGON\(\(\(/, 'POLYGON((').replace(/\)\)\)$/, '))'), iri('geo', 'wktLiteral')));
-    const ring = polys[0][0], cx = ring.reduce((a, c) => a + c[0], 0) / ring.length, cy = ring.reduce((a, c) => a + c[1], 0) / ring.length;
-    g.lit(s, iri('s', 'longitude'), +cx.toFixed(7)); g.lit(s, iri('s', 'latitude'), +cy.toFixed(7));
+    const wkt = wktOf(gm); if (wkt) { const geom = s + '/geometry'; g.add(s, iri('geo', 'hasGeometry'), geom); g.add(geom, TYPE, iri('geo', 'Geometry')); g.add(geom, iri('geo', 'asWKT'), F.literal(wkt, iri('geo', 'wktLiteral'))); }
+    const [cx, cy] = centreOf(gm); g.lit(s, iri('s', 'longitude'), +cx.toFixed(7)); g.lit(s, iri('s', 'latitude'), +cy.toFixed(7));
   }
 }
 

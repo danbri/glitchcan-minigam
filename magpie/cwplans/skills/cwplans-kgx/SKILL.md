@@ -35,14 +35,18 @@ page that uses ServiceWorker and sparql to cache some/all of this an expose usef
   `occupants` (role, level, mall, `s:openingHours` in OSM syntax, `s:containedInPlace` building, `s:sameAs` OSM and CWG),
   `cwg` (the typed CWG directory plus `s:OpeningHoursSpecification` per day with `cwk:opensMinute`/`cwk:closesMinute`,
   malls as `s:ShoppingCenter`), `web` (canonical schema.org layer, pages merged), `coref-<rule>` (owl:sameAs by key rule),
-  `mallmap` (Living Map units: `cwk:MallUnit`, mall, floor, opening text, outline, centre; from zoom-17 tiles),
+  `mallmap` (Living Map units `cwk:MallUnit` with outline, and `cwk:Facility` points: lifts, escalators, ramps, stairs,
+  entrances, toilets, defibrillators; mall, floor, opening text, centre; from the normalised GeoJSON in londat
+  `third_party/cwg/_TMI/mallmap`, whole outlines),
   `storeguide` (`cwk:GuideEntry`: name, section, `cwk:gridRef` like "10C", OCR text and confidence, `s:sameAs` CWG
   entity when matched), `meta` (`void:Dataset` per graph: title, sources, licence, OSM rights, triple count).
 - Joins across sources go through `s:sameAs` to the CWG entity IRI (`https://canarywharf.com/<kind>/<slug>/#entity`),
   OSM element URLs and Wikidata items. Mall units join by exact name only, for now.
 - A pattern that spans two graphs needs two `GRAPH` blocks (`GRAPH ?g1 {…} GRAPH ?g2 {…}`); one block returns nothing.
 
-## The four copies, measured 2026-10-06 (70k quads, this container)
+## The four copies, measured 2026-10-06 (70k to 88k quads, this container)
+
+Build of 2026-10-06: 87,512 quads in 13 graphs (12 plus `meta`), Shardborough generation `gen-20261006-854bbbff`.
 
 | format | where | size | what it is good for |
 |---|---|---|---|
@@ -83,7 +87,7 @@ page that uses ServiceWorker and sparql to cache some/all of this an expose usef
 
 ## Open
 
-- Lifts, escalators, stairs and toilets are points in the archived tiles; add them (with floor) for step-free routes.
+- Step-free routes: the facilities are in (view "Step-free"); the corridors (indoor lines) and floor links are not yet.
 - Units: join to CWG entities by a better key than the exact name (normalised name, mall, level).
 - A building-level link from mall units and guide grid squares to registry buildings (position in the outline).
 - Turn on GitHub Pages for londat and point the page at it (same origin as the site's host family).

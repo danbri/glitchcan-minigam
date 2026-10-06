@@ -1122,7 +1122,13 @@ Owner: "don't waste good info by burying it in our chatlogs".
 - `tools/cwg-maps-tmi.mjs` (helper agent): store guide OCR (692 entries with grid squares; 99 of 100 sampled lines
   exact), access map labels, art trail and art guide entries, in londat `third_party/cwg/_TMI/`.
 - `tools/cwg-mallmap-tmi.mjs`: the archived Living Map tiles as GeoJSON per floor (runs when the archive is complete).
-- `tools/build-kgx.mjs`: londat `kgx/`, 75,471 quads in 14 graphs, as N-Quads, Shardborough, COTTAS and HDT. Measured:
+- `tools/build-kgx.mjs`: londat `kgx/`, 75,471 quads in 13 graphs (first build; 87,512 after the mall-map facilities), as N-Quads, Shardborough, COTTAS and HDT. Measured:
   Shardborough answers views in about 1 s; COTTAS 40 to 280 s; HDT through Factoidal minutes. Skill `cwplans-kgx`.
 - Page `magpie/cwplans/kg/`: the Lean engine in a Web Worker reads the Shardborough store over fetch; a ServiceWorker
   keeps engine and blocks. New Factoidal fault: `toCottas()` of an N-Quads string writes an empty store.
+- Archive finished and pushed (londat 0bbb19d) after GitHub push protection refused the Mapbox token in
+  `api/maps.json`; that value is redacted in the committed copy (manifest keeps the as-served hash). Corrections made
+  this session: tile counts in the mallmap README were first written before measuring (fixed from the manifest); the
+  graph count is 13, not 14; the first archive run sent `features` and tag requests the API refuses (400), fixed and
+  fetched again.
+- Also: commit 0e104709 failed check-data-register (kg/worker.js and kg/sw.js unregistered: the check ran before git add, so it did not see them). Fixed by adding both entries; run the check after `git add`.
