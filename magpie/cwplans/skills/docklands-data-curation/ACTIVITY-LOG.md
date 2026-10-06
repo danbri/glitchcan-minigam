@@ -1109,3 +1109,7 @@ Owner: "don't waste good info by burying it in our chatlogs".
   `livingmap-cwg`, no published licence): the owner decides.
 - Fix: `tools/check-factoidal.mjs` (previous commit) was not in pipeline.json, so `check-data-register.mjs` failed;
   my earlier report of exit 0 was wrong. Added as activity `check-factoidal`.
+- Owner, later: "Archive everything including all map tiles into a mallmap subfolder, as is." New
+  `tools/archive-cwg-mallmap.mjs` writes danbri/londat `third_party/cwg/mallmap/` (app, API answers, 5,747 tile URLs
+  over zoom 0-19 indoor and 0-16 basemap, sprite, popup images, manifest with SHA-256). Gotham glyphs and usage POSTs
+  left out. `@mapbox/vector-tile` and `pbf` added as devDependencies to read the tiles.

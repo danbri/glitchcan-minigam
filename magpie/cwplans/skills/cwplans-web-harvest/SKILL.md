@@ -298,7 +298,19 @@ a React app on Mapbox GL; its data comes from Living Map (livingmap.com):
   tiles of one page load: 1,094 indoor polygons, 475 named (Cabot Place 95, Jubilee Place 73, Canada Place 72,
   Crossrail Place 28), 334 with opening times, 173 with a telephone. Decode with `@mapbox/vector-tile` and `pbf`.
 - No key, no cookie; every answer sends `Access-Control-Allow-Origin: *`. No published licence or terms found
-  (source `livingmap-cwg`). This is a proprietary map database: the owner decides before a harvest or a commit.
+  (source `livingmap-cwg`).
+- `/v1/maps/canary_wharf/features` is a name search (`long_name`, `latitude`, `longitude`, `floor_id`), not a full
+  list: without `long_name` it returns the nearest 100. The full records come from one call per name in
+  `feature-names`. Other GET endpoints in the app: `features/{id}`, `features-uid/{uid}`, `search?query=`,
+  `search/tag/{id}`. Routing is a POST.
+- **Archived as served (owner, 2026-10-06: "Archive everything including all map tiles into a mallmap subfolder, as
+  is. It can be used for reference and exploring physical accessibility designs for large pseudo-public spaces."):**
+  `tools/archive-cwg-mallmap.mjs` writes https://github.com/danbri/londat/tree/main/third_party/cwg/mallmap (README,
+  manifest with SHA-256 per URL). Indoor tiles zoom 0-19 and basemap zoom 0-16 over the config extents (5,747 tile
+  URLs), API answers, sprite, popup images, the app. The basemap is OSM-derived (ODbL). Not archived: Gotham glyphs
+  (commercial font), usage-logging POSTs. Restartable; `--only=tiles|api|media|app`.
+- The style's indoor source declares `maxzoom` 19; the page opens at zoom 16. A z17 tile over Canada Square is
+  420 kB, a z19 tile about 11 kB.
 
 ## What the markup is for (report of 2026-10-06)
 
@@ -404,8 +416,9 @@ environment.
 
 ## Open (2026-10-06)
 
-- Mall plans: the owner decides whether to harvest the Living Map tiles (unit outlines, hours, telephone per floor)
-  and what may be committed; else OCR the store guide index (grid squares) and join it to the CWG directory.
+- Mall plans: decode the archived Living Map tiles (londat `third_party/cwg/mallmap/tiles/indoor/`) into unit polygons
+  per floor and join them to the CWG directory (name, mall, level); compare their opening times with `cwg-hours.json`;
+  study step-free routes (lifts, ramps, escalators per floor) against the step-free access map PDF.
 - Crawl the 48 site-search hits that are not in the harvest (`search/probe.json`, `hits_new`), branch pages first.
 - Mall plans without a new source: snap each placed point to the nearest corridor on its level and order shops along
   each corridor (a schematic plan, which shop is next to which).

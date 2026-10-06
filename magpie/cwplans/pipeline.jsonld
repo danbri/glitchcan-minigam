@@ -7271,6 +7271,41 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/archive-cwg-mallmap",
+   "@type": "prov:Activity",
+   "rdfs:label": "archive-cwg-mallmap",
+   "dct:description": "Fetches, as served, the app shell of map.canarywharf.com, the map config, the GET API answers (feature-objects, feature-names, geofences, styles, each config search tag, /features?long_name= for every feature name), the sprite and language file, every indoor vector tile at zoom 0-19 and basemap tile at zoom 0-16 whose square meets the config extents, and every popup image named by tiles or features; writes the bytes unchanged under danbri/londat third_party/cwg/mallmap/ and a manifest.json (URL, file, status, type, size, SHA-256, time).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/livingmap-cwg"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:generated": [],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/archive-cwg-mallmap.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/archive-cwg-mallmap.mjs [--only=tiles|api|media|app]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Owner, 2026-10-06: archive everything as is, for reference and accessibility design study; scoping phase.",
+    "robots.txt of map.canarywharf.com allows all; one request at a time per host, 1.1 s apart (API hosts) or 0.5 s (the tile CDN); no key, no login; the page's Origin and Referer are sent.",
+    "Not fetched: Gotham font glyphs (commercial typeface), session and event POSTs (usage logging), third-party scripts.",
+    "Restartable: a URL in the manifest with a file, a 204 or a 404 is not fetched again."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-cwg-map"
+    }
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": []
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-data-register-write",
    "@type": "prov:Activity",
    "rdfs:label": "check-data-register-write",
@@ -13610,6 +13645,20 @@
     "dcat:Distribution"
    ],
    "dct:title": "code, not data: records the network requests of map.canarywharf.com in headless Chromium (finds the Living Map API); output stays in data/raw/cwg-map/",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/archive-cwg-mallmap.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: archives the Living Map data behind map.canarywharf.com as served (app, API answers, every indoor and basemap tile over the extents, sprite, popup images) into danbri/londat third_party/cwg/mallmap with a manifest",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
@@ -26598,8 +26647,8 @@
     "prov:Entity",
     "dcat:Dataset"
    ],
-   "dct:title": "Living Map service behind https://map.canarywharf.com/ (map-api.prod.livingmap.com/v1/maps/canary_wharf: map config, feature-objects, geofences, styles; vector tiles prod.cdn.livingmap.com/tiles/canary_wharf/{z}/{x}/{y}.pbf with indoor unit polygons per floor, names, opening times, telephone, address)",
-   "dct:license": "Living Map / Canary Wharf Group; no published licence or terms found on 2026-10-06"
+   "dct:title": "Living Map service behind https://map.canarywharf.com/ (map-api.prod.livingmap.com/v1/maps/canary_wharf: config, feature-objects, feature-names, features by name, tag searches, geofences, styles; vector tiles prod.cdn.livingmap.com/tiles/canary_wharf/{z}/{x}/{y}.pbf with indoor unit polygons per floor, names, opening times, telephone, address; an OSM-derived basemap)",
+   "dct:license": "Canary Wharf Group / Living Map; no published licence or terms found on 2026-10-06; basemap tiles © OpenStreetMap contributors, ODbL"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-am3d",
