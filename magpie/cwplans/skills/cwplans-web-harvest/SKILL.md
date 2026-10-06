@@ -163,6 +163,8 @@ if needed" (also in the repo CLAUDE.md). What we learned with `@factoidal/core` 
   every quad that uses it, silently, in nquads, ntriples and turtle; `toNQuads()` keeps them but writes the invalid
   label, and `parse()` of that output drops those lines, also silently. In a SELECT, a `BNODE()` term's `value` starts
   with `_:`. Workaround here: mint IRIs from a SHA-1 of the text (`IRI(CONCAT(base, SHA1(STR(?a))))`).
+- **`toCottas()` of an N-Quads string writes an empty store** (73 bytes, no error); pass a parsed `Dataset`. COTTAS
+  queries are also slow at 70k quads; the store to use is Shardborough (skill `cwplans-kgx`, measured there).
 - **Blank nodes are renamed per query.** Each query result gives the data's own blank nodes a new prefix (`_:p20_…` in
   one CONSTRUCT, `_:p21_…` in the next, for the same node). SPARQL allows this, but two CONSTRUCT outputs merged into
   one file then lose every link between them: the first canonical layer had 341 `openingHoursSpecification` links and

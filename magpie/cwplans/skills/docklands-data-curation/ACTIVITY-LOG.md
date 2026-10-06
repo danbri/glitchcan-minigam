@@ -1113,3 +1113,16 @@ Owner: "don't waste good info by burying it in our chatlogs".
   `tools/archive-cwg-mallmap.mjs` writes danbri/londat `third_party/cwg/mallmap/` (app, API answers, 5,747 tile URLs
   over zoom 0-19 indoor and 0-16 basemap, sprite, popup images, manifest with SHA-256). Gotham glyphs and usage POSTs
   left out. `@mapbox/vector-tile` and `pbf` added as devDependencies to read the tiles.
+
+## 2026-10-06 (night): OCR to _TMI, the knowledge graph kgx, the search page
+
+- Owner: "ocr where needed and normalise, use a subdir _TMI"; "Make londat tld folder kgx and explore state of npm js
+  Factoidal/core for persistent storage ... first cut at a persistent knowledge graph ... nquads copies ... hdt or
+  shardborough ... public search page that uses ServiceWorker and sparql".
+- `tools/cwg-maps-tmi.mjs` (helper agent): store guide OCR (692 entries with grid squares; 99 of 100 sampled lines
+  exact), access map labels, art trail and art guide entries, in londat `third_party/cwg/_TMI/`.
+- `tools/cwg-mallmap-tmi.mjs`: the archived Living Map tiles as GeoJSON per floor (runs when the archive is complete).
+- `tools/build-kgx.mjs`: londat `kgx/`, 75,471 quads in 14 graphs, as N-Quads, Shardborough, COTTAS and HDT. Measured:
+  Shardborough answers views in about 1 s; COTTAS 40 to 280 s; HDT through Factoidal minutes. Skill `cwplans-kgx`.
+- Page `magpie/cwplans/kg/`: the Lean engine in a Web Worker reads the Shardborough store over fetch; a ServiceWorker
+  keeps engine and blocks. New Factoidal fault: `toCottas()` of an N-Quads string writes an empty store.

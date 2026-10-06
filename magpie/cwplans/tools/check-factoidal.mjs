@@ -4,7 +4,7 @@
 // Skill: cwplans-web-harvest, "Factoidal notes"; issue text: skills/cwplans-web-harvest/factoidal-issue-2026-10-06.md.
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { parse, query, serialize, Dataset, dataFactory as F } from '@factoidal/core';
+import { parse, query, serialize, toCottas, openCottas, queryCottas, closeCottas, Dataset, dataFactory as F } from '@factoidal/core';
 import { TOOLS } from './lib.mjs';
 
 const pkg = JSON.parse(readFileSync(join(TOOLS, '..', '..', '..', 'node_modules', '@factoidal', 'core', 'package.json'), 'utf8'));
@@ -26,4 +26,7 @@ const r1 = (await query(d2, 'CONSTRUCT { ?a <http://ex/h> ?b } WHERE { ?a <http:
 const r2 = (await query(d2, 'CONSTRUCT { ?b <http://ex/v> ?v } WHERE { ?b <http://ex/v> ?v }')).toArray()[0]?.subject.value;
 checks.push(['blank nodes from the data are renamed per query (two CONSTRUCT outputs do not share nodes; skolemize first)', r1 !== r2]);
 checks.push(['a query without GRAPH matches only the default graph', (await query(await parse('<http://ex/a> <http://ex/p> "x" <http://ex/g> .\n', { format: 'nquads' }), 'SELECT * WHERE { ?s ?p ?o }')).length === 0]);
+const nq4 = '<http://ex/a> <http://ex/p> "x" <http://ex/g> .\n';
+const cs = await toCottas(nq4), hs = await openCottas(cs); const nStr = (await queryCottas(hs, 'SELECT * WHERE { GRAPH ?g { ?s ?p ?o } }')).length; await closeCottas(hs);
+checks.push(['toCottas() of an N-Quads string writes an empty store (pass a parsed Dataset)', nStr === 0]);
 for (const [what, still] of checks) console.log(still ? 'STILL ' : 'FIXED ', what);

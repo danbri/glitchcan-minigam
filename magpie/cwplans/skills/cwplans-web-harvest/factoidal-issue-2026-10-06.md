@@ -48,3 +48,9 @@ Each query result renames the data's own blank nodes with a per-query prefix: on
 ## How it was found
 
 A CONSTRUCT that rewrites text addresses into PostalAddress nodes in danbri/glitchcan-minigam (`magpie/cwplans/tools/web-idioms.mjs`). The canonical output lost every address node. The workaround there is to make the node an IRI from a SHA-1 of the address text: `IRI(CONCAT(base, SHA1(STR(?a))))`.
+
+## Second fault found the same day: toCottas() of an N-Quads string
+
+`toCottas('<http://ex/a> <http://ex/p> "x" <http://ex/g> .\n')` returns 73 bytes: a Parquet file with the s, p, o, g
+columns and no rows. No error. `toCottas(await parse(text, { format: 'nquads' }))` keeps every quad and round-trips
+through `openCottas`/`queryCottas`. The d.ts types `toCottas(data: DataInput)`, so a string looks allowed.
