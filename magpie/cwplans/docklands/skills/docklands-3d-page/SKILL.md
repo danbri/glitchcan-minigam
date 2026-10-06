@@ -982,6 +982,10 @@ towerOf, groundAt, tunnelY, par, toast and getters for MVP, VZ, CAM, TOWERS) and
   meet measures the distance to that point. Default A3 view: 69.1 m -> 94.4 m drawn (25 m of outlines were lost); phone
   default view, buildings 30.0 m -> 40.3 m. Present from the first version; not seen because the tests counted lines and
   looked at whole pages, never laid the lines over the page's own image.
+- **Each file names its view**: the `<desc>` holds the page's share link (`DocklandsNav.shareUrl()`, camera, layers, time)
+  and the screen size in CSS px; not plotted. To reproduce an owner's plot, open that link in a headless page of that
+  size and call `DocklandsPlot.make({ paper })`. Files made before 2026-10-06 22:40 UTC have no link: a closed-loop count
+  dates them (the outline fault left almost no closed loops, e.g. 44 of 17,513 lines in the owner's 22:18 file).
 - **Test a change by laying the plot over the page's own image** (that is how the fault above was found): render the page
   canvas (`?capture`, `renderNow`, `toDataURL`), call `DocklandsPlot.make()` in the same state, map the SVG back with the
   frame make() uses (k = min((PW - 24) / W, (PH - 30) / H) mm per raster px, ox = (PW - W k) / 2, oy = 12 + (PH - 30 -

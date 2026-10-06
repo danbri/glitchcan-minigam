@@ -1263,3 +1263,7 @@ Owner: "don't waste good info by burying it in our chatlogs".
   their neighbours' mean, nodes under 40 m apart; counted with a node script over `area.js` decoded as on the page). The
   plotter now uses the drone's 5-point moving average for track heights; the 3D page and `area.js` are unchanged. F10 notes
   that the plotter repeated its `simplify()` fault.
+- Owner's third file (22:18 UTC, "Still a few issues?") was also made before the outline fix went live (pushed about
+  22:27 UTC): 44 closed loops in 17,513 lines. A similar view from the north with the fixed code, laid over the page's
+  image, has every outline. Each plot's `<desc>` now holds the page's share link and the screen size, so a reported plot
+  can be reproduced exactly.

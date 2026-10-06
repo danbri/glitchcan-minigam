@@ -298,11 +298,14 @@ function make(opts = {}) {
   const creditLines = rows.flatMap((t, i) => strokeText(t, MARGIN, PH - MARGIN + 1 - (rows.length - 1 - i) * cap * 1.6, cap).lines);
   stats.credit = creditLines.length;
   const d = ls => ls.map(L => 'M' + L.map(p => `${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join('L')).join('');
+  // the page's share link of this view, in the description only (not plotted): with the screen size it gives the same plot
+  const xml = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;'), N = globalThis.DocklandsNav;
+  let view = location.href; try { if (N && N.shareUrl) view = N.shareUrl().url; } catch { /* keep the page address */ }
   const groups = LAYERS.filter(([id]) => out[id].length || id === 'bld').map(([id, label, col]) =>
     `<g id="${id}" inkscape:groupmode="layer" inkscape:label="${label}" fill="none" stroke="${col}" stroke-width="${PEN}" stroke-linecap="round" stroke-linejoin="round">` +
     (out[id].length ? `<path d="${d(out[id])}"/>` : '') + (id === 'bld' ? `<path id="credit" d="${d(creditLines)}"/>` : '') + '</g>');
   const svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${PW}mm" height="${PH}mm" viewBox="0 0 ${PW} ${PH}">\n` +
-    `<title>Docklands 3D: plotter drawing of the current view</title><desc>${credit.replace(/&/g, '&amp;')} Hidden lines removed.</desc>\n${groups.join('\n')}\n</svg>\n`;
+    `<title>Docklands 3D: plotter drawing of the current view</title><desc>${xml(credit)} Hidden lines removed. View: ${xml(view)} (screen ${W0} x ${H0} CSS px).</desc>\n${groups.join('\n')}\n</svg>\n`;
   return { svg, stats, ms: Math.round(performance.now() - t0), raster: [W, H], occluders: nTri, paper: [PW, PH] };
 }
 function download() {
