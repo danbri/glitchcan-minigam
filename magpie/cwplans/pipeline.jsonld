@@ -2482,6 +2482,165 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-idioms",
+   "@type": "prov:Activity",
+   "rdfs:label": "web-idioms",
+   "dct:description": "For each page graph (as a default graph, schema.org namespace variants mapped to https://schema.org/), finds candidate nodes for each idiom by SPARQL, checks the idiom's core ShEx shape and each form shape with Factoidal, runs the SPARQL forms, and rewrites the content idioms to the canonical layer with SPARQL CONSTRUCT.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/all.nq.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/idioms.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/idioms.shex"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/rewrites"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
+     "dcat:accessURL": "npm @factoidal/core 0.7.1 (local)",
+     "dct:description": "parse (N-Quads), graphs, query (SPARQL SELECT, ASK, CONSTRUCT), shexValidate, serialize"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/page-idioms.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/summary.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/canonical.nq.gz"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/web-idioms.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/web-idioms.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Shapes are open: they recognise an idiom and its forms, they do not reject data.",
+    "A node counts for an idiom when its core shape holds; forms are counted per node.",
+    "New nodes in rewrites get IRIs from a SHA-1 of their text, not BNODE() (Factoidal 0.7.1 serialize drops BNODE() nodes)."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/extract-structured-data"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-coref",
+   "@type": "prov:Activity",
+   "rdfs:label": "web-coref",
+   "dct:description": "Reads name, telephone, sameAs, postcode and coordinates of every organisation and place description; applies the key rules in order (same IRI; same site and name, for places also the postcode; same sameAs URL; same telephone; same postcode and name) and writes each link in the named graph of its rule; groups by union; flags a branch page that links to more than one registry building.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/all.nq.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/pages"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/idioms.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
+     "dcat:accessURL": "npm @factoidal/core 0.7.1 (local)",
+     "dct:description": "parse (N-Quads), query (SPARQL SELECT over named graphs), serialize"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/coref/sameas.nq.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/coref/descriptions.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/coref/entities.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/web-coref.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/web-coref.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Telephone and sameAs join only descriptions of the same kind (organisation with organisation, place with place).",
+    "Two places with postcodes that disagree are never linked, except by an identical IRI.",
+    "Empty and bare social-network URLs are not keys.",
+    "A page's registry keys belong to a description only when it is the one place on that page."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/extract-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-idioms"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-directory-typed",
+   "@type": "prov:Activity",
+   "rdfs:label": "cwg-directory-typed",
+   "dct:description": "Reads each archived canarywharf.com page's WebPage name, datePublished, dateModified and breadcrumb; joins it to the directory record by URL; gives a schema.org type from the CWG kind and category by a fixed table; adds the registry buildings that link to the page.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/all.nq.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/pages"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
+     "dcat:accessURL": "npm @factoidal/core 0.7.1 (local)",
+     "dct:description": "parse (N-Quads), query (SPARQL SELECT over named graphs), serialize"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory-typed.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory-typed.nq"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/cwg-directory-typed.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/cwg-directory-typed.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Types come from the CWG category table, not from the publisher (the pages type only the publisher).",
+    "first_listed is datePublished and last_edited is dateModified of the archived page."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/extract-structured-data"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry",
    "@type": "prov:Activity",
    "rdfs:label": "build-registry",
@@ -12670,6 +12829,273 @@
     "dcat:Distribution"
    ],
    "dct:title": "what the folder is, the crawl method and date, the owner's crawl and store-finder rules, how to rebuild, and that full pages are not stored",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/idioms.shex",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "ShEx (ShExC) shapes of the descriptive idioms in the publisher schema.org markup: a core shape per idiom and one small shape per known form (open shapes that recognise, not validate)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/idioms.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "catalogue of the 16 idioms: candidate nodes (SPARQL), core and form shapes, SPARQL forms, rewrite file, content or furniture",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/rewrites",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "SPARQL CONSTRUCT rewrites from each idiom form to the canonical layer (branch card, weekly hours, organisation card)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/page-idioms.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "per page: the idioms found, how many nodes, and which forms (from Factoidal ShEx checks)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-idioms"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/summary.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "sites, pages and nodes per idiom and per form",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-idioms"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/canonical.nq.gz",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "canonical layer: the content idioms (branch card, weekly hours, organisation card) rewritten to one form each, one named graph per page (graph IRI = page URL)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-idioms"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/coref/sameas.nq.gz",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "owl:sameAs links between organisation and place descriptions that refer to the same thing, one named graph per key rule (iri, site-name, sameAs, telephone, postcode-name)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-coref"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/coref/descriptions.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "each organisation or place description: its IRI (hash of page and node), page, node, kind, name, types, normalised telephone, postcodes, sameAs and the page's registry keys",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-coref"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/coref/entities.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the entity groups: members, the key rules that joined them, sites, registry keys, the buildings named by branch pages, and the branch-in-two-buildings conflicts (fault F46)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-coref"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory-typed.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the Canary Wharf Group directory as a typed occupant list: each archived page's name, first published and last edited dates and section, joined to the directory record (kind, categories, mall, level, postcode, website), a schema.org type from the CWG category, and the registry buildings that link to the page",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-directory-typed"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory-typed.nq",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the typed directory list as N-Quads (schema.org types, name, cuisine, address, mall, website, page dates), one named graph per archived page",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-directory-typed"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/web-idioms.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: recognises the idioms with Factoidal ShEx and writes the canonical layer with Factoidal SPARQL CONSTRUCT",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/web-coref.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: groups descriptions that refer to the same thing (Factoidal SPARQL) and writes owl:sameAs by key rule",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/cwg-directory-typed.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: builds the typed directory list (Factoidal SPARQL and serialize)",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"

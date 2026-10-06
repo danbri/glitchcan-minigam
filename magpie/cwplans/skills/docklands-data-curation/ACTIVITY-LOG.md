@@ -1041,3 +1041,22 @@ central tower - do we have an index of these?"
   under 3 mm: roof outline only; first version 40,962 lines, 30 s); Rotherhithe photo view 563 lines; phone download
   through the button, portrait A4. Details: skill docklands-3d-page, "Plotter SVG". Register entry for the script;
   check-data-register exit 0.
+
+## 2026-10-06 — schema.org harvest: idioms, sameAs links, fault F46, typed CWG directory (Opus)
+- Owner: report on the schema.org harvest (https://claude.ai/artifact/8syFhnR1EaJEmJJQdqLmn5), then "the shape specs here
+  are intended to be used to capture common multi-triple descriptive idioms, not necc for validation", "do 1-4", and
+  "Please always try to use NPM Module Factoidal/core for RDF work" (now in the repo CLAUDE.md).
+- 1. Idioms: `third_party/cwplans-structured-data/idioms/` (ShExC shapes, catalogue, SPARQL CONSTRUCT rewrites) and
+  `tools/web-idioms.mjs` (Factoidal parse, SPARQL, shexValidate, serialize): 16 idioms, 4,341 nodes on 824 pages, per-page
+  index, canonical layer of branch cards, weekly hours and organisation cards.
+- 2. sameAs: `tools/web-coref.mjs` -> `coref/sameas.nq.gz` (one named graph per key rule), `descriptions.json`,
+  `entities.json`: 890 descriptions, 396 entities (151 organisations, 245 places), 14 across sites. Two rule faults found
+  and fixed on the way: same site and name joined a chain's branches (places now need the postcode too); a shared
+  head-office telephone joined three Post Office branches (places with different postcodes are never linked).
+- 3. Fault register: F46 (one branch, two building records from two sources). Web: 6 branch pages that link to two
+  buildings (3 are F46). Registry: 48 of 101 names in more than one building fit the class by a heuristic, not yet checked.
+- 4. `tools/cwg-directory-typed.mjs` -> `registry/sources/brands/cwg-directory-typed.json` and `.nq`: 374 directory
+  entries with first listed and last edited dates, section, schema.org type from the CWG category, registry buildings.
+- Factoidal 0.7.1 fault found: `serialize()` drops quads with blank nodes made by `BNODE()` in CONSTRUCT (labels like
+  `p1__:fxbn…`); worked around with SHA-1 IRIs. Notes in the web-harvest skill, "Factoidal notes".
+- Register: 14 entries; pipeline activities web-idioms, web-coref, cwg-directory-typed; check-data-register run.

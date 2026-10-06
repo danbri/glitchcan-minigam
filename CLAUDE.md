@@ -75,6 +75,12 @@ restrictions on personal org and address data while in the scoping, planning and
 - The exception ends when the project leaves the prototyping phase; the owner says when.
   It does not apply to any other directory. The Bristol trees rule above is unchanged.
 
+## RDF WORK: FACTOIDAL FIRST
+Owner instruction, October 2026: "Please always try to use NPM Module Factoidal/core for RDF work, before falling back on
+other software if needed." For parsing, SPARQL, ShEx/SHACL, canonicalisation and serialisation use `@factoidal/core`
+(already in `node_modules`; `parse`, `query`, `graphs`, `serialize`, `shexValidate`, `shaclValidate`). Use rdflib, N3.js,
+shex.js or others only when Factoidal lacks the feature, and say so in the tool header and the skill.
+
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
 **ONLY ALLOWED:** Real ink-full.js compiler and Story API

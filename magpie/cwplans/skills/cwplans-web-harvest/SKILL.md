@@ -144,6 +144,87 @@ silent fix.
 - `third_party/cwplans-structured-data/all.nq` (12 MB, gitignored) and `all.nq.gz` (committed): 65,566 quads from 901
   pages; SPARQL over it took 62 s.
 
+## Factoidal notes (2026-10-06)
+
+Owner, 2026-10-06: "Please always try to use NPM Module Factoidal/core for RDF work, before falling back on other software
+if needed" (also in the repo CLAUDE.md). What we learned with `@factoidal/core` 0.7.1 on this dataset:
+
+- `parse` of `all.nq.gz` (65,566 quads, 824 graphs) takes 52 to 60 s. `graphs(ds)` then gives one Dataset per page.
+- A query without `GRAPH` matches only the default graph; every harvest triple is in a named graph. For per-page work,
+  rebuild each page as a default-graph Dataset (`new Dataset(q.map(x => dataFactory.quad(s, p, o, dataFactory.defaultGraph())))`).
+- `shexValidate(data, shexC, focus, shape)` takes ShExC or ShExJ. Shape labels must be absolute or prefixed (`i:Branch`);
+  a relative label (`<Branch>`) fails with "could not decode schema". Value sets, `EXTRA`, `@ref`, `|` alternatives,
+  cardinalities and regex facets (`LITERAL /^https?:/`) work. A focus can be the RDF/JS term from a SPARQL binding,
+  blank nodes included. About 30 ms a check on a page graph (16,143 checks in 9.5 minutes).
+- **Fault (reported to the owner):** in a CONSTRUCT, a blank node made by `BNODE()` gets a label like `p1__:fxbn…`, and
+  `serialize()` drops every quad that uses it, silently (`toNQuads()` keeps them). Workaround here: mint IRIs from a
+  SHA-1 of the text (`IRI(CONCAT(base, SHA1(STR(?a))))`); stable IRIs are better for the graph anyway.
+- SPARQL scoping, not a Factoidal fault: a `FILTER` inside an inner `OPTIONAL` cannot see a variable bound only outside
+  that group. Use `BIND(IF(...))` at the same level instead.
+
+## Idioms (2026-10-06): `idioms/`, `tools/web-idioms.mjs`
+
+Owner, 2026-10-06: "the shape specs here are intended to be used to capture common multi-triple descriptive idioms, not
+necc for validation". An idiom is a recurring small group of triples (a node of one type, its usual properties, the
+child nodes that hang from it). `idioms/idioms.shex` holds one open core shape per idiom and one small shape per known
+form; `idioms/idioms.json` lists, per idiom, the candidate nodes (SPARQL), the core and form shapes, SPARQL forms (for
+what ShEx cannot say, such as "the last breadcrumb item has no link") and the rewrite. The tool checks every candidate
+with Factoidal ShEx and writes `page-idioms.json` (per page: idioms, nodes, forms), `summary.json` (sites per idiom and
+form) and `canonical.nq.gz` (branch cards, weekly hours and organisation cards rewritten to one form each by the SPARQL
+CONSTRUCT files in `idioms/rewrites/`; graph = page URL).
+
+Measured (824 pages, 4,341 idiom nodes, 0 deferred ShEx answers, 57 schema.org namespace variants mapped):
+
+| idiom | sites | nodes | forms (sites) |
+|---|---|---|---|
+| Social preview (Open Graph) | 270 | 698 | image size 92, article times 61 |
+| Site identity | 187 | 588 | with publisher 73 |
+| Organisation card | 162 | 642 | logo as ImageObject 61, as IRI 47, as text 68 (an image URL in a JSON-LD string), sameAs 110 |
+| Branch card | 112 | 220 | address node 106, address text 22, hours nodes 38, hours text 37, geo 40, telephone 69, all parts 21 |
+| Site search box | 109 | 502 | target EntryPoint 70, target as text 41, query-input spec 49, as text 62 |
+| Breadcrumb trail | 105 | 502 | last item without a link 71 |
+| Page frame | 85 | 471 | breadcrumb 66, primary image 43, about 44 |
+| Weekly hours | 39 | 462 | day IRI as text 12, day name 27, special days 1 |
+| Contact point, Person, Chain branch link | 25, 24, 24 | 32, 95, 45 | chain: parentOrganization 16, brand 7, branchCode 3 |
+| Menu, FAQ, Rating badge, Service catalogue, Product offer | 18, 12, 9, 4, 4 | | one full menu tree (an ordering platform) |
+
+JSON-LD without `@id` turns IRIs into text: day names arrive as the text "https://schema.org/Monday", logos and search
+targets as URL strings. These are forms, not faults; the rewrites map them (hours.rq strips the namespace and
+capitalises the day; org.rq makes any logo an ImageObject with a url; branch.rq writes E.164 UK telephones, ISO country
+codes, and the postcode of a text address, with the address text kept as `cwp:addressText`).
+
+## Same thing (2026-10-06): `coref/`, `tools/web-coref.mjs`
+
+Organisation and place descriptions (types from the BranchCard and OrgCard candidate lists in `idioms.json`) get an
+IRI from a hash of page and node (`…/desc/<sha1>`). Key rules are applied in this order, and each link goes into the
+named graph of its rule (`…/coref/rule/<rule>`) in `coref/sameas.nq.gz`, so a bad rule is removed by dropping its graph:
+
+1. `iri`: the same `@id` IRI. 2. `site-name`: same site and normalised name; for places also the same postcode (a chain's
+branch pages all say "Pret A Manger"). 3. `sameAs`: the same profile URL. 4. `telephone`: the same normalised number.
+5. `postcode-name`: same postcode and name.
+
+Guards: telephone and sameAs join only the same kind (organisation, place); two places whose postcodes disagree are never
+linked except by an identical IRI (a head-office number joined three Post Office branches; shared social links joined
+two Bread & Truffle shops); empty and bare social URLs are not keys (an empty `sameAs` joined 13 sites).
+
+Measured: 890 descriptions; entities after each rule 493, 401, 399, 396, 396; 151 organisations and 245 places; 14
+entities across sites (Mildreds on its own site and a booking platform, Pret on two Pret hosts, Barry's, Charles Tyrwhitt,
+atis, Social Pub & Kitchen); no place group with two postcodes. A page's registry keys belong to a description only
+when it is the one place on that page; then 6 branches link to two registry buildings (`conflict` in `entities.json`).
+Three are fault F46 (curation skill): Atis, Le Chalet Cryo, Charbonnel et Walker. Notes is two real branches seen from
+the brand's home page; Flowers & Plants Co is to check.
+
+## The canarywharf.com directory (2026-10-06): `tools/cwg-directory-typed.mjs`
+
+The 369 archived directory pages type only the publisher (Yoast: WebPage, WebSite, BreadcrumbList, Organization). The
+tool reads each page's name, `datePublished`, `dateModified` and breadcrumb section with Factoidal SPARQL, joins it to
+`registry/sources/brands/cwg-directory.json` by URL, gives a schema.org type from the CWG kind and category (a fixed
+table in the tool: "Grab & Go" FastFoodRestaurant, "Cafes & Bars" CafeOrCoffeeShop, "Hairdressing & Beauty" BeautySalon,
+"Services" LocalBusiness, ...; cuisine categories also as `servesCuisine`), and adds the registry buildings that link to
+the page. Output `registry/sources/brands/cwg-directory-typed.json` and `.nq`. Measured: 374 entries, 357 with page data,
+321 with a registry building; first listed 2013 (90, the site launch) to 2025 (55); last edited mostly 2024 (155) and
+2025 (153). The types are ours, from the category, not the publisher's.
+
 ## What is committed (`third_party/cwplans-structured-data/`)
 
 **No full pages.** `pages/<host>.jsonl` (one line per rendered page: URL, final URL, status, method, title, lang,

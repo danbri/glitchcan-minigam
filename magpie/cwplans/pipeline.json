@@ -2193,6 +2193,142 @@
       "area": "structured"
     },
     {
+      "id": "web-idioms",
+      "area": "structured",
+      "tool": "tools/web-idioms.mjs",
+      "command": "node magpie/cwplans/tools/web-idioms.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "../../third_party/cwplans-structured-data/all.nq.gz"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/idioms/idioms.json"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/idioms/idioms.shex"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/idioms/rewrites"
+        },
+        {
+          "source": "factoidal",
+          "endpoint": "npm @factoidal/core 0.7.1 (local)",
+          "request": "parse (N-Quads), graphs, query (SPARQL SELECT, ASK, CONSTRUCT), shexValidate, serialize"
+        }
+      ],
+      "generated": [
+        {
+          "file": "../../third_party/cwplans-structured-data/idioms/page-idioms.json"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/idioms/summary.json"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/idioms/canonical.nq.gz"
+        }
+      ],
+      "method": "For each page graph (as a default graph, schema.org namespace variants mapped to https://schema.org/), finds candidate nodes for each idiom by SPARQL, checks the idiom's core ShEx shape and each form shape with Factoidal, runs the SPARQL forms, and rewrites the content idioms to the canonical layer with SPARQL CONSTRUCT.",
+      "rules": [
+        "Shapes are open: they recognise an idiom and its forms, they do not reject data.",
+        "A node counts for an idiom when its core shape holds; forms are counted per node.",
+        "New nodes in rewrites get IRIs from a SHA-1 of their text, not BNODE() (Factoidal 0.7.1 serialize drops BNODE() nodes)."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "extract-structured-data"
+      ]
+    },
+    {
+      "id": "web-coref",
+      "area": "structured",
+      "tool": "tools/web-coref.mjs",
+      "command": "node magpie/cwplans/tools/web-coref.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "../../third_party/cwplans-structured-data/all.nq.gz"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/pages"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/idioms/idioms.json"
+        },
+        {
+          "source": "factoidal",
+          "endpoint": "npm @factoidal/core 0.7.1 (local)",
+          "request": "parse (N-Quads), query (SPARQL SELECT over named graphs), serialize"
+        }
+      ],
+      "generated": [
+        {
+          "file": "../../third_party/cwplans-structured-data/coref/sameas.nq.gz"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/coref/descriptions.json"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/coref/entities.json"
+        }
+      ],
+      "method": "Reads name, telephone, sameAs, postcode and coordinates of every organisation and place description; applies the key rules in order (same IRI; same site and name, for places also the postcode; same sameAs URL; same telephone; same postcode and name) and writes each link in the named graph of its rule; groups by union; flags a branch page that links to more than one registry building.",
+      "rules": [
+        "Telephone and sameAs join only descriptions of the same kind (organisation with organisation, place with place).",
+        "Two places with postcodes that disagree are never linked, except by an identical IRI.",
+        "Empty and bare social-network URLs are not keys.",
+        "A page's registry keys belong to a description only when it is the one place on that page."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "extract-structured-data",
+        "web-idioms"
+      ]
+    },
+    {
+      "id": "cwg-directory-typed",
+      "area": "structured",
+      "tool": "tools/cwg-directory-typed.mjs",
+      "command": "node magpie/cwplans/tools/cwg-directory-typed.mjs",
+      "kind": "derive",
+      "used": [
+        {
+          "file": "../../third_party/cwplans-structured-data/all.nq.gz"
+        },
+        {
+          "file": "../../third_party/cwplans-structured-data/pages"
+        },
+        {
+          "file": "registry/sources/brands/cwg-directory.json"
+        },
+        {
+          "source": "factoidal",
+          "endpoint": "npm @factoidal/core 0.7.1 (local)",
+          "request": "parse (N-Quads), query (SPARQL SELECT over named graphs), serialize"
+        }
+      ],
+      "generated": [
+        {
+          "file": "registry/sources/brands/cwg-directory-typed.json"
+        },
+        {
+          "file": "registry/sources/brands/cwg-directory-typed.nq"
+        }
+      ],
+      "method": "Reads each archived canarywharf.com page's WebPage name, datePublished, dateModified and breadcrumb; joins it to the directory record by URL; gives a schema.org type from the CWG kind and category by a fixed table; adds the registry buildings that link to the page.",
+      "rules": [
+        "Types come from the CWG category table, not from the publisher (the pages type only the publisher).",
+        "first_listed is datePublished and last_edited is dateModified of the archived page."
+      ],
+      "network": false,
+      "deterministic": true,
+      "after": [
+        "extract-structured-data"
+      ]
+    },
+    {
       "id": "build-registry",
       "tool": "tools/build-registry.mjs",
       "command": "node magpie/cwplans/tools/build-registry.mjs",
