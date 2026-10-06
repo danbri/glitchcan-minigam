@@ -19,6 +19,7 @@ data/raw/trees/
 # website crawl cache (tools/crawl-sites.mjs)
 data/raw/crawl/
 data/raw/site-search/
+data/raw/cwg-map/
 
 # regulatory register downloads (tools/fetch-registers.mjs)
 data/raw/registers/

@@ -1096,3 +1096,16 @@ Owner: "don't waste good info by burying it in our chatlogs".
   features), "Reports", and "Open (2026-10-06)" with the next steps; the description was cut to 860 characters
   (it was 1,652, over the 1,024 limit, and the listing truncated it).
 - This skill, "Ship at once": the `.git/info/exclude` trap and how to check for it.
+
+## 2026-10-06 (evening): CWG maps (PDF) and the Living Map service
+
+- The owner supplied four PDFs from canarywharf.com/maps/ and asked for them in londat: saved unchanged in
+  danbri/londat `third_party/cwg/maps/` with README and manifest (londat 5a1bdee). Source `cwg-maps`, manual step
+  `cwg-maps-pdfs`. The July 2026 store guide has the mall plans by level with unit outlines and a grid-square index;
+  its text is vector outlines (OCR needed).
+- The owner asked whether map.canarywharf.com has a REST API. Yes: Living Map (`map-api.prod.livingmap.com`, vector
+  tiles on `prod.cdn.livingmap.com`), no key, CORS *. The indoor tiles carry unit polygons per floor with names, mall,
+  hours and telephone. Probed once with `tools/probe-cwg-map.mjs`; raw answers local only; not harvested (source
+  `livingmap-cwg`, no published licence): the owner decides.
+- Fix: `tools/check-factoidal.mjs` (previous commit) was not in pipeline.json, so `check-data-register.mjs` failed;
+  my earlier report of exit 0 was wrong. Added as activity `check-factoidal`.

@@ -6435,6 +6435,8 @@
       "note": "Child process: git ls-files. Run last, after every rebuild.",
       "area": "provenance"
     },
+    {"id": "check-factoidal", "area": "structured", "tool": "tools/check-factoidal.mjs", "command": "node magpie/cwplans/tools/check-factoidal.mjs", "kind": "check", "used": [{"source": "factoidal", "endpoint": "npm @factoidal/core (local)", "request": "parse, query (SELECT, CONSTRUCT), serialize, toNQuads on tiny in-memory cases"}], "generated": [], "method": "Re-tests the known @factoidal/core faults and behaviours on tiny in-memory datasets and prints STILL or FIXED for each: BNODE() labels with a colon, serialize() dropping their quads, parse() of toNQuads() dropping lines, SELECT BNODE() values with a _: prefix, blank nodes renamed per query, no default-graph view of named graphs.", "rules": ["Run after every Factoidal upgrade; remove a workaround in web-idioms.mjs or elsewhere only when its line says FIXED.", "No network and no files written."], "network": false, "deterministic": true, "after": []},
+    {"id": "probe-cwg-map", "area": "brands", "tool": "tools/probe-cwg-map.mjs", "command": "node magpie/cwplans/tools/probe-cwg-map.mjs", "kind": "fetch", "used": [{"source": "livingmap-cwg"}], "generated": [], "method": "Loads https://map.canarywharf.com/ twice (floor 0, floor -1) in headless Chromium and logs every request (method, type, URL, request headers, POST body, status, response headers) and saves JSON and vector-tile bodies to data/raw/cwg-map/ (not committed).", "rules": ["robots.txt of map.canarywharf.com allows all (checked 2026-10-06).", "One run is two page loads; no harvest loop.", "Nothing from the service is committed until the owner decides (source livingmap-cwg)."], "network": true, "deterministic": false, "after": []},
     {
       "id": "check-data-register-write",
       "tool": "tools/check-data-register.mjs",
@@ -8356,6 +8358,7 @@
     }
   ],
   "manual_activities": [
+    {"id": "cwg-maps-pdfs", "area": "brands", "what": "Canary Wharf Group maps and guides (PDF) supplied by the owner", "by": "hand (the owner downloaded them from canarywharf.com/maps/; the session copied them to danbri/londat)", "date": "2026-10-06", "method": "The owner downloaded four PDFs from https://canarywharf.com/maps/ (the site answers scripts with a bot challenge) and gave them to the session, which saved them unchanged in danbri/londat third_party/cwg/maps/ with a README (rights, status) and manifest.json (size, SHA-256, pages, dates, what each shows).", "rules": ["Files are kept unchanged; no page or image is copied into this repository.", "Only facts are taken from them (a shop's mall, level and grid square; where a lift or toilet is), each with the file and page.", "The store guide's text is vector outlines: names are read by eye or OCR, never guessed."], "used": [{"source": "cwg-maps"}]},
     {
       "id": "sourced-levels",
       "area": "underground",

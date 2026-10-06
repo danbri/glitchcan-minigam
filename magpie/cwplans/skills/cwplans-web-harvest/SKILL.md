@@ -257,15 +257,48 @@ menus and footers name it on every page. Asset links (`/cdn/…css`, `wp-content
 The CWG directory gives mall and level (signage number) for 209 of 223 mall occupants, but no unit number and no
 position. The tool matches each one by name to an OSM point within 250 m of the mall anchor: 105 placed (47%), 90 with
 an OSM level, 38 with `addr:unit`. Around the malls OSM has 506 levelled footways and indoor ways, and only 3
-`indoor=room` ways. So a draft plan per level is possible (corridors plus about half the shops as points), and unit
-outlines are not in any source we hold.
+`indoor=room` ways. From open sources alone, a draft plan per level is possible (corridors plus about half the shops
+as points). Unit outlines exist in two non-open sources found later the same day (below).
 
 - Levels (fault F48): around the estate OSM `level` is the physical level and `level:ref` the CWG number. Compare the
   CWG level with `level:ref` first. Then 81 of 88 placed occupants agree.
 - A chain with two branches within 250 m can match the wrong one: the nearest is taken.
-- canarywharf.com/maps/ is linked from every directory page and may hold the plans. On 2026-10-06 web.archive.org and
-  index.commoncrawl.org reset every connection from the container (agent-proxy `ws_closed_mid_exchange`); fetch it
-  first next time.
+- On 2026-10-06 web.archive.org and index.commoncrawl.org reset every connection from the container (agent-proxy
+  `ws_closed_mid_exchange`, in `/__agentproxy/status` as `recentRelayFailures`). A later session may reach them.
+
+### The CWG printed maps (owner, 2026-10-06): danbri/londat `third_party/cwg/maps/`
+
+The owner downloaded the PDFs on https://canarywharf.com/maps/ by hand (the site challenges scripts) and asked for
+them in londat: https://github.com/danbri/londat/tree/main/third_party/cwg (README with rights and status,
+`manifest.json` with SHA-256, pages and dates). Source `cwg-maps`; manual step `cwg-maps-pdfs` in pipeline.json.
+- `260720_store_guide_JULY_composite_v85_vec.pdf` (20 July 2026, 2 pages, Illustrator): p. 1 "Shopping Malls", a
+  schematic plan of the five malls by level with unit outlines, colour per mall, and an index giving each shop its grid
+  squares ("Boots 10C, 10H"; rows 1-16, columns A-Q); p. 2 "Canary Wharf Estate", street retail and office tenants on
+  a 23 x 10 grid and the buildings by postal address. **All text is vector outlines** (`pdftotext` gives 0 words):
+  read names by eye or OCR (render with `pdftoppm -r 150`); never guess a name from a shape.
+- `AccesibilityMap_MAY-2025_v2.pdf` (step-free access: lifts, toilets in and outside the malls, ramps, car parks;
+  has a text layer), children's art trail (June 2025, 3 pages), art guide (April 2025, 20 pages, over 100 artworks).
+- Design © Ravenshaw Studios Limited and Paul & Linda Anthony 2026, for CWG. Facts only into this repository.
+
+### The Living Map service behind map.canarywharf.com (probed 2026-10-06, not harvested)
+
+`node magpie/cwplans/tools/probe-cwg-map.mjs` loads the page twice in headless Chromium (needs the NSS proxy CA fix
+below) and logs every request to `data/raw/cwg-map/requests.json` (not committed). robots.txt allows all. The page is
+a React app on Mapbox GL; its data comes from Living Map (livingmap.com):
+- `GET https://map-api.prod.livingmap.com/v1/maps?host=map.canarywharf.com`: map config: floors (id, `floor` -4.0 to
+  2.0, names "Level -4" to "Level 2", "Level -1M" at -0.5 and "Level M" at 0.5), centre, extents, languages, routing options, and
+  an `access_token` (a public Mapbox key; do not copy it into the repo).
+- `GET .../v1/maps/canary_wharf/feature-objects?lang=en-GB`: 536 named places (title, point, `floorId`).
+- `GET .../v1/maps/canary_wharf/styles/styles.json`, `.../geofences`; `POST .../sessions` and `.../sessions/<id>/events`
+  are the page's own usage logging: do not call them.
+- Vector tiles `https://prod.cdn.livingmap.com/tiles/canary_wharf/{z}/{x}/{y}.pbf?lang=en-GB` (z16 seen; one central
+  tile is 1 MB), layers `indoor` and `outdoor`. `indoor` holds unit **polygons** per floor with `name`, `class`
+  (retail, food_and_drink, ...), `location_name` (the mall), `floor_id`, `floor_level`, `floor_name`, `opening_times`
+  ("mon: 07:30 - 20:00, ..."), `tel_number`, `street_address`, `url`, plus lifts, escalators and corridors. In the 22
+  tiles of one page load: 1,094 indoor polygons, 475 named (Cabot Place 95, Jubilee Place 73, Canada Place 72,
+  Crossrail Place 28), 334 with opening times, 173 with a telephone. Decode with `@mapbox/vector-tile` and `pbf`.
+- No key, no cookie; every answer sends `Access-Control-Allow-Origin: *`. No published licence or terms found
+  (source `livingmap-cwg`). This is a proprietary map database: the owner decides before a harvest or a commit.
 
 ## What the markup is for (report of 2026-10-06)
 
@@ -371,8 +404,8 @@ environment.
 
 ## Open (2026-10-06)
 
-- Fetch https://canarywharf.com/maps/ (an Internet Archive or Common Crawl copy): it may hold the mall plans. On
-  2026-10-06 both hosts reset every connection from the container; check the agent-proxy status first.
+- Mall plans: the owner decides whether to harvest the Living Map tiles (unit outlines, hours, telephone per floor)
+  and what may be committed; else OCR the store guide index (grid squares) and join it to the CWG directory.
 - Crawl the 48 site-search hits that are not in the harvest (`search/probe.json`, `hits_new`), branch pages first.
 - Mall plans without a new source: snap each placed point to the nearest corridor on its level and order shops along
   each corridor (a schematic plan, which shop is next to which).

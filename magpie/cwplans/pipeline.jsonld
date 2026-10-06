@@ -7216,6 +7216,61 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-factoidal",
+   "@type": "prov:Activity",
+   "rdfs:label": "check-factoidal",
+   "dct:description": "Re-tests the known @factoidal/core faults and behaviours on tiny in-memory datasets and prints STILL or FIXED for each: BNODE() labels with a colon, serialize() dropping their quads, parse() of toNQuads() dropping lines, SELECT BNODE() values with a _: prefix, blank nodes renamed per query, no default-graph view of named graphs.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
+     "dcat:accessURL": "npm @factoidal/core (local)",
+     "dct:description": "parse, query (SELECT, CONSTRUCT), serialize, toNQuads on tiny in-memory cases"
+    }
+   ],
+   "prov:generated": [],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/check-factoidal.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/check-factoidal.mjs",
+   "cwp:kind": "check",
+   "cwp:rule": [
+    "Run after every Factoidal upgrade; remove a workaround in web-idioms.mjs or elsewhere only when its line says FIXED.",
+    "No network and no files written."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-cwg-map",
+   "@type": "prov:Activity",
+   "rdfs:label": "probe-cwg-map",
+   "dct:description": "Loads https://map.canarywharf.com/ twice (floor 0, floor -1) in headless Chromium and logs every request (method, type, URL, request headers, POST body, status, response headers) and saves JSON and vector-tile bodies to data/raw/cwg-map/ (not committed).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/livingmap-cwg"
+    }
+   ],
+   "prov:generated": [],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/probe-cwg-map.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/probe-cwg-map.mjs",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "robots.txt of map.canarywharf.com allows all (checked 2026-10-06).",
+    "One run is two page loads; no harvest loop.",
+    "Nothing from the service is committed until the owner decides (source livingmap-cwg)."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [],
+   "cwp:area": "brands",
+   "cwp:fault": []
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-data-register-write",
    "@type": "prov:Activity",
    "rdfs:label": "check-data-register-write",
@@ -9204,6 +9259,29 @@
    ],
    "cwp:area": "underground",
    "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-maps-pdfs",
+   "@type": "prov:Activity",
+   "rdfs:label": "Canary Wharf Group maps and guides (PDF) supplied by the owner",
+   "dct:description": "The owner downloaded four PDFs from https://canarywharf.com/maps/ (the site answers scripts with a bot challenge) and gave them to the session, which saved them unchanged in danbri/londat third_party/cwg/maps/ with a README (rights, status) and manifest.json (size, SHA-256, pages, dates, what each shows).",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-maps"
+    }
+   ],
+   "prov:generated": [],
+   "cwp:kind": "hand",
+   "cwp:rule": [
+    "Files are kept unchanged; no page or image is copied into this repository.",
+    "Only facts are taken from them (a shop's mall, level and grid square; where a lift or toilet is), each with the file and page.",
+    "The store guide's text is vector outlines: names are read by eye or OCR, never guessed."
+   ],
+   "cwp:area": "brands",
+   "cwp:fault": [],
+   "cwp:by": "hand (the owner downloaded them from canarywharf.com/maps/; the session copied them to danbri/londat)",
+   "cwp:date": "2026-10-06",
+   "cwp:decisionsRecordedIn": []
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/sourced-levels",
@@ -13518,6 +13596,20 @@
     "dcat:Distribution"
    ],
    "dct:title": "code, not data: re-tests the known @factoidal/core faults and behaviours and prints STILL or FIXED for each",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/probe-cwg-map.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: records the network requests of map.canarywharf.com in headless Chromium (finds the Living Map API); output stays in data/raw/cwg-map/",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
@@ -26490,6 +26582,24 @@
    ],
    "dct:title": "web search and crawl for scoping, 2026-10-05: what people built from or alongside TfL's axonometric station diagrams (search results, direct fetches where robots.txt allows, Sketchfab API v3, GitHub search and raw files, ArcGIS Hub API, HTTP HEAD on foi.tfl.gov.uk)",
    "dct:license": "each site's terms; facts, URLs and short quotes only, no models or images copied"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-maps",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Canary Wharf Group printed maps and guides from https://canarywharf.com/maps/ (store guide 20 July 2026 with mall and estate maps, step-free access map May 2025, children's art trail June 2025, art guide April 2025), supplied by the owner, held in danbri/londat third_party/cwg/maps",
+   "dct:license": "Canary Wharf Group; store guide design © Ravenshaw Studios Limited and Paul & Linda Anthony 2026; not an open licence"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/livingmap-cwg",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Living Map service behind https://map.canarywharf.com/ (map-api.prod.livingmap.com/v1/maps/canary_wharf: map config, feature-objects, geofences, styles; vector tiles prod.cdn.livingmap.com/tiles/canary_wharf/{z}/{x}/{y}.pbf with indoor unit polygons per floor, names, opening times, telephone, address)",
+   "dct:license": "Living Map / Canary Wharf Group; no published licence or terms found on 2026-10-06"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/tfl-am3d",
