@@ -356,6 +356,45 @@ Rotherhithe, Limehouse, Canary Wharf, Isle of Dogs etc etc.)."
   Panoramax `/api/search` gives no paging links: when an answer has `limit` items, split the box. OpenAerialMap
   `/meta` pages by `page`. Mapillary needs a token.
 
+## Contributed photos
+
+Owner, 2026-10-06 (four photos round Canada Water Library): "Here are photos I cc0-share from 16:30ish today ... Store in
+londat data/images/contrib/cwlibrary/ and figure out which buildings they are, so we can abstract vector patterns or
+textures for their 3D models."
+
+- **Where:** londat `data/images/contrib/<set>/`: the photos as given (renamed `<date>-<place>-NN-<subject>.jpg`), a
+  `README.md`, and `photos.json`, the hand-made part: licence, creator, date and time, what each photo depicts, each
+  building with its OSM way, model index and height, evidence and confidence, judged facade notes, and the facade
+  regions (`patches`: photo, ROI in photo pixels, measuring box in rectified pixels, face, face width).
+- **Run:** `FACADE_PY=<venv python> node magpie/cwplans/tools/contrib-photos.mjs <set>`: operation
+  `rectify-facade-patches` (facade.py and measure.py in `registry/sources/facades/tools/`, writes `rect/<id>.jpg`) then
+  `lift-contrib-photos`; graphs `facade-patches-<set>` and `photos-<set>` named in `kgx/external-heads.json`; then
+  `build-kgx.mjs`. Python here: Debian's numpy does not import; make a venv (`python3 -m venv v && v/bin/pip install
+  numpy opencv-python-headless scikit-learn scipy pillow`, about 1 minute).
+- **Identify by evidence, in this order:** a name on the building; a unique form (the library's inverted pyramid, the
+  station drum); then OSM in the area (the registry stops at x -740; the area round Canada Water is not in it, but the
+  model is): `osmium extract -b <box>` of `data/raw/docklands/greater_london-latest.osm.pbf`, then `osmium export
+  --add-unique-id=type_id` (an area id `a<n>` is way n/2 when n is even, relation (n-1)/2 when odd); a floor count from
+  a rectified patch against `building:levels` and the model height; the sun (`sunAt`) for which faces were lit and
+  which way the camera looked. Overpass may answer 504: use the local extract.
+- **Floor counts:** count on a rectified patch, not on the photo (perspective). A repeat can hold two floors: Ontario
+  Point's thick band comes every two floors (its side balconies, one a floor, are half the repeat at the same height,
+  and 12 repeats x 2 + ground = 25 levels, 76.5 m by LiDAR).
+- **Measured periods need judgement:** the autocorrelation picks the strongest repeat, which may be a glazing bar (The
+  Founding: 13 px, the floor is 82 px), a mesh (the library: 5 and 11 px) or a two-floor unit. Write the judged
+  pattern in `photos.json`.
+- **Colours** from evening photos in shade or against the light are much darker than the materials (Columbia Point's
+  cream frame measured #4d504f). Use them for patterns, not as material colours, unless the face was sunlit.
+- **Rectification fails** on a face with projecting balconies or a strong texture (the red part of The Founding; the
+  library's mesh plus its sloped roof edge gave a skewed result): a narrower ROI on flat wall worked for the library;
+  for the balcony face only judged facts were kept.
+- **Model:** match an OSM centroid to the model outline that contains it (`area().buildings`, `dec(p)` is already in
+  metres). The station drum has no model outline of its own. The Founding's model height comes from its levels (it is
+  newer than the 2022 LiDAR); the page's default colouring draws heights from levels (`s` 1) or newer buildings (`s` 4)
+  in `C.bldlv` (amber), others in `C.bld`.
+- **Not done:** the page draws photo facades only for registry towers (`facSlot`: atlas cwb ids). Facades for
+  OSM-keyed buildings outside the registry need a key from OSM way (or position) to model building.
+
 ## Pages and tests
 
 - The atlas (`atlas/index.html`) loads `atlas/data/atlas.json` first and the detail files on demand. Hash

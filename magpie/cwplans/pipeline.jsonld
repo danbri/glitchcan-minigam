@@ -7450,6 +7450,9 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-imagery-coverage"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/contrib-photos"
     }
    ],
    "cwp:area": "structured",
@@ -7541,6 +7544,46 @@
    ],
    "cwp:network": true,
    "cwp:deterministic": false,
+   "cwp:after": [],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/contrib-photos",
+   "@type": "prov:Activity",
+   "rdfs:label": "contrib-photos",
+   "dct:description": "Operation rectify-facade-patches: for each facade region in photos.json, facade.py rectifies it (LSD segments, RANSAC vanishing points, homography) and measure.py cuts the measuring box and gives bay and floor periods (autocorrelation) and three colours (k-means in Lab); the patch is written to rect/<id>.jpg. Operation lift-contrib-photos: photos.json (identifications with evidence and confidence, judged facade notes, model heights) and the patch graph give a schema.org Photograph per photo and a node per building. Both graphs are named in kgx/external-heads.json.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/contrib-photos"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/tools/facade.py"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/facades/tools/measure.py"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/contrib-photos.mjs"
+   },
+   "cwp:command": "FACADE_PY=<venv python> node magpie/cwplans/tools/contrib-photos.mjs <set>",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Inputs by SHA-256: the photos, photos.json, facade.py and measure.py.",
+    "Identifications and facade patterns are judgement, written in photos.json with their evidence; the tool only lifts them.",
+    "Measured colours are as photographed (shade, backlight)."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
    "cwp:after": [],
    "cwp:area": "structured",
    "cwp:fault": []
@@ -13983,6 +14026,20 @@
     "dcat:Distribution"
    ],
    "dct:title": "code, not data: counts open imagery (OpenAerialMap, Panoramax, KartaView, EA survey catalogue) over the first study areas, then the logged operation lift-imagery-coverage gives the kgx graph coverage-imagery",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/contrib-photos.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: contributed photos (londat data/images/contrib/<set>/) as two logged operations: rectify-facade-patches (facade.py, measure.py) and lift-contrib-photos; kgx graphs facade-patches-<set> and photos-<set>",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
@@ -27102,6 +27159,16 @@
    "dct:title": "Environment Agency survey download catalogue search (products, years and resolutions over a polygon)",
    "dct:license": "OGL v3.0",
    "dcat:landingPage": "https://environment.data.gov.uk/backend/catalog/api/tiles/collections/survey/search"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/contrib-photos",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Photos given to the project by the owner (danbri) under CC0, with the hand-made identifications (photos.json), in danbri/londat data/images/contrib/<set>/",
+   "dct:license": "CC0 1.0",
+   "dcat:landingPage": "https://github.com/danbri/londat/tree/main/data/images/contrib"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/livingmap-cwg",

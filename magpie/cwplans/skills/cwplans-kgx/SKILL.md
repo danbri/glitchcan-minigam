@@ -44,9 +44,9 @@ an operation on immutable named graphs (the `cwplans-dataflow` skill).
 
 ## The store (Shardborough, `factoidal pack --layout ibk5`)
 
-Build of 2026-10-06: 106,425 triples, 16 graphs, 42 parts, 688 blocks, generation `gen-db68f11ff7c7d20a`, 4,130 files,
-20.3 MB (blocks 14.5 MB; the rest are sidecar indexes and Merkle files). The table below was measured on the build
-before it (15 graphs, 659 blocks); on this one the same entity reads 60 blocks out and 58 in, about 1.1 MB each.
+Build of 2026-10-06 (evening): 107,408 triples, 18 graphs, 44 parts, 743 blocks, generation `gen-f77d3378dffd7b81`,
+4,460 files, 20.6 MB (blocks 14.6 MB; the rest are sidecar indexes and Merkle files). The table below was measured on
+an earlier build (15 graphs, 659 blocks); on this one the same entity reads 60 blocks out and 59 in, about 1.1 MB each.
 
 - **Blocks** are cut per predicate per graph. `--batch-bytes` does not change the count. So a big graph gives big
   blocks whose subject ranges cover everything, and zone maps skip nothing.

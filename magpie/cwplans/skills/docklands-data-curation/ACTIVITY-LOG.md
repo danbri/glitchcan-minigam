@@ -1172,3 +1172,19 @@ Owner: "don't waste good info by burying it in our chatlogs".
   (`coverage/` added to `HOSTED_DIRS`). The first run put the share-alike answers in londat; moved before any commit,
   and the offline rerun was a memo hit.
 - Public page test: raw.githubusercontent.com answered 429 once; the worker now fetches 6 at a time and retries.
+
+## 2026-10-06 (evening): contributed photos round Canada Water Library
+
+- Owner: four CC0 photos from about 16:30 BST, "Store in londat data/images/contrib/cwlibrary/ and figure out which
+  buildings they are, so we can abstract vector patterns or textures for their 3D models." No EXIF time, GPS or camera.
+- Identified (londat `data/images/contrib/cwlibrary/photos.json`, `README.md`): Ontario Point (OSM way 204580680; name
+  on the building; about 12 two-floor units = 25 levels, LiDAR 76.5 m); Canada Water Library (way 157137089; name and
+  form); Canada Water station drum (way 41599363, about 30 m across, no model outline) and bus station (way 140147695);
+  Columbia Point and Regina Point (ways 52588475, 52588474, 20 levels; backlit, so the camera looked west); The Founding
+  (way 1330247335; 30 or more floors counted, the only 30+ level building within about 1 km in OSM).
+- New `tools/contrib-photos.mjs`: operations `rectify-facade-patches` (facade.py, measure.py) and `lift-contrib-photos`;
+  kgx graphs `facade-patches-cwlibrary` (5 patches) and `photos-cwlibrary`. Rectified patches (CC0) in `rect/`.
+- Corrections before commit: the first reading of Ontario Point's face stopped at the wrong right edge (the face
+  recedes to the right); the full-width patch gave the symmetric pattern (12 panes, 3 louvre strips). The drum is about
+  30 m across, not 25 m as first written; the lake is OSM relation 18015947, not a way.
+- Not done: the 3D page draws photo facades only for registry towers (cwb ids).
