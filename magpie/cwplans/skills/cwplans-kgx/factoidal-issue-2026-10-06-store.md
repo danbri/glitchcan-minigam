@@ -106,8 +106,8 @@ ranges.
 ## 3. A subquery plans every block
 
 D2 (a COUNT over a subquery) plans all 12 blocks; the inner query alone (D1) plans 4, and the same pattern without the
-subquery (D3) plans 4. With the stateless `storeQuery` this hits the 64-artifact cap; with a handle it fetches the whole
-store. We count rows for paging this way (`SELECT (COUNT(*) AS ?n) WHERE { { <the user's SELECT> } }`) and had to
+subquery (D3) plans 4. On a large store the stateless `storeQuery` then hits the 64-artifact cap, and a handle fetches
+the whole store. We count rows for paging this way (`SELECT (COUNT(*) AS ?n) WHERE { { <the user's SELECT> } }`) and had to
 rewrite it as a COUNT over the WHERE group. Request: plan through subqueries (the union of the inner plans).
 
 ## 4. Every call re-parses the whole manifest
@@ -115,7 +115,7 @@ rewrite it as a COUNT over the WHERE group. Request: plan through subqueries (th
 `storeQueryPlan`, `storeOpen` and `storeHandleQuery` all take the manifest as hex and their time grows with it, even
 when the handle holds few blocks:
 
-| store | blocks | manifest | plan | open | handle query (55 to 60 blocks held) |
+| store | blocks | manifest | plan | open | handle query (54 to 60 blocks held) |
 |---|---:|---:|---:|---:|---:|
 | public store above (gen-f77d3378dffd7b81) | 743 | 570 KB | 500 ms | 889 ms | 163 ms |
 | same data, smaller parts | 1,164 | 890 KB | 1,407 ms | 982 ms | 554 ms |
