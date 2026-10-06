@@ -17,7 +17,9 @@ const K = join(LONDAT_DIR, 'kgx'), heads = JSON.parse(readFileSync(join(K, 'head
 const vers = readFileSync(join(K, 'log', 'versions.jsonl'), 'utf8').split('\n').filter(Boolean).map(JSON.parse);
 const cur = new Set(Object.values(heads)), read = v => gunzipSync(readFileSync(join(K, v.file))).toString();
 const members = [...vers.filter(v => cur.has(v.partOf)), ...vers.filter(v => v.iri === heads.meta || v.iri === heads.log)].sort((a, b) => a.iri.localeCompare(b.iri));
-const partitioned = members.map(read).join(''), whole = Object.values(heads).map(iri => read(vers.find(v => v.iri === iri))).join('');
+// the store holds the parts of the heads that have parts (a head kept out of the store, such as model-building-keys, has none)
+const stored = Object.values(heads).filter(iri => iri === heads.meta || iri === heads.log || vers.some(v => v.partOf === iri));
+const partitioned = members.map(read).join(''), whole = stored.map(iri => read(vers.find(v => v.iri === iri))).join('');
 const gen = readFileSync(join(K, 'shardborough', 'CURRENT'), 'utf8').trim();
 const inputHash = createHash('sha256').update(partitioned).digest('hex').slice(0, 16);
 if ('gen-' + inputHash !== gen) { console.error(`the store (${gen}) was not packed from the current versions (gen-${inputHash}): rebuild first`); process.exit(2); }
