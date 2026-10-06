@@ -1258,3 +1258,8 @@ Owner: "don't waste good info by burying it in our chatlogs".
   Default A3 view 66.6 m -> 94.4 m of line (with the earlier changes); no stubble left in the phone default view.
   Checked that the Rotherhithe water edge comes from the draping, not this fix (old code + fix: still 0.01 m).
   Vendor preview: no warnings; page button at phone size: no console error.
+- Owner's second screenshot (file of 22:12 UTC, before this fix was live) also showed red zigzags on the DLR. Cause: open
+  track heights from the DSM jump between deck and ground; catalogued as F50 (114 of 1,052 open rail lines over 3 m off
+  their neighbours' mean, nodes under 40 m apart; counted with a node script over `area.js` decoded as on the page). The
+  plotter now uses the drone's 5-point moving average for track heights; the 3D page and `area.js` are unchanged. F10 notes
+  that the plotter repeated its `simplify()` fault.

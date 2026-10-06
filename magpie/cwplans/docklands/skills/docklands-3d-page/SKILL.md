@@ -964,6 +964,9 @@ towerOf, groundAt, tunnelY, par, toast and getters for MVP, VZ, CAM, TOWERS) and
   Before this, straight water, green, road and rail edges crossed many 20 m cells and the ground hid them where it bulged
   above the chord: in `?view=rotherhithe` 0.01 m of water edge was drawn, now 0.80 m (the far bank under the towers and
   the near river wall). `groundAt` on the page is the nearest cell, not these triangles; do not use it for draping.
+- **Railway heights are smoothed** in the plot with the drone's tube rule (moving average over 5 points): open track
+  heights come from the LiDAR surface model and jump between viaduct deck and ground (fault F50, up to 13 m on the DLR),
+  which drew red zigzags in the owner's plot. The 3D page itself still draws the raw heights.
 - **Road kerbs are mitred**: the kerb point at a bend lies on the mean of the two segment normals, at most 2 w out, so the
   two kerb pieces meet (one stroke, no notch or overlap).
 - **Plotter tidy**: runs joined end to start (0.6 px), Douglas-Peucker 0.08 mm; then `join()`: line ends within 0.15 mm of

@@ -115,6 +115,9 @@ function scene(P, cam, minPx) {
     const V0 = [];
     for (let i = 0; i < q.length; i += 3) { const p = [q[i], q[i + 2], q[i + 1]], o = V0[V0.length - 1]; if (!o || o[0] !== p[0] || o[2] !== p[2]) V0.push(p); }
     if (V0.length < 2) continue;
+    // open track heights come from the LiDAR surface and jump between the viaduct deck and the ground (fault F50): the plot
+    // uses the drone's tube rule, a moving average over 5 points, so the track is drawn where the train mode rides it
+    if (!road) { const y = V0.map(p => p[1]); V0.forEach((p, i) => { let t = 0, n = 0; for (let j = Math.max(0, i - 2); j <= Math.min(y.length - 1, i + 2); j++) { t += y[j]; n++; } p[1] = t / n; }); }
     const V = []; for (let i = 1; i < V0.length; i++) along(V0[i - 1], V0[i], V);
     if (!road) { polyline('rail', V, .3); continue; }
     const off = V.map((p, i) => {
