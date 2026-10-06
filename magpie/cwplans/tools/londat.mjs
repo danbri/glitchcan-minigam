@@ -16,8 +16,8 @@ export const LONDAT_DIR = resolve(process.env.LONDAT_DIR || join(CW, '..', '..',
 export const LONDAT_CW = join(LONDAT_DIR, 'cwplans');
 export const londatPresent = () => existsSync(join(LONDAT_DIR, '.git')) || existsSync(LONDAT_CW);
 // the hosted folders; inside them, code and READMEs stay here
-// cache/: the SQLite history of live state, latest.json and zone.gpkg (tools/cache-londat.mjs, build-zone-gpkg.mjs; skill cwplans-londat-cache)
-export const HOSTED_DIRS = ['feeds/london-datastore/', 'feeds/portals/', 'feeds/kml/', 'cache/'];
+// coverage/: open imagery coverage answers (tools/probe-imagery-coverage.mjs). cache/: the SQLite history of live state, latest.json and zone.gpkg (tools/cache-londat.mjs, build-zone-gpkg.mjs; skill cwplans-londat-cache)
+export const HOSTED_DIRS = ['feeds/london-datastore/', 'feeds/portals/', 'feeds/kml/', 'cache/', 'coverage/'];
 export const isHostedPath = rel => HOSTED_DIRS.some(d => rel.startsWith(d)) && !/(^|\/)README\.md$|\.js$|^feeds\/kml\/catalogue\.json$/.test(rel);
 // a path relative to magpie/cwplans -> the file on disk (the londat checkout for a hosted path)
 export const cwPath = rel => join(isHostedPath(rel) ? LONDAT_CW : CW, rel);

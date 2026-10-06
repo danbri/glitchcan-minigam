@@ -34,7 +34,9 @@ an operation on immutable named graphs (the `cwplans-dataflow` skill).
 - Graph names: `facts`, `buildings` (cwb- ids, outline as `geo:asWKT`), `occupants`, `cwg` (typed CWG directory and
   `s:OpeningHoursSpecification` per day with `cwk:opensMinute`/`cwk:closesMinute`), `web`, `coref-<rule>`, `mallmap`
   (`cwk:MallUnit` with outline, `cwk:Facility` points: lifts, escalators, ramps, stairs, entrances, toilets,
-  defibrillators), `storeguide` (`cwk:GuideEntry` with `cwk:gridRef`), `pipeline` (pipeline.jsonld lifted), `meta`
+  defibrillators), `storeguide` (`cwk:GuideEntry` with `cwk:gridRef`), `pipeline` (pipeline.jsonld lifted),
+  `coverage-imagery` (from `tools/probe-imagery-coverage.mjs` through `kgx/external-heads.json`: `cwk:CoverageCount` per
+  imagery source and study area), `meta`
   (`void:Dataset` per version and part; heads as `graph/<name> cwk:current <version>`), `log` (the activities).
   Counts: the londat README.
 - Joins across sources go through `s:sameAs` to the CWG entity IRI (`https://canarywharf.com/<kind>/<slug>/#entity`),
@@ -42,8 +44,9 @@ an operation on immutable named graphs (the `cwplans-dataflow` skill).
 
 ## The store (Shardborough, `factoidal pack --layout ibk5`)
 
-Build of 2026-10-06: 103,982 triples, 15 graphs, 41 parts, 659 blocks, generation `gen-997d0037f51ae3b8`, 3,956 files,
-19.9 MB (blocks 14.2 MB; the rest are sidecar indexes and Merkle files).
+Build of 2026-10-06: 106,425 triples, 16 graphs, 42 parts, 688 blocks, generation `gen-db68f11ff7c7d20a`, 4,130 files,
+20.3 MB (blocks 14.5 MB; the rest are sidecar indexes and Merkle files). The table below was measured on the build
+before it (15 graphs, 659 blocks); on this one the same entity reads 60 blocks out and 58 in, about 1.1 MB each.
 
 - **Blocks** are cut per predicate per graph. `--batch-bytes` does not change the count. So a big graph gives big
   blocks whose subject ranges cover everything, and zone maps skip nothing.
@@ -88,7 +91,7 @@ Build of 2026-10-06: 103,982 triples, 15 graphs, 41 parts, 659 blocks, generatio
 - `worker.js` (module Web Worker) imports the Lean engine `l4-assets/l4factoidal.js` from jsDelivr, pinned
   (`@factoidal/core@0.7.1`; the 5.9 MB wasm loads by `locateFile`). It reads `shardborough/CURRENT` and the manifest
   once. Per query: `storeQueryPlan` (cached by query text), fetch the plan's blocks and blob files (not the sidecars),
-  12 at a time; answer from a handle that holds them. Up to 4 handles stay open; a query whose blocks one of them holds
+  6 at a time (on 429 or 5xx it waits Retry-After, else 1, 2, 4, 8 s); answer from a handle that holds them. Up to 4 handles stay open; a query whose blocks one of them holds
   reuses it, else a new handle opens with just its blocks and the oldest closes. On "needs artifact" it opens again
   with that key added.
 - Count then page: a SELECT without its own LIMIT whose rows are the solutions of its WHERE group (no DISTINCT,
@@ -102,6 +105,9 @@ Build of 2026-10-06: 103,982 triples, 15 graphs, 41 parts, 659 blocks, generatio
 - Measured 2026-10-06, headless Chromium (no WebKit in the container: Safari not tested), local server: start 1.9 s;
   the 11 views 0.8 to 3.6 s, each 10 to 96 blocks and 0.07 to 2.4 MB the first time; a later page of rows 0.2 s;
   one entity (out and in links) 2.8 s, 106 blocks, 1.14 MB; no console errors.
+- **raw.githubusercontent.com rate-limits.** The first test of the public page (2026-10-06, 12 fetches at a time, several
+  hundred block requests in about a minute) got one 429 on the "Open now" view. Hence 6 at a time and the retry. GitHub
+  Pages for londat may avoid this limit (not tested; open item below).
 - Data base: `?base=` overrides the default `https://raw.githubusercontent.com/danbri/londat/main/kgx/` (sends
   `Access-Control-Allow-Origin: *`). Test locally with `python3 -m http.server` at the folder above both checkouts and
   `?base=/londat/kgx/`.

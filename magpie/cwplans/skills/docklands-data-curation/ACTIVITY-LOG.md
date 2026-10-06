@@ -1152,3 +1152,23 @@ Owner: "don't waste good info by burying it in our chatlogs".
   ("layer < 0") and the pack stopped; the log graph described the previous pack, so each build made a new generation.
   Both rules are in `cwplans-dataflow`. Disk filled once: four merged helper clones (7 GB) in the old scratchpad
   removed, `git worktree prune` run.
+
+## 2026-10-06 (late): sources queue and first imagery coverage check
+
+- Owner: "Make a note in londat of data sources to investigate. Extract anything new and unexplored from this Gemini
+  response and queue it up. Then begin by checking for data in our initial area of London (SE16, Rotherhithe,
+  Limehouse, Canary Wharf, Isle of Dogs etc etc.)."
+- londat `SOURCES-TO-INVESTIGATE.md` and `sources-to-investigate.json`: 9 items. Already held or catalogued: Mapillary,
+  KartaView, Panoramax, OpenAerialMap, EA aerial photography and LiDAR, LGIF. Not found in the London Datastore
+  catalogue (1,305 datasets, text search): 3D building models, historical aerial imagery indices. New: BESS (xRI,
+  Datastore vd4ll, RDF, licence not stated).
+- `tools/probe-imagery-coverage.mjs` (new): fetch by box, then the operation `lift-imagery-coverage` gives the kgx graph
+  `coverage-imagery` (1,407 triples), packed through the new `kgx/external-heads.json`. Results: Panoramax 5,217
+  pictures in the zone (485 Canary Wharf, 193 Isle of Dogs south, 4 Limehouse, 9 SE16; all CC BY-SA 4.0); KartaView 70,
+  38, 49, 152 (2016 to 2024); OpenAerialMap 7 in the zone, 4 in SE16 (Canada Dock, Canada Water, Earl Pumping Station,
+  Deptford Landings), none in the other areas; EA: no 25 cm LiDAR, finest 0.5 m (2003, 2007, 2012). Mapillary not
+  counted (needs a token).
+- Share-alike answers stay in `data/raw/coverage/` (gitignored); open answers in londat `cwplans/coverage/raw/`
+  (`coverage/` added to `HOSTED_DIRS`). The first run put the share-alike answers in londat; moved before any commit,
+  and the offline rerun was a memo hit.
+- Public page test: raw.githubusercontent.com answered 429 once; the worker now fetches 6 at a time and retries.

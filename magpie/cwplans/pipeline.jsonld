@@ -7402,6 +7402,9 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.jsonld"
     },
     {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/livingmap-cwg"
     },
     {
@@ -7444,6 +7447,9 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-mallmap-tmi"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-imagery-coverage"
     }
    ],
    "cwp:area": "structured",
@@ -7481,6 +7487,61 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-kgx"
     }
    ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-imagery-coverage",
+   "@type": "prov:Activity",
+   "rdfs:label": "probe-imagery-coverage",
+   "dct:description": "For each study area box (Canary Wharf, Isle of Dogs south, Limehouse, Rotherhithe / SE16, the zone): OpenAerialMap /meta by box; Panoramax /api/search by box, split in quarters while an answer is full (500); KartaView /2.0/photo at the points of a 200 m grid with a 145 m radius (areas only), halving the radius on a timeout; EA survey catalogue search by polygon. Answers are cut to the fields used. Then the operation lift-imagery-coverage (kgx-ops Flow) turns the answer files into the kgx graph version coverage-imagery and names it in kgx/external-heads.json.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openaerialmap"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/panoramax"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kartaview"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-survey-catalogue"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/mapillary"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/coverage/raw/*/openaerialmap-*.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/coverage/raw/*/ea-survey-*.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/coverage/raw/*/mapillary.json"
+    },
+    {
+     "cwp:pathPattern": "data/raw/coverage/<date>/panoramax-*.json, kartaview-*.json (CC BY-SA: not committed)"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/probe-imagery-coverage.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/probe-imagery-coverage.mjs [--offline <date>]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Share-alike sources (Panoramax, KartaView, Mapillary) give counts only; their raw answers stay local.",
+    "Uploader and photographer names are not kept.",
+    "About one request a second; KartaView at most 150 items a page."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [],
    "cwp:area": "structured",
    "cwp:fault": []
   },
@@ -13913,6 +13974,71 @@
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
     }
    ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/probe-imagery-coverage.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: counts open imagery (OpenAerialMap, Panoramax, KartaView, EA survey catalogue) over the first study areas, then the logged operation lift-imagery-coverage gives the kgx graph coverage-imagery",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/coverage/raw/*/openaerialmap-*.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "OpenAerialMap /meta answers per study area and date, cut to id, title, dates, ground sample distance, platform, licence, box and image URL (uploader dropped); inputs of lift-imagery-coverage",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openaerialmap"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-imagery-coverage"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/coverage/raw/*/ea-survey-*.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "EA survey catalogue answers per study area and date: product, year, resolution, tile and download URL; inputs of lift-imagery-coverage",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-survey-catalogue"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-imagery-coverage"
+   },
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/coverage/raw/*/mapillary.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "Mapillary status for the run (not fetched without a token)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/mapillary"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-imagery-coverage"
+   },
    "cwp:osmUse": "none"
   },
   {
@@ -26926,6 +27052,56 @@
    ],
    "dct:title": "the cwplans knowledge graph in danbri/londat kgx/ (built by tools/build-kgx.mjs from registry, CWG, web, mall map and store guide data)",
    "dct:license": "per graph, as its meta graph states; includes OSM-derived data (ODbL) and data crawled for scoping"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/openaerialmap",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "OpenAerialMap catalogue API (/meta by box): drone and satellite image metadata",
+   "dct:license": "CC BY 4.0",
+   "dcat:landingPage": "https://api.openaerialmap.org/meta"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/panoramax",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Panoramax federated STAC search (api.panoramax.xyz): street-level picture metadata",
+   "dct:license": "per picture; CC BY-SA 4.0 seen (share-alike: counts only committed)",
+   "dcat:landingPage": "https://api.panoramax.xyz/api/search"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kartaview",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "KartaView photo API v2 (Grab; formerly OpenStreetCam): street-level picture metadata",
+   "dct:license": "CC BY-SA 4.0 (share-alike: counts only committed)",
+   "dcat:landingPage": "https://api.openstreetcam.org/2.0/photo/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/mapillary",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Mapillary Graph API (Meta): street-level images and map features",
+   "dct:license": "CC BY-SA 4.0 (share-alike)",
+   "dcat:landingPage": "https://graph.mapillary.com/"
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/ea-survey-catalogue",
+   "@type": [
+    "prov:Entity",
+    "dcat:Dataset"
+   ],
+   "dct:title": "Environment Agency survey download catalogue search (products, years and resolutions over a polygon)",
+   "dct:license": "OGL v3.0",
+   "dcat:landingPage": "https://environment.data.gov.uk/backend/catalog/api/tiles/collections/survey/search"
   },
   {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/livingmap-cwg",

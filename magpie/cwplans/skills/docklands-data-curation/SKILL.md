@@ -334,6 +334,28 @@ their limits. Old blobs stay in this repository's history: do not rewrite histor
   write plain JSON. Gzip them only together with a `.gz`-aware reader in those tools (as `readOut` in walk-portals.mjs).
   The portal files keep their own rule (`writeOut`: over 1 MB as `.gz`).
 
+## Sources to investigate (the queue)
+
+Owner, 2026-10-06: "Make a note in londat of data sources to investigate. Extract anything new and unexplored from
+this Gemini response and queue it up. Then begin by checking for data in our initial area of London (SE16,
+Rotherhithe, Limehouse, Canary Wharf, Isle of Dogs etc etc.)."
+
+- The queue: https://github.com/danbri/londat/blob/main/SOURCES-TO-INVESTIGATE.md and `sources-to-investigate.json`
+  (id, API, licence and class, status, what we already hold, next step). Before adding an item, search this repository
+  and londat for the name: most items in the Gemini answer were already catalogued or in use (Mapillary, KartaView,
+  Panoramax, OpenAerialMap, EA aerial photography and LiDAR, the London Green Infrastructure Framework).
+- First check of the areas: `node magpie/cwplans/tools/probe-imagery-coverage.mjs [--offline <date>]`. Fetch step,
+  then the operation `lift-imagery-coverage` (skill `cwplans-dataflow`) gives the graph `coverage-imagery` in kgx
+  (named in `kgx/external-heads.json`; `build-kgx.mjs` packs it). Areas are hand-drawn boxes in the tool (`AREAS`):
+  Canary Wharf, Isle of Dogs south, Limehouse, Rotherhithe / SE16, and the zone.
+- Share-alike sources (Panoramax, KartaView, Mapillary: CC BY-SA 4.0) give counts only. Their raw answers stay in
+  `data/raw/coverage/<date>/` (gitignored); the log names them by SHA-256. Open answers (OpenAerialMap CC BY 4.0, EA
+  OGL) are committed in londat `cwplans/coverage/raw/<date>/`.
+- API facts met: KartaView `/2.0/photo` times out ("apiCode 408") at a 500 m radius and allows at most 150 items a
+  page; "no photos" is apiCode 601 with no result; its `/sequence` box search answers "Restricted access!".
+  Panoramax `/api/search` gives no paging links: when an answer has `limit` items, split the box. OpenAerialMap
+  `/meta` pages by `page`. Mapillary needs a token.
+
 ## Pages and tests
 
 - The atlas (`atlas/index.html`) loads `atlas/data/atlas.json` first and the detail files on demand. Hash

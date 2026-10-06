@@ -14,7 +14,15 @@ const bytes = new Map();                                  // artifact key -> byt
 const plans = new Map();                                  // sparql -> plan
 const HEX = Array.from({ length: 256 }, (_, b) => b.toString(16).padStart(2, '0'));
 const hexOf = u8 => { const p = new Array(u8.length); for (let i = 0; i < u8.length; i++) p[i] = HEX[u8[i]]; return p.join(''); };
-const getBytes = async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${r.status} for ${url}`); return new Uint8Array(await r.arrayBuffer()); };
+// raw.githubusercontent.com answers 429 when many files are asked for at once: wait (Retry-After, else 1, 2, 4, 8 s)
+const getBytes = async url => {
+  for (let i = 0; ; i++) {
+    const r = await fetch(url);
+    if (r.ok) return new Uint8Array(await r.arrayBuffer());
+    if (i >= 4 || !(r.status === 429 || r.status >= 500)) throw new Error(`${r.status} for ${url}`);
+    await new Promise(ok => setTimeout(ok, 1000 * (+r.headers.get('Retry-After') || 2 ** i)));
+  }
+};
 const stats = { fetched: 0, fetchedBytes: 0, opens: 0 };
 const EMPTY = { kind: 'select', srj: { head: { vars: [] }, results: { bindings: [] } } };
 
@@ -31,7 +39,7 @@ async function init(b) {
 }
 async function fetchKeys(keys) {
   const todo = keys.filter(k => !bytes.has(k));
-  for (let i = 0; i < todo.length; i += 12) await Promise.all(todo.slice(i, i + 12).map(async k => {
+  for (let i = 0; i < todo.length; i += 6) await Promise.all(todo.slice(i, i + 6).map(async k => {
     const b = await getBytes(`${base}shardborough/${gen}/${k}`); bytes.set(k, b); stats.fetched++; stats.fetchedBytes += b.length; }));
 }
 // a handle that holds every key: an open one if it can, else a new one with just these keys

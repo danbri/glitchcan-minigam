@@ -189,6 +189,14 @@ Object.assign(versions, await flow.run(LIFT('lift-registry-occupants', 'registry
     return { pipeline: { quads: g.quads, about: { title: 'Provenance of the earlier cwplans pipeline: every tool as a prov:Activity with the files it used and made (pipeline.jsonld), each file tied to its content at this build', licence: 'CC0 (descriptions of tools and files)' } } };
   })); }
 
+// ---- graph versions made by other tools' operations: kgx/external-heads.json maps a name to a version in the log
+{ const ehF = join(OUT, 'external-heads.json');
+  if (existsSync(ehF)) for (const [name, iri] of Object.entries(JSON.parse(readFileSync(ehF, 'utf8')))) {
+    const v = flow.versions.get(iri);
+    if (!v || !existsSync(join(OUT, v.file))) throw new Error(`external head ${name}: ${iri} is not in log/versions.jsonl or its file is missing`);
+    versions[name] = v;
+  } }
+
 // ---- partition every source version by subject key for the store (blocks with narrow, disjoint zone maps)
 const PART = 3000, parts = {};
 for (const v of Object.values(versions)) {

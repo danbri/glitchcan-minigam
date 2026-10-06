@@ -57,6 +57,12 @@ Data: https://github.com/danbri/londat/tree/main/kgx (README). Graph, store and 
 | `describe-graph-versions` | 1 | cwplans-dataflow | all versions and parts → `meta` |
 | `lift-activity-log` | 1 | cwplans-dataflow | the log (less log lifts and packs) → `log` |
 | `pack-shardborough` | 1 | cwplans-kgx | parts + `meta` + `log` → a store generation, `gen-<sha256(store input)[0:16]>` |
+| `lift-imagery-coverage` | 1 | docklands-data-curation | coverage answer files (`tools/probe-imagery-coverage.mjs`) → `coverage-imagery` |
+
+**Composition across tools.** A tool other than `build-kgx.mjs` runs its own operations with a `Flow` on the same
+londat `kgx/` folder (same log) and names its output version in `kgx/external-heads.json` (graph name → version IRI).
+`build-kgx.mjs` reads that file and treats those versions like its own lifts: partition, describe, pack. It fails if a
+named version is not in `log/versions.jsonl` or its file is missing.
 
 ## Rules learned
 
