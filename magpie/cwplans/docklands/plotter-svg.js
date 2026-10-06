@@ -290,12 +290,15 @@ function make(opts = {}) {
     const lines = order(join(chain(runs).map(L => simplify(L, tol)).filter(L => L.length > 1), PEN / 2 / k).filter(L => len(L) * k > .25));
     stats[id] = lines.length; out[id] = lines.map(L => L.map(p => [ox + p[0] * k, oy + p[1] * k]));
   }
-  // the credit in single-stroke text, in layer 1 (plotter software skips SVG text): one row, or two when one is too wide
+  // the credit in single-stroke text, in layer 1 (plotter software skips SVG text): under the drawing from its left edge
+  // when it fits the drawing's width (a preview that fits the page height cuts the side margins), else from the margin;
+  // one row, or two when one is too wide
   const when = new Date().toISOString().slice(0, 16).replace('T', ' ');
   const parts = [`Docklands 3D, ${when} UTC.`, '© OpenStreetMap contributors (ODbL).', 'Heights: Environment Agency LiDAR (OGL v3.0).'], credit = parts.join(' ');
-  const room = PW - 2 * MARGIN, rows = strokeText(credit, 0, 0, 2.2).width > room ? [parts[0], parts.slice(1).join(' ')] : [credit];
-  const cap = 2.2 * Math.min(1, room / Math.max(...rows.map(t => strokeText(t, 0, 0, 2.2).width)));
-  const creditLines = rows.flatMap((t, i) => strokeText(t, MARGIN, PH - MARGIN + 1 - (rows.length - 1 - i) * cap * 1.6, cap).lines);
+  const cw = t => strokeText(t, 0, 0, 2.2).width, two = [parts[0], parts.slice(1).join(' ')], page = PW - 2 * MARGIN;
+  const [rows, x0, room] = [[[credit], ox, W * k], [two, ox, W * k], [[credit], MARGIN, page]].find(([r, , w]) => Math.max(...r.map(cw)) <= w) || [two, MARGIN, page];
+  const cap = 2.2 * Math.min(1, room / Math.max(...rows.map(cw)));
+  const creditLines = rows.flatMap((t, i) => strokeText(t, x0, PH - MARGIN + 1 - (rows.length - 1 - i) * cap * 1.6, cap).lines);
   stats.credit = creditLines.length;
   const d = ls => ls.map(L => 'M' + L.map(p => `${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join('L')).join('');
   // the page's share link of this view, in the description only (not plotted): with the screen size it gives the same plot

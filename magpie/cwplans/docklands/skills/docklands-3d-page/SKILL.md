@@ -952,7 +952,9 @@ towerOf, groundAt, tunnelY, par, toast and getters for MVP, VZ, CAM, TOWERS) and
   outlines, both kerbs of each road, open railway centre lines, level-tagged paths (the page's heights, station floors
   inside the boxes); with the cut on, tunnel centre lines (cut out of the station boxes) and the station models' feature
   edges (a boundary, or faces more than 30 degrees apart). The credit (date, OSM ODbL, EA LiDAR OGL) is drawn in layer 1
-  as single-stroke text, Hershey Roman Simplex, cap height 2.2 mm, one row or two when one is too wide (portrait A4). The
+  as single-stroke text, Hershey Roman Simplex, cap height 2.2 mm, under the drawing: from the drawing's left edge when
+  it fits the drawing's width in one row or two, else from the page margin (portrait A4). A phone preview (Textastic)
+  fits the page height and cuts the side margins, so a credit at the margin lost its first word there. The
   `<desc>` repeats it as text. No fills, stroke 0.3 mm, mm units, no `<text>` element.
 - **Hidden lines**: a CPU z-buffer at 2 x the CSS size (long side at most 2,400 px) of the solids: building and tower
   walls and roofs, the terrain (only with the cut off; with the cut on the page draws the ground faint), and the opaque

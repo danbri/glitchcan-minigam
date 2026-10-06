@@ -1267,3 +1267,6 @@ Owner: "don't waste good info by burying it in our chatlogs".
   22:27 UTC): 44 closed loops in 17,513 lines. A similar view from the north with the fixed code, laid over the page's
   image, has every outline. Each plot's `<desc>` now holds the page's share link and the screen size, so a reported plot
   can be reproduced exactly.
+- The owner's screenshot of the 22:18 file in Textastic: the preview fits the page height and cuts the side margins, so
+  the credit (from the 12 mm margin) lost its first word. The credit now starts at the drawing's left edge when it fits
+  the drawing's width (one or two rows), else at the margin; checked on A3 and A4, portrait and landscape.
