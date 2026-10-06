@@ -1132,3 +1132,23 @@ Owner: "don't waste good info by burying it in our chatlogs".
   graph count is 13, not 14; the first archive run sent `features` and tag requests the API refuses (400), fixed and
   fetched again.
 - Also: commit 0e104709 failed check-data-register (kg/worker.js and kg/sw.js unregistered: the check ran before git add, so it did not see them). Fixed by adding both entries; run the check after `git add`.
+
+## 2026-10-06 (late): kgx as dataflow; Shardborough in the browser
+
+- Owner: "Concentrate on making shardborough work for browser somehow pls / What 64 block limit?? / Could we count then
+  page results in several queries?" and "any cleanup, data pipeline and normalization work you do or did MUST be
+  expressed and logged in terms of FP-friendly operations on named graphs ... upon static unchanging input named
+  graphs". New skill `cwplans-dataflow`; rule added to CLAUDE.md.
+- `tools/kgx-ops.mjs` (new, the `Flow` runtime) and `tools/build-kgx.mjs` (rewritten): inputs named by SHA-256, graph
+  versions by RDFC-1.0 hash, activities by (operation, version, inputs, parameters), memoised; logs in londat
+  `kgx/log/`. Layout now `graphs/<name>/<hash16>.nq.gz`, `heads.json`, `current.nq.gz`, `shardborough/` (ibk5);
+  `nq/`, `cottas/`, `hdt/` removed (git history). 103,982 triples, 15 graphs including `pipeline` (pipeline.jsonld
+  lifted) and `log`.
+- The 64 is the stateless `storeQuery` cap; store handles have none (8 handles, 128 MiB). The page now uses handles,
+  blocks only (sidecars are optional), a COUNT over the WHERE group then pages of 200 (a COUNT over a subquery plans
+  every block), and parts cut in zone-key order: one entity reads 56 of 659 blocks (was 320 of 1,163 in string order).
+  New `tools/kgx-query.mjs` (handle) for queries above 64 blocks.
+- Faults met and fixed this session: a regex that stripped the graph term from the first " <" cut a literal
+  ("layer < 0") and the pack stopped; the log graph described the previous pack, so each build made a new generation.
+  Both rules are in `cwplans-dataflow`. Disk filled once: four merged helper clones (7 GB) in the old scratchpad
+  removed, `git worktree prune` run.

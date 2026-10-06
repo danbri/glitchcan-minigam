@@ -102,13 +102,14 @@ PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX geo: <http://www.opengis.net/ont/geosparql#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX void: <http://rdfs.org/ns/void#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
 PREFIX cwk: <https://danbri.github.io/londat/kgx/vocab#>
 `;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const lit = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ') + '"';
 const SHORT = [['https://schema.org/', 's:'], ['http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'rdf:'], ['http://www.w3.org/2000/01/rdf-schema#', 'rdfs:'], ['http://www.w3.org/2002/07/owl#', 'owl:'],
-  ['http://www.opengis.net/ont/geosparql#', 'geo:'], ['http://purl.org/dc/terms/', 'dct:'], ['http://rdfs.org/ns/void#', 'void:'], ['https://danbri.github.io/londat/kgx/vocab#', 'cwk:'],
+  ['http://www.opengis.net/ont/geosparql#', 'geo:'], ['http://purl.org/dc/terms/', 'dct:'], ['http://rdfs.org/ns/void#', 'void:'], ['http://www.w3.org/ns/prov#', 'prov:'], ['https://danbri.github.io/londat/kgx/vocab#', 'cwk:'],
   ['https://danbri.github.io/londat/kgx/graph/', 'graph:'], ['https://danbri.github.io/londat/kgx/id/', 'id:'], ['http://www.wikidata.org/entity/', 'wd:']];
 const short = u => { for (const [a, b] of SHORT) if (u.startsWith(a)) return b + u.slice(a.length); return u; };
 let handle = false;
@@ -131,7 +132,7 @@ async function boot() {
     const info = await ask({ type: 'init', base: new URL(BASE, location.href).href });
     $("st-engine").textContent = `Factoidal Lean engine (${info.engine.split(" (")[0]})`;
     const man = await (await fetch(BASE + 'manifest.json')).json().catch(() => null);
-    $('st-data').textContent = `${info.rows.toLocaleString('en-GB')} quads, ${info.predicates} predicates in ${info.blocks} blocks (store ${info.generation})${man ? `, ${Object.keys(man.graphs).length} graphs` : ''}`;
+    $('st-data').textContent = `${info.rows.toLocaleString('en-GB')} quads, ${info.blocks} blocks in ${info.graphs} graph parts (store ${info.generation}, wire ${info.wire})${man ? `, ${Object.keys(man.graphs).length} graphs` : ''}`;
     handle = true; swPost({ type: 'keep-generation', generation: info.generation });
     $('go').disabled = false; $('run').disabled = false;
     const h = location.hash.slice(1);
@@ -143,12 +144,12 @@ async function boot() {
 }
 
 let lastStats = '';
-async function select(q) {
-  const r = await ask({ type: 'query', sparql: PFX + q });
-  lastStats = `${r.blocks} blocks read${r.bytesFetched ? `, ${(r.bytesFetched / 1e6).toFixed(2)} MB fetched` : ', all from this device'}`;
-  swPost({ type: 'status' });
-  if (r.kind !== 'select') return { vars: ['result'], rows: [{ result: { type: 'literal', value: JSON.stringify(r.boolean ?? r) } }] };
-  return { vars: r.srj.head.vars, rows: r.srj.results.bindings };
+const fmtStats = r => `${r.blocks} blocks planned (${r.zoneExcluded} skipped by zone maps), ${r.fetchedBytes ? (r.fetchedBytes / 1e6).toFixed(2) + ' MB fetched' : 'nothing fetched'}${r.opened ? `, opened a handle of ${r.handleBlocks} blocks` : `, reused a handle of ${r.handleBlocks} blocks`}`;
+async function select(q, page = 0, pageSize = 200) {
+  const r = await ask({ type: 'query', sparql: PFX + q, page, pageSize });
+  lastStats = fmtStats(r); swPost({ type: 'status' });
+  if (r.kind !== 'select') return { vars: ['result'], rows: [{ result: { type: 'literal', value: JSON.stringify(r.boolean ?? r) } }], count: null };
+  return { vars: r.srj.head.vars, rows: r.srj.results.bindings, count: r.count, more: r.more, page: r.page, pageSize: r.pageSize };
 }
 function cell(b) {
   if (!b) return '';
@@ -161,18 +162,28 @@ function table(vars, rows) {
   return `<table><thead><tr>${vars.map(v => `<th>${esc(v)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${vars.map(v => `<td class="${v === 'g' ? 'g' : ''}">${cell(r[v])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 function show(title, note, html) { $('outTitle').textContent = title; $('outNote').innerHTML = note || ''; $('outBody').innerHTML = html; }
-async function run(title, note, q) {
+// a query is counted first, then shown a page at a time (LIMIT/OFFSET in the worker)
+let current = null;
+async function run(title, note, q, page = 0) {
+  current = { title, note, q, page };
   show(title, 'Running…', ''); $('sparql').value = q.trim();
   const t0 = performance.now();
-  try { const { vars, rows } = await select(q); show(title, `${note ? note + ' · ' : ''}${rows.length} rows, ${Math.round(performance.now() - t0)} ms, ${lastStats}`, table(vars, rows)); }
-  catch (err) { show(title, '', `<p class="err">${esc(err.message || err)}</p>`); }
+  try {
+    const r = await select(q, page);
+    const n = r.count, from = page * (r.pageSize || 0);
+    const later = n != null ? from + r.rows.length < n : !!r.more;
+    const span = !r.rows.length ? '0 rows' : n == null && !later && !page ? `${r.rows.length} rows` : `rows ${from + 1}–${from + r.rows.length}${n != null ? ` of ${n}` : later ? ', more follow' : ''}`;
+    const pager = later || page ? `<div class="row"><button type="button" class="ghost" data-page="${page - 1}" ${page ? '' : 'disabled'}>Earlier rows</button><button type="button" class="ghost" data-page="${page + 1}" ${later ? '' : 'disabled'}>Later rows</button></div>` : '';
+    show(title, `${note ? note + ' · ' : ''}${span}, ${Math.round(performance.now() - t0)} ms · ${lastStats}`, pager + table(r.vars, r.rows) + pager);
+  } catch (err) { show(title, '', `<p class="err">${esc(err.message || err)}</p>`); }
 }
+$('outBody').addEventListener('click', e => { const b = e.target.closest('button[data-page]'); if (!b || !current) return; run(current.title, current.note, current.q, +b.dataset.page); });
 
 // --- name search
 $('searchForm').addEventListener('submit', e => { e.preventDefault(); const q = $('q').value.trim(); if (!q) return;
   setPressed(null); history.replaceState(null, '', '#');
   run(`Names containing “${q}”`, 'Click a name to see everything the graph says about it.',
-    `SELECT ?thing ?name ?type ?g WHERE { GRAPH ?g { ?thing s:name|rdfs:label ?name . FILTER(CONTAINS(LCASE(STR(?name)), ${lit(q.toLowerCase())})) OPTIONAL { ?thing a ?type } } } ORDER BY ?name LIMIT 300`); });
+    `SELECT ?thing ?name ?g WHERE { GRAPH ?g { ?thing s:name|rdfs:label ?name . FILTER(CONTAINS(LCASE(STR(?name)), ${lit(q.toLowerCase())})) } } ORDER BY ?name`); });
 
 // --- one thing: what it says, what points at it
 async function showEntity(iri) {
@@ -181,26 +192,31 @@ async function showEntity(iri) {
   try {
     const d = await ask({ type: 'describe', iri }); swPost({ type: 'status' });
     const out = { rows: d.out }, inc = { rows: d.in };
+    const more = (n, shown) => n != null && n > shown ? ` (first ${shown} of ${n})` : '';
     const name = out.rows.find(r => /name$|label$/.test(r.p.value))?.o.value;
     const hours = out.rows.filter(r => r.p.value.endsWith('openingHoursSpecification')).length;
     let extra = '';
-    if (hours) { const h = await select(`SELECT ?day ?opens ?closes WHERE { GRAPH ?g { <${iri}> s:openingHoursSpecification ?h . ?h s:dayOfWeek ?d ; s:opens ?opens ; s:closes ?closes } BIND(STRAFTER(STR(?d), "https://schema.org/") AS ?day) }`);
+    if (hours) { const h = await select(`SELECT ?day ?opens ?closes WHERE { GRAPH ?g1 { <${iri}> s:openingHoursSpecification ?h } GRAPH ?g2 { ?h s:dayOfWeek ?d ; s:opens ?opens ; s:closes ?closes } BIND(STRAFTER(STR(?d), "https://schema.org/") AS ?day) }`, 0, 0);
       const order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']; h.rows.sort((a, b) => order.indexOf(a.day.value) - order.indexOf(b.day.value));
       extra = `<h3>Weekly hours</h3>${table(['day', 'opens', 'closes'], h.rows)}`; }
-    show(name || short(iri), `<span class="iri">${esc(iri)}</span> · ${d.ms} ms${/^https?:\/\//.test(iri) && !iri.startsWith('https://danbri.github.io/londat/') ? ` · <a href="${esc(iri)}" target="_blank" rel="noopener">open ↗</a>` : ''}`,
-      `${extra}<h3>What the graph says (${out.rows.length})</h3>${table(['p', 'o', 'g'], out.rows.map(r => ({ ...r, p: { type: 'literal', value: short(r.p.value) } })))}
-       <h3>What points here (${inc.rows.length})</h3>${table(['s', 'p', 'g'], inc.rows.map(r => ({ ...r, p: { type: 'literal', value: short(r.p.value) } })))}`);
+    show(name || short(iri), `<span class="iri">${esc(iri)}</span> · ${d.ms} ms, ${d.blocks} blocks, ${d.fetchedBytes ? (d.fetchedBytes / 1e6).toFixed(2) + ' MB fetched' : 'nothing fetched'}${/^https?:\/\//.test(iri) && !iri.startsWith('https://danbri.github.io/londat/') ? ` · <a href="${esc(iri)}" target="_blank" rel="noopener">open ↗</a>` : ''}`,
+      `${extra}<h3>What the graph says${more(d.outCount, out.rows.length)}</h3>${table(['p', 'o', 'g'], out.rows.map(r => ({ ...r, p: { type: 'literal', value: short(r.p.value) } })))}
+       <h3>What points here${more(d.inCount, inc.rows.length)}</h3>${table(['s', 'p', 'g'], inc.rows.map(r => ({ ...r, p: { type: 'literal', value: short(r.p.value) } })))}`);
   } catch (err) { show(short(iri), '', `<p class="err">${esc(err.message || err)}</p>`); }
 }
 $('outBody').addEventListener('click', e => { const a = e.target.closest('a[data-e]'); if (!a) return; e.preventDefault(); showEntity(a.dataset.e); window.scrollTo({ top: $('out').offsetTop - 8, behavior: 'smooth' }); });
 
 // --- preset views
 function londonNow() { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'long', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value])); return { day: p.weekday, min: +p.hour * 60 + +p.minute, text: `${p.weekday} ${p.hour}:${p.minute}` }; }
+// The store's graphs are parts of graph versions (by subject), so a pattern that joins two subjects needs one GRAPH
+// block per subject. Skill cwplans-kgx, "Query rule".
 const VIEWS = {
-  graphs: ['Graphs and licences', 'What each named graph holds, where it came from and its licence.', () =>
-    `SELECT ?g ?title ?quads ?licence ?rights WHERE { GRAPH ?m { ?g a void:Dataset ; dct:title ?title ; void:triples ?quads ; dct:license ?licence . OPTIONAL { ?g dct:rights ?rights } } } ORDER BY DESC(?quads)`],
+  graphs: ['Graphs and versions', 'Each graph name, its current version (named by its RDFC-1.0 hash), size and licence.', () =>
+    `SELECT ?name ?version ?triples ?title ?licence WHERE { GRAPH ?m { ?name cwk:current ?version . ?version void:triples ?triples ; dct:title ?title ; dct:license ?licence } } ORDER BY DESC(?triples)`],
+  lineage: ['Lineage: operations and outputs', 'Every operation in the log: which skill and tool it belongs to, and the graph versions it made from its inputs.', () =>
+    `SELECT ?operation ?skill ?tool ?activity ?generated WHERE { GRAPH ?l1 { ?activity a prov:Activity ; cwk:operation ?op ; prov:generated ?generated } GRAPH ?l2 { ?op cwk:skill ?skill ; cwk:tool ?tool } BIND(STRAFTER(STR(?op), "/operation/") AS ?operation) } ORDER BY ?operation ?generated`],
   open: ['Open now', 'CWG directory hours (as archived) for the current time in London. Places open past midnight from the previous day are not shown.', () => { const n = londonNow();
-    return `SELECT ?place ?name ?mall ?opens ?closes WHERE { GRAPH ?g { ?place s:openingHoursSpecification ?h ; s:name ?name . ?h s:dayOfWeek s:${n.day} ; cwk:opensMinute ?o ; cwk:closesMinute ?c ; s:opens ?opens ; s:closes ?closes . FILTER(?o <= ${n.min} && ?c > ${n.min}) OPTIONAL { ?place s:containedInPlace ?m . ?m s:name ?mall } } } ORDER BY ?mall ?name LIMIT 500`; }],
+    return `SELECT ?place ?name ?opens ?closes WHERE { GRAPH ?g1 { ?h s:dayOfWeek s:${n.day} ; cwk:opensMinute ?o ; cwk:closesMinute ?c ; s:opens ?opens ; s:closes ?closes . FILTER(?o <= ${n.min} && ?c > ${n.min}) } GRAPH ?g2 { ?place s:openingHoursSpecification ?h ; s:name ?name } } ORDER BY ?name`; }],
   units: ['Mall units by mall and floor', 'Named indoor units from the Living Map data behind map.canarywharf.com.', () =>
     `SELECT ?mall ?floor (COUNT(?u) AS ?units) WHERE { GRAPH ?g { ?u a cwk:MallUnit ; cwk:mall ?mall ; cwk:floorName ?floor ; cwk:floorLevel ?lv } } GROUP BY ?mall ?floor ?lv ORDER BY ?mall ?lv`],
   stepfree: ['Step-free: lifts, ramps, escalators by floor', 'Lifts, ramps, escalators, stairs and entrances in the mall map, counted by mall and floor. Each point has a position (s:latitude, s:longitude): list them in the SPARQL box.', () =>
@@ -208,15 +224,15 @@ const VIEWS = {
   access: ['Toilets and facilities by floor', 'Toilets, baby change, defibrillators, drinking water and other facilities in the mall map, with their floor.', () =>
     `SELECT ?mall ?floor ?type ?name ?thing WHERE { GRAPH ?g { ?thing cwk:unitClass ?class ; cwk:unitType ?type ; cwk:floorName ?floor . OPTIONAL { ?thing s:name ?name } OPTIONAL { ?thing cwk:mall ?mall } FILTER(?class IN ("restroom", "facility", "emergency")) } } ORDER BY ?mall ?floor ?type`],
   hours: ['Hours: CWG directory and mall map', 'The same name in both sources, side by side (exact name match).', () =>
-    `SELECT ?name ?cwg ?mallmap ?e WHERE { GRAPH ?g1 { ?e s:openingHours ?cwg ; s:name ?name ; cwk:levelText ?lt } GRAPH ?g2 { ?u a cwk:MallUnit ; s:name ?name ; cwk:openingTimesText ?mallmap } } ORDER BY ?name LIMIT 400`],
+    `SELECT ?name ?cwg ?mallmap ?e WHERE { GRAPH ?g1 { ?e s:openingHours ?cwg ; s:name ?name ; cwk:levelText ?lt } GRAPH ?g2 { ?u a cwk:MallUnit ; s:name ?name ; cwk:openingTimesText ?mallmap } } ORDER BY ?name`],
   tall: ['Tallest buildings', 'Registry buildings by height (OSM height tag, metres).', () =>
-    `SELECT ?building ?name ?height ?levels WHERE { GRAPH ?g { ?building cwk:heightMetres ?height . OPTIONAL { ?building s:name ?name } OPTIONAL { ?building cwk:levels ?levels } } } ORDER BY DESC(?height) LIMIT 40`],
+    `SELECT ?building ?name ?height ?levels WHERE { GRAPH ?g { ?building cwk:heightMetres ?height . OPTIONAL { ?building s:name ?name } OPTIONAL { ?building cwk:levels ?levels } } } ORDER BY DESC(?height)`],
   facts: ['Cited facts', 'Depths, levels and sizes from cited sources, with a short quote each.', () =>
-    `SELECT ?subject ?property ?value ?unit ?source WHERE { GRAPH ?g { ?f a cwk:CitedFact ; cwk:about ?x ; s:propertyID ?property ; s:value ?value ; s:citation ?source . OPTIONAL { ?f s:unitText ?unit } ?x rdfs:label ?subject } } ORDER BY ?subject ?property LIMIT 500`],
+    `SELECT ?subject ?property ?value ?unit ?source WHERE { GRAPH ?g1 { ?f a cwk:CitedFact ; cwk:about ?x ; s:propertyID ?property ; s:value ?value ; s:citation ?source . OPTIONAL { ?f s:unitText ?unit } } GRAPH ?g2 { ?x rdfs:label ?subject } } ORDER BY ?subject ?property`],
   same: ['Same thing on several web pages', 'Links made by the key rules (IRI, site and name, sameAs, telephone, postcode and name).', () =>
-    `SELECT ?a ?nameA ?b ?nameB ?g WHERE { GRAPH ?g { ?a owl:sameAs ?b . OPTIONAL { ?a s:name ?nameA } OPTIONAL { ?b s:name ?nameB } } } LIMIT 300`],
+    `SELECT ?a ?b ?g WHERE { GRAPH ?g { ?a owl:sameAs ?b } }`],
   occupants: ['Occupants by building', 'Occupant counts per registry building.', () =>
-    `SELECT ?building ?name (COUNT(?o) AS ?occupants) WHERE { GRAPH ?g1 { ?o s:containedInPlace ?building } GRAPH ?g2 { ?building a cwk:Building . OPTIONAL { ?building s:name ?name } } } GROUP BY ?building ?name ORDER BY DESC(?occupants) LIMIT 60`],
+    `SELECT ?building ?name (COUNT(?o) AS ?occupants) WHERE { GRAPH ?g1 { ?o s:containedInPlace ?building } GRAPH ?g2 { ?building a cwk:Building . OPTIONAL { ?building s:name ?name } } } GROUP BY ?building ?name ORDER BY DESC(?occupants)`],
 };
 function setPressed(k) { for (const b of $('views').children) b.setAttribute('aria-pressed', String(b.dataset.v === k)); }
 function showView(k) { const [t, n, q] = VIEWS[k]; setPressed(k); history.replaceState(null, '', '#' + k); run(t, n, q()); }

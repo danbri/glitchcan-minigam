@@ -7369,7 +7369,7 @@
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-kgx",
    "@type": "prov:Activity",
    "rdfs:label": "build-kgx",
-   "dct:description": "Builds one named graph per source (facts, buildings with WKT outlines, occupants, cwg with daily opening-hours specifications, web, coref per key rule, mallmap units, storeguide entries) and a meta graph (void:Dataset per graph with title, sources, licence, OSM rights, triple count); writes N-Quads (gzip) per graph and all, COTTAS per graph and all (checked by a count query), HDT per graph when HDT_LIB is set, and a Shardborough store (pack, activate) into danbri/londat kgx/ with manifest.json (SHA-256 per file, timings).",
+   "dct:description": "Every step is a logged operation (tools/kgx-ops.mjs, skill cwplans-dataflow) over inputs fixed by content hash. Lift operations turn the source files into one graph version each (facts, buildings with WKT outlines, occupants, cwg with daily opening-hours specifications, web, coref per key rule, mallmap units and facilities, storeguide entries, pipeline provenance from pipeline.jsonld with blank nodes skolemized); partition-by-subject-key cuts each version into parts of about 3,000 triples in Shardborough zone-key order; describe-graph-versions makes meta (void:Dataset per version and part, heads); lift-activity-log makes log; pack-shardborough packs the parts, meta and log (ibk5) and activates the generation. Writes graphs/<name>/<hash16>.nq.gz, log/activities.jsonl and versions.jsonl, heads.json, current.nq.gz, manifest.json and shardborough/ into danbri/londat kgx/. An activity already in the log is not run again; a second run gives the same generation.",
    "prov:used": [
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/facts.json"
@@ -7399,6 +7399,9 @@
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/coref/descriptions.json"
     },
     {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/pipeline.jsonld"
+    },
+    {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/livingmap-cwg"
     },
     {
@@ -7407,18 +7410,21 @@
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
      "dcat:accessURL": "npm @factoidal/core 0.7.1 (local)",
-     "dct:description": "parse, serialize (N-Quads), toCottas, openCottas/queryCottas (check), factoidal pack and activate (Shardborough)"
+     "dct:description": "parse, serialize (N-Quads), jsonldToRdf, fn.hash (RDFC-1.0, for graphs with blank nodes), factoidal pack --layout ibk5 and activate (Shardborough)"
     }
    ],
    "prov:generated": [],
    "cwp:tool": {
     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/build-kgx.mjs"
    },
-   "cwp:command": "[HDT_LIB=<hdt-java-cli jars>] node magpie/cwplans/tools/build-kgx.mjs [--no-store]",
+   "cwp:command": "node magpie/cwplans/tools/build-kgx.mjs [--no-store]",
    "cwp:kind": "derive",
    "cwp:rule": [
-    "No blank nodes: every node has an IRI under https://danbri.github.io/londat/kgx/.",
-    "Duplicate quads are dropped per graph; serialize() output is checked to have one line per quad.",
+    "No blank nodes: every node has an IRI under https://danbri.github.io/londat/kgx/ (the pipeline graph is skolemized).",
+    "serialize() output is checked to have one line per distinct quad; lines read back must hash to their version.",
+    "Graph versions are immutable and named by their RDFC-1.0 hash; an activity is named by (operation, operation version, input IRIs, parameters) and is not run again.",
+    "Bump an operation's version when its code changes.",
+    "The log graph leaves out log lifts and store packs, so an unchanged pipeline gives the same store generation.",
     "Only the current Shardborough generation is kept in the folder; git keeps history."
    ],
    "cwp:network": false,
@@ -7438,6 +7444,41 @@
     },
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-mallmap-tmi"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/kgx-query",
+   "@type": "prov:Activity",
+   "rdfs:label": "kgx-query",
+   "dct:description": "Opens a store handle on the kgx Shardborough store with the artifacts the query's plan names (no 64-block cap) and prints the answer as tab-separated rows.",
+   "prov:used": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/kgx"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
+     "dcat:accessURL": "npm @factoidal/core 0.7.1 (local)",
+     "dct:description": "openStore, openStoreHandle ({ sparql }), handle query"
+    }
+   ],
+   "prov:generated": [],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/kgx-query.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/kgx-query.mjs <file.rq | SPARQL> [store dir]",
+   "cwp:kind": "check",
+   "cwp:rule": [
+    "Opens only the artifacts the query's plan names.",
+    "Read-only: writes nothing."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-kgx"
     }
    ],
    "cwp:area": "structured",
@@ -13838,7 +13879,35 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "code, not data: builds the knowledge graph in danbri/londat kgx (named graphs per source, meta graph; N-Quads, Shardborough, COTTAS, HDT)",
+   "dct:title": "code, not data: builds the knowledge graph in danbri/londat kgx as logged operations (kgx-ops.mjs): lifts source files into immutable graph versions, partitions them by subject key, describes them (meta), lifts the activity log, packs a Shardborough store (ibk5)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/kgx-ops.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the kgx dataflow runtime (Flow): content-named input files, graph versions (RDFC-1.0 hash) and activities, memoised operation runs, activity and version logs; the subject-key partition operation",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/kgx-query.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: asks the kgx Shardborough store one SPARQL query through a store handle and prints tab-separated rows",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
@@ -13852,7 +13921,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "code, not data: the search page's Web Worker; runs the Factoidal Lean engine over the kgx Shardborough store fetched from danbri/londat",
+   "dct:title": "code, not data: the search page's Web Worker; runs the Factoidal Lean engine over the kgx Shardborough store fetched from danbri/londat (blocks only, store handles, count then page)",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"

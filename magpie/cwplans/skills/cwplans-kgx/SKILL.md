@@ -1,14 +1,13 @@
 ---
 name: cwplans-kgx
 description: >-
-  The cwplans knowledge graph in danbri/londat kgx/ and its public search page: how build-kgx.mjs turns the core
-  Canary Wharf data (cited facts, registry buildings with outlines, occupants, the typed CWG directory and hours, the
-  canonical web layer, sameAs groups, Living Map mall units, the OCR'd store guide) into one named graph per source
-  with a meta graph; the IRIs and vocabulary; the four copies (N-Quads, Shardborough, COTTAS, HDT) and what each is
-  good for, measured; @factoidal/core persistent storage (pack, activate, store handles, the per-query caps, the Lean
-  engine in a browser worker with a fetch host); and the page magpie/cwplans/kg/ (Web Worker, ServiceWorker, views,
-  SPARQL editor). Reach for it before you add a graph, change an IRI, query the store, choose a store format, or
-  change the search page.
+  The cwplans knowledge graph in danbri/londat kgx/ and its public search page: how build-kgx.mjs lifts the core Canary
+  Wharf data (cited facts, registry buildings, occupants, the typed CWG directory and hours, the canonical web layer,
+  sameAs groups, Living Map mall units and facilities, the OCR'd store guide, pipeline provenance) into immutable graph
+  versions; IRIs and vocabulary; the Shardborough store (wire version 10, parts cut in zone-key order, the 64-block cap
+  of the stateless call, store handles, the query rule of one GRAPH block per subject, measured plans); the page
+  magpie/cwplans/kg/ (Lean engine in a Web Worker, blocks only, handles, count then page, ServiceWorker); COTTAS and
+  HDT measured and dropped. Reach for it before you add a graph, change an IRI, query the store, or change the page.
 ---
 
 # The cwplans knowledge graph (kgx)
@@ -17,77 +16,101 @@ Owner, 2026-10-06: "Make londat tld folder kgx and explore state of npm js Facto
 Build out a first cut at a persistent knowledge graph for core data we have collected, beginning with Canary Wharf
 facts. Also keep nquads copies in filetree alongside hdt or shardborough formats if they work. Make a public search
 page that uses ServiceWorker and sparql to cache some/all of this an expose useful queries and views of the data."
+Later the same day: "Concentrate on making shardborough work for browser somehow pls", and every pipeline step must be
+an operation on immutable named graphs (the `cwplans-dataflow` skill).
 
-- Data: https://github.com/danbri/londat/tree/main/kgx (README, `manifest.json`).
+- Data: https://github.com/danbri/londat/tree/main/kgx (README, `manifest.json`, `heads.json`, `queries/*.rq`).
 - Page: https://danbri.github.io/glitchcan-minigam/magpie/cwplans/kg/ (`kg/index.html`, `kg/worker.js`, `kg/sw.js`).
-- Build: `node magpie/cwplans/tools/build-kgx.mjs` (all RDF work with @factoidal/core); add
-  `HDT_LIB=<dir of hdt-java-cli jars>` for the HDT copy; `--no-store` skips Shardborough. Commit the output in londat.
-  Policy, register and activity log: the hub skill `docklands-data-curation`.
+- Build: `node magpie/cwplans/tools/build-kgx.mjs [--no-store]` (all RDF work with @factoidal/core). Run it twice: the
+  second run must print `new: 0` and the same generation. Commit the output in londat.
+- Query in Node: `node magpie/cwplans/tools/kgx-query.mjs <file.rq | 'SPARQL'>` (store handle, no block cap).
+- Policy, register and activity log: the hub skill `docklands-data-curation`.
 
 ## Graphs, IRIs, vocabulary
 
-- Base `https://danbri.github.io/londat/kgx/`: things `id/…`, graphs `graph/<name>`, vocabulary `vocab#` (prefix `cwk:`),
-  schema.org first. No blank nodes anywhere (two Factoidal faults touch blank nodes; see `cwplans-web-harvest`,
-  "Factoidal notes").
-- One named graph per source, few and large (the store's caps count blocks; a block is one predicate in one graph):
-  `facts` (docklands/facts.json: `cwk:CitedFact` about a Wikidata item, property, value, unit, citation, short quote),
-  `buildings` (cwb- ids, name, position, levels, height, postcodes, OSM and Wikidata links, `geo:asWKT` outline),
-  `occupants` (role, level, mall, `s:openingHours` in OSM syntax, `s:containedInPlace` building, `s:sameAs` OSM and CWG),
-  `cwg` (the typed CWG directory plus `s:OpeningHoursSpecification` per day with `cwk:opensMinute`/`cwk:closesMinute`,
-  malls as `s:ShoppingCenter`), `web` (canonical schema.org layer, pages merged), `coref-<rule>` (owl:sameAs by key rule),
-  `mallmap` (Living Map units `cwk:MallUnit` with outline, and `cwk:Facility` points: lifts, escalators, ramps, stairs,
-  entrances, toilets, defibrillators; mall, floor, opening text, centre; from the normalised GeoJSON in londat
-  `third_party/cwg/_TMI/mallmap`, whole outlines),
-  `storeguide` (`cwk:GuideEntry`: name, section, `cwk:gridRef` like "10C", OCR text and confidence, `s:sameAs` CWG
-  entity when matched), `meta` (`void:Dataset` per graph: title, sources, licence, OSM rights, triple count).
+- Base `https://danbri.github.io/londat/kgx/`: things `id/…`, graph versions `graph/<name>/<hash16>`, store parts
+  `graph/<name>.pNN/<hash16>`, activities `activity/<hash16>`, input files `artifact/sha256/<hash>`, vocabulary `vocab#`
+  (prefix `cwk:`), schema.org first. No blank nodes (the `pipeline` graph is skolemized to `genid/pipeline/…`).
+- Graph names: `facts`, `buildings` (cwb- ids, outline as `geo:asWKT`), `occupants`, `cwg` (typed CWG directory and
+  `s:OpeningHoursSpecification` per day with `cwk:opensMinute`/`cwk:closesMinute`), `web`, `coref-<rule>`, `mallmap`
+  (`cwk:MallUnit` with outline, `cwk:Facility` points: lifts, escalators, ramps, stairs, entrances, toilets,
+  defibrillators), `storeguide` (`cwk:GuideEntry` with `cwk:gridRef`), `pipeline` (pipeline.jsonld lifted), `meta`
+  (`void:Dataset` per version and part; heads as `graph/<name> cwk:current <version>`), `log` (the activities).
+  Counts: the londat README.
 - Joins across sources go through `s:sameAs` to the CWG entity IRI (`https://canarywharf.com/<kind>/<slug>/#entity`),
   OSM element URLs and Wikidata items. Mall units join by exact name only, for now.
-- A pattern that spans two graphs needs two `GRAPH` blocks (`GRAPH ?g1 {…} GRAPH ?g2 {…}`); one block returns nothing.
 
-## The four copies, measured 2026-10-06 (70k to 88k quads, this container)
+## The store (Shardborough, `factoidal pack --layout ibk5`)
 
-Build of 2026-10-06: 87,512 quads in 13 graphs (12 plus `meta`), Shardborough generation `gen-20261006-854bbbff`.
+Build of 2026-10-06: 103,982 triples, 15 graphs, 41 parts, 659 blocks, generation `gen-997d0037f51ae3b8`, 3,956 files,
+19.9 MB (blocks 14.2 MB; the rest are sidecar indexes and Merkle files).
 
-| format | where | size | what it is good for |
-|---|---|---|---|
-| N-Quads, gzip | `nq/<graph>.nq.gz`, `nq/all.nq.gz` | 0.8 MB all | the reference copy; diffable; any RDF tool |
-| Shardborough | `shardborough/` (CURRENT + `gen-<date>-<hash>/`) | 11 MB, 137 blocks + sidecars | queries: 0.4 to 1.5 s in Node and in the browser page |
-| COTTAS | `cottas/<graph>.cottas`, `all.cottas` | 3.1 MB all | portable bytes; opens in the browser entry; queries slow (below) |
-| HDT | `hdt/<graph>.hdt` (triples, one file per graph) | about 1 MB | exchange with HDT tools; Factoidal reads it very slowly |
+- **Blocks** are cut per predicate per graph. `--batch-bytes` does not change the count. So a big graph gives big
+  blocks whose subject ranges cover everything, and zone maps skip nothing.
+- **Zone maps** (wire version 10) hold the first 64 bytes of the smallest and largest subject and object key of each
+  block. A key is: term type byte (IRI 0x00), UTF-8 length as 4 bytes little-endian, UTF-8 text. Keys compare byte by
+  byte, so the order is by length first, not string order. `factoidal inspect` and `manifest.tsv` show only 8 bytes.
+- **Parts:** each source version is cut into parts of about 3,000 triples with subjects in zone-key order
+  (`partition-by-subject-key`). Measured on the same data, describing one restaurant (`GRAPH ?g { <iri> ?p ?o }`):
 
-- **Shardborough** (`factoidal pack INPUT ROOT/GEN --layout ibk4`, `factoidal activate ROOT GEN`; 14 s for 70k quads)
-  is the store to use. The JS command packs since 0.7.x although the README still says `pack` exits 3: trust the
-  CHANGELOG. Every artifact is SHA-256 verified. Caps per query: 64 artifacts, 8,388,608 bytes, 100,000 rows. A
-  pattern with a variable predicate needs every block (137) and is refused; write the predicates out as a UNION of
-  constant-predicate patterns, which the planner maps onto just their blocks (3 predicates: 14 blocks).
-- **COTTAS**: `toCottas` given an N-Quads **string** writes an empty store (73 bytes) with no error; given a parsed
-  `Dataset` it keeps every quad. The same views took 40 to 280 s through `queryCottas` against about 1 s in Shardborough;
-  every extra triple pattern multiplies the time (one view 43 s, the same with two patterns fewer 12 s). Splitting into
-  per-graph files did not help (43 s against 47 s).
-- **HDT**: written with `rdf2hdt` from hdt-java-cli 3.0.10 (Maven Central; pip `rdflib-hdt` did not build). Factoidal
-  `queryHdt` answers correctly but took 22 s for a COUNT on 3,452 triples and 470 to 690 s on the larger graphs.
-- `tools/check-factoidal.mjs` re-tests these faults after an upgrade.
+  | layout | blocks in store | blocks read | bytes read (blocks only) | plan | open | query |
+  |---|---:|---:|---:|---:|---:|---:|
+  | 1,500 per part, string order | 1,163 | 320 | 2.4 MB | | | |
+  | 500, key order | 3,066 | 54 | 0.28 MB | 5.5 s | 2.6 s | 2.8 s |
+  | 1,500, key order | 1,164 | 55 | 0.60 MB | 1.2 s | 0.9 s | 0.4 s |
+  | **3,000, key order** | 659 | 56 | 1.09 MB | 0.4 s | 0.9 s | 0.13 s |
+  | 5,000, key order | 465 | 56 | 1.68 MB | 0.3 s | 1.1 s | 0.1 s |
+
+  Every engine call parses the whole manifest again (890 KB at 1,500, 500 KB at 3,000), so plan and query times grow
+  with the number of blocks. 3,000 is the balance.
+- **Query rule: one `GRAPH` block per subject.** Two subjects can be in different parts. Measured:
+  `GRAPH ?g { ?place s:openingHoursSpecification ?h . ?h s:opens ?o }` 130 rows; with `GRAPH ?g1 {…} GRAPH ?g2 {…}`
+  2,519. There is no default-graph view of the named graphs (a pattern outside `GRAPH` plans no blocks).
+- **Caps:** the stateless `storeQuery` (what `npx factoidal query` uses) reads at most 64 artifacts, 8,388,608 bytes
+  and 100,000 rows per call, and refuses a bigger plan ("the plan selects 81 artifacts, the cap is 64"). A **store
+  handle** (`storeOpen` / `openStoreHandle`) has no artifact cap: at most 8 handles and 128 MiB held in all
+  (Factoidal issue 657). A handle query that needs an artifact it does not hold fails with "needs artifact 'X' …
+  reopen the handle with it".
+- **Sidecars are optional.** The plan lists `.lgi2` (literal 3-gram index) and `.gbi1` (geometry box index) for every
+  block. A handle opened with blocks only gives the same rows (checked on five queries); the engine scans instead.
+  Here the sidecars added 26 % (one entity) to 85 % (a name search) to the bytes of the blocks.
+- **A subquery plans every block.** `SELECT (COUNT(*) …) WHERE { { SELECT … } }` planned 659 blocks where the inner
+  query planned 14: the planner does not look inside a subquery. Count over the WHERE group instead.
+- About 20,000 rows in one answer overflow the engine's default stack: page with LIMIT/OFFSET.
+- `toCottas` given an N-Quads **string** writes an empty store with no error; given a `Dataset` it keeps every quad.
+  COTTAS queries took 40 to 280 s and HDT (`rdf2hdt`, hdt-java-cli 3.0.10) 22 to 690 s against about 1 s in
+  Shardborough; both were dropped from kgx (in git history). `tools/check-factoidal.mjs` re-tests the faults.
+- Package paths: `@factoidal/core/engine` (`loadEngine`) and `@factoidal/core/store` (`openStore`, `openStoreHandle`);
+  the README's `@factoidal/core/bin/engine.mjs` is not exported.
 
 ## The search page (`kg/`)
 
 - `worker.js` (module Web Worker) imports the Lean engine `l4-assets/l4factoidal.js` from jsDelivr, pinned
-  (`@factoidal/core@0.7.1`); its Emscripten loader finds the 5.9 MB wasm by `locateFile`. It repeats bin/store.mjs with
-  `fetch()` as the host: read `shardborough/CURRENT` and the manifest, `storeManifestInspect`, then per query
-  `storeQueryPlan` (names the blocks), fetch only those blocks, `callBlobIO('storeQuery', …)` gives SPARQL JSON results.
-  The entity view batches predicates under the caps (60 blocks, 7.5 MB a batch), out-links and in-links.
+  (`@factoidal/core@0.7.1`; the 5.9 MB wasm loads by `locateFile`). It reads `shardborough/CURRENT` and the manifest
+  once. Per query: `storeQueryPlan` (cached by query text), fetch the plan's blocks and blob files (not the sidecars),
+  12 at a time; answer from a handle that holds them. Up to 4 handles stay open; a query whose blocks one of them holds
+  reuses it, else a new handle opens with just its blocks and the oldest closes. On "needs artifact" it opens again
+  with that key added.
+- Count then page: a SELECT without its own LIMIT whose rows are the solutions of its WHERE group (no DISTINCT,
+  REDUCED, aggregate, GROUP BY, HAVING or trailing VALUES) runs `SELECT (COUNT(*) AS ?__count) WHERE <group>`, then
+  `… LIMIT 200 OFFSET n`. Other SELECTs ask for 201 rows to know whether a later page exists. The WHERE group is found
+  by a brace scan that skips string literals and comments (an IRI cannot hold a brace).
 - `sw.js`: engine files and `shardborough/gen-*/` files cache first (a generation never changes); CURRENT, the
   manifest and the page network first. The page tells the service worker which generation to keep.
-- Measured headless (SwiftShader Chromium, local server): first load 4.7 s, a view 0.4 to 2.5 s, name search 0.6 s,
-  the first entity view 8.8 s (it fetches the whole store once), a second visit 0.45 s from the cache, no errors.
+- Views (`VIEWS` in the page, the same queries as `queries/*.rq`): graphs and versions, lineage (the log), open now,
+  mall units, step-free, toilets and facilities, hours CWG against mall map, tallest, cited facts, sameAs, occupants.
+- Measured 2026-10-06, headless Chromium (no WebKit in the container: Safari not tested), local server: start 1.9 s;
+  the 11 views 0.8 to 3.6 s, each 10 to 96 blocks and 0.07 to 2.4 MB the first time; a later page of rows 0.2 s;
+  one entity (out and in links) 2.8 s, 106 blocks, 1.14 MB; no console errors.
 - Data base: `?base=` overrides the default `https://raw.githubusercontent.com/danbri/londat/main/kgx/` (sends
   `Access-Control-Allow-Origin: *`). Test locally with `python3 -m http.server` at the folder above both checkouts and
   `?base=/londat/kgx/`.
-- Views are SPARQL in the page (`VIEWS`); the editor adds the prefixes. "Open now" ignores hours that run past
-  midnight from the day before.
 
 ## Open
 
-- Step-free routes: the facilities are in (view "Step-free"); the corridors (indoor lines) and floor links are not yet.
+- Step-free routes: the facilities are in; the corridors (indoor lines) and floor links are not yet.
 - Units: join to CWG entities by a better key than the exact name (normalised name, mall, level).
 - A building-level link from mall units and guide grid squares to registry buildings (position in the outline).
-- Turn on GitHub Pages for londat and point the page at it (same origin as the site's host family).
+- Turn on GitHub Pages for londat and point the page at it.
+- Ask Factoidal for: a handle that keeps the parsed manifest (each call parses it again), a planner that looks inside
+  subqueries, and an export path for `bin/engine.mjs` (or a README fix).
