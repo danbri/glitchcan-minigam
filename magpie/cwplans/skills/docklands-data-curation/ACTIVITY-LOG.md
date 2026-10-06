@@ -1060,3 +1060,26 @@ central tower - do we have an index of these?"
 - Factoidal 0.7.1 fault found: `serialize()` drops quads with blank nodes made by `BNODE()` in CONSTRUCT (labels like
   `p1__:fxbn…`); worked around with SHA-1 IRIs. Notes in the web-harvest skill, "Factoidal notes".
 - Register: 14 entries; pipeline activities web-idioms, web-coref, cwg-directory-typed; check-data-register run.
+
+## 2026-10-06 (later): site search, opening hours by mall, mall plan evidence
+
+- The owner asked to file the Factoidal BNODE()/serialize() bug, and for a deep dive on SearchAction data, on opening
+  hours by mall and area, and on whether mall plans can be rebuilt. The session could not post to danbri/factoidal
+  (add_repo refused); the issue text is on the report page.
+- `tools/probe-site-search.mjs` → `third_party/cwplans-structured-data/search/probe.json`: 111 SearchAction sites
+  tested against a control query; 18 find a Canary Wharf branch page; 48 pages are not in the harvest yet.
+- `tools/cwg-hours.mjs` → `registry/sources/brands/cwg-hours.json`: hours for 332 CWG directory occupants.
+- `tools/hours-by-place.mjs` → `registry/sources/web/hours-by-place.json`: half-hour week grids, area and kind
+  statistics, permutation tests (the mall explains 15% of closing time within a kind, p = 0.015), source agreement,
+  postcode to mall.
+- `tools/mall-plan-evidence.mjs` → `registry/sources/brands/mall-plan-evidence.json` (OSM-derived): 105 of 223 mall
+  occupants placed, levels agree in 81 of 88 when `level:ref` is read first.
+- `tools/web-idioms.mjs`: Factoidal renames blank nodes per query, so the branch and hours rewrites did not share
+  nodes. Rewrites now run on a skolemized copy; recognition still runs on the page as published (a first try that
+  skolemized both changed LogoIri and TargetIri counts; caught and fixed). All idiom counts are unchanged.
+- Faults F47 (a fixed 09:00-17:00 week in web markup) and F48 (two level numberings) added.
+- web.archive.org and index.commoncrawl.org reset every connection from the container this session:
+  canarywharf.com/maps/ is not fetched yet.
+- Trap found: this container's `.git/info/exclude` ignores `magpie/cwplans/registry/sources/`, although files there are
+  tracked. The previous commit (2d83b25e) said it held `cwg-directory-typed.json` and `.nq`, but they were left out;
+  they are added now with `git add -f`. After `git add`, check `git status` for every new file under registry/sources/.

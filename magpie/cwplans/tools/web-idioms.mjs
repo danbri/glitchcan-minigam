@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { gzipSync, gunzipSync } from 'zlib';
 import { join } from 'path';
+import { createHash } from 'crypto';
 import { parse, query, graphs, shexValidate, serialize, Dataset, dataFactory as F } from '@factoidal/core';
 import { TOOLS } from './lib.mjs';
 
@@ -17,6 +18,10 @@ const PFX = Object.entries(cat.prefixes).map(([p, u]) => `PREFIX ${p}: <${u}>`).
 const I = cat.prefixes.i, limit = +(process.argv[process.argv.indexOf('--limit') + 1]) || Infinity;
 const host = g => { const m = g.match(/^https?:\/\/web\.archive\.org\/web\/\d+[a-z_]*\/(.*)$/); const u = m ? m[1] : g; return new URL(/^https?:/.test(u) ? u : 'http://' + u).hostname.replace(/^www\./, ''); };
 const SCHEMA_ALT = /^https?:\/\/(www\.)?schema\.org\//;   // http://schema.org/, http(s)://www.schema.org/ -> https://schema.org/
+// skolemize for the rewrites: each query renames the data's blank nodes with its own prefix, so two CONSTRUCT outputs would not share
+// a node (a branch's openingHoursSpecification link would point at nothing); a stable IRI per (page, label) keeps them joined
+const GENID = 'https://danbri.github.io/glitchcan-minigam/third_party/cwplans-structured-data/.well-known/genid/';
+const skol = (t, g) => t.termType === 'BlankNode' ? F.namedNode(GENID + createHash('sha1').update(g + '\t' + t.value).digest('hex').slice(0, 20)) : t;
 const norm = t => t.termType === 'NamedNode' && SCHEMA_ALT.test(t.value) && !t.value.startsWith('https://schema.org/') ? F.namedNode(t.value.replace(SCHEMA_ALT, 'https://schema.org/')) : t;
 
 let t0 = Date.now();
@@ -29,7 +34,9 @@ const bump = (id, form, h) => { const k = form ? `${id}\t${form}` : id; (sites[k
 for (const [g, gd] of graphs(all)) {
   if (st.pages >= limit) break; st.pages++;
   let remapped = 0;
-  const ds = new Dataset(gd.toArray().map(q => { const p = norm(q.predicate), o = norm(q.object); if (p !== q.predicate || o !== q.object) remapped++; return F.quad(q.subject, p, o, F.defaultGraph()); }));
+  const quads = gd.toArray().map(q => { const p = norm(q.predicate), o = norm(q.object); if (p !== q.predicate || o !== q.object) remapped++; return F.quad(q.subject, p, o, F.defaultGraph()); });
+  // recognition on the page as published (an IRI form must not match a skolemized blank node); rewrites on the skolemized copy
+  const ds = new Dataset(quads), sk = new Dataset(quads.map(q => F.quad(skol(q.subject, g), q.predicate, skol(q.object, g), q.graph)));
   st.nsRemapped += remapped;
   const h = host(g), rec = { site: h, idioms: {} };
   if (remapped) rec.schema_namespace_variants = remapped;
@@ -52,7 +59,7 @@ for (const [g, gd] of graphs(all)) {
     if (!out.nodes) continue;
     rec.idioms[d.id] = out; bump(d.id, null, h); for (const f of Object.keys(out.forms)) bump(d.id, f, h);
     if (rewrites[d.id] && d.id !== 'ChainBranchLink') {
-      const c = await query(ds, PFX + rewrites[d.id]);
+      const c = await query(sk, PFX + rewrites[d.id]);
       for (const q of c.toArray()) canon.push(F.quad(q.subject, q.predicate, q.object, F.namedNode(g)));
     }
   }

@@ -2641,6 +2641,192 @@
    "cwp:fault": []
   },
   {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-site-search",
+   "@type": "prov:Activity",
+   "rdfs:label": "probe-site-search",
+   "dct:description": "Reads every SearchAction template in the harvest; per site picks one template with a placeholder; fills it with a nonsense control query, \"Canary Wharf\" and \"E14 5AB\"; fetches each result page once; counts only the same-site links (assets left out) and mentions that a place query adds over the control; classes each site (finds a branch page, finds other place content, no place result, results drawn by script, robots.txt disallows, blocked, no page); marks the branch-like hits not yet in the harvest.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/all.nq.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/pages"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-crawl"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
+     "dcat:accessURL": "npm @factoidal/core 0.7.1 (local)",
+     "dct:description": "parse (N-Quads), query (SPARQL SELECT of SearchAction templates)"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/search/probe.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/probe-site-search.mjs"
+   },
+   "cwp:command": "NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/probe-site-search.mjs [--offline]",
+   "cwp:kind": "fetch",
+   "cwp:rule": [
+    "Politeness: robots.txt per host (cached crawl rules, else fetched), the project User-Agent, one request at a time per host, 1.1 s apart.",
+    "Only GET URLs that the site publishes as its own SearchAction; no forms, no login.",
+    "Kept: status, counts, JSON-LD types, result URLs. No page text; the raw result pages stay in data/raw/site-search/ (not committed)."
+   ],
+   "cwp:network": true,
+   "cwp:deterministic": false,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/extract-structured-data"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": [],
+   "cwp:judgement": "The branch-like path pattern and the wall pattern are chosen by hand in the tool; a hit list was checked by hand on 2026-10-06 (about a third are blog or news posts)."
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-hours",
+   "@type": "prov:Activity",
+   "rdfs:label": "cwg-hours",
+   "dct:description": "Reads the seven-row hours table of each cached CWG directory page (Internet Archive copy saved by fetch-cwg.mjs): 9am, 7.30am, 12noon, Midnight, Closed, Open 24hrs, Coming Soon; groups days with the same hours into OSM opening_hours text.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-hours.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/cwg-hours.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/cwg-hours.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "A closing time at or before the opening time runs past midnight.",
+    "A row that is not a time (\"109am\", \"4m\", \"12pm - 10\") is listed in problems and left out, never guessed.",
+    "All coming soon: no hours."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-directory-typed"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/hours-by-place",
+   "@type": "prov:Activity",
+   "rdfs:label": "hours-by-place",
+   "dct:description": "Puts every hours text on a 336-slot half-hour week with docklands/opening-hours.js (the 3D page's reader) and the canonical schema.org hours with their dayOfWeek, opens and closes; groups places by area (CWG mall, street-level estate, Wood Wharf, postcode sector outside the CWG list) and kind (coarse: food and drink, shop, service; fine for CWG from schema.org types); medians and shares per group; stratified permutation tests (5,000, fixed seed) of the mall effect on hours per week and weekday closing time within a fine kind; agreement (share of open slots in common) for the same occupant across CWG, OSM and web; postcode unit to mall from the whole CWG list (one mall in at least 80% of 3 or more entries) to place web branches by their parsed postcode.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-hours.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory-typed.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/idioms/canonical.nq.gz"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/opening-hours.js"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/factoidal",
+     "dcat:accessURL": "npm @factoidal/core 0.7.1 (local)",
+     "dct:description": "parse (N-Quads), query (SPARQL SELECT of branch, postcode and OpeningHoursSpecification)"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/web/hours-by-place.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/hours-by-place.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/hours-by-place.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Dated special hours (validFrom) are not the weekly pattern and are left out.",
+    "An occupant in the CWG list is counted once, from its CWG page; its OSM and web hours are used only for the agreement check."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-hours"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/web-idioms"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/mall-plan-evidence",
+   "@type": "prov:Activity",
+   "rdfs:label": "mall-plan-evidence",
+   "dct:description": "For each mall: the anchor is the median position of the registry buildings its CWG entries link to; each CWG entry is matched by normalised name (or brand) to the nearest OSM shop, amenity, office or leisure point within 250 m; the CWG level (signage number) is compared with OSM level:ref, else level; footways with a level and indoor ways within 250 m are kept as polylines in metres from the anchor.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-directory-typed.json"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/buildings.json"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    }
+   ],
+   "prov:generated": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/mall-plan-evidence.json"
+    }
+   ],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/mall-plan-evidence.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/mall-plan-evidence.mjs",
+   "cwp:kind": "derive",
+   "cwp:rule": [
+    "Read level:ref before level (fault F48).",
+    "No unit outlines are made: positions are OSM points."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": true,
+   "cwp:after": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-directory-typed"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/registry-osm"
+    }
+   ],
+   "cwp:area": "structured",
+   "cwp:fault": [],
+   "cwp:judgement": "The name normalisation (dropping the mall name and common words) is chosen by hand; a wrong branch of a chain can be matched when two are within 250 m."
+  },
+  {
    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/build-registry",
    "@type": "prov:Activity",
    "rdfs:label": "build-registry",
@@ -13096,6 +13282,155 @@
     "dcat:Distribution"
    ],
    "dct:title": "code, not data: builds the typed directory list (Factoidal SPARQL and serialize)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/../../third_party/cwplans-structured-data/search/probe.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "the SearchAction templates the harvested sites publish, each filled with \"Canary Wharf\", \"E14 5AB\" and a control query and fetched once on 2026-10-06 (robots.txt obeyed, 1.1 s per host): status, robots result, what the place query adds over the control (links, mentions, branch-like pages), and the hits not yet in the harvest. Counts and URLs only, no page text",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/probe-site-search"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/cwg-hours.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "weekly opening hours from the hours table on each archived Canary Wharf Group directory page, as OSM opening_hours text, with mall, level, postcode and the archive date; rows that are not a time are listed as problems",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/cwg-hours"
+   },
+   "cwp:osmUse": "none",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/web/hours-by-place.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "opening hours of every place we hold (CWG pages, OSM opening_hours tags of registry occupants, web facts, canonical schema.org hours read with Factoidal) on a half-hour grid of the week; profiles and statistics per mall, area and kind; permutation tests of the mall effect; agreement between sources; the postcode to mall table from the CWG list and the web branches it places",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/web-structured-data"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/hours-by-place"
+   },
+   "cwp:osmUse": "derived",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/registry/sources/brands/mall-plan-evidence.json",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "per mall (Cabot Place, Canada Place, Jubilee Place, Crossrail Place, One Canada Square): CWG directory occupants matched by name to OSM points near the mall, their positions in metres from the mall anchor, OSM level and level:ref against the CWG level (fault F48), and the levelled footways and indoor ways around the mall, for a draft plan per level",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/cwg-site"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/osm"
+    },
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "prov:wasGeneratedBy": {
+    "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/mall-plan-evidence"
+   },
+   "cwp:osmUse": "derived",
+   "cwp:review": "crawled for scoping (owner rule of 2026-10-03): re-check before anything leaves the prototyping phase"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/probe-site-search.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: tests the SearchAction templates (Factoidal SPARQL for the templates; one polite fetch per site and query; --offline re-reads the cached pages)",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/cwg-hours.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: reads the hours table of each cached CWG directory page into OSM opening_hours text",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/hours-by-place.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: opening hours by mall and area (docklands/opening-hours.js for text, Factoidal SPARQL for the canonical hours), permutation tests and source agreement",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/mall-plan-evidence.mjs",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: matches mall occupants to OSM points and collects the levelled ways near each mall",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"

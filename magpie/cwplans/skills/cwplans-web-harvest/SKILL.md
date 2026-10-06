@@ -156,9 +156,16 @@ if needed" (also in the repo CLAUDE.md). What we learned with `@factoidal/core` 
   a relative label (`<Branch>`) fails with "could not decode schema". Value sets, `EXTRA`, `@ref`, `|` alternatives,
   cardinalities and regex facets (`LITERAL /^https?:/`) work. A focus can be the RDF/JS term from a SPARQL binding,
   blank nodes included. About 30 ms a check on a page graph (16,143 checks in 9.5 minutes).
-- **Fault (reported to the owner):** in a CONSTRUCT, a blank node made by `BNODE()` gets a label like `p1__:fxbn…`, and
-  `serialize()` drops every quad that uses it, silently (`toNQuads()` keeps them). Workaround here: mint IRIs from a
-  SHA-1 of the text (`IRI(CONCAT(base, SHA1(STR(?a))))`); stable IRIs are better for the graph anyway.
+- **Fault (issue text for danbri/factoidal written 2026-10-06; this session could not post it):** in a CONSTRUCT, a
+  blank node made by `BNODE()` gets a label like `p1__:fxbn…` (a colon, not a valid N-Quads label). `serialize()` drops
+  every quad that uses it, silently, in nquads, ntriples and turtle; `toNQuads()` keeps them but writes the invalid
+  label, and `parse()` of that output drops those lines, also silently. In a SELECT, a `BNODE()` term's `value` starts
+  with `_:`. Workaround here: mint IRIs from a SHA-1 of the text (`IRI(CONCAT(base, SHA1(STR(?a))))`).
+- **Blank nodes are renamed per query.** Each query result gives the data's own blank nodes a new prefix (`_:p20_…` in
+  one CONSTRUCT, `_:p21_…` in the next, for the same node). SPARQL allows this, but two CONSTRUCT outputs merged into
+  one file then lose every link between them: the first canonical layer had 341 `openingHoursSpecification` links and
+  no branch reached its days. Fix in use in `web-idioms.mjs`: skolemize each page before any query, a blank node
+  becoming `…/.well-known/genid/<sha1(page, label)>`.
 - SPARQL scoping, not a Factoidal fault: a `FILTER` inside an inner `OPTIONAL` cannot see a variable bound only outside
   that group. Use `BIND(IF(...))` at the same level instead.
 
@@ -225,6 +232,39 @@ the page. Output `registry/sources/brands/cwg-directory-typed.json` and `.nq`. M
 321 with a registry building; first listed 2013 (90, the site launch) to 2025 (55); last edited mostly 2024 (155) and
 2025 (153). The types are ours, from the category, not the publisher's.
 
+## Site search (SearchAction, 2026-10-06): `tools/probe-site-search.mjs`, `search/probe.json`
+
+111 sites publish a schema.org SearchAction. The tool fills each site's template with a nonsense control query,
+"Canary Wharf" and "E14 5AB", fetches each result page once (robots.txt, the project User-Agent, 1.1 s per host), and
+counts only what a place query adds over the control. Without the control every site "finds" Canary Wharf, because
+menus and footers name it on every page. Asset links (`/cdn/…css`, `wp-content`) are not results.
+
+- 68 sites use the WordPress default (`?s={search_term_string}`), written by an SEO plugin: post and page search,
+  not branch search. One template points at a store finder (Nando's), and it answers 403.
+- Result on 2026-10-06: finds a branch, location or menu page 18; other place content 44; no place result 17;
+  robots.txt disallows 18 (most large retailers); results drawn by script 8; blocked 3; 202 with no page 2.
+- 48 of the 51 branch-like hits are not in the harvest (`hits_new`): seeds for the next crawl. Checked by hand: about a
+  third are blog or news posts.
+- The postcode finds fewer new links than the place name on 36 sites, the same on 49 and more on 3.
+- No template takes a location, and the result pages carry no branch markup. Use site search to find pages, never as
+  a store finder. The store-finder exception (postcode forms) is a different route; see "What is allowed".
+- `--offline` re-reads the cached result pages in `data/raw/site-search/`: change the counting rules without new requests.
+
+## Mall plans (2026-10-06): `tools/mall-plan-evidence.mjs`
+
+The CWG directory gives mall and level (signage number) for 209 of 223 mall occupants, but no unit number and no
+position. The tool matches each one by name to an OSM point within 250 m of the mall anchor: 105 placed (47%), 90 with
+an OSM level, 38 with `addr:unit`. Around the malls OSM has 506 levelled footways and indoor ways, and only 3
+`indoor=room` ways. So a draft plan per level is possible (corridors plus about half the shops as points), and unit
+outlines are not in any source we hold.
+
+- Levels (fault F48): around the estate OSM `level` is the physical level and `level:ref` the CWG number. Compare the
+  CWG level with `level:ref` first. Then 81 of 88 placed occupants agree.
+- A chain with two branches within 250 m can match the wrong one: the nearest is taken.
+- canarywharf.com/maps/ is linked from every directory page and may hold the plans. On 2026-10-06 web.archive.org and
+  index.commoncrawl.org reset every connection from the container (agent-proxy `ws_closed_mid_exchange`); fetch it
+  first next time.
+
 ## What is committed (`third_party/cwplans-structured-data/`)
 
 **No full pages.** `pages/<host>.jsonl` (one line per rendered page: URL, final URL, status, method, title, lang,
@@ -260,6 +300,19 @@ scope, confidence, match, opening_hours in OSM syntax, phone, price range, cuisi
 phone 75, events 1; 14 fact records match no occupant.
 
 ## Opening hours
+- CWG directory pages (2026-10-06, `tools/cwg-hours.mjs`): each archived page has a seven-row hours table ("mon: 9am
+  - 8pm", "Closed", "Open 24hrs", "Coming Soon"). Read for 332 of 374 (328 whole, 4 with a typo row left out: "109am",
+  "4m", "12pm - 10", "22:30pm"); 6 coming soon; 34 with no table. All 332 parse in `docklands/opening-hours.js`.
+  The hours are as on the archive date.
+- `tools/hours-by-place.mjs` puts every hours source on a 336-slot week and compares malls within one kind of place.
+  Result on 2026-10-06: the mall explains 15% of the spread in weekday closing time (permutation p = 0.015) and 12% of
+  hours per week (p = 0.085); mall or street explains 3%. Shops in Cabot Place and Canada Place close at 20:00, in
+  Jubilee Place at 19:00. Restaurants at street level, in Wood Wharf and in Crossrail Place close at 22:00 to 22:30.
+  Sources agree well (median overlap 0.9 or more). The exception is F47: a fixed "Mo-Su 09:00-17:00" on five sites.
+- Parsed addresses: a postcode unit in the CWG list points at one mall in most units (E14 5NY Jubilee Place 95%,
+  E14 5AH Canada Place 97%, E14 4QT Cabot Place 90%). 41 web branches have a parsed postcode and hours. 17 of the 35
+  in E14/E16 get a CWG location from it, 14 of them one of the five malls.
+
 
 - In the wild: `openingHours` text ("Mo-Fr 09:00-17:00", "Monday,Tuesday 09:00-17:00", "Friday06:30-20:00", empty
   strings, ", , , ,"), specifications with "13:00 PM", "9:30am", "6pm", days with no times, special hours dated
