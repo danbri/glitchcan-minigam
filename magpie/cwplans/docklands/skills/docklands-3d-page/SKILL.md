@@ -971,11 +971,26 @@ towerOf, groundAt, tunnelY, par, toast and getters for MVP, VZ, CAM, TOWERS) and
   cut at the virtual edges) cover each part with max(1, odd / 2) trails. A bridge is at most 0.3 mm, the pen width, so it
   does not show. Then lines under 0.25 mm dropped, greedy nearest-end order per layer, shared walls drawn once. A building
   under 1 mm on the paper hides but is not drawn; under 3 mm only its roof outline.
-- **Measured** with the kerbs and the draping, default A3 view: 29,501 -> 20,232 lines (pen lifts); buildings 23,739 ->
-  16,760, roads 4,400 -> 2,415. Rotherhithe 570 -> 428. Canada Water phone view 454 -> 351 (buildings only -9%: few
-  touching ends; roads -58%). Union-find clusters, with no bound on the bridge, gave buildings -58% in a simulation, but
-  with bridges of any length. The greedy order is as good as the vendor's own reordering (its "full" reordering saves 2 to
-  3% more travel).
+- **Closed outlines were deleted (fixed 2026-10-06, owner's file "garbled, with missing lines")**. A fully visible roof,
+  base, shore or park ring chains into a closed polyline whose first and last points are the same. Douglas-Peucker measured
+  each point's distance to the line between the two ends; that line has zero length, the cross product is 0, so every
+  distance was 0, only the two ends stayed and the ring became a zero-length line, then dropped. So the clearest buildings
+  lost their roof and base outlines and kept their vertical edges: stubble and "transparent" blocks. Now a span whose ends
+  meet measures the distance to that point. Default A3 view: 69.1 m -> 94.4 m drawn (25 m of outlines were lost); phone
+  default view, buildings 30.0 m -> 40.3 m. Present from the first version; not seen because the tests counted lines and
+  looked at whole pages, never laid the lines over the page's own image.
+- **Test a change by laying the plot over the page's own image** (that is how the fault above was found): render the page
+  canvas (`?capture`, `renderNow`, `toDataURL`), call `DocklandsPlot.make()` in the same state, map the SVG back with the
+  frame make() uses (k = min((PW - 24) / W, (PH - 30) / H) mm per raster px, ox = (PW - W k) / 2, oy = 12 + (PH - 30 -
+  H k) / 2, raster = CSS size x min(2, 2400 / long side)), draw it in red over the grey image at DPR 3 and look at crops.
+  A building with no red outline, or red on a face that should hide it, is a fault. To find where lines go, serve a copy of
+  plotter-svg.js through `page.route` that keeps each stage (runs, chain, simplify, join, filter) and an id buffer beside
+  the z-buffer (which solid won each pixel), and measure the distance from a traced edge to the nearest line per stage.
+- **Measured** with the kerbs, the draping and the outline fix, default A3 view: 22,571 lines (pen lifts) for 94.4 m
+  drawn; before all three, 29,501 lines for 66.6 m (with the outlines missing). Rotherhithe 570 -> 428 lines (its water
+  edge comes from the draping: the old code with only the outline fix still draws 0.01 m). Canada Water phone view
+  454 -> 353. Union-find clusters, with no bound on the bridge, gave buildings -58% in a simulation, but with bridges of
+  any length. The greedy order is as good as the vendor's own reordering (its "full" reordering saves 2 to 3% more travel).
 
 ### The owner's plotter: iDraw 2.0 A3 (DrawCore V2.0), and how to test against its software
 
@@ -1001,7 +1016,7 @@ S0-S1000, engraving 0-5,000 mm/min), writing 0-12,000 mm/min, 115200 baud.
   and pen-up distance, and every warning.
 - **Its time estimate ignores pen lifts**: `raise_time` and `lower_time` stay 0 (the timing code is commented out). So 31%
   fewer pen lifts did not change the estimate (default A3 view 1:43:47 -> 1:44:08, with the credit's 169 strokes and the
-  draped lines added). On the machine each lift moves the pen 4.5 mm down and up (Z at 5,000 mm/min by default), so the
+  draped lines added; 2:08:50 once the outline fix put back 25 m of line). On the machine each lift moves the pen 4.5 mm down and up (Z at 5,000 mm/min by default), so the
   count of lines is the measure to use. Real plotting time is not measured; there is no plotter here.
 - vpype (`vpype read x.svg stat`, 1.15) read the first version as one layer (the layers were inside a styling `<g>`); it
   reads the numbered top-level layers as layers.
@@ -1009,10 +1024,11 @@ S0-S1000, engraving 0-5,000 mm/min), writing 0-12,000 mm/min, 115200 baud.
   negated against the page (document x -> machine -Y, y -> -X, home rear right; from the extension's code) and the pen is a
   Z height; a file that is wrong on a machine nobody here can test can drive the pen into the paper edge. The vendor's
   extension takes the SVG and handles both.
-- Measured after these changes (headless Chromium, A3 unless stated): default view at 1600 x 900 DPR 1: 20,232 lines + 170
-  credit strokes, 7.2 s, 1.1 MB; `?view=rotherhithe` 428 lines; `?view=under`, layer 7 alone plots 8.3 m; 390 x 844 DPR 3
-  portrait A4 from `?view=greenland` through the button and a real download, 465 lines, 33 kB, credit on two rows. No
-  console error; xmllint well formed; no warnings from the vendor preview on A3 and A4.
+- Measured after these changes and the outline fix (headless Chromium, A3 unless stated): default view at 1600 x 900 DPR 1:
+  22,571 lines + 169 credit strokes, 94.4 m, 11 s, 1.4 MB, vendor estimate 2:08:50; default view at 390 x 844 DPR 3
+  (portrait) 10,072 lines, 47.8 m, 550 kB, estimate 59:27, through the button and a real download; `?view=rotherhithe`
+  428 lines; `?view=under` 9.5 m, estimate 6:44; 390 x 844 DPR 3 portrait A4 from `?view=greenland` through the button, 465
+  lines, 33 kB, credit on two rows. No console error; xmllint well formed; no warnings from the vendor preview on A3 and A4.
 
 ## Station models (2026-10-05)
 

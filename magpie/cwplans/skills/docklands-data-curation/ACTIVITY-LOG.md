@@ -1247,3 +1247,14 @@ Owner: "don't waste good info by burying it in our chatlogs".
 - The vendor's time estimate counts a pen lift as 0 s (its timing code is commented out), so it did not fall. Not tested
   on a real plotter. No G-code export (axes swapped and negated on the DrawCore; untestable here). Details: skill
   docklands-3d-page, "Plotter SVG" and "The owner's plotter". Register entry updated; check-data-register run.
+
+## 2026-10-06 (night, later): plotter SVG lost every closed outline; fixed (Opus)
+- Owner sent a plot made at 21:07 UTC (before the iDraw changes): "In preview it looks a bit garbled, with missing lines".
+  Laid the export over the page's own image (method: skill docklands-3d-page, "Plotter SVG"): whole buildings had no
+  roof or base outline. Traced the lines stage by stage: present after the hidden-line test and the chaining, gone after
+  Douglas-Peucker. A fully visible ring is a closed polyline; the distance to a zero-length line was 0 for every point,
+  so the ring shrank to its two equal ends and was dropped. Present since the first version.
+- Fix in `docklands/plotter-svg.js` `simplify()`: when the ends of a span meet, measure the distance to that point.
+  Default A3 view 66.6 m -> 94.4 m of line (with the earlier changes); no stubble left in the phone default view.
+  Checked that the Rotherhithe water edge comes from the draping, not this fix (old code + fix: still 0.01 m).
+  Vendor preview: no warnings; page button at phone size: no console error.

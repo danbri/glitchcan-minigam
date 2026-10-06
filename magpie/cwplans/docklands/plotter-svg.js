@@ -178,11 +178,18 @@ function chain(segs) {   // join runs that meet end to start (within 0.6 px) int
     lines.push(L); }
   return lines;
 }
-function simplify(pts, tol) {   // Douglas-Peucker
+// Douglas-Peucker. When the two ends of a span meet (a closed outline: a fully visible roof, base or shore ring) the
+// distance is to that point, not to a line of zero length: with the line, every distance was 0 and the whole ring went
+function simplify(pts, tol) {
   if (pts.length < 3) return pts; const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1; const st = [[0, pts.length - 1]];
-  while (st.length) { const [i, j] = st.pop(), [ax, ay] = pts[i], [bx, by] = pts[j], L = Math.hypot(bx - ax, by - ay) || 1e-9; let best = -1, bd = tol;
-    for (let k = i + 1; k < j; k++) { const d = Math.abs((bx - ax) * (ay - pts[k][1]) - (ax - pts[k][0]) * (by - ay)) / L; if (d > bd) { bd = d; best = k; } }
-    if (best > 0) { keep[best] = 1; st.push([i, best], [best, j]); } }
+  while (st.length) {
+    const [i, j] = st.pop(), [ax, ay] = pts[i], [bx, by] = pts[j], L = Math.hypot(bx - ax, by - ay); let best = -1, bd = tol;
+    for (let k = i + 1; k < j; k++) {
+      const d = L > 1e-9 ? Math.abs((bx - ax) * (ay - pts[k][1]) - (ax - pts[k][0]) * (by - ay)) / L : Math.hypot(pts[k][0] - ax, pts[k][1] - ay);
+      if (d > bd) { bd = d; best = k; }
+    }
+    if (best > 0) { keep[best] = 1; st.push([i, best], [best, j]); }
+  }
   return pts.filter((_, k) => keep[k]);
 }
 // Fewer pen lifts: lines whose ends lie near the same point become one trail. Nodes are clusters of line ends (every end
