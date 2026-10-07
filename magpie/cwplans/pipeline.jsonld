@@ -13241,7 +13241,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "facade texture atlas the 3D page loads: the 16 registry tower tiles (facades-registry.jpg) and, from slot 16, the tiles of contributed photo sets (cwlibrary: Canada Water Library mesh, a vector pattern for Columbia and Regina Point, Ontario Point, The Founding); 32 slots of 256 px",
+   "dct:title": "facade texture atlas the 3D page loads: the 16 registry tower tiles (facades-registry.jpg) and, from slot 16, the tiles of contributed photo sets in set-name order (cwdock: the 17-storey brick tower north-east of Decathlon, Decathlon, Dock Shed; cwlibrary: Canada Water Library mesh, a vector pattern for Columbia and Regina Point, Ontario Point, The Founding); 32 slots of 256 px, 23 used",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/flickr-commons-photos"

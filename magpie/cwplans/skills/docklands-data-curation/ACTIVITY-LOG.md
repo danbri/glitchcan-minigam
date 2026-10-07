@@ -1331,3 +1331,23 @@ Owner: "don't waste good info by burying it in our chatlogs".
   runs the afterglow fade in fp16 (reaches 0 in 19 frames at 60 frames a second). Share link restores style and overlay.
 - First tuning made the far city a white haze; glow and brightness lowered and the size rule raised to 6 px for this style.
   Skill docklands-3d-page, "Line styles" > "Vector CRT".
+
+## 2026-10-07 (late morning): cwdock facade tiles on the 3D page (Opus)
+
+- After the cwdock set was pushed (londat 8c28efa, main 142db243): photos.json `tiles` for three buildings with a
+  frontal face in diffuse light; operation `cut-facade-tiles` (graph `facade-tiles-cwdock`, 52 triples): the 17-storey
+  brick tower north-east of Decathlon (OSM way 729958295; left half of the south-south-east face and its mirror image,
+  27.0 m by 4 floors, 12.6 m), Decathlon (way 729958296; two bays by one storey, 10.0 m by 6.1 m) and Dock Shed (way
+  1427207669; one bay by one floor, 12.6 m by 3.17 m, the model's own floor). Colours are P3 values read as sRGB (F51).
+- Not tiled: 11 Maritime Street (rectified face keeps a 3 deg tilt; the other face has projecting balconies), The
+  Founding (has a cwlibrary tile; its three parts need three outlines), Three Deal Porters (model a guessed 6 m, F52).
+- `compose-facade-atlas.mjs` (graph `facade-atlas`, 26 triples): 23 of 32 slots. The new tiles took slots 16 to 18
+  (set-name order) and moved the cwlibrary tiles to 19 to 22; the page reads slots from `facades.json` (skill lesson).
+- Test (headless Chromium, SwiftShader WebGL, worktree at origin/master): `FT.byModel` maps model buildings 17650, 17651
+  and 36551 to slots 16, 17, 18 and the cwlibrary buildings to 19 to 22; close views of Decathlon and Dock Shed with
+  photo facades on and off differ in 18 to 28 % of pixels and show the tiles; the photo views rotherhithe, greenland and
+  pier at 1600 x 900 DPR 1 and 390 x 844 DPR 3 have mean luma equal to the old atlas to 2e-5 (on 142db243); no page or
+  console error. Re-run on 881f5c98 (Line drawing style): no error, but the greenland view gave mean luma 0.0925, 0.0925
+  and 0.211 in three runs with the same files, so photo-view luma no longer compares run to run there; not investigated.
+- kgx: `build-kgx.mjs` twice (second run new: 0), generation gen-94788565be0fae62, 294,405 triples; store check 17 of 17
+  the same.

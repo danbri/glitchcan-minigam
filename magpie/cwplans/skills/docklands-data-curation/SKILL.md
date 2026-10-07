@@ -411,6 +411,8 @@ textures for their 3D models."
   of `docklands/data/tex/facades.jpg/.json`, keyed by OSM id with model indices from `key-model-buildings.mjs`. The page
   draws them on any building (skill `docklands-3d-page`, "Building keys"). Order after new photos: `contrib-photos.mjs
   <set>`, `compose-facade-atlas.mjs`, `build-kgx.mjs`; after a model rebuild: `key-model-buildings.mjs` first.
+  Slots follow the sorted set names, so a new set can move an earlier set's tiles (cwdock took 16 to 18 and moved
+  cwlibrary from 16-19 to 19-22): refer to a tile by its OSM key, never by its slot number.
 - **Sets:** `cwlibrary` (4 photos, 2026-10-06 about 16:30 BST, low evening sun) and `cwdock` (20 photos, 2026-10-07 about
   09:00 BST, overcast and light drizzle; owner: "taken NOW near the Dock by the Library ... one of some stickers on the
   library door for white calibration"). Name a set after the place (`cw<place>`), number the photos in the owner's order.
