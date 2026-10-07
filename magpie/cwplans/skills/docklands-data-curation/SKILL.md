@@ -90,7 +90,7 @@ Collected on 2026-10-07 from the owner's messages of the session of 2026-10-02 t
   localised and extended, even if initially the viewer / 3D world was a side effect from exploring the data landscape."
   (2026-10-05). So new code should not fix the zone in many places; the key rules in `docklands-3d-page`, "Future
   expansion", follow this.
-- **The model.** On 2026-10-05 the session ran on Haiku from 18:55 to 19:41 UTC (`/model claude-haiku-4-5-20251001`,
+- **The model.** On 2026-10-05 the session ran on Haiku from 18:55 to 19:41 UTC (a `/model` switch,
   during the Blender station work; it is not clear that the owner chose it). Owner: "When did we get switched to
   haiku? / I put you on 55 already." Haiku answered 6 messages and made no tool calls (transcript), and no commit in
   either repository falls in that window (master 1b345204 at 18:07, then b4df1ab2 at 21:32; londat 0077caa at 18:03,

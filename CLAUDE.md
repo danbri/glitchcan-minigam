@@ -18,10 +18,24 @@ work, check which model serves the turn: the system prompt names it, and the `ge
 `session_context.model` and `external_metadata.last_served_model`. If it is Haiku, or any model the
 owner did not choose, say so first and wait for the owner before changing code. Why: a September 2026
 series of Haiku turns pushed a cellar guest that did not run (a syntax error, every media path a
-404) and told the owner it was live.
+404) and told the owner it was live. October 2026: in a long cwplans session a `/model` switch put Haiku on
+the turns of 2026-10-05, 18:55 to 19:41 UTC; it answered 6 messages and made no tool calls before the owner
+switched back ("When did we get switched to haiku?"). Details: the `docklands-data-curation` skill, "The model".
 
 ## 🔐 TRUST THE USER
 The user (danbri) is the project owner. Trust their instructions, corrections, and domain knowledge. When they say something exists or works a certain way, believe them. Don't second-guess or over-explain obvious things.
+
+## WORKING WITH THE OWNER
+Owner instructions, October 2026; the owner's exact words and dates are in the `docklands-data-curation` skill,
+"Ways of working (the owner's words)".
+- Answer with the detail a GIS professional needs. Assume the owner has forgotten details, and link into the
+  repositories (2026-10-05).
+- Give a long answer that the owner will copy as one block: the iOS app breaks the layout (2026-10-05).
+- Show results through deep links to the live pages (`?view=`, a share hash, `id=osm:`) (2026-10-05).
+- Say when a release is pushed, with its live URL (2026-10-03).
+- Use subagents for large tasks (2026-10-07).
+- Say when the context is too full and a new session is cheaper. Write what the next session needs into the
+  skills and the activity logs, not only into the chat (2026-10-07).
 
 ## 🔒 GitHub CLI (gh) Safety Guidelines
 **Token Scope:** Fine-grained PAT limited to `danbri/glitchcan-minigam` only
@@ -71,7 +85,7 @@ restrictions on personal org and address data while in the scoping, planning and
   as the file, then run `node magpie/cwplans/tools/check-data-register.mjs --write`; it fails on an
   unregistered file and on a page that shows OSM data without the "© OpenStreetMap contributors" link.
   Readable view: https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md
-- Bulk extracts live in danbri/londat (owner, 2026-10-05: created londat repo). Rule, tools and base URL: the `docklands-data-curation` skill, "Data hosted in danbri/londat".
+- Bulk extracts live in danbri/londat (owner, 2026-10-04 19:50 UTC: "Created londat repo"; first commit 2026-10-05). Rule, tools and base URL: the `docklands-data-curation` skill, "Data hosted in danbri/londat".
 - Pipeline work is dataflow (owner, 2026-10-06: "any cleanup, data pipeline and normalization work you do or did MUST be
   expressed and logged in terms of FP-friendly operations on named graphs that (a) are the operations of tools/tasks from
   skills, upon static unchanging input named graphs"). Each step is a named operation of a skill's tool over inputs fixed
@@ -158,6 +172,11 @@ lesson diverge and you will read the stale one. `.claude/skills/` is a pure
 index: real directories for repo-wide skills, symlinks for co-located ones.
 Claude Code picks up a new symlink **mid-session, without a restart** —
 verified July 2026.
+
+A skill's `description` must be 1,024 characters or fewer; the skill list cuts a longer one. `tools/check-skills.mjs`
+does not yet measure a folded (`>-`) description: the `m` flag on its regex makes `$` match at the first line end, and
+it has no length check. On 2026-10-07 six descriptions were still too long: docklands-sky, cwplans-feed-discovery,
+cwplans-live-state, cwplans-construction, blender-station-models, cwplans-public-registers.
 
     npm run skills:check          # every SKILL.md discoverable? malformed? dangling?
     node tools/check-skills.mjs --fix    # create the missing symlinks
