@@ -1270,3 +1270,41 @@ Owner: "don't waste good info by burying it in our chatlogs".
 - The owner's screenshot of the 22:18 file in Textastic: the preview fits the page height and cuts the side margins, so
   the credit (from the 12 mm margin) lost its first word. The credit now starts at the drawing's left edge when it fits
   the drawing's width (one or two rows), else at the margin; checked on A3 and A4, portrait and landscape.
+
+## 2026-10-07 (morning): contributed photos round the Canada Water dock, set cwdock (Opus)
+
+- Owner: 20 CC0 photos from about 09:00 BST, "taken NOW near the Dock by the Library ... one of some stickers on the
+  library door for white calibration. Weather at 9am is overcast, light drizzle", and a phone map screenshot (EXIF
+  09:08:43). Stored in londat `data/images/contrib/cwdock/` (originals unchanged, `README.md`, `photos.json`). The
+  screenshot is not stored (the map provider's imagery and the owner's profile picture); only our fix from it is kept:
+  -0.04740, 51.49760, +-10 m (OSM outlines laid over it at its scale bar, 4.33 px/m), at Decathlon's south corner.
+- EXIF of the 20 JPEGs: no time, GPS, make or model; an embedded Display P3 profile while the EXIF ColorSpace says sRGB
+  (new fault F51). Weather from the londat cache run of 08:43 UTC (Open-Meteo, 08:30 UTC): cloud 100 %, 0.1 mm, WMO 51.
+- Identified (`photos.json`, with OSM way, model index, model height and evidence): Decathlon, 11 Maritime Street (way
+  729958291: "11" and the Mouse Tail Coffee front, whose OSM node lies in the outline; 13 levels counted), the
+  17-storey tower and 8-storey wing north-east of Decathlon (ways 729958295 and 729958294, floor counts), Dock X,
+  Surrey Quays Shopping Centre with Corner Corner, Three Deal Porters (name partly read), Dock Shed, The Founding (three
+  parts), the library, Ontario Point, the station drum, Regina and Columbia Point. Photo 01 (3x telephoto skyline): a
+  camera solve on four tower tops (rms 2.2 px; Hampton Tower held out at 8 px; eye +-60 m): Newfoundland, Citigroup
+  Centre, Landmark Pinnacle, One Canada Square, One Bank Street, 25 Bank Street, Wardian, One Park Drive, Hampton Tower,
+  and a dark tower on Marsh Wall at Consort Place (way 988728458, identity a guess) that the model draws as a pit.
+- White calibration (photo 19, the "Automatic door" sign's white): Display P3 RGB 216.1, 217.5, 212.4, CIELAB 86.6,
+  -1.6, +2.5; linear gains R x 1.015, B x 1.055. The sky in the other 19 photos is within 4 CIELAB units of neutral, so
+  each photo is balanced on its own neutral; the gains are not copied (white balance is per shot).
+- Operations `rectify-facade-patches` (7 patches) and `lift-contrib-photos` (`tools/contrib-photos.mjs cwdock`, tool
+  unchanged): kgx graphs `facade-patches-cwdock` (241 triples) and `photos-cwdock` (1,038); `build-kgx.mjs` twice
+  (second run new: 0), generation gen-49d2897980a81d06, 294,125 triples (110,640 in the browser store);
+  `check-kgx-store.mjs --write`: 17 of 17 queries the same in the store and in memory.
+- Faults: F51 (Display P3 read as sRGB by the facade tools; red-brown brick off by about 6 CIELAB units) and F52
+  (buildings newer than the 2022 LiDAR with no OSM levels: a dig or a guessed 6 m). F52 counts, on `area.js` of
+  2026-10-03 decoded with `area()` and `dec()` of `tools/view-mcp/view-lib.mjs` and keyed by `building-keys.json`: height
+  source `guess` 247 buildings, 21 with a footprint over 800 m2; source `lidar` with ground below 0 m OD and footprint
+  over 300 m2: 6.
+- Open: photo 18 repeats cwlibrary photo 1. The bearings of the brick chimney (way 1175339088) and the station drum
+  put that camera about 65 m south-south-east of Ontario Point, not south-west as cwlibrary says; its face names and
+  the 24.0 m tile width need a camera solve on the roof corners. Not changed.
+- Corrections before commit: a first face-normal script took the normal side from the ring direction and inverted some
+  outlines; recomputed as the side away from the centroid (skill lesson). Photo 11's twin towers did not fit a camera at
+  the 09:08 fix; the bearings put the camera on the pontoon ramp about 55 m west.
+- Privacy: people and vehicles appear incidentally; no person is described or tagged. Photos with a face or a number
+  plate that may be readable were listed for the owner (blur decision before wider use).

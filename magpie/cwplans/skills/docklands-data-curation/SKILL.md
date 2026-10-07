@@ -134,6 +134,8 @@ Faults found in this project's joins and tools. "Open" means catalogued and meas
 | F48 | 2026-10-06 | Two level numberings for the same floor: CWG pages give the signed number on CWG signage ("Mall Level -1"); in OSM around the estate `level` is the physical level (0 = ground) and `level:ref` the CWG number (note on way 193407928), but some mappers put the CWG number in `level`. Read `level` alone and Canada Place's mall floor reads 0 for some shops and -1 for others | meaning (two conventions) | rule in use in `tools/mall-plan-evidence.mjs`: compare the CWG level with `level:ref` first, else with `level`; 81 of 88 placed occupants with both agree. The 7 that disagree have `level` only and follow the physical convention | `registry/sources/brands/mall-plan-evidence.json` |
 | F49 | 2026-10-06 | A website URL with HTML character references: the CWG directory gives Diptyque's website as `https://www.diptyqueparis.com/en_uk/?_mkpid=…&#038;_mkpc=…` (9 times `&#038;`, the HTML escape of `&`). It is copied unchanged into `cwg-directory.json`, `branches.json`, the typed directory (`.json`, `.nq`) and kgx (`cwg` graph, `s:url`). With several `#` it is not a valid IRI (RFC 3987): Factoidal parses and packs it without a warning, Oxigraph refuses it unless loaded leniently | validity (extraction: an HTML attribute value not decoded) | open; rule to add: decode HTML character references in URL attributes when the CWG pages are read, then re-derive the files above | the one URL, found by the store differential check (`tools/check-kgx-store.mjs`, Oxigraph strict load) |
 | F50 | 2026-10-06 | Open track heights jump between the viaduct deck and the ground: `area.js` takes rail, light-rail and subway heights from the LiDAR surface model (DSM) at each OSM node, so on viaducts a node can hit the deck, the ground beside it, or a roof. Bridge points over 20 m above the ground are already interpolated (F10); smaller jumps stay. 114 of 1,052 open rail lines have a height off the mean of its two neighbours by more than 3 m where the nodes are under 40 m apart (worst 26.2 m, London, Tilbury & Southend Railway bridge; DLR up to 13 m, e.g. 19.6, 13.8, 19.1, 15.1 m). Seen as zigzag red lines in the owner's plot of 2026-10-06 | validity (source sampling) | open. Display rules in use: the drone's tube mode (`drone.js` `rails()`) and the plotter (`plotter-svg.js`) use a moving average over 5 points; the 3D page still draws the raw heights. Rule to add in `tools/build-docklands.mjs`: one deck profile per bridge chain (a robust fit to the DSM samples, with the station and ground ends as anchors), then re-derive `area.js` | the count above (`area.js` of 2026-10-06, script in the activity log entry) |
+| F51 | 2026-10-07 | Phone photos are Display P3, and the facade tools read them as sRGB: every JPEG of the owner's sets cwlibrary and cwdock embeds an ICC profile 'Display P3' while its EXIF ColorSpace tag says sRGB. `facade.py` and `measure.py` (OpenCV `imread`) and `tools/facade-tile.py` (Pillow, no profile conversion) take the P3 values as sRGB, and the tiles and the atlas are saved without a profile. Size, CIELAB D65 difference between the right reading and the sRGB reading of the same P3 values: neutrals under 1 (the cwdock white sign 0.3, cream 1.7), red-brown brick 5.7, an oxide-red frame 7.1, the safety yellow of a sticker 24.4 (out of the sRGB gamut) | meaning (colour space of the source files) | open. Rule to add: convert with the embedded profile to sRGB (Pillow `ImageCms`) before `rectify-facade-patches` and `cut-facade-tiles` measure or cut, then bump both operation versions and re-derive the cwlibrary and cwdock graphs and the atlas. Low-chroma tiles (Ontario Point, the library mesh) change little; brick and red frames are desaturated now | `exiftool` on the 24 photos; the P3 and sRGB matrices on the cwdock calibration values (londat `data/images/contrib/cwdock/photos.json` `calibration`) |
+| F52 | 2026-10-07 | Buildings finished after the 2022 LiDAR survey with no `building:levels` or `height` in OSM keep the survey-time site in `area.js`: a dig or a guessed 6 m. Seen in the owner's photos of 2026-10-07 (set cwdock): a residential tower on Marsh Wall at Consort Place (OSM way 988728458, model building 21116) is drawn as a pit, ground -7.5 m OD, roof -0.1 m OD, while photo 01 puts its top at about 216 m OD (+-15 m, from a solved camera); Three Deal Porters (way 1428008978, model 36552) is a guessed 6 m and the photo shows 6 storeys (about 25 to 28 m) | currency (source) and coverage (our height rule) | open. Counted on `area.js` of 2026-10-03: 247 model buildings have a guessed height, 21 of them with footprints over 800 m2 (e.g. UNCLE Deptford, Dockley Apartments, Seraphina Apartments, Three Deal Porters, Amparo House); 6 LiDAR buildings over 300 m2 have their ground below 0 m OD (digs, the Consort Place tower among them). Rule to add in `tools/build-docklands.mjs`: for these, take storeys from a dated source (Planning London Datahub storeys, the construction index, Wikidata, a photo count) with the source marked, else flag the building | the counts above (script in the activity log entry of 2026-10-07); cwdock `photos.json` `buildings.consort-place-tower`, `buildings.three-deal-porters` |
 
 Add new faults here with the next F number, and in the activity log.
 
@@ -409,6 +411,36 @@ textures for their 3D models."
   of `docklands/data/tex/facades.jpg/.json`, keyed by OSM id with model indices from `key-model-buildings.mjs`. The page
   draws them on any building (skill `docklands-3d-page`, "Building keys"). Order after new photos: `contrib-photos.mjs
   <set>`, `compose-facade-atlas.mjs`, `build-kgx.mjs`; after a model rebuild: `key-model-buildings.mjs` first.
+- **Sets:** `cwlibrary` (4 photos, 2026-10-06 about 16:30 BST, low evening sun) and `cwdock` (20 photos, 2026-10-07 about
+  09:00 BST, overcast and light drizzle; owner: "taken NOW near the Dock by the Library ... one of some stickers on the
+  library door for white calibration"). Name a set after the place (`cw<place>`), number the photos in the owner's order.
+- **Files as delivered:** keep the JPEG bytes; record in `photos.json` what EXIF has. The owner's phone JPEGs so far have
+  no time, GPS, make or model, and embed a Display P3 profile while the EXIF ColorSpace tag says sRGB (F51).
+- **Map screenshots are evidence, never data:** a phone map screenshot shows the map provider's imagery and labels (not
+  the owner's to license) and the owner's profile picture. Never copy it into either repository. Derive the position:
+  lay OSM outlines (the water, a few buildings) over it at its own scale bar, north up, and read the blue dot's centre
+  (cwdock: 50 m = 216 px; the metric bar ends at the same right end as the feet bar and starts at the lower tick;
+  outlines fit to 2 to 3 m; fix +-10 m). Its EXIF time dates the walk. The view cone is the phone compass at that moment,
+  not a photo's direction.
+- **White calibration** (cwdock photo 19, stickers on the library door): measure clean boxes of the white (sd about 2);
+  record mean RGB as stored, sRGB, CIELAB, and the linear gains that make it neutral. The phone sets white balance per
+  shot, so do not copy the gains to other photos: balance each photo on its own neutral (overcast sky, white paint) and
+  use the calibration photo to check. Measured on cwdock: the sky within 4 CIELAB units of neutral in all 19 other photos,
+  the white sign at b* +2.5. Printed safety colours are secondary references only (print colour unknown).
+- **Telephoto skylines** (cwdock photo 01, focal 5,570 px, a 3x lens): solve the camera with `solveCamera`
+  (`tools/view-mcp/view-lib.mjs`) with x and z free on 3 or 4 sure tower tops (a logo, a unique form), and hold one out.
+  Three tops leave the position free along a line (a valley of equal rms); four gave +-60 m and a hold-out at 8 px. A
+  tower that no model building explains is new (F52): trace the ray through its top and look for OSM outlines within a
+  few metres of it.
+- **Face orientation:** take an OSM side's outward normal as the perpendicular that points away from the centroid. A
+  sign rule on the ring direction gave inverted normals for some outlines in the cwdock work before it was caught.
+- **Bearings between identified buildings** place a judged camera when a photo shows three or more (main lens: focal
+  about 1,860 px on the 2,576 px side, an assumption): cwdock photo 11 (Ontario, Regina and Columbia Point), photo 18
+  (the brick chimney, OSM way 1175339088, and the station drum). Photo 18 repeats cwlibrary photo 1 and puts that camera
+  about 65 m south-south-east of Ontario Point, not south-west: open, the cwlibrary face names and the 24.0 m tile width
+  need a camera solve on the roof corners before they are trusted or changed.
+- **People and vehicles:** do not describe or tag people. Report to the owner which photos show a recognisable face or
+  a readable number plate, for a blur decision before any wider use.
 
 ## Pages and tests
 
