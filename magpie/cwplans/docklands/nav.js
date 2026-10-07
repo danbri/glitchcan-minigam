@@ -190,9 +190,9 @@ function shareState() {
   o.push(['u', $('gauge') && !$('gauge').hidden ? '1' : '0']);
   const on = [], offs = [], rad = [], sel = [], rng = [];
   for (const el of inputs()) {
+    if (el.type === 'radio') { if (el.name && el.checked && !el.defaultChecked) rad.push(el.name + ':' + el.value); continue; }   // radios have no id: keyed by name (style, ground image, buildings, splats)
     const k = keyOf(el); if (!k || VIEW_IDS.has(k)) continue;
     if (el.type === 'checkbox') { if (el.checked !== el.defaultChecked) (el.checked ? on : offs).push(k); }
-    else if (el.type === 'radio') { if (el.checked && !el.defaultChecked) rad.push(el.name + ':' + el.value); }
     else if (el.type === 'range') { const dv = k === 'skyYear' ? el.max : el.defaultValue; if (el.value !== dv) rng.push(k + ':' + el.value); }
     else if (el.tagName === 'SELECT') { if (el.value !== selDefault(el)) sel.push(k + ':' + el.value); }
   }
@@ -205,7 +205,7 @@ function shareState() {
 const enc = v => encodeURIComponent(v).replace(/%2C/g, ',').replace(/%3A/g, ':').replace(/%20/g, '+');
 function shareUrl() {
   const { pairs, follow } = shareState(), u = new URL(location.href);
-  for (const k of ['view', 't', 'night', 'pixel', 'drone']) u.searchParams.delete(k);   // the hash carries these
+  for (const k of ['view', 't', 'night', 'pixel', 'lines', 'vectrex', 'drone']) u.searchParams.delete(k);   // the hash carries these
   u.hash = pairs.map(([k, v]) => k + '=' + enc(v)).join('&');
   return { url: u.href, hash: u.hash, follow };
 }

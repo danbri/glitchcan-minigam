@@ -1308,3 +1308,17 @@ Owner: "don't waste good info by burying it in our chatlogs".
   the 09:08 fix; the bearings put the camera on the pontoon ramp about 55 m west.
 - Privacy: people and vehicles appear incidentally; no person is described or tagged. Photos with a face or a number
   plate that may be readable were listed for the owner (blur decision before wider use).
+
+## 2026-10-07: 3D page Line drawing style, the plotter look in real time (Opus)
+- Owner asked whether the plotter view can be in the app, in real time (WebGPU and wasm allowed), with a Vectrex-like
+  CRT as a variation. Layers > Style > "Line drawing" (`?lines`): new `docklands/line-styles.js`. WebGL 1 is enough:
+  the page's solids go into the depth buffer only, then 838,254 feature edges (instanced quads, 1.1 CSS px) are drawn
+  with the depth test. The edges come from plotter-svg.js's `scene()`, now shared (the plot is byte-identical at four
+  views except the credit's date strokes). Real-time size rule in place of 1 mm / 3 mm (4 and 12 CSS px, faded); 400 m
+  tiles sorted by size draw 21% of the edges in the default view. 22.4 MiB buffer, built in about 2 s.
+- Against the plot of the same camera (new `tools/check-line-styles.mjs`): recall 97-99.9% and precision 99.4-99.99% at
+  2 px. Photo views unchanged in Map style (mean luma to 1e-5). Picking, the share link and the below-ground cut work.
+- Found and fixed: the share link carried no radio at all (style, ground image, buildings mode, splats: radios have no
+  id and nav.js keyed inputs by id); a timer in the inline script can fire before a later script tag has loaded.
+- Register entry for line-styles.js and a pipeline activity for the check tool; check-data-register --write run. Method,
+  numbers and limits: skill docklands-3d-page, "Line styles". Not measured on a phone GPU.

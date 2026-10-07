@@ -1,7 +1,7 @@
-// What a phone GPU would do with the 3D page's shaders, checked without a phone (magpie/cwplans/docklands/index.html and
-// sky.js). Two parts:
+// What a phone GPU would do with the 3D page's shaders, checked without a phone (magpie/cwplans/docklands/index.html,
+// sky.js and line-styles.js). Two parts:
 //  1. The page is opened in headless Chromium (SwiftShader); every shader source the page compiles is captured, and for
-//     each program the tool lists its precision and counts its uniform vectors, varyings, attributes and samplers
+//     each program (the line drawing is switched on once so that its program compiles) the tool lists its precision and counts its uniform vectors, varyings, attributes and samplers
 //     against the WebGL 1 minimums (what any conforming phone must offer) and against what this Chromium reports.
 //  2. The maths that a GPU running mediump as 16-bit floats (Apple's, at least) would get wrong is re-run in Node with
 //     every intermediate rounded to fp16 (IEEE binary16: 10-bit mantissa, exponents to 2^15, subnormals, overflow to
@@ -16,8 +16,8 @@ import { createServer } from 'http';
 import { join, extname } from 'path';
 import { TOOLS } from './lib.mjs';
 
-const ROOT = join(TOOLS, '..', '..', '..'), PAGE = join(TOOLS, '..', 'docklands', 'index.html'), SKY = join(TOOLS, '..', 'docklands', 'sky.js');
-const src = readFileSync(PAGE, 'utf8') + readFileSync(SKY, 'utf8');
+const ROOT = join(TOOLS, '..', '..', '..'), PAGE = join(TOOLS, '..', 'docklands', 'index.html'), SKY = join(TOOLS, '..', 'docklands', 'sky.js'), LINES = join(TOOLS, '..', 'docklands', 'line-styles.js');
+const src = readFileSync(PAGE, 'utf8') + readFileSync(SKY, 'utf8') + readFileSync(LINES, 'utf8');
 let failed = 0;
 
 // ---------- fp16 arithmetic
@@ -81,6 +81,9 @@ if (need('float A=-dot(vq,vq);if(A<-4.)discard;float B=exp(A)*vc.a;', 'splat fal
 }
 if (need('vec3 near(vec3 c){float bd=1e9;', 'palette search')) cases.push({ id: 'pixel-art palette search (ppr, mediump)', prec: 'fp16', result: `bd=1e9 is ${h(1e9)} in fp16 (infinity): every first comparison still succeeds, so the result is the same`, bad: false });
 
+// (h) the line drawing (line-styles.js, mediump fragment shader): the cut test on the world height wy
+if (need('if(wy>cut)discard;', 'line cut test')) for (const y of [2.15, 60.3, 245.3, 320.4]) cases.push({ id: `line styles: cut test at ${y} m OD (mediump)`, prec: 'fp16', result: `wy ${y} is ${h(y)} (error ${Math.abs(h(y) - y).toFixed(3)} m); the cut level is passed as at most 1e4 (${h(1e4)})`, bad: Math.abs(h(y) - y) > .25 });
+
 // ---------- part 1: the shader sources and their counts, from the running page
 async function capture() {
   const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.gz': 'application/gzip', '.bin': 'application/octet-stream' };
@@ -98,6 +101,10 @@ async function capture() {
     const gc = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (k, o) { const g = gc.call(this, k, o); if (g && /webgl/.test(k) && !window.__gl) window.__gl = g; return g; }; });
   await page.goto(`http://127.0.0.1:${port}/magpie/cwplans/docklands/index.html?t=photo&view=greenland`);
   await page.waitForFunction(() => window.__docklands?.AT && window.__docklands.NIGHT.built && window.DocklandsSky?.S?.ready, null, { timeout: 240000 });
+  for (const m of ['lines']) {   // the line drawing compiles its program when first drawn
+    await page.evaluate(m => window.__docklands.setStyle(m), m); await page.waitForFunction(() => window.DocklandsLines?.built, null, { timeout: 240000 });
+    await page.evaluate(() => window.__docklands.renderNow()); }
+  await page.evaluate(() => window.__docklands.setStyle('normal'));
   const r = await page.evaluate(() => { const g = window.__gl, L = n => g.getParameter(g[n]); return { progs: window.__shaders, lim: Object.fromEntries(['MAX_VERTEX_UNIFORM_VECTORS', 'MAX_FRAGMENT_UNIFORM_VECTORS', 'MAX_VARYING_VECTORS', 'MAX_TEXTURE_IMAGE_UNITS', 'MAX_VERTEX_ATTRIBS'].map(n => [n, L(n)])),
     hp: g.getShaderPrecisionFormat(g.FRAGMENT_SHADER, g.HIGH_FLOAT).precision, mp: g.getShaderPrecisionFormat(g.FRAGMENT_SHADER, g.MEDIUM_FLOAT).precision }; });
   await browser.close(); srv.close(); return { ...r, errors };
@@ -109,7 +116,7 @@ function count(code, kind) {
   while ((m = re.exec(c))) for (const v of m[2].split(',')) { const a = /\[(\d+)\]/.exec(v), k = a ? +a[1] : 1; if (/sampler/.test(m[1])) samp += k; else n += rows(m[1]) * k; }
   return { n, samp };
 }
-const names = s => s.type === 'fragment' ? (/pal\[33\]/.test(s.src) ? 'ppr pixel-art pass' : /nightCol/.test(s.src) ? 'prF buildings' : /fslot|vq\.w/.test(s.src) && /refl/.test(s.src) ? 'lpr light sprites' : /float A=-dot\(vq,vq\)/.test(s.src) ? 'prS splats' : /uniform vec2 v;/.test(s.src) && /texture2D\(t,uv/.test(s.src) ? 'bloom pass' : /layer\(vec3 d/.test(s.src) ? 'sky (sky.js)' : /gl_PointCoord/.test(s.src) ? 'sky points (sky.js)' : /mono/.test(s.src) ? 'pr ground, water, lines' : 'other') : '';
+const names = s => s.type === 'fragment' ? (/uniform float add;/.test(s.src) ? 'line styles (line-styles.js)' : /uniform sampler2D t2;/.test(s.src) ? 'afterglow (line-styles.js)' : /pal\[33\]/.test(s.src) ? 'ppr pixel-art pass' : /nightCol/.test(s.src) ? 'prF buildings' : /fslot|vq\.w/.test(s.src) && /refl/.test(s.src) ? 'lpr light sprites' : /float A=-dot\(vq,vq\)/.test(s.src) ? 'prS splats' : /uniform vec2 v;/.test(s.src) && /texture2D\(t,uv/.test(s.src) ? 'bloom pass' : /layer\(vec3 d/.test(s.src) ? 'sky (sky.js)' : /gl_PointCoord/.test(s.src) ? 'sky points (sky.js)' : /mono/.test(s.src) ? 'pr ground, water, lines' : 'other') : '';
 if (!process.argv.includes('--no-browser')) {
   const C = await capture(), MIN = { MAX_VERTEX_UNIFORM_VECTORS: 128, MAX_FRAGMENT_UNIFORM_VECTORS: 16, MAX_VARYING_VECTORS: 8, MAX_TEXTURE_IMAGE_UNITS: 8, MAX_VERTEX_ATTRIBS: 8 };
   console.log(`page errors: ${C.errors.length ? C.errors.join(' | ') : 'none'}`);

@@ -48,24 +48,24 @@ function clipPoly(P, inside, cross) {   // Sutherland-Hodgman against one plane
 }
 const lerp = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 
-// ---------- scene
-function scene(P, cam, minPx) {
-  const cutY = P.cut < 250 ? P.cut : Infinity, O = [], E = Object.fromEntries(LAYERS.map(l => [l[0], []])), seen = new Set();
-  const tri = (a, b, c) => O.push(a, b, c);
-  const seg = (L, a, b, dedupe) => {
+// ---------- scene: the edges of each layer, from the page's data. opt.emit(layer, a, b, g) takes each edge, g = [size m,
+// rank] for the real-time size rule (rank 0 roof outline, 1 base or corner edge, 2 ground outline or kerb; no g: always
+// drawn); opt.small(box) gives 0 (all edges), 1 (roof outline only) or 2 (none) for a building's box [x0 y0 z0 x1 y1 z1];
+// opt.tri(a, b, c) takes each solid that hides lines (none made without it); opt.under adds the underground edges and the
+// paths below ground with no cut. line-styles.js draws the same edges in real time.
+function scene(P, opt) {
+  const cutY = P.cut < 250 ? P.cut : Infinity, seen = new Set(), nop = () => {};
+  const tri = opt.tri || nop, small = opt.small || (() => 0);
+  const seg = (L, a, b, dedupe, g) => {
     if (dedupe) { const k1 = a.map(v => Math.round(v * 5)).join() + '|' + b.map(v => Math.round(v * 5)).join(), k2 = k1.split('|').reverse().join('|'); if (seen.has(k1) || seen.has(k2)) return; seen.add(k1); }
-    E[L].push(a, b);
+    opt.emit(L, a, b, g);
   };
   const ringsOf = (f, holes) => { const starts = [0, ...(holes || []), f.length / 2], R = []; for (let r = 0; r < starts.length - 1; r++) { const ring = []; for (let i = starts[r]; i < starts[r + 1]; i++) ring.push([f[2 * i], f[2 * i + 1]]); R.push(ring); } return R; };
-  // a building smaller than minPx on the screen still hides what is behind it, but its edges are not drawn
-  const small = (rings, y0, y1) => { let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (const p of rings[0]) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }
-    let sx0 = Infinity, sx1 = -Infinity, sy0 = Infinity, sy1 = -Infinity;
-    for (const q of [[x0, y0, z0], [x1, y1, z1], [x0, y1, z1], [x1, y0, z0], [x0, y1, z0], [x1, y1, z0]]) { const c = cam.clip(...q); if (!nearOK(c) || c[3] <= 0) return false; const s = cam.scr(c);
-      sx0 = Math.min(sx0, s[0]); sx1 = Math.max(sx1, s[0]); sy0 = Math.min(sy0, s[1]); sy1 = Math.max(sy1, s[1]); }
-    const sz = Math.max(sx1 - sx0, sy1 - sy0); return sz < minPx ? 2 : sz < 3 * minPx ? 1 : 0; };
+  const boxOf = (ring, y0, y1) => { let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (const p of ring) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); } return [x0, y0, z0, x1, y1, z1]; };
   const prism = (rings, y0, y1, roof = true) => {
     if (y0 >= cutY) return; const cut = y1 > cutY; if (cut) y1 = cutY;
-    const sz = small(rings, y0, y1), segB = sz === 2 ? () => {} : seg, segD = sz ? () => {} : seg;   // 1: roof outline only
+    const box = boxOf(rings[0], y0, y1), sz = small(box), size = Math.max(box[3] - box[0], box[5] - box[2], y1 - y0);
+    const segB = sz === 2 ? nop : (L, a, b, d) => seg(L, a, b, d, [size, 0]), segD = sz ? nop : (L, a, b, d) => seg(L, a, b, d, [size, 1]);   // 1: roof outline only
     for (const ring of rings) { const n = ring.length;
       for (let i = 0; i < n; i++) { const p = ring[i], q = ring[(i + 1) % n], o = ring[(i + n - 1) % n];
         tri([p[0], y0, p[1]], [q[0], y0, q[1]], [q[0], y1, q[1]]); tri([p[0], y0, p[1]], [q[0], y1, q[1]], [p[0], y1, p[1]]);
@@ -73,7 +73,7 @@ function scene(P, cam, minPx) {
         const t1 = Math.atan2(p[1] - o[1], p[0] - o[0]), t2 = Math.atan2(q[1] - p[1], q[0] - p[0]); let d = Math.abs(t2 - t1); if (d > Math.PI) d = 2 * Math.PI - d;
         if (d > .45) segD('bld', [p[0], y0, p[1]], [p[0], y1, p[1]], true);   // a corner of more than about 26 degrees: a vertical edge
       } }
-    if (roof && !cut) { const flatv = [], holes = []; for (const r of rings) { if (flatv.length) holes.push(flatv.length / 2); for (const p of r) flatv.push(p[0], p[1]); }
+    if (roof && !cut && opt.tri) { const flatv = [], holes = []; for (const r of rings) { if (flatv.length) holes.push(flatv.length / 2); for (const p of r) flatv.push(p[0], p[1]); }
       const t = C.earcut(flatv, holes.length ? holes : undefined, 2); for (let k = 0; k < t.length; k += 3) tri(...[t[k], t[k + 1], t[k + 2]].map(i => [flatv[2 * i], y1, flatv[2 * i + 1]])); }
   };
   // buildings and fitted towers, as the page draws them
@@ -86,7 +86,7 @@ function scene(P, cam, minPx) {
     for (let i = 0; i < r.length; i++) { const p = r[i], q = r[(i + 1) % r.length]; tri([p[0], tr.y0, p[1]], [q[0], tr.y0, q[1]], [ax, ay, az]); seg('bld', [p[0], tr.y0, p[1]], [q[0], tr.y0, q[1]], true); seg('bld', [p[0], tr.y0, p[1]], [ax, ay, az], true); }
   });
   // terrain: an occluder only when the model is not cut open (the page then draws the ground faint)
-  if (cutY === Infinity) { const G = C.A.terrain, h = (i, j) => G.dm[j * G.nx + i] / 10;
+  if (cutY === Infinity && opt.tri) { const G = C.A.terrain, h = (i, j) => G.dm[j * G.nx + i] / 10;
     for (let j = 0; j < G.nz - 1; j++) for (let i = 0; i < G.nx - 1; i++) { const x0 = G.x0 + i * G.cell, z0 = G.z0 + j * G.cell, x1 = x0 + G.cell, z1 = z0 + G.cell;
       const a = [x0, h(i, j), z0], b = [x1, h(i + 1, j), z0], c = [x0, h(i, j + 1), z1], d = [x1, h(i + 1, j + 1), z1]; tri(a, b, c); tri(b, d, c); } }
   // Lines on the ground (water and green outlines, kerbs, railways) are draped on the same triangles as the terrain
@@ -101,10 +101,11 @@ function scene(P, cam, minPx) {
   const along = (a, b, out) => { const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[2] - a[2]) / (G.cell / 2)));
     for (let s = out.length ? 1 : 0; s <= n; s++) out.push(lerp(a, b, s / n)); return out; };
   const onGround = (p, lift) => [p[0], Math.max(p[1], surfY(p[0], p[2])) + lift, p[2]];
-  const polyline = (L, P, lift) => { for (let i = 1; i < P.length; i++) seg(L, onGround(P[i - 1], lift), onGround(P[i], lift)); };
+  const polyline = (L, P, lift, g) => { for (let i = 1; i < P.length; i++) seg(L, onGround(P[i - 1], lift), onGround(P[i], lift), false, g); };
   // water and greens: outlines on the surface
-  const outline = (L, o, y0, lift) => { for (const ring of ringsOf(C.dec(o.p), o.holes)) for (let i = 0; i < ring.length; i++) { const p = ring[i], q = ring[(i + 1) % ring.length];
-    if (p[1] === q[1] && p[0] === q[0]) continue; polyline(L, along([p[0], y0, p[1]], [q[0], y0, q[1]], []), lift); } };
+  const outline = (L, o, y0, lift) => { const R = ringsOf(C.dec(o.p), o.holes), bx = boxOf(R[0], 0, 0), g = [Math.max(bx[3] - bx[0], bx[5] - bx[2]), 2];
+    for (const ring of R) for (let i = 0; i < ring.length; i++) { const p = ring[i], q = ring[(i + 1) % ring.length];
+      if (p[1] === q[1] && p[0] === q[0]) continue; polyline(L, along([p[0], y0, p[1]], [q[0], y0, q[1]], []), lift, g); } };
   for (const w of C.A.water) outline('water', w, w.level, .1);
   for (const g of C.A.greens) outline('green', g, -1e4, .3);
   // roads (both kerbs) and open railways (centre line). A kerb point at a bend lies on the mitre (the mean of the two
@@ -128,22 +129,29 @@ function scene(P, cam, minPx) {
       const s = w / Math.max(.5, (mx * n1[0] + mz * n1[1]) / ml) / ml;
       return [mx * s, mz * s];
     });
-    for (const sg of [1, -1]) polyline('road', V.map((p, i) => [p[0] + sg * off[i][0], p[1], p[2] + sg * off[i][1]]), .3);
+    for (const sg of [1, -1]) polyline('road', V.map((p, i) => [p[0] + sg * off[i][0], p[1], p[2] + sg * off[i][1]]), .3, [2 * w, 2]);
   }
   // paths and corridors with a level tag, at the page's heights (station models: measured floors)
   const ST = globalThis.DocklandsStations, U = globalThis.DOCKLANDS_UNDER;
   if (U && $('showUnder') && $('showUnder').checked) for (const o of U.indoor) if (o.line) { const f = C.dec(o.line);
     if (ST && ST.inside(f[0], f[1])) continue;
-    for (const lv of o.lv) { const ly = lv < 0 && ST ? ST.levelY(f[0], f[1], lv, o.g) : null, y = ly ?? o.g + lv * P.storey + .2; if (y < C.groundAt(f[0], f[1]) - 1 && cutY === Infinity) continue;
+    for (const lv of o.lv) { const ly = lv < 0 && ST ? ST.levelY(f[0], f[1], lv, o.g) : null, y = ly ?? o.g + lv * P.storey + .2; if (y < C.groundAt(f[0], f[1]) - 1 && cutY === Infinity && !opt.under) continue;
       for (let i = 2; i < f.length; i += 2) seg('path', [f[i - 2], y, f[i - 1]], [f[i], y, f[i + 1]]); } }
   // underground: tunnels and the station models, drawn when the model is cut open
-  if (cutY < Infinity) {
+  if (cutY < Infinity || opt.under) {
     for (const l of C.A.lines) if (l.tunnel) for (let i = 1; i < l.pts.length; i++) { const a = l.pts[i - 1], b = l.pts[i];
       for (const [s, e] of ST ? ST.outside(a[0], a[1], b[0], b[1]) : [[0, 1]]) { const ya = C.tunnelY(l, a, P) + 3, yb = C.tunnelY(l, b, P) + 3;
         seg('under', [a[0] + (b[0] - a[0]) * s, ya + (yb - ya) * s, a[1] + (b[1] - a[1]) * s], [a[0] + (b[0] - a[0]) * e, ya + (yb - ya) * e, a[1] + (b[1] - a[1]) * e]); } }
     if (ST && ST.S.doc && $('showStations') && $('showStations').checked) stationEdges(ST.S.doc, seg, tri);
   }
-  return { O, E, cutY };
+  return { cutY };
+}
+// a building's size on the screen from its box: 0 draw all edges, 1 (under 3 minPx) roof outline only, 2 (under minPx) none
+function smallOf(cam, minPx, b) {
+  const [x0, y0, z0, x1, y1, z1] = b; let sx0 = Infinity, sx1 = -Infinity, sy0 = Infinity, sy1 = -Infinity;
+  for (const q of [[x0, y0, z0], [x1, y1, z1], [x0, y1, z1], [x1, y0, z0], [x0, y1, z0], [x1, y1, z0]]) { const c = cam.clip(...q); if (!nearOK(c) || c[3] <= 0) return 0; const s = cam.scr(c);
+    sx0 = Math.min(sx0, s[0]); sx1 = Math.max(sx1, s[0]); sy0 = Math.min(sy0, s[1]); sy1 = Math.max(sy1, s[1]); }
+  const sz = Math.max(sx1 - sx0, sy1 - sy0); return sz < minPx ? 2 : sz < 3 * minPx ? 1 : 0;
 }
 function stationEdges(doc, seg, tri) {   // feature edges: a boundary, or two faces more than 30 degrees apart
   const GLASS = new Set(['box', 'hall', 'canopy']);
@@ -274,7 +282,8 @@ function make(opts = {}) {
   const t0 = performance.now(), cv = $('c'), W0 = cv.clientWidth, H0 = cv.clientHeight, s = Math.min(2, 2400 / Math.max(W0, H0)), W = Math.round(W0 * s), H = Math.round(H0 * s);
   const [pw0, ph0] = PAPER[opts.paper || 'A3'], land = W >= H, PW = land ? pw0 : ph0, PH = land ? ph0 : pw0;
   const k = Math.min((PW - 2 * MARGIN) / W, (PH - 2 * MARGIN - 6) / H), ox = (PW - W * k) / 2, oy = MARGIN + (PH - 2 * MARGIN - 6 - H * k) / 2;
-  const P = C.par(), cam = camera(W, H), Z = zbuffer(W, H), { O, E, cutY } = scene(P, cam, (opts.minMm ?? 1) / k);
+  const P = C.par(), cam = camera(W, H), Z = zbuffer(W, H), O = [], E = Object.fromEntries(LAYERS.map(l => [l[0], []])), minPx = (opts.minMm ?? 1) / k;
+  const { cutY } = scene(P, { small: b => smallOf(cam, minPx, b), emit: (L, a, b) => E[L].push(a, b), tri: (a, b, c) => O.push(a, b, c) });
   // occluders: clip to the cut level and the near plane, then fill the z-buffer
   let nTri = 0;
   for (let k = 0; k < O.length; k += 3) { let poly = [O[k], O[k + 1], O[k + 2]];
@@ -325,6 +334,6 @@ function injectUi() {
   sb.after(row); $('plotBtn').onclick = download; return true;
 }
 function init(ctx) { C = ctx; if (!injectUi()) document.addEventListener('DOMContentLoaded', injectUi, { once: true }); }
-globalThis.DocklandsPlot = { init, make, download };
+globalThis.DocklandsPlot = { init, make, download, scene, LAYERS };
 if (globalThis.DocklandsPlotCtx) init(globalThis.DocklandsPlotCtx);
 })();

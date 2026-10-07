@@ -5617,6 +5617,9 @@
         },
         {
           "file": "docklands/sky.js"
+        },
+        {
+          "file": "docklands/line-styles.js"
         }
       ],
       "generated": [],
@@ -5630,6 +5633,36 @@
       ],
       "network": false,
       "deterministic": true,
+      "after": [],
+      "area": "imagery",
+      "faults": []
+    },
+    {
+      "id": "check-line-styles",
+      "tool": "tools/check-line-styles.mjs",
+      "command": "node magpie/cwplans/tools/check-line-styles.mjs [--out DIR]",
+      "kind": "check",
+      "used": [
+        {
+          "file": "docklands/index.html"
+        },
+        {
+          "file": "docklands/line-styles.js"
+        },
+        {
+          "file": "docklands/plotter-svg.js"
+        }
+      ],
+      "generated": [],
+      "method": "Opens the 3D page with the Line drawing style in headless Chromium at four views and sizes, renders the line drawing and makes the Plotter SVG of the same camera, draws the SVG at the canvas size in the plotter's own page frame and matches the ink pixel by pixel; prints the edge counts, buffer bytes, build time, edges drawn, frame time and recall and precision within 1 and 2 px.",
+      "rules": [
+        "Ink: luma under 0.8 in the line drawing; the SVG's strokes drawn black at one canvas pixel, the credit left out.",
+        "Recall: plot ink with line-drawing ink within the tolerance (a square of 2 x tol + 1 px); precision: the other way.",
+        "Fails on a page error, a style that did not switch on, or recall under 95% or precision under 97% at 2 px.",
+        "Frame times come from SwiftShader (the GPU in software): not a phone. Writes images only with --out."
+      ],
+      "network": false,
+      "deterministic": false,
       "after": [],
       "area": "imagery",
       "faults": []

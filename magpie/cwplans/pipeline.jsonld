@@ -6292,6 +6292,9 @@
     },
     {
      "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/sky.js"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/line-styles.js"
     }
    ],
    "prov:generated": [],
@@ -6309,6 +6312,40 @@
    ],
    "cwp:network": false,
    "cwp:deterministic": true,
+   "cwp:after": [],
+   "cwp:area": "imagery",
+   "cwp:fault": []
+  },
+  {
+   "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#activity/check-line-styles",
+   "@type": "prov:Activity",
+   "rdfs:label": "check-line-styles",
+   "dct:description": "Opens the 3D page with the Line drawing style in headless Chromium at four views and sizes, renders the line drawing and makes the Plotter SVG of the same camera, draws the SVG at the canvas size in the plotter's own page frame and matches the ink pixel by pixel; prints the edge counts, buffer bytes, build time, edges drawn, frame time and recall and precision within 1 and 2 px.",
+   "prov:used": [
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/index.html"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/line-styles.js"
+    },
+    {
+     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/plotter-svg.js"
+    }
+   ],
+   "prov:generated": [],
+   "cwp:tool": {
+    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/check-line-styles.mjs"
+   },
+   "cwp:command": "node magpie/cwplans/tools/check-line-styles.mjs [--out DIR]",
+   "cwp:kind": "check",
+   "cwp:rule": [
+    "Ink: luma under 0.8 in the line drawing; the SVG's strokes drawn black at one canvas pixel, the credit left out.",
+    "Recall: plot ink with line-drawing ink within the tolerance (a square of 2 x tol + 1 px); precision: the other way.",
+    "Fails on a page error, a style that did not switch on, or recall under 95% or precision under 97% at 2 px.",
+    "Frame times come from SwiftShader (the GPU in software): not a phone. Writes images only with --out."
+   ],
+   "cwp:network": false,
+   "cwp:deterministic": false,
    "cwp:after": [],
    "cwp:area": "imagery",
    "cwp:fault": []
@@ -14686,6 +14723,20 @@
    ],
    "cwp:osmUse": "none",
    "cwp:review": "Hershey font data: free for any use if the acknowledgement goes with the data (the Hershey Fonts were originally created by Dr. A. V. Hershey while working at the U. S. National Bureau of Standards; the format of the font data was originally created by James Hurt, Cognition, Inc.); the acknowledgement is in the file header. Not share-alike. The OFL-licensed EMS Hershey SVG fonts were not used."
+  },
+  {
+   "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/docklands/line-styles.js",
+   "@type": [
+    "prov:Entity",
+    "dcat:Distribution"
+   ],
+   "dct:title": "code, not data: the 3D page's line styles (Layers > Style): Line drawing (?lines, the plotter drawing in real time: feature edges as screen-space quads, hidden lines removed by the depth buffer of the page's own solids, the plotter's pen colours); the edges come from plotter-svg.js's rules (DocklandsPlot.scene); drawn in the browser from the page's own data, nothing sent",
+   "prov:wasDerivedFrom": [
+    {
+     "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
+    }
+   ],
+   "cwp:osmUse": "none"
   },
   {
    "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/atlas/kml-atlas.js",
