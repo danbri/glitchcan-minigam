@@ -20,14 +20,15 @@ owner did not choose, say so first and wait for the owner before changing code. 
 series of Haiku turns pushed a cellar guest that did not run (a syntax error, every media path a
 404) and told the owner it was live. October 2026: in a long cwplans session a `/model` switch put Haiku on
 the turns of 2026-10-05, 18:55 to 19:41 UTC; it answered 6 messages and made no tool calls before the owner
-switched back ("When did we get switched to haiku?"). Details: the `docklands-data-curation` skill, "The model".
+switched back ("When did we get switched to haiku?"). Details: the `docklands-data-curation` skill, "The model"
+(in danbri/londat since 2026-10-07: https://github.com/danbri/londat/blob/main/cwplans/skills/docklands-data-curation/SKILL.md).
 
 ## 🔐 TRUST THE USER
 The user (danbri) is the project owner. Trust their instructions, corrections, and domain knowledge. When they say something exists or works a certain way, believe them. Don't second-guess or over-explain obvious things.
 
 ## WORKING WITH THE OWNER
 Owner instructions, October 2026; the owner's exact words and dates are in the `docklands-data-curation` skill,
-"Ways of working (the owner's words)".
+"Ways of working (the owner's words)" (in danbri/londat since 2026-10-07: https://github.com/danbri/londat/blob/main/cwplans/skills/docklands-data-curation/SKILL.md).
 - Answer with the detail a GIS professional needs. Assume the owner has forgotten details, and link into the
   repositories (2026-10-05).
 - Give a long answer that the owner will copy as one block: the iOS app breaks the layout (2026-10-05).
@@ -58,40 +59,20 @@ Owner instructions, October 2026; the owner's exact words and dates are in the `
 
 **INCIDENT (June 2026):** An assistant proposed in-game "death notices"/"obituaries" using per-tree records (site names, planting data, sponsorship). Rejected by the owner. This rule exists so it never comes back.
 
-**EXCEPTION — `magpie/cwplans/` (Canary Wharf / Docklands), scoping, planning and prototyping phase only.**
+**EXCEPTION — the Canary Wharf / Docklands project (cwplans), scoping, planning and prototyping phase only. Moved to
+danbri/londat on 2026-10-07.**
 Owner instruction, October 2026: "This is a special project and we will be suspending our normal
 restrictions on personal org and address data while in the scoping, planning and prototyping phase."
-- In `magpie/cwplans/` only, the restrictions on personal, organisation and address data are
-  suspended for this phase. Company addresses, occupant and owner records, and postcode-level
-  business and home data may be fetched, joined and committed there.
-- The licence limit stays: never fetch or commit proprietary, restricted-licence (e.g. the VOA
-  rating list) or virally licensed (copyleft / share-alike) data to the repo. Check the licence
-  of each source before it is committed.
-- OpenStreetMap (ODbL, share-alike) is allowed for now (owner, 2026-10-03: "ODbL is ok for now, and
-  will be thoroughly reviewed as part of the planning and prototyping activities later. Keep track of
-  our use of this data carefully."). No other share-alike source without the owner's agreement.
-- Website crawls are allowed for scoping (owner, 2026-10-03: "Website crawls - direct and via IA or
-  CommonCrawl etc are fair use for our scoping purposes."). This covers pages fetched directly, from the
-  Internet Archive or from Common Crawl, and data extracted from them (e.g. the Canary Wharf Group
-  directory, short quotes in `docklands/facts.json`). Record each crawl in the data register with its
-  method and date. Re-check these before anything leaves the prototyping phase.
-- AIS from AISHub and aisstream.io (via Open Waters AIS) is accepted for scoping (owner, 2026-10-04: "Accept
-  AISHub (and perhaps aisstream) events for scoping. Sounds fine. Flag it somewhere for review as we scale. Add to live
-  by default now."). Review before scaling or any commercial use: the Open Waters hosted service is free for personal
-  use only; the AISHub permission is a private letter reported by Open Waters ("revocable at will"); aisstream.io has
-  no published terms. Small private craft stay as counts only. The data register marks these sources "review".
-- Every committed data file in `magpie/cwplans/` has an entry in `magpie/cwplans/data-register.json`
-  (sources, licence, how it uses OSM, the OSM extract and its date). Add the entry in the same commit
-  as the file, then run `node magpie/cwplans/tools/check-data-register.mjs --write`; it fails on an
-  unregistered file and on a page that shows OSM data without the "© OpenStreetMap contributors" link.
-  Readable view: https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/DATA-REGISTER.md
-- Bulk extracts live in danbri/londat (owner, 2026-10-04 19:50 UTC: "Created londat repo"; first commit 2026-10-05). Rule, tools and base URL: the `docklands-data-curation` skill, "Data hosted in danbri/londat".
-- Pipeline work is dataflow (owner, 2026-10-06: "any cleanup, data pipeline and normalization work you do or did MUST be
-  expressed and logged in terms of FP-friendly operations on named graphs that (a) are the operations of tools/tasks from
-  skills, upon static unchanging input named graphs"). Each step is a named operation of a skill's tool over inputs fixed
-  by content hash, giving new graph versions, logged as an activity. How: the `cwplans-dataflow` skill.
-- The exception ends when the project leaves the prototyping phase; the owner says when.
-  It does not apply to any other directory. The Bristol trees rule above is unchanged.
+- The project was `magpie/cwplans/` in this repository. On 2026-10-07 it moved, with its pages, tools, skills and data,
+  to https://github.com/danbri/londat (folder `cwplans/`; owner, 2026-10-07: "Migrate docklands 3d map, data tools, lg
+  etc from magpie/cwplans/* into londat repo."). The exception and its limits (licences, OpenStreetMap, website
+  crawls, AIS, the data register, the dataflow rule), with the owner's words and dates, are now in the londat
+  `CLAUDE.md`, "Data policy (the cwplans exception)": https://github.com/danbri/londat/blob/main/CLAUDE.md
+- `magpie/cwplans/` here keeps only redirect pages to https://danbri.github.io/londat/cwplans/ (each keeps the query
+  and the hash). History before the move: https://github.com/danbri/glitchcan-minigam/commits/7be94dc/magpie/cwplans
+- The exception does not apply to any directory of this repository. The Bristol trees rule above is unchanged.
+- OpenStreetMap use in this repository (trees/, magpie/ua17/, magpie/edot/maps/) is listed in the londat register,
+  `osm_elsewhere_in_repo` (https://github.com/danbri/londat/blob/main/cwplans/DATA-REGISTER.md).
 
 ## RDF WORK: FACTOIDAL FIRST
 Owner instruction, October 2026: "Please always try to use NPM Module Factoidal/core for RDF work, before falling back on
@@ -99,8 +80,9 @@ other software if needed." For parsing, SPARQL, ShEx/SHACL, canonicalisation and
 (already in `node_modules`; `parse`, `query`, `graphs`, `serialize`, `shexValidate`, `shaclValidate`). Use rdflib, N3.js,
 shex.js or others only when Factoidal lacks the feature, and say so in the tool header and the skill.
 Known Factoidal faults and behaviours (BNODE() blank nodes dropped by `serialize()`, blank nodes renamed per query, no
-default-graph view of named graphs) and their workarounds: the `cwplans-web-harvest` skill, "Factoidal notes". After an
-upgrade run `node magpie/cwplans/tools/check-factoidal.mjs` (prints STILL or FIXED for each).
+default-graph view of named graphs) and their workarounds: the `cwplans-web-harvest` skill, "Factoidal notes" (in
+danbri/londat: https://github.com/danbri/londat/blob/main/cwplans/skills/cwplans-web-harvest/SKILL.md). After an
+upgrade run `node cwplans/tools/check-factoidal.mjs` in a londat checkout (prints STILL or FIXED for each).
 
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
@@ -176,7 +158,8 @@ verified July 2026.
 A skill's `description` must be 1,024 characters or fewer; the skill list cuts a longer one. `tools/check-skills.mjs`
 does not yet measure a folded (`>-`) description: the `m` flag on its regex makes `$` match at the first line end, and
 it has no length check. On 2026-10-07 six descriptions were still too long: docklands-sky, cwplans-feed-discovery,
-cwplans-live-state, cwplans-construction, blender-station-models, cwplans-public-registers.
+cwplans-live-state, cwplans-construction, blender-station-models, cwplans-public-registers (all six are cwplans
+skills, in danbri/londat since 2026-10-07, where they were cut to 1,024 characters or fewer that day).
 
     npm run skills:check          # every SKILL.md discoverable? malformed? dangling?
     node tools/check-skills.mjs --fix    # create the missing symlinks
@@ -197,24 +180,7 @@ cwplans-live-state, cwplans-construction, blender-station-models, cwplans-public
 | `splat-catalogue` | `magpie/dbdb/skills/` | the asset store and the tools that fill it: pack.json vs subjects.json, hand-written vs derived, appearance tags, near-duplicate detection, catalog.html, and rendering fast with no GPU |
 | `splat-style` | `magpie/dbdb/skills/` | how a splat LOOKS: runtime grades/stylisation, floater cull, crisping via `setWorkBufferModifier`; and what is offline-only (style transfer, upscaling, gap fill, densification). **Read its silent-failure section first** |
 | `lam-face-pipeline` | `magpie/splatweb/skills/` | the LAM avatar face roster behind Pentulpa and the `demo-lam-*` treatments: converting a photo to a riggable Gaussian-splat head via a self-hosted LAM Space (`tools/lam-generate.py`), where source photos come from, roster wiring, attribution. **Read its ethics section first — synthetic faces only, never a real identifiable person** |
-| `docklands-data-curation` | `magpie/cwplans/skills/` | `magpie/cwplans/` — Canary Wharf and Docklands open data: catalogue error classes before patching values (the data-quality audit), the fault register of registry and pipeline faults (F1 to F52 on 2026-10-07), the activity log (`ACTIVITY-LOG.md`, append each session; its review entries list the open items waiting for the owner), rebuild order, the data register, data hosted in danbri/londat, contributed photos (sets cwlibrary, cwdock), sessions and cost |
-| `cwplans-river-and-water` | `magpie/cwplans/skills/` | `magpie/cwplans/` river, docks and water: PLA notices to mariners, CRT stoppages, Thames Barrier closures, tide and feeder-river levels, tidal lock rules, swim-water results (Eden Dock, Royal Docks), EA sondes and sampling points, river buses, moorings, houseboats and named vessels (`tools/fetch-river.mjs`, `feeds/river/`); licences; AIS: no open live source, Open Waters AIS (AISHub, aisstream.io) accepted for scoping by the owner on 2026-10-04 (`tools/fetch-ais.mjs`, review before scaling) |
-| `docklands-3d-page` | `magpie/cwplans/docklands/skills/` | `magpie/cwplans/docklands/index.html` and its scripts — the WebGL1 3D page: programs and vertex formats (the alpha byte is not opacity), interface and gestures, phone audio, map / pixel-art / photo-facade / splat / Line drawing / Vector CRT styles, Night mode and its calibration against the owner's photos, the fp16 fault, overlays, KML, Drone, station models, the plotter SVG (and the owner's iDraw 2.0 A3), building keys (any building by OSM id) and the 32-slot facade atlas, the headless test recipe (two sizes x two pixel ratios x the photo views, numbers not one look) |
-| `docklands-sky` | `magpie/cwplans/docklands/skills/` | the 3D page's clock (`?t=`), sky and photopills-like Sky panel: astronomy-engine sun/moon (phase, limb)/planets, Bright Star Catalogue stars and the London star limit, constellation lines, Milky Way band, CelesTrak satellites, Open-Meteo weather, EA tide interpolated along the Thames, the photo-time solution, the snapshot fetch tool, and each source's licence |
-| `photo-view-reconstruction` | `magpie/cwplans/docklands/skills/` | the owner sends a photo of the zone (ground or from an aircraft) and asks where it was taken or to reconstruct it: landmark identification, overlay, the least-squares camera (eye, heading, pitch, roll, focal, k1) on points, shorelines and the horizon, hold-outs and the error budget, the time from the sun, a `?view=` entry and the headless compare; the `docklands-view` MCP server (`tools/view-mcp/`) |
-| `blender-station-models` | `magpie/cwplans/docklands/skills/` | modelling station boxes (or any structure) in Blender driven through the blender-mcp MCP server under Xvfb: setup, the stdio client, the 10-second screenshot loop and timelapse, the model frame and naming, the uncertainty property, OSM positions vs TfL sheet topology, the export recipe (glb, obj, fbx, stl, usdc via usd-core); models in danbri/londat `third_party/tfl/am3d/models/` |
-| `cwplans-web-harvest` | `magpie/cwplans/skills/` | crawling the websites the cwplans registry links to: plain crawl, headless render, store-finder postcode searches (and their limits), robots.txt, JSON-LD repair, Factoidal and the N-Quads dataset (known faults), descriptive idioms and sameAs groups, branch / chain / organisation scopes, site search (SearchAction), opening hours by mall and area, how far mall plans can be rebuilt, what the markup is for, the reports, the Chromium proxy CA fix |
-| `cwplans-kgx` | `magpie/cwplans/skills/` | the cwplans knowledge graph in danbri/londat `kgx/` (`tools/build-kgx.mjs`): graph versions per source, IRIs and vocabulary, the Shardborough store (parts in zone-key order, the 64-block cap of the stateless call, store handles, one GRAPH block per subject, measured plans), `tools/kgx-query.mjs`, the search page `magpie/cwplans/kg/` (Lean engine in a Web Worker, blocks only, count then page, ServiceWorker); COTTAS and HDT measured and dropped |
-| `cwplans-dataflow` | `magpie/cwplans/skills/` | any cleanup, pipeline or normalisation step for cwplans data: the owner's rule (operations of skill tools on immutable named graphs, logged), the `Flow` runtime in `tools/kgx-ops.mjs` (content-named inputs, versions and activities, memoised runs, logs, heads), the operations that exist, when to bump an operation version, the idempotence test |
-| `cwplans-public-registers` | `magpie/cwplans/skills/` | the regulatory registers in cwplans (GIAS, CQC, ODS, charities, Ofsted, gambling, Active Places, FSA pubs): licences, fields dropped, the join (UPRN first) and its traps (F17 to F20), rejected sources |
-| `cwplans-london-datastore` | `magpie/cwplans/skills/` | the London Datastore (data.london.gov.uk) walked for cwplans: the v3 export API and terms, `tools/walk-london-datastore.mjs` (walk, triage, harvest), the written triage rules (licence class, zone relevance, held/listed, sensitive titles, score), the rule-driven harvest (219 datasets harvested, `tools/lds-harvest-auto.mjs`), the extracts (in danbri/londat `cwplans/feeds/london-datastore/` since 2026-10-05), the joins to the registry, traps F22 (rounded UPRNs), F23 (geometry-only GeoPackages), F25, F27 to F31 and F36 to F41 |
-| `cwplans-open-portals` | `magpie/cwplans/skills/` | the open-data catalogues other than the London Datastore walked for cwplans (`tools/walk-portals.mjs`, adapters in `tools/portals/`): data.gov.uk (CKAN, all 59,451 datasets), planning.data.gov.uk, the zone borough portals, Nomis / ONS, national APIs; licence classes, triage rules and final states, harvests clipped to the zone (in danbri/londat `cwplans/feeds/portals/` since 2026-10-05), size rules, traps |
-| `cwplans-permits-and-works` | `magpie/cwplans/skills/` | permits, works and closures across the Docklands zone: Tower Hamlets licence notices and TENs, DfT Street Manager permits and street events, TfL road disruptions and planned line, bus and river closures, Gazette TTROs, temporary-event planning applications, markets; `tools/fetch-works.mjs`, `feeds/works/`, `feeds/whatson.html`; licences, placement traps (TfL stop lat/lon 0, Gazette geo = publisher office) and rejected sources |
-| `cwplans-construction` | `magpie/cwplans/skills/` | works in progress (construction sites) across the Docklands zone: `registry/sources/construction/sites.json` built by `tools/build-construction-index.mjs` from the Planning London Datahub (borough decisions, LDD commencement and completion), NOTAM cranes, Street Manager, OSM construction areas, brownfield, site allocations and Wikidata; status rules and their confidence, F32 to F35 (stale or lagging LDD dates, point-marker polygons), identifying a site in a photo by bearing and height |
-| `cwplans-live-state` | `magpie/cwplans/skills/` | live and fast-changing state in the Docklands zone (`tools/fetch-live.mjs`, `feeds/live/`): Santander Cycles docks, TfL lift outages, station busyness and JamCams, UKPN power cuts, Thames Water storm overflows, NOTAM cranes and temporary areas (facts only), the UK AIP helicopter route H4 and restricted area EGR159 Isle of Dogs; what cannot be known (live helicopter or Chinook positions: every ADS-B source is restricted or share-alike; dockless bikes: no open London feed) and the ranked backlog |
-| `cwplans-londat-cache` | `magpie/cwplans/skills/` | the cache in danbri/londat: the hourly history of live state (one small run file per run in `cache/runs/`, a SQLite per closed month, `tools/cache-londat.mjs`, the londat workflow), `cache/latest.json` that the atlas and 3D page read before any third-party API (`live-cache.js`, the Live toggle), and `cache/zone-{core,lds,portals}.gpkg` (163 GIS layers, licences per layer; open in QGIS); schema, sizes, git growth, request counts |
-| `cwplans-feed-discovery` | `magpie/cwplans/skills/` | London RSS/Atom/iCal feeds at scale for cwplans (`tools/discover-feeds.mjs`, `feeds/discovery/`): 18 discovery methods (directories, GitHub lists, Wikipedia/Wikidata, ICNN map, hand lists, ModernGov, GLA, Mastodon, Bluesky, Lemmy, groups.io search, Common Crawl columnar index + WARC), polite verification, zone-relevance counts, the events.json merge rule, and what is excluded and why (Facebook, Nextdoor, WhatsApp, X, Reddit and groups.io by robots.txt, JISCMail) |
-| `cwplans-crown-lighting` | `magpie/cwplans/skills/` | the coloured lighting at the tops of the Canary Wharf towers (One Canada Square's pyramid and "halo", 25 Bank Street, Newfoundland): how a colour is chosen (CWG campaigns with partners; no public request route or calendar found), the white aviation flash as a separate system, whether a history exists (no: a sample from press, posts and dated photos), `tools/fetch-crown-lighting.mjs`, `registry/sources/lighting/`, judging a colour from a photo without copying it |
+| cwplans skills (18: `docklands-data-curation`, `docklands-3d-page`, `docklands-sky`, `photo-view-reconstruction`, `blender-station-models`, `cwplans-*`) | danbri/londat `cwplans/skills/`, `cwplans/docklands/skills/` | the Canary Wharf / Docklands project, in danbri/londat since 2026-10-07: https://github.com/danbri/londat/blob/main/CLAUDE.md lists them |
 | `game-mcp` | `tools/game-mcp/skills/` | exploring or checking the running game without a new script: the project MCP server ("glitchcan" in `.mcp.json`) keeps one browser open and makes the hooks tools — stories, choices, the city's Titan coordinates, picks, window-menu actions, the bus, screenshots, WebGPU renders. States what the headless WebGL fallback cannot do |
 | `lucid-scene-authoring` | `lucid/skills/` | scene JSON — primitives, CSG, transforms, `defs`/`ref`, params |
 | `lucid-renderer-interop` | `lucid/skills/` | across Mayfly (WebGL/GLSL) and Stinkyfish (WebGPU/WGSL) |
