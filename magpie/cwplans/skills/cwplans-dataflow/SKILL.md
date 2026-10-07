@@ -69,6 +69,12 @@ named version is not in `log/versions.jsonl` or its file is missing. A value `{ 
 is described in `meta` and is in `current.nq.gz`, but is not packed into the browser store: `model-building-keys`
 (183,485 triples, more than the rest of kgx; a query in the browser gains little from model indices).
 
+**Order of runs** (as run on 2026-10-06 and 2026-10-07): after an `area.js` rebuild, `key-model-buildings.mjs` first;
+after new contributed photos, `contrib-photos.mjs <set>`, then `compose-facade-atlas.mjs`, then `build-kgx.mjs` twice
+(the second run prints `new: 0`), then `check-kgx-store.mjs --write`. Push londat first, then the page files here
+(`docklands/data/tex/facades.*`, `docklands/data/building-keys.json`), as for the cwdock set (londat 8c28efa, then
+master 142db243; londat 44da043, then master a2781653).
+
 **Side files** (a page file, tiles, an atlas) are written inside an operation's body, so a run that the log already has
 does not write them again. Write a projection of the output graph outside the body when it can be (building-keys.json
 is remade on every run); otherwise bump the operation version if a side file is lost.

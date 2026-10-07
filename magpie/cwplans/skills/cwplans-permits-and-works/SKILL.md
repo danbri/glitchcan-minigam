@@ -2,22 +2,14 @@
 name: cwplans-permits-and-works
 description: >-
   Permits, works, closures and planned events across the magpie/cwplans Docklands zone (the 3D model box plus the
-  Royal Docks): Tower Hamlets licence applications and Temporary Event Notices, DfT Street Manager permits and
-  highway-authority activities (street events, cranes, hoardings) from the monthly open-data archive, TfL road
-  disruptions (works, planned events, closed street segments), TfL planned line closures by date range (tube, DLR,
-  Elizabeth line, Windrush, national rail, river buses, cable car), bus diversions and stop closures placed through
-  NaPTAN, Gazette traffic orders and TTROs, Planning London Datahub applications for temporary events and structures,
-  markets (OSM marketplaces plus the Tower Hamlets markets page), and venue and council event programmes harvested
-  from every verified event feed in feeds/events.json at run time (The O2, Royal Docks, Greenwich Theatre, The Space,
-  Wilton's, Tower Hamlets events). Covers the tool tools/fetch-works.mjs, the
-  snapshots in feeds/works/, the combined works.json and the whatson.html page (a "What's on" view and a "Closures and
-  works" view, road works grouped by street), each source's licence and attribution,
-  how each item is placed in the zone and what it says about ad-hoc events, the traps (TfL sends lat/lon 0 for stops,
-  the Gazette geo point is the publisher's office, borough names are too coarse for bus diversions, robots.txt
-  Crawl-delay 10 on the Gazette), and what was rejected or not reached (Idox licensing registers are forms, the Tower
-  Hamlets eLR register fails TLS, NRE and Network Rail feeds need accounts, Street Manager live data needs an SNS
-  endpoint). Reach for it before you refresh or extend these sources, add a borough register, change the zone filter,
-  or explain why an event, closure or works item is or is not on the page.
+  Royal Docks): Tower Hamlets licence applications and Temporary Event Notices, DfT Street Manager permits and street
+  events, TfL road disruptions, planned line closures and bus diversions (stops placed through NaPTAN), Gazette traffic
+  orders and TTROs, temporary-event planning applications, markets, and venue and council programmes from the verified
+  feeds in feeds/events.json. The tool tools/fetch-works.mjs, the snapshots in feeds/works/, works.json and the
+  whatson.html page; each source's licence; how each item is placed; the traps (TfL lat/lon 0 for stops, the Gazette
+  geo point is the publisher's office, Gazette Crawl-delay 10); what was rejected or not reached. Reach for it before
+  you refresh or extend these sources, add a borough register, change the zone filter, or explain why an event,
+  closure or works item is or is not on the page.
 ---
 
 # Permits, works and closures (magpie/cwplans)

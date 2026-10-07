@@ -1,29 +1,15 @@
 ---
 name: cwplans-london-datastore
 description: >-
-  The London Datastore (data.london.gov.uk, GLA, a DataPress site) walked for magpie/cwplans: the current API
-  (/api/v3/datasets/export.json gives all 1,305 datasets in one response; the CKAN-compatible /api/action/package_search
-  ignores q, rows and start; organization_list and license_list answer 410), the site terms (any purpose; state that
-  the GLA cannot warrant the data), the tool tools/walk-london-datastore.mjs (walk with --details, refs, probe,
-  triage, harvest), the written triage rules (licence class, relevance to the Docklands zone, kind, held/listed by the
-  project, value themes, join keys, sensitive titles, score), the area read from inside the data (probe: zone codes,
-  postcodes, UPRNs, coordinates, place names; size caps; rules D1-D8; tools/lds-probe.mjs), the final state of every
-  dataset (rules F1-F11; harvested, listed-for-harvest, not-relevant, not-open, deferred, unavailable, sensitive), the
-  31 harvested datasets in feeds/london-datastore/ (planning designations, town centres, Opportunity Areas, high
-  streets, BIDs, LSOA/MSOA/ward boundaries, 2021 Census by ward and LSOA as zone rows, heat demand and solar potential
-  per building, green roofs, urban heat island, air quality, cultural venues, LVMF views) clipped to the 3D model box,
-  metadata that understates the area (F27), geometry-only and file-format traps (F28, F29), stale LiDAR (F30),
-  mislabelled WGS84 columns (F31), the rule-driven harvest of the 219 listed datasets (tools/lds-harvest-auto.mjs:
-  resource rules, streamed readers, zone keys incl. old ward codes, profiled postcode columns, station and town-centre
-  names, transposed sheets, outcome per dataset in harvest-log.json, F36-F41), the joins to the building registry
-  (tools/join-lds.mjs: heat and solar by TOID, venues by UPRN, records by position, Census context by LSOA), and
-  the traps: GLA Planning Constraints Map GeoPackages with geometry only and a brownfield OBJECTID that is not the
-  CSV's (F23), spreadsheet-rounded UPRNs in the cultural infrastructure map (F22) and the method that amends them in a copy
-  (tools/amend-uprns.mjs: detection classes, recovery routes, confidence, amendments file), a constant position offset
-  in 10 venue layers (F25), custom GPKG srs_id 100000 that is
-  BNG. Reach for it before you re-walk or update the triage, harvest another Datastore dataset, judge whether a GLA
-  dataset is open or relevant, join these files to the registry, or repair a rounded or damaged column in any
-  spreadsheet-sourced file.
+  The London Datastore (data.london.gov.uk, GLA) walked for magpie/cwplans: the v3 export API (all 1,305 datasets in
+  one answer; the CKAN-style search ignores its parameters), the site terms, tools/walk-london-datastore.mjs (walk,
+  refs, probe, triage, harvest), the written triage rules and the final state of every dataset (219 harvested after
+  the rule-driven harvest of 2026-10-04, tools/lds-harvest-auto.mjs, harvest-log.json), the area read from inside the
+  data (probe, rules D1-D8), the extracts clipped to the 3D model box (since 2026-10-05 in danbri/londat
+  cwplans/feeds/london-datastore/), the joins to the building registry (tools/join-lds.mjs), amending rounded UPRNs in
+  a copy (tools/amend-uprns.mjs), and the faults F22, F23, F25, F27 to F31, F36 to F41. Reach for it before you re-walk
+  or update the triage, harvest another Datastore dataset, judge whether a GLA dataset is open or relevant, join these
+  files to the registry, or repair a rounded or damaged column in a spreadsheet-sourced file.
 ---
 
 # London Datastore for magpie/cwplans

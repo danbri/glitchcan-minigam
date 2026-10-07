@@ -25,14 +25,22 @@ postcodes"): a UK postcode in a brand's store-finder search, nothing else; limit
 
 **Activity log:** [ACTIVITY-LOG.md](ACTIVITY-LOG.md), dated, newest last. Add an entry for every session
 that changes data, tools, checks or policy: what changed, the commit, the measured effect (audit counts
-before and after), and what is still open. The other cwplans skills write their entries here too.
+before and after), and what is still open. The other cwplans skills write their entries here too. The open items
+waiting for the owner are listed in one place in the newest review entry (first: 2026-10-07, "skills review");
+start there, and move an item out when the owner answers.
 
 ## Skills for this project
 
 | skill | home | reach for it when |
 |---|---|---|
 | `docklands-data-curation` (this one) | `magpie/cwplans/skills/` | policy, catalogue first, the fault register, joins, rebuild order, methods, provenance, the data register |
-| `docklands-3d-page` | `magpie/cwplans/docklands/skills/` | editing `docklands/index.html`: programs and vertex formats, interface, styles, splats, Night mode and its calibration, the fp16 lesson, headless testing, shipping |
+| `docklands-3d-page` | `magpie/cwplans/docklands/skills/` | editing `docklands/index.html` and its scripts: programs and vertex formats, interface, styles (Line drawing, Vector CRT), splats, Night mode and its calibration, the fp16 lesson, the plotter SVG and the owner's iDraw 2.0 A3, building keys and the facade atlas, headless testing, shipping |
+| `photo-view-reconstruction` | `magpie/cwplans/docklands/skills/` | the owner sends a photo: landmarks, the least-squares camera, hold-outs, the time from the sun, a `?view=` entry; telephoto skylines and bearings (set cwdock) |
+| `blender-station-models` | `magpie/cwplans/docklands/skills/` | station boxes in Blender through blender-mcp under Xvfb; the models in londat `third_party/tfl/am3d/models/` |
+| `cwplans-kgx` | `magpie/cwplans/skills/` | the knowledge graph in londat `kgx/`: graphs, IRIs, the Shardborough store, `tools/check-kgx-store.mjs`, the search page `kg/`, Factoidal issue 697 |
+| `cwplans-dataflow` | `magpie/cwplans/skills/` | the owner's rule for pipeline work: operations on immutable named graphs (`tools/kgx-ops.mjs`, `Flow`), the operations and their versions, the order of runs, the idempotence test |
+| `cwplans-feed-discovery` | `magpie/cwplans/skills/` | London RSS, Atom and iCal feeds at scale (`tools/discover-feeds.mjs`, `feeds/discovery/`) |
+| `cwplans-permits-and-works` | `magpie/cwplans/skills/` | permits, works, closures and what's on (`tools/fetch-works.mjs`, `feeds/works/`, `feeds/whatson.html`) |
 | `cwplans-web-harvest` | `magpie/cwplans/skills/` | crawling entity websites, the headless render, store finders, JSON-LD repair, Factoidal and N-Quads (known faults, `tools/check-factoidal.mjs`), idioms, sameAs groups, the typed CWG directory, site search, opening hours by mall, mall plans, what the markup is for, the reports, the Chromium proxy CA fix |
 | `cwplans-public-registers` | `magpie/cwplans/skills/` | GIAS, CQC, ODS, charities, Ofsted, gambling, Active Places, FSA pubs: licences, fields dropped, the join and its traps (F17 to F20), rejected sources |
 | `cwplans-london-datastore` | `magpie/cwplans/skills/` | the London Datastore walk: the v3 export API and terms, `tools/walk-london-datastore.mjs` (walk, triage, harvest), the triage rules, the rule-driven harvest of the listed datasets (`tools/lds-harvest-auto.mjs`, harvest-log.json, F36 to F41), the joins to the registry (`tools/join-lds.mjs`), the ranked backlog, F22 and F23; amending rounded UPRNs in a copy (`tools/amend-uprns.mjs`, F22, F25) |
@@ -57,6 +65,48 @@ The page-side recipe and the lesson behind "re-read the whole line" are in `dock
 files silently, and `check-data-register.mjs` still passes (it checks the disk, not git). Commit 2d83b25e said it held
 `cwg-directory-typed.json` and `.nq` and did not. After `git add`, run `git status --short` and look for each new
 file; `git check-ignore -v <file>` names the rule; add a needed file with `git add -f <file>`.
+
+## Ways of working (the owner's words)
+
+Collected on 2026-10-07 from the owner's messages of the session of 2026-10-02 to 2026-10-07. Repo-wide rules
+(ASD-STE100 reports, full URLs, no Haiku without agreement) are in the repo `CLAUDE.md`.
+
+- **Reports.** "Please answer with specificity appropriate for a GIS pro reader. Assume I have forgotten details
+  already, links into our gh repo(s) are v useful. I forget what is moved into londat already." (2026-10-05). Long
+  answers in one block: "Give me part 3 in a single copy-pastable block. In ios app the ui breaks" (2026-10-05).
+  Results on the live pages: "Can we see the results in the web app, via deeplinks?" (2026-10-05): give the
+  https://danbri.github.io/glitchcan-minigam/... link with the `?view=`, share hash or `id=osm:` that shows the result.
+- **Releases.** "let me know when you have pushed release to check" (2026-10-03): after a push, say so and give the live
+  URL ("Ship at once" below).
+- **Scope.** "Prioritise sure, but do the whole lot" (2026-10-03). "Also don’t stop any of our earlier in-progress
+  tasks" (2026-10-06).
+- **Subagents.** "Subagents pls" (2026-10-07; on 2026-10-03: "Also subagent for a synthetic drone view").
+- **Infrastructure, not chat.** "Ok these lists, are they in our infrastructure (skills, registry, data available to
+  the 3d map / atlas)?" (2026-10-04); "don't waste good info by burying it in our chatlogs" (2026-10-06). A list or a
+  finding is done when it is in a skill, the registry or a data file that the 3D page or the atlas shows.
+- **The 3D view.** "We also need our data to be fully available throughh, and bring to life, the 3D view." and "Ok now
+  the ui does no justice to the amazing materials you collected." (2026-10-03).
+- **Data apart from code.** "Ofc eventually we will clean up and separate data vs code so this current tool can be
+  localised and extended, even if initially the viewer / 3D world was a side effect from exploring the data landscape."
+  (2026-10-05). So new code should not fix the zone in many places; the key rules in `docklands-3d-page`, "Future
+  expansion", follow this.
+- **The model.** On 2026-10-05 the session ran on Haiku from 18:55 to 19:41 UTC (`/model claude-haiku-4-5-20251001`,
+  during the Blender station work; it is not clear that the owner chose it). Owner: "When did we get switched to
+  haiku? / I put you on 55 already." Haiku answered 6 messages and made no tool calls (transcript), and no commit in
+  either repository falls in that window (master 1b345204 at 18:07, then b4df1ab2 at 21:32; londat 0077caa at 18:03,
+  then f94783a at 19:51). Rule: repo `CLAUDE.md`, "MODEL: NO HAIKU WITHOUT THE OWNER'S AGREEMENT".
+
+### Sessions, context and cost (2026-10-07)
+
+Owner: "Let me know if I flooded context and need to restart a new session." and "This session is long though. Are you
+auto-compacting? Does every single message burn a ton of tokens?" (2026-10-07). The session context had reached about
+490,000 of 1,000,000 tokens (orchestrating session's figure). Each model call reads the whole context again, so a long
+session makes every later step dearer. So:
+- Tell the owner when the context is too full to continue well.
+- Give large tasks to subagents: each starts with a small context, does the work, and reports back in a few lines.
+- Start a new session for new work. The state carries over in the skills and in ACTIVITY-LOG.md, not in the chat: write
+  there what the next session needs (owner's words with the date, open items, measured numbers) before you stop.
+- Keep reports short and put the long material in the repository.
 
 ## Catalogue first
 
@@ -256,6 +306,10 @@ Registers (GIAS, CQC, ODS and the rest): `cwplans-public-registers`.
     node magpie/cwplans/tools/audit-quality.mjs         # quality/issues.json, quality/CATALOGUE.md (reads the atlas)
     node magpie/cwplans/tools/check-data-register.mjs --write   # every committed data file registered?
 
+After a rebuild of `docklands/data/area.js` or new contributed photos, the keyed and graph steps follow:
+`key-model-buildings.mjs` (after area.js only), `contrib-photos.mjs <set>`, `compose-facade-atlas.mjs`,
+`build-kgx.mjs` twice, `check-kgx-store.mjs --write` (skill `cwplans-dataflow`, "Order of runs").
+
 The fetch and 3D steps are in `magpie/cwplans/docklands/README.md` and `registry/README.md`; the web and register
 fetches in their skills. The order of every tool is the `after` list of its activity in `pipeline.json`. Raw extracts
 over a few MB stay local (gitignored); `data-register.json` says what is committed and why.
@@ -299,7 +353,8 @@ too) and `vendor/` are not data and are not registered.
 
 ## Data hosted in danbri/londat
 
-Owner, 2026-10-05: created the repository https://github.com/danbri/londat for the bulk open-data extracts, because the
+Owner, 2026-10-04 19:50 UTC: "Created londat repo"; 2026-10-05 11:27 UTC: "londat repo fixed for Claude." (first commit
+48e4851, 2026-10-05 11:29 UTC). https://github.com/danbri/londat holds the bulk open-data extracts, because the
 main repository (about 1.5 GB tracked in all directories, pack about 1 GB) and its Pages site (1 GB limit) were at
 their limits. Old blobs stay in this repository's history: do not rewrite history (owner decision).
 

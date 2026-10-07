@@ -12,6 +12,9 @@ description: >-
 
 # The cwplans knowledge graph (kgx)
 
+Owner, 2026-10-06 10:05 UTC, the direction behind it: "We need to start reflecting it all into a knowledge graph
+structure. Give me a high level view of what we have. In particular regarding materials not currently exposed in the 3D
+UI." So the graph is meant to hold all the project's data, including what the 3D page does not show.
 Owner, 2026-10-06: "Make londat tld folder kgx and explore state of npm js Factoidal/core for persistent storage.
 Build out a first cut at a persistent knowledge graph for core data we have collected, beginning with Canary Wharf
 facts. Also keep nquads copies in filetree alongside hdt or shardborough formats if they work. Make a public search
@@ -45,10 +48,13 @@ an operation on immutable named graphs (the `cwplans-dataflow` skill).
 
 ## The store (Shardborough, `factoidal pack --layout ibk5`)
 
-Build of 2026-10-06 (late night): 292,259 triples in 21 graphs, of which 108,774 in the browser store (46 parts, 774
-blocks, generation `gen-f330e7f03b06d9d9`, 4,646 files, 20.8 MB; blocks 14.7 MB): `model-building-keys` (183,485) is a
-head but not in the store (`external-heads.json` `store: false`). The table below was measured on an earlier build (15
-graphs, 659 blocks); on this one the same entity reads 60 blocks out and 59 in, about 1.1 MB each.
+Build of 2026-10-07 09:22 UTC (after the cwdock tiles; londat `kgx/manifest.json`): 294,405 triples in 24 head graphs
+(22 data graphs, `meta` and `log`), of which 110,920 quads in the browser store (51 parts, 847 blocks, generation
+`gen-94788565be0fae62`, 5,084 files, 21.4 MB; blocks 15.0 MB). `model-building-keys` (183,485) is a head but not in
+the store (`external-heads.json` `store: false`). Each build adds lines to `log/`; the counts grow with every
+contributed set (2026-10-06 night: 292,259 triples, 21 graphs, 774 blocks). The table below was measured on an
+earlier build (15 graphs, 659 blocks); on the 774-block build the same entity read 60 blocks out and 59 in, about
+1.1 MB each (not measured again).
 
 - **Blocks** are cut per predicate per graph. `--batch-bytes` does not change the count. So a big graph gives big
   blocks whose subject ranges cover everything, and zone maps skip nothing.
@@ -100,12 +106,17 @@ graphs, 659 blocks); on this one the same entity reads 60 blocks out and 59 in, 
   through the in-memory engine on the store's own input; exits 1 on any difference; `--write` puts the result in londat
   `kgx/checks/store-vs-memory.json`. It refuses when the store was not packed from the current versions. It reads only the graphs
   the store holds (a head kept out of the store is skipped: with `model-building-keys` the parse took over 15 minutes).
-  Several minutes (the in-memory parse; not timed). Result of 2026-10-06 (gen-f330e7f03b06d9d9): 17 of 17 the same. Run it after a rebuild with new data and after a Factoidal upgrade.
+  Several minutes (the in-memory parse; not timed). Results: 2026-10-06 (gen-f330e7f03b06d9d9) 17 of 17 the same;
+  2026-10-07 09:35 UTC (gen-94788565be0fae62, 110,920 quads) 17 of 17 the same (`checks/store-vs-memory.json`). Run it
+  after a rebuild with new data and after a Factoidal upgrade.
 - An independent engine as a third opinion: pyoxigraph in a venv, `Store.bulk_load(path=…, format=RdfFormat.N_QUADS,
   lenient=True)`. Strict loading refuses one IRI in our data (F49).
 - Reported to Factoidal as https://github.com/danbri/factoidal/issues/697 (store granularity, zone-key order, subqueries,
   manifest cost; text in `factoidal-issue-2026-10-06-store.md`). `tools/check-factoidal.mjs` re-tests its points after
-  an upgrade (STILL or FIXED); when one is FIXED, review the parts and the query rule above.
+  an upgrade (STILL or FIXED); when one is FIXED, review the parts and the query rule above. Follow-up state on
+  2026-10-07: npm still has 0.7.1 as the latest @factoidal/core (published 2026-09-06), and all 12 checks print STILL.
+  This project's sessions cannot read or post in danbri/factoidal (not in the session's repositories), so any reply on
+  the issue reaches us only through the owner.
 
 ## The search page (`kg/`)
 

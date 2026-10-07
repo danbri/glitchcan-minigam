@@ -1,20 +1,15 @@
 ---
 name: cwplans-river-and-water
 description: >-
-  The river, docks, locks, water quality and boats of the magpie/cwplans Docklands zone (the Thames from London Bridge
-  to the Royal Docks, West India, Millwall, Greenland, South and Royal Docks, Limehouse Basin, Bow Creek and the Lea,
-  Deptford Creek and the Ravensbourne), as dated snapshots in feeds/river/ made by tools/fetch-river.mjs: PLA Notices to
-  Mariners (harbourmaster, from the PLA ArcGIS layer NtMs_Live because pla.co.uk blocks scripts), Canal & River Trust
-  stoppage notices (the JSON endpoint behind the notices page), Thames Barrier planned test closures (GOV.UK, OGL), EA
-  flood warnings, EA tide and river levels (Thames gauges, barrier DIFF stations, Lee and Ravensbourne), tidal lock
-  rules (Limehouse, West India Dock Entrance, Bow, South Dock) with OSM positions, swim-water results for Eden Dock (Sea
-  Lanes Canary Wharf) and the Royal Docks (RoDMA PDF certificate), EA continuous sondes and the Water Quality Archive,
-  TfL river buses (routes, timetables, live arrival predictions), OSM moorings, houseboats and ships, PLA visitor
-  moorings, and Wikidata vessels. Licences per source, the facts-only rule for PLA and CRT, why there is no open live
-  AIS (Open Waters AIS measured: Thames coverage is AISHub and aisstream only, tools/fetch-ais.mjs keeps CC0/NLOD/CC BY events), and the traps (time-stamped URLs and --no-fetch, minute-level DIFF readings, a sonde with impossible values F24,
-  two CRT pages that disagree on the West India lock window, a certificate that misnames King George V Dock). Reach for
-  it before you refresh or add a river or water source, show boats, locks, notices or swim-water status on the 3D page,
-  or answer "can I swim in the dock today?", "is the lock open?" or "what ships are on the river?".
+  The river, docks, locks, water quality and boats of the magpie/cwplans Docklands zone, as dated snapshots in
+  feeds/river/ made by tools/fetch-river.mjs: PLA Notices to Mariners, Canal & River Trust stoppages, Thames Barrier
+  test closures, EA flood warnings, tide and river levels, tidal lock rules, swim-water results (Eden Dock, Royal
+  Docks), EA sondes and the Water Quality Archive, TfL river buses, OSM moorings and houseboats, Wikidata vessels. AIS:
+  no open live source; Open Waters AIS (AISHub, aisstream.io) accepted by the owner for scoping on 2026-10-04, review
+  before scaling (tools/fetch-ais.mjs, the Ships layer). Licences per source, the facts-only rule for PLA and CRT, and
+  the traps (time-stamped URLs, DIFF readings, the sonde fault F24). Reach for it before you refresh or add a river or
+  water source, show boats, locks, notices or swim-water status on the 3D page, or answer "can I swim in the dock
+  today?", "is the lock open?" or "what ships are on the river?".
 ---
 
 # River, docks and water for magpie/cwplans

@@ -1,16 +1,14 @@
 ---
 name: photo-view-reconstruction
 description: >-
-  Reconstruct the view of any photo of the magpie/cwplans Docklands zone (ground or air) on the 3D page: identify
-  landmarks (tower tops by height and shape, river bends, docks, piers, rail corridors), fit a camera by least squares
-  (pinhole with eye position, heading, pitch, roll for an aircraft's bank, focal length, optional radial k1 for aircraft
-  windows and wide phone lenses) to points, shoreline pixels and the horizon, judge the error budget with hold-outs, solve
-  the photo time from the sun or moon, and add a ?view= entry or render a camera headless and compare it with the photo
-  (side by side, landmark px errors, luma). Tools: tools/view-mcp (view-lib.mjs, solve.mjs, overlay.mjs, render.mjs) and
-  the docklands-view MCP server (list_landmarks, project, solve_camera, overlay, render_view, compare, sun_at,
-  time_from_sun). Worked cases: the owner's aircraft photo (?view=plane, 2026-10-05) and the ground photo views
-  (?view=rotherhithe|greenland|pier|greenlandday). Reach for it when the owner sends a photo and asks "where was this
-  taken / can you reconstruct this view", before you add a photo view to docklands/index.html, or when a solve looks wrong.
+  Reconstruct the view of a photo of the magpie/cwplans Docklands zone (ground or air) on the 3D page: identify
+  landmarks (tower tops, river bends, docks, piers, rail), fit a camera by least squares (eye, heading, pitch, roll,
+  focal, optional radial k1) to points, shorelines and the horizon, judge the error with hold-outs, place a camera from
+  bearings, solve the time from the sun or moon, and add a ?view= entry or render and compare headless. Tools:
+  tools/view-mcp (view-lib.mjs, solve.mjs, overlay.mjs, render.mjs) and the docklands-view MCP server. Worked cases:
+  the owner's aircraft photo (?view=plane), the ground photo views (?view=rotherhithe|greenland|pier|greenlandday) and
+  the cwdock 3x telephoto skyline. Reach for it when the owner sends a photo and asks "where was this taken / can you
+  reconstruct this view", before you add a photo view to docklands/index.html, or when a solve looks wrong.
 ---
 
 # Photo view reconstruction
@@ -94,8 +92,35 @@ and needs k1 (the Greenland day photo: 99.8 deg).
 - **Features beyond the model box**: they cannot be landmarks. In the aircraft view everything above about 200 px (south
   London, 5 to 40 km) is outside the box; the page fills it with its sky colour (top-third luma 0.85 in the render
   against 0.65 in the photo).
-- **Buildings newer than the LiDAR and OSM** (cranes, towers built since 2022): not in the model; do not use them.
+- **Buildings newer than the LiDAR and OSM** (cranes, towers built since 2022): not in the model; do not use them as
+  landmarks. After the solve they are findings: a tower top that no model building explains is new (fault F52 in the
+  hub skill). Trace the ray through its top and look for OSM outlines within a few metres of it (cwdock photo 01: a
+  tower on Marsh Wall at Consort Place, about 216 m OD +-15 m, that the model draws as a pit).
 - **The sun out of the frame or behind cloud**: the time is weak (see below).
+
+## The owner's photos and their licence
+
+The aircraft photo is CC0 1.0 with the owner (danbri) as photographer and copyright holder: "Plane photo - yes cc0,
+record me as owner" (2026-10-05 12:23 UTC; `docklands/reference/plane-2026-10/README.md`, commit 2f2772fb). The day
+photos from Greenland Pier ("I am copyright holder but will CC0 them.", 2026-10-04; `docklands/reference/day-2026-10-04/`)
+and the sets cwlibrary and cwdock (londat `data/images/contrib/`) are CC0 too. The night photos of 2026-10-03
+(`docklands/reference/night-2026-10-03/`) are not: the owner's copyright, kept with permission as reference ("Keep my
+photos", 2026-10-04). A new photo: ask for the licence and the creator before you commit it, and write both, with the
+owner's words and date, in its README.
+
+## Telephoto skylines and bearings (set cwdock, 2026-10-07)
+
+- **A 3x telephoto from the ground** (cwdock photo 01, focal 5,570 px, horizontal field 26 deg): the eye was not known
+  (the phone map fix, +-10 m, is one moment of the walk, not this photo's place), so x and z were left free and fitted
+  with heading, pitch, roll and focal on sure tower tops (a logo, a unique form). Three tops leave the eye free along a
+  line (a valley of equal rms). Four gave rms 2.2 px, the eye to +-60 m, and a held-out fifth top (Hampton Tower) at
+  8 px. Result: about 250 m south of the map fix; heading 63.9 deg grid (65.4 true), pitch 9.3, roll -1.3.
+- **Bearings between identified buildings** place a judged camera when a photo shows three or more with the main lens
+  (focal about 1,860 px on the 2,576 px side: an assumption, no EXIF). Photo 11's twin towers did not fit a camera at the
+  map fix; the bearings put it on the pontoon ramp about 55 m west. Photo 18 repeats cwlibrary photo 1 and puts that
+  camera about 65 m south-south-east of Ontario Point, not south-west as first judged: open, see the hub skill.
+- Details per photo: londat `data/images/contrib/cwdock/photos.json` and the hub skill `docklands-data-curation`,
+  "Contributed photos".
 
 ## Ground versus air
 

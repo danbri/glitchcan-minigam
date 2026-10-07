@@ -1,21 +1,15 @@
 ---
 name: cwplans-open-portals
 description: >-
-  The open-data catalogues other than the London Datastore, walked for the magpie/cwplans Docklands zone with one tool,
-  tools/walk-portals.mjs, and one adapter per portal in tools/portals/: data.gov.uk (CKAN package_search, all 59,451
-  datasets; scope S1-S4, states T0-T11), planning.data.gov.uk (MHCLG, every dataset OGL, zone counts by the platform's
-  spatial query or by zone planning organisation; states P0-P8), the six zone borough portals (City of London map service, Tower Hamlets hub,
-  Southwark and Greenwich InstantAtlas observatories, Open Data Lewisham, Newham none), Nomis Census 2021 bulk zips (the
-  Nomis API is disallowed by robots.txt), the ONS Open Geography Portal and other national sources (DfT AADF and
-  STATS19, police.uk, DESNZ energy, Ofcom refused). Covers each portal's API, robots.txt and terms, the
-  written triage rules and the final state of every dataset (harvested, held, listed-for-harvest, deferred,
-  not-relevant, not-open, unavailable, sensitive, walked-elsewhere), the licence classes (no licence = metadata only;
-  "no restrictions" without a licence name is not open; GOV.UK/ONS site terms), the harvests in feeds/portals/ clipped
-  to the 3D model box (listed buildings and outlines, Heritage at Risk, Article 4 areas, area TPOs, EA flood zones,
-  section 106 agreements, City of London layers, Census 2021 OA tables, OA boundaries and lookups, traffic counts,
-  collision and crime aggregates, energy by small area), size rules for the repo, faults F42-F45, and the traps (Poplar is a tree, short slugs match prose,
-  safeguarding areas are not safeguarding of people, deleted records keep resources). Reach for it before you walk,
-  re-triage or harvest any national or borough portal for cwplans, or answer "is dataset X open and in the zone?".
+  The open-data catalogues other than the London Datastore, walked for the magpie/cwplans Docklands zone with
+  tools/walk-portals.mjs and one adapter per portal in tools/portals/: data.gov.uk (all 59,451 datasets),
+  planning.data.gov.uk, the six zone borough portals, Nomis Census 2021 bulk zips (the Nomis API is disallowed by
+  robots.txt), the ONS Open Geography Portal and national sources (DfT, police.uk, DESNZ). Each portal's API,
+  robots.txt and terms, the written triage rules and the final state of every dataset, the licence classes (no
+  licence = metadata only; "no restrictions" without a licence name is not open), the extracts clipped to the 3D model
+  box (since 2026-10-05 in danbri/londat cwplans/feeds/portals/), size rules, faults F42 to F45, and the traps (Poplar
+  is a tree, short slugs match prose). Reach for it before you walk, re-triage or harvest any national or borough
+  portal for cwplans, or answer "is dataset X open and in the zone?".
 ---
 
 # Open-data portals for magpie/cwplans

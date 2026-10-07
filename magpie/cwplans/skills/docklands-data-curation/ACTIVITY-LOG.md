@@ -1351,3 +1351,131 @@ Owner: "don't waste good info by burying it in our chatlogs".
   and 0.211 in three runs with the same files, so photo-view luma no longer compares run to run there; not investigated.
 - kgx: `build-kgx.mjs` twice (second run new: 0), generation gen-94788565be0fae62, 294,405 triples; store check 17 of 17
   the same.
+
+## 2026-10-07 (late morning): skills review against the work since 2026-10-02 (Opus, review agent)
+
+Owner: "Please review the state of the skills vs state of our achievements and content of our session logs, updating
+skills and activity logs with materials that shouldn't be lost."
+
+### Open items waiting for the owner
+
+Checked against this log and the files on 2026-10-07. The date is when the item was first recorded.
+
+1. **Faces and number plates in set cwdock** (2026-10-07): blur the faces in photos 04, 09 and possibly 16, and the
+   partly readable number plates in 18 and 20, before any wider use? The photo numbers are those listed to the owner
+   in the session; this review did not open the photos. Nothing in the set describes or tags people (londat
+   `data/images/contrib/cwdock/README.md`, "Privacy").
+2. **Where cwlibrary photo 1 was taken** (2026-10-07): the bearings in cwdock photo 18 put that camera about 65 m
+   south-south-east of Ontario Point, not south-west. If a camera solve on the roof corners confirms it, the cwlibrary
+   wall names and Ontario Point's 24.0 m tile width (`facades.json` `osm:w204580680`, `w_m` 24) are wrong. Nothing
+   changed yet.
+3. **F51** (2026-10-07): the owner's phone photos are Display P3 and the facade tools read them as sRGB (brick about
+   6 CIELAB units off). Proposed: convert with the embedded profile before `rectify-facade-patches` and
+   `cut-facade-tiles`, bump both operation versions, re-derive cwlibrary, cwdock and the atlas. Waiting for a go-ahead.
+4. **F52** (2026-10-07): 247 model buildings have a guessed height (21 with footprints over 800 m2) and 6 LiDAR
+   buildings over 300 m2 are digs (the tower at Consort Place drawn as a pit). Proposed: storeys from a dated source
+   (PLD storeys, the construction index, Wikidata, a photo count) in `tools/build-docklands.mjs`, source marked.
+   Waiting for a go-ahead.
+5. **A real-phone test of the line styles** (2026-10-07): Line drawing and Vector CRT are measured only on SwiftShader.
+   https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?lines and
+   https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?vectrex
+6. **A real plot on the owner's iDraw 2.0 A3** (2026-10-06): only the vendor's preview has been run. A file made after
+   2026-10-06 22:40 UTC carries its view link and screen size in `<desc>`, so a fault in it can be reproduced.
+7. **Mapillary token** (2026-10-06): give one, or decide not to count Mapillary.
+8. **GitHub Pages for londat** (2026-10-05): https://danbri.github.io/londat/README.md answered 404 on 2026-10-07.
+   When it answers 200: `DATA_BASE = PAGES` in `data-base.js` and the default base of the kg page.
+9. **OpenAerialMap drone images** (2026-10-06): fetch the 2 to 5 cm images over Canada Dock, Canada Water and Earl
+   Pumping Station (CC BY 4.0)?
+10. **CC BY-SA extracts** (2026-10-06): Panoramax (5,217 zone pictures), KartaView and Mapillary are counts only. An
+    extract needs the owner's agreement (OpenStreetMap is the only share-alike source agreed).
+11. **Sunlit photos of the west faces, for true colours** (2026-10-06, in a session summary): the cwlibrary photos
+    were taken against the sun, so the tile colours of Columbia and Regina Point are judged, not measured.
+12. **Factoidal issue https://github.com/danbri/factoidal/issues/697** (filed by the owner 2026-10-06): npm still has
+    0.7.1 as the latest @factoidal/core (published 2026-09-06); `tools/check-factoidal.mjs` prints STILL for all 12
+    checks on 2026-10-07. Sessions here cannot read danbri/factoidal, so a reply reaches us only through the owner. The
+    first issue text (`skills/cwplans-web-harvest/factoidal-issue-2026-10-06.md`, BNODE() and serialize()) has no record
+    of being filed.
+13. **TfL FOI-0493-2223 station depths** (2026-10-05; no owner reply found): no open licence is stated; six cited
+    values are used in the model and the station models (londat `third_party/tfl/am3d/models/README.md`). Approve or
+    reject.
+14. **VOA** (2026-10-03 and 2026-10-05): keep or delete `tools/registry-voa.mjs` (it reads the restricted VOA rating
+    list); the VOA totals stay unpublished.
+15. **Other licence asks** (2026-10-03, from a session summary, no owner words): the CRT non-commercial data (the river
+    skill already lists the CRT ArcGIS layers as not allowed), the PLA's licence terms, a Land Registry account for
+    CCOD/OCOD.
+16. **Fly.io** (2026-10-03): "We can start to keep state on flyio / Can you see Flyio credentials here? (Via github?)".
+    A token goes into the environment settings (`FLY_API_TOKEN`); never ask the owner to paste one into the chat.
+17. **londat in the GitHub iOS app** (2026-10-05): "Londat in gh ios app shows no actions or workflows". The workflow
+    file `.github/workflows/cache-live.yml` is in londat; treated as an app issue, nothing to change in the repository.
+18. **A friend's feedback on the plots** (2026-10-07): "A friend will take a look for detailed feedback." Waiting.
+
+Earlier items that this log still shows as open:
+- 2026-10-03: the privacy limits change the owner approved was blocked by the environment's safety check ("Open, in the
+  order proposed", item 8).
+- 2026-10-03: the Crossrail long section (digitised, licence not stated): ask before committing (item 11).
+- 2026-10-04: adsb.lol (ODbL) for live aircraft positions; Tower Bridge lift times (the site's terms forbid scraping
+  and reuse); whether to ask the M7AZV aiscatcher operator for an Open Waters output or a licence.
+- 2026-10-04: London Datastore: lift entrapment incidents (addresses), the Assembly Member gifts register (named
+  people), and 4 datasets held for the owner (2g980, em8xy, 24r65, 2ogkn).
+- Standing: AIS from AISHub and aisstream.io is accepted for scoping only; review before scaling (repo CLAUDE.md).
+
+### The owner's instructions not yet recorded
+
+A read-only agent listed 103 owner instructions and decisions of the session (2026-10-02 to 2026-10-07) and searched
+CLAUDE.md, every SKILL.md, this log and the londat READMEs: 69 found, 13 partly, 21 not found. The 21 now:
+- Ways of working (DURABLE: tell the owner when a release is pushed; do the whole set in priority order; answer for a
+  GIS professional with links into the repositories; long answers in one copy-pastable block; results through deep
+  links; do not stop earlier tasks; use subagents; say when the context is too full; collected lists belong in the
+  infrastructure; the data must bring the 3D view to life; separate data from code): the owner's words and dates in
+  `docklands-data-curation`, "Ways of working (the owner's words)".
+- The Haiku window of 2026-10-05 (18:55 to 19:41 UTC; 6 replies, no tool calls, no commit): same section, "The model".
+- londat was created by the owner on 2026-10-04 ("Created londat repo", 19:50 UTC), not 2026-10-05 as this skill and
+  the repo CLAUDE.md said; the skill is corrected (first commit 48e4851 is of 2026-10-05 11:29 UTC); the CLAUDE.md
+  line is outside the skills table and is left for the owner.
+- The aircraft photo is CC0 with the owner as creator ("Plane photo - yes cc0, record me as owner", 2026-10-05 12:23
+  UTC): `photo-view-reconstruction`, "The owner's photos and their licence". The entry above of 2026-10-05 ("CC0 not
+  yet asked") is stale: the README and commit 2f2772fb have the answer.
+- "We need to start reflecting it all into a knowledge graph structure ..." (2026-10-06 10:05 UTC): `cwplans-kgx`.
+- Open items (TfL FOI depths, VOA tool, other licence asks, Fly.io, the iOS app, a friend's feedback): the list above.
+- The review itself: this entry.
+
+### What changed in the skills
+
+- `docklands-3d-page`: description rewritten (was 1,686 characters; said the sky skill was "pending" and "seven
+  shader programs"); Architecture checked against master a2781653 (2,349 lines and 295 KB, not 1,840 and 218 KB; the
+  20 script tags in order; 15 programs: the sky row was "moving to sky.js", the My KML programs were missing); URL
+  switches (`plane`, `?t=`, `?drone=`, `?kml=`, the share hash); drawer tabs (Sky exists); facade slots in use (23 of
+  32: cwdock 16 to 18, cwlibrary 19 to 22; refer by OSM key); plotter dating by closed-loop count (44 of 17,513 before
+  the fix, 809 of 12,393 in a test plot after); Testing: photo-view luma not repeatable on 881f5c98 (0.0925, 0.0925,
+  0.211), and the `pgrep -f` wait loop that matched itself.
+- `cwplans-kgx`: the owner's direction of 2026-10-06 10:05 UTC; the build and store numbers of 2026-10-07 (294,405
+  triples, 24 head graphs, 110,920 quads in the store, 51 parts, 847 blocks, gen-94788565be0fae62); the store check of 2026-10-07 (17 of 17); the Factoidal follow-up.
+- `cwplans-dataflow`: "Order of runs" (key, tiles, atlas, kgx twice, store check; push londat first). The operation
+  table was checked against the code: all ids and versions agree.
+- `photo-view-reconstruction`: the owner's photos and their licence (aircraft and day photos and both sets CC0; the
+  night photos of 2026-10-03 not open); telephoto skylines and bearings (cwdock photos 01, 11, 18); a tower top that
+  no model building explains is a finding (F52); description shortened (was 1,162 characters).
+- `docklands-data-curation`: the project skills table (6 skills were missing: photo-view-reconstruction,
+  blender-station-models, cwplans-kgx, cwplans-dataflow, cwplans-feed-discovery, cwplans-permits-and-works); the
+  keyed and graph steps in "Rebuild order"; new "Ways of working (the owner's words)" with "Sessions, context and
+  cost".
+- `cwplans-construction`: F52 cross-reference (the index as a source of storeys).
+- Descriptions over the 1,024-character limit of the skill format, shortened (this session's skill listing cut
+  `docklands-3d-page`, `cwplans-londat-cache`, `cwplans-london-datastore`, `cwplans-open-portals` and
+  `cwplans-permits-and-works` with "…", and showed no text for `cwplans-river-and-water`): `cwplans-river-and-water` (1,736;
+  it also said "no open live AIS" without the owner's acceptance of 2026-10-04),
+  `cwplans-londat-cache` (1,662), `cwplans-london-datastore` (2,482; said 31 harvested and `feeds/london-datastore/`:
+  now 219 harvested, files in londat), `cwplans-open-portals` (1,768), `cwplans-permits-and-works` (1,819).
+- Repo CLAUDE.md skills table: rows added for `fink-validation` and `nocliches-fink-authoring` (both discoverable, no
+  row); rows corrected for `docklands-3d-page`, `docklands-data-curation`, `cwplans-river-and-water`,
+  `cwplans-london-datastore` ("the 13 harvested sets") and `cwplans-open-portals` (files now in londat).
+
+### Found, not fixed (no code changes in this task)
+
+- `tools/check-skills.mjs` reads only the first line of a folded (`>-`) description: its regular expression has the
+  `m` flag, so `$` in `(?=\n\w+:|$)` matches at the first line end. It printed "111 char description" for a
+  1,686-character one and has no length check, so it cannot catch descriptions over 1,024. Still over 1,024 after this review:
+  docklands-sky (1,377), cwplans-feed-discovery (1,367), cwplans-live-state (1,318), cwplans-construction (1,202),
+  blender-station-models (1,134), cwplans-public-registers (1,133).
+- Not reviewed: `cwplans-web-harvest`, the londat cache folder against `cwplans-londat-cache`, and the contributed
+  photo files: the environment's safety check refused those reads in this session.

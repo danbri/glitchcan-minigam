@@ -103,6 +103,10 @@ Measured: 11 of 12 NOTAM cranes matched (4 at 60 Gracechurch Street plus N422; C
   completed 2020) and South Quay Plaza (Q21585412), 2 of the 4 such items in the zone. Shown, never used for status.
 - **F35** PLD polygons that are point markers (1,923 of 5,127 zone records) or missing (1,401); the PLD gives no storeys for
   30 Marsh Wall or 25 Cuba. Footprints fall back to OSM or a circle and say so.
+- **Related, F52 (2026-10-07, hub register)**: buildings finished after the 2022 LiDAR with no OSM levels or height are a
+  dig or a guessed 6 m in the 3D model (247 guessed heights; a tower at Consort Place drawn as a pit). The rule proposed
+  for `tools/build-docklands.mjs` takes storeys from a dated source, and this index (PLD `no_storeys`, completion
+  dates) is one of them. Not done yet: waiting for the owner.
 
 ## Identifying a site in a photo
 

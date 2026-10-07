@@ -1,18 +1,15 @@
 ---
 name: docklands-3d-page
 description: >-
-  Work on the Docklands 3D page, magpie/cwplans/docklands/index.html: one WebGL1 file with seven shader programs.
-  Covers the vertex formats (Mesh, MeshF, the u coordinate, the alpha byte that is NOT opacity, the g attribute
-  that carries building use and roof top), picking, the drawer, record card, search, press-and-hold routes,
-  gestures (labels must still join a pinch), music and the phone audio rules, the styles (map, isometric pixel art
-  with materials, photo facades with mip LOD, Gaussian splats including the trained set, glow chips), Night mode
-  (lit windows by use, the Air Navigation Order aviation-light rule, riverside lamps, glitter-path reflections,
-  bloom, the photo views ?view=rotherhithe|greenland|pier|greenlandday|plane and their calibration against the owner's photos; a view may carry a roll), the
-  fp16 / highp fault that left phones dark, and how to test a visual change headless (SwiftShader, renderNow and
-  toDataURL, two sizes x two pixel ratios x the photo views, numbers not one look). Reach for it before you edit
-  docklands/index.html, add a layer or a style, change a shader, judge a render, or push a page change. The sky,
-  clock, weather and tide have their own skill (pending). Also the crown halo by date and the overlays (live state,
-  London Datastore: OV), and the locate button (blue dot, follow, compass heading, look through the phone; locate.js), and the first-person Drone (drone.js: copter, plane, boat, tube, walk, under; autopilots, controls, ?drone=). The line styles (Line drawing ?lines and Vector CRT ?vectrex: line-styles.js, edges from plotter-svg.js's rules, hidden lines by the depth buffer). Append to the curation skill's ACTIVITY-LOG.md.
+  Work on the Docklands 3D page, magpie/cwplans/docklands/index.html and its scripts (WebGL 1, 15 shader programs):
+  vertex formats (the alpha byte is not opacity; g carries building use and roof top), picking by model index, the
+  drawer, card, search, routes, gestures, phone audio; the styles (map, pixel art, photo facades in a 32-slot atlas,
+  splats, glow chips, Line drawing ?lines and Vector CRT ?vectrex); Night and the photo views
+  (?view=rotherhithe|greenland|pier|greenlandday|plane); the fp16 fault; overlays, locate, ships, river, KML, Drone,
+  station models; the plotter SVG and the owner's iDraw 2.0 A3; building keys (any building by OSM id); and the
+  headless test recipe (two sizes x two pixel ratios x the photo views, numbers not one look). Sky, clock, weather and
+  tide: skill docklands-sky. Reach for it before you edit the page or its scripts, add a layer or a style, change a
+  shader, judge a render or a plot, or push a page change. Append to the curation skill's ACTIVITY-LOG.md.
 ---
 
 # The Docklands 3D page
@@ -23,8 +20,8 @@ Data and method notes: https://github.com/danbri/glitchcan-minigam/blob/master/m
 Data policy, the fault register and the activity log are in the hub skill `docklands-data-curation`
 (`magpie/cwplans/skills/docklands-data-curation/`). Append what you did to its `ACTIVITY-LOG.md`.
 
-Everything below was read from the code on 2026-10-04 (HEAD 2cf7d2a plus another agent's uncommitted sky work).
-Counts marked "measured" were run that day with the recipe in "Testing".
+The sections are dated: each was read from the code on its date. "Architecture" was checked again on 2026-10-07
+(master a2781653). Counts marked "measured" were run with the recipe in "Testing".
 
 ## Ship at once, and re-read the whole line
 
@@ -53,10 +50,15 @@ colour mask and polygon offset at the start of every frame. After you edit a lon
 
 ## Architecture
 
-- **One file.** `docklands/index.html` (about 1,840 lines, 218 KB) holds the CSS, the HTML and one inline script
-  (about 189 KB). It loads `data/area.js`, `data/under.js`, `opening-hours.js` and `vendor/earcut.min.js` as
-  scripts and fetches the rest on demand (`data/indoor.js`, `data/splats/`, `data/tex/`, `data/towers.json`,
-  `data/trees.json`, `../atlas/data/atlas.json`, `data/music.json`, `data/pixel-palette.json`, `data/river.json`).
+- **One page, many scripts.** `docklands/index.html` (2,349 lines, 295 KB on 2026-10-07; 1,840 lines on 2026-10-04)
+  holds the CSS, the HTML and one inline script. Script tags, in order: `vendor/earcut.min.js`, `data/area.js`,
+  `data/under.js`, `opening-hours.js`, `vendor/astronomy.browser.min.js`, `vendor/satellite.min.js`, `sky.js`,
+  `river-layer.js`, `ships-layer.js`, `stations-layer.js`, `../data-base.js`, `../live-cache.js`,
+  `../feeds/london-datastore/lds-building.js`, `locate.js`, `building-keys.js`, `kml-layer.js` (module), `nav.js`,
+  `drone.js`, `plotter-svg.js`, `line-styles.js`. The rest is fetched on demand (`data/indoor.js`, `data/splats/`,
+  `data/tex/`, `data/towers.json`, `data/trees.json`, `data/building-keys.json`, `../atlas/data/atlas.json`,
+  `data/music.json`, `data/pixel-palette.json`, `data/river.json`). A script tag added later in the page is not
+  there when an inline timer fires (section "Line styles", fault b).
 - **WebGL1.** `getContext('webgl', { antialias: true, alpha: false, stencil: true })` (the stencil marks night
   water). Required: `OES_element_index_uint` (32-bit indices; without it the page shows only the text tables).
   Optional: `EXT_shader_texture_lod` + `OES_standard_derivatives` (`FLOD`: facade mip levels),
@@ -73,7 +75,13 @@ colour mask and polygon offset at the start of every frame. After you edit a lon
   | `ppr` | pixel-art post pass: palette and outlines | mediump |
   | `LP` (line-styles.js) | Line drawing and Vector CRT: one instance a feature edge, widened on the screen | vertex highp, fragment mediump |
   | `PP`, `GP` (line-styles.js) | Vector CRT afterglow and glow source | mediump |
-  | sky | moving from `skyPr` in the page to `sky.js` (another agent, October 2026; see the sky skill when it exists) | |
+  | `S.P.sky`, `S.P.pt` (sky.js) | sky dome and sky points (stars, planets, satellites); skill `docklands-sky` | |
+  | `LP`, `WP` (kml-layer.js) | My KML: screen-space lines (depth-tested against the buildings) and walls | fragment mediump |
+
+  15 programs in all on 2026-10-07: 8 in index.html, 3 in line-styles.js, 2 in sky.js, 2 in kml-layer.js.
+  `tools/check-fp16-shaders.mjs` captures the shaders that the page compiles in its test run (the line programs since
+  2026-10-07) and counts uniforms, varyings and samplers; a program that is made only on demand (My KML) is in the
+  check only when the run makes it.
 
 - **Vertex formats.** `Mesh`: `[x y z]` float + `[r g b a]` bytes, 16 bytes a vertex. `MeshF` (buildings): `[x y z u]`
   float + rgba, 20 bytes, plus a second buffer `g` of 4 floats bound at attribute location 3. `u` is metres along the
@@ -96,8 +104,10 @@ colour mask and polygon offset at the start of every frame. After you edit a lon
 - **Pixel-art frame buffer.** `pixBegin()` unbinds the frame's own texture before drawing into it: a texture that is
   bound while it is the render target is a feedback loop, and every draw fails.
 
-URL switches: `?view=<name>` (any key of `VIEWS`: area, cw, under, plan, rotherhithe, greenland, pier, greenlandday), `?night`,
-`?pixel`, `?lines`, `?vectrex` (read in line-styles.js), `?capture` (no overlays, photo colours: drone frames), `#music`, `#at=`.
+URL switches: `?view=<name>` (any key of `VIEWS`: area, cw, under, plan, rotherhithe, greenland, pier, greenlandday,
+plane), `?night`, `?pixel`, `?lines`, `?vectrex` (read in line-styles.js), `?capture` (no overlays, photo colours: drone
+frames), `?t=` (page clock, sky.js; `?t=photo` also opens `rotherhithe`), `?drone=` (drone.js), `?kml=` (kml-layer.js),
+`#music`, `#at=`, and the share hash `#v=1&c=…` (nav.js; `id=osm:w<id>` opens an OSM card).
 Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNight`, `setStyle`, `setSplatMode`,
 `setGround`, `captureMode`, `pickAt` (model index), `selectBuilding`, `selectModel`, `MFP`, `modelAt`, `FT`, `searchItems`, `route`, `setEye`/`clearEye`, `screenOf`,
 `NIGHT`, `AVL`, `BL`, `PIX`, `VIZ`, `SPL`, `AT`, `AUDst`, and `setTidal`, `relight` for sky.js).
@@ -106,7 +116,7 @@ Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNig
 
 - The screen holds the model, two round buttons at the top left (Menu, Search) and the OSM credit, which folds to an (i)
   button (see "Credits and the window lock"). Every other credit is in Menu > About > Credits.
-- **Drawer** (Menu): views, then tabs Layers, Route, About (the sky work adds a Sky tab). It closes with its cross, a
+- **Drawer** (Menu): views, then tabs Layers, Sky, Route, About (checked 2026-10-07). It closes with its cross, a
   tap on the dimmed map, Escape, or a swipe left of more than 70 px. On a phone (under 900 px) a view button closes it
   so the result shows; at 900 px and wider the map is not dimmed.
 - **Record card** (`#sheet`): a tap on a building, a label or a pin opens it. Heights: 0, 38% and 80% of the screen on
@@ -150,6 +160,10 @@ Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNig
 - **Photo facades**: `data/tex/facades.jpg` is 2048 x 1024, 8 x 4 tiles of 256 px: slots 0 to 15 the registry towers
   (`facades-registry.jpg/.json`, built by `tools/build-facade-atlas.py`, which cuts whole floors by whole bays so the
   tile repeats; photos and measurement: hub skill, "Trees and facades"), then contributed tiles (see "Building keys").
+  On 2026-10-07, 23 of 32 slots are in use: 16 to 18 from set cwdock (the 17-storey brick tower, Decathlon, Dock Shed),
+  19 to 22 from set cwlibrary (the library, Columbia and Regina Point sharing one slot, Ontario Point, The Founding).
+  The compose step gives slots in set-name order, so a new set can move older tiles: refer to a tile by its OSM key,
+  never by its slot number.
   `data/tex/facades.json` gives each building its slot and the tile size on the wall in metres (`w_m`, `h_m`); the
   shader reads the sizes from `uniform vec4 fslot[16]` (two slots a row: `.xy` even, `.zw` odd). Without mipmaps the far towers speckle. `fract()` on the tile coordinate makes the
   implicit mip level jump at every seam, so the level comes from `dFdx`/`dFdy` of the unwrapped coordinate
@@ -990,7 +1004,10 @@ towerOf, groundAt, tunnelY, par, toast and getters for MVP, VZ, CAM, TOWERS) and
 - **Each file names its view**: the `<desc>` holds the page's share link (`DocklandsNav.shareUrl()`, camera, layers, time)
   and the screen size in CSS px; not plotted. To reproduce an owner's plot, open that link in a headless page of that
   size and call `DocklandsPlot.make({ paper })`. Files made before 2026-10-06 22:40 UTC have no link: a closed-loop count
-  dates them (the outline fault left almost no closed loops, e.g. 44 of 17,513 lines in the owner's 22:18 file).
+  dates them. Count the lines whose first and last points are the same: the outline fault left almost none (44 of
+  17,513 lines in the owner's 22:18 file); the fixed code keeps every visible closed outline (809 of 12,393 lines in a
+  test plot of the session, view not recorded). So an owner's "missing lines" report starts with that count, before
+  any code is read.
 - **Test a change by laying the plot over the page's own image** (that is how the fault above was found): render the page
   canvas (`?capture`, `renderNow`, `toDataURL`), call `DocklandsPlot.make()` in the same state, map the SVG back with the
   frame make() uses (k = min((PW - 24) / W, (PH - 30) / H) mm per raster px, ox = (PW - W k) / 2, oy = 12 + (PH - 30 -
@@ -1225,6 +1242,13 @@ const png = await page.evaluate(() => { window.__docklands.renderNow(); return d
   mean luma 0.100 and red pixels 0.077% at 1600 x 900 DPR 1; 0.073 and 0.064% at 390 x 844 DPR 3; `NIGHT.n` = 84 tall,
   587 red, 1,449 lamps, 160 columns, 1,769 reflections, 12 signs.
 - Then look at the pictures as well, and say which renderer made them (SwiftShader WebGL here; fp16 faults do not show).
+- **Mean luma is not always repeatable now.** On 881f5c98 (Line drawing added), three runs of `?view=greenland` with the
+  same files gave 0.0925, 0.0925 and 0.211 (2026-10-07; cause not investigated; open). Run a photo view three times
+  and compare the medians; report the spread, and do not call one odd value a regression or a pass.
+- **Wait on a condition that can end.** A shell loop `while pgrep -f <script>; do sleep …; done` matched its own
+  command line (the loop's text holds the script name) and never ended (2026-10-07). Wait on a PID (`wait $pid`,
+  or `kill -0 $pid` in the loop), or run the wait as a background command that exits when its condition is met
+  (a file that appears, a line in a log), with an upper time limit.
 
 ## Known limits (from the README and the code)
 

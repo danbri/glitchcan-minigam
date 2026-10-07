@@ -1,21 +1,15 @@
 ---
 name: cwplans-londat-cache
 description: >-
-  The cache of magpie/cwplans in the danbri/londat repository: an append-only history of live state in the
-  Docklands zone (one small gzip JSON run file per hourly run in cwplans/cache/runs/<day>/, replayed into
-  cwplans/cache/live-YYYY-MM.sqlite once when the month closes: Santander Cycles docks, lift outages,
-  station crowding, UK Power Networks power cuts, Thames Water storm overflows, NOTAM cranes and areas, AIS vessels
-  without small private craft, EA tide and river levels, TfL line status, river-bus arrival counts, Open-Meteo weather,
-  plus sources and runs tables), the compact cwplans/cache/latest.json ("latest + last 24 h" per theme) that the atlas
-  and the 3D page read before any third-party API (live-cache.js, CwLive), and three OGC GeoPackages
-  (cwplans/cache/zone-core.gpkg, zone-lds.gpkg, zone-portals.gpkg; 163 static zone layers) for QGIS and GDAL (3D model buildings with heights and cwb- ids, water, greens,
-  roads, flood defences, registry buildings, construction sites, river points, every London Datastore and portal
-  GeoJSON) with the licence of each layer in gpkg_contents. Covers the tools tools/cache-londat.mjs and
-  tools/build-zone-gpkg.mjs, the schema, the hourly GitHub Actions workflow in londat (.github/workflows/cache-live.yml),
-  sizes and git growth measured, why JSON and not sql.js-httpvfs for the pages, the request counts before and after,
-  the register rule for a monthly file family (cache/live-*.sqlite), and how to validate and open the GeoPackages. Reach for
-  it before you add a theme to the cache, change the pages' live panels, rebuild the GeoPackages, or answer "do we keep a
-  history of X?" or "can I open this in QGIS?".
+  The cache of magpie/cwplans in danbri/londat: an append-only hourly history of live state in the Docklands zone (one
+  gzip JSON run file per run in cwplans/cache/runs/<day>/, replayed into cwplans/cache/live-YYYY-MM.sqlite when the
+  month closes: hire-bike docks, lift outages, crowding, power cuts, storm overflows, NOTAM cranes, AIS without small
+  craft, tide and river levels, line status, river buses, weather), cwplans/cache/latest.json that the atlas and the
+  3D page read before any third-party API (live-cache.js), and three GeoPackages (zone-core, zone-lds, zone-portals;
+  163 layers, licence per layer) for QGIS. Tools tools/cache-londat.mjs and tools/build-zone-gpkg.mjs, the schema, the
+  hourly workflow in londat, sizes and git growth, request counts, the register rule for a monthly file family. Reach
+  for it before you add a theme to the cache, change the pages' live panels, rebuild the GeoPackages, or answer "do we
+  keep a history of X?" or "can I open this in QGIS?".
 ---
 
 # The londat cache (cwplans)
