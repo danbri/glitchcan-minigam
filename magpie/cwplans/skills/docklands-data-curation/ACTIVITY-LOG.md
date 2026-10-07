@@ -1322,3 +1322,12 @@ Owner: "don't waste good info by burying it in our chatlogs".
   id and nav.js keyed inputs by id); a timer in the inline script can fire before a later script tag has loaded.
 - Register entry for line-styles.js and a pipeline activity for the check tool; check-data-register --write run. Method,
   numbers and limits: skill docklands-3d-page, "Line styles". Not measured on a phone GPU.
+
+## 2026-10-07 (later): 3D page Vector CRT style (Opus)
+- Layers > Style > "Vector CRT" (`?vectrex`), the Vectrex tribute: the same edges added on black in one blue-white
+  phosphor (a brightness per layer; "Colour overlay" tints them), glow (quarter-size, the night bloom's blur), afterglow
+  (two textures in turn, 0.09 s), slight flicker, no scanlines. Redraws all the time only while on; a still frame skips
+  the lines (0.06-0.19 s on SwiftShader at 390 x 844 DPR 3). check-fp16-shaders.mjs now captures the line programs and
+  runs the afterglow fade in fp16 (reaches 0 in 19 frames at 60 frames a second). Share link restores style and overlay.
+- First tuning made the far city a white haze; glow and brightness lowered and the size rule raised to 6 px for this style.
+  Skill docklands-3d-page, "Line styles" > "Vector CRT".

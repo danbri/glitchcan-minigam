@@ -1,7 +1,7 @@
 // What a phone GPU would do with the 3D page's shaders, checked without a phone (magpie/cwplans/docklands/index.html,
 // sky.js and line-styles.js). Two parts:
 //  1. The page is opened in headless Chromium (SwiftShader); every shader source the page compiles is captured, and for
-//     each program (the line drawing is switched on once so that its program compiles) the tool lists its precision and counts its uniform vectors, varyings, attributes and samplers
+//     each program (the line styles are switched on once so that their programs compile) the tool lists its precision and counts its uniform vectors, varyings, attributes and samplers
 //     against the WebGL 1 minimums (what any conforming phone must offer) and against what this Chromium reports.
 //  2. The maths that a GPU running mediump as 16-bit floats (Apple's, at least) would get wrong is re-run in Node with
 //     every intermediate rounded to fp16 (IEEE binary16: 10-bit mantissa, exponents to 2^15, subnormals, overflow to
@@ -81,8 +81,11 @@ if (need('float A=-dot(vq,vq);if(A<-4.)discard;float B=exp(A)*vc.a;', 'splat fal
 }
 if (need('vec3 near(vec3 c){float bd=1e9;', 'palette search')) cases.push({ id: 'pixel-art palette search (ppr, mediump)', prec: 'fp16', result: `bd=1e9 is ${h(1e9)} in fp16 (infinity): every first comparison still succeeds, so the result is the same`, bad: false });
 
-// (h) the line drawing (line-styles.js, mediump fragment shader): the cut test on the world height wy
+// (h) the line styles (line-styles.js, mediump fragment shaders): the cut test on the world height wy, and the afterglow,
+// which must fade an 8-bit value to 0 (max(new, old * fade - 1.5 / 255))
 if (need('if(wy>cut)discard;', 'line cut test')) for (const y of [2.15, 60.3, 245.3, 320.4]) cases.push({ id: `line styles: cut test at ${y} m OD (mediump)`, prec: 'fp16', result: `wy ${y} is ${h(y)} (error ${Math.abs(h(y) - y).toFixed(3)} m); the cut level is passed as at most 1e4 (${h(1e4)})`, bad: Math.abs(h(y) - y) > .25 });
+if (need('texture2D(t2,uv).rgb*v.x-v.y', 'afterglow')) for (const fps of [30, 60, 120]) { const d = h(Math.exp(-1 / fps / .09)), e = h(1.5 / 255); let v = 1, n = 0; while (v > 0 && n < 2000) { v = Math.max(0, Math.round(h(h(v * d) - e) * 255) / 255); n++; }
+  cases.push({ id: `line styles: afterglow at ${fps} frames a second (mediump, 8-bit texture)`, prec: 'fp16', result: `a full-bright pixel reaches 0 after ${n} frames (${(n / fps).toFixed(2)} s)`, bad: v > 0 }); }
 
 // ---------- part 1: the shader sources and their counts, from the running page
 async function capture() {
@@ -101,7 +104,7 @@ async function capture() {
     const gc = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (k, o) { const g = gc.call(this, k, o); if (g && /webgl/.test(k) && !window.__gl) window.__gl = g; return g; }; });
   await page.goto(`http://127.0.0.1:${port}/magpie/cwplans/docklands/index.html?t=photo&view=greenland`);
   await page.waitForFunction(() => window.__docklands?.AT && window.__docklands.NIGHT.built && window.DocklandsSky?.S?.ready, null, { timeout: 240000 });
-  for (const m of ['lines']) {   // the line drawing compiles its program when first drawn
+  for (const m of ['lines', 'vectrex']) {   // the line styles compile their programs when first drawn
     await page.evaluate(m => window.__docklands.setStyle(m), m); await page.waitForFunction(() => window.DocklandsLines?.built, null, { timeout: 240000 });
     await page.evaluate(() => window.__docklands.renderNow()); }
   await page.evaluate(() => window.__docklands.setStyle('normal'));

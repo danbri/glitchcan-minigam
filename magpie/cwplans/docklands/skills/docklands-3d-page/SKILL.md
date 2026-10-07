@@ -12,7 +12,7 @@ description: >-
   toDataURL, two sizes x two pixel ratios x the photo views, numbers not one look). Reach for it before you edit
   docklands/index.html, add a layer or a style, change a shader, judge a render, or push a page change. The sky,
   clock, weather and tide have their own skill (pending). Also the crown halo by date and the overlays (live state,
-  London Datastore: OV), and the locate button (blue dot, follow, compass heading, look through the phone; locate.js), and the first-person Drone (drone.js: copter, plane, boat, tube, walk, under; autopilots, controls, ?drone=). The line styles (Line drawing ?lines: line-styles.js, edges from plotter-svg.js's rules, hidden lines by the depth buffer). Append to the curation skill's ACTIVITY-LOG.md.
+  London Datastore: OV), and the locate button (blue dot, follow, compass heading, look through the phone; locate.js), and the first-person Drone (drone.js: copter, plane, boat, tube, walk, under; autopilots, controls, ?drone=). The line styles (Line drawing ?lines and Vector CRT ?vectrex: line-styles.js, edges from plotter-svg.js's rules, hidden lines by the depth buffer). Append to the curation skill's ACTIVITY-LOG.md.
 ---
 
 # The Docklands 3D page
@@ -71,7 +71,8 @@ colour mask and polygon offset at the start of every frame. After you edit a lon
   | `lpr` | light sprites: aviation lights, lamps, crowns, signs, and their reflections | `HIP` |
   | `BP.bright`, `BP.blur`, `BP.add` | night bloom | mediump |
   | `ppr` | pixel-art post pass: palette and outlines | mediump |
-  | `LP` (line-styles.js) | Line drawing: one instance a feature edge, widened on the screen | vertex highp, fragment mediump |
+  | `LP` (line-styles.js) | Line drawing and Vector CRT: one instance a feature edge, widened on the screen | vertex highp, fragment mediump |
+  | `PP`, `GP` (line-styles.js) | Vector CRT afterglow and glow source | mediump |
   | sky | moving from `skyPr` in the page to `sky.js` (another agent, October 2026; see the sky skill when it exists) | |
 
 - **Vertex formats.** `Mesh`: `[x y z]` float + `[r g b a]` bytes, 16 bytes a vertex. `MeshF` (buildings): `[x y z u]`
@@ -96,7 +97,7 @@ colour mask and polygon offset at the start of every frame. After you edit a lon
   bound while it is the render target is a feedback loop, and every draw fails.
 
 URL switches: `?view=<name>` (any key of `VIEWS`: area, cw, under, plan, rotherhithe, greenland, pier, greenlandday), `?night`,
-`?pixel`, `?lines` (read in line-styles.js), `?capture` (no overlays, photo colours: drone frames), `#music`, `#at=`.
+`?pixel`, `?lines`, `?vectrex` (read in line-styles.js), `?capture` (no overlays, photo colours: drone frames), `#music`, `#at=`.
 Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNight`, `setStyle`, `setSplatMode`,
 `setGround`, `captureMode`, `pickAt` (model index), `selectBuilding`, `selectModel`, `MFP`, `modelAt`, `FT`, `searchItems`, `route`, `setEye`/`clearEye`, `screenOf`,
 `NIGHT`, `AVL`, `BL`, `PIX`, `VIZ`, `SPL`, `AT`, `AUDst`, and `setTidal`, `relight` for sky.js).
@@ -186,7 +187,7 @@ Test hooks: `window.__docklands` (`cam`, `draw`, `renderNow`, `setView`, `setNig
     depths). `tools/publish-trained-splat.mjs` keeps the flown box plus 150 m, -30 to 260 m OD and axes up to 25 m
     (21,222 of 188,295 removed), gives each splat its building (so the music works on it) and adds the set to
     `index.json`.
-- **Line drawing** (`?lines`): the plotter's edges in real time; section "Line styles".
+- **Line drawing and Vector CRT** (`?lines`, `?vectrex`): the plotter's edges in real time; section "Line styles".
 - **Glow chips** (Layers, "Glow: who is inside"): 11 categories (finance, shop, catering, leisure, entertainment, bar,
   education, health, sport, arts, charity) from `registry/categories.json` through the atlas index. Categories come
   only from stated classes (`tools/build-categories.mjs`), never from names. Drawn with the depth test, then once
@@ -1045,12 +1046,13 @@ S0-S1000, engraving 0-5,000 mm/min), writing 0-12,000 mm/min, 115200 baud.
 
 Owner, 2026-10-07: "is this stylized view possible to add within the app itself? Ideally in realtime? Use webgpu and wasm
 if needed. Possible variations: a crt style ui in tribute to classic vectrex console- which drew lines directly as needed".
-Layers > Style > "Line drawing" (`?lines`). Live:
-https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?lines. Code: `docklands/line-styles.js`
+Layers > Style > "Line drawing" (`?lines`) and "Vector CRT" (`?vectrex`). Live:
+https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?lines
+and https://danbri.github.io/glitchcan-minigam/magpie/cwplans/docklands/?vectrex. Code: `docklands/line-styles.js`
 (`DocklandsLines`). Hooks in index.html: the radios, `lineOn()` (`nightOn()` asks it: Night is off in these styles), a
 branch at the top of `render()` after the fresh state, `setStyle()` (now a wrapper; pixel art is `setPixStyle()`),
 `DocklandsLinesCtx`, and the script tag after plotter-svg.js. Check tool: `node magpie/cwplans/tools/check-line-styles.mjs
-[--out DIR]` (about 2 min).
+[--out DIR] [--style vectrex]` (about 2 min).
 
 - **No WebGPU, no wasm.** WebGL 1 with `ANGLE_instanced_arrays` (the splats need it already) is enough: the edges are built
   once in JS and the depth test removes the hidden lines. Without the extension the style stays Map (toast).
@@ -1064,14 +1066,14 @@ branch at the top of `render()` after the fresh state, `setStyle()` (now a wrapp
   only with Buildings: Solid), the terrain (no cut) or the opaque station parts (cut open). (2) Each edge is one instance
   of a 4-vertex strip. The vertex shader moves both ends towards the eye by max(0.35 m, 0.3% of the distance) (the
   plotter's depth tolerance; along the line of sight, so the picture does not move), clips at the near plane and widens
-  the quad on the screen to 1.1 CSS px, with a half-pixel soft edge; under 1 device px the alpha falls
+  the quad on the screen to 1.1 CSS px (Vector CRT 1.4), with a half-pixel soft edge; under 1 device px the alpha falls
   instead. No polygon offset was needed. The fragment shader drops the part above the cut. Pen colours from plotter-svg.js
   `LAYERS`, white paper. See-through buildings: no building occluders, building lines at 35%; Hidden: none.
 - **Size rule (the real-time form of the plotter's 1 mm and 3 mm).** Each edge carries a size (its building's box: largest
   of width, depth and height; a water or green outline's box; a road's width) and a rank: 0 roof outline, 1 base ring and
   corner verticals, 2 water or green outline or kerb, 3 always (pyramid edges, railways, paths, underground). Projected
   size = size x focal / depth; the edge fades out from 1.6 x the limit down to the limit: 4 CSS px (rank 1: 12), which are
-  1 mm and 3 mm on an A3 plot of a 1600 px screen. Far kerbs fade too (the plot
+  1 mm and 3 mm on an A3 plot of a 1600 px screen. Vector CRT 6 px: at 4 px the far city ran into a glare. Far kerbs fade too (the plot
   draws them all): most of what the plot has and the line drawing lacks.
 - **Tiles.** 400 m tiles by the edge's middle (285 tiles); inside a tile the edges are sorted by size (rank 1 a third of
   it, rank 3 first). Each frame the 8 corners of a tile's box go through MVP: a tile wholly outside one plane is skipped,
@@ -1091,8 +1093,8 @@ branch at the top of `render()` after the fresh state, `setStyle()` (now a wrapp
   kerbs 95,180; railways 11,700; paths 2,948): 23,471,112 bytes (22.4 MiB) in one buffer. Cut open: 868,232 (+27,813
   underground, +2,165 paths below ground). For scale: the building mesh is 1,226,712 vertices and 1,957,656 indices,
   52 MB. Frame (renderNow + a 1 px readPixels): 1600 x 900 map 2.0-2.2 s, Line drawing 4.8-5.0 s; 390 x 844 DPR 3 map
-  1.0-1.2 s, Line drawing 1.9-2.0 s. SwiftShader runs the vertex shader on the CPU; these numbers say nothing about a phone
-  GPU. Not measured on a phone.
+  1.0-1.2 s, Line drawing 1.9-2.0 s (the check tool's single frame read 6-13 s at 1600 x 900 on the shared machine).
+  SwiftShader runs the vertex shader on the CPU; these numbers say nothing about a phone GPU. Not measured on a phone.
 - **Against the plot** (check-line-styles.mjs: the line drawing, and the SVG drawn at the canvas size in make()'s frame;
   ink is luma under 0.8; recall = plot ink with a line-drawing line within 1 or 2 px, precision the other way): default
   1600 x 900 recall 94.8-95.0% and precision 99.9% at 1 px, 97.2-97.4% and 99.98% at 2 px; Rotherhithe 98.8-98.9% and
@@ -1102,13 +1104,34 @@ branch at the top of `render()` after the fresh state, `setStyle()` (now a wrapp
   0.10130 / 0.10131, pier 0.10909 / 0.10908 at 1600 x 900; 0.06629 / 0.06628, 0.07776 / 0.07777, 0.07811 / 0.07812 at
   390 x 844 DPR 3 (the ripples move with time).
 - **Not drawn** in the line styles: sky, Night, splats, trees, overlays (live state, London Datastore, ships, river, My KML
-  lines), glow chips, the faint ground of a cut. The tap highlight and the route are drawn on top. Labels: dark with a white halo (`body.lstyle-lines`).
+  lines), glow chips, the faint ground of a cut. The tap highlight and the route are drawn on top. Labels: dark with a white halo on paper, blue-white glow on the CRT (`body.lstyle-lines`, `body.lstyle-crt`).
   Picking is the page's own pick pass and does not change. The cut draws no outline where it cuts a building.
 - **Faults found on the way.** (a) The share link never carried a radio: `keyOf()` gives '' for an input with no id, and
   no radio has one, so the style (pixel art), ground image, buildings mode and splat mode were left out of every link
   since the share feature began. nav.js now keys a radio by its name (`r=style:lines`). (b) A `setTimeout(…, 50)` in the
   inline script can fire before a later `<script src>` has loaded (the parser waits on the network; timers run), so
   `?lines` set the radio while `DocklandsLines` did not exist yet. line-styles.js reads the switch itself.
+
+### Vector CRT (2026-10-07)
+
+- Lines added (blend ONE, ONE) on black, each layer a brightness of one blue-white phosphor (buildings .9, underground .8,
+  railways .7, water .55, paths .5, greens .42, kerbs .34). "Colour overlay" (`crtOverlay`, in the share link) tints them
+  per layer, as the Vectrex's plastic screen overlays did. No scanlines: a vector screen has none.
+- Passes. The lines are drawn into the default framebuffer (for its 24-bit depth) and copied to a texture
+  (`copyTexSubImage2D`, as the night bloom does), only when the view changed (key: MVP, size, buildings mode, cut,
+  overlay, roads, and the highlight and route meshes). Afterglow: max(new, old x exp(-dt / 0.09 s) - 1.5/255) into one of
+  two textures used in turn. Glow: a quarter-size 4-tap average without a threshold (the night bloom's `BP.bright`
+  threshold leaves a 1 to 2 px line too dim to glow), blurred twice across and down with `BP.blur`. Screen: `BP.add` of the
+  afterglow x flicker, then the glow x 0.8 added. Flicker: 0.955 + 0.03 sin(61 t) sin(19.5 t) + 0.02 noise.
+- The 1.5/255: an 8-bit texture rounds 0.8 x 1/255 back up to 1/255, so without it a trail never fades to black.
+  `check-fp16-shaders.mjs` runs the fade in fp16: a full pixel reaches 0 in 19 frames at 60 frames a second (11 at 30).
+- Redraws all the time (requestAnimationFrame) only while this style is on. A still frame is only the afterglow, glow and
+  screen passes: 0.06 to 0.19 s here at 390 x 844 DPR 3, 0.10 s at 1600 x 900; a moving frame adds a line frame.
+  Afterglow measured at 390 x 844 DPR 3 with `DocklandsLines.testDt = 1/60` (a fixed frame time) and a turn of 0.06 rad
+  between two frames, two runs (the flicker moves the counts): lit pixels (blue over 60) still 448,457 and 451,568,
+  moving 707,297 and 716,058, after 40 more frames 457,775 and 459,014.
+- First tuning (glow x 1.8, layer brightness 1, the 4 px size rule) made the far city a white haze; the values above are
+  after the change, judged by eye on the 1600 x 900 frame.
 
 ## Station models (2026-10-05)
 

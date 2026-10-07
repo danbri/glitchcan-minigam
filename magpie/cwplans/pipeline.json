@@ -5640,7 +5640,7 @@
     {
       "id": "check-line-styles",
       "tool": "tools/check-line-styles.mjs",
-      "command": "node magpie/cwplans/tools/check-line-styles.mjs [--out DIR]",
+      "command": "node magpie/cwplans/tools/check-line-styles.mjs [--out DIR] [--style lines|vectrex]",
       "kind": "check",
       "used": [
         {

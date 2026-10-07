@@ -1929,7 +1929,7 @@ Each tool activity gives its command, method, rules, inputs, outputs, network an
 
 #### 58. `check-line-styles` (tools/check-line-styles.mjs)
 
-- Command: `node magpie/cwplans/tools/check-line-styles.mjs [--out DIR]`
+- Command: `node magpie/cwplans/tools/check-line-styles.mjs [--out DIR] [--style lines|vectrex]`
 - Method: Opens the 3D page with the Line drawing style in headless Chromium at four views and sizes, renders the line drawing and makes the Plotter SVG of the same camera, draws the SVG at the canvas size in the plotter's own page frame and matches the ink pixel by pixel; prints the edge counts, buffer bytes, build time, edges drawn, frame time and recall and precision within 1 and 2 px.
 - Rules:
   - Ink: luma under 0.8 in the line drawing; the SVG's strokes drawn black at one canvas pixel, the credit left out.
@@ -3946,7 +3946,7 @@ All tool activities in an order that satisfies every "after" (the brands merge a
 55. `lds-harvest-auto` (feeds, network): `node magpie/cwplans/tools/lds-harvest-auto.mjs plan [id ...]; NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/lds-harvest-auto.mjs run [id ...] [--rank a-b] [--again]; node magpie/cwplans/tools/lds-harvest-auto.mjs register`
 56. `amend-uprns` (feeds, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/amend-uprns.mjs cultural-infrastructure [--refresh]; generic: node magpie/cwplans/tools/amend-uprns.mjs --in <file> --uprn-field <f> --id-field <f[,f]> [--ref a:<file>]... [--ref c:<file>]... [--open-uprn <zip|csv>] [--footprints <osm-clip.json.gz>] --out <copy> --amendments <json>`
 57. `check-fp16-shaders` (imagery): `node magpie/cwplans/tools/check-fp16-shaders.mjs [--no-browser]`
-58. `check-line-styles` (imagery): `node magpie/cwplans/tools/check-line-styles.mjs [--out DIR]`
+58. `check-line-styles` (imagery): `node magpie/cwplans/tools/check-line-styles.mjs [--out DIR] [--style lines|vectrex]`
 59. `fetch-crown-lighting` (lighting, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/fetch-crown-lighting.mjs [--press] [--commons] [--thumbs] [--no-fetch]`
 60. `fetch-trees` (trees, network): `NODE_USE_ENV_PROXY=1 node magpie/cwplans/tools/build-trees.mjs fetch [gla|osgs|tpo|tow ...]`
 61. `build-trees` (trees): `node --max-old-space-size=6000 magpie/cwplans/tools/build-trees.mjs`

@@ -23,7 +23,7 @@ a{color:var(--link)}
 canvas#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .lb{position:absolute;transform:translate(-50%,-100%);font:11px system-ui,sans-serif;white-space:nowrap;padding:2px 3px;border:0;background:none;color:var(--fg);pointer-events:auto;cursor:pointer;touch-action:none;text-shadow:0 0 2px #000,0 0 3px #000,0 1px 4px #000c}
-body.lstyle-lines .lb{color:#202020;text-shadow:0 0 2px #fff,0 0 3px #fff,0 1px 4px #fffc}
+body.lstyle-lines .lb{color:#202020;text-shadow:0 0 2px #fff,0 0 3px #fff,0 1px 4px #fffc}body.lstyle-crt .lb{color:#d8f0ff;text-shadow:0 0 3px #7cc8ff,0 0 6px #3a8cff99}
 .lb.st{font-size:12px;font-weight:600;color:#ffd9bf}.lb.pl{font-style:italic;color:#d7dce0}.lb.wt{border-color:var(--water);color:#bfe3ff}.lb.cam{padding:0 3px;border:1px solid #ffd26f;border-radius:5px;background:#0d1013d9}.lb.src{border-color:#ffd26f;color:#ffe7a8}.lb.occ{border-color:#ff5fa2;color:#ffd1e6;font-size:10px}.lb.her{border-color:#b48cff;color:#e2d4ff}.lb.end{border-color:var(--acc);color:#c9ffd6;font-weight:600}
 button{font:inherit;color:var(--fg);background:#293038;border:1px solid #59616a;border-radius:10px;padding:8px 12px;cursor:pointer}
 button[aria-pressed=true]{background:#3d4a57;border-color:#9aa6b2}
@@ -162,11 +162,12 @@ body.capture #mini,body.capture #top,body.capture #gauge,body.capture #isoBtns,b
     <div class="pane" id="paneLayers">
       <h3>Style</h3>
       <div class="chips" role="radiogroup" aria-label="Style">
-        <label><input type="radio" name="style" value="normal" checked> Map</label><label><input type="radio" name="style" value="pixel"> Isometric pixel art</label><label><input type="radio" name="style" value="lines"> Line drawing</label>
+        <label><input type="radio" name="style" value="normal" checked> Map</label><label><input type="radio" name="style" value="pixel"> Isometric pixel art</label><label><input type="radio" name="style" value="lines"> Line drawing</label><label><input type="radio" name="style" value="vectrex"> Vector CRT</label>
       </div>
       <div class="chips row"><label><input type="checkbox" id="nightMode"> Night</label><label><input type="checkbox" id="crownDate" checked> Crown halo colour by date</label></div>
       <p class="small" id="crownNote" hidden></p>
       <p class="small" id="nightNote" hidden></p>
+      <div class="chips row" id="crtRow" hidden><label><input type="checkbox" id="crtOverlay"> Colour overlay</label></div>
       <p class="small" id="lineNote" hidden></p>
       <p class="small" id="pixNote" hidden>Pixel art: an isometric view in a 33-colour palette with stylised trees, people, cyclists, buses, cabs, now and then a police car, ambulance or fire engine, gulls, river traffic (Thames Clipper catamarans, tourist boats, tugs towing waste barges, aggregate barges, speedboats) and swimmers in Eden Dock. Drag to move, pinch or wheel to zoom, twist two fingers to turn, move two fingers up or down to tilt (mouse: right or Shift drag). The arrows at the top right turn by a quarter. The animals and traffic are illustrative, not live data.</p>
       <h3>Ground image</h3>
@@ -778,7 +779,7 @@ function render() {
   moonNow(nm); gl.uniform3fv(uMl, MOON.on ? MOON.g : [0, 0, 0]);
   gl.uniformMatrix4fv(uM, false, MVP); gl.uniform1f(uVz, VZ); gl.uniform1f(uCut, cutY); gl.uniform1f(uMono, 0); const nDim = nm ? (cutOn ? .6 : .12) : night ? .45 : 1; gl.uniform1f(uDim, nDim);
   gl.disable(gl.BLEND); gl.depthMask(true); gl.colorMask(true, true, true, true); gl.disable(gl.POLYGON_OFFSET_FILL);   // a fresh state every frame
-  if (lineOn() && DocklandsLines.ready(P)) {   // Line drawing (line-styles.js): the solids hide the edges; the sky, night, splats and overlays are off
+  if (lineOn() && DocklandsLines.ready(P)) {   // Line drawing and Vector CRT (line-styles.js): the solids hide the edges; the sky, night, splats and overlays are off
     DocklandsLines.frame({ P, w, h, cutOn, cutY, bm, occlude() { if (bm === 'solid') drawFacades(L.bld, 1, P); if (!cutOn) drawMesh(L.terrain, 1); else if (globalThis.DocklandsStations) DocklandsStations.draw(0); },
       top() { if (L.hi || L.route) { gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); drawMesh(L.hi, .9); drawMesh(L.route, .95); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST); } } });
     placeLabels(); if (globalThis.DocklandsSky) DocklandsSky.after({ MVP, VZ, cssW: cv.clientWidth, cssH: cv.clientHeight, pix: false });
@@ -1278,7 +1279,7 @@ function drawGlow() {
 // there. Lights are additive soft sprites with a halo, which also stands in for bloom. README "Night".
 const NIGHT = { on: false, built: false, lights: null, refl: null, loop: 0, wl: 2.5, moon: null, moonAt: 0, n: {} };
 const nightOn = () => NIGHT.on && !PIX.on && !lineOn();
-function lineOn() { return !!(globalThis.DocklandsLines && DocklandsLines.mode); }   // Line drawing (line-styles.js)
+function lineOn() { return !!(globalThis.DocklandsLines && DocklandsLines.mode); }   // Line drawing or Vector CRT (line-styles.js)
 // moonlight (Night only, and only while the sun is below the horizon): strength = the moon's brightness relative to a full
 // moon (from its magnitude, astronomy-engine) x the light left after the airmass at its altitude (0.25 mag per airmass)
 // x the share of the sky not under low and mid cloud; a cool tint. Walls take it by their angle to the moon (Lambert, the
@@ -2060,11 +2061,11 @@ function stepActors(dt, now) {
   if (PIX.ents) PIX.ents.free(); PIX.ents = M.upload();
 }
 function pixTick(now) { if (!PIX.on) return; const dt = Math.min(.1, (now - (PIX.last || now)) / 1000); PIX.last = now; stepActors(dt, now / 1000); draw(); PIX.loop = requestAnimationFrame(pixTick); }
-async function setStyle(mode) {   // normal, pixel or lines (Line drawing)
+async function setStyle(mode) {   // normal, pixel, lines (Line drawing) or vectrex (Vector CRT)
   const LS = globalThis.DocklandsLines;
   if (LS && LS.mode && mode !== LS.mode) LS.set(null);
   if ((mode === 'pixel') !== PIX.on) await setPixStyle(mode);
-  if (LS && mode === 'lines' && !LS.set(mode)) { document.querySelector('input[name=style][value=normal]').checked = true; mode = 'normal'; }
+  if (LS && (mode === 'lines' || mode === 'vectrex') && !LS.set(mode)) { document.querySelector('input[name=style][value=normal]').checked = true; mode = 'normal'; }
   const r = document.querySelector(`input[name=style][value=${mode}]`); if (r) r.checked = true;   // the radio follows a call from code (the share link reads it)
   $('nightMode').disabled = mode !== 'normal'; if (mode === 'normal' && NIGHT.on) setNight(true); draw();
 }
@@ -2308,8 +2309,8 @@ if (globalThis.DocklandsStations) DocklandsStations.init({ Mesh, shade, norm3, e
 // My KML (kml-layer.js, Layers > My KML): the helpers it draws with; it runs after this script as a module
 // Plotter SVG (plotter-svg.js, Menu > views > Plotter SVG of this view): the data and camera it draws from
 globalThis.DocklandsPlotCtx = { A, dec, earcut, heightOf, towerOf, groundAt, tunnelY, par, toast, MVP: () => MVP, VZ: () => VZ, CAM: () => CAM, TOWERS: () => TOWERS };
-// Line drawing (line-styles.js, Layers > Style): GL helpers and the camera
-globalThis.DocklandsLinesCtx = { gl, cv, sh, instExt, aP, aC, pr, L, par, toast, draw, setStyle, MVP: () => MVP, PROJ: () => PROJ, VZ: () => VZ, CAM: () => CAM };   // ?lines is read in line-styles.js: a timer set here can fire before that script has loaded
+// Line drawing and Vector CRT (line-styles.js, Layers > Style): GL helpers, the night-bloom passes and the camera
+globalThis.DocklandsLinesCtx = { gl, cv, sh, instExt, BP, bTex, quad, aP, aC, pr, L, par, toast, draw, setStyle, MVP: () => MVP, PROJ: () => PROJ, VZ: () => VZ, CAM: () => CAM };   // ?lines and ?vectrex are read in line-styles.js: a timer set here can fire before that script has loaded
 globalThis.DocklandsKMLctx = { Mesh, beam, shade, geo, groundAt, inBox, ovCard, ovOn, dec, earcut, draw, toast, unview, A, OV, labels, labelBox, cam, get CAM() { return CAM; }, get VZ() { return VZ; }, get MVP() { return MVP; }, get PROJ() { return PROJ; }, gl, cv, sel: () => selected >= 0 && AT ? AT.buildings[selected] : null };
 globalThis.DocklandsKeysCtx = { A, MFP, dec, Mesh, L, outline, heightOf, clearSelection, resetInfo, openPane, info, routeBtns, flyTo, cam, toast, draw, esc, regOf, facadeOf: idx => { if (!FT || !FT.byModel) return null; for (const i of idx) { const s = FT.byModel.get(i); if (s != null) return Object.values(FT.buildings).find(f => f.slot === s) || null; } return null; } };   // building-keys.js
 window.__docklands = { cam, draw, setView, geo, groundAt, toast, L, labels, pickAt, selectBuilding, regOf, get AT() { return AT; }, loadNet, route, doRoute, get NET() { return NET; }, setGround, openPane, vertexAt, openPress, setEnd, vertexEnd, showPlace, searchItems, get ground() { return ground; }, VIZ, PIX, AUDst: () => AUD.ctx ? { ctx: AUD.ctx.state, paused: AUD.el.paused, t: +AUD.el.currentTime.toFixed(1), state: AUD.state } : null, setStyle, setSplatMode, get SPL() { return SPL; }, captureMode, renderNow, get CAM() { return CAM; }, setNight, NIGHT, sunMoon, AVL, BL, nightRebuild() { buildNightLights(); draw(); }, get CROWN() { return CROWN; }, crownNow, crownText, OV, buildOverlays, ovTapPoint, ovTapGround, groundUnder, tunnelY, par, get tidalField() { return tidalField; },

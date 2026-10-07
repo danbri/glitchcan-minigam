@@ -5,7 +5,7 @@
 // 1 and 2 px (recall: plot ink with a line-drawing line near it; precision: the other way). Exit 1 on a page error or a
 // value under the floor.
 //
-//   node magpie/cwplans/tools/check-line-styles.mjs [--out DIR]
+//   node magpie/cwplans/tools/check-line-styles.mjs [--out DIR] [--style lines|vectrex]
 //
 // --out writes, per view, the line drawing, the SVG and a diff (grey both, red plot only, blue line drawing only).
 // Method, measurements and limits: the docklands-3d-page skill, "Line styles".

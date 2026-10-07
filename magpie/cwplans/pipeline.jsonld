@@ -6336,7 +6336,7 @@
    "cwp:tool": {
     "@id": "https://github.com/danbri/glitchcan-minigam/blob/master/magpie/cwplans/tools/check-line-styles.mjs"
    },
-   "cwp:command": "node magpie/cwplans/tools/check-line-styles.mjs [--out DIR]",
+   "cwp:command": "node magpie/cwplans/tools/check-line-styles.mjs [--out DIR] [--style lines|vectrex]",
    "cwp:kind": "check",
    "cwp:rule": [
     "Ink: luma under 0.8 in the line drawing; the SVG's strokes drawn black at one canvas pixel, the credit left out.",
@@ -14730,7 +14730,7 @@
     "prov:Entity",
     "dcat:Distribution"
    ],
-   "dct:title": "code, not data: the 3D page's line styles (Layers > Style): Line drawing (?lines, the plotter drawing in real time: feature edges as screen-space quads, hidden lines removed by the depth buffer of the page's own solids, the plotter's pen colours); the edges come from plotter-svg.js's rules (DocklandsPlot.scene); drawn in the browser from the page's own data, nothing sent",
+   "dct:title": "code, not data: the 3D page's line styles (Layers > Style): Line drawing (?lines, the plotter drawing in real time: feature edges as screen-space quads, hidden lines removed by the depth buffer of the page's own solids, the plotter's pen colours) and Vector CRT (?vectrex, phosphor lines on black with glow, afterglow and flicker after the Vectrex); the edges come from plotter-svg.js's rules (DocklandsPlot.scene); drawn in the browser from the page's own data, nothing sent",
    "prov:wasDerivedFrom": [
     {
      "@id": "https://danbri.github.io/glitchcan-minigam/magpie/cwplans/data-register.json#source/own"
