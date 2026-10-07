@@ -1243,8 +1243,11 @@ const png = await page.evaluate(() => { window.__docklands.renderNow(); return d
   587 red, 1,449 lamps, 160 columns, 1,769 reflections, 12 signs.
 - Then look at the pictures as well, and say which renderer made them (SwiftShader WebGL here; fp16 faults do not show).
 - **Mean luma is not always repeatable now.** On 881f5c98 (Line drawing added), three runs of `?view=greenland` with the
-  same files gave 0.0925, 0.0925 and 0.211 (2026-10-07; cause not investigated; open). Run a photo view three times
-  and compare the medians; report the spread, and do not call one odd value a regression or a pass.
+  same files gave 0.0925, 0.0925 and 0.211 (2026-10-07; cause not investigated; open). On a2781653 the same day, three
+  fresh pages at 1600 x 900 DPR 1, each read 12 s after `__docklands.MVP` appeared (renderNow, toDataURL, Rec. 709
+  luma of every pixel), gave 0.08836, 0.08835 and 0.08835: stable. The odd value may be a page read before it settled;
+  wait the same time in every run. Run a photo view three times and compare the medians; report the spread, and do
+  not call one odd value a regression or a pass.
 - **Wait on a condition that can end.** A shell loop `while pgrep -f <script>; do sleep …; done` matched its own
   command line (the loop's text holds the script name) and never ended (2026-10-07). Wait on a PID (`wait $pid`,
   or `kill -0 $pid` in the loop), or run the wait as a background command that exits when its condition is met
