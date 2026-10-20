@@ -81,14 +81,13 @@ const SPAWNS={'3':[[15,15],[23,17]],'2':[[9,15],[25,13]],'1':[[13,17],[27,9]],'G
 // again while chasing); sight = path length at which she notices you; persist = steps she keeps going after you leave her sight;
 // hold = steps she stands on noticing you; pause = chance per patrol step of an idle pause; patrol = wander | home | straight.
 const NURSE_TYPES={
- matron:{label:'brisk matron',size:1.1,build:1.04,tick:.84,chaseTick:.95,sight:9,persist:7,hold:0,pause:.03,patrol:'straight',lean:0,head:-3,stride:1.2,swing:30,rest:'stand',idles:['watch'],hair:'bun',dress:true},
- night:{label:'weary night nurse',size:1,build:1,tick:1.3,chaseTick:.9,sight:6,persist:2,hold:1,pause:.2,patrol:'home',lean:6,head:13,stride:.75,swing:8,rest:'slump',idles:['yawn','rub'],hair:'messy'},
- chatty:{label:'chatty nurse',size:.96,build:1.02,tick:1.04,chaseTick:1,sight:6,persist:3,hold:1,pause:.14,patrol:'wander',lean:2,head:0,stride:1,swing:18,rest:'clip',idles:['look','nod'],hair:'pony',clip:true},
- trainee:{label:'nervous trainee',size:.88,build:.9,tick:.95,chaseTick:1,sight:5,persist:1,hold:2,pause:.08,patrol:'wander',lean:3,head:5,stride:.9,swing:12,rest:'clasp',idles:['glance'],hair:'curly',hesitate:.22},
- stern:{label:'stern sister',size:1.05,build:1.14,tick:1.12,chaseTick:1,sight:10,persist:3,hold:0,pause:.12,patrol:'straight',lean:-1,head:-3,stride:1,swing:0,rest:'fold',idles:['scan','fold'],hair:'crop'}
+ matron:{label:'brisk matron',size:1.1,tick:.84,chaseTick:.95,sight:9,persist:7,hold:0,pause:.03,patrol:'straight',lean:-2,head:-4,stride:1.2,swing:26,bob:3,lift:.22,rest:'stand',idles:['watch']},
+ night:{label:'weary night nurse',size:1,tick:1.3,chaseTick:.9,sight:6,persist:2,hold:1,pause:.2,patrol:'home',lean:7,head:12,stride:.75,swing:8,bob:4.5,lift:.07,rest:'slump',idles:['yawn','rub']},
+ chatty:{label:'chatty nurse',size:.96,tick:1.04,chaseTick:1,sight:6,persist:3,hold:1,pause:.14,patrol:'wander',lean:2,head:0,stride:1,swing:18,bob:6,lift:.25,rest:'clip',idles:['look','nod']},
+ trainee:{label:'nervous trainee',size:.88,tick:.95,chaseTick:1,sight:5,persist:1,hold:2,pause:.08,patrol:'wander',lean:3,head:5,stride:.85,swing:12,bob:3.5,lift:.18,rest:'clasp',idles:['glance'],hesitate:.22},
+ stern:{label:'stern sister',size:1.05,tick:1.12,chaseTick:1,sight:10,persist:3,hold:0,pause:.12,patrol:'straight',lean:-3,head:-3,stride:1,swing:3,bob:2.2,lift:.15,rest:'fold',idles:['scan','fold']}
 };
 const NURSE_CAST={'3':['matron','night'],'2':['chatty','stern'],'1':['trainee','matron'],'G':['chatty','trainee'],'B1':['night','stern']};
-const SKIN=['#f0c8a6','#c48a5e','#8a5638','#e3aa80','#5f3b29'],HAIR=['#2a1d16','#6b3f22','#c9a06a','#121014','#8f8a86'],INK='#1c130e',DEG=Math.PI/180;
 const COL={walls:'#122831',floor:'#37545b',edge:'#466a6a',south:'#38565a',central:'#405d5d',tower:'#445a62'};
 const ns='http://www.w3.org/2000/svg';
 const svg=document.getElementById('gameSvg'),tiles=document.getElementById('tiles'),featuresG=document.getElementById('features'),actorsG=document.getElementById('actors'),pathG=document.getElementById('pathline');
@@ -112,7 +111,7 @@ function genMap(fi){const random=rng(1024+fi*317),grid=Array.from({length:H},()=
 }
 function isOpen(f,x,y,staff=false){if(x<0||y<0||x>=W||y>=H)return false;const c=maps[f][y][x];return c==='.'||(c==='D'&&(staff||!!game.inventory?.key));}
 function bfs(f,from,to,staff=false){if(!isOpen(f,to.x,to.y,staff))return null;if(from.x===to.x&&from.y===to.y)return [];let q=[from],seen=new Set([from.x+','+from.y]),p=new Map();for(let i=0;i<q.length;i++){let v=q[i];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){let nx=v.x+dx,ny=v.y+dy,k=nx+','+ny;if(seen.has(k)||!isOpen(f,nx,ny,staff))continue;seen.add(k);p.set(k,{x:v.x,y:v.y});if(nx===to.x&&ny===to.y){let path=[{x:nx,y:ny}],cur=p.get(k);while(cur&&(cur.x!==from.x||cur.y!==from.y)){path.push(cur);cur=p.get(cur.x+','+cur.y)}return path.reverse();}q.push({x:nx,y:ny});}}return null;}
-function spawnNurses(f){const fi=floors.indexOf(f);return SPAWNS[f].map(([x,y],i)=>({x,y,homeX:x,homeY:y,phase:i*2.3,alert:false,lastDx:0,lastDy:0,type:NURSE_CAST[f][i],skin:SKIN[(fi*2+i*3)%5],hair:HAIR[(fi+i*2)%5],acc:i*160,hold:0,chase:0,idle:null,seen:null,face:i?-1:1,px:x,py:y,movedAt:-1e4,moveDur:300,noticeAt:-1e4,lostAt:-1e4}));}
+function spawnNurses(f){return SPAWNS[f].map(([x,y],i)=>({x,y,homeX:x,homeY:y,phase:i*2.3,alert:false,lastDx:0,lastDy:0,type:NURSE_CAST[f][i],acc:i*160,hold:0,chase:0,idle:null,seen:null,face:i?-1:1,px:x,py:y,movedAt:-1e4,moveDur:300,noticeAt:-1e4,lostAt:-1e4}));}
 function reset(full=true){maps={};floors.forEach((f,i)=>maps[f]=genMap(i));game={floor:'3',x:25,y:5,caught:null,inventory:{badge:false,key:false,pin:false,fuse:false},pin:['4137','2864','7305','9412','5728'][Math.floor(Math.random()*5)],captures:0,score:0,dir:null,next:null,nurses:spawnNurses('3'),route:[],running:false,paused:false,won:false,invincibleUntil:0};viewport.x=game.x*T;viewport.y=game.y*T;last=0;moveAccum=0;renderFloor();refreshHud();setMsg('The ward is quiet. For now.');}
 function paintSymbol(g,x,y,type){const ox=x*T+T/2,oy=y*T+T/2;if(type==='bed'){
  mk('rect',{x:x*T+5,y:y*T+9,width:27,height:19,rx:3,fill:'#6faaca',stroke:'#d3eff1','stroke-width':2},g);mk('rect',{x:x*T+8,y:y*T+11,width:10,height:8,rx:2,fill:'#ebf2e3'},g);mk('path',{d:`M${x*T+5} ${y*T+23}h27`,stroke:'#376477','stroke-width':3},g);return;
@@ -136,7 +135,7 @@ function renderFloor(){tiles.replaceChildren();featuresG.replaceChildren();actor
  for(const [name,x,y] of labelDefs)mk('text',{x:x*T,y:y*T,'font-size':10,'font-weight':800,fill:'#79979a',opacity:.85,'letter-spacing':1},featuresG).textContent=name;
  for(const c of cores){if(game.floor==='3'&&c.type==='liftB')continue;let g=mk('g',{},featuresG);paintSymbol(g,c.x,c.y,c.type);}
  for(const f of features[game.floor]||[]){if(game.inventory[f.type]&&f.type!=='bed')continue;let g=mk('g',{},featuresG);paintSymbol(g,f.x,f.y,f.type);}
- actorRefs=game.nurses.map(n=>buildNurse(n));
+ actorRefs=game.nurses.map((n,i)=>buildNurse(n,i));
  let playerG=mk('g',{id:'hero'},actorsG);mk('circle',{cx:0,cy:0,r:21,fill:'#74d8e0',opacity:.11},playerG);mk('use',{href:'#playerGlyph'},playerG);actorRefs.forEach(r=>actorsG.append(r.mark));
  el('zone').textContent=game.floor==='B1'?'B1 · PLANT ROOMS':game.floor==='G'?'G · ATRIUM':game.floor+'F · '+(game.floor==='3'?'TOWER WARD':game.floor==='2'?'PHARMACY':'RECORDS');el('floorChip').textContent='FLOOR '+game.floor;
  updateCamera(true);drawRoute();updateActors(performance.now());}
@@ -144,68 +143,59 @@ function updateActors(now){let moving=(game.route.length>0||!!game.dir);const he
  actorRefs.forEach((r,i)=>{if(game.nurses[i])drawNurse(r,game.nurses[i],i,now);});
  const order=[...actorRefs].sort((a,b)=>a.y-b.y);if(order.some((r,i)=>actorsG.children[i]!==r.root))order.forEach(r=>actorsG.insertBefore(r.root,el('hero')));
 }
-// Nurse figures: side view, traced-from-life proportions (about 7.5 heads), flat fills, a jointed rig (hip, knee, shoulder,
-// elbow, neck) posed per frame. Local units: feet at y=0, hip -27.5, shoulder -44.6, head top -56; facing +x, mirrored for left.
-const cap=(x,y1,y2,w1,w2)=>`M${x-w1} ${y1}L${x-w2} ${y2}A${w2} ${w2} 0 0 0 ${x+w2} ${y2}L${x+w1} ${y1}A${w1} ${w1} 0 0 0 ${x-w1} ${y1}Z`;
-const shade=(c,k)=>'#'+[1,3,5].map(i=>Math.round(parseInt(c.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('');
-// Hand-inked line: a dark copy of each shape sits under it, offset down-right, so the outline is heavier on the shadow side.
-function inked(g,tag,a,fill,w=.45){mk(tag,{...a,fill:INK,stroke:INK,'stroke-width':w+1.2,transform:'translate(.35 .5) '+(a.transform||'')},g);return mk(tag,{...a,fill,stroke:INK,'stroke-width':w},g);}
-function buildNurse(n){const P=NURSE_TYPES[n.type],b=P.build,sk=n.skin,hc=n.hair,shoe=P.dress||n.type==='stern'?'#2e2a2a':'#efebe3',r={P},root=r.root=mk('g',{},actorsG),hem=P.dress?-12:-21.4;
- r.glow=mk('ellipse',{cx:0,cy:0,rx:17,ry:6.5,fill:'#ff4949',opacity:0},root);mk('ellipse',{cx:0,cy:0,rx:10*P.size,ry:3.4,fill:'#000',opacity:.4},root);
- const fig=r.fig=mk('g',{filter:'url(#nurseShadow)'},root),
-  arm=(g,near)=>{const s=near?sk:shade(sk,.8),a=mk('g',{},g);inked(a,'path',{d:cap(.2,-44.6,-34.8,1.45,1.25)},s);inked(a,'path',{d:cap(.2,-44.8,-39.2,2.15,1.85)},near?'#f2890f':'#c66a07');const f=mk('g',{},a);inked(f,'path',{d:cap(.2,-34.8,-26.6,1.25,.95)},s);
-   if(near&&P.clip){inked(f,'rect',{x:-1.5,y:-27.2,width:8.4,height:3.4,rx:.4},'#a87a4c',.35);mk('rect',{x:-.9,y:-26.8,width:6.6,height:2,fill:'#f7f4ec'},f);}
-   inked(f,'ellipse',{cx:.5,cy:-25.4,rx:1.2,ry:1.65},s);return {a,f};},
-  leg=near=>{const c=P.dress?(near?'#40343a':'#2b2327'):(near?'#e07d0c':'#a95705'),w=P.dress?.62:1,l=mk('g',{},fig);inked(l,'path',{d:cap(0,-27.5,-14,2.7*w,2.2*w)},c);const s=mk('g',{},l);inked(s,'path',{d:cap(0,-14,-1.8,2.2*w,1.6*w)},c);inked(s,'path',{d:'M-1.7 -2.9Q-2.3 0-1.3 0H4.4Q4.8-1.8 2.4-3Z'},near?shoe:shade(shoe,.8));return {l,s};};
- r.upB=mk('g',{},fig);const farArm=arm(r.upB,false),farLeg=leg(false),nearLeg=leg(true);r.legs=[nearLeg,farLeg];
- const up=r.upF=mk('g',{},fig);inked(up,'path',{d:'M.1 -48.8H2V-45H.1Z'},sk);
- inked(up,'path',{d:`M-1.3 -46.7Q${-3.5*b} -46.2 ${-3.4*b} -42L${-2.9*b} -31Q${-3.2*b} -27 ${-(P.dress?5.6:4.1)*b} ${hem}L${(P.dress?5.8:4.1)*b} ${hem}Q${3.4*b} -26 ${3*b} -30.5Q${4.5*b} -35 ${4*b} -39.6Q${3.6*b} -44.4 1.9 -46.6Z`},'#f2890f');
- mk('path',{d:`M${-3.4*b} -42L${-2.9*b} -31Q${-3.2*b} -27 ${-(P.dress?5.6:4.1)*b} ${hem}L${-1.8*b} ${hem}L${-1.4*b} -31L${-1.9*b} -42Z`,fill:'#c96a08',opacity:.85},up);
- if(P.dress){inked(up,'path',{d:`M${-2.95*b} -31.4L${3.05*b} -31L${3.1*b} -29.4L${-3*b} -29.7Z`},'#2e2a2a',.3);mk('rect',{x:2*b,y:-31.3,width:1.4,height:1.9,fill:'#d9dde0',stroke:INK,'stroke-width':.25},up);}
- else mk('path',{d:`M${2.7*b} -25.6h-2.4`,stroke:INK,'stroke-width':.4,fill:'none'},up);
- mk('path',{d:`M1.9 -46.6L2.9 -42.6L${3.6*b} -45.1`,stroke:'#fff4e2','stroke-width':.8,fill:'none','stroke-linejoin':'round'},up);
- mk('path',{d:`M-.9 -46.5Q.6 -41 ${2.2*b} -37.4`,stroke:'#2f6fb0','stroke-width':.55,fill:'none'},up);mk('rect',{x:1.6*b,y:-37.6,width:2.2,height:3,fill:'#eef6ff',stroke:INK,'stroke-width':.3},up);
- mk('circle',{cx:3.5*b,cy:-42.3,r:.95,fill:'#dfe3e6',stroke:INK,'stroke-width':.35},up);
- const h=r.head=mk('g',{},up),hairCap=P.hair==='crop'?'M-2.4 -51.2Q-3 -56.3 1.3 -56Q4.9 -55.8 4.6 -53.3Q2.6 -54.6 .6 -53.6Q-.6 -52.6-1.2 -50.6Z':'M-2.6 -50.4Q-3.2 -56.6 1.4 -56.2Q5.2 -55.9 4.7 -52.9Q2.8 -54.4 .7 -53.4Q-.5 -52.3-1.3 -49.4Z';
- if(P.hair==='bun')inked(h,'circle',{cx:-3.2,cy:-54.4,r:2.1},hc);
- if(P.hair==='messy')inked(h,'circle',{cx:-2.8,cy:-55.6,r:1.9},hc);
- if(P.hair==='pony'){r.tail=mk('g',{},h);inked(r.tail,'path',{d:'M-2.6 -54Q-5.6 -53 -5.4 -48.6Q-5 -46.5 -3.6 -45.8Q-3.9 -49.5 -1.6 -52Z'},hc);mk('circle',{cx:-2.8,cy:-53.6,r:.75,fill:'#2f6fb0'},r.tail);}
- if(P.hair==='curly')for(const [x,y] of [[-2.6,-53.4],[-1.4,-55.6],[1,-56.6],[3.3,-56.1],[-2.8,-51]])inked(h,'circle',{cx:x,cy:y,r:1.55},hc,.3);
- inked(h,'ellipse',{cx:1.1,cy:-51.6,rx:3.5,ry:4.15},sk);mk('ellipse',{cx:.2,cy:-51.3,rx:.8,ry:1.1,fill:shade(sk,.85),stroke:INK,'stroke-width':.3},h);
- inked(h,'path',{d:'M4.3 -52.4Q5.6 -50.7 4.4 -50.1'},sk,.35);
- if(n.type==='night')mk('path',{d:'M2.6 -52.1h1.2',stroke:INK,'stroke-width':.5},h);else mk('circle',{cx:3.2,cy:-52.2,r:.45,fill:INK},h);
- mk('path',{d:n.type==='stern'?'M2.2 -53.8L4.1 -53.1':n.type==='trainee'?'M2.3 -54.1Q3.2 -54.6 4.1 -54':'M2.3 -53.5h1.7',stroke:INK,'stroke-width':.45,fill:'none'},h);
- mk('path',{d:n.type==='chatty'?'M3.3 -49.6q.6 .5 1.2 0':'M3.4 -49.4h1',stroke:INK,'stroke-width':.4,fill:'none'},h);
- inked(h,'path',{d:hairCap},hc,.35);
- if(P.hair==='messy')mk('path',{d:'M-3.6 -50.5q-.8 1.8 .1 3M4 -55q1.6 -.6 1.7 -2M-1.2 -56.4q-.4 -1.6 1 -2.2',stroke:hc,'stroke-width':.5,fill:'none'},h);
- const nearArm=arm(up,true);r.arms=[nearArm,farArm];
- r.mark=mk('g',{opacity:0});r.markC=mk('circle',{cx:0,cy:0,r:6.6,fill:'#ff4949',stroke:'#fff','stroke-width':1.3},r.mark);r.markT=mk('text',{x:0,y:3.7,'text-anchor':'middle','font-size':10.5,'font-weight':900,fill:'#fff'},r.mark);
+// Nurse figures: the hospital-sign pictogram (#nurseGlyph) cut at its joints and animated as itself, in the manner of
+// rotoscoped animation: smooth gait cycles with a weight shift, and damped springs that give anticipation, overlap and
+// follow-through. Glyph units: viewBox 120x184, facing +x; feet at y 173. README "Nurses".
+const NURSE_INK='#19130f',NURSE_FILL='#ef870a',NURSE_FAR='#c56b07';
+const NURSE_PARTS={upper:'M62 37L47 55L42 72Q41 78 50 81L60 81.5L60 70.4L56 52Z',fore:'M48 70.6L67 70L91 72L91 55L99 55L99 79L94 83L50 81Q44 80.5 44.5 75.5Z',
+ head:'M53 15L56 12Q61 8 70 12L75 15Q81 22 77 30L69 39L61 38L69 24L63 21L56 25Z',streak:'M14 58L57 11L65 22L29 56Z',
+ legA:'M50 122L55 170L59 173L67 122Z',legB:'M65 122L72 173L76 172L83 122Z'};
+// Joints are drawn twice, ink then fill, so a bent elbow or a swinging plait shows no seam.
+function glyphPart(g,d,fill,ink){return mk('path',ink?{d,fill:NURSE_INK,stroke:NURSE_INK,'stroke-width':9,'stroke-linejoin':'round'}:{d,fill},g);}
+function glyphArm(g,fill){const a=mk('g',{},g);glyphPart(a,NURSE_PARTS.upper,fill,true);const f=mk('g',{},a);glyphPart(f,NURSE_PARTS.fore,fill,true);glyphPart(f,NURSE_PARTS.fore,fill);glyphPart(a,NURSE_PARTS.upper,fill);return {a,f};}
+function buildNurse(n,i){const P=NURSE_TYPES[n.type],s=P.size*.34,r={P,s,st:{},t:0,ph:n.phase,fx:n.face},root=r.root=mk('g',{class:'nurse','data-i':i},actorsG),line={stroke:NURSE_INK,'stroke-width':5.8,'stroke-linecap':'round','stroke-linejoin':'round'};
+ r.glow=mk('ellipse',{cx:0,cy:(81*s).toFixed(1),rx:18,ry:6.5,fill:'#ff4949',opacity:0},root);r.shadow=mk('ellipse',{cx:0,cy:(81*s).toFixed(1),rx:(30*s).toFixed(1),ry:3.6,fill:'#000',opacity:.38},root);
+ const fig=r.fig=mk('g',{filter:'url(#nurseShadow)'},root);
+ r.upB=mk('g',{},fig);r.far=glyphArm(r.upB,NURSE_FAR);
+ r.legs=['legA','legB'].map(k=>{const g=mk('g',{},fig);mk('path',{d:NURSE_PARTS[k],fill:NURSE_FILL,...line},g);return g;});
+ r.dress=mk('g',{},fig);mk('path',{d:'M57 81L67 81L68 90L57 90Z',fill:NURSE_FILL,...line},r.dress);mk('path',{d:'M60 88L32 133L93 133L65 88Z',fill:NURSE_FILL,...line},r.dress);mk('path',{d:'M62 94L56 123L83 123',fill:'none',...line,'stroke-width':4.5},r.dress);
+ r.upF=mk('g',{},fig);r.head=mk('g',{},r.upF);glyphPart(r.head,NURSE_PARTS.head,NURSE_FILL,true);r.streak=mk('g',{},r.head);glyphPart(r.streak,NURSE_PARTS.streak,NURSE_FILL,true);glyphPart(r.streak,NURSE_PARTS.streak,NURSE_FILL);glyphPart(r.head,NURSE_PARTS.head,NURSE_FILL);mk('path',{d:'M64 22L72 17',...line,'stroke-width':3.5},r.head);
+ r.near=glyphArm(r.upF,NURSE_FILL);mk('path',{d:'M60 45L52 67L68 68Z',fill:NURSE_FILL,...line,'stroke-width':4.5},r.upF);
+ r.mark=mk('g',{opacity:0});r.markC=mk('circle',{cx:0,cy:0,r:7,fill:'#ff4949',stroke:'#fff','stroke-width':1.4},r.mark);r.markT=mk('text',{x:0,y:3.9,'text-anchor':'middle','font-size':11,'font-weight':900,fill:'#fff'},r.mark);
  return r;}
-// Idle body language: arms are [forward angle, elbow bend, foreshortening], head is a forward tilt in degrees.
-const NURSE_IDLE={stand:()=>{},slump:o=>{o.legs=[[2,9],[-4,8]];o.arms=[[2,6,1],[0,6,1]];},clip:o=>{o.arms[0]=[12,86,.55];},clasp:o=>{o.arms=[[18,48,.8],[16,46,.8]];},fold:o=>{o.arms=[[8,84,.45],[14,80,.45]];},
- watch:o=>{o.arms[0]=[22,102,.6];o.head=18;},yawn:(o,q)=>{const y=q%24<14;o.arms[0]=y?[52,122,1]:[4,8,1];o.head=y?-16:14;o.lean-=y?3:0;},rub:(o,q)=>{o.arms[0]=[150,158,1];o.head=18+(q>>2)%2*5;},
- look:(o,q)=>{o.arms[0]=[12,86,.55];o.flip=(q>>3)%2===1;},nod:(o,q)=>{o.arms[0]=[12,86,.55];o.arms[1]=[28+(q>>2)%2*16,64,1];o.head=4+(q>>1)%2*7;},
- glance:(o,q,i)=>{o.arms=[[18,48,.8],[16,46,.8]];o.flip=(q>>2)%3===1;o.jx=((q*7+i)%3-1)*.4;},scan:(o,q)=>{o.arms=[[8,84,.45],[14,80,.45]];o.flip=(q>>4)%2===1;},
- lost:(o,q)=>{o.arms=[[-20,55,1],[-22,55,1]];o.flip=(q>>3)%2===1;}};
-function nursePose(n,P,now,i,walk,caught){const q=Math.floor(now/83),chase=n.alert||caught,o={lean:P.lean,head:P.head,flip:false,jx:0,tail:0,legs:[[3,4],[-3,4]],arms:[[4,10,1],[2,8,1]],mark:n.alert?'!':now-n.lostAt<1500?'?':''};
- if(walk){const f=(Math.floor(now/(nurseInterval(n)/6))+i*3)%6,p=f*Math.PI/3,st=P.stride*(chase?1.3:1),sw=chase?Math.max(P.swing,14)+16:P.swing;
-  o.legs=[0,Math.PI].map(d=>[24*st*Math.sin(p+d),5+40*st*Math.max(0,Math.cos(p+d))]);
-  o.arms=[[-sw*Math.sin(p),chase?80:14,1],[sw*Math.sin(p),chase?80:14,1]];o.tail=8*Math.sin(p)+(chase?14:4);
-  if(chase){o.lean+=11;o.head=P.head*.3-4;if(n.alert&&now-n.noticeAt<450)o.arms[0]=[84,6,1];}else if(P.clip){o.arms[0]=[12,86,.55];o.head+=3*Math.sin(2*p);}else if(n.type==='stern')o.arms=[[-16,36,1],[-18,34,1]];
-  if(n.type==='trainee'){o.jx=((q*7+i)%3-1)*.35;if(!chase&&q%26<3)o.flip=true;}}
- else if(n.alert&&now-n.noticeAt<560){o.head=-8;o.lean=P.lean-4;o.arms[0]=n.type==='trainee'?[40,128,1]:[84,6,1];}
- else if(n.alert){o.lean+=7;o.legs=[[10,9],[-9,6]];o.arms=n.type==='trainee'?[[40,128,1],[16,46,.8]]:[[16,46,1],[10,40,1]];if(n.type==='trainee')o.flip=q%10<4;}
- else NURSE_IDLE[n.idle||P.rest]?.(o,q,i);
- o.dy=25.7-Math.max(...o.legs.map(([t,k])=>13.5*Math.cos(t*DEG)+12.2*Math.cos((t-k)*DEG)));return o;}
-function drawNurse(r,n,i,now){const P=r.P,iv=nurseInterval(n),caught=!!game.caught&&game.caught.index===i,k=Math.min(1,(now-n.movedAt)/n.moveDur),walk=caught||now-n.movedAt<iv*1.05,s=P.size*.98,face=caught?1:n.face,R=(a,x,y)=>`rotate(${a.toFixed(1)} ${x} ${y})`,
-  wx=(n.px+(n.x-n.px)*k+.5)*T+(caught?Math.min(1,(now-game.caught.start)/1200)*T*3.1:0),wy=(n.py+(n.y-n.py)*k+.5)*T+12,o=nursePose(n,P,now,i,walk,caught);
- r.y=wy;r.root.setAttribute('transform',`translate(${wx.toFixed(1)} ${wy.toFixed(1)})`);r.fig.setAttribute('transform',`translate(${o.jx} ${(o.dy*s).toFixed(2)}) scale(${face*s} ${s})`);
- r.upB.setAttribute('transform',R(o.lean,0,-27.5));r.upF.setAttribute('transform',R(o.lean,0,-27.5));r.head.setAttribute('transform',R(o.head,.9,-47)+(o.flip?' translate(1.8 0) scale(-1 1)':''));
- if(r.tail)r.tail.setAttribute('transform',R(o.tail,-2.4,-53.6));
- r.legs.forEach((l,j)=>{l.l.setAttribute('transform',R(-o.legs[j][0],0,-27.5));l.s.setAttribute('transform',R(o.legs[j][1],0,-14));});
- r.arms.forEach((a,j)=>{const [al,be,fs]=o.arms[j];a.a.setAttribute('transform',R(-al,.2,-44.6));a.f.setAttribute('transform',R(-be,.2,-34.8)+(fs<1?` translate(0 ${(-34.8*(1-fs)).toFixed(2)}) scale(1 ${fs})`:''));});
- r.glow.setAttribute('opacity',n.alert?(.32+.14*Math.sin(now/90)).toFixed(2):0);r.mark.setAttribute('opacity',o.mark?1:0);
- if(o.mark){r.markT.textContent=o.mark;r.markC.setAttribute('fill',o.mark==='!'?'#ff4949':'#33474d');const pop=o.mark==='!'?1+Math.max(0,.6-(now-n.noticeAt)/500):1;r.mark.setAttribute('transform',`translate(${(wx+o.jx*s).toFixed(1)} ${(wy-60*s-7+Math.sin(now/120)).toFixed(1)}) scale(${pop.toFixed(2)})`);}}
+// Damped spring per pose value: [frequency Hz, damping ratio]. Low damping on the plait and the dress gives the overlap.
+const NURSE_SPRING={tilt:[4,.7],dy:[6,.6],sx:[6,.5],sy:[6,.5],lean:[4.5,.55],head:[4,.5],hx:[5,.8],streak:[2.4,.32],skew:[2.8,.38],arm:[5,.55],elbow:[5,.6],farArm:[5,.6],farElbow:[5,.6],legA:[9,.8],legB:[9,.8],liftA:[9,.8],liftB:[9,.8]};
+function nurseSpring(r,k,target,dt){const [f,z]=NURSE_SPRING[k],w=2*Math.PI*f;let st=r.st[k]||(r.st[k]=[target,0]);st[1]+=(w*w*(target-st[0])-2*z*w*st[1])*dt;st[0]+=st[1]*dt;return st[0];}
+// Body language for each idle, as offsets on the pose (degrees; dy in glyph units, negative is up).
+const NURSE_IDLE={stand:()=>{},slump:o=>{o.lean+=7;o.head+=6;o.arm+=10;o.elbow+=12;},clip:(o,t)=>{o.head+=3*Math.sin(t/260);},clasp:(o,t,i)=>{o.arm+=16;o.elbow+=30;o.lean+=2;o.jx=Math.sin(t/37+i)*.35;},fold:o=>{o.arm-=6;o.elbow+=48;o.lean-=2;},
+ watch:o=>{o.head+=18;o.arm+=8;o.elbow+=38;},yawn:(o,t)=>{const y=(t%2400)<1400;if(y){o.head-=18;o.lean-=7;o.arm-=34;o.sy=1.04;o.sx=.97;}},rub:(o,t)=>{o.head+=14+5*Math.sin(t/240);o.arm-=70;o.elbow-=20;o.lean+=4;},
+ look:(o,t)=>{o.hx=Math.floor(t/800)%2?-1:1;},nod:(o,t)=>{o.head+=Math.sin(t/140)>0?7:0;o.elbow+=6*Math.sin(t/300);},glance:(o,t,i)=>{o.hx=Math.floor(t/330)%3===1?-1:1;o.jx=Math.sin(t/37+i)*.4;o.arm+=14;o.elbow+=24;},
+ scan:(o,t)=>{o.hx=Math.floor(t/1500)%2?-1:1;o.arm-=6;o.elbow+=48;},lost:(o,t)=>{o.hx=Math.floor(t/520)%2?-1:1;o.arm+=18;o.elbow+=40;o.lean-=3;}};
+function nursePose(n,r,now,i,walk,caught,dt){const P=r.P,o={tilt:0,dy:0,sx:1,sy:1,lean:P.lean,head:P.head,hx:1,streak:3,skew:0,arm:0,elbow:0,farArm:0,farElbow:0,legA:0,legB:0,liftA:1,liftB:1,jx:0},run=n.alert||caught,
+  breath=Math.sin(now/650+i);
+ if(walk){const iv=nurseInterval(n);r.ph+=dt*1000*Math.PI/iv;const p=r.ph,st=P.stride*(run?1.75:1),A=17*st,sw=run?Math.min(34,P.swing+12):P.swing,s=Math.sin(p),c=Math.cos(p),s2=Math.sin(2*p);
+  o.legA=-A*s;o.legB=A*s;o.liftA=1-P.lift*(run?1.6:1)*Math.max(0,c);o.liftB=1-P.lift*(run?1.6:1)*Math.max(0,-c);
+  o.dy=-P.bob*(run?1.6:1)*Math.cos(2*p);o.lean+=1.8*Math.sin(2*p+.3)+(run?11:2);o.tilt=run?5:1;o.head+=-o.lean*.35+2*Math.sin(2*p-.7)+(run?-P.head*.6:0);
+  o.arm=-sw*s;o.farArm=sw*s*.6;o.elbow=run?-12+8*Math.abs(s):0;o.farElbow=run?40:18;o.streak=4*Math.sin(2*p-1.3)+(run?18:5);o.skew=-3*s2-(run?9:3);
+  if(n.type==='trainee')o.jx=Math.sin(now/41+i)*.3;if(n.type==='chatty'&&!run)o.head+=3*Math.sin(2*p-.4);
+  if(run&&now-n.noticeAt<700){const t=(now-n.noticeAt)/700;o.arm-=28*(1-t);o.head+=6*(1-t);}}
+ else if(n.alert&&now-n.noticeAt<600){const t=now-n.noticeAt;
+  if(t<140){o.sy=.88;o.sx=1.07;o.dy=4;o.lean-=8;o.head-=10;o.arm+=18;o.elbow+=10;}
+  else{o.sy=1.06;o.sx=.96;o.dy=-6;o.lean+=7;o.head+=4;o.arm-=n.type==='trainee'?55:36;o.elbow-=10;o.streak=16;o.tilt=2;}}
+ else if(n.alert){o.lean+=6;o.tilt=2;o.legA=-8;o.legB=8;o.arm-=24;o.dy=-1.5*Math.abs(Math.sin(now/120));if(n.type==='trainee'){o.arm-=20;o.hx=Math.floor(now/400)%2?-1:1;o.jx=Math.sin(now/37+i)*.5;}}
+ else{o.lean+=.9*breath;o.dy+=.7*breath;o.tilt=.9*Math.sin(now/1900+i*2);o.streak+=1.5*Math.sin(now/900+i);NURSE_IDLE[n.idle||P.rest]?.(o,now,i);}
+ for(const k in NURSE_SPRING)o[k]=nurseSpring(r,k,o[k],dt);return o;}
+function drawNurse(r,n,i,now){const P=r.P,dt=Math.min(.05,Math.max(0,(now-(r.t||now))/1000)),iv=nurseInterval(n),caught=!!game.caught&&game.caught.index===i,k=Math.min(1,(now-n.movedAt)/n.moveDur),walk=caught||now-n.movedAt<iv*1.05,s=r.s,face=caught?1:n.face,R=(a,x,y)=>`rotate(${a.toFixed(2)} ${x} ${y})`,
+  wx=(n.px+(n.x-n.px)*k+.5)*T+(caught?Math.min(1,(now-game.caught.start)/1200)*T*3.1:0),wy=(n.py+(n.y-n.py)*k+.5)*T;r.t=now;
+ r.fx+=Math.sign(face-r.fx)*Math.min(Math.abs(face-r.fx),dt*11);const o=nursePose(n,r,now,i,walk,caught,dt),turn=Math.abs(r.fx)<.3?.3*Math.sign(r.fx||1):r.fx;
+ r.y=wy;r.root.setAttribute('transform',`translate(${wx.toFixed(1)} ${wy.toFixed(1)})`);
+ r.fig.setAttribute('transform',`translate(${(o.jx).toFixed(2)} 0) scale(${(turn*s).toFixed(3)} ${s}) translate(-62 -92) ${R(o.tilt,62,173)} translate(62 ${(173+o.dy).toFixed(2)}) scale(${o.sx.toFixed(3)} ${o.sy.toFixed(3)}) translate(-62 -173)`);
+ r.upB.setAttribute('transform',R(o.lean,62,90));r.upF.setAttribute('transform',R(o.lean,62,90));r.dress.setAttribute('transform',`translate(62 88) skewX(${o.skew.toFixed(2)}) translate(-62 -88)`);
+ r.head.setAttribute('transform',`${R(o.head,64,37)} translate(64 0) scale(${o.hx.toFixed(3)} 1) translate(-64 0)`);r.streak.setAttribute('transform',R(o.streak-3,60,16));
+ r.legs[0].setAttribute('transform',`${R(o.legA,58.5,124)} translate(0 124) scale(1 ${o.liftA.toFixed(3)}) translate(0 -124)`);r.legs[1].setAttribute('transform',`${R(o.legB,74,124)} translate(0 124) scale(1 ${o.liftB.toFixed(3)}) translate(0 -124)`);
+ r.near.a.setAttribute('transform',R(o.arm,61,40));r.near.f.setAttribute('transform',R(o.elbow,50,76));r.far.a.setAttribute('transform',R(o.farArm,61,40));r.far.f.setAttribute('transform',R(o.farElbow,50,76));
+ r.glow.setAttribute('opacity',n.alert?(.32+.14*Math.sin(now/90)).toFixed(2):0);const mark=n.alert?'!':now-n.lostAt<1500?'?':'';r.mark.setAttribute('opacity',mark?1:0);
+ if(mark){r.markT.textContent=mark;r.markC.setAttribute('fill',mark==='!'?'#ff4949':'#33474d');const pop=mark==='!'?1+Math.max(0,.6-(now-n.noticeAt)/500):1;r.mark.setAttribute('transform',`translate(${(wx+o.jx).toFixed(1)} ${(wy-88*s-9+Math.sin(now/120)).toFixed(1)}) scale(${pop.toFixed(2)})`);}}
 function updateCamera(force=false){const bounds=svg.getBoundingClientRect();if(!bounds.width||!bounds.height)return;const ratio=bounds.width/bounds.height;let vw=ratio<1?14.5*T:13*T*ratio,vh=vw/ratio;if(vw>W*T){vw=W*T;vh=vw/ratio;}if(vh>H*T){vh=H*T;vw=vh*ratio;}let cx=(game.x+.5)*T,cy=(game.y+.5)*T,camera=viewport;
  if(force){camera.x=cx;camera.y=cy;}else{camera.x+=(cx-camera.x)*.23;camera.y+=(cy-camera.y)*.23;}
  const vx=vw>=W*T?0:Math.max(0,Math.min(W*T-vw,camera.x-vw/2));const vy=vh>=H*T?0:Math.max(0,Math.min(H*T-vh,camera.y-vh/2));svg.setAttribute('viewBox',`${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}`);viewport.w=vw;viewport.h=vh;}
