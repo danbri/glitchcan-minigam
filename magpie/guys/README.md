@@ -3,10 +3,10 @@
 A small standalone, mobile-first maze game inspired by the names and wayfinding vocabulary of Guy's Hospital in London.
 
 - **Open `game.html`** in any current browser. No server, installation, external fonts or requests required.
-- **Use arrow keys or WASD**, the on-screen D-pad, or tap corridors to automatically walk there. Swiping also works.
+- **Swipe** on the pad or on the map, or press the arrow keys or WASD. Movement is as in Pac-Man: you keep moving in the chosen direction. A new direction is taken at the next opening; until then you continue in the current direction. A wall stops you, and so does a lift, a stairwell or the exit. On the pad, one drag can steer several turns; a tap on an edge selects that direction; a tap in the centre stops you. A tap on the map walks you to that place.
 - **Press E, Space or INTERACT** while on/adjacent to a lift, stairwell or exit.
-- The **lift A** serves G–3; **lift B** serves B1–2 but needs the generator fuse. The west/east **stairs** serve neighbouring levels.
-- Find the **visitor badge (3F)**, **pharmacy key (2F)**, **access code memo (1F)**, **fuse (B1)** and then leave by the exit on **G**.
+- **Lift A** serves G–3 and needs the visitor badge; **lift B** serves B1–2 and needs the generator fuse. The amber staff doors are shortcuts: they open for you after you find the pharmacy key, and they are always open to the nurses. The west/east **stairs** serve neighbouring levels.
+- Find the **visitor badge (3F)**, **pharmacy key (2F)**, **access code memo (1F)**, **fuse (B1)** and then leave by the exit on **G**. Each item gives 250 points and opens a route. The escape gives 1000 points, less 100 for each capture.
 - Orange SVG nurses patrol and chase. Touching them takes you back to your bed, without discarding inventory.
 - Use **MAP** to see the complete current floor; **SOUND** is off by default.
 
@@ -24,8 +24,8 @@ All code and art supplied as editable source with no dependencies.
 The SOUND button plays music from the Diddums game-music engine, loaded at run time from its public URL, https://danbri.github.io/diddums/ (`adaptive.js`, `song.js`, `songbook.js`). The reference demo is https://danbri.github.io/diddums/game.html; the API is in https://danbri.github.io/diddums/skill/SKILL.md, "Adaptive music for games". The wiring is in `music.js`. `game.html` sends its sound cues through `cue()`, which uses the music when it plays and the original beeps when it does not.
 
 - **One piece per floor:** 3F Synthwave · Neon Coastline, 2F Drum and Bass · Night Bus 174, 1F Bossa Nova · Late Café, G Northern Soul · All-Nighter, B1 Krautrock · Motorway Blue. A lift or stair changes the piece.
-- **State (next bar line):** threat is the walking distance to the nearest nurse. Parts enter one threshold at a time: an accompaniment part, then the rest of the accompaniment and the tune, then bass and drums, then a heartbeat, then a dread drone and 6% more tempo ("Quiet ward", "Footsteps", "Spotted", "Chased"). Items found also add parts. Capture cuts to bass, drone and heartbeat ("Escorted"). Escape plays everything ("Free").
-- **Characters:** your motif has one note for each item you carry. The nurses have a motif that enters when they are close and gets stronger and less stable as they close in.
+- **State (next bar line):** threat is the walking distance to the nearest nurse (nurses can use the staff doors). Parts enter one threshold at a time: an accompaniment part, then the rest of the accompaniment and the tune, then bass and drums, then a heartbeat, then a dread drone and 6% more tempo ("Quiet ward", "Footsteps", "Spotted", "Chased"). Items do not add parts. Capture cuts to bass, drone and heartbeat ("Escorted"). Escape plays everything ("Free").
+- **Characters:** the nurses have a motif that enters when they are close and gets stronger and less stable as they close in.
 - **Events (next 16th note, on the current chord):** pickups, a nurse that sees you, capture, a locked exit, a wrong code, the escape.
 - **Mix (immediate):** the heartbeat level follows the threat; a menu, map or pause muffles the music.
 
