@@ -27,6 +27,9 @@ header{height:57px;flex:none;padding:9px 12px 7px 15px;display:flex;align-items:
 @media(max-height:680px){header{height:49px}.eyebrow{font-size:8px}h1{font-size:14px}#hud{min-height:46px;padding:4px 9px}#controls{height:118px}#dpad{height:101px;width:170px}.action{min-height:42px}#message{min-height:36px;font-size:11px}#tinyFooter{display:none}}
 @media(min-width:650px){#controls{height:128px;grid-template-columns:1fr 180px}#dpad{height:112px;width:200px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+/* Items pulse so they stand out from the lift and stair markers. */
+.itemHalo{transform-box:fill-box;transform-origin:center;animation:itemPulse 1.4s ease-in-out infinite}@keyframes itemPulse{0%,100%{opacity:.25;transform:scale(.85)}50%{opacity:.75;transform:scale(1.12)}}
+#miniMap{max-width:420px}#mapLegend{font-size:14px;line-height:1.3;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;text-align:left;margin:8px 0 14px}#mapLegend span{display:flex;align-items:center;gap:8px}#mapLegend svg{flex:none;width:22px;height:22px}
 </style>
 </head>
 <body>
@@ -113,11 +116,19 @@ function isOpen(f,x,y,staff=false){if(x<0||y<0||x>=W||y>=H)return false;const c=
 function bfs(f,from,to,staff=false){if(!isOpen(f,to.x,to.y,staff))return null;if(from.x===to.x&&from.y===to.y)return [];let q=[from],seen=new Set([from.x+','+from.y]),p=new Map();for(let i=0;i<q.length;i++){let v=q[i];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){let nx=v.x+dx,ny=v.y+dy,k=nx+','+ny;if(seen.has(k)||!isOpen(f,nx,ny,staff))continue;seen.add(k);p.set(k,{x:v.x,y:v.y});if(nx===to.x&&ny===to.y){let path=[{x:nx,y:ny}],cur=p.get(k);while(cur&&(cur.x!==from.x||cur.y!==from.y)){path.push(cur);cur=p.get(cur.x+','+cur.y)}return path.reverse();}q.push({x:nx,y:ny});}}return null;}
 function spawnNurses(f){return SPAWNS[f].map(([x,y],i)=>({x,y,homeX:x,homeY:y,phase:i*2.3,alert:false,lastDx:0,lastDy:0,type:NURSE_CAST[f][i],acc:i*160,hold:0,chase:0,idle:null,seen:null,face:i?-1:1,px:x,py:y,movedAt:-1e4,moveDur:300,noticeAt:-1e4,lostAt:-1e4,talkAt:-1e5}));}
 function reset(full=true){maps={};floors.forEach((f,i)=>maps[f]=genMap(i));game={floor:'3',x:25,y:5,caught:null,inventory:{badge:false,key:false,pin:false,fuse:false},pin:['4137','2864','7305','9412','5728'][Math.floor(Math.random()*5)],captures:0,score:0,dir:null,next:null,nurses:spawnNurses('3'),route:[],running:false,paused:false,won:false,invincibleUntil:0};viewport.x=game.x*T;viewport.y=game.y*T;last=0;moveAccum=0;renderFloor();refreshHud();setMsg('The ward is quiet. For now.');}
+// Item icons: an ID card, a key, a sheet of paper, a cartridge fuse, a running exit arrow.
+function itemIcon(g,x,y,type,c){const k={stroke:'#0b1a1f','stroke-width':1.4};
+ if(type==='badge'){mk('rect',{x:x-8,y:y-6,width:16,height:12,rx:2,fill:c,...k},g);mk('circle',{cx:x-3.5,cy:y-1,r:2.4,fill:'#0b1a1f'},g);mk('path',{d:`M${x+.5} ${y-2}h5M${x+.5} ${y+1.5}h5`,stroke:'#0b1a1f','stroke-width':1.6},g);}
+ else if(type==='key'){mk('circle',{cx:x-4,cy:y,r:4.2,fill:'none',stroke:c,'stroke-width':3},g);mk('path',{d:`M${x} ${y}h9M${x+6} ${y}v4M${x+9} ${y}v3`,stroke:c,'stroke-width':2.6,fill:'none'},g);}
+ else if(type==='pin'){mk('path',{d:`M${x-6} ${y-8}h8l4 4v12h-12z`,fill:c,...k},g);mk('path',{d:`M${x-3.5} ${y-2}h7M${x-3.5} ${y+1}h7M${x-3.5} ${y+4}h5`,stroke:'#0b1a1f','stroke-width':1.3},g);}
+ else if(type==='fuse'){mk('rect',{x:x-7,y:y-3.5,width:14,height:7,rx:2,fill:c,...k},g);mk('path',{d:`M${x-10} ${y}h3M${x+7} ${y}h3`,stroke:c,'stroke-width':3},g);mk('path',{d:`M${x+1} ${y-3}l-3 3.5h3l-2 3`,stroke:'#0b1a1f','stroke-width':1.3,fill:'none'},g);}
+ else if(type==='exit'){mk('path',{d:`M${x-7} ${y}h10M${x} ${y-5}l5 5-5 5`,stroke:c,'stroke-width':3,fill:'none','stroke-linecap':'round','stroke-linejoin':'round'},g);mk('path',{d:`M${x+8} ${y-7}v14`,stroke:c,'stroke-width':2.4},g);}}
 function paintSymbol(g,x,y,type){const ox=x*T+T/2,oy=y*T+T/2;if(type==='bed'){
  mk('rect',{x:x*T+5,y:y*T+9,width:27,height:19,rx:3,fill:'#6faaca',stroke:'#d3eff1','stroke-width':2},g);mk('rect',{x:x*T+8,y:y*T+11,width:10,height:8,rx:2,fill:'#ebf2e3'},g);mk('path',{d:`M${x*T+5} ${y*T+23}h27`,stroke:'#376477','stroke-width':3},g);return;
  }
- const kinds={badge:['#b3f3ce','ID'],key:['#edc665','K'],pin:['#a0bfed','PIN'],fuse:['#eb9e71','F'],exit:['#98ffdb','OUT']};
- if(type in kinds){let [fill,text]=kinds[type];mk('circle',{cx:ox,cy:oy,r:16,fill:'#13272d',stroke:fill,'stroke-width':2.5},g);mk('text',{x:ox,y:oy+4.2,'text-anchor':'middle','font-size':text.length>2?9:13,'font-weight':900,fill},g).textContent=text;return;}
+ const kinds={badge:['#7dffb6','BADGE'],key:['#ffd23f','KEY'],pin:['#ffffff','MEMO'],fuse:['#ff9a4d','FUSE'],exit:['#3dff9a','EXIT']};
+ if(type in kinds){let [fill,text]=kinds[type];mk('circle',{class:'itemHalo',cx:ox,cy:oy,r:22,fill:'none',stroke:fill,'stroke-width':4},g);mk('circle',{cx:ox,cy:oy,r:16,fill:'#0b1a1f',stroke:fill,'stroke-width':3},g);itemIcon(g,ox,oy-2,type,fill);
+ mk('rect',{x:ox-21,y:oy+12,width:42,height:12,rx:4,fill:'#0b1a1f',stroke:fill,'stroke-width':1.2},g);mk('text',{x:ox,y:oy+21.5,'text-anchor':'middle','font-size':9,'font-weight':900,'letter-spacing':.5,fill},g).textContent=text;return;}
  const c=type==='liftA'||type==='liftB'?'#a2c1dd':'#deb687';mk('rect',{x:x*T+3,y:y*T+3,width:T-6,height:T-6,rx:6,fill:'#172a30',stroke:c,'stroke-width':2},g);
  mk('text',{x:ox,y:oy+3,'text-anchor':'middle','font-size':12,'font-weight':900,fill:c},g).textContent=type==='stairs'?'ST':type==='liftA'?'A':'B';
 }
@@ -252,7 +263,7 @@ function interact(){if(!game.running||game.paused||game.caught||runningModal||ga
  if(p.type==='bed'){setMsg('You are not staying in bed. Not this time.');return;}
  setMsg('Explore the ward, pharmacy, records office and basement.');}
 function chooseFloor(title,text,stops,core){showModal(title,text,[...stops.map(f=>({label:'FLOOR '+f,primary:f==='G',action:()=>changeFloor(f,core)})),{label:'CANCEL',action:closeModal}]);}
-function changeFloor(f,core){closeModal();game.floor=f;game.x=core.x;game.y=core.y;game.route=[];game.dir=null;game.next=null;refreshPad();game.nurses=spawnNurses(f);renderFloor();refreshHud();beep(310,.1);setMsg(`Arrived at ${floorNames[f]}. Watch for orange uniforms.`);}
+function changeFloor(f,core){closeModal();game.floor=f;game.x=core.x;game.y=core.y;game.route=[];game.dir=null;game.next=null;refreshPad();game.nurses=spawnNurses(f);renderFloor();refreshHud();beep(310,.1);const it=(features[f]||[]).find(v=>v.type!=='bed'&&(v.type==='exit'||!game.inventory[v.type])),wing=it&&(it.x<12?'Southwark (west)':it.x<25?'Bermondsey (centre)':'Tower (east)');setMsg(`Arrived at ${floorNames[f]}.`+(it?` The ${it.name.toLowerCase()} is in the ${wing} wing.`:' Watch for orange uniforms.'));}
 function showKeypad(){showModal('SECURITY CODE','The final exit is locked. Enter the four-digit number from the records memo.',[{label:'UNLOCK',primary:true,action:submitCode},{label:'CANCEL',action:closeModal}],`<input id="pinInput" class="codeInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" aria-label="Four digit code" autocomplete="off"/><div class="hint">Records memo: ${game.inventory.pin?game.pin:'not found'}</div>`);el('pinInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitCode();});}
 function submitCode(){if(el('pinInput')?.value.trim()===game.pin){closeModal();game.won=true;game.running=false;game.score+=Math.max(0,1000-100*game.captures);cue('win',{},()=>{beep(790,.24);setTimeout(()=>beep(990,.3),180);});showModal('YOU ESCAPED!','Great Maze Pond, daylight, freedom. Score '+game.score+'.\n\nThe nurses dragged you back '+game.captures+' time'+(game.captures===1?'':'s')+'. All items retained.',[{label:'PLAY AGAIN',primary:true,action:()=>{closeModal();reset();game.running=true;setMsg('A different code. Same maze. Go!');}}],null,true);}else{cue('wrong',{},()=>beep(120,.21));el('pinInput').value='';setMsg('Access denied. Recheck the records memo.');}}
 function captured(index=0){let now=performance.now();if(game.invincibleUntil>now||game.caught||runningModal||game.won)return;
@@ -281,17 +292,27 @@ function loop(t){requestAnimationFrame(loop);if(!last)last=t;const dt=Math.min(1
  nurseTick(dt);}
  updateActors(t);updateCamera();}
 function setMsg(s){el('messageText').textContent=s;el('subzone').textContent=game.captures?`Returned to bed ${game.captures} ×`:game.inventory.pin?`Memo: ${game.pin}`:'Avoid the orange nurses';}
-function refreshHud(){let items=[['badge','BADGE'],['key','KEY'],['pin','PIN'],['fuse','FUSE']];el('inventory').innerHTML=items.map(([k,t])=>`<span class="item ${game.inventory[k]?'got':''}">${game.inventory[k]?'✓':'○'} ${t}${k==='pin'&&game.inventory.pin?' '+game.pin:''}</span>`).join('')+`<span class="item got">★ ${game.score}</span>`;el('pauseBtn').textContent=game.paused?'▶':'Ⅱ';}
+function refreshHud(){let items=[['badge','BADGE'],['key','KEY'],['pin','MEMO'],['fuse','FUSE']];el('inventory').innerHTML=items.map(([k,t])=>`<span class="item ${game.inventory[k]?'got':''}">${game.inventory[k]?'✓':'○'} ${t}${k==='pin'&&game.inventory.pin?' '+game.pin:''}</span>`).join('')+`<span class="item got">★ ${game.score}</span>`;el('pauseBtn').textContent=game.paused?'▶':'Ⅱ';}
 function showModal(title,txt,buttons=[],extra=null,nurse=false){runningModal=true;game.route=[];drawRoute();el('modalTitle').textContent=title;el('modalText').textContent=txt;el('modalIllustration').innerHTML=nurse?'<svg class="largeNurse" viewBox="0 0 120 184" aria-hidden="true"><use href="#nurseGlyph"/></svg>':'';el('modalExtra').innerHTML=extra||'';
  el('modalButtons').replaceChildren();for(const b of buttons){let btn=document.createElement('button');btn.textContent=b.label;if(b.primary)btn.className='primary';btn.onclick=b.action;el('modalButtons').append(btn);}el('modal').classList.add('show');}
 function closeModal(){el('modal').classList.remove('show');runningModal=false;}
-function openMap(){if(!game.running||game.won)return;const scale=8;let s=`<svg id="miniMap" viewBox="0 0 ${W*scale} ${H*scale}" xmlns="http://www.w3.org/2000/svg">`;
- for(let y=0;y<H;y++)for(let x=0;x<W;x++)s+=`<rect x="${x*scale}" y="${y*scale}" width="${scale}" height="${scale}" fill="${maps[game.floor][y][x]==='D'?(game.inventory.key?'#6a5a3a':'#7a4a16'):isOpen(game.floor,x,y)?'#3a5558':'#132832'}"/>`;
- for(const c of cores)if(!(game.floor==='3'&&c.type==='liftB'))s+=`<rect x="${c.x*scale+1}" y="${c.y*scale+1}" width="${scale-2}" height="${scale-2}" fill="#c0d2e3"/>`;
- for(const f of features[game.floor]||[])if(!game.inventory[f.type]||f.type==='exit')s+=`<circle cx="${(f.x+.5)*scale}" cy="${(f.y+.5)*scale}" r="4" fill="${f.type==='exit'?'#82ffd3':'#e7c46a'}"/>`;
- for(const n of game.nurses)s+=`<circle cx="${(n.x+.5)*scale}" cy="${(n.y+.5)*scale}" r="3.1" fill="#ff8922"/>`;
- s+=`<circle cx="${(game.x+.5)*scale}" cy="${(game.y+.5)*scale}" r="4" fill="#81e5fc" stroke="#fff" stroke-width="1.5"/></svg>`;
- showModal('FLOOR '+game.floor+' MAP','West: Southwark · Centre: Bermondsey · East: Tower', [{label:'CLOSE',primary:true,action:closeModal}],s+'<div id="mapLegend">Blue = you · Orange = nurse · White = stairs/lifts · Yellow = item · Green = exit · Amber = staff door</div>');}
+// Map markers: each kind has its own shape and colour, and the legend draws the same shapes.
+const MAPKEY={you:'#5fe3ff',nurse:'#ff3b3b',core:'#ffffff',item:'#ffd23f',exit:'#3dff9a',door:'#e08a1e'};
+const mapMark={you:(x,y)=>`<circle cx="${x}" cy="${y}" r="6" fill="${MAPKEY.you}" stroke="#fff" stroke-width="2"/>`,
+ nurse:(x,y)=>`<path d="M${x} ${y-7}L${x+6.5} ${y+5}H${x-6.5}Z" fill="${MAPKEY.nurse}" stroke="#2a0606" stroke-width="1.2"/>`,
+ core:(x,y,t='')=>`<rect x="${x-6}" y="${y-6}" width="12" height="12" rx="2" fill="${MAPKEY.core}" stroke="#0b1a1f" stroke-width="1"/><text x="${x}" y="${y+3.6}" text-anchor="middle" font-size="9" font-weight="900" fill="#0b1a1f">${t}</text>`,
+ item:(x,y)=>`<path d="M${x} ${y-8}l2.4 5 5.6.6-4.2 3.8 1.2 5.6-5-2.9-5 2.9 1.2-5.6-4.2-3.8 5.6-.6z" fill="${MAPKEY.item}" stroke="#3a2a00" stroke-width="1"/>`,
+ exit:(x,y)=>`<rect x="${x-7}" y="${y-7}" width="14" height="14" rx="3" fill="${MAPKEY.exit}" stroke="#003b1d" stroke-width="1.2"/><path d="M${x-4} ${y}h6M${x} ${y-3}l3 3-3 3" stroke="#003b1d" stroke-width="1.8" fill="none"/>`,
+ door:(x,y)=>`<rect x="${x-5}" y="${y-5}" width="10" height="10" fill="${MAPKEY.door}" stroke="#3a2000" stroke-width="1"/><path d="M${x-5} ${y}h10" stroke="#3a2000" stroke-width="1.6"/>`};
+function openMap(){if(!game.running||game.won)return;const sc=12,c=v=>(v+.5)*sc;let s=`<svg id="miniMap" viewBox="0 0 ${W*sc} ${H*sc}" xmlns="http://www.w3.org/2000/svg">`;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(maps[game.floor][y][x]!=='D')s+=`<rect x="${x*sc}" y="${y*sc}" width="${sc}" height="${sc}" fill="${isOpen(game.floor,x,y)?'#3a5558':'#132832'}"/>`;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(maps[game.floor][y][x]==='D')s+=game.inventory.key?`<rect x="${x*sc}" y="${y*sc}" width="${sc}" height="${sc}" fill="#3a5558" stroke="${MAPKEY.door}" stroke-width="1.5" stroke-dasharray="3 2"/>`:mapMark.door(c(x),c(y));
+ for(const k of cores)if(!(game.floor==='3'&&k.type==='liftB'))s+=mapMark.core(c(k.x),c(k.y),k.type==='stairs'?'S':k.label);
+ for(const f of features[game.floor]||[])if(f.type==='exit')s+=mapMark.exit(c(f.x),c(f.y));else if(f.type!=='bed'&&!game.inventory[f.type])s+=mapMark.item(c(f.x),c(f.y));
+ for(const n of game.nurses)s+=mapMark.nurse(c(n.x),c(n.y));
+ s+=mapMark.you(c(game.x),c(game.y))+'</svg>';
+ const sw=(k,label)=>`<span><svg viewBox="0 0 22 22">${mapMark[k](11,11,k==='core'?'S':'')}</svg>${label}</span>`;
+ showModal('FLOOR '+game.floor+' MAP','West: Southwark · Centre: Bermondsey · East: Tower', [{label:'CLOSE',primary:true,action:closeModal}],s+'<div id="mapLegend">'+sw('you','You')+sw('nurse','Nurse')+sw('item','Item to find')+sw('core','Stairs (S), lift (A, B)')+sw('exit','Exit')+sw('door','Staff door (key)')+'</div>');}
 // Sound cues go to the adaptive music (music.js) when it is playing, else to the beeps.
 function cue(name,detail,fallback){if(!window.escapeMusic?.cue(name,detail))fallback?.();}
 function beep(hz,dur){if(mute)return;try{audioContext??=new (window.AudioContext||window.webkitAudioContext)();const osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type='square';osc.frequency.value=hz;gain.gain.setValueAtTime(.038,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+dur);osc.connect(gain);gain.connect(audioContext.destination);osc.start();osc.stop(audioContext.currentTime+dur);}catch(e){}}
