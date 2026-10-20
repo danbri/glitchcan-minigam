@@ -43,6 +43,7 @@ The SOUND button plays music from the Diddums game-music engine, loaded at run t
 - **State (next bar line):** threat is the walking distance to the nearest nurse (nurses can use the staff doors). Parts enter one threshold at a time: an accompaniment part, then the rest of the accompaniment and the tune, then bass and drums, then a heartbeat, then a dread drone and 6% more tempo ("Quiet ward", "Footsteps", "Spotted", "Chased"). Items do not add parts. Capture cuts to bass, drone and heartbeat ("Escorted"). Escape plays everything ("Free").
 - **Characters:** the nurses have a motif that enters when they are close and gets stronger and less stable as they close in.
 - **Events (next 16th note, on the current chord):** pickups, a nurse that sees you, capture, a locked exit, a wrong code, the escape.
-- **Mix (immediate):** the heartbeat level follows the threat; a menu, map or pause muffles the music.
+- **Heartbeat:** from a quarter threat, a lub-dub pulse plays and gets faster and louder as the nurses come closer: about 75 a minute at 6 steps, 150 at 2 steps, and fast while a nurse takes you back to bed. Each pulse pushes the rest of the mix down a little (ducking). The heartbeat part of the piece also starts earlier and is louder.
+- **Mix (immediate):** a menu, map or pause muffles the music.
 
 SOUND cycles OFF → MUSIC ON → OFF. If the engine does not load (offline), the button shows SOUND ON and the game uses its own beeps. `?diddums=<url>` loads another copy of the engine, for example a local server.
