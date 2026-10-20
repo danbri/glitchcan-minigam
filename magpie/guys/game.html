@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#101d23" />
+<title>ESCAPE / GREAT MAZE POND</title>
+<style>
+:root { color-scheme: dark; --ink:#dbeadf; --dim:#8ca6a4; --bg:#101d23; --panel:#172a30; --accent:#f49c26; --mint:#82e2c5; --border:#315057; --coral:#fa7565; }
+*{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#09151a;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;color:var(--ink);-webkit-tap-highlight-color:transparent}
+button,input{font:inherit}button{cursor:pointer;touch-action:manipulation}button:focus-visible, input:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+#app{height:100vh;height:100dvh;max-width:990px;margin:auto;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);box-shadow:0 0 60px #0008;position:relative;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+header{height:57px;flex:none;padding:9px 12px 7px 15px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border)}
+.eyebrow{font-size:9px;letter-spacing:.20em;color:var(--accent)}h1{margin:2px 0 0;font-weight:900;letter-spacing:0;font-size:13px;line-height:1;white-space:nowrap}h1 span{color:var(--accent)}
+.topbuttons{display:flex;gap:6px}.topbuttons button,.secondary{background:#263c42;color:var(--ink);border:1px solid #4d7070;border-radius:7px;min-height:34px;padding:5px 9px;font-size:11px;font-weight:800}
+#hud{flex:none;min-height:57px;display:flex;align-items:center;padding:7px 12px;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border)}
+#zone{font-size:13px;font-weight:800;line-height:1.4}#subzone{font-size:10px;color:var(--dim);white-space:nowrap}#inventory{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:4px;max-width:64%}.item{border-radius:5px;border:1px solid #3e5e60;background:#1c3136;padding:5px 6px;font-size:10px;color:#84999a;white-space:nowrap}.item.got{border-color:#6eb99f;color:#b5f9df;background:#22483f}
+#stageWrap{flex:1;min-height:170px;position:relative;background:#0c181d;overflow:hidden;touch-action:none}#gameSvg{width:100%;height:100%;display:block;touch-action:none;user-select:none}
+#floorChip{pointer-events:none;position:absolute;left:10px;top:10px;padding:7px 10px;background:#08161ad9;border:1px solid #45646b;border-radius:7px;font-size:11px;color:var(--mint);font-weight:900;letter-spacing:.08em}
+#escortMsg{display:none;position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);border:2px solid var(--accent);border-radius:10px;padding:12px 18px;background:#152024e8;color:#ffbd68;font-weight:1000;letter-spacing:.12em;text-align:center;line-height:1.5;font-size:14px;pointer-events:none;white-space:nowrap;box-shadow:0 7px 30px #000a}#escortMsg.show{display:block}#tipChip{pointer-events:none;position:absolute;right:10px;top:10px;padding:7px 9px;background:#08161ad9;border-radius:7px;font-size:10px;color:var(--dim)}
+#message{min-height:44px;max-height:60px;padding:7px 12px;display:flex;align-items:center;background:#14262c;border-top:1px solid #27464a;color:#c7d9d5;font-size:12px;line-height:1.35}#message strong{color:#ffc46c}
+#controls{flex:none;height:145px;display:grid;grid-template-columns:1fr 150px;gap:8px;align-items:center;padding:7px 13px 8px;border-top:1px solid var(--border);background:#15252a}
+#dpad{height:128px;width:160px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px;margin:auto}.dpad{border:1px solid #507176;background:#284047;color:#e4f1ea;border-radius:9px;font-size:19px;font-weight:900;touch-action:none;user-select:none}.dpad:active,.dpad.pressed{background:#558778;color:white}.void{pointer-events:none}.mid{grid-column:2;grid-row:2;display:grid;place-items:center;font-size:11px;color:#618385}#up{grid-column:2;grid-row:1}#left{grid-column:1;grid-row:2}#right{grid-column:3;grid-row:2}#down{grid-column:2;grid-row:3}
+#actions{display:flex;flex-direction:column;gap:8px}.action{border:1px solid #c79143;border-radius:10px;background:#e99924;color:#1d2525;font-weight:900;font-size:13px;min-height:52px;padding:6px 8px}.action:active{background:#ffbf5b}.hint{font-size:10px;color:#93b3aa;text-align:center;line-height:1.3}
+#tinyFooter{padding:3px 8px 5px;font-size:9px;text-align:center;color:#708c8c;border-top:1px solid #24414a;background:#0c191e}
+#modal{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;padding:16px;background:#051015d9;backdrop-filter:blur(5px)}#modal.show{display:flex}#modalCard{background:#192c33;border:1px solid #608380;border-radius:17px;width:min(100%,440px);max-height:92%;overflow:auto;padding:20px 17px 18px;box-shadow:0 15px 60px #0009;text-align:center}#modalTitle{font-size:20px;font-weight:1000;letter-spacing:.02em;margin:0 0 10px}#modalText{font-size:13px;line-height:1.6;color:#c4d9d2;margin:0 0 15px;white-space:pre-line}.modalButtons{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.modalButtons button{min-width:88px;min-height:42px;padding:9px 13px;border:1px solid #739b93;background:#2a4649;color:#f0fcf6;border-radius:9px;font-weight:800}.modalButtons button.primary{background:#f5a43a;border-color:#f5a43a;color:#14252a}.modalButtons button:disabled{opacity:.35}.largeNurse{width:100px;height:150px;display:block;margin:-5px auto 12px;filter:drop-shadow(0 5px 8px #0008)}.codeInput{font-size:26px;text-align:center;letter-spacing:.28em;display:block;margin:12px auto;padding:8px 4px;width:170px;border-radius:7px;border:2px solid #7fc1ab;background:#0b1920;color:#c4ffe8}#miniMap{width:100%;max-width:350px;background:#112028;border-radius:7px;border:1px solid #415e66;display:block;margin:0 auto 12px;image-rendering:pixelated}#mapLegend{font-size:11px;color:#bdd6d0;line-height:1.5;margin:6px 0 14px}
+@media(max-height:680px){header{height:49px}.eyebrow{font-size:8px}h1{font-size:14px}#hud{min-height:46px;padding:4px 9px}#controls{height:118px}#dpad{height:101px;width:132px}.action{min-height:42px}#message{min-height:36px;font-size:11px}#tinyFooter{display:none}}
+@media(min-width:650px){#controls{height:128px;grid-template-columns:1fr 180px}#dpad{height:112px;width:145px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div id="app">
+<header><div><div class="eyebrow">A FICTIONAL HOSPITAL MAZE</div><h1>ESCAPE <span>/ GREAT MAZE POND</span></h1></div><div class="topbuttons"><button id="mapBtn" aria-label="Open map">MAP</button><button id="soundBtn" aria-label="Toggle sound">SOUND OFF</button><button id="pauseBtn" aria-label="Pause game">Ⅱ</button></div></header>
+<div id="hud"><div><div id="zone">3F · TOWER WARD</div><div id="subzone">Get out before they find you.</div></div><div id="inventory"></div></div>
+<div id="stageWrap">
+  <svg id="gameSvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Top-down hospital maze; navigate using arrow keys, taps or on-screen directional buttons" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <pattern id="floorGrain" width="72" height="72" patternUnits="userSpaceOnUse"><path d="M0 0 H72 M0 0 V72" stroke="#ffffff" stroke-width=".4" opacity=".13"/></pattern>
+      <filter id="nurseShadow" x="-40%" y="-20%" width="180%" height="160%"><feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity=".55"/></filter>
+      <g id="nurseGlyph" stroke="#19130f" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M14 58 L56 12 Q61 8 70 12 L75 15 Q81 22 77 30 L69 39 L61 38 L69 24 L63 21 L29 56 Z" fill="#ef870a"/>
+        <path d="M64 22 L72 17" stroke-width="3.5"/>
+        <path d="M62 37 L47 55 L42 72 Q41 78 50 81 L94 83 L99 79 L99 55 L91 55 L91 72 L67 70 L56 52" fill="#ef870a"/>
+        <path d="M60 45 L52 67 L68 68 L60 45" fill="#ef870a" stroke-width="4.5"/>
+        <path d="M57 81 L67 81 L68 90 L57 90 Z" fill="#ef870a"/>
+        <path d="M60 88 L32 133 L93 133 L65 88 Z" fill="#ef870a"/>
+        <path d="M62 94 L56 123 L83 123" stroke-width="4.5"/>
+        <path d="M51 135 L55 170 L59 173 L66 136 L72 173 L76 172 L82 135" fill="#ef870a"/>
+      </g>
+      <g id="playerGlyph">
+        <circle cx="0" cy="1" r="14" fill="#9eecfa" stroke="#0d303d" stroke-width="3"/>
+        <path d="M-9 8 Q0 15 9 8 L11 20 L-11 20 Z" fill="#66b6cf" stroke="#163e50" stroke-width="2"/>
+        <path d="M-8 -4 Q0 -12 8 -4" stroke="#2d5966" stroke-width="2" fill="none"/>
+        <circle cx="-4" cy="0" r="1.7" fill="#123947"/><circle cx="4" cy="0" r="1.7" fill="#123947"/>
+      </g>
+    </defs>
+    <g id="tiles"></g><g id="pathline"></g><g id="features"></g><g id="actors"></g>
+  </svg>
+  <div id="floorChip">FLOOR 3</div><div id="tipChip">TAP TO WALK</div><div id="escortMsg" aria-live="assertive">NURSE ESCORT<br/>RETURN TO WARD</div>
+</div>
+<div id="message" aria-live="polite"><span id="messageText">The ward is quiet. For now.</span></div>
+<div id="controls"><div id="dpad"><button class="dpad" id="up" data-dx="0" data-dy="-1" aria-label="Walk up">▲</button><button class="dpad" id="left" data-dx="-1" data-dy="0" aria-label="Walk left">◀</button><div class="mid">MOVE</div><button class="dpad" id="right" data-dx="1" data-dy="0" aria-label="Walk right">▶</button><button class="dpad" id="down" data-dx="0" data-dy="1" aria-label="Walk down">▼</button></div><div id="actions"><button class="action" id="interactBtn">INTERACT <span aria-hidden="true">↵</span></button><div class="hint">Tap corridor to auto-walk<br/>WASD · arrows · E/space</div></div></div>
+<div id="tinyFooter">Inspired by Guy’s Hospital wayfinding · fictional layout, not a real hospital map</div>
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div id="modalCard"><div id="modalIllustration"></div><div id="modalTitle"></div><div id="modalText"></div><div id="modalExtra"></div><div class="modalButtons" id="modalButtons"></div></div></div>
+</div>
+<script>
+'use strict';
+const W=35,H=23,T=36, floors=['B1','G','1','2','3'];
+const floorNames={'B1':'BASEMENT · PLANT ROOMS','G':'GROUND · ATRIUM','1':'1F · CLINICS & RECORDS','2':'2F · IMAGING & PHARMACY','3':'3F · TOWER WARD'};
+const features = {
+ '3':[{type:'badge',x:7,y:17,name:'Visitor badge'},{type:'bed',x:25,y:5,name:'Your bed'}],
+ '2':[{type:'key',x:27,y:5,name:'Pharmacy cabinet key'}],
+ '1':[{type:'pin',x:7,y:5,name:'Access code memo'}],
+ 'B1':[{type:'fuse',x:27,y:5,name:'Generator fuse'}],
+ 'G':[{type:'exit',x:31,y:5,name:'Great Maze Pond exit'}]
+};
+const cores=[{type:'stairs',x:5,y:5,label:'W'},{type:'stairs',x:31,y:19,label:'E'},{type:'liftA',x:17,y:11,label:'A'},{type:'liftB',x:29,y:17,label:'B'}];
+const SPAWNS={'3':[[15,15],[23,17]],'2':[[9,15],[25,13]],'1':[[13,17],[27,9]],'G':[[21,17],[9,7]],'B1':[[15,9],[31,13]]};
+const COL={walls:'#122831',floor:'#37545b',edge:'#466a6a',south:'#38565a',central:'#405d5d',tower:'#445a62'};
+const ns='http://www.w3.org/2000/svg';
+const svg=document.getElementById('gameSvg'),tiles=document.getElementById('tiles'),featuresG=document.getElementById('features'),actorsG=document.getElementById('actors'),pathG=document.getElementById('pathline');
+const el=id=>document.getElementById(id);
+let maps={}, game={}, audioContext=null, mute=true, last=0, npcAccum=0, moveAccum=0, keysHeld={}, touchTimer=null, touchDown=null, runningModal=false, viewport={x:0,y:0,w:0,h:0}, actorRefs=[];
+function mk(tag,attrs={},parent=null){const n=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(parent)parent.append(n);return n;}
+function rng(seed){return ()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+function genMap(fi){const random=rng(1024+fi*317),grid=Array.from({length:H},()=>Array(W).fill('#')),visited=new Set();
+ let stack=[[1,1]];visited.add('1,1');grid[1][1]='.';
+ while(stack.length){let [x,y]=stack[stack.length-1];let ds=[[2,0],[-2,0],[0,2],[0,-2]].filter(([dx,dy])=>{let nx=x+dx,ny=y+dy;return nx>0&&ny>0&&nx<W-1&&ny<H-1&&!visited.has(nx+','+ny)});
+ if(!ds.length){stack.pop();continue;}const [dx,dy]=ds[Math.floor(random()*ds.length)];grid[y+dy/2][x+dx/2]='.';grid[y+dy][x+dx]='.';visited.add((x+dx)+','+(y+dy));stack.push([x+dx,y+dy]);}
+ // Alternate routes and small connected chambers break up the perfect maze.
+ for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++)if(grid[y][x]==='#'&&random()<.11&&((grid[y-1][x]==='.'&&grid[y+1][x]==='.')||(grid[y][x-1]==='.'&&grid[y][x+1]==='.')))grid[y][x]='.';
+ function chamber(cx,cy,rx=1,ry=1){for(let y=cy-ry;y<=cy+ry;y++)for(let x=cx-rx;x<=cx+rx;x++)if(x>0&&y>0&&x<W-1&&y<H-1)grid[y][x]='.';}
+ for(const c of cores)chamber(c.x,c.y,c.type.startsWith('lift')?2:1,1);
+ for(const f of features[floors[fi]]||[])chamber(f.x,f.y,f.type==='bed'?2:1,1);
+ chamber(17,11,2,2);
+ return grid;
+}
+function isOpen(f,x,y){return x>=0&&y>=0&&x<W&&y<H&&maps[f][y][x]==='.';}
+function bfs(f,from,to){if(!isOpen(f,to.x,to.y))return null;if(from.x===to.x&&from.y===to.y)return [];let q=[from],seen=new Set([from.x+','+from.y]),p=new Map();for(let i=0;i<q.length;i++){let v=q[i];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){let nx=v.x+dx,ny=v.y+dy,k=nx+','+ny;if(seen.has(k)||!isOpen(f,nx,ny))continue;seen.add(k);p.set(k,{x:v.x,y:v.y});if(nx===to.x&&ny===to.y){let path=[{x:nx,y:ny}],cur=p.get(k);while(cur&&(cur.x!==from.x||cur.y!==from.y)){path.push(cur);cur=p.get(cur.x+','+cur.y)}return path.reverse();}q.push({x:nx,y:ny});}}return null;}
+function spawnNurses(f){return SPAWNS[f].map(([x,y],i)=>({x,y,homeX:x,homeY:y,phase:i*2.3,alert:false,lastDx:0,lastDy:0}));}
+function reset(full=true){maps={};floors.forEach((f,i)=>maps[f]=genMap(i));game={floor:'3',x:25,y:5,caught:null,inventory:{badge:false,key:false,pin:false,fuse:false},pin:['4137','2864','7305','9412','5728'][Math.floor(Math.random()*5)],captures:0,nurses:spawnNurses('3'),route:[],running:false,paused:false,won:false,invincibleUntil:0};viewport.x=game.x*T;viewport.y=game.y*T;last=0;npcAccum=0;moveAccum=0;renderFloor();refreshHud();setMsg('The ward is quiet. For now.');}
+function paintSymbol(g,x,y,type){const ox=x*T+T/2,oy=y*T+T/2;if(type==='bed'){
+ mk('rect',{x:x*T+5,y:y*T+9,width:27,height:19,rx:3,fill:'#6faaca',stroke:'#d3eff1','stroke-width':2},g);mk('rect',{x:x*T+8,y:y*T+11,width:10,height:8,rx:2,fill:'#ebf2e3'},g);mk('path',{d:`M${x*T+5} ${y*T+23}h27`,stroke:'#376477','stroke-width':3},g);return;
+ }
+ const kinds={badge:['#b3f3ce','ID'],key:['#edc665','K'],pin:['#a0bfed','PIN'],fuse:['#eb9e71','F'],exit:['#98ffdb','OUT']};
+ if(type in kinds){let [fill,text]=kinds[type];mk('circle',{cx:ox,cy:oy,r:16,fill:'#13272d',stroke:fill,'stroke-width':2.5},g);mk('text',{x:ox,y:oy+4.2,'text-anchor':'middle','font-size':text.length>2?9:13,'font-weight':900,fill},g).textContent=text;return;}
+ const c=type==='liftA'||type==='liftB'?'#a2c1dd':'#deb687';mk('rect',{x:x*T+3,y:y*T+3,width:T-6,height:T-6,rx:6,fill:'#172a30',stroke:c,'stroke-width':2},g);
+ mk('text',{x:ox,y:oy+3,'text-anchor':'middle','font-size':12,'font-weight':900,fill:c},g).textContent=type==='stairs'?'ST':type==='liftA'?'A':'B';
+}
+function renderFloor(){tiles.replaceChildren();featuresG.replaceChildren();actorsG.replaceChildren();pathG.replaceChildren();const grid=maps[game.floor];
+ mk('rect',{x:0,y:0,width:W*T,height:H*T,fill:'#0b1a21'},tiles);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+ const open=grid[y][x]==='.';let clr=open?(x<12?COL.south:x<25?COL.central:COL.tower):COL.walls;
+ mk('rect',{x:x*T+.4,y:y*T+.4,width:T-.8,height:T-.8,fill:clr,stroke:open?'#365157':'#1e3740','stroke-width':open?.45:.65},tiles);
+ if(!open){let n=isOpen(game.floor,x,y-1),s=isOpen(game.floor,x,y+1),e=isOpen(game.floor,x+1,y),w=isOpen(game.floor,x-1,y);if(n||s||e||w)mk('path',{d:`M${x*T+2} ${y*T+2} h${T-4}`,stroke:'#34535a','stroke-width':2},tiles);}
+ }
+ for(let x of [12,25])mk('line',{x1:x*T,y1:T,x2:x*T,y2:(H-1)*T,stroke:'#7bb5ac','stroke-width':2,'stroke-dasharray':'4 13',opacity:.3},tiles);
+ mk('rect',{x:0,y:0,width:W*T,height:H*T,fill:'url(#floorGrain)','pointer-events':'none'},tiles);
+ const labelDefs=[['SOUTHWARK',3,2],['BERMONDSEY',13,2],['TOWER WING',26,2]];
+ for(const [name,x,y] of labelDefs)mk('text',{x:x*T,y:y*T,'font-size':10,'font-weight':800,fill:'#79979a',opacity:.85,'letter-spacing':1},featuresG).textContent=name;
+ for(const c of cores){if(game.floor==='3'&&c.type==='liftB')continue;let g=mk('g',{},featuresG);paintSymbol(g,c.x,c.y,c.type);}
+ for(const f of features[game.floor]||[]){if(game.inventory[f.type]&&f.type!=='bed')continue;let g=mk('g',{},featuresG);paintSymbol(g,f.x,f.y,f.type);}
+ actorRefs=game.nurses.map(()=>{let g=mk('g',{filter:'url(#nurseShadow)'},actorsG);mk('circle',{cx:0,cy:0,r:23,fill:'#fd9a27',opacity:.13},g);mk('use',{href:'#nurseGlyph',transform:'translate(-20 -30) scale(.36)'},g);return g;});
+ let playerG=mk('g',{id:'hero'},actorsG);mk('circle',{cx:0,cy:0,r:21,fill:'#74d8e0',opacity:.11},playerG);mk('use',{href:'#playerGlyph'},playerG);
+ el('zone').textContent=game.floor==='B1'?'B1 · PLANT ROOMS':game.floor==='G'?'G · ATRIUM':game.floor+'F · '+(game.floor==='3'?'TOWER WARD':game.floor==='2'?'PHARMACY':'RECORDS');el('floorChip').textContent='FLOOR '+game.floor;
+ updateCamera(true);drawRoute();updateActors(performance.now());}
+function updateActors(now){let moving=(game.route.length>0||Object.values(keysHeld).some(Boolean));const hero=el('hero');if(hero){let bob=moving?Math.sin(now/67)*2.4:Math.sin(now/520)*.6;let drag=game.caught?Math.min(1,(now-game.caught.start)/1200)*T*3.1:0;hero.setAttribute('transform',`translate(${(game.x+.5)*T+drag-(game.caught?17:0)} ${(game.y+.5)*T+bob+(game.caught?8:0)})`);}
+ actorRefs.forEach((node,i)=>{let n=game.nurses[i];if(!n)return;let bob=Math.sin(now/135+n.phase)*2;let drag=game.caught&&game.caught.index===i?Math.min(1,(now-game.caught.start)/1200)*T*3.1:0;node.setAttribute('transform',`translate(${(n.x+.5)*T+drag} ${(n.y+.5)*T+bob}) scale(.94)`);const ring=node.querySelector('circle');if(ring)ring.setAttribute('fill',n.alert?'#ff4949':'#fd9a27');});
+}
+function updateCamera(force=false){const bounds=svg.getBoundingClientRect();if(!bounds.width||!bounds.height)return;const ratio=bounds.width/bounds.height;let vw=ratio<1?14.5*T:13*T*ratio,vh=vw/ratio;if(vw>W*T){vw=W*T;vh=vw/ratio;}if(vh>H*T){vh=H*T;vw=vh*ratio;}let cx=(game.x+.5)*T,cy=(game.y+.5)*T,camera=viewport;
+ if(force){camera.x=cx;camera.y=cy;}else{camera.x+=(cx-camera.x)*.23;camera.y+=(cy-camera.y)*.23;}
+ const vx=vw>=W*T?0:Math.max(0,Math.min(W*T-vw,camera.x-vw/2));const vy=vh>=H*T?0:Math.max(0,Math.min(H*T-vh,camera.y-vh/2));svg.setAttribute('viewBox',`${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}`);viewport.w=vw;viewport.h=vh;}
+function drawRoute(){pathG.replaceChildren();if(!game.route.length)return;let seq=[{x:game.x,y:game.y},...game.route];mk('polyline',{points:seq.map(p=>`${(p.x+.5)*T},${(p.y+.5)*T}`).join(' '),fill:'none',stroke:'#d2e9b2','stroke-width':3,'stroke-dasharray':'6 8',opacity:.48,'stroke-linecap':'round','pointer-events':'none'},pathG);}
+function walk(dx,dy){if(!game.running||game.paused||game.caught||runningModal||game.won)return;game.route=[];let x=game.x+dx,y=game.y+dy;if(isOpen(game.floor,x,y)){game.x=x;game.y=y;onStep();}else cue('bump',{},()=>beep(120,.045));drawRoute();}
+function stepRoute(){if(game.caught||!game.route.length)return;let n=game.route.shift();if(!isOpen(game.floor,n.x,n.y)){game.route=[];return;}game.x=n.x;game.y=n.y;onStep();drawRoute();}
+function goto(x,y){if(!game.running||game.paused||game.caught||runningModal)return;let p={x,y};if(!isOpen(game.floor,x,y)){
+ const opts=[];for(let yy=y-2;yy<=y+2;yy++)for(let xx=x-2;xx<=x+2;xx++)if(isOpen(game.floor,xx,yy))opts.push({x:xx,y:yy,dist:Math.abs(xx-x)+Math.abs(yy-y)});
+ opts.sort((a,b)=>a.dist-b.dist);if(!opts.length)return;p=opts[0];}
+ const route=bfs(game.floor,{x:game.x,y:game.y},p);if(route){game.route=route;drawRoute();if(!route.length)interact();}
+}
+function onStep(){const item=(features[game.floor]||[]).find(v=>v.x===game.x&&v.y===game.y);
+ if(item&&['badge','key','pin','fuse'].includes(item.type)&&!game.inventory[item.type]){
+ game.inventory[item.type]=true;cue('pickup',{item:item.type,found:['badge','key','pin','fuse'].filter(i=>game.inventory[i]).length},()=>{beep(600,.10);setTimeout(()=>beep(800,.08),100);});renderFloor();refreshHud();
+ const labels={badge:'Visitor badge acquired. The lifts look less suspicious now.',key:'You found the pharmacy cabinet key.',pin:`Found a records memo: exit keypad code is ${game.pin}.`,fuse:'Generator fuse acquired. Lift B and the exit circuit have power.'};setMsg(labels[item.type]);
+ }
+ if(item?.type==='exit')interact();
+ for(let i=0;i<game.nurses.length;i++)if(game.nurses[i].x===game.x&&game.nurses[i].y===game.y){captured(i);break;}
+}
+function adjacent(p){return Math.abs(game.x-p.x)+Math.abs(game.y-p.y)<=1;}
+function interact(){if(!game.running||game.paused||game.caught||runningModal||game.won)return;
+ const current=[...cores.filter(c=>!(game.floor==='3'&&c.type==='liftB')),...(features[game.floor]||[])].filter(p=>adjacent(p));current.sort((a,b)=>(Math.abs(game.x-a.x)+Math.abs(game.y-a.y))-(Math.abs(game.x-b.x)+Math.abs(game.y-b.y)));
+ if(!current.length){setMsg('Nothing to interact with here. Find a marked lift, stairwell or exit.');cue('nope',{},()=>beep(150,.08));return;}
+ const p=current[0];if(p.type==='stairs'){let ix=floors.indexOf(game.floor),dest=floors.filter((f,i)=>Math.abs(i-ix)===1);chooseFloor('STAIR '+p.label,'Take the stairs one floor at a time.',dest,p);return;}
+ if(p.type==='liftA'||p.type==='liftB'){
+ if(p.type==='liftB'&&!game.inventory.fuse){showModal('LIFT B: NO POWER','Basement plant supply disconnected. The stairs still work.',[{label:'BACK',action:closeModal}]);return;}
+ const stops=(p.type==='liftA'?['G','1','2','3']:['B1','G','1','2']);chooseFloor('LIFT '+p.label,`Choose a floor. ${p.type==='liftA'?'Tower lift':'Service lift'}.`,stops.filter(f=>f!==game.floor),p);return;
+ }
+ if(p.type==='exit'){const missing=['badge','key','pin','fuse'].filter(i=>!game.inventory[i]);if(missing.length){showModal('EXIT SECURITY','The Great Maze Pond exit requires: '+missing.map(v=>({badge:'visitor badge',key:'pharmacy key',pin:'access code memo',fuse:'power fuse'}[v])).join(', ')+'.',[{label:'BACK',action:closeModal}]);cue('locked',{},()=>beep(100,.13));return;}
+ showKeypad();return;}
+ if(p.type==='bed'){setMsg('You are not staying in bed. Not this time.');return;}
+ setMsg('Explore the ward, pharmacy, records office and basement.');}
+function chooseFloor(title,text,stops,core){showModal(title,text,[...stops.map(f=>({label:'FLOOR '+f,primary:f==='G',action:()=>changeFloor(f,core)})),{label:'CANCEL',action:closeModal}]);}
+function changeFloor(f,core){closeModal();game.floor=f;game.x=core.x;game.y=core.y;game.route=[];game.nurses=spawnNurses(f);renderFloor();refreshHud();beep(310,.1);setMsg(`Arrived at ${floorNames[f]}. Watch for orange uniforms.`);}
+function showKeypad(){showModal('SECURITY CODE','The final exit is locked. Enter the four-digit number from the records memo.',[{label:'UNLOCK',primary:true,action:submitCode},{label:'CANCEL',action:closeModal}],`<input id="pinInput" class="codeInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" aria-label="Four digit code" autocomplete="off"/><div class="hint">Records memo: ${game.inventory.pin?game.pin:'not found'}</div>`);el('pinInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitCode();});}
+function submitCode(){if(el('pinInput')?.value.trim()===game.pin){closeModal();game.won=true;game.running=false;cue('win',{},()=>{beep(790,.24);setTimeout(()=>beep(990,.3),180);});showModal('YOU ESCAPED!','Great Maze Pond, daylight, freedom.\n\nThe nurses dragged you back '+game.captures+' time'+(game.captures===1?'':'s')+'. All items retained.',[{label:'PLAY AGAIN',primary:true,action:()=>{closeModal();reset();game.running=true;setMsg('A different code. Same maze. Go!');}}],null,true);}else{cue('wrong',{},()=>beep(120,.21));el('pinInput').value='';setMsg('Access denied. Recheck the records memo.');}}
+function captured(index=0){let now=performance.now();if(game.invincibleUntil>now||game.caught||runningModal||game.won)return;
+ game.captures++;game.route=[];keysHeld={};game.caught={start:now,index};el('escortMsg').classList.add('show');
+ cue('caught',{},()=>beep(95,.2));setMsg(`CAUGHT by a nurse! Being dragged back to bed (capture #${game.captures}).`);
+}
+function finishCapture(){game.caught=null;el('escortMsg').classList.remove('show');game.floor='3';game.x=25;game.y=5;game.nurses=spawnNurses('3');game.route=[];game.invincibleUntil=performance.now()+2100;renderFloor();refreshHud();setMsg(`Returned to the ward (capture #${game.captures}). All your items are safe.`);} 
+function nurseTick(){for(let n of game.nurses){let path=bfs(game.floor,{x:n.x,y:n.y},{x:game.x,y:game.y});n.alert=!!path&&path.length<=7;let target=null;
+ if(n.alert&&path.length)target=path[0];else{let opt=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>isOpen(game.floor,n.x+dx,n.y+dy));if(opt.length){let straight=opt.find(([dx,dy])=>dx===n.lastDx&&dy===n.lastDy);let dir=(straight&&Math.random()<.55)?straight:opt[Math.floor(Math.random()*opt.length)];n.lastDx=dir[0];n.lastDy=dir[1];target={x:n.x+dir[0],y:n.y+dir[1]};}}
+ if(target){n.x=target.x;n.y=target.y;}if(n.x===game.x&&n.y===game.y){captured(game.nurses.indexOf(n));return;}}
+}
+function loop(t){requestAnimationFrame(loop);if(!last)last=t;const dt=Math.min(100,t-last);last=t;if(game.caught && t-game.caught.start>=1200)finishCapture();
+ if(game.running&&!game.paused&&!game.caught&&!runningModal){moveAccum+=dt;npcAccum+=dt;
+ if(moveAccum>=137){moveAccum=0;const held=Object.entries(keysHeld).find(([,v])=>v);if(held){let [dx,dy]=held[0].split(',').map(Number);walk(dx,dy);}else if(game.route.length)stepRoute();}
+ if(npcAccum>=390){npcAccum=0;nurseTick();}}
+ updateActors(t);updateCamera();}
+function setMsg(s){el('messageText').textContent=s;el('subzone').textContent=game.captures?`Returned to bed ${game.captures} ×`:game.inventory.pin?`Memo: ${game.pin}`:'Avoid the orange nurses';}
+function refreshHud(){let items=[['badge','BADGE'],['key','KEY'],['pin','PIN'],['fuse','FUSE']];el('inventory').innerHTML=items.map(([k,t])=>`<span class="item ${game.inventory[k]?'got':''}">${game.inventory[k]?'✓':'○'} ${t}${k==='pin'&&game.inventory.pin?' '+game.pin:''}</span>`).join('');el('pauseBtn').textContent=game.paused?'▶':'Ⅱ';}
+function showModal(title,txt,buttons=[],extra=null,nurse=false){runningModal=true;game.route=[];drawRoute();el('modalTitle').textContent=title;el('modalText').textContent=txt;el('modalIllustration').innerHTML=nurse?'<svg class="largeNurse" viewBox="0 0 120 184" aria-hidden="true"><use href="#nurseGlyph"/></svg>':'';el('modalExtra').innerHTML=extra||'';
+ el('modalButtons').replaceChildren();for(const b of buttons){let btn=document.createElement('button');btn.textContent=b.label;if(b.primary)btn.className='primary';btn.onclick=b.action;el('modalButtons').append(btn);}el('modal').classList.add('show');}
+function closeModal(){el('modal').classList.remove('show');runningModal=false;}
+function openMap(){if(!game.running||game.won)return;const scale=8;let s=`<svg id="miniMap" viewBox="0 0 ${W*scale} ${H*scale}" xmlns="http://www.w3.org/2000/svg">`;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++)s+=`<rect x="${x*scale}" y="${y*scale}" width="${scale}" height="${scale}" fill="${isOpen(game.floor,x,y)?'#3a5558':'#132832'}"/>`;
+ for(const c of cores)if(!(game.floor==='3'&&c.type==='liftB'))s+=`<rect x="${c.x*scale+1}" y="${c.y*scale+1}" width="${scale-2}" height="${scale-2}" fill="#c0d2e3"/>`;
+ for(const f of features[game.floor]||[])if(!game.inventory[f.type]||f.type==='exit')s+=`<circle cx="${(f.x+.5)*scale}" cy="${(f.y+.5)*scale}" r="4" fill="${f.type==='exit'?'#82ffd3':'#e7c46a'}"/>`;
+ for(const n of game.nurses)s+=`<circle cx="${(n.x+.5)*scale}" cy="${(n.y+.5)*scale}" r="3.1" fill="#ff8922"/>`;
+ s+=`<circle cx="${(game.x+.5)*scale}" cy="${(game.y+.5)*scale}" r="4" fill="#81e5fc" stroke="#fff" stroke-width="1.5"/></svg>`;
+ showModal('FLOOR '+game.floor+' MAP','West: Southwark · Centre: Bermondsey · East: Tower', [{label:'CLOSE',primary:true,action:closeModal}],s+'<div id="mapLegend">Blue = you · Orange = nurse · White = stairs/lifts · Yellow = item · Green = exit</div>');}
+// Sound cues go to the adaptive music (music.js) when it is playing, else to the beeps.
+function cue(name,detail,fallback){if(!window.escapeMusic?.cue(name,detail))fallback?.();}
+function beep(hz,dur){if(mute)return;try{audioContext??=new (window.AudioContext||window.webkitAudioContext)();const osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type='square';osc.frequency.value=hz;gain.gain.setValueAtTime(.038,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+dur);osc.connect(gain);gain.connect(audioContext.destination);osc.start();osc.stop(audioContext.currentTime+dur);}catch(e){}}
+let activePointer=null;
+for(const btn of document.querySelectorAll('.dpad')){
+ const dx=+btn.dataset.dx,dy=+btn.dataset.dy,key=`${dx},${dy}`;
+ btn.addEventListener('pointerdown',e=>{e.preventDefault();btn.setPointerCapture(e.pointerId);game.route=[];drawRoute();keysHeld={};keysHeld[key]=true;walk(dx,dy);btn.classList.add('pressed');});
+ const end=()=>{keysHeld[key]=false;btn.classList.remove('pressed');};btn.addEventListener('pointerup',end);btn.addEventListener('pointercancel',end);btn.addEventListener('lostpointercapture',end);
+}
+svg.addEventListener('pointerdown',e=>{if(!game.running||game.paused||runningModal)return;touchDown={x:e.clientX,y:e.clientY};});
+svg.addEventListener('pointerup',e=>{if(!touchDown)return;let dx=e.clientX-touchDown.x,dy=e.clientY-touchDown.y;touchDown=null;if(Math.hypot(dx,dy)>35){if(Math.abs(dx)>Math.abs(dy))walk(Math.sign(dx),0);else walk(0,Math.sign(dy));return;}
+ const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;let m=svg.getScreenCTM();if(!m)return;let local=pt.matrixTransform(m.inverse());goto(Math.floor(local.x/T),Math.floor(local.y/T));});
+window.addEventListener('keydown',e=>{const key=e.key.toLowerCase();if(e.target instanceof HTMLInputElement)return;let dir=({'arrowup':[0,-1],w:[0,-1],'arrowdown':[0,1],s:[0,1],'arrowleft':[-1,0],a:[-1,0],'arrowright':[1,0],d:[1,0]})[key];if(dir){e.preventDefault();keysHeld={};const k=dir.join(',');keysHeld[k]=true;if(!e.repeat)walk(...dir);return;}
+ if(key==='e'||key===' '){e.preventDefault();if(!runningModal)interact();}if(key==='escape'&&runningModal&&game.running)closeModal();if(key==='m'&&!runningModal)openMap();});
+window.addEventListener('keyup',e=>{const key=e.key.toLowerCase();let dir=({'arrowup':[0,-1],w:[0,-1],'arrowdown':[0,1],s:[0,1],'arrowleft':[-1,0],a:[-1,0],'arrowright':[1,0],d:[1,0]})[key];if(dir)delete keysHeld[dir.join(',')];});
+window.addEventListener('blur',()=>{keysHeld={};});
+el('interactBtn').onclick=interact;el('mapBtn').onclick=openMap;
+el('pauseBtn').onclick=()=>{if(!game.running||game.caught||game.won||runningModal)return;game.paused=!game.paused;keysHeld={};refreshHud();setMsg(game.paused?'Paused. Press ▶ to resume.':'Back on the move.');};
+el('soundBtn').onclick=()=>{mute=!mute;el('soundBtn').textContent=mute?'SOUND OFF':'SOUND ON';beep(440,.11);};
+window.addEventListener('resize',()=>updateCamera(true));
+// Deliberately exposed for local smoke tests; no data leaves the device.
+window.__escapeTest={get game(){return game},setMute(v){mute=v;},get maps(){return maps},bfs,changeFloor,interact,walk,reset,closeModal,spawnNurses};
+reset();showModal('ESCAPE THE HOSPITAL','Wake up in the Tower ward. Explore five connected levels; find a visitor badge, a pharmacy key, a code memo and a generator fuse.\n\nOrange nurses patrol the corridors. If they catch you, you are taken back to bed — but your discoveries survive.\n\nTap corridors to walk, use the D-pad or arrow keys. Press INTERACT at lifts, stairs and exits.',[{label:'START ESCAPE',primary:true,action:()=>{closeModal();game.running=true;setMsg('First find the visitor badge somewhere on floor 3.');}}],'<div class="hint">Fictional maze inspired by Guy’s site, not a navigational map.</div>',true);
+requestAnimationFrame(loop);
+</script>
+<script type="module" src="music.js"></script>
+</body>
+</html>

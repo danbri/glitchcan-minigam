@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 184" role="img" aria-labelledby="title desc">
+  <title id="title">Angular hospital nurse pictogram</title>
+  <desc id="desc">A geometric nurse with long triangular hair, a raised forearm, a triangular dress and pointed legs, traced from the supplied orange hospital symbol.</desc>
+  <g id="nurseGlyph" stroke="#19130f" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Pointed hairstyle and side profile -->
+    <path d="M14 58 L56 12 Q61 8 70 12 L75 15 Q81 22 77 30 L69 39 L61 38 L69 24 L63 21 L29 56 Z" fill="#ef870a"/>
+    <path d="M64 22 L72 17" stroke-width="3.5"/>
+    <!-- Folded left arm, angular torso, raised right hand -->
+    <path d="M62 37 L47 55 L42 72 Q41 78 50 81 L94 83 L99 79 L99 55 L91 55 L91 72 L67 70 L56 52" fill="#ef870a"/>
+    <path d="M60 45 L52 67 L68 68 L60 45" fill="#ef870a" stroke-width="4.5"/>
+    <!-- Neck -->
+    <path d="M57 81 L67 81 L68 90 L57 90 Z" fill="#ef870a"/>
+    <!-- Distinctive triangular uniform and inner apron -->
+    <path d="M60 88 L32 133 L93 133 L65 88 Z" fill="#ef870a"/>
+    <path d="M62 94 L56 123 L83 123" stroke-width="4.5"/>
+    <!-- Two sharply tapered legs -->
+    <path d="M51 135 L55 170 L59 173 L66 136 L72 173 L76 172 L82 135" fill="#ef870a"/>
+  </g>
+</svg>
