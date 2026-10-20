@@ -91,7 +91,7 @@ function tick(){
  music.set(s);
  // Nurses noticing you: a bright ping on the beat; the nurse motif grows stronger as they close in.
  if(s.alerts>(prev.alerts||0)&&!s.caught)hit('alarm',{tones:[0],octave:1,grid:4,velocity:.7});
- const close=s.threat>=.5&&!s.caught;
+ const close=s.threat>=.5&&!s.caught&&!s.won;
  if(close)music.setCharacter('nurse',{power:s.threat,stability:s.threat>=.8?.5:1});
  if(close!==!!prev.close)close?music.enter('nurse'):music.leave('nurse');s.close=close;
  ctl('heart','level',.4+.6*s.threat);
