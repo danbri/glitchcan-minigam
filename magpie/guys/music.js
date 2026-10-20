@@ -4,8 +4,8 @@
 // Each floor plays a piece from the Diddums songbook. The game reports what things mean (how close the
 // nearest nurse is, being caught, a menu open) and the plan below turns that into an
 // arrangement at the next bar line; events (pickups, a nurse noticing you, capture, escape) are hit()
-// calls on the chord that is sounding. Items found are
-// events only: they add no parts. If the engine cannot load, the game keeps its own beeps.
+// calls on the chord that is sounding. An item found plays a chime and one or two upbeat bars;
+// it adds no lasting parts. If the engine cannot load, the game keeps its own beeps.
 // `?diddums=<url>` points at another copy of the engine (a local server, for tests).
 const DIDDUMS=new URL(new URLSearchParams(location.search).get('diddums')||'https://danbri.github.io/diddums/',location.href).href;
 const T=window.__escapeTest,btn=document.getElementById('soundBtn');
@@ -20,7 +20,7 @@ const FLOORS={
 const LEAD=new Set(['fiddle','whistle','melodica','voice','call','crew','lead','sax','flute','glock']);
 const roleOf=id=>/bass|sub/.test(id)?'bass':LEAD.has(id)?'lead':'accomp';
 
-let lib=null,music=null,M=null,ctx=null,on=false,loading=null,floor=null,wanted=null,poll=null,prev={};
+let lib=null,music=null,M=null,ctx=null,on=false,loading=null,floor=null,wanted=null,poll=null,prev={},liftUntil=0;
 
 function floorMusic(f){
  const {compositionFromSong,parseKey,modes,GENRES,CHARTS}=lib,title=FLOORS[f].song,song=GENRES.find(s=>s.title===title);
@@ -41,10 +41,12 @@ function floorMusic(f){
 // Game state → arrangement. The piece builds as nurses close in;
 // being caught cuts to bass, drone and heartbeat; escaping plays everything.
 function makePlan(M){
- return function plan({threat=0,caught=false,won=false,returned=false}){
+ return function plan({threat=0,caught=false,won=false,returned=false,lift=false}){
   const q=x=>Math.round(x*10)/10,t=returned?0:q(threat),bpm=M.song.bpm,L=new Set();
   if(won){for(const id of [...M.lead,...M.bass,...M.accomp])L.add(id);return {name:'Free',layers:[...L],rhythm:M.song.rhythm==='none'?'motown':M.song.rhythm,energy:1,harmony:M.harmony,tempo:bpm,transition:{type:'pickup',beats:2}};}
   if(caught){for(const id of M.bass)L.add(id);L.add('drone');L.add('heart');return {name:'Escorted',layers:[...L],rhythm:'halftime',energy:.7,harmony:M.harmony,tempo:Math.round(bpm*.9),transition:{type:'cut',beats:1}};}
+  // An item found: one or two upbeat bars with the whole band, then back to the threat arrangement.
+  if(lift){for(const id of [...M.lead,...M.accomp,...M.bass])L.add(id);if(t>=.5)L.add('heart');return {name:'Found it',layers:[...L],rhythm:M.song.rhythm==='none'?'motown':M.song.rhythm,energy:1,harmony:M.harmony,tempo:bpm,transition:{type:'pickup',beats:2}};}
   if(M.accomp[0])L.add(M.accomp[0]);
   if(t>=.3)for(const id of M.lead)L.add(id);
   if(t>=.2)for(const id of M.accomp)L.add(id);
@@ -61,7 +63,7 @@ function makePlan(M){
 function state(){
  const g=T.game;let near=99;
  for(const n of g.nurses){const p=T.bfs(g.floor,{x:n.x,y:n.y},{x:g.x,y:g.y},true);if(p)near=Math.min(near,p.length);}
- return {threat:Math.max(0,Math.min(1,(12-near)/10)),caught:!!g.caught,won:g.won,returned:g.invincibleUntil>performance.now(),near,
+ return {threat:Math.max(0,Math.min(1,(12-near)/10)),caught:!!g.caught,won:g.won,returned:g.invincibleUntil>performance.now(),lift:performance.now()<liftUntil,near,
   alerts:g.nurses.filter(n=>n.alert).length,quiet:g.paused||document.getElementById('modal').classList.contains('show')};
 }
 
@@ -100,7 +102,7 @@ const hit=(track,o)=>{try{music?.hit(track,o);}catch(e){}};
 
 // Events from the game (window.escapeMusic.cue). Returns true when the music handled it.
 const CUES={
- pickup:({found=1})=>{const k=Math.min(6,found+1);hit('chime',{tones:[0,k,k+2],octave:1,spread:1,velocity:.8});},
+ pickup:({found=1})=>{const k=Math.min(6,found+1);hit('chime',{tones:[0,k,k+2],octave:1,spread:1,velocity:.8});liftUntil=performance.now()+2*(music.barSeconds||2)*1000;music.set(state());},
  nope:()=>hit('alarm',{tones:[1,0],octave:-1,spread:1,velocity:.4}),
  locked:()=>hit('boom',{tones:[0],octave:-1,velocity:.6}),
  wrong:()=>hit('alarm',{tones:[3,2,1],spread:1,velocity:.5}),
