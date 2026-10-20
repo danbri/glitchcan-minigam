@@ -77,11 +77,23 @@ const features = {
 };
 const cores=[{type:'stairs',x:5,y:5,label:'W'},{type:'stairs',x:31,y:19,label:'E'},{type:'liftA',x:17,y:11,label:'A'},{type:'liftB',x:29,y:17,label:'B'}];
 const SPAWNS={'3':[[15,15],[23,17]],'2':[[9,15],[25,13]],'1':[[13,17],[27,9]],'G':[[21,17],[9,7]],'B1':[[15,9],[31,13]]};
+// Nurses: five fictional personalities (README "Nurses"). size scales the figure; tick multiplies the 390 ms step (chaseTick
+// again while chasing); sight = path length at which she notices you; persist = steps she keeps going after you leave her sight;
+// hold = steps she stands on noticing you; pause = chance per patrol step of an idle pause; patrol = wander | home | straight.
+const NURSE_TYPES={
+ matron:{label:'brisk matron',size:1.1,build:1.04,tick:.84,chaseTick:.95,sight:9,persist:7,hold:0,pause:.03,patrol:'straight',lean:0,head:-3,stride:1.2,swing:30,rest:'stand',idles:['watch'],hair:'bun',dress:true},
+ night:{label:'weary night nurse',size:1,build:1,tick:1.3,chaseTick:.9,sight:6,persist:2,hold:1,pause:.2,patrol:'home',lean:6,head:13,stride:.75,swing:8,rest:'slump',idles:['yawn','rub'],hair:'messy'},
+ chatty:{label:'chatty nurse',size:.96,build:1.02,tick:1.04,chaseTick:1,sight:6,persist:3,hold:1,pause:.14,patrol:'wander',lean:2,head:0,stride:1,swing:18,rest:'clip',idles:['look','nod'],hair:'pony',clip:true},
+ trainee:{label:'nervous trainee',size:.88,build:.9,tick:.95,chaseTick:1,sight:5,persist:1,hold:2,pause:.08,patrol:'wander',lean:3,head:5,stride:.9,swing:12,rest:'clasp',idles:['glance'],hair:'curly',hesitate:.22},
+ stern:{label:'stern sister',size:1.05,build:1.14,tick:1.12,chaseTick:1,sight:10,persist:3,hold:0,pause:.12,patrol:'straight',lean:-1,head:-3,stride:1,swing:0,rest:'fold',idles:['scan','fold'],hair:'crop'}
+};
+const NURSE_CAST={'3':['matron','night'],'2':['chatty','stern'],'1':['trainee','matron'],'G':['chatty','trainee'],'B1':['night','stern']};
+const SKIN=['#f0c8a6','#c48a5e','#8a5638','#e3aa80','#5f3b29'],HAIR=['#2a1d16','#6b3f22','#c9a06a','#121014','#8f8a86'],INK='#1c130e',DEG=Math.PI/180;
 const COL={walls:'#122831',floor:'#37545b',edge:'#466a6a',south:'#38565a',central:'#405d5d',tower:'#445a62'};
 const ns='http://www.w3.org/2000/svg';
 const svg=document.getElementById('gameSvg'),tiles=document.getElementById('tiles'),featuresG=document.getElementById('features'),actorsG=document.getElementById('actors'),pathG=document.getElementById('pathline');
 const el=id=>document.getElementById(id);
-let maps={}, game={}, audioContext=null, mute=true, last=0, npcAccum=0, moveAccum=0, keysHeld={}, touchTimer=null, touchDown=null, runningModal=false, viewport={x:0,y:0,w:0,h:0}, actorRefs=[];
+let maps={}, game={}, audioContext=null, mute=true, last=0, moveAccum=0, keysHeld={}, touchTimer=null, touchDown=null, runningModal=false, viewport={x:0,y:0,w:0,h:0}, actorRefs=[];
 function mk(tag,attrs={},parent=null){const n=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(parent)parent.append(n);return n;}
 function rng(seed){return ()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
 function genMap(fi){const random=rng(1024+fi*317),grid=Array.from({length:H},()=>Array(W).fill('#')),visited=new Set();
@@ -100,8 +112,8 @@ function genMap(fi){const random=rng(1024+fi*317),grid=Array.from({length:H},()=
 }
 function isOpen(f,x,y,staff=false){if(x<0||y<0||x>=W||y>=H)return false;const c=maps[f][y][x];return c==='.'||(c==='D'&&(staff||!!game.inventory?.key));}
 function bfs(f,from,to,staff=false){if(!isOpen(f,to.x,to.y,staff))return null;if(from.x===to.x&&from.y===to.y)return [];let q=[from],seen=new Set([from.x+','+from.y]),p=new Map();for(let i=0;i<q.length;i++){let v=q[i];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){let nx=v.x+dx,ny=v.y+dy,k=nx+','+ny;if(seen.has(k)||!isOpen(f,nx,ny,staff))continue;seen.add(k);p.set(k,{x:v.x,y:v.y});if(nx===to.x&&ny===to.y){let path=[{x:nx,y:ny}],cur=p.get(k);while(cur&&(cur.x!==from.x||cur.y!==from.y)){path.push(cur);cur=p.get(cur.x+','+cur.y)}return path.reverse();}q.push({x:nx,y:ny});}}return null;}
-function spawnNurses(f){return SPAWNS[f].map(([x,y],i)=>({x,y,homeX:x,homeY:y,phase:i*2.3,alert:false,lastDx:0,lastDy:0}));}
-function reset(full=true){maps={};floors.forEach((f,i)=>maps[f]=genMap(i));game={floor:'3',x:25,y:5,caught:null,inventory:{badge:false,key:false,pin:false,fuse:false},pin:['4137','2864','7305','9412','5728'][Math.floor(Math.random()*5)],captures:0,score:0,dir:null,next:null,nurses:spawnNurses('3'),route:[],running:false,paused:false,won:false,invincibleUntil:0};viewport.x=game.x*T;viewport.y=game.y*T;last=0;npcAccum=0;moveAccum=0;renderFloor();refreshHud();setMsg('The ward is quiet. For now.');}
+function spawnNurses(f){const fi=floors.indexOf(f);return SPAWNS[f].map(([x,y],i)=>({x,y,homeX:x,homeY:y,phase:i*2.3,alert:false,lastDx:0,lastDy:0,type:NURSE_CAST[f][i],skin:SKIN[(fi*2+i*3)%5],hair:HAIR[(fi+i*2)%5],acc:i*160,hold:0,chase:0,idle:null,seen:null,face:i?-1:1,px:x,py:y,movedAt:-1e4,moveDur:300,noticeAt:-1e4,lostAt:-1e4}));}
+function reset(full=true){maps={};floors.forEach((f,i)=>maps[f]=genMap(i));game={floor:'3',x:25,y:5,caught:null,inventory:{badge:false,key:false,pin:false,fuse:false},pin:['4137','2864','7305','9412','5728'][Math.floor(Math.random()*5)],captures:0,score:0,dir:null,next:null,nurses:spawnNurses('3'),route:[],running:false,paused:false,won:false,invincibleUntil:0};viewport.x=game.x*T;viewport.y=game.y*T;last=0;moveAccum=0;renderFloor();refreshHud();setMsg('The ward is quiet. For now.');}
 function paintSymbol(g,x,y,type){const ox=x*T+T/2,oy=y*T+T/2;if(type==='bed'){
  mk('rect',{x:x*T+5,y:y*T+9,width:27,height:19,rx:3,fill:'#6faaca',stroke:'#d3eff1','stroke-width':2},g);mk('rect',{x:x*T+8,y:y*T+11,width:10,height:8,rx:2,fill:'#ebf2e3'},g);mk('path',{d:`M${x*T+5} ${y*T+23}h27`,stroke:'#376477','stroke-width':3},g);return;
  }
@@ -124,13 +136,76 @@ function renderFloor(){tiles.replaceChildren();featuresG.replaceChildren();actor
  for(const [name,x,y] of labelDefs)mk('text',{x:x*T,y:y*T,'font-size':10,'font-weight':800,fill:'#79979a',opacity:.85,'letter-spacing':1},featuresG).textContent=name;
  for(const c of cores){if(game.floor==='3'&&c.type==='liftB')continue;let g=mk('g',{},featuresG);paintSymbol(g,c.x,c.y,c.type);}
  for(const f of features[game.floor]||[]){if(game.inventory[f.type]&&f.type!=='bed')continue;let g=mk('g',{},featuresG);paintSymbol(g,f.x,f.y,f.type);}
- actorRefs=game.nurses.map(()=>{let g=mk('g',{filter:'url(#nurseShadow)'},actorsG);mk('circle',{cx:0,cy:0,r:23,fill:'#fd9a27',opacity:.13},g);mk('use',{href:'#nurseGlyph',transform:'translate(-20 -30) scale(.36)'},g);return g;});
- let playerG=mk('g',{id:'hero'},actorsG);mk('circle',{cx:0,cy:0,r:21,fill:'#74d8e0',opacity:.11},playerG);mk('use',{href:'#playerGlyph'},playerG);
+ actorRefs=game.nurses.map(n=>buildNurse(n));
+ let playerG=mk('g',{id:'hero'},actorsG);mk('circle',{cx:0,cy:0,r:21,fill:'#74d8e0',opacity:.11},playerG);mk('use',{href:'#playerGlyph'},playerG);actorRefs.forEach(r=>actorsG.append(r.mark));
  el('zone').textContent=game.floor==='B1'?'B1 · PLANT ROOMS':game.floor==='G'?'G · ATRIUM':game.floor+'F · '+(game.floor==='3'?'TOWER WARD':game.floor==='2'?'PHARMACY':'RECORDS');el('floorChip').textContent='FLOOR '+game.floor;
  updateCamera(true);drawRoute();updateActors(performance.now());}
 function updateActors(now){let moving=(game.route.length>0||!!game.dir);const hero=el('hero');if(hero){let bob=moving?Math.sin(now/67)*2.4:Math.sin(now/520)*.6;let drag=game.caught?Math.min(1,(now-game.caught.start)/1200)*T*3.1:0;hero.setAttribute('transform',`translate(${(game.x+.5)*T+drag-(game.caught?17:0)} ${(game.y+.5)*T+bob+(game.caught?8:0)})`);}
- actorRefs.forEach((node,i)=>{let n=game.nurses[i];if(!n)return;let bob=Math.sin(now/135+n.phase)*2;let drag=game.caught&&game.caught.index===i?Math.min(1,(now-game.caught.start)/1200)*T*3.1:0;node.setAttribute('transform',`translate(${(n.x+.5)*T+drag} ${(n.y+.5)*T+bob}) scale(.94)`);const ring=node.querySelector('circle');if(ring)ring.setAttribute('fill',n.alert?'#ff4949':'#fd9a27');});
+ actorRefs.forEach((r,i)=>{if(game.nurses[i])drawNurse(r,game.nurses[i],i,now);});
+ const order=[...actorRefs].sort((a,b)=>a.y-b.y);if(order.some((r,i)=>actorsG.children[i]!==r.root))order.forEach(r=>actorsG.insertBefore(r.root,el('hero')));
 }
+// Nurse figures: side view, traced-from-life proportions (about 7.5 heads), flat fills, a jointed rig (hip, knee, shoulder,
+// elbow, neck) posed per frame. Local units: feet at y=0, hip -27.5, shoulder -44.6, head top -56; facing +x, mirrored for left.
+const cap=(x,y1,y2,w1,w2)=>`M${x-w1} ${y1}L${x-w2} ${y2}A${w2} ${w2} 0 0 0 ${x+w2} ${y2}L${x+w1} ${y1}A${w1} ${w1} 0 0 0 ${x-w1} ${y1}Z`;
+const shade=(c,k)=>'#'+[1,3,5].map(i=>Math.round(parseInt(c.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('');
+// Hand-inked line: a dark copy of each shape sits under it, offset down-right, so the outline is heavier on the shadow side.
+function inked(g,tag,a,fill,w=.45){mk(tag,{...a,fill:INK,stroke:INK,'stroke-width':w+1.2,transform:'translate(.35 .5) '+(a.transform||'')},g);return mk(tag,{...a,fill,stroke:INK,'stroke-width':w},g);}
+function buildNurse(n){const P=NURSE_TYPES[n.type],b=P.build,sk=n.skin,hc=n.hair,shoe=P.dress||n.type==='stern'?'#2e2a2a':'#efebe3',r={P},root=r.root=mk('g',{},actorsG),hem=P.dress?-12:-21.4;
+ r.glow=mk('ellipse',{cx:0,cy:0,rx:17,ry:6.5,fill:'#ff4949',opacity:0},root);mk('ellipse',{cx:0,cy:0,rx:10*P.size,ry:3.4,fill:'#000',opacity:.4},root);
+ const fig=r.fig=mk('g',{filter:'url(#nurseShadow)'},root),
+  arm=(g,near)=>{const s=near?sk:shade(sk,.8),a=mk('g',{},g);inked(a,'path',{d:cap(.2,-44.6,-34.8,1.45,1.25)},s);inked(a,'path',{d:cap(.2,-44.8,-39.2,2.15,1.85)},near?'#f2890f':'#c66a07');const f=mk('g',{},a);inked(f,'path',{d:cap(.2,-34.8,-26.6,1.25,.95)},s);
+   if(near&&P.clip){inked(f,'rect',{x:-1.5,y:-27.2,width:8.4,height:3.4,rx:.4},'#a87a4c',.35);mk('rect',{x:-.9,y:-26.8,width:6.6,height:2,fill:'#f7f4ec'},f);}
+   inked(f,'ellipse',{cx:.5,cy:-25.4,rx:1.2,ry:1.65},s);return {a,f};},
+  leg=near=>{const c=P.dress?(near?'#40343a':'#2b2327'):(near?'#e07d0c':'#a95705'),w=P.dress?.62:1,l=mk('g',{},fig);inked(l,'path',{d:cap(0,-27.5,-14,2.7*w,2.2*w)},c);const s=mk('g',{},l);inked(s,'path',{d:cap(0,-14,-1.8,2.2*w,1.6*w)},c);inked(s,'path',{d:'M-1.7 -2.9Q-2.3 0-1.3 0H4.4Q4.8-1.8 2.4-3Z'},near?shoe:shade(shoe,.8));return {l,s};};
+ r.upB=mk('g',{},fig);const farArm=arm(r.upB,false),farLeg=leg(false),nearLeg=leg(true);r.legs=[nearLeg,farLeg];
+ const up=r.upF=mk('g',{},fig);inked(up,'path',{d:'M.1 -48.8H2V-45H.1Z'},sk);
+ inked(up,'path',{d:`M-1.3 -46.7Q${-3.5*b} -46.2 ${-3.4*b} -42L${-2.9*b} -31Q${-3.2*b} -27 ${-(P.dress?5.6:4.1)*b} ${hem}L${(P.dress?5.8:4.1)*b} ${hem}Q${3.4*b} -26 ${3*b} -30.5Q${4.5*b} -35 ${4*b} -39.6Q${3.6*b} -44.4 1.9 -46.6Z`},'#f2890f');
+ mk('path',{d:`M${-3.4*b} -42L${-2.9*b} -31Q${-3.2*b} -27 ${-(P.dress?5.6:4.1)*b} ${hem}L${-1.8*b} ${hem}L${-1.4*b} -31L${-1.9*b} -42Z`,fill:'#c96a08',opacity:.85},up);
+ if(P.dress){inked(up,'path',{d:`M${-2.95*b} -31.4L${3.05*b} -31L${3.1*b} -29.4L${-3*b} -29.7Z`},'#2e2a2a',.3);mk('rect',{x:2*b,y:-31.3,width:1.4,height:1.9,fill:'#d9dde0',stroke:INK,'stroke-width':.25},up);}
+ else mk('path',{d:`M${2.7*b} -25.6h-2.4`,stroke:INK,'stroke-width':.4,fill:'none'},up);
+ mk('path',{d:`M1.9 -46.6L2.9 -42.6L${3.6*b} -45.1`,stroke:'#fff4e2','stroke-width':.8,fill:'none','stroke-linejoin':'round'},up);
+ mk('path',{d:`M-.9 -46.5Q.6 -41 ${2.2*b} -37.4`,stroke:'#2f6fb0','stroke-width':.55,fill:'none'},up);mk('rect',{x:1.6*b,y:-37.6,width:2.2,height:3,fill:'#eef6ff',stroke:INK,'stroke-width':.3},up);
+ mk('circle',{cx:3.5*b,cy:-42.3,r:.95,fill:'#dfe3e6',stroke:INK,'stroke-width':.35},up);
+ const h=r.head=mk('g',{},up),hairCap=P.hair==='crop'?'M-2.4 -51.2Q-3 -56.3 1.3 -56Q4.9 -55.8 4.6 -53.3Q2.6 -54.6 .6 -53.6Q-.6 -52.6-1.2 -50.6Z':'M-2.6 -50.4Q-3.2 -56.6 1.4 -56.2Q5.2 -55.9 4.7 -52.9Q2.8 -54.4 .7 -53.4Q-.5 -52.3-1.3 -49.4Z';
+ if(P.hair==='bun')inked(h,'circle',{cx:-3.2,cy:-54.4,r:2.1},hc);
+ if(P.hair==='messy')inked(h,'circle',{cx:-2.8,cy:-55.6,r:1.9},hc);
+ if(P.hair==='pony'){r.tail=mk('g',{},h);inked(r.tail,'path',{d:'M-2.6 -54Q-5.6 -53 -5.4 -48.6Q-5 -46.5 -3.6 -45.8Q-3.9 -49.5 -1.6 -52Z'},hc);mk('circle',{cx:-2.8,cy:-53.6,r:.75,fill:'#2f6fb0'},r.tail);}
+ if(P.hair==='curly')for(const [x,y] of [[-2.6,-53.4],[-1.4,-55.6],[1,-56.6],[3.3,-56.1],[-2.8,-51]])inked(h,'circle',{cx:x,cy:y,r:1.55},hc,.3);
+ inked(h,'ellipse',{cx:1.1,cy:-51.6,rx:3.5,ry:4.15},sk);mk('ellipse',{cx:.2,cy:-51.3,rx:.8,ry:1.1,fill:shade(sk,.85),stroke:INK,'stroke-width':.3},h);
+ inked(h,'path',{d:'M4.3 -52.4Q5.6 -50.7 4.4 -50.1'},sk,.35);
+ if(n.type==='night')mk('path',{d:'M2.6 -52.1h1.2',stroke:INK,'stroke-width':.5},h);else mk('circle',{cx:3.2,cy:-52.2,r:.45,fill:INK},h);
+ mk('path',{d:n.type==='stern'?'M2.2 -53.8L4.1 -53.1':n.type==='trainee'?'M2.3 -54.1Q3.2 -54.6 4.1 -54':'M2.3 -53.5h1.7',stroke:INK,'stroke-width':.45,fill:'none'},h);
+ mk('path',{d:n.type==='chatty'?'M3.3 -49.6q.6 .5 1.2 0':'M3.4 -49.4h1',stroke:INK,'stroke-width':.4,fill:'none'},h);
+ inked(h,'path',{d:hairCap},hc,.35);
+ if(P.hair==='messy')mk('path',{d:'M-3.6 -50.5q-.8 1.8 .1 3M4 -55q1.6 -.6 1.7 -2M-1.2 -56.4q-.4 -1.6 1 -2.2',stroke:hc,'stroke-width':.5,fill:'none'},h);
+ const nearArm=arm(up,true);r.arms=[nearArm,farArm];
+ r.mark=mk('g',{opacity:0});r.markC=mk('circle',{cx:0,cy:0,r:6.6,fill:'#ff4949',stroke:'#fff','stroke-width':1.3},r.mark);r.markT=mk('text',{x:0,y:3.7,'text-anchor':'middle','font-size':10.5,'font-weight':900,fill:'#fff'},r.mark);
+ return r;}
+// Idle body language: arms are [forward angle, elbow bend, foreshortening], head is a forward tilt in degrees.
+const NURSE_IDLE={stand:()=>{},slump:o=>{o.legs=[[2,9],[-4,8]];o.arms=[[2,6,1],[0,6,1]];},clip:o=>{o.arms[0]=[12,86,.55];},clasp:o=>{o.arms=[[18,48,.8],[16,46,.8]];},fold:o=>{o.arms=[[8,84,.45],[14,80,.45]];},
+ watch:o=>{o.arms[0]=[22,102,.6];o.head=18;},yawn:(o,q)=>{const y=q%24<14;o.arms[0]=y?[52,122,1]:[4,8,1];o.head=y?-16:14;o.lean-=y?3:0;},rub:(o,q)=>{o.arms[0]=[150,158,1];o.head=18+(q>>2)%2*5;},
+ look:(o,q)=>{o.arms[0]=[12,86,.55];o.flip=(q>>3)%2===1;},nod:(o,q)=>{o.arms[0]=[12,86,.55];o.arms[1]=[28+(q>>2)%2*16,64,1];o.head=4+(q>>1)%2*7;},
+ glance:(o,q,i)=>{o.arms=[[18,48,.8],[16,46,.8]];o.flip=(q>>2)%3===1;o.jx=((q*7+i)%3-1)*.4;},scan:(o,q)=>{o.arms=[[8,84,.45],[14,80,.45]];o.flip=(q>>4)%2===1;},
+ lost:(o,q)=>{o.arms=[[-20,55,1],[-22,55,1]];o.flip=(q>>3)%2===1;}};
+function nursePose(n,P,now,i,walk,caught){const q=Math.floor(now/83),chase=n.alert||caught,o={lean:P.lean,head:P.head,flip:false,jx:0,tail:0,legs:[[3,4],[-3,4]],arms:[[4,10,1],[2,8,1]],mark:n.alert?'!':now-n.lostAt<1500?'?':''};
+ if(walk){const f=(Math.floor(now/(nurseInterval(n)/6))+i*3)%6,p=f*Math.PI/3,st=P.stride*(chase?1.3:1),sw=chase?Math.max(P.swing,14)+16:P.swing;
+  o.legs=[0,Math.PI].map(d=>[24*st*Math.sin(p+d),5+40*st*Math.max(0,Math.cos(p+d))]);
+  o.arms=[[-sw*Math.sin(p),chase?80:14,1],[sw*Math.sin(p),chase?80:14,1]];o.tail=8*Math.sin(p)+(chase?14:4);
+  if(chase){o.lean+=11;o.head=P.head*.3-4;if(n.alert&&now-n.noticeAt<450)o.arms[0]=[84,6,1];}else if(P.clip){o.arms[0]=[12,86,.55];o.head+=3*Math.sin(2*p);}else if(n.type==='stern')o.arms=[[-16,36,1],[-18,34,1]];
+  if(n.type==='trainee'){o.jx=((q*7+i)%3-1)*.35;if(!chase&&q%26<3)o.flip=true;}}
+ else if(n.alert&&now-n.noticeAt<560){o.head=-8;o.lean=P.lean-4;o.arms[0]=n.type==='trainee'?[40,128,1]:[84,6,1];}
+ else if(n.alert){o.lean+=7;o.legs=[[10,9],[-9,6]];o.arms=n.type==='trainee'?[[40,128,1],[16,46,.8]]:[[16,46,1],[10,40,1]];if(n.type==='trainee')o.flip=q%10<4;}
+ else NURSE_IDLE[n.idle||P.rest]?.(o,q,i);
+ o.dy=25.7-Math.max(...o.legs.map(([t,k])=>13.5*Math.cos(t*DEG)+12.2*Math.cos((t-k)*DEG)));return o;}
+function drawNurse(r,n,i,now){const P=r.P,iv=nurseInterval(n),caught=!!game.caught&&game.caught.index===i,k=Math.min(1,(now-n.movedAt)/n.moveDur),walk=caught||now-n.movedAt<iv*1.05,s=P.size*.98,face=caught?1:n.face,R=(a,x,y)=>`rotate(${a.toFixed(1)} ${x} ${y})`,
+  wx=(n.px+(n.x-n.px)*k+.5)*T+(caught?Math.min(1,(now-game.caught.start)/1200)*T*3.1:0),wy=(n.py+(n.y-n.py)*k+.5)*T+12,o=nursePose(n,P,now,i,walk,caught);
+ r.y=wy;r.root.setAttribute('transform',`translate(${wx.toFixed(1)} ${wy.toFixed(1)})`);r.fig.setAttribute('transform',`translate(${o.jx} ${(o.dy*s).toFixed(2)}) scale(${face*s} ${s})`);
+ r.upB.setAttribute('transform',R(o.lean,0,-27.5));r.upF.setAttribute('transform',R(o.lean,0,-27.5));r.head.setAttribute('transform',R(o.head,.9,-47)+(o.flip?' translate(1.8 0) scale(-1 1)':''));
+ if(r.tail)r.tail.setAttribute('transform',R(o.tail,-2.4,-53.6));
+ r.legs.forEach((l,j)=>{l.l.setAttribute('transform',R(-o.legs[j][0],0,-27.5));l.s.setAttribute('transform',R(o.legs[j][1],0,-14));});
+ r.arms.forEach((a,j)=>{const [al,be,fs]=o.arms[j];a.a.setAttribute('transform',R(-al,.2,-44.6));a.f.setAttribute('transform',R(-be,.2,-34.8)+(fs<1?` translate(0 ${(-34.8*(1-fs)).toFixed(2)}) scale(1 ${fs})`:''));});
+ r.glow.setAttribute('opacity',n.alert?(.32+.14*Math.sin(now/90)).toFixed(2):0);r.mark.setAttribute('opacity',o.mark?1:0);
+ if(o.mark){r.markT.textContent=o.mark;r.markC.setAttribute('fill',o.mark==='!'?'#ff4949':'#33474d');const pop=o.mark==='!'?1+Math.max(0,.6-(now-n.noticeAt)/500):1;r.mark.setAttribute('transform',`translate(${(wx+o.jx*s).toFixed(1)} ${(wy-60*s-7+Math.sin(now/120)).toFixed(1)}) scale(${pop.toFixed(2)})`);}}
 function updateCamera(force=false){const bounds=svg.getBoundingClientRect();if(!bounds.width||!bounds.height)return;const ratio=bounds.width/bounds.height;let vw=ratio<1?14.5*T:13*T*ratio,vh=vw/ratio;if(vw>W*T){vw=W*T;vh=vw/ratio;}if(vh>H*T){vh=H*T;vw=vh*ratio;}let cx=(game.x+.5)*T,cy=(game.y+.5)*T,camera=viewport;
  if(force){camera.x=cx;camera.y=cy;}else{camera.x+=(cx-camera.x)*.23;camera.y+=(cy-camera.y)*.23;}
  const vx=vw>=W*T?0:Math.max(0,Math.min(W*T-vw,camera.x-vw/2));const vy=vh>=H*T?0:Math.max(0,Math.min(H*T-vh,camera.y-vh/2));svg.setAttribute('viewBox',`${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}`);viewport.w=vw;viewport.h=vh;}
@@ -188,14 +263,24 @@ function captured(index=0){let now=performance.now();if(game.invincibleUntil>now
  cue('caught',{},()=>beep(95,.2));setMsg(`CAUGHT by a nurse! Being dragged back to bed (capture #${game.captures}).`);
 }
 function finishCapture(){game.caught=null;el('escortMsg').classList.remove('show');game.floor='3';game.x=25;game.y=5;game.nurses=spawnNurses('3');game.route=[];game.invincibleUntil=performance.now()+2100;renderFloor();refreshHud();setMsg(`Returned to the ward (capture #${game.captures}). All your items are safe.`);} 
-function nurseTick(){for(let n of game.nurses){let path=bfs(game.floor,{x:n.x,y:n.y},{x:game.x,y:game.y},true);n.alert=!!path&&path.length<=7;let target=null;
- if(n.alert&&path.length)target=path[0];else{let opt=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>isOpen(game.floor,n.x+dx,n.y+dy,true));if(opt.length){let straight=opt.find(([dx,dy])=>dx===n.lastDx&&dy===n.lastDy);let dir=(straight&&Math.random()<.55)?straight:opt[Math.floor(Math.random()*opt.length)];n.lastDx=dir[0];n.lastDy=dir[1];target={x:n.x+dir[0],y:n.y+dir[1]};}}
- if(target){n.x=target.x;n.y=target.y;}if(n.x===game.x&&n.y===game.y){captured(game.nurses.indexOf(n));return;}}
-}
+function nurseInterval(n){const P=NURSE_TYPES[n.type];return 390*P.tick*(n.alert?P.chaseTick:1);}
+// Each nurse keeps her own clock (acc), so a brisk nurse steps more often than a weary one.
+function nurseTick(dt=390){for(let i=0;i<game.nurses.length;i++){const n=game.nurses[i],iv=nurseInterval(n);n.acc+=dt;if(n.acc<iv)continue;n.acc=Math.min(n.acc-iv,iv);nurseStep(n,i);if(game.caught)return;}}
+function nurseStep(n,i){const P=NURSE_TYPES[n.type],now=performance.now(),path=bfs(game.floor,{x:n.x,y:n.y},{x:game.x,y:game.y},true),sees=!!path&&path.length<=P.sight;let target=null;
+ if(sees){n.seen={x:game.x,y:game.y};n.chase=P.persist;if(!n.alert){n.alert=true;n.noticeAt=now;n.hold=P.hold;n.idle=null;n.face=Math.sign(game.x-n.x)||n.face;}}
+ else if(n.alert&&--n.chase<0){n.alert=false;n.seen=null;n.lostAt=now;n.hold=1+P.hold;n.idle='lost';}
+ if(n.hold>0){if(--n.hold===0)n.idle=null;}
+ else if(n.alert){if(!(P.hesitate&&Math.random()<P.hesitate)){const p=sees?path:bfs(game.floor,{x:n.x,y:n.y},n.seen,true);if(p?.length)target=p[0];}}
+ else if(Math.random()<P.pause){n.idle=P.idles[Math.floor(Math.random()*P.idles.length)];n.hold=2+Math.floor(Math.random()*4);}
+ else{const home=P.patrol==='home'&&Math.abs(n.x-n.homeX)+Math.abs(n.y-n.homeY)>3&&Math.random()<.6?bfs(game.floor,{x:n.x,y:n.y},{x:n.homeX,y:n.homeY},true):null;
+  let opt=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>isOpen(game.floor,n.x+dx,n.y+dy,true));if(P.patrol!=='wander'&&opt.length>1)opt=opt.filter(([dx,dy])=>dx!==-n.lastDx||dy!==-n.lastDy);
+  if(home?.length)target=home[0];else if(opt.length){const straight=opt.find(([dx,dy])=>dx===n.lastDx&&dy===n.lastDy),d=straight&&Math.random()<(P.patrol==='straight'?.92:.55)?straight:opt[Math.floor(Math.random()*opt.length)];target={x:n.x+d[0],y:n.y+d[1]};}}
+ if(target){const dx=target.x-n.x;n.px=n.x;n.py=n.y;n.lastDx=dx;n.lastDy=target.y-n.y;n.x=target.x;n.y=target.y;if(dx)n.face=dx;n.movedAt=now;n.moveDur=Math.min(300,nurseInterval(n)*.9);}
+ if(n.x===game.x&&n.y===game.y)captured(i);}
 function loop(t){requestAnimationFrame(loop);if(!last)last=t;const dt=Math.min(100,t-last);last=t;if(game.caught && t-game.caught.start>=1200)finishCapture();
- if(game.running&&!game.paused&&!game.caught&&!runningModal){moveAccum+=dt;npcAccum+=dt;
+ if(game.running&&!game.paused&&!game.caught&&!runningModal){moveAccum+=dt;
  if(moveAccum>=137){moveAccum=0;if(game.route.length)stepRoute();else advance();}
- if(npcAccum>=390){npcAccum=0;nurseTick();}}
+ nurseTick(dt);}
  updateActors(t);updateCamera();}
 function setMsg(s){el('messageText').textContent=s;el('subzone').textContent=game.captures?`Returned to bed ${game.captures} ×`:game.inventory.pin?`Memo: ${game.pin}`:'Avoid the orange nurses';}
 function refreshHud(){let items=[['badge','BADGE'],['key','KEY'],['pin','PIN'],['fuse','FUSE']];el('inventory').innerHTML=items.map(([k,t])=>`<span class="item ${game.inventory[k]?'got':''}">${game.inventory[k]?'✓':'○'} ${t}${k==='pin'&&game.inventory.pin?' '+game.pin:''}</span>`).join('')+`<span class="item got">★ ${game.score}</span>`;el('pauseBtn').textContent=game.paused?'▶':'Ⅱ';}
@@ -233,7 +318,7 @@ el('pauseBtn').onclick=()=>{if(!game.running||game.caught||game.won||runningModa
 el('soundBtn').onclick=()=>{mute=!mute;el('soundBtn').textContent=mute?'SOUND OFF':'SOUND ON';beep(440,.11);};
 window.addEventListener('resize',()=>updateCamera(true));
 // Deliberately exposed for local smoke tests; no data leaves the device.
-window.__escapeTest={get game(){return game},setMute(v){mute=v;},get maps(){return maps},bfs,changeFloor,interact,walk,steer,stopMoving,reset,closeModal,spawnNurses};
+window.__escapeTest={get game(){return game},setMute(v){mute=v;},get maps(){return maps},bfs,changeFloor,interact,walk,steer,stopMoving,reset,closeModal,spawnNurses,nurseTick,nurseStep,nurseInterval,NURSE_TYPES,NURSE_CAST};
 reset();showModal('ESCAPE THE HOSPITAL','Wake up in the Tower ward. Explore five connected levels; find a visitor badge, a pharmacy key, a code memo and a generator fuse.\n\nOrange nurses patrol the corridors. If they catch you, you are taken back to bed — but your discoveries survive.\n\nSwipe (on the pad or the map) or use the arrow keys: you keep moving that way, and a new direction is taken at the next opening. Tap the map to walk to a place. Lift A needs the badge; the key opens the amber staff doors. Press INTERACT at lifts, stairs and exits.',[{label:'START ESCAPE',primary:true,action:()=>{closeModal();game.running=true;setMsg('First find the visitor badge somewhere on floor 3.');}}],'<div class="hint">Fictional maze inspired by Guy’s site, not a navigational map.</div>',true);
 requestAnimationFrame(loop);
 </script>

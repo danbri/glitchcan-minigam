@@ -7,7 +7,7 @@ A small standalone, mobile-first maze game inspired by the names and wayfinding 
 - **Press E, Space or INTERACT** while on/adjacent to a lift, stairwell or exit.
 - **Lift A** serves G–3 and needs the visitor badge; **lift B** serves B1–2 and needs the generator fuse. The amber staff doors are shortcuts: they open for you after you find the pharmacy key, and they are always open to the nurses. The west/east **stairs** serve neighbouring levels.
 - Find the **visitor badge (3F)**, **pharmacy key (2F)**, **access code memo (1F)**, **fuse (B1)** and then leave by the exit on **G**. Each item gives 250 points and opens a route. The escape gives 1000 points, less 100 for each capture.
-- Orange SVG nurses patrol and chase. Touching them takes you back to your bed, without discarding inventory.
+- Orange SVG nurses patrol and chase (see Nurses). Touching them takes you back to your bed, without discarding inventory.
 - Use **MAP** to see the complete current floor; **SOUND** is off by default.
 
 The nurse symbol is a hand-traced vector interpretation of the user-supplied pictogram and also exists as the standalone `nurse.svg` file. Its forms are reproduced in the game's internal SVG symbol for offline use.
@@ -18,6 +18,22 @@ This is a **fictional** playable maze, not an accurate floor plan or hospital ac
 - https://www.guysandstthomas.nhs.uk/guys-hospital
 
 All code and art supplied as editable source with no dependencies.
+
+## Nurses
+
+The nurses are fictional characters, drawn in the game as side-view figures in the style of rotoscoped animation: flat colour, a hand-inked outline (heavier on the shadow side), a jointed rig (hip, knee, shoulder, elbow, neck) and a walk cycle that switches frames with time and speed. They face the way they walk. A red "!" and a red glow show a nurse that has seen you; a "?" shows a nurse that has lost you. `nurse.svg` (the supplied pictogram) is still used for the large picture in the dialogs.
+
+Each nurse has one of five personalities (`NURSE_TYPES` in `game.html`; the cast for each floor is `NURSE_CAST`). The step time is a multiple of 390 ms; sight is the walking distance at which she notices you; persistence is the number of steps she goes on after you leave her sight.
+
+| Personality | Size | Step | Sight | Persist | Patrol | Body language |
+|---|---|---|---|---|---|---|
+| Brisk matron | 1.10 | ×0.84 (×0.95 in a chase) | 9 | 7 | long straight corridors | upright, long stride, arms swing, dress and belt, checks her fob watch |
+| Weary night nurse | 1.00 | ×1.30 (×0.9 in a chase) | 6 | 2 | stays near her post | slumped shoulders, head down, short steps, stops to yawn or rub her neck |
+| Chatty nurse | 0.96 | ×1.04 | 6 | 3 | wanders | clipboard, head bobs as she walks, stops to look round and nod |
+| Nervous trainee | 0.88 | ×0.95 | 5 | 1 | wanders | small and slim, fidgets, glances back, hand to mouth when she sees you, hesitates in a chase |
+| Stern sister | 1.05 | ×1.12 | 10 | 3 | long straight corridors | broad, hands behind her back, arms folded when she stops, slow head scan |
+
+Floor 3 has the matron and the night nurse; the other floors mix the rest. When a nurse sees you she points (or startles), leans forward and lengthens her stride.
 
 ## Adaptive music (Diddums)
 
