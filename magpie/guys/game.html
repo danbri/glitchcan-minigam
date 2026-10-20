@@ -154,66 +154,100 @@ function updateActors(now){let moving=(game.route.length>0||!!game.dir);const he
  actorRefs.forEach((r,i)=>{if(game.nurses[i])drawNurse(r,game.nurses[i],i,now);});
  const order=[...actorRefs].sort((a,b)=>a.y-b.y);if(order.some((r,i)=>actorsG.children[i]!==r.root))order.forEach(r=>actorsG.insertBefore(r.root,el('hero')));
 }
-// Nurse figures: the hospital-sign pictogram (#nurseGlyph) cut at its joints and animated as itself, in the manner of
-// rotoscoped animation: smooth gait cycles with a weight shift, and damped springs that give anticipation, overlap and
-// follow-through. Glyph units: viewBox 120x184, facing +x; feet at y 173. README "Nurses".
+// Nurse figures: the hospital-sign pictogram (#nurseGlyph) cut at its joints (hip, knee, ankle, shoulder, elbow, wrist,
+// waist, neck) and moved like a person. Walk and run follow clinical sagittal gait curves (GAIT below), sampled every 5% of
+// the cycle and interpolated with Catmull-Rom; a 2-bone IK keeps the stance foot planted while the body passes over it.
+// Damped springs give the overlap (headdress, hem, hands). Glyph units: viewBox 120x184, facing +x, ground y 173.
 const NURSE_INK='#19130f',NURSE_FILL='#ef870a',NURSE_FAR='#c56b07';
-const NURSE_PARTS={upper:'M62 37L47 55L42 72Q41 78 50 81L60 81.5L60 70.4L56 52Z',fore:'M48 70.6L67 70L91 72L91 55L99 55L99 79L94 83L50 81Q44 80.5 44.5 75.5Z',
+const NURSE_PARTS={upper:'M62 37L47 55L42 72Q41 78 50 81L60 81.5L60 70.4L56 52Z',fore:'M48 70.6L67 70L92 72L92 82.8L50 81Q44 80.5 44.5 75.5Z',hand:'M88 72L91 55L99 55L99 79L94 83L88 83Z',
  head:'M53 15L56 12Q61 8 70 12L75 15Q81 22 77 30L69 39L61 38L69 24L63 21L56 25Z',streak:'M14 58L57 11L65 22L29 56Z',
- legA:'M50 122L55 170L59 173L67 122Z',legB:'M65 122L72 173L76 172L83 122Z'};
-// Joints are drawn twice, ink then fill, so a bent elbow or a swinging plait shows no seam.
+ thigh:'M50 122L67 122L62.5 149L54.5 149Z',shin:'M54.5 146L62.5 146L60.5 172L56.5 172Z',foot:'M55.5 168.5L61.5 168.5L68 173L54.5 173Z'};
+// Sagittal joint angles over one gait cycle from heel strike, 20 keys (every 5%), degrees: hip +flexion, knee +flexion,
+// ankle +dorsiflexion. Walk: typical adult curves after Winter (1991) and Perry & Burnfield (2010); run: jogging after
+// Novacheck (1998). stance = fraction of the cycle a foot is on the ground. README "Nurses".
+const GAIT={walk:{stance:.6,hip:[30,28,25,20,15,10,5,1,-4,-8,-10,-8,-2,7,16,23,28,31,32,31],knee:[5,12,17,19,16,11,7,5,4,6,10,18,32,48,59,62,57,43,24,9],ankle:[0,-5,-3,2,5,7,9,10,11,10,5,-5,-15,-18,-10,-3,1,2,1,0],bob:2,crouch:4,lean:3,arm:.5,peak:.3,tilt:1.5},
+ run:{stance:.4,hip:[35,30,24,16,8,0,-6,-10,-11,-6,3,14,26,36,43,46,46,43,40,37],knee:[20,30,38,40,36,30,24,20,22,35,55,75,90,98,95,85,65,42,28,20],ankle:[5,12,18,20,17,10,0,-12,-22,-18,-10,-5,0,2,3,3,2,2,3,4],bob:-3.5,crouch:5,lean:12,arm:.35,peak:.2,tilt:2.5}};
+const NURSE_LEG={LT:24,LS:23,hip:[[58.5,124],[74,124]],toe:[9.5,2]},RAD=Math.PI/180;
+const catmull=(a,t)=>{const n=a.length,x=(t%1+1)%1*n,i=Math.floor(x),f=x-i,p0=a[(i+n-1)%n],p1=a[i],p2=a[(i+1)%n],p3=a[(i+2)%n];return .5*(2*p1+(p2-p0)*f+(2*p0-5*p1+4*p2-p3)*f*f+(3*p1-p0-3*p2+p3)*f*f*f);};
+const legFK=(th,kn)=>{const {LT,LS}=NURSE_LEG;return [LT*Math.sin(th*RAD)+LS*Math.sin((th-kn)*RAD),LT*Math.cos(th*RAD)+LS*Math.cos((th-kn)*RAD)];};
+// 2-bone IK: hip to ankle; returns [thigh angle forward, knee flexion] in degrees, knee bending forward.
+function legIK(dx,dy){const {LT,LS}=NURSE_LEG,D=Math.min(LT+LS-.01,Math.max(3,Math.hypot(dx,dy))),c=v=>Math.acos(Math.max(-1,Math.min(1,v)));return [(Math.atan2(dx,dy)+c((LT*LT+D*D-LS*LS)/(2*LT*D)))/RAD,180-c((LT*LT+LS*LS-D*D)/(2*LT*LS))/RAD];}
+const toeVec=p=>{const c=Math.cos(p*RAD),s=Math.sin(p*RAD);return [9.5*c-2*s,9.5*s+2*c];};
+// Distance the body travels in one cycle, so that the stance foot moves back exactly as fast as the body moves on.
+// Stride fitted to the leg: the swing lands where the leg can still reach the floor from hip height h (the full reach
+// either side), and the cycle length is the distance the stance foot travels back, divided by the stance fraction.
+function gaitFit(G,st,ks,h){const a=legFK(catmull(G.hip,0)*st,catmull(G.knee,0)*st*ks)[0],b=legFK(catmull(G.hip,G.stance)*st,catmull(G.knee,G.stance)*st*ks)[0],{LT,LS}=NURSE_LEG,m=Math.sqrt(Math.max(0,(LT+LS-.3)**2-h*h)),sc=Math.min(1,m/Math.max(1,a));return [sc,Math.max(8,sc*(a-b)/G.stance)];}
+// Joints are drawn twice, ink then fill, so a bent joint shows no seam.
 function glyphPart(g,d,fill,ink){return mk('path',ink?{d,fill:NURSE_INK,stroke:NURSE_INK,'stroke-width':9,'stroke-linejoin':'round'}:{d,fill},g);}
-function glyphArm(g,fill){const a=mk('g',{},g);glyphPart(a,NURSE_PARTS.upper,fill,true);const f=mk('g',{},a);glyphPart(f,NURSE_PARTS.fore,fill,true);glyphPart(f,NURSE_PARTS.fore,fill);glyphPart(a,NURSE_PARTS.upper,fill);return {a,f};}
-function buildNurse(n,i){const P=NURSE_TYPES[n.type],s=P.size*.34,r={P,s,st:{},t:0,ph:n.phase,fx:n.face,stopAt:-1e4},root=r.root=mk('g',{class:'nurse','data-i':i},actorsG),line={stroke:NURSE_INK,'stroke-width':5.8,'stroke-linecap':'round','stroke-linejoin':'round'};
+function glyphChain(g,parts,fill){const gs=[];let p=g;for(const d of parts){const c=mk('g',{},p);glyphPart(c,d,fill,true);gs.push(c);p=c;}for(let k=parts.length-1;k>=0;k--)glyphPart(gs[k],parts[k],fill);return gs;}
+function buildNurse(n,i){const P=NURSE_TYPES[n.type],s=P.size*.34,r={P,s,st:{},t:0,ph:n.phase%1,bx:0,fx:n.face,face:n.face,stopAt:-1e4,legs:[{},{}]},root=r.root=mk('g',{class:'nurse','data-i':i},actorsG),line={stroke:NURSE_INK,'stroke-width':5.8,'stroke-linecap':'round','stroke-linejoin':'round'};
  r.glow=mk('ellipse',{cx:0,cy:(81*s).toFixed(1),rx:18,ry:6.5,fill:'#ff4949',opacity:0},root);r.shadow=mk('ellipse',{cx:0,cy:(81*s).toFixed(1),rx:(30*s).toFixed(1),ry:3.6,fill:'#000',opacity:.38},root);
  const fig=r.fig=mk('g',{filter:'url(#nurseShadow)'},root);
- r.upB=mk('g',{},fig);r.far=glyphArm(r.upB,NURSE_FAR);
- r.legs=['legA','legB'].map(k=>{const g=mk('g',{},fig);mk('path',{d:NURSE_PARTS[k],fill:NURSE_FILL,...line},g);return g;});
- r.dress=mk('g',{},fig);mk('path',{d:'M57 81L67 81L68 90L57 90Z',fill:NURSE_FILL,...line},r.dress);mk('path',{d:'M60 88L32 133L93 133L65 88Z',fill:NURSE_FILL,...line},r.dress);mk('path',{d:'M62 94L56 123L83 123',fill:'none',...line,'stroke-width':4.5},r.dress);
+ r.upB=mk('g',{},fig);r.farG=mk('g',{},r.upB);r.far=glyphChain(r.farG,[NURSE_PARTS.upper,NURSE_PARTS.fore,NURSE_PARTS.hand],NURSE_FAR);
+ r.legG=[0,1].map(j=>{const g=mk('g',{},fig);return [g,...glyphChain(g,[NURSE_PARTS.thigh,NURSE_PARTS.shin,NURSE_PARTS.foot].map(d=>j?d.replace(/(-?[\d.]+) (-?[\d.]+)/g,(m,x,y)=>`${+x+15.5} ${y}`):d),NURSE_FILL)];});
+ r.dress=mk('g',{},fig);r.hem=mk('g',{},r.dress);mk('path',{d:'M57 81L67 81L68 90L57 90Z',fill:NURSE_FILL,...line},r.hem);mk('path',{d:'M60 88L32 133L93 133L65 88Z',fill:NURSE_FILL,...line},r.hem);mk('path',{d:'M62 94L56 123L83 123',fill:'none',...line,'stroke-width':4.5},r.hem);
  r.upF=mk('g',{},fig);r.head=mk('g',{},r.upF);glyphPart(r.head,NURSE_PARTS.head,NURSE_FILL,true);r.streak=mk('g',{},r.head);glyphPart(r.streak,NURSE_PARTS.streak,NURSE_FILL,true);glyphPart(r.streak,NURSE_PARTS.streak,NURSE_FILL);glyphPart(r.head,NURSE_PARTS.head,NURSE_FILL);mk('path',{d:'M64 22L72 17',...line,'stroke-width':3.5},r.head);
- r.near=glyphArm(r.upF,NURSE_FILL);mk('path',{d:'M60 45L52 67L68 68Z',fill:NURSE_FILL,...line,'stroke-width':4.5},r.upF);
+ r.nearG=mk('g',{},r.upF);r.near=glyphChain(r.nearG,[NURSE_PARTS.upper,NURSE_PARTS.fore,NURSE_PARTS.hand],NURSE_FILL);mk('path',{d:'M60 45L52 67L68 68Z',fill:NURSE_FILL,...line,'stroke-width':4.5},r.upF);
  r.mark=mk('g',{opacity:0});r.markC=mk('circle',{cx:0,cy:0,r:7,fill:'#ff4949',stroke:'#fff','stroke-width':1.4},r.mark);r.markT=mk('text',{x:0,y:3.9,'text-anchor':'middle','font-size':11,'font-weight':900,fill:'#fff'},r.mark);
  return r;}
-// Damped spring per pose value: [frequency Hz, damping ratio]. Low damping on the plait and the dress gives the overlap.
-const NURSE_SPRING={tilt:[4,.7],dy:[6,.6],sx:[6,.5],sy:[6,.5],lean:[4.5,.55],head:[4,.5],hx:[5,.8],streak:[2.4,.32],skew:[2.8,.38],arm:[5,.55],elbow:[5,.6],farArm:[5,.6],farElbow:[5,.6],legA:[9,.8],legB:[9,.8],liftA:[9,.8],liftB:[9,.8]};
+// Damped spring per pose value: [frequency Hz, damping ratio]. Loose springs on the headdress, hem and hands give the overlap.
+const NURSE_SPRING={lean:[4.5,.6],head:[4,.55],roll:[3,.5],hx:[5,.8],streak:[2.4,.32],skew:[2.8,.38],arm:[5,.6],elbow:[5,.6],hand:[3.2,.35],farArm:[5,.6],farElbow:[5,.6],farHand:[3.2,.35],crouch:[5,.7],pdx:[3,.8],rise:[6,.7],gm:[3,1],tap:[12,.6]};
 function nurseSpring(r,k,target,dt){const [f,z]=NURSE_SPRING[k],w=2*Math.PI*f;let st=r.st[k]||(r.st[k]=[target,0]);st[1]+=(w*w*(target-st[0])-2*z*w*st[1])*dt;st[0]+=st[1]*dt;return st[0];}
-// Body language for each idle, as offsets on the pose (degrees; dy in glyph units, negative is up).
-const NURSE_IDLE={stand:()=>{},slump:o=>{o.lean+=7;o.head+=6;o.arm+=10;o.elbow+=12;},clip:(o,t)=>{o.head+=3*Math.sin(t/260);},clasp:(o,t,i)=>{o.arm+=16;o.elbow+=30;o.lean+=2;o.jx=Math.sin(t/37+i)*.35;},fold:o=>{o.arm-=6;o.elbow+=48;o.lean-=2;},
- watch:(o,t)=>{const c=t%2200;if(c<1500){o.head+=20;o.arm+=8;o.elbow+=40;o.lean+=2;}else o.head-=4;},
- yawn:(o,t)=>{const c=(t%2600)/2600;if(c<.25){o.lean-=4;o.head-=8;o.sy=1.02;}else if(c<.6){o.head-=20;o.lean-=9;o.arm-=45;o.farArm-=30;o.sy=1.05;o.sx=.96;o.dy-=3;}else{o.lean+=6;o.head+=10;}},
- doze:(o,t)=>{const c=(t%2600)/2600;o.head+=c<.85?26*c:-6;o.lean+=c<.85?6*c:-2;o.arm+=c<.85?14*c:0;},
- tap:(o,t)=>{o.liftB=Math.sin(t/110)>0?.86:1;o.legB=-6;o.head-=2;o.elbow+=30;},wave:(o,t)=>{o.arm-=10;o.elbow+=16*Math.sin(t/85);o.head-=3;o.lean-=2;},
- fidget:(o,t,i)=>{const w=Math.sin(t/300+i);o.tilt=2.5*w;o.legA=4*w;o.legB=4*w;o.elbow+=24+8*Math.sin(t/70);o.arm+=12;},
- talk:(o,t,i)=>{o.lean+=3;if(Math.floor(t/1200+i)%2){o.arm-=8;o.elbow+=14*Math.sin(t/160);o.head+=Math.sin(t/130)>0?4:-2;}else{o.head+=7;o.elbow+=30;}},rub:(o,t)=>{o.head+=14+5*Math.sin(t/240);o.arm-=70;o.elbow-=20;o.lean+=4;},
- look:(o,t)=>{o.hx=Math.floor(t/800)%2?-1:1;},nod:(o,t)=>{o.head+=Math.sin(t/140)>0?7:0;o.elbow+=6*Math.sin(t/300);},glance:(o,t,i)=>{o.hx=Math.floor(t/330)%3===1?-1:1;o.jx=Math.sin(t/37+i)*.4;o.arm+=14;o.elbow+=24;},
- scan:(o,t)=>{o.hx=Math.floor(t/1500)%2?-1:1;o.arm-=6;o.elbow+=48;},lost:(o,t)=>{o.hx=Math.floor(t/520)%2?-1:1;o.arm+=18;o.elbow+=40;o.lean-=3;}};
-function nursePose(n,r,now,i,walk,caught,dt,d){const P=r.P,o={tilt:0,dy:0,sx:1,sy:1,lean:P.lean,head:P.head,hx:1,streak:3,skew:0,arm:0,elbow:0,farArm:0,farElbow:0,legA:0,legB:0,liftA:1,liftB:1,jx:0},run=n.alert||caught,
-  breath=Math.sin(now/650+i);
- if(walk){const st=P.stride*(run?1.75:1),A=17*st;r.ph+=d/r.s/(98*Math.sin(A*Math.PI/180))*Math.PI;const p=r.ph,sw=run?Math.min(34,P.swing+12):P.swing,s=Math.sin(p),c=Math.cos(p),s2=Math.sin(2*p);
-  o.legA=-A*s;o.legB=A*s;o.liftA=1-P.lift*(run?1.6:1)*Math.max(0,c);o.liftB=1-P.lift*(run?1.6:1)*Math.max(0,-c);
-  o.dy=-P.bob*(run?1.6:1)*Math.cos(2*p);o.lean+=1.8*Math.sin(2*p+.3)+(run?11:2);o.tilt=run?5:1;o.head+=-o.lean*.35+2*Math.sin(2*p-.7)+(run?-P.head*.6:0);
-  o.arm=-sw*s;o.farArm=run?Math.min(6,sw*s*.5)-4:sw*s*.6;o.elbow=run?-12+8*Math.abs(s):0;o.farElbow=run?78:18;o.streak=4*Math.sin(2*p-1.3)+(run?18:5);o.skew=-3*s2-(run?9:3);
-  if(n.type==='trainee')o.jx=Math.sin(now/41+i)*.3;if(n.type==='chatty'&&!run)o.head+=3*Math.sin(2*p-.4);
-  if(run&&now-n.noticeAt<700){const t=(now-n.noticeAt)/700;o.arm-=28*(1-t);o.head+=6*(1-t);}}
+// Body language for each idle, as offsets on the pose: degrees; crouch and pdx in glyph units (hips down, hips forward).
+const NURSE_IDLE={stand:()=>{},slump:o=>{o.lean+=7;o.head+=6;o.arm+=10;o.elbow+=12;o.crouch+=1.5;},clip:(o,t)=>{o.head+=3*Math.sin(t/260);},clasp:(o,t,i)=>{o.arm+=16;o.elbow+=30;o.lean+=2;o.pdx+=.5*Math.sin(t/37+i);},fold:o=>{o.arm-=6;o.elbow+=48;o.lean-=2;o.hand+=20;},
+ watch:(o,t)=>{const c=t%2200;if(c<1500){o.head+=20;o.arm+=8;o.elbow+=40;o.lean+=2;o.hand-=25;}else o.head-=4;},
+ yawn:(o,t)=>{const c=(t%2600)/2600;if(c<.25){o.lean-=4;o.head-=8;o.crouch+=1;}else if(c<.6){o.head-=20;o.lean-=9;o.arm-=45;o.farArm-=30;o.crouch-=2;o.rise+=8;o.hand-=30;}else{o.lean+=6;o.head+=10;o.crouch+=1.5;}},
+ doze:(o,t)=>{const c=(t%2600)/2600;o.head+=c<.85?26*c:-6;o.lean+=c<.85?6*c:-2;o.arm+=c<.85?14*c:0;o.crouch+=c<.85?2.5*c:0;},
+ tap:(o,t)=>{o.tap=Math.max(0,Math.sin(t/110))*3;o.head-=2;o.elbow+=30;o.pdx-=1;},wave:(o,t)=>{o.arm-=10;o.elbow+=16*Math.sin(t/85);o.hand+=22*Math.sin(t/85-.9);o.head-=3;o.lean-=2;},
+ fidget:(o,t,i)=>{const w=Math.sin(t/300+i);o.pdx+=2.6*w;o.crouch+=.8*Math.abs(w);o.elbow+=24+8*Math.sin(t/70);o.arm+=12;o.hand+=10*Math.sin(t/90);},
+ talk:(o,t,i)=>{o.lean+=3;if(Math.floor(t/1200+i)%2){o.arm-=8;o.elbow+=14*Math.sin(t/160);o.hand+=18*Math.sin(t/160-.8);o.head+=Math.sin(t/130)>0?4:-2;}else{o.head+=7;o.elbow+=30;o.pdx+=1;}},rub:(o,t)=>{o.head+=14+5*Math.sin(t/240);o.arm-=70;o.elbow-=20;o.lean+=4;o.hand+=15*Math.sin(t/120);},
+ look:(o,t)=>{o.hx=Math.floor(t/800)%2?-1:1;o.roll=Math.floor(t/800)%2?4:-2;},nod:(o,t)=>{o.head+=Math.sin(t/140)>0?7:0;o.elbow+=6*Math.sin(t/300);},glance:(o,t,i)=>{o.hx=Math.floor(t/330)%3===1?-1:1;o.pdx+=.6*Math.sin(t/37+i);o.arm+=14;o.elbow+=24;},
+ scan:(o,t)=>{o.hx=Math.floor(t/1500)%2?-1:1;o.arm-=6;o.elbow+=48;o.hand+=20;},lost:(o,t)=>{o.hx=Math.floor(t/520)%2?-1:1;o.arm+=18;o.elbow+=40;o.lean-=3;o.pdx-=1;}};
+function nursePose(n,r,now,i,walk,caught,dt){const P=r.P,run=n.alert||caught,o={lean:P.lean,head:P.head,roll:0,hx:1,streak:3,skew:0,arm:0,elbow:0,hand:0,farArm:0,farElbow:0,farHand:0,crouch:0,pdx:0,rise:0,gm:walk?1:0,tap:0},
+  breath=Math.sin(now/650+i),sway=.7*Math.sin(now/1700+i*2)+.35*Math.sin(now/730+i*5);
+ if(walk){o.crouch+=r.G.crouch;o.lean+=r.G.lean;o.streak+=run?18:5;o.skew-=run?9:3;if(run&&now-n.noticeAt<700){const t=(now-n.noticeAt)/700;o.arm-=28*(1-t);o.head+=6*(1-t);}if(n.type==='trainee')o.pdx+=.4*Math.sin(now/41+i);}
  else if(n.alert&&now-n.noticeAt<600){const t=now-n.noticeAt;
-  if(t<140){o.sy=.88;o.sx=1.07;o.dy=4;o.lean-=8;o.head-=10;o.arm+=18;o.elbow+=10;}
-  else{o.sy=1.06;o.sx=.96;o.dy=-6;o.lean+=7;o.head+=4;o.arm-=n.type==='trainee'?55:36;o.elbow-=10;o.streak=16;o.tilt=2;}}
- else if(n.alert){o.lean+=6;o.tilt=2;o.legA=-8;o.legB=8;o.arm-=24;o.dy=-1.5*Math.abs(Math.sin(now/120));if(n.type==='trainee'){o.arm-=20;o.hx=Math.floor(now/400)%2?-1:1;o.jx=Math.sin(now/37+i)*.5;}}
- else{const t=(now-r.stopAt)/380;if(t<1){o.lean+=7*(1-t);o.skew+=8*(1-t);o.dy+=2*(1-t);o.streak+=9*(1-t);}
-  o.lean+=.9*breath;o.dy+=.7*breath;o.tilt=.9*Math.sin(now/1900+i*2);o.streak+=1.5*Math.sin(now/900+i);NURSE_IDLE[n.idle||P.rest]?.(o,now,i);}
- if(Math.abs(r.fx)<.99){o.dy+=3;o.head+=6;o.lean+=3;o.sy*=.97;}
- for(const k in NURSE_SPRING)o[k]=nurseSpring(r,k,o[k],dt);return o;}
-function drawNurse(r,n,i,now){const P=r.P,dt=Math.min(.05,Math.max(0,(now-(r.t||now))/1000)),iv=nurseInterval(n),caught=!!game.caught&&game.caught.index===i,k=Math.min(1,(now-n.movedAt)/n.moveDur),s=r.s,face=caught?1:n.face,R=(a,x,y)=>`rotate(${a.toFixed(2)} ${x} ${y})`,
+  if(t<150){o.crouch+=6;o.lean-=8;o.head-=10;o.arm+=18;o.elbow+=10;o.hand+=15;}
+  else{o.crouch-=3;o.rise+=14;o.lean+=7;o.head+=4;o.arm-=n.type==='trainee'?55:36;o.elbow-=10;o.hand-=20;o.streak=16;}}
+ else if(n.alert){o.lean+=6;o.crouch+=3+1.2*Math.abs(Math.sin(now/120));o.arm-=24;if(n.type==='trainee'){o.arm-=20;o.hx=Math.floor(now/400)%2?-1:1;o.pdx+=.6*Math.sin(now/37+i);}}
+ else{const t=(now-r.stopAt)/380;if(t<1){o.lean+=7*(1-t);o.skew+=8*(1-t);o.streak+=9*(1-t);o.crouch+=2*(1-t);}
+  o.lean+=.7*breath;o.pdx+=sway;o.streak+=1.5*Math.sin(now/900+i);NURSE_IDLE[n.idle||P.rest]?.(o,now,i);}
+ if(Math.abs(r.fx)<.99){o.crouch+=3;o.head+=6;o.lean+=3;}
+ if((now+i*1300)%3700<140)o.head+=4;
+ for(const k in NURSE_SPRING)o[k]=nurseSpring(r,k,o[k],dt);o.breath=breath;return o;}
+// Legs: phase-driven gait with IK-planted stance feet while walking; planted feet that step back under the hips when standing.
+function nurseLegs(r,o,walk,d,dt){const P=r.P,G=r.G,{LT,LS}=NURSE_LEG,Lm=LT+LS-.3,st=P.stride*(G===GAIT.run?1.25:1.4),ks=.6+2*P.lift,[sc,len]=gaitFit(G,st,ks,47-G.crouch),out=[],tg=[];
+ if(walk)r.ph=(r.ph+d/r.s/len)%1;
+ const tA=r.ph,tB=(r.ph+.5)%1,pr=walk?.08*st*(catmull(G.hip,tB)-catmull(G.hip,tA)):0,up=walk?Math.cos(4*Math.PI*(r.ph-G.peak))*G.bob*(P.bob/3):0;let hipY=124+o.crouch-up;
+ for(let j=0;j<2;j++){const L=r.legs[j],t=j?tB:tA,hx=NURSE_LEG.hip[j][0]+o.pdx+(j?pr:-pr);let ax=null,ay,p;
+  if(walk&&t<G.stance){if(L.mode!=='stance'){L.mode='stance';L.anchor=(L.toe??NURSE_LEG.hip[j][0]+9.5)+r.bx;}
+   p=t>G.stance*.7||G===GAIT.run?Math.max(0,-catmull(G.ankle,t)):0;const tv=toeVec(p);ax=L.anchor-r.bx-tv[0];ay=173-tv[1];
+   hipY=Math.max(hipY,ay-Math.sqrt(Math.max(0,Lm*Lm-(ax-hx)**2)));}
+  else if(!walk){if(L.mode!=='stand'){L.mode='stand';L.x=L.toe??NURSE_LEG.hip[j][0]+9.5;L.v=0;}
+   const rest=NURSE_LEG.hip[j][0]+9.5+o.pdx*.3,w=2*Math.PI*4.5;L.v+=(w*w*(rest-L.x)-2*.9*w*L.v)*dt;L.x+=L.v*dt;
+   const lift=Math.min(5,Math.abs(rest-L.x)*.6)+(j?o.tap:0);p=o.rise;const tv=toeVec(p);ax=L.x-tv[0];ay=173-lift-tv[1];}
+  tg.push([t,hx,ax,ay,p]);}
+ for(let j=0;j<2;j++){const L=r.legs[j];let [t,hx,ax,ay,p]=tg[j];const hy=hipY+(walk&&t>=G.stance?1.2:0);
+  if(ax===null){const th=catmull(G.hip,t)*st,kn=catmull(G.knee,t)*st*ks,an=catmull(G.ankle,t),f=legFK(th,kn);f[0]*=sc;if(L.mode!=='swing'){L.mode='swing';L.from=[(L.ax??hx)-hx,(L.ay??171)-hy,L.p??0];}
+   const w=Math.min(1,(t-G.stance)/.15),e=w*w*(3-2*w);ax=hx+L.from[0]+(f[0]-L.from[0])*e;ay=Math.min(171,hy+L.from[1]+(f[1]-L.from[1])*e);p=L.from[2]+((-th+kn-an)-L.from[2])*e;}
+  let dx=ax-hx,dy=ay-hy;const D=Math.hypot(dx,dy);if(D>Lm){dx*=Lm/D;dy*=Lm/D;}
+  const [th,kn]=legIK(dx,dy);L.ax=hx+dx;L.ay=hy+dy;L.p=p;L.toe=L.ax+toeVec(p)[0];out.push([hx,hy,th,kn,p+th-kn]);}
+ return {legs:out,pr,up,hipY};}
+function drawNurse(r,n,i,now){const P=r.P,dt=Math.min(.05,Math.max(0,(now-(r.t||now))/1000)),caught=!!game.caught&&game.caught.index===i,k=Math.min(1,(now-n.movedAt)/n.moveDur),s=r.s,face=caught?1:n.face,R=(a,x,y)=>`rotate(${a.toFixed(2)} ${x} ${y})`,
   wx=(n.px+(n.x-n.px)*k+.5)*T+(caught?Math.min(1,(now-game.caught.start)/1200)*T*3.1:0),wy=(n.py+(n.y-n.py)*k+.5)*T,d0=Math.hypot(wx-(r.lx??wx),wy-(r.ly??wy)),d=d0<T?d0:0;r.t=now;r.lx=wx;r.ly=wy;if(d>.01)r.movedT=now;const walk=caught||now-(r.movedT||-1e4)<120;if(r.wasWalk&&!walk)r.stopAt=now;r.wasWalk=walk;
- r.fx+=Math.sign(face-r.fx)*Math.min(Math.abs(face-r.fx),dt*11);const o=nursePose(n,r,now,i,walk,caught,dt,d),turn=Math.abs(r.fx)<.55?.55*Math.sign(r.fx||1):r.fx;
- r.y=wy;r.root.setAttribute('transform',`translate(${wx.toFixed(1)} ${wy.toFixed(1)})`);
- r.fig.setAttribute('transform',`translate(${(o.jx).toFixed(2)} 0) scale(${(turn*s).toFixed(3)} ${s}) translate(-62 -92) ${R(o.tilt,62,173)} translate(62 ${(173+o.dy).toFixed(2)}) scale(${o.sx.toFixed(3)} ${o.sy.toFixed(3)}) translate(-62 -173)`);
- r.upB.setAttribute('transform',R(o.lean,62,90));r.upF.setAttribute('transform',R(o.lean,62,90));r.dress.setAttribute('transform',`translate(62 88) skewX(${o.skew.toFixed(2)}) translate(-62 -88)`);
- r.head.setAttribute('transform',`${R(o.head,64,37)} translate(64 0) scale(${o.hx.toFixed(3)} 1) translate(-64 0)`);r.streak.setAttribute('transform',R(o.streak-3,60,16));
- r.legs[0].setAttribute('transform',`${R(o.legA,58.5,124)} translate(0 124) scale(1 ${o.liftA.toFixed(3)}) translate(0 -124)`);r.legs[1].setAttribute('transform',`${R(o.legB,74,124)} translate(0 124) scale(1 ${o.liftB.toFixed(3)}) translate(0 -124)`);
- r.near.a.setAttribute('transform',R(o.arm,61,40));r.near.f.setAttribute('transform',R(o.elbow,50,76));r.far.a.setAttribute('transform',R(o.farArm,61,40));r.far.f.setAttribute('transform',R(o.farElbow,50,76));
+ const G=(n.alert||caught)?GAIT.run:GAIT.walk;if(G!==r.G){r.G=G;}if(face!==r.face){r.face=face;for(const L of r.legs)if(L.mode==='stance')L.anchor=(L.toe??0)+r.bx;}r.bx+=d/s;
+ r.fx+=Math.sign(face-r.fx)*Math.min(Math.abs(face-r.fx),dt*11);const o=nursePose(n,r,now,i,walk,caught,dt),g=nurseLegs(r,o,walk,d,dt),turn=Math.abs(r.fx)<.55?.55*Math.sign(r.fx||1):r.fx,gm=o.gm,ph=r.ph,
+  tilt=gm*G.tilt*Math.cos(4*Math.PI*ph),sw=P.swing/26,armS=Math.max(-28,Math.min(28,gm*G.arm*(18+12*sw)*sw*(catmull(G.hip,ph)-catmull(G.hip,ph+.5))/40)),body=`translate(${o.pdx.toFixed(2)} ${(g.hipY-124).toFixed(2)})`;
+ r.y=wy;r.root.setAttribute('transform',`translate(${wx.toFixed(1)} ${wy.toFixed(1)})`);r.fig.setAttribute('transform',`scale(${(turn*s).toFixed(3)} ${s}) translate(-62 -92)`);
+ const upper=`${body} ${R(o.lean,62,90)} translate(0 ${(-.5*o.breath).toFixed(2)})`;r.upB.setAttribute('transform',upper);r.upF.setAttribute('transform',upper);
+ r.dress.setAttribute('transform',`${body} ${R(tilt+o.lean*.25,62,110)} translate(${(-g.pr*.5).toFixed(2)} 0)`);r.hem.setAttribute('transform',`translate(62 88) skewX(${o.skew.toFixed(2)}) translate(-62 -88)`);
+ r.nearG.setAttribute('transform',`translate(${(-g.pr*.8).toFixed(2)} 0)`);r.farG.setAttribute('transform',`translate(${(g.pr*.8).toFixed(2)} 0)`);
+ r.head.setAttribute('transform',`translate(0 ${(g.up*.45).toFixed(2)}) ${R(o.head-o.lean*.85*gm-tilt,64,37)} translate(64 37) skewY(${o.roll.toFixed(2)}) scale(${o.hx.toFixed(3)} 1) translate(-64 -37)`);r.streak.setAttribute('transform',R(o.streak-3+3*gm*Math.sin(4*Math.PI*ph-1.3),60,16));
+ g.legs.forEach(([hx,hy,th,kn,fa],j)=>{const [L0,L1,L2,L3]=r.legG[j],x0=NURSE_LEG.hip[j][0];L0.setAttribute('transform',`translate(${(hx-x0).toFixed(2)} ${(hy-124).toFixed(2)})`);L1.setAttribute('transform',R(-th,x0,124));L2.setAttribute('transform',R(kn,x0,148));L3.setAttribute('transform',R(fa,x0,171));});
+ r.near[0].setAttribute('transform',R(o.arm+armS,61,40));r.near[1].setAttribute('transform',R(o.elbow-Math.max(0,-armS)*.4,50,76));r.near[2].setAttribute('transform',R(o.hand-(o.arm+o.elbow)*.25,92,77));
+ r.far[0].setAttribute('transform',R(o.farArm-armS*(n.alert||caught?.6:1)+(n.alert||caught?-4:0),61,40));r.far[1].setAttribute('transform',R(o.farElbow+(n.alert||caught?70:14),50,76));r.far[2].setAttribute('transform',R(o.farHand,92,77));
  r.glow.setAttribute('opacity',n.alert?(.32+.14*Math.sin(now/90)).toFixed(2):0);const mark=n.alert?'!':now-n.lostAt<1500?'?':n.idle==='talk'?'…':'';r.mark.setAttribute('opacity',mark?1:0);
- if(mark){r.markT.textContent=mark;r.markC.setAttribute('fill',mark==='!'?'#ff4949':'#33474d');const pop=mark==='!'?1+Math.max(0,.6-(now-n.noticeAt)/500):1;r.mark.setAttribute('transform',`translate(${(wx+o.jx).toFixed(1)} ${(wy-88*s-9+Math.sin(now/120)).toFixed(1)}) scale(${pop.toFixed(2)})`);}}
+ if(mark){r.markT.textContent=mark;r.markC.setAttribute('fill',mark==='!'?'#ff4949':'#33474d');const pop=mark==='!'?1+Math.max(0,.6-(now-n.noticeAt)/500):1;r.mark.setAttribute('transform',`translate(${wx.toFixed(1)} ${(wy-88*s-9+Math.sin(now/120)).toFixed(1)}) scale(${pop.toFixed(2)})`);}}
 function updateCamera(force=false){const bounds=svg.getBoundingClientRect();if(!bounds.width||!bounds.height)return;const ratio=bounds.width/bounds.height;let vw=ratio<1?14.5*T:13*T*ratio,vh=vw/ratio;if(vw>W*T){vw=W*T;vh=vw/ratio;}if(vh>H*T){vh=H*T;vw=vh*ratio;}let cx=(game.x+.5)*T,cy=(game.y+.5)*T,camera=viewport;
  if(force){camera.x=cx;camera.y=cy;}else{camera.x+=(cx-camera.x)*.23;camera.y+=(cy-camera.y)*.23;}
  const vx=vw>=W*T?0:Math.max(0,Math.min(W*T-vw,camera.x-vw/2));const vy=vh>=H*T?0:Math.max(0,Math.min(H*T-vh,camera.y-vh/2));svg.setAttribute('viewBox',`${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}`);viewport.w=vw;viewport.h=vh;}
