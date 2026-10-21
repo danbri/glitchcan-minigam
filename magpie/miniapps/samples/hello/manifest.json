@@ -1,0 +1,25 @@
+{
+  "dir": "ltr",
+  "lang": "en-US",
+  "app_id": "org.glitchcan.hello",
+  "name": "Hello MiniApp",
+  "short_name": "Hello",
+  "description": "A test package for the glitchcan MiniApp runner: lifecycle, storage, pages, i18n.",
+  "version": { "name": "1.0.0", "code": 1 },
+  "icons": [{ "src": "common/icons/icon.svg", "sizes": "48x48", "label": "Hello icon" }],
+  "platform_version": { "min_code": 1, "target_code": 1, "release_type": "Beta1" },
+  "pages": ["pages/index/index", "pages/detail/detail"],
+  "window": {
+    "background_color": "#fdf6e3",
+    "navigation_bar_background_color": "#073642",
+    "navigation_bar_text_style": "white",
+    "navigation_bar_title_text": "Hello MiniApp"
+  },
+  "req_permissions": [
+    { "name": "system.permission.STORAGE", "reason": "Keep a visit counter" },
+    { "name": "system.permission.LOCATION", "reason": "Show where you are" },
+    { "name": "system.permission.CAMERA", "reason": "Not used: here to show a refusal" }
+  ],
+  "color_scheme": "light",
+  "device_type": ["phone", "tv"]
+}

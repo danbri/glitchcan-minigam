@@ -1,0 +1,2 @@
+{ "title": "Hello MiniApp", "detail": "Detail page", "where": "Where am I?", "error": "Raise an error",
+  "lifecycle": "Page lifecycle", "visits": "Visits", "back": "Back", "deeper": "Open another" }

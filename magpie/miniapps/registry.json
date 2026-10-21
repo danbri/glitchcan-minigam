@@ -1,0 +1,14 @@
+{
+  "packages": {
+    "org.glitchcan.hello": {
+      "versions": {
+        "1.0.0": {
+          "href": "dist/org.glitchcan.hello-1.0.0.ma",
+          "code": 1,
+          "bytes": 4158
+        }
+      },
+      "latest": "1.0.0"
+    }
+  }
+}
