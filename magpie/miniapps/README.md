@@ -228,6 +228,11 @@ The browser test runs the sample in Chromium 1194 (headless), with Playwright. I
   send `Allow-CSP-From`), and `data:` URLs that make large media expensive. See the `fink`
   skill, sections on exfiltration.
 
+Identity, cloud storage, backup and portability: a MiniApp gets these from its super app, and
+foafos must get them from open protocols. The plan to use W3C Linked Web Storage (LWS), with
+the Factoidal LWS implementation, is in
+[docs/foafos-lws-20261021.md](../../docs/foafos-lws-20261021.md).
+
 ## 6. Next steps: Rust/WASM, then Lean
 
 The parts that are pure functions over bytes or JSON are these: URI parsing, ZIP reading
