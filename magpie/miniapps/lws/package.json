@@ -1,0 +1,10 @@
+{
+  "name": "miniapps-lws-pod",
+  "private": true,
+  "type": "module",
+  "description": "Home LWS pod for foafos: the Factoidal LWS engine behind HTTP and an XMPP (XEP-0332) binding",
+  "dependencies": {
+    "@factoidal/core": "0.11.0",
+    "@xmpp/client": "0.14.0"
+  }
+}

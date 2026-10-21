@@ -38,6 +38,18 @@ writes is one the runner opens.
   `allow-same-origin`. Do not run app code in a Worker made from a blob in the host:
   it would get the host's origin.
 
+## LWS over XMPP (magpie/miniapps/lws/)
+
+The home pod (`lws/pod.mjs`) serves one Factoidal LWS storage over HTTP and over
+XEP-0332. The browser side is `src/xmpp-ws.mjs` (RFC 7395) and `src/lws-store.mjs`
+(the FoafStore backend). The answers and measurements are in `lws/README.md`.
+
+    apt-get install -y prosody
+    cd magpie/miniapps/lws && npm install && node test/run.mjs     # 15 checks
+
+Rules: keep LWS semantics out of the XMPP layer (the request and answer are the
+same bytes as over HTTP), and keep resource IRIs `https://`.
+
 ## Traps (each one cost a failed test run on 2026-10-21)
 
 1. Chromium does not run `requestAnimationFrame` in a cross-origin frame that is
@@ -49,3 +61,11 @@ writes is one the runner opens.
 3. `python3 -m http.server` serves `.ma` as `application/mathematica`, and GitHub
    Pages does not serve `application/miniapp-pkg+zip`. The runner opens packages with
    `strictMediaType: false` and shows the media type as a warning.
+4. `@xmpp/client` 0.13.2 sends an EMPTY SCRAM-SHA-1 `<response/>` under Node 22, and
+   Prosody answers `malformed-request`. Use 0.14.0 (pinned in `lws/package.json`).
+5. Over RFC 7395 each WebSocket frame is a standalone document: every stanza the
+   browser sends needs `xmlns="jabber:client"`. Without it Prosody closes the stream
+   with `unsupported-stanza-type` straight after SASL succeeds.
+6. A crashed test leaves Prosody holding ports 15222/15280. The next run's Prosody
+   cannot bind, and the browser talks to the stale one. `test/run.mjs` kills its
+   Prosody on exit and on any uncaught error; if a run still dies, `pgrep -af prosody`.
