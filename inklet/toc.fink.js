@@ -194,7 +194,7 @@ BoidWars
 Command your wizard flock in strategic boid-based combat. Flocks of strange creatures await your command.
 
 + [Play BoidWars]
-    # MINIGAME: battleboids
+    # APP: battleboids
     -> minigame_return
 
 === gridluck_selected ===
@@ -206,7 +206,7 @@ GridLuck
 Pac-Man style maze chase with treasures, power-ups, and zone exploration. Navigate the 5x5 zone grid world.
 
 + [Play GridLuck]
-    # MINIGAME: gridluck
+    # APP: gridluck
     -> minigame_return
 
 === waterworld_selected ===
@@ -218,7 +218,7 @@ Waterworld — Docklands Deep
 Pilot a submarine through a flooded London dock in picoCAD-style 3D. Sonar-ping the dark, salvage drowned history, dodge eels and rampant fatbergs, and follow the ghost whale to a pirate captain's chest.
 
 + [Play Waterworld]
-    # MINIGAME: waterworld
+    # APP: waterworld
     -> minigame_return
 
 === canarywharf_selected ===
@@ -230,7 +230,7 @@ CANARY WHARF — one small bird, one big skyline
 A one-thumb dusk flight over the Docklands. Light the rooftop beacons; the tower screens tell the lamplighters' story in ink, in the world, on the glass.
 
 + [Play Canary Wharf]
-    # MINIGAME: canarywharf mode=firstlight
+    # APP: canarywharf mode=firstlight
     -> minigame_return
 
 === minigame_return ===

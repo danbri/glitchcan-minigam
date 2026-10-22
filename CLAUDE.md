@@ -168,11 +168,11 @@ skills, in danbri/londat since 2026-10-07, where they were cut to 1,024 characte
 |---|---|---|
 | `container-improver` | `.claude/skills/` | you are about to write "this container has no X" — try installing it first; apt/pip/npm/cargo all work here. Also names the limits that are real (no GPU, no WebGPU, no `gh`) |
 | `fink` | `.claude/skills/` | FINK platform + the foafos shell: file format, ink compilation, sandbox, capabilities, brokers, chrome, testing discipline |
-| `glitchcanary` | `.claude/skills/` | story/game CONTENT — authoring `.fink.js`, episode linking, `# MINIGAME:` |
+| `glitchcanary` | `.claude/skills/` | story/game CONTENT — authoring `.fink.js`, episode linking, `# APP:` |
 | `fink-validation` | `inklet/skills/` | validating `.fink.js` files from the command line in this repo or another: the three-tier ladder (Node with finkcore + inkjs, `checkfink --scan`, the story runner headless), the four defect classes and their fixes, "story loads but shows nothing", Pseudo-Ink |
 | `nocliches-fink-authoring` | `.claude/skills/` | the PROSE of `.fink.js` stories and choice labels: the owner-adopted ban list of clichéd constructions and AI-default words, fixes, the interactive-fiction additions, scoring, the word scanner (`scan.mjs`); not structure or tags |
 | `photo-novel` | `cozyverse/skills/` | the photographic graphic-novel chapters (Steeple Wyke): tap-safe ink patterns, the village memory, pictures, loops, sound and voices, costs, and what failed |
-| `story-game-sync` | `inklet/minigames/skills/` | a story depends on an attached game: pause/play/resume `# MINIGAME:` guests vs Drift city's live in-page sync, what each cannot do yet, and the text route every world-only clue needs (no GPU, screen readers) |
+| `story-game-sync` | `inklet/minigames/skills/` | a story depends on an attached game: pause/play/resume `# APP:` guests vs Drift city's live in-page sync, what each cannot do yet, and the text route every world-only clue needs (no GPU, screen readers) |
 | `drift-city` | `drift-city/skills/` | `drift-city/` — the Titan city: build, seeing WGSL changes headless (Dawn on lavapipe, `tests/walkers.html`), the walker frame rule, the Titan design brief, the dorms |
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
 | `tanks-for-the-trees` | `trees/skills/` | `trees/` — the Bristol data pipeline, BNG↔world coordinates, `host.api`/`__tftt`. **Read its data-ethics section first** |
@@ -235,7 +235,7 @@ Do not bring a second story engine back.
 ### FINK engine architecture (DO NOT BREAK)
 - `.fink.js` files contain `oooOO`...`` tagged template literal calls — **JavaScript, not text**. Loaded via script injection into a sandboxed iframe; content captured by the `oooOO` function and returned via postMessage. **Never parse them as text.**
 - Real compiler only: `new inkjs.Compiler(finkContent).Compile()` then `new inkjs.Story(...)`. Vendored at `third_party/ink/ink-full.js` (version unrecorded in-file; tooling pins `inkjs ^2.3.2` in package.json).
-- INK tags (`# IMAGE:`, `# FINK:`, `# BASEHREF:`, `# MENU:`, `# VIDEO:`, `# MINIGAME:`, `# LINKREL:`, `# ENTRY:`) are legitimate INK extensions used at story or knot level. See `glitchcanary.md` and `docs/glossary.md`.
+- INK tags (`# IMAGE:`, `# FINK:`, `# BASEHREF:`, `# MENU:`, `# VIDEO:`, `# APP:`, `# LINKREL:`, `# ENTRY:`) are legitimate INK extensions used at story or knot level. `# APP:` replaced `# MINIGAME:` on 2026-10-22 (owner: "lets phase out MINIGAME: f)INK tag and just use \"# APP: \" as our preferred version"); the runner still reads the old name. Design: `docs/foafos-apps-20261022.md`. See `glitchcanary.md` and `docs/glossary.md`.
 - **`#` starts a tag in ink**, so a URL in a tag CANNOT carry a fragment: `# FINK: x.fink.js#knot` is two tags and the fragment never reaches the runner. That is why the merged-content entry point is its own `# ENTRY:` tag.
 - Reference implementation: `inklet/demos/hamfinkdemo.html`.
 - Mandatory test after ANY player change: TOC loads → Episodes → Hampstead plays through, choice text labels visible, no console errors.

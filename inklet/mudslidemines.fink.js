@@ -44,7 +44,7 @@ The air grows cool and damp as you step into a dark cave entrance. Water drips s
 
 === Cave_Exploration ===
 # IMAGE: 8A85D856-4662-4425-ABFB-5F7A2F3DBF36.png
-# MINIGAME: mudslider mode=cave
+# APP: mudslider mode=cave
 You venture deeper into the twisting cave passages...
 -> Cave_Return
 

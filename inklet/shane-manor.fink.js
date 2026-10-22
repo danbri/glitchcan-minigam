@@ -355,7 +355,7 @@ The black pieces show fresh fingerprints. And the positioning is wrong - someone
     -> crime_scene
 
 === chess_minigame ===
-# MINIGAME: chess
+# APP: chess
 ~ chess_game_completed = true
 
 You sit at the board, working through the position. The queen sacrifice demands a precise response...

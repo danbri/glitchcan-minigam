@@ -109,27 +109,27 @@ You stand in a glowing space filled with floating game cabinets. Each one hums w
 + Return to the World Between Worlds -> world_between_worlds
 
 === play_gems ===
-# MINIGAME: gems
+# APP: gems
 Gems scatter before you, waiting to be collected...
 -> arcade_return
 
 === play_mudslider ===
-# MINIGAME: mudslider
+# APP: mudslider
 The cave entrance yawns before you...
 -> arcade_return
 
 === play_battleboids ===
-# MINIGAME: battleboids
+# APP: battleboids
 Flocks of strange creatures await your command...
 -> arcade_return
 
 === play_gridluck ===
-# MINIGAME: gridluck
+# APP: gridluck
 The maze materializes around you...
 -> arcade_return
 
 === play_waterworld ===
-# MINIGAME: waterworld
+# APP: waterworld
 One cabinet stands apart, dripping. The screen shows green water and old brick — a drowned dock, waiting. You sink into it...
 -> arcade_return
 

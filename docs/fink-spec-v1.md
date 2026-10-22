@@ -79,7 +79,7 @@ parser; values keep their case. Implemented tags:
 | `# IMAGE:` / `# VIDEO:` | media, resolved via §3.2. A local `# VIDEO:` may add `poster=<image>`, the picture shown before play (resolved the same way); phones load no video ahead, so without one the reader sees a black box |
 | `# BASEHREF:` | story/knot media base |
 | `# FINK:` | load another FINK document (breaks the continue loop) |
-| `# MINIGAME: name [mode=m] [controls=dpad\|lite\|none] [key=value …]` | a game; the story pauses until it completes (§5). Other keys reach the game only if its registry row lists them in `args`. The game's result reaches the story as `game_success` and `game_score`, if the story declares those VARs |
+| `# APP: name [then=wait\|beside\|go] [mode=m] [controls=dpad\|lite\|none] [key=value …]` | an app. `then=wait` (the default): the story pauses until it completes (§5). `then=beside`: as `# WORLD:`. `then=go`: refused until service apps exist. `# MINIGAME:` is the old name of `# APP:` (owner, 2026-10-22; `docs/foafos-apps-20261022.md`, section 6); the runner still reads it, and `npm run fink:check` warns for it.  Other keys reach the game only if its registry row lists them in `args`. The game's result reaches the story as `game_success` and `game_score`, if the story declares those VARs |
 | `# WORLD: name [key=value …]` | a stage app beside the story that shows what the story's tags say; the story does not pause (§5.8) |
 | `# AUDIO:` / `# FOLEY:` / `# STOP_AUDIO` | audio (§7) |
 | `# PUBLIC:` | cold-entry respawn knots (links spec) |
@@ -97,14 +97,14 @@ in `gcfink test/inkCompile.real.test.js`; `lintTagUrls` warns.
 ### 3.2 Tag attachment — normative authoring rule
 
 A tag on its own line attaches **forward to the next text line, through
-diverts**. Tags that mark a moment (especially `# MINIGAME:`) MUST be
+diverts**. Tags that mark a moment (especially `# APP:`) MUST be
 inline on a text line. Reactions to minigame results MUST live behind a
 choice in the return knot (Ink evaluates a knot's entry text before the
 break takes effect). INK-GOTCHAS §8; E2E-locked in `e2e-robbin.mjs`.
 Lines AFTER an inline tagged line are different: the story runner breaks
 after the tagged line, and ink's look-ahead past it is rewound, so they read
 the game's result. Per Aspera's cellar does this (`{game_score == 1: ->
-oskar}` on the lines after `# MINIGAME: cellar exits=oskar`), and it resets
+oskar}` on the lines after `# APP: cellar exits=oskar`), and it resets
 `game_score` before the tag so an old value cannot divert. E2E-locked in
 `e2e-novel.mjs` (September 2026).
 
@@ -865,7 +865,7 @@ real guest frames. SDK wire shapes pinned offline in
 ### 5.8 The world beside a story (`# WORLD:`) — normative
 
 A story may name a stage app that shows the world the story happens in:
-`# WORLD: <name> [key=value …]`. Unlike `# MINIGAME:` it does not break the
+`# WORLD: <name> [key=value …]` (the same as `# APP: <name> then=beside`). Unlike `# APP:` with then=wait it does not break the
 beat or pause the story, does not take the screen from the story window,
 and never completes. Added September 2026, so that Drift City plays its
 stories in the foafos runner instead of an Ink engine of its own.

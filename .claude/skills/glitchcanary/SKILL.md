@@ -1,6 +1,6 @@
 ---
 name: glitchcanary
-description: Glitch Canary story and game content — authoring .fink.js stories (Hampstead, Bagend, TOC, world-between-worlds), episode linking, minigame placement (# MINIGAME:), the Robbin game and its tube data, and content-side conventions. Use when writing or editing story content, wiring episodes/minigames into the TOC or stories, or working on magpie/robbin gameplay/content. NOT for platform mechanics — that is the fink skill.
+description: Glitch Canary story and game content — authoring .fink.js stories (Hampstead, Bagend, TOC, world-between-worlds), episode linking, app and minigame placement (# APP:, formerly # MINIGAME:), the Robbin game and its tube data, and content-side conventions. Use when writing or editing story content, wiring episodes/minigames into the TOC or stories, or working on magpie/robbin gameplay/content. NOT for platform mechanics — that is the fink skill.
 ---
 
 # Glitch Canary content skill
@@ -23,7 +23,7 @@ platform grows a slot and the content fills it.
   `_`-prefixed knots are private (not deep-linkable). `# PUBLIC:` marks
   cold-entry respawn points.
 - Tags in use: `# IMAGE:`, `# VIDEO:`, `# BASEHREF:`, `# FINK:` (loads
-  another story — breaks the Continue loop), `# MINIGAME:`, `# AUDIO:`,
+  another story — breaks the Continue loop), `# APP:`, `# AUDIO:`,
   `# FOLEY:`, `# STOP_AUDIO`, `#BG:#hex`, `#CLASS:info|danger|...`,
   `# IMPORT:` (variables), `# RESTART`.
 - Media: BASEHREF + relative paths (the Bagend pattern); static files
@@ -151,11 +151,14 @@ media pipeline, costs, checks and the list of things that failed) is in the **ph
    `surface: 'stage', game: '<name>'`, with capabilities, `desc`,
    `controls`, and `silent` if it makes no sound. The stage host reads
    that row; there is no second list. An unregistered name is refused.
-3. Invoke from Ink: `# MINIGAME: <name> mode=<m> controls=<dpad|lite|none>`
+3. Invoke from Ink: `# APP: <name> [then=wait|beside|go] mode=<m> controls=<dpad|lite|none>`.
+   `# MINIGAME:` is the old name of `# APP:` (owner, 2026-10-22; `docs/foafos-apps-20261022.md`, section 6); the runner still reads it, and `npm run fink:check` warns for it.
+   `then=wait` (the default) pauses the story until the app returns; `then=beside` is the
+   `# WORLD:` path; `then=go` is refused until service apps exist.
    then divert to a return knot; read the variables the game wrote. An app
    may take more keys, listed in its registry row's `args`:
-   `# MINIGAME: drift tale=peraspera` (Drift City on that story),
-   `# MINIGAME: talkinghead line=mags-3 mood=wry` (a recorded line spoken by
+   `# APP: drift tale=peraspera` (Drift City on that story),
+   `# APP: talkinghead line=mags-3 mood=wry` (a recorded line spoken by
    that cast member's face). Values are plain tokens (letters, digits,
    `. _ : -`); an unlisted key is dropped and reported, not passed on. The
    story-game-sync skill has the rules; `drift-city/foafos-entry.fink.js` is
@@ -170,21 +173,21 @@ media pipeline, costs, checks and the list of things that failed) is in the **ph
    explaining — stand at the kerb, jump, ride up, and the game posts
    `complete` with its variables. Two rules learned building it:
    - **An exit nobody is told about is not an exit.** The story names
-     it in the beat before the `# MINIGAME:` tag ("the car rank down by
+     it in the beat before the `# APP:` tag ("the car rank down by
      the bakery runs a shuttle back up here").
    - **The way out must work in BOTH lives.** The same game runs
      standalone; there the car returns the player to the title card it
      came in from. Whatever the guest came from is where it goes back.
 6. Reactions to minigame results go BEHIND a choice in the return knot,
-   and the MINIGAME tag goes INLINE on a text line — a bare tag line
+   and the APP tag goes INLINE on a text line — a bare tag line
    attaches forward through the divert and the destination's first line
    (with any conditionals) evaluates before the game runs. INK-GOTCHAS §8.
 7. Worked example: hampstead_tube/tube_return in hampstead.fink.js;
    full-loop test: node inklet/finkapp/test/e2e-robbin.mjs.
-8. **A WORLD IS NOT A MINIGAME.** When the game is the place where the
+8. **A WORLD IS NOT A GAME THE STORY WAITS FOR.** When the game is the place where the
    story happens and should follow it as you read, put
    `# WORLD: <name>` near the top of the story (after `# title:`), not a
-   `# MINIGAME:` in a knot. The story does not pause; after every step the
+   `# APP:` in a knot. The story does not pause; after every step the
    foafos runner sends the world the tags it does not handle itself
    (`scene`, `place`, `time`, `voice`, `speech`...). The world writes back only
    the VARs its registry row lists, so declare them (`VAR here = ""`), and

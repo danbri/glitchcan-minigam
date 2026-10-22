@@ -1,6 +1,6 @@
 ---
 name: story-game-sync
-description: How an Ink story and a game engine share one playthrough in this repo ("gamgam", the dual game engines idea) — the platform's pause/play/resume model for `# MINIGAME:` guests, the world beside a story (`# WORLD:`: the story in the foafos runner, the game showing its tags, variables both ways), the live two-way model Drift city runs in its own page (tags drive the world, the world writes VARs, a discovery re-enters the scene), what each can and cannot do today, and the fallback rule that every world-only affordance needs a text route for readers with no GPU or no sight. Use this when designing a story that depends on an attached game, wiring a game to read or write story variables, deciding where the Ink runtime should live, adding a text or screen-reader route to game-only content, or when a story "works in the game but gets stuck in the FINK player".
+description: How an Ink story and a game engine share one playthrough in this repo ("gamgam", the dual game engines idea) — the platform's pause/play/resume model for `# APP:` guests, the world beside a story (`# WORLD:`: the story in the foafos runner, the game showing its tags, variables both ways), the live two-way model Drift city runs in its own page (tags drive the world, the world writes VARs, a discovery re-enters the scene), what each can and cannot do today, and the fallback rule that every world-only affordance needs a text route for readers with no GPU or no sight. Use this when designing a story that depends on an attached game, wiring a game to read or write story variables, deciding where the Ink runtime should live, adding a text or screen-reader route to game-only content, or when a story "works in the game but gets stuck in the FINK player".
 ---
 
 # Story and game in sync
@@ -20,9 +20,9 @@ drift; search for the names.
 ### A. Platform guest: pause, play, resume
 
 A story in the FINK player (production: the boxed runner,
-`inklet/apps/storyrunner/storyrunner.js`) meets `# MINIGAME: <name>`:
+`inklet/apps/storyrunner/storyrunner.js`) meets `# APP: <name>`:
 
-1. The runner breaks the beat and pauses (`case 'MINIGAME'`, sets
+1. The runner breaks the beat and pauses (`case 'APP'` with then=wait, and `case 'MINIGAME'`, sets
    `_pendingGame`), then sends the `story.launch` verb.
 2. The shell (`foafos-shell.js`, `story.launch` handler) snapshots
    `FoafOS.storyVars`, gives the economy to the launching story, and calls
@@ -54,7 +54,7 @@ What this model does NOT do, today:
 - `# MINIGAME_MODE:` and `# MINIGAME_CONFIG:` (in `inklet/minigames/README.md`)
   are not parsed anywhere.
 
-**Tag arguments (September 2026).** `# MINIGAME: <name> key=value ...`. The
+**Tag arguments (September 2026).** `# APP: <name> key=value ...`. `# MINIGAME:` is the old name of `# APP:` (owner, 2026-10-22; `docs/foafos-apps-20261022.md`, section 6); the runner still reads it, and `npm run fink:check` warns for it. The
 boxed runner sends the name and the pairs (`gameTag` in `storyrunner.js`; it
 splits the tag value the ink runtime produced and reads no story source). The
 shell's `launchArgs` keeps `mode` and `controls` (dpad, lite, none) for the
@@ -65,7 +65,7 @@ at most 12 pairs are read. Everything else is dropped and reported on
 (`?tale=peraspera`), so a page that already reads its address needs no change,
 and in `init.config.args`. The node records them (`scopes.args`), and the Task
 Manager shows them in the State column. Until September 2026 the runner kept
-only the first word, so `# MINIGAME: robbin mode=hampstead` arrived as mode
+only the first word, so `# APP: robbin mode=hampstead` arrived as mode
 normal in production; it now reaches the game.
 
 Good fit: a self-contained episode inside a story — a heist, a battle, a
@@ -75,9 +75,9 @@ a stage app with no capabilities. Pause freezes it, a close keeps its place
 (snapshot), a reopen restores it, and its own story's exit completes it, so
 the outer story resumes after the tag (`drift-city/novel/cellar-entry.fink.js`;
 the drift-city skill, Novel pages, has the lessons). The city itself is the
-stage app `drift` (`# MINIGAME: drift tale=peraspera` opens it on that story)
+stage app `drift` (`# APP: drift tale=peraspera` opens it on that story)
 and a cast member speaking a recorded line is `talkinghead`
-(`# MINIGAME: talkinghead line=mags-3 [mood=wry]`); both are played by
+(`# APP: talkinghead line=mags-3 [mood=wry]`); both are played by
 `drift-city/foafos-entry.fink.js` (the drift-city skill, "Drift City as a
 foafos app"). Examples:
 `inklet/hampstead.fink.js` (robbin, reads `robbin_birds` after),
@@ -241,7 +241,7 @@ Rules:
    a choice (see the `glitchcanary` skill).
 5. A text route for anything the story needs from the game (above).
 
-Fixed September 2026: `canarywharf` (TOC entry `# MINIGAME: canarywharf
+Fixed September 2026: `canarywharf` (TOC entry `# APP: canarywharf
 mode=firstlight`) had a guest folder and no registration, so it played gems. It
 has a registry row now, and since the tag arguments work, `mode=firstlight`
 reaches it.
@@ -251,7 +251,8 @@ reaches it.
 ```
 node drift-city/tests/inkwalk.mjs                         # both modes, all endings
 node inklet/tools/fink-check.mjs drift-city/story/lamplighter.fink.js
-node inklet/finkapp/test/e2e-storyrunner.mjs              # pause on MINIGAME, resume with variables
+node inklet/finkapp/test/e2e-storyrunner.mjs              # pause on APP, resume with variables
+node inklet/finkapp/test/e2e-app-tag.mjs                # then=wait|beside|go, and the old # MINIGAME:
 node inklet/finkapp/test/e2e-powers.mjs                   # one node per stage app, the cellar end to end
 node inklet/finkapp/test/e2e-drift.mjs                    # tag arguments; the city and the talking head end to end
 ```

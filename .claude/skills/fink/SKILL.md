@@ -297,7 +297,7 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   and walks into the runner frame. It used to audit `?player=legacy` only and
   reported 0 errors about a surface the reading had left; if you move the
   reading again, move the audit with it.
-- Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]
+- Tag grammar (`# MINIGAME:` is the old name of `# APP:` (owner, 2026-10-22; `docs/foafos-apps-20261022.md`, section 6); the runner still reads it, and `npm run fink:check` warns for it.): `# APP: <name> [then=wait|beside|go] [mode=x] [controls=dpad|lite|none]
   [key=value ...]`. The boxed runner splits the tag value (`gameTag`) and
   sends `{game, args}` with `story.launch`; the shell's `launchArgs` keeps
   mode and controls for the stage host and only the keys the registry row
@@ -305,7 +305,7 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `app.launch.args.dropped`; the guest gets them in its page address and
   `init.config.args`, and the node records them (`scopes.args`). Until
   September 2026 the runner kept the first word only, so mode never reached
-  a game in production. The runner's Continue loop stops on MINIGAME and
+  a game in production. The runner's Continue loop stops on APP (then=wait) and on MINIGAME, and
   FINK tags. Details: the story-game-sync skill.
 - `# WORLD: <name> [key=value ...]` (boxed runner only, September 2026; spec
   §5.8): a stage app BESIDE the story, not a pause. Verb `story.world`
@@ -932,7 +932,7 @@ widgets are Apps." The tree half was already true (game nodes spawn under
   not lose it), and the runner plays the story from its start with a "Continue where you stopped" button
   (`#resume-offer`). Until the first choice, `keepPlace` and `onSnapshot` both return the offered save, so a
   reload or a close does not overwrite it with the fresh opening. `e2e-storyrunner` §9c. Its first version
-  checked for choices at the opening; `peer.fink.js` opens on a `# MINIGAME:`, so it has none: check the
+  checked for choices at the opening; `peer.fink.js` opens on a `# APP:`, so it has none: check the
   opening text instead.
 - Guests may answer `null` to decline. Chess does, mid-animation: a
   half-slid piece would restore to a board that disagrees with itself.
@@ -1691,7 +1691,7 @@ kernel.
   story runs in the shell's own document.
 - Its tags reach `FinkAudio`, `FinkFoley`, `FinkMinigames`,
   `FinkNavigation`, `FinkBreadcrumb`, `FinkUI` and `FoafOS` directly.
-  Nine tag verbs (`AUDIO FOLEY STOP_AUDIO FINK LINKREL MINIGAME STATUS BG
+  Nine tag verbs (`AUDIO FOLEY STOP_AUDIO FINK LINKREL APP (formerly MINIGAME) STATUS BG
   CLASS`) and **not one is capability-checked** — grep the engine, player
   and ui for "capabilit" and you get nothing.
 - So a story can launch an app, navigate the whole shell, restyle the
@@ -1716,7 +1716,7 @@ sandboxed: it compiles (backticks browser kernel) and plays a real ink
 story INSIDE an opaque-origin app frame, renders prose+choices in its own
 document, styles itself (`# BG:` hits the frame, not the host), and reaches
 the shell only via `foaf.storyRequest` → capability-checked `story:*` verbs
-(`story.request` handler in `governAppFrame`) + the scoped bus. `# MINIGAME:`
+(`story.request` handler in `governAppFrame`) + the scoped bus. `# APP:`
 becomes a governed `story.launch` that opens a separately-boxed guest — up
 AND down. `e2e-storyrunner.mjs` proves containment: `parent.FoafOS` /
 `parent.FinkInkEngine` / `parent.document` all throw from inside.

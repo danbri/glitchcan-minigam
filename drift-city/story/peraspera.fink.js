@@ -14,7 +14,7 @@ VAR snowing = false
 VAR want_time = ""
 VAR want_weather = ""
 VAR in_world = false
-// the way the reader left a page the story opened (# MINIGAME:), set by the foafos story runner from the page's result:
+// the way the reader left a page the story opened (# APP:), set by the foafos story runner from the page's result:
 // 1 "Sit in with Oskar", 2 "Back to Ferry Street" (drift-city/novel/cellar.html)
 VAR game_score = 0
 
@@ -192,7 +192,7 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
     // the first visit opens the cellar's graphic-novel page (drift-city/novel/cellar.html, the stage app "cellar");
     // the city's own player and the text checker ignore the tag and read on
     ~ game_score = 0
-    The Lantern Cellar is under a noodle bar on Glass Walk: forty steps down, then an airlock, then a low room full of smoke and brass. The late jam never stops; players come and go and the tune goes on. # MINIGAME: cellar exits=oskar
+    The Lantern Cellar is under a noodle bar on Glass Walk: forty steps down, then an airlock, then a low room full of smoke and brass. The late jam never stops; players come and go and the tune goes on. # APP: cellar exits=oskar
     {game_score == 1: -> oskar}
     {game_score == 2: -> street}
     Oskar is on the drums, as always, brushes on a snare, eyes shut.

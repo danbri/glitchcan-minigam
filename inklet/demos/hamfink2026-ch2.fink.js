@@ -93,7 +93,7 @@ Each one pulses with incredible power. These are worth 1000x normal diamonds!
 + [Return to the main area] -> explore_mega
 
 === start_mega_minigame ===
-# MINIGAME: mega
+# APP: mega
 # CLASS: mega
 You reach out toward the floating Mega Diamonds...
 

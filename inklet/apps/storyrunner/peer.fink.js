@@ -3,7 +3,7 @@
 // play another document in the same box.
 //
 // It is also the PARITY fixture for #779: it declares shared-economy VARs,
-// pauses on `# MINIGAME:`, and then SPENDS what the game wrote. A runner
+// pauses on `# APP:`, and then SPENDS what the game wrote. A runner
 // that fires the launch and carries on would print the after-game line
 // while the game was still on screen, with the old values — which is
 // exactly the blocker this story exists to catch.
@@ -31,7 +31,7 @@ Beyond the doorway: a different dock, a different tale.
 // from before the game. Hence the shipped convention, which
 // mudslidemines.fink.js already follows: tag first, lead-in second,
 // after-game content behind a divert.
-# MINIGAME: waterworld
+# APP: waterworld
 The arcade hums with old light. You climb down into the salvage rig.
 -> surfacing
 

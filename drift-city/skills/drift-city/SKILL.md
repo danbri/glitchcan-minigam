@@ -1129,7 +1129,7 @@ menu did. e2e-drift 20a.
 Owner, after the Lantern Cellar worked in the shell: "Can we do the sdf world drift display too? And sdf rigged
 talking heads?" The talking heads in this repo are rigged Gaussian-splat heads (LAM, `magpie/splatweb`), not SDF;
 no SDF talking head exists (searched lucid/, yeti/, magpie/, drift-city/). Both are now foafos stage apps, rows in
-`inklet/finkapp/foafos-apps.js`, opened by `# MINIGAME:` with arguments (the story-game-sync skill, "Tag
+`inklet/finkapp/foafos-apps.js`, opened by `# APP:` with arguments (the story-game-sync skill, "Tag
 arguments"). Try them: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/foafos-entry.fink.js`, a hub whose
 every line is quoted from `story/episodes.fink.js`, `story/peraspera.fink.js` and the cellar entry.
 
@@ -1139,7 +1139,7 @@ story that the foafos runner plays (`# WORLD: drift`; spec §5.8; the story-game
 links to each story as a dream, and each story's own `# WORLD: drift` opens the city. Per Aspera opened directly
 works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.fink.js`.
 
-- **`drift`**: `dist/city.html` in a sandboxed frame. `# MINIGAME: drift tale=peraspera` arrives as `?tale=`,
+- **`drift`**: `dist/city.html` in a sandboxed frame. `# APP: drift tale=peraspera` arrives as `?tale=`,
   which `tales.js` already read, so the page needed no argument code. Holds `audio`, `vars:read`, `vars:write`
   and `story:steer`; the foafos sticks (`controls: 'sticks'`). The row's `variables` let it read `want_time` and
   `want_weather` and write `here`, `hour` and `snowing`; `features: ['autoplay']`, because the reader taps the
@@ -1167,7 +1167,7 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   From the foafos app list, Drift City opens the story runner on the Drift hub
   (`drift-city/foafos-entry.fink.js`; the registry row's `opens`), so the
   city runs as a story's world there too. The city's own ink client remains
-  for the standalone page and for a story that still says `# MINIGAME: drift`
+  for the standalone page and for a story that still says `# APP: drift`
   (none in the repo, September 2026).
   Recorded lines (`# speech:`) are played by the SHELL when the city is hosted (spec §5.5, owner's rule: "it
   needed to be a shell service cos new iframe apps weren't trusted quickly enough"). On a phone beside a story
@@ -1273,7 +1273,7 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   VP9 WebM source: open-source Chromium (the test browser here) has no H.264 and reports error 4.
 - As a foafos app (September 2026): `novel/cellar.html` is also the stage app `cellar` (a row in
   `inklet/finkapp/foafos-apps.js` whose `url` is this page, no capabilities). A story opens it with
-  `# MINIGAME: cellar`; the entry story is `novel/cellar-entry.fink.js`, owner lines only. One file serves both
+  `# APP: cellar`; the entry story is `novel/cellar-entry.fink.js`, owner lines only. One file serves both
   uses: the page speaks the minigame SDK only when it is in a frame. Lifecycle API: `pause()`, `resume()`,
   `.paused`, `captureState()`, `restoreState(state)`. Lessons: `animation-play-state` does not inherit, so setting
   it on the shadow `.page` left the slotted stills drifting; `pause()` pauses each animation from
@@ -1319,7 +1319,7 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   orange-brown haze, sealed glass traffic tubes on pylons, domes, people in pressure suits and bubble helmets. Put the
   Titan design brief into the prompt; do not trust a source image to carry it.
 - In Per Aspera (owner, September 2026: "Can you work the novel format we prototyped into the story?"): the first
-  visit to the Lantern Cellar opens the page, `# MINIGAME: cellar exits=oskar`, inline on the cellar's first-visit
+  visit to the Lantern Cellar opens the page, `# APP: cellar exits=oskar`, inline on the cellar's first-visit
   line. `exits=oskar` (the app row lists `args: ['exits']`) sets `oskar_exit` in cellar.ink, so the stage panel
   also offers Per Aspera's own "Sit in with Oskar". The page completes with a score for the way out: 1 Oskar
   (`# leave: oskar`, seen through the component's new `storytags` event), 2 the street (the story's move to the

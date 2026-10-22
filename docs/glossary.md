@@ -71,11 +71,14 @@ Display a special menu interface.
 - **Handler:** [`fink-ink-engine.js`](../inklet/finkapp/fink-ink-engine.js)
 - **Example:** `# MENU: main_toc`
 
-### `# MINIGAME: <type>`
-Launch an embedded minigame, optionally with parameters.
+### `# APP: <app> [then=wait|beside|go] [key=value …]`
+Open an app (a game, a world beside the story, or later a service such as a media player).
+`then=wait`, the default, pauses the story until the app returns its result. `# MINIGAME:` is
+the old name (owner, 2026-10-22); the runner still reads it. Design:
+[`docs/foafos-apps-20261022.md`](foafos-apps-20261022.md), section 6.
 
-- **Handler:** [`fink-minigames.js`](../inklet/finkapp/fink-minigames.js)
-- **Example:** `# MINIGAME: crystals count=5`
+- **Handler:** [`storyrunner.js`](../inklet/apps/storyrunner/storyrunner.js) (`case 'APP'`), which asks the shell with the `story.launch` verb; the shell's stage host is [`fink-minigames.js`](../inklet/finkapp/fink-minigames.js)
+- **Example:** `# APP: gridluck`, `# APP: robbin mode=hampstead controls=dpad`
 
 ### `# BG: <color>`
 Set background color for the current section.

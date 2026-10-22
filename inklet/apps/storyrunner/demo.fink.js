@@ -1,6 +1,6 @@
 // A tiny self-contained .fink.js the boxed runner plays in its own frame.
 // It tours the media roles (feature → hero → accent), a # BG: (which must
-// colour the FRAME, not the host), and a # MINIGAME: tag (which must
+// colour the FRAME, not the host), and a # APP: tag (which must
 // surface as a governed verb request). Media are bundled local SVGs.
 oooOO`
 // These fixtures keep their art BESIDE the story file, so they must say

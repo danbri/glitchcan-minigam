@@ -1,4 +1,4 @@
-// Entry point: plays Drift city's Lantern Cellar page as a foafos stage app (`# MINIGAME: cellar`, registered in
+// Entry point: plays Drift city's Lantern Cellar page as a foafos stage app (`# APP: cellar`, registered in
 // inklet/finkapp/foafos-apps.js). The page runs sandboxed with its own ink (cellar.ink) and hands control back
 // here when its story returns the reader to the street.
 // Every line of prose and every choice label below is an exact quote from drift-city/story/peraspera.fink.js
@@ -10,7 +10,7 @@ Ferry Street. Snow settles on your case.
 + [Go down to the Lantern Cellar, Chinatown] -> cellar
 
 === cellar ===
-# MINIGAME: cellar
+# APP: cellar
 The Lantern Cellar. The jam goes on under the street.
 -> street
 

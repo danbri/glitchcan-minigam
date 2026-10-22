@@ -41,7 +41,7 @@ The mess-hall veterans lean in, delighted to be asked.
 
 The dock lights dim to moonlight. Your shift begins.
 
-Jack into the candy terminals for the dreams. When you have had enough, the car rank down by the bakery runs a shuttle back up here. # MINIGAME: skydock controls=none
+Jack into the candy terminals for the dreams. When you have had enough, the car rank down by the bakery runs a shuttle back up here. # APP: skydock controls=none
 
 -> debrief
 

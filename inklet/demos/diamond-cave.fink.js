@@ -80,7 +80,7 @@ The alcove sparkles with countless gems embedded in the walls!
 + [Return to the main cavern] -> cavern_choices
 
 === start_minigame ===
-# MINIGAME: gems
+# APP: gems
 You focus your attention on the gem-studded walls...
 
 [The minigame will start - collect as many gems as you can!]
@@ -276,7 +276,7 @@ Queen moves first. The king tries to escape or capture. There's a forced win!
 # CLASS: info
 Collect gems before they fade! 💎
 
-# MINIGAME: gems mode=normal
+# APP: gems mode=normal
 
 -> minigame_tour
 

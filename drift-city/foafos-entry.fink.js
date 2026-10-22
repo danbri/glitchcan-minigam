@@ -3,7 +3,7 @@ oooOO`
 // a dream (# LINKREL: goDeeper, so their end brings you back here); each opens "drift", the city, beside itself with
 // its own # WORLD: drift. "talkinghead" is a cast member's face speaking a recorded line; "cellar" is a novel page.
 // Every line a reader sees is quoted exactly from story/episodes.fink.js, story/peraspera.fink.js and
-// novel/cellar-entry.fink.js (the drift-city skill: words on screen). Each link and # MINIGAME: tag is inline on its
+// novel/cellar-entry.fink.js (the drift-city skill: words on screen). Each link and # APP: tag is inline on its
 // text line (glitchcanary skill, minigames, rule 6). Play it in the FINK player:
 // inklet/finkapp/?story=/glitchcan-minigam/drift-city/foafos-entry.fink.js
 # title: Drift city
@@ -26,11 +26,11 @@ Midnight. You play upright bass, and the band leader has taken a seat home to Ea
 
 === mags ===
 The Cold Tap is a dive bar behind an airlock: nine stools, a heater that ticks, and a price list older than the dome. You crack your helmet seal. The air smells of hops and hot metal.
-"Nuala was in at noon," Mags says, and wipes the bar. "Sat where you're sitting. Drank one whisky, very slow, and didnae say a word." # MINIGAME: talkinghead line=mags-1
-She puts a glass in front of you. "The set's still on. Midnight, in the bubble. Ruth says it goes ahead with or without her." # MINIGAME: talkinghead line=mags-3
+"Nuala was in at noon," Mags says, and wipes the bar. "Sat where you're sitting. Drank one whisky, very slow, and didnae say a word." # APP: talkinghead line=mags-1
+She puts a glass in front of you. "The set's still on. Midnight, in the bubble. Ruth says it goes ahead with or without her." # APP: talkinghead line=mags-3
 + [Thank her and go] -> door
 
 === cellar ===
-The Lantern Cellar. The jam goes on under the street. # MINIGAME: cellar
+The Lantern Cellar. The jam goes on under the street. # APP: cellar
 -> door
 `;
