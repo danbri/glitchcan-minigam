@@ -13,9 +13,9 @@ const SHOTS = process.env.SHOTS || new URL('./shots/', import.meta.url).pathname
 mkdirSync(SHOTS, { recursive: true });
 const AXE = readFileSync(new URL('../node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
-// RUNNER=https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html runs it against the live site.
+// RUNNER=https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html runs it against the live site.
 const srv = process.env.RUNNER ? { close: async () => {} } : await serve(0);
-const RUNNER = process.env.RUNNER || `${srv.url}/magpie/miniapps/index.html`;
+const RUNNER = process.env.RUNNER || `${srv.url}/magpie/miniapps/runner.html`;
 
 let failed = 0;
 const findings = [];

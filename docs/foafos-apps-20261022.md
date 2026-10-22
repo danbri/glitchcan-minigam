@@ -223,8 +223,8 @@ server (`tools/game-mcp/`) drive apps the same way.
 ## 9. Order of work, and the questions for the owner
 
 State, 2026-10-22 (owner: "Step 1 then 2"):
-- Step 1 is built. The story runner reads `# APP:` with `then=wait|beside|go` (`go` is
-  refused until service apps exist); `fink:check`, `fink-minigame-map` and `fink-universe`
+- Step 1 is built. The story runner reads `# APP:` with `then=wait|beside|go` (`go` sends
+  an action to a single-instance app; see the demo below); `fink:check`, `fink-minigame-map` and `fink-universe`
   read it; 13 story files moved by hand; `inklet/finkapp/test/e2e-app-tag.mjs` tests it.
   `inklet/tools/fink-graph.mjs` is not changed: it reads tags with regexes over ink source,
   which CLAUDE.md forbids, so it needs rebuilding on the compiler rather than extending.
@@ -235,6 +235,37 @@ State, 2026-10-22 (owner: "Step 1 then 2"):
   members of section 4 (`instances`, `handles`, `actions`, `storage`, `headless`,
   `delegates`) are accepted by the check (and `instances`, `storage` by the shapes), and no
   manifest uses them yet. @factoidal/core is 0.11.0 since 2026-10-22.
+- The demo (owner, 2026-10-22: "I'd like a shippable demo soon, replacing earlier miniapp
+  demo") is built. It takes the parts of steps 3 and 4 that the owner's scenario needs:
+  - Landing page: https://danbri.github.io/glitchcan-minigam/magpie/miniapps/ (it replaced
+    the MiniApp runner's page; the runner is now `magpie/miniapps/runner.html`).
+  - The demo: https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?root=apps. The
+    `apps` root (`inklet/finkapp/foafos-root.js`) boots three Data windows on three
+    documents and two story runners on `inklet/demos/apps/first-story.fink.js` and
+    `second-story.fink.js`, and tiles them on a wide screen (`boot.layout: 'tile'`).
+  - Per-document storage (part of step 3): a launch with `doc` gets the store namespace
+    `<app>#<doc>`, which `FoafStore` treats as the app's own (same grant, same quota). There
+    is no way yet to pick a document in the UI: the root's boot entry names it.
+  - Single-instance apps (part of step 4): `instances: "single"` in a manifest; a second
+    launch shows the open window and gives it the launch's action. A single-instance app is
+    a child of the root, never of the app that asked, so closing one story does not close
+    the Playlist for the other.
+  - Actions: a manifest's `actions` lists the names an app takes. The shell delivers an
+    action as `app.action`; an app reads it with `foaf.onAction(action, args, from)`
+    (`inklet/apps/app-sdk.js`). A story sends one with
+    `# APP: <app> then=go action=<name> [key=value ...]` (shell verb `story.app`, capability
+    `story:launch`). The shell refuses an app that is not single-instance (`not-single`)
+    and an action the manifest does not list (`unknown-action`). A window that a story's
+    action opens goes behind the other windows, so the reader stays in the story.
+  - The Playlist app (`inklet/apps/playlist/`, manifest `playlist.jsonld`): one queue of
+    the 24 soundtrack tracks (`inklet/apps/tv/channels.js`); actions `queue`, `play`,
+    `pause`, `next`, `open`; each item shows which story added it.
+  - Tests: `inklet/finkapp/test/e2e-apps-demo.mjs` (12 checks), the store test in
+    `packages/foafos/test/store.test.js`, and `e2e-app-tag.mjs` for a refused `then=go`.
+  - Known limits: a story that holds `story:launch` can start any single-instance app that
+    the root offers, with the root's grant attenuated by that app's manifest, and send it
+    only the actions it lists. The Playlist is not headless (step 4's headless player is
+    not built). A browser can refuse sound until the reader presses Play in the Playlist.
 
 Proposed order:
 1. `# APP:` in the story runner and the tools, with `then=wait` (what `# MINIGAME:` does

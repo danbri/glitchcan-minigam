@@ -315,6 +315,14 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   September 2026 the runner kept the first word only, so mode never reached
   a game in production. The runner's Continue loop stops on APP (then=wait) and on MINIGAME, and
   FINK tags. Details: the story-game-sync skill.
+  `then=go action=<name> [key=value ...]` (2026-10-22) is different: the runner sends
+  `story.app` and reads on. The shell accepts it only for an app whose manifest says
+  `instances: "single"` and lists the action in `actions`, launches it under the ROOT (never
+  under the story, or closing the story would close it for everyone) or shows the open one,
+  and posts `app.action`; the app reads it with `foaf.onAction`. A held action is replayed
+  when `onAction` registers, so an app must restore its own saved state BEFORE it registers
+  `onAction` (the Playlist read its own fresh save back as a second queue item until it did).
+  Demo and test: `?root=apps`, `inklet/finkapp/test/e2e-apps-demo.mjs`.
 - `# WORLD: <name> [key=value ...]` (boxed runner only, September 2026; spec
   §5.8): a stage app BESIDE the story, not a pause. Verb `story.world`
   (`open`, `beat`, `vars`, `close`; authority `story:launch`), same launch

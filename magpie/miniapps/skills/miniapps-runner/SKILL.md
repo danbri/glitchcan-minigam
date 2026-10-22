@@ -32,7 +32,7 @@ The MiniApp Manifest, Packaging and Lifecycle documents are W3C Discontinued Dra
     node test/serve.mjs 8765 &                                           # like Pages: CORS, /glitchcan-minigam/ prefix
     node test/browser.mjs                                                # 24 checks, hello package
     node test/ux.mjs                                                     # 70 checks, the suite; own server
-    RUNNER=https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html node test/ux.mjs   # live site
+    RUNNER=https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html node test/ux.mjs   # live site
 
 Re-pack after you change a sample, and commit the `.ma` file: GitHub Pages has no
 build step. `pack.mjs` runs `openPackage` on its own output, so a package that it
@@ -87,7 +87,7 @@ same bytes as over HTTP), and keep resource IRIs `https://`.
    page then stayed at `loaded`. `guest.js` now sends `miniapp.rendered` from a 250 ms
    timer if two animation frames have not come. Do not scroll the host page from code.
 2. Author CSS `display: grid` overrides the `hidden` attribute. The "App unloaded"
-   overlay took every tap while hidden. `index.html` has `[hidden] { display: none !important; }`.
+   overlay took every tap while hidden. `runner.html` has `[hidden] { display: none !important; }`.
 3. `python3 -m http.server` serves `.ma` as `application/mathematica`, and GitHub
    Pages does not serve `application/miniapp-pkg+zip`. The runner opens packages with
    `strictMediaType: false` and shows the media type as a warning.

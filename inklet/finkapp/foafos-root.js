@@ -111,6 +111,36 @@ export const ROOTS = {
     boot: { story: false, apps: ['tellyclub'] },
     apps: ['tellyclub', 'telly-guide', 'channels', 'robbamp'],
   },
+
+  // THE FOAFOS APPS DEMO (October 2026). The owner's scenario, verbatim:
+  // "It should be possible in foafos to have 3 spreadsheets and two stories
+  // open, both of which use a system wide music playlist app (flagged as
+  // singleton so playlist is exposed on foafos bus, rather than competing
+  // player instances)." Three Data windows on three documents (three
+  // stores), two story runners on two stories, and the one Playlist, which
+  // the first story to ask opens and the second finds already there.
+  // Landing page: magpie/miniapps/index.html. Design:
+  // docs/foafos-apps-20261022.md. Test: test/e2e-apps-demo.mjs.
+  apps: {
+    id: 'apps',
+    label: 'foafos apps',
+    capabilities: ['storage', 'audio', 'input', 'vars:read', 'vars:write', 'shell', 'chrome',
+                   'story:launch', 'story:link', 'story:navigate', 'story:observe', 'story:steer'],
+    // A boot entry is an app id, or `{ id, doc }` (an instance on its own
+    // document store), or `{ id, story }` (a runner on that story).
+    boot: {
+      story: false,
+      layout: 'tile',
+      apps: [
+        { id: 'sheets', doc: 'budget' },
+        { id: 'sheets', doc: 'trips' },
+        { id: 'sheets', doc: 'reading' },
+        { id: 'storyrunner', story: '/glitchcan-minigam/inklet/demos/apps/first-story.fink.js' },
+        { id: 'storyrunner', story: '/glitchcan-minigam/inklet/demos/apps/second-story.fink.js' },
+      ],
+    },
+    apps: ['sheets', 'storyrunner', 'playlist', 'channels', 'menubar'],
+  },
 };
 
 // `?root=tellyclub` was a second TV installation for a while; folding it in

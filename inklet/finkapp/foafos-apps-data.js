@@ -502,5 +502,35 @@ export const APPS = [
       "shell"
     ],
     "silent": true
+  },
+  {
+    "id": "playlist",
+    "family": "media",
+    "icon": "🎶",
+    "name": "Playlist",
+    "surface": "window",
+    "url": "../apps/playlist/index.html",
+    "desc": "One playlist for every story and app",
+    "capabilities": [
+      "storage",
+      "audio"
+    ],
+    "instances": "single",
+    "actions": [
+      "queue",
+      "play",
+      "pause",
+      "next",
+      "open"
+    ],
+    "bus": {
+      "publish": [
+        "app.playlist.*"
+      ],
+      "subscribe": [
+        "ui.skin",
+        "audio.volume"
+      ]
+    }
   }
 ];

@@ -29,7 +29,19 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     const rootBoot = window.FoafOS?.root?.boot;
     if (!story && rootBoot && rootBoot.story === false) {
-        setTimeout(() => { for (const id of (rootBoot.apps || [])) window.FoafOS.launchApp(id); }, 100);
+        // An entry is an app id, or `{ id, doc, story }`: launch options.
+        // `layout: 'tile'` grids the windows on a wide screen, again each time
+        // an app opens a window (the Playlist, when a story first asks for it).
+        setTimeout(() => {
+            for (const e of (rootBoot.apps || [])) {
+                if (typeof e === 'string') window.FoafOS.launchApp(e);
+                else window.FoafOS.launchApp(e.id, { doc: e.doc, story: e.story });
+            }
+            if (rootBoot.layout === 'tile') {
+                window.FoafOS.tileWindows?.();
+                window.FoafOS.bus?.subscribe('app.launch', () => setTimeout(() => window.FoafOS.tileWindows?.(), 50));
+            }
+        }, 100);
         return;
     }
     if (params.get('player') === 'none') return;

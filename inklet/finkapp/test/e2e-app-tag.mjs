@@ -5,7 +5,8 @@
 //     then= key, and resumes with the game's result
 //   · then=beside opens the app beside the story (the # WORLD: path) and the
 //     story goes on
-//   · then=go is refused out loud until service apps exist, and the story goes on
+//   · then=go to an app that does not exist is refused out loud, and the story goes on
+//     (then=go to the playlist, a single-instance app: e2e-apps-demo.mjs)
 //   · the old name, # MINIGAME:, still pauses and launches
 //
 //   node inklet/finkapp/test/e2e-app-tag.mjs
@@ -55,16 +56,20 @@ try {
       prose: s.prose.map((p) => p.text).join(' | ') };
   });
 
-  // then=go: refused out loud, the story goes on, nothing is launched.
+  // then=go to an app that does not exist: refused out loud, the story goes
+  // on, nothing is launched.
   await goto(r, 'go');
-  let s = await until(async () => { const x = await st(); return /goes on at once/.test(x.prose) && x; });
-  s && !s.paused && s.choices > 0 && s.launches.length === 0 && /then=go needs a service app/.test(s.status)
+  let s = await until(async () => { const x = await st(); return /goes on at once/.test(x.prose) && /refused/.test(x.status) && x; });
+  s && !s.paused && s.choices > 0 && s.launches.length === 0 && /player: open refused \(unknown-app\)/.test(s.status)
     ? pass(`then=go: the story goes on and says why nothing opened ("${s.status}")`)
     : fail(`then=go: ${JSON.stringify(s || await st())}`);
 
   // then=wait: pause, launch without then=, resume with the result.
   const playGame = async (knot, label) => {
     const before = (await st()).launches.length;
+    // The then=go step leaves "refused" in the status line; clear it, or the
+    // wait below takes that old line for this step's refusal.
+    await r.evaluate(() => { const el = document.getElementById('status'); if (el) el.textContent = ''; });
     await goto(r, knot);
     const p = await until(async () => { const x = await st(); return x.launches.length > before && (x.pausedFor || /refused/.test(x.status)) && x; });
     const req = p?.launches.at(-1);

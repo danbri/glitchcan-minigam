@@ -53,9 +53,19 @@ export class FoafStore {
     this.audit = [];
   }
 
-  /** The allowance this app gets: its own if named, else the default. */
+  /** A document namespace, `<app>#<doc>`, belongs to its app: one store
+   *  per document, the app's grant and the app's quota. */
+  static ownerOf(ns) {
+    const s = String(ns);
+    const i = s.indexOf('#');
+    return i > 0 ? s.slice(0, i) : s;
+  }
+
+  /** The allowance this app gets: its own if named, else its app's, else the default. */
   quotaFor(appId) {
-    return this.quotas.has(appId) ? this.quotas.get(appId) : this.quotaBytes;
+    if (this.quotas.has(appId)) return this.quotas.get(appId);
+    const owner = FoafStore.ownerOf(appId);
+    return this.quotas.has(owner) ? this.quotas.get(owner) : this.quotaBytes;
   }
   setQuota(appId, bytes) { this.quotas.set(appId, bytes); return this; }
 
@@ -70,7 +80,9 @@ export class FoafStore {
     return this;
   }
   revoke(appId) { this.grants.delete(appId); return this; }
-  can(appId, cap) { return !!this.grants.get(appId)?.has(cap); }
+  can(appId, cap) {
+    return !!(this.grants.get(appId) ?? this.grants.get(FoafStore.ownerOf(appId)))?.has(cap);
+  }
 
   // An app that was never granted storage does not get a silent empty
   // object — that reads as "you have no data yet" and an app will

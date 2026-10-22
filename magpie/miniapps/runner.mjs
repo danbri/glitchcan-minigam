@@ -1,10 +1,10 @@
 // The runner page: resolve a MiniApp URI, fetch and open the package, run it in a MiniAppHost,
 // and give it accessible chrome.
 //
-//   index.html                                   the default app (the hello package)
-//   index.html?app=org.glitchcan.suite           the suite experiment (inverted; see README)
-//   index.html?app=org.glitchcan.hello           an app id from registry.json
-//   index.html?uri=<MiniApp URI, URL-encoded>     e.g. foafos://miniapp/org.glitchcan.suite/pages/office/editor
+//   runner.html                                   the default app (the hello package)
+//   runner.html?app=org.glitchcan.suite           the suite experiment (inverted; see README)
+//   runner.html?app=org.glitchcan.hello           an app id from registry.json
+//   runner.html?uri=<MiniApp URI, URL-encoded>     e.g. foafos://miniapp/org.glitchcan.suite/pages/office/editor
 //   &lang=zh-CN                                  the language of the chrome and of the app
 //   &deny=geolocation,storage                    drop capabilities from the root (to see attenuation)
 //

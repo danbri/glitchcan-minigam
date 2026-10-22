@@ -6,7 +6,7 @@
 // Pages does not.
 //
 //   node magpie/miniapps/test/serve.mjs [port]
-//   -> http://127.0.0.1:<port>/glitchcan-minigam/magpie/miniapps/index.html
+//   -> http://127.0.0.1:<port>/glitchcan-minigam/magpie/miniapps/runner.html
 //   import { serve } from './serve.mjs'; const s = await serve(0); s.url; s.close();
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';

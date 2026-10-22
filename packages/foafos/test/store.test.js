@@ -97,3 +97,17 @@ test('setQuota raises an allowance after the fact', () => {
   s.setQuota('sheets', 4000);
   assert.equal(s.set('sheets', 'db', 'x'.repeat(500)).ok, true);
 });
+
+test('a document namespace <app>#<doc> is its own store, with the app\'s grant and quota', () => {
+  // Three Data windows on three documents (the foafos apps demo) must not
+  // share one keyspace, and must not need three grants either.
+  const s = new FoafStore({ backend: memoryBackend(), quotaBytes: 40, quotas: { sheets: 4000 } });
+  s.grant('sheets', [STORE_CAP]);
+  assert.equal(s.set('sheets#budget', 'db', 'one').ok, true);
+  assert.equal(s.set('sheets#trips', 'db', 'two').ok, true);
+  assert.equal(s.snapshot('sheets#budget').db, 'one');
+  assert.equal(s.snapshot('sheets#trips').db, 'two');
+  assert.equal(s.snapshot('sheets').db, undefined, 'the app store is apart from its documents');
+  assert.equal(s.quotaFor('sheets#budget'), 4000);
+  assert.equal(s.set('tv#x', 'k', 'v').ok, false, 'no grant for the app, none for its documents');
+});

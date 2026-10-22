@@ -18,7 +18,7 @@ const states = () => page.evaluate(() => window.__miniapps.host.log.map(e => `${
 const pageFrame = (i) => page.frames().filter(f => f.parentFrame() === page.mainFrame())[i];
 const waitFor = async (fn, ms = 5000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await page.waitForTimeout(50); } return false; };
 
-await page.goto(base + 'index.html?app=org.glitchcan.hello&lang=zh-CN&dev');
+await page.goto(base + 'runner.html?app=org.glitchcan.hello&lang=zh-CN&dev');
 await page.waitForSelector('#perm-dialog[open]');
 await page.click('#perm-allow');
 await waitFor(() => page.evaluate(() => !!window.__miniapps));
@@ -75,7 +75,7 @@ check(s.slice(-2).join(' ') === 'page:unloaded:index global:unloaded', `close: $
 check(await page.evaluate(() => window.__miniapps.tree.children(window.__miniapps.root.id).length) === 0, 'tree node closed');
 
 // Attenuation: a root without geolocation refuses LOCATION, and the API call is denied.
-await page.goto(base + 'index.html?app=org.glitchcan.hello&deny=geolocation&dev');
+await page.goto(base + 'runner.html?app=org.glitchcan.hello&deny=geolocation&dev');
 await waitFor(async () => (await page.evaluate(() => window.__miniapps?.host.log.length || 0)) >= 5);
 const r2 = await page.evaluate(() => window.__miniapps.host.refused.map(x => `${x.name}:${x.reason}`));
 check(r2.includes('system.permission.LOCATION:the root does not hold it'), `LOCATION refused by attenuation: ${r2}`);

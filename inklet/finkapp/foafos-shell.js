@@ -2721,7 +2721,23 @@ function buildUI() {
     // spawning app said otherwise), and the tree refuses any capability
     // the parent does not itself hold. This is what makes handing out
     // `launch` safe: an app cannot mint a more powerful app than itself.
-    const parentId = opts.parentId || FoafOS.rootNode?.id || null;
+    // A SINGLE-INSTANCE app belongs to the installation, not to whoever
+    // asked first: it hangs from the root, so closing the story that opened
+    // the playlist does not close it for the other story.
+    const parentId = (app.instances === 'single' ? null : opts.parentId) || FoafOS.rootNode?.id || null;
+    // ONE OF IT for the whole installation (manifest `instances: "single"`,
+    // docs/foafos-apps-20261022.md section 5). A second launch shows the
+    // window that exists, as a web app's `launch_handler` `focus-existing`
+    // does, and hands it the launch's action. A launch from a story
+    // (`quiet`) does not raise it: the reader stays in the story.
+    if (app.instances === 'single') {
+      const existing = [...apps.nodes.values()].find((n) => n.appId === app.id);
+      if (existing) {
+        if (opts.action) deliverAction(existing.id, app, opts);
+        if (!opts.quiet) focusNode(existing);
+        return document.querySelector(`.foafos-window[data-instance="${existing.id}"]`);
+      }
+    }
     // A STAGE app's node is made once, by the game handler, when its guest
     // registers (minigame.instance). Spawning here as well gave every
     // picker launch two rows, and the second one outlived the game as a
@@ -2812,8 +2828,16 @@ function buildUI() {
         // huge monitor is not wallpapered edge to edge.
         const appW = Math.min(720, Math.max(380, Math.round(window.innerWidth * 0.55)));
         const appH = Math.min(680, Math.max(460, Math.round(window.innerHeight * 0.72)));
-        const win = makeWindow(`${app.icon} ${app.name}`, appW, appH);
+        // A DOCUMENT names this instance's store (`opts.doc`, a root's boot
+        // entry `{ id, doc }`): three Data windows on three documents keep
+        // three stores, where three plain launches would share one.
+        const doc = /^[a-z0-9][a-z0-9-]{0,31}$/.test(String(opts.doc || '')) ? String(opts.doc) : null;
+        const win = makeWindow(`${app.icon} ${app.name}${doc ? `: ${doc}` : ''}`, appW, appH);
         win.dataset.appId = app.id;   // lets CSS treat the story window as a place, not a window
+        if (doc) win.dataset.doc = doc;
+        // Opened by a story's request (`then=go`): behind the other windows,
+        // so the reader stays in the story (input focus rule, design §10).
+        if (opts.quiet) win.style.zIndex = 2610;
         if (opts.story) win.dataset.story = opts.story;   // app.hello hands it to the runner
         const frame = document.createElement('iframe');
         frame.title = app.name;
@@ -2863,11 +2887,71 @@ function buildUI() {
           }).catch(() => win.remove());
         });
         win.dataset.instance = node.id;
+        if (opts.action) deliverAction(node.id, app, opts);
         return win;
       }
     }
   }
   FoafOS.launchApp = launchApp;
+
+  // TILE the open windows in a grid, in the order they opened, on a screen
+  // wide enough for it (a root's `boot.layout: 'tile'`). A narrow screen
+  // keeps one maximized window at a time, and so does a maximized or
+  // minimized window here.
+  FoafOS.tileWindows = () => {
+    if (window.innerWidth < 900) return false;
+    const wins = [...document.querySelectorAll('.foafos-window')]
+      .filter((w) => !w.classList.contains('maximized') && !w.classList.contains('minimized'));
+    if (!wins.length) return false;
+    const n = wins.length;
+    const cols = Math.ceil(Math.sqrt(n));
+    const rows = Math.ceil(n / cols);
+    const top = 52, bottom = 70, gap = 8;
+    const cw = (window.innerWidth - gap * (cols + 1)) / cols;
+    const ch = (window.innerHeight - top - bottom - gap * (rows - 1)) / rows;
+    wins.forEach((w, i) => {
+      w.style.left = `${Math.round(gap + (i % cols) * (cw + gap))}px`;
+      w.style.top = `${Math.round(top + Math.floor(i / cols) * (ch + gap))}px`;
+      w.style.width = `${Math.round(cw)}px`;
+      w.style.height = `${Math.round(ch)}px`;
+    });
+    return true;
+  };
+
+  // ACTIONS: a named operation handed to a running app (`queue` a track).
+  // Held per node until the frame has had `app.init`, then posted; the app
+  // reads them with `foaf.onAction`. Only names in the manifest's `actions`
+  // pass: an asker can choose among what the app offers, nothing else.
+  const heldActions = new Map();   // node id -> [{ action, args, from }]
+  const initedNodes = new Set();
+  function deliverAction(nodeId, app, opts) {
+    const action = String(opts.action || '');
+    if (!(app.actions || []).includes(action)) {
+      bus.publish('app.action.refused', {
+        summary: `${app.name} has no action "${action}"`, id: app.id, action,
+      });
+      return false;
+    }
+    const args = {};
+    for (const [k, v] of Object.entries(opts.args || {})) args[String(k)] = String(v);
+    const msg = { type: 'app.action', action, args, from: opts.from || null };
+    bus.publish('app.action', {
+      summary: `${opts.from?.label || 'someone'} → ${app.name}: ${action}`,
+      id: app.id, action, args, from: opts.from || null,
+    });
+    if (!initedNodes.has(nodeId)) {
+      if (!heldActions.has(nodeId)) heldActions.set(nodeId, []);
+      heldActions.get(nodeId).push(msg);
+      return true;
+    }
+    const frame = document.querySelector(`.foafos-window[data-instance="${nodeId}"] iframe`);
+    try { frame?.contentWindow?.postMessage(msg, '*'); } catch (err) { /* closed */ }
+    return true;
+  }
+  FoafOS.deliverAction = (id, action, args = {}) => {
+    const node = [...apps.nodes.values()].find((n) => n.appId === id);
+    return node ? deliverAction(node.id, appById(id), { action, args }) : false;
+  };
 
   // One-tap deep link: `?app=<id>` opens an app straight after boot, so a
   // shareable URL can drop someone into the boxed Story Runner (or any app
@@ -2930,6 +3014,9 @@ function buildUI() {
     // nothing while it does.
     const nodeId = node?.id || null;
     const holds = (cap) => !!nodeId && apps.can(nodeId, cap);
+    // The store namespace: the app's, or the app's document's
+    // (`<app>#<doc>`, which the store treats as the app's: same grant, same quota).
+    const storeNs = win.dataset.doc ? `${app.id}#${win.dataset.doc}` : app.id;
     const refuseAtNode = (topic, cap, op, extra = {}) => {
       bus.publish(`${topic}.denied`, {
         summary: `${app.name} holds no ${cap} (${op})`, appId: app.id, op, node: nodeId, ...extra,
@@ -2974,7 +3061,7 @@ function buildUI() {
           bootTaken = !win.dataset.story && !app.story && (app.capabilities || []).includes('story:link') ? takeBootStory() : null;
         }
         const bootStory = win.dataset.story || app.story || bootTaken || null;
-        const snapshot = holds('storage') ? store.snapshot(app.id)
+        const snapshot = holds('storage') ? store.snapshot(storeNs)
           : (refuseAtNode('store', 'storage', 'snapshot'), null);
         try {
           frame.contentWindow?.postMessage({
@@ -3010,6 +3097,14 @@ function buildUI() {
             },
           }, '*');
         } catch (err) { /* closed */ }
+        // Actions asked before the frame could hear them go now, after init.
+        if (nodeId) {
+          initedNodes.add(nodeId);
+          for (const msg of heldActions.get(nodeId) || []) {
+            try { frame.contentWindow?.postMessage(msg, '*'); } catch (err) { /* closed */ }
+          }
+          heldActions.delete(nodeId);
+        }
         bus.publish('sys.app.ready', {
           summary: `${app.name} speaks the app protocol`,
           id: app.id, capabilities: caps, storage: !!snapshot,
@@ -3032,6 +3127,9 @@ function buildUI() {
         const need = verb === 'story.vars'
           ? (d.detail?.op === 'write' ? 'vars:write' : 'vars:read')
           : { 'story.launch': 'story:launch', 'story.world': 'story:launch',
+              // `# APP: <app> then=go action=…`: an action handed to a
+              // single-instance app (the playlist); the story goes on.
+              'story.app': 'story:launch',
               'story.link': 'story:link',
               // A session IS the runner's composition of one or more finks,
               // so it answers to the composition authority.
@@ -3050,6 +3148,24 @@ function buildUI() {
         // audio, and must tally the same way (parked-work note, 2026-07-28).
         tallyCap(app.id, need);
         try {
+          if (verb === 'story.app') {
+            // Only a single-instance app takes then=go: the action goes to
+            // the one instance, so two stories reach the same playlist. Only
+            // a name in its manifest `actions` passes (deliverAction).
+            const target = appById(String(d.detail?.app || ''));
+            if (!target || !rootOffers(ROOT, target.id)) { reply({ ok: false, reason: 'unknown-app' }); return; }
+            if (target.instances !== 'single') { reply({ ok: false, reason: 'not-single' }); return; }
+            const action = String(d.detail?.action || 'open');
+            if (!(target.actions || []).includes(action)) { reply({ ok: false, reason: 'unknown-action' }); return; }
+            const runnerNodeId = win.dataset.instance || null;
+            const label = currentSession(runnerNodeId)?.label || app.name;
+            const out = launchApp(target.id, {
+              action, args: d.detail?.args || {}, quiet: true,
+              from: { appId: app.id, label },
+            });
+            reply(out ? { ok: true, app: target.id, action } : { ok: false, reason: 'refused' });
+            return;
+          }
           if (verb === 'story.launch') {
             const chk = stageLaunchCheck(app, win, d.detail?.game, d.detail?.session);
             if (!chk.ok) {
@@ -3536,9 +3652,9 @@ function buildUI() {
       if (d.type === 'store.set' || d.type === 'store.remove' || d.type === 'store.clear') {
         tallyCap(app.id, 'storage');
         const r = !holds('storage') ? refuseAtNode('store', 'storage', d.type, { key: d.key })
-                : d.type === 'store.set' ? store.set(app.id, d.key, d.value)
-                : d.type === 'store.remove' ? store.remove(app.id, d.key)
-                : store.clear(app.id);
+                : d.type === 'store.set' ? store.set(storeNs, d.key, d.value)
+                : d.type === 'store.remove' ? store.remove(storeNs, d.key)
+                : store.clear(storeNs);
         if (!r.ok) {
           try {
             frame.contentWindow?.postMessage({ type: 'store.refused', op: d.type, key: d.key, reason: r.reason }, '*');

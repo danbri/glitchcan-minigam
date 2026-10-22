@@ -28,7 +28,12 @@
 (function () {
   if (window.foaf) return;
 
-  const listeners = { init: [], grant: [], suspend: [], resume: [], terminate: [], audio: [] };
+  const listeners = { init: [], grant: [], suspend: [], resume: [], terminate: [], audio: [], action: [] };
+  // ACTIONS (docs/foafos-apps-20261022.md, section 5): named operations the
+  // shell delivers on behalf of a story or another app — `queue` a track on
+  // the one playlist, say. One may arrive before a deferred module has
+  // registered, so they are held until someone does.
+  const heldActions = [];
   // SNAPSHOT / RESTORE (spec §5.5.4), same shape as every other service:
   // REGISTERING the handler IS the answer to the shell's contract probe.
   // A window app that never registers keeps working exactly as before and
@@ -250,6 +255,21 @@
       post({ type: 'app.snapshot-keep', state: state ?? null });
       return foaf;
     },
+    /**
+     * Receive actions: `fn(action, args, from)`. `action` is one of the
+     * names in this app's manifest `actions`; `args` a plain object of
+     * strings; `from` is `{ appId, label }` of the asker, or null. Actions
+     * held before registration are replayed in order.
+     */
+    onAction: (fn) => {
+      listeners.action.push(fn);
+      declareContract('actions');
+      while (heldActions.length) {
+        const a = heldActions.shift();
+        try { fn(a.action, a.args, a.from); } catch (err) { console.error(err); }
+      }
+      return foaf;
+    },
     onSuspend: (fn) => { listeners.suspend.push(fn); return foaf; },
     onResume: (fn) => { listeners.resume.push(fn); return foaf; },
     onTerminate: (fn) => { listeners.terminate.push(fn); return foaf; },
@@ -374,6 +394,15 @@
     if (d.type === 'app.restore') {
       if (restoreFn) { try { restoreFn(d.state); } catch (err) { console.error(err); } }
       else pendingRestore = d.state;
+      return;
+    }
+    if (d.type === 'app.action') {
+      const a = { action: String(d.action || ''), args: d.args && typeof d.args === 'object' ? d.args : {},
+                  from: d.from || null };
+      if (!listeners.action.length) { heldActions.push(a); return; }
+      for (const fn of [...listeners.action]) {
+        try { fn(a.action, a.args, a.from); } catch (err) { console.error(err); }
+      }
       return;
     }
     if (d.type === 'audio-level') {

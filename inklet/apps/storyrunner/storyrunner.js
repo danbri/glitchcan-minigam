@@ -222,7 +222,7 @@ function handleTag(tag) {
       // it is taken off before the arguments go to the shell.
       const { then, rest } = appThen(value);
       if (then === 'beside') _pendingWorldTag = rest;
-      else if (then === 'go') setStatus(`${gameTag(rest).name}: then=go needs a service app, and there are none yet`);
+      else if (then === 'go') sendAppAction(rest);
       else {
         if (then !== 'wait') setStatus(`${gameTag(rest).name}: then=${then} is not known; waiting for the app`);
         _pendingGame = rest;
@@ -796,6 +796,16 @@ function appThen(value) {
     return true;
   }).join(' ');
   return { then, rest };
+}
+
+// `# APP: <app> then=go action=<name> [key=value ...]`: hand an action to a
+// single-instance app (the playlist) and go on reading. The shell checks that
+// the app is single-instance and offers that action; a refusal is shown.
+async function sendAppAction(value) {
+  const { name, args } = gameTag(value);
+  const { action = 'open', ...rest } = args;
+  const res = await storyRequest('story.app', { app: name, action, args: rest });
+  if (!res?.ok) setStatus(`${name}: ${action} refused (${res?.reason || 'no answer'})`);
 }
 
 function gameTag(value) {

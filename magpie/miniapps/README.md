@@ -1,6 +1,11 @@
 # miniapps: a W3C MiniApp package runner for foafos
 
-Live runner: https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html
+Live runner: https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html
+
+Since 2026-10-22 the page https://danbri.github.io/glitchcan-minigam/magpie/miniapps/ is the
+landing page of the foafos apps demo (owner: "I'd like a shippable demo soon, replacing
+earlier miniapp demo"), and the runner moved from `index.html` to `runner.html`. The demo
+and what it is built from: `docs/foafos-apps-20261022.md`, section 9.
 
 This folder tests one question. Can the W3C MiniApp specifications supply the app
 model that the foafos shell lacks: a declared manifest, a package, a lifecycle and an
@@ -157,7 +162,7 @@ uses both.
 ## 3. What is built
 
 ```
-index.html, runner.mjs   the runner page: URI → registry → package → host
+runner.html, runner.mjs  the runner page: URI → registry → package → host
 registry.json            the static "package server" (id → versions → .ma file)
 src/addressing.mjs       MiniApp URI parse and format (Addressing §4)
 src/manifest.mjs         manifest processing (Manifest §1.7), defaults, warnings
@@ -181,12 +186,12 @@ test/serve.mjs           a static server that behaves like GitHub Pages (CORS, /
 
 ### Deep links
 
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html opens the hello package.
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.suite opens the suite experiment (inverted; see the correction).
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.suite&lang=zh-CN opens it in Chinese.
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.suite%2Fpages%2Fstory%2Fstory%3Fstory%3D%2Fglitchcan-minigam%2Finklet%2Fhampstead.fink.js%26title%3DHampstead opens the Hampstead story.
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.suite%2Fpages%2Foffice%2Feditor opens edot Documents.
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.hello&deny=geolocation opens it with a root that has no geolocation. The LOCATION request is then refused by attenuation.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html opens the hello package.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html?app=org.glitchcan.suite opens the suite experiment (inverted; see the correction).
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html?app=org.glitchcan.suite&lang=zh-CN opens it in Chinese.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.suite%2Fpages%2Fstory%2Fstory%3Fstory%3D%2Fglitchcan-minigam%2Finklet%2Fhampstead.fink.js%26title%3DHampstead opens the Hampstead story.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.suite%2Fpages%2Foffice%2Feditor opens edot Documents.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/runner.html?app=org.glitchcan.hello&deny=geolocation opens it with a root that has no geolocation. The LOCATION request is then refused by attenuation.
 - Add `&dev` to show the developer panel (URI box, grant table, warnings, bus log).
 
 The runner writes the current page back into `?uri=`, so the address bar is always a deep
