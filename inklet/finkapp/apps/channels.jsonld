@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "channels",
+  "@type": "App",
+  "position": 16,
+  "id": "channels",
+  "family": "media",
+  "icon": "📻",
+  "name": "Glitchcan Original Soundtrack",
+  "surface": "window",
+  "url": "../apps/tv/index.html",
+  "desc": "The tape library, as stations",
+  "capabilities": [
+    "storage",
+    "audio"
+  ],
+  "notes": [
+    "The id stays `channels` after the July 2026 rename: it is the store namespace (`foafos.store.channels` — changing it silently orphans someone's last-tuned station), the name three root manifests list, and what a dozen assertions launch. A display name is a display name."
+  ]
+}

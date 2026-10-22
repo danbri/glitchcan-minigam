@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "calendar",
+  "@type": "App",
+  "position": 2,
+  "id": "calendar",
+  "family": "office",
+  "icon": "📅",
+  "name": "Calendar",
+  "surface": "window",
+  "url": "../../magpie/edot/calendar/calendar.html",
+  "desc": "Days and plans",
+  "capabilities": [
+    "storage"
+  ],
+  "silent": true,
+  "notes": [
+    "MIGRATED off the escape hatch (July 2026), and the first Office app to manage it. It used IndexedDB, which an opaque origin refuses; its store now falls back to the brokered key/value when IDB will not open, so it keeps its indexes standalone and loses nothing but them here."
+  ]
+}

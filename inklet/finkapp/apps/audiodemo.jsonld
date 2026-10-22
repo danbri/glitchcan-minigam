@@ -1,0 +1,15 @@
+{
+  "@context": "context.jsonld",
+  "@id": "audiodemo",
+  "@type": "App",
+  "position": 22,
+  "id": "audiodemo",
+  "family": "make",
+  "icon": "🔊",
+  "name": "Audio demo",
+  "surface": "window",
+  "opens": "storyrunner",
+  "story": "/glitchcan-minigam/inklet/demos/audio-demo.fink.js",
+  "desc": "mp3 beds + foley",
+  "capabilities": []
+}

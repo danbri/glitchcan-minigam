@@ -1,0 +1,23 @@
+{
+  "@context": "context.jsonld",
+  "@id": "edot",
+  "@type": "App",
+  "position": 0,
+  "id": "edot",
+  "family": "office",
+  "icon": "🗂️",
+  "name": "edot",
+  "surface": "window",
+  "url": "../../magpie/edot/edot.html",
+  "desc": "The suite shell",
+  "capabilities": [
+    "storage",
+    "secrets",
+    "git:write"
+  ],
+  "silent": true,
+  "notes": [
+    "MIGRATED (July 2026). edot's own `same-origin` turned out to be cargo cult: the page has no iframes to reach into, every localStorage call was already try-wrapped, and `Library.create()` already tried IndexedDB and fell back to a localStorage backend. All it needed was for that fallback to land somewhere — app-sdk's shim over the broker. `secrets` because it really does hold a credential: its GitHub-backed saving takes a token. Declared SEPARATELY from `storage` on purpose — measured (July 2026), that token was landing in the storage broker in plaintext on the shell's disk, because reading back what you wrote is what a storage broker is for. See docs/foafos-secrets-and-auth-20260726.md",
+    "`git:write` is a VERB capability, not a data one: it does not let edot read a token, it lets it ask the shell to commit a file — and only to wherever `FoafOS.aimOp` was pointed. With no destination configured, holding it does nothing at all, which is the correct default for something that writes to someone's repo. s3/solid ride the same rail and are deliberately NOT declared until a caller exists for them: declaring a capability no code uses is how a vocabulary starts lying."
+  ]
+}

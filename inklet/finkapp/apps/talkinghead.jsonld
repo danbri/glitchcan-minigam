@@ -1,0 +1,28 @@
+{
+  "@context": "context.jsonld",
+  "@id": "talkinghead",
+  "@type": "App",
+  "position": 14,
+  "id": "talkinghead",
+  "family": "play",
+  "icon": "🗣️",
+  "name": "Talking head",
+  "surface": "stage",
+  "game": "talkinghead",
+  "url": "../../drift-city/feed/index.html",
+  "desc": "A Drift City face speaking a recorded line",
+  "controls": "none",
+  "args": [
+    "line",
+    "mood"
+  ],
+  "capabilities": [
+    "audio"
+  ],
+  "features": [
+    "autoplay"
+  ],
+  "notes": [
+    "One Drift City cast member on the helmet comms feed, speaking a recorded line: `# APP: talkinghead line=mags-3 [mood=wry]`. A rigged Gaussian-splat head (LAM, synthetic faces only), mouth moved by the clip. It plays without a tap in its frame, so it needs autoplay; it hands control back when the line ends (drift-city/feed/index.html)."
+  ]
+}

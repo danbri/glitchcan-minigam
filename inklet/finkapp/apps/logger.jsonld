@@ -1,0 +1,17 @@
+{
+  "@context": "context.jsonld",
+  "@id": "logger",
+  "@type": "App",
+  "position": 25,
+  "id": "logger",
+  "family": "make",
+  "icon": "📜",
+  "name": "Logger",
+  "surface": "panel",
+  "panel": "logger",
+  "desc": "The event bus, filterable — including everything refused",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true
+}

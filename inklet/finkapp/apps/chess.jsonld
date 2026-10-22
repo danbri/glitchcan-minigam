@@ -1,0 +1,19 @@
+{
+  "@context": "context.jsonld",
+  "@id": "chess",
+  "@type": "App",
+  "position": 8,
+  "id": "chess",
+  "family": "play",
+  "icon": "♟️",
+  "name": "Chess",
+  "surface": "stage",
+  "game": "chess",
+  "desc": "Classic strategy game",
+  "controls": "none",
+  "capabilities": [
+    "vars:read",
+    "vars:write"
+  ],
+  "silent": true
+}

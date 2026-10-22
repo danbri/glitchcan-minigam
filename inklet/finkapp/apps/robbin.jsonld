@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "robbin",
+  "@type": "App",
+  "position": 4,
+  "id": "robbin",
+  "family": "play",
+  "icon": "🐦",
+  "name": "Robbin",
+  "surface": "stage",
+  "game": "robbin",
+  "desc": "Grow the flock across the Underground",
+  "controls": "dpad",
+  "capabilities": [
+    "input",
+    "vars:read",
+    "vars:write",
+    "audio"
+  ]
+}

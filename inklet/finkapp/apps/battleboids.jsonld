@@ -1,0 +1,19 @@
+{
+  "@context": "context.jsonld",
+  "@id": "battleboids",
+  "@type": "App",
+  "position": 7,
+  "id": "battleboids",
+  "family": "play",
+  "icon": "🧙",
+  "name": "Boidwars",
+  "surface": "stage",
+  "game": "battleboids",
+  "desc": "Command your wizard flock",
+  "controls": "none",
+  "capabilities": [
+    "vars:read",
+    "vars:write",
+    "audio"
+  ]
+}

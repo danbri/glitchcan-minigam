@@ -1,0 +1,71 @@
+{
+  "@context": "context.jsonld",
+  "@id": "drift",
+  "@type": "App",
+  "position": 13,
+  "id": "drift",
+  "family": "play",
+  "icon": "🪐",
+  "name": "Drift City",
+  "surface": "stage",
+  "game": "drift",
+  "url": "../../drift-city/dist/city.html",
+  "desc": "The city on Titan and its stories",
+  "controls": "sticks",
+  "args": [
+    "tale"
+  ],
+  "capabilities": [
+    "audio",
+    "vars:read",
+    "vars:write",
+    "story:steer"
+  ],
+  "variables": {
+    "read": [
+      "want_time",
+      "want_weather",
+      "card",
+      "ledger",
+      "minutes",
+      "oilcan",
+      "patch",
+      "reed",
+      "scale",
+      "setlist",
+      "stone",
+      "tape",
+      "tenpo",
+      "ticket",
+      "voucher"
+    ],
+    "write": [
+      "here",
+      "hour",
+      "snowing",
+      "card",
+      "ledger",
+      "minutes",
+      "oilcan",
+      "patch",
+      "reed",
+      "scale",
+      "setlist",
+      "stone",
+      "tape",
+      "tenpo",
+      "ticket",
+      "voucher"
+    ]
+  },
+  "features": [
+    "autoplay"
+  ],
+  "opens": "storyrunner",
+  "story": "/glitchcan-minigam/drift-city/foafos-entry.fink.js",
+  "notes": [
+    "Drift City itself: the raymarched city on Titan (WebGPU, with a WebGL fallback) and its stories. `# APP: drift tale=peraspera` opens it on that story; `args` lists the only keys a story may pass. It obeys pause and the master volume (audio), keeps its story saves as a snapshot, and at a story's end offers the way back (drift-city/src/host.js). Its own controls, so no host pad. As a WORLD (`# WORLD: drift`, the story in the runner) it reads the story's want_time and want_weather, and writes where you are, the hour and the snow back to it. The clues are the story's VARs named by its `# hotspot:` tags: read so a found one is not offered again, written when the city finds one, and then the city re-enters the reader's scene (story:steer). Autoplay: the reader taps the story, not the city, so the city's sound must start without a tap in its own frame.",
+    "From the launcher it opens the story runner on the Drift hub, whose stories open the city as their world (`# WORLD: drift`): the story is foafos's, not the city's own ink client.",
+    "The clues are the VARs its stories name in `# hotspot:` tags (drift-city/story/*.fink.js); they are listed in both variables.read and variables.write. A new clue in a story needs its name in both lists, or the city cannot report finding it (the broker refuses an unlisted write)."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "@context": "context.jsonld",
+  "@id": "skydock",
+  "@type": "App",
+  "position": 10,
+  "id": "skydock",
+  "family": "play",
+  "icon": "🛰️",
+  "name": "Skydock Scuttlebutt",
+  "surface": "stage",
+  "game": "skydock",
+  "desc": "Gemstones and gossip on the night shift",
+  "controls": "none",
+  "capabilities": [
+    "input",
+    "vars:read",
+    "vars:write",
+    "audio"
+  ],
+  "notes": [
+    "Skydock ran unregistered: the switcher showed it as a bare lowercase \"skydock\" with a window glyph and CAPABILITIES none, because appById() had nothing to answer with. It still WORKED — the legacy FinkMinigames path is not capability-gated — which is exactly the shape the tree exists to make visible rather than convenient."
+  ]
+}

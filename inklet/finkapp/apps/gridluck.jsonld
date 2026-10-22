@@ -1,0 +1,19 @@
+{
+  "@context": "context.jsonld",
+  "@id": "gridluck",
+  "@type": "App",
+  "position": 5,
+  "id": "gridluck",
+  "family": "play",
+  "icon": "👻",
+  "name": "GridLuck",
+  "surface": "stage",
+  "game": "gridluck",
+  "desc": "Pac-Man style maze chase",
+  "controls": "none",
+  "capabilities": [
+    "vars:read",
+    "vars:write"
+  ],
+  "silent": true
+}

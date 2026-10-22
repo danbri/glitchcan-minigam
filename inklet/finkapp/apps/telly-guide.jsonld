@@ -1,0 +1,21 @@
+{
+  "@context": "context.jsonld",
+  "@id": "telly-guide",
+  "@type": "App",
+  "position": 20,
+  "id": "telly-guide",
+  "family": "media",
+  "icon": "📋",
+  "name": "Channel Guide",
+  "surface": "window",
+  "url": "https://danbri.github.io/isle_of_glitch/tvp/app/#guide",
+  "desc": "What's on, across every Tellyclub channel",
+  "capabilities": [
+    "audio"
+  ],
+  "external": true,
+  "persists": false,
+  "notes": [
+    "Tellyclub's widgets, broken OUT as sub-apps (owner's direction, July 2026) rather than reachable only from inside the running TV. The channel guide is the first: tvp's hash router gained `#guide`, so this is the same app booted straight into its EPG. More of tellyclub's internal widgets (controller, venues) can follow the same pattern — each is one hash route in tvp plus one line here."
+  ]
+}

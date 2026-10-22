@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "mudslider",
+  "@type": "App",
+  "position": 6,
+  "id": "mudslider",
+  "family": "play",
+  "icon": "⛏️",
+  "name": "Mudslider",
+  "surface": "stage",
+  "game": "mudslider",
+  "desc": "Boulder Dash-style puzzle",
+  "controls": "lite",
+  "capabilities": [
+    "input",
+    "vars:read",
+    "vars:write",
+    "audio"
+  ]
+}

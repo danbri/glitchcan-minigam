@@ -1,0 +1,21 @@
+{
+  "@context": "context.jsonld",
+  "@id": "canarywharf",
+  "@type": "App",
+  "position": 11,
+  "id": "canarywharf",
+  "family": "play",
+  "icon": "🐤",
+  "name": "Canary Wharf",
+  "surface": "stage",
+  "game": "canarywharf",
+  "desc": "One small bird, one big skyline",
+  "controls": "none",
+  "capabilities": [
+    "vars:read",
+    "vars:write"
+  ],
+  "notes": [
+    "The table of contents links it (`# APP: canarywharf`), but it was in neither of the stage host's lists, so that link played Gem Hunt. Its page (magpie/dbdb) writes the wharf variables and makes sound, and it answers neither the audio nor the controls probe, so it holds neither."
+  ]
+}

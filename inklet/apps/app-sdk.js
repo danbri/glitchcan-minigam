@@ -70,7 +70,7 @@
   const denied = (op) => {
     const e = new Error(
       `foafos: this app was not granted the "storage" capability, so ${op} is unavailable. ` +
-      `Add "storage" to its capabilities in foafos-apps.js.`);
+      `Add "storage" to its capabilities in its manifest, inklet/finkapp/apps/<id>.jsonld.`);
     e.name = 'FoafCapabilityError';
     return e;
   };

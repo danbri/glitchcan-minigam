@@ -1,0 +1,16 @@
+{
+  "@context": "context.jsonld",
+  "@id": "toc",
+  "@type": "App",
+  "position": 21,
+  "id": "toc",
+  "family": "make",
+  "icon": "📖",
+  "name": "Stories",
+  "surface": "window",
+  "opens": "storyrunner",
+  "story": "/glitchcan-minigam/inklet/toc.fink.js",
+  "desc": "The table of contents",
+  "capabilities": [],
+  "silent": true
+}

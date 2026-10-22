@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "maker",
+  "@type": "App",
+  "position": 23,
+  "id": "maker",
+  "family": "make",
+  "icon": "🔧",
+  "name": "Maker",
+  "surface": "panel",
+  "panel": "maker",
+  "desc": "Variables, governance, capabilities",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true,
+  "notes": [
+    "Shell-native: drawn by the shell itself, so there is no frame and no capability boundary. Listed here so there is ONE registry — but do not read this row as \"sandboxed with no capabilities\"."
+  ]
+}

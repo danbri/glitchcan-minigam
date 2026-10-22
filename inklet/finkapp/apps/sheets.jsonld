@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "sheets",
+  "@type": "App",
+  "position": 1,
+  "id": "sheets",
+  "family": "office",
+  "icon": "📊",
+  "name": "Data",
+  "surface": "window",
+  "url": "../../magpie/edot/data/data.html",
+  "desc": "Spreadsheet, SQL, RDF",
+  "capabilities": [
+    "storage"
+  ],
+  "silent": true,
+  "notes": [
+    "MIGRATED (July 2026). Data keeps one SQLite blob, and kept it in IndexedDB — which an opaque origin refuses to open. Its engine now picks a backend by trying, and falls back to the same blob base64'd through the store broker. It reports which one is live, and a refused write is announced rather than swallowed: this is the app where a silent autosave failure costs the most."
+  ]
+}

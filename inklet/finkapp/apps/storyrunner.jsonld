@@ -1,0 +1,39 @@
+{
+  "@context": "context.jsonld",
+  "@id": "storyrunner",
+  "@type": "App",
+  "position": 17,
+  "id": "storyrunner",
+  "family": "play",
+  "icon": "📖",
+  "name": "Finkosphere",
+  "surface": "window",
+  "url": "../apps/storyrunner/index.html",
+  "desc": "A FINK story, sandboxed all the way up",
+  "featured": true,
+  "capabilities": [
+    "story:launch",
+    "story:link",
+    "story:navigate",
+    "story:observe",
+    "story:steer",
+    "audio",
+    "input",
+    "vars:read",
+    "vars:write"
+  ],
+  "bus": {
+    "publish": [
+      "app.storyrunner.*"
+    ],
+    "subscribe": [
+      "wm.mode",
+      "audio.volume",
+      "ui.skin"
+    ]
+  },
+  "notes": [
+    "The narrative runtime, BOXED — a story compiled and played entirely in an opaque-origin frame, reaching the shell only through story:* verbs (spec §5.7, threat model 2026-07-28). It is the only story engine. NO same-origin: it is a real box. story:launch lets a # APP: tag ask the shell to open a (separately boxed) guest — up AND down. FINKOSPHERE — the boxed story engine (owner's name, July 2026). The id stays `storyrunner`: it is in `?app=` links, the snapshot key (`app:storyrunner`), the capUse ledger and the e2e suites. A label is what people read; an id is what things are keyed by.",
+    "no `story` override: the runner defaults to its own ./demo.fink.js, resolved relative to the RUNNER frame (a finkapp-relative path would resolve against the wrong base once fetched inside the box) It holds what it CONFERS: a minigame it launches becomes its child, and attenuation requires the child's caps ⊆ the runner's. So the runner carries input + vars:read/write on behalf of the games it instantiates — the capability border is real, not cosmetic. `story:observe` is the LEVEL-1 job from the layer model: this app is the observability point for the story subtree beneath it. It is a separate capability from playing, so a runner that should only play can be handed a list without it and the shell will refuse the verb. `story:steer` it holds only to confer: a world it opens (`# WORLD:`) may ask the story to re-enter the reader's scene (spec §5.8)."
+  ]
+}

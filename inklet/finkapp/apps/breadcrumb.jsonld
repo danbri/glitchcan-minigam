@@ -1,0 +1,17 @@
+{
+  "@context": "context.jsonld",
+  "@id": "breadcrumb",
+  "@type": "App",
+  "position": 28,
+  "id": "breadcrumb",
+  "family": "chrome",
+  "icon": "🧭",
+  "name": "Breadcrumb",
+  "surface": "chrome",
+  "mount": "breadcrumb-container",
+  "desc": "The trail of knots you came through",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true
+}

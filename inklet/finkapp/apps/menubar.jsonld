@@ -1,0 +1,17 @@
+{
+  "@context": "context.jsonld",
+  "@id": "menubar",
+  "@type": "App",
+  "position": 29,
+  "id": "menubar",
+  "family": "chrome",
+  "icon": "📊",
+  "name": "Menubar",
+  "surface": "chrome",
+  "mount": "foaf-menubar",
+  "desc": "A clock and app dashboard widgets, grouped by the app tree",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true
+}

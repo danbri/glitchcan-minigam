@@ -820,7 +820,15 @@ widgets are Apps." The tree half was already true (game nodes spawn under
   surfaces" below); Alt+M toggles mute. Shortcuts skip
   INPUT/TEXTAREA/SELECT/contenteditable.
 - The installed set is CONTENT: `inklet/finkapp/foafos-apps.js`, never
-  `packages/foafos`. `kind` ∈ window | game | story | panel decides how
+  `packages/foafos`. Since 2026-10-22 its rows are MANIFESTS: one JSON-LD
+  file per app, `inklet/finkapp/apps/<id>.jsonld` (the row, plus `notes`
+  with the reasons that were comments, plus `position` for the order).
+  Edit a manifest, then `npm run apps:build` (writes `foafos-apps-data.js`,
+  which `foafos-apps.js` re-exports as `APPS`). `npm run apps:check`
+  validates JSON-LD and SHACL (`apps/shapes.ttl`) with @factoidal/core and
+  fails when the data module is stale. Never edit `foafos-apps-data.js`.
+  Design and the members still to come (instances, handles, actions,
+  storage, headless): `docs/foafos-apps-20261022.md`, section 4. `kind` ∈ window | game | story | panel decides how
   the shell opens it; nothing else distinguishes an office app from a maze.
 - CSS trap that bit here: `--sk-bg-figure` is TRANSLUCENT in two skins
   (terminal 0.6, aurora 0.055). Fine for a floating panel, wrong for a

@@ -1,0 +1,15 @@
+{
+  "@context": "context.jsonld",
+  "@id": "universe",
+  "@type": "App",
+  "position": 27,
+  "id": "universe",
+  "family": "make",
+  "icon": "🗺️",
+  "name": "Finkiverse",
+  "surface": "window",
+  "url": "../../docs/fink-universe.html",
+  "desc": "Stories and widgets, mapped",
+  "capabilities": [],
+  "silent": true
+}

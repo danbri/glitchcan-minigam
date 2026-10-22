@@ -1,0 +1,28 @@
+# SHACL shapes for the foafos app manifests (inklet/finkapp/apps/*.jsonld).
+# Checked by `node inklet/tools/app-manifests.mjs --check` with @factoidal/core.
+# Design: docs/foafos-apps-20261022.md, section 4.
+
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix schema: <https://schema.org/> .
+@prefix foafos: <https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#> .
+
+foafos:AppShape a sh:NodeShape ;
+  sh:targetClass foafos:App ;
+  sh:property [ sh:path foafos:appId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+                sh:pattern "^[a-z][a-z0-9-]*$" ] ;
+  sh:property [ sh:path schema:name ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path schema:description ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+  sh:property [ sh:path schema:position ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ] ;
+  sh:property [ sh:path foafos:family ; sh:minCount 1 ; sh:maxCount 1 ;
+                sh:in ( "office" "play" "media" "make" "chrome" ) ] ;
+  sh:property [ sh:path foafos:surface ; sh:minCount 1 ; sh:maxCount 1 ;
+                sh:in ( "stage" "window" "story" "panel" "chrome" "none" ) ] ;
+  sh:property [ sh:path foafos:controls ; sh:maxCount 1 ;
+                sh:in ( "dpad" "lite" "none" "sticks" ) ] ;
+  sh:property [ sh:path foafos:capability ;
+                sh:in ( "storage" "secrets" "vars:read" "vars:write" "audio" "input" "geolocation"
+                        "same-origin" "shell" "git:write" "story:launch" "story:link" "story:navigate"
+                        "story:observe" "story:steer" ) ] ;
+  sh:property [ sh:path foafos:instances ; sh:maxCount 1 ; sh:in ( "many" "single" ) ] ;
+  sh:property [ sh:path foafos:storage ; sh:maxCount 1 ; sh:in ( "app" "instance" "document" ) ] .

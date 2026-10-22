@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "publishing",
+  "@type": "App",
+  "position": 26,
+  "id": "publishing",
+  "family": "make",
+  "icon": "🔑",
+  "name": "Publishing",
+  "surface": "panel",
+  "panel": "publishing",
+  "desc": "Aim an app's brokered actions, and hold its key",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true,
+  "notes": [
+    "Where an app's brokered actions POINT, and where its credential is typed in. Both belong to the shell: a token an app collects is a token an app has held, however briefly, and a destination an app can choose is not a boundary. This panel is the reason `git:write` is reachable by a person rather than only by a test."
+  ]
+}

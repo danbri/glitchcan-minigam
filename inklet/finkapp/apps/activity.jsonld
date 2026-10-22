@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "activity",
+  "@type": "App",
+  "position": 24,
+  "id": "activity",
+  "family": "make",
+  "icon": "💬",
+  "name": "Activity",
+  "surface": "panel",
+  "panel": "activity",
+  "desc": "Who said or did what, in every app",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true,
+  "notes": [
+    "Who said or did what in every app (spec §5.10): the talking heads' live card and the history, in a window the shell manages, not over an app's pane"
+  ]
+}

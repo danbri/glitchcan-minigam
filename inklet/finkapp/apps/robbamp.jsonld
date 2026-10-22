@@ -1,0 +1,20 @@
+{
+  "@context": "context.jsonld",
+  "@id": "robbamp",
+  "@type": "App",
+  "position": 18,
+  "id": "robbamp",
+  "family": "media",
+  "icon": "🎛️",
+  "name": "ROBBAMP",
+  "surface": "window",
+  "url": "../../magpie/robbin/robbin.html#robbamp",
+  "desc": "The player",
+  "capabilities": [
+    "storage",
+    "audio"
+  ],
+  "notes": [
+    "MIGRATED (July 2026) — and it was the LAST `same-origin` holder, so the whole registry is now sandboxed. Found because the ROBBAMP tile was DEAD on the TV root: the root (correctly) holds no escape hatch, attenuation refused the spawn, and 27 winampesque visualizer modes were unreachable from the surface built for lean-back listening. danbri asked where the visualizations went; this line is where. app-sdk now fronts robbin's 24 bare localStorage calls (probe: standalone keeps native storage)."
+  ]
+}

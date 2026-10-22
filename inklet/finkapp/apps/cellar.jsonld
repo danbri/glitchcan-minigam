@@ -1,0 +1,23 @@
+{
+  "@context": "context.jsonld",
+  "@id": "cellar",
+  "@type": "App",
+  "position": 12,
+  "id": "cellar",
+  "family": "play",
+  "icon": "🏮",
+  "name": "The Lantern Cellar",
+  "surface": "stage",
+  "game": "cellar",
+  "url": "../../drift-city/novel/cellar.html",
+  "desc": "A graphic-novel page from Drift City",
+  "controls": "none",
+  "args": [
+    "exits"
+  ],
+  "capabilities": [],
+  "silent": true,
+  "notes": [
+    "Drift city's graphic-novel page, played as a stage app: a sandboxed guest with its own ink, launched by `# APP: cellar`. It lives beside its content, so it names its page with `url`. It reads and writes no story variable and its video is muted, so it holds nothing. `exits=oskar` (Per Aspera's cellar) adds that story's \"Sit in with Oskar\" as a way out; the way the reader left comes back as the result's score."
+  ]
+}

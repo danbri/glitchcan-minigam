@@ -218,6 +218,19 @@ server (`tools/game-mcp/`) drive apps the same way.
 
 ## 9. Order of work, and the questions for the owner
 
+State, 2026-10-22 (owner: "Step 1 then 2"):
+- Step 1 is built. The story runner reads `# APP:` with `then=wait|beside|go` (`go` is
+  refused until service apps exist); `fink:check`, `fink-minigame-map` and `fink-universe`
+  read it; 13 story files moved by hand; `inklet/finkapp/test/e2e-app-tag.mjs` tests it.
+  `inklet/tools/fink-graph.mjs` is not changed: it reads tags with regexes over ink source,
+  which CLAUDE.md forbids, so it needs rebuilding on the compiler rather than extending.
+- Step 2 is built. `inklet/finkapp/apps/<id>.jsonld` (30 apps), `context.jsonld`,
+  `shapes.ttl`; `npm run apps:build` writes `foafos-apps-data.js`; `npm run apps:check`
+  validates with @factoidal/core. The generated `APPS` equals the old hand-written one, row
+  for row and in order. Only the members the registry already had are filled in; the new
+  members of section 4 (`instances`, `handles`, `actions`, `storage`, `headless`,
+  `delegates`) are in the context and the shapes, and no manifest uses them yet.
+
 Proposed order:
 1. `# APP:` in the story runner and the tools, with `then=wait` (what `# MINIGAME:` does
    today). The 14 stories move by hand afterwards.

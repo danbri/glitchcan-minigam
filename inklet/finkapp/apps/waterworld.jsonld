@@ -1,0 +1,33 @@
+{
+  "@context": "context.jsonld",
+  "@id": "waterworld",
+  "@type": "App",
+  "position": 15,
+  "id": "waterworld",
+  "family": "play",
+  "icon": "🫧",
+  "name": "Waterworld",
+  "surface": "stage",
+  "game": "waterworld",
+  "desc": "Submarine salvage in the drowned dock",
+  "controls": "dpad",
+  "capabilities": [
+    "input",
+    "vars:read",
+    "vars:write",
+    "audio"
+  ],
+  "bus": {
+    "publish": [
+      "guest.waterworld.*"
+    ],
+    "subscribe": [
+      "wm.mode",
+      "audio.volume",
+      "story.state"
+    ]
+  },
+  "notes": [
+    "its scoped bus view: speak in its own namespace, hear the shell surfaces that shape it (this is also the stage default, spelled out)"
+  ]
+}

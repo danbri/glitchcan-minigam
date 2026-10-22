@@ -1,0 +1,21 @@
+{
+  "@context": "context.jsonld",
+  "@id": "files",
+  "@type": "App",
+  "position": 3,
+  "id": "files",
+  "family": "office",
+  "icon": "📁",
+  "name": "Files",
+  "surface": "window",
+  "url": "../../magpie/edot/files/files.html",
+  "desc": "Pod explorer",
+  "capabilities": [
+    "storage"
+  ],
+  "silent": true,
+  "notes": [
+    "MIGRATED (July 2026). Files stored nothing itself — its escape hatch was bought for OPFS, which needs an origin to hang a storage bucket on and so is refused outright in a sandboxed frame. It now probes the device mount and falls back to BrokeredResourceSource: the same list/read/write/remove/stat/mkdir interface over the shell's store.",
+    "files.html, not the directory: there is no index.html here, so the bare path served a directory listing locally and would 404 on GitHub Pages. The app had never actually loaded inside the shell."
+  ]
+}

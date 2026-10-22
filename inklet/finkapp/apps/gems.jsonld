@@ -1,0 +1,26 @@
+{
+  "@context": "context.jsonld",
+  "@id": "gems",
+  "@type": "App",
+  "position": 9,
+  "id": "gems",
+  "family": "play",
+  "icon": "💎",
+  "name": "Gem Hunt",
+  "surface": "stage",
+  "game": "gems",
+  "desc": "Collect sparkling gems!",
+  "controls": "none",
+  "inline": true,
+  "aliases": [
+    "mega"
+  ],
+  "capabilities": [
+    "vars:read",
+    "vars:write"
+  ],
+  "silent": true,
+  "notes": [
+    "Drawn by the host, not a frame: `inline`. `mega` is its gems mode."
+  ]
+}
