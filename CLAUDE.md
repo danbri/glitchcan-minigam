@@ -83,6 +83,14 @@ Known Factoidal faults and behaviours (BNODE() blank nodes dropped by `serialize
 default-graph view of named graphs) and their workarounds: the `cwplans-web-harvest` skill, "Factoidal notes" (in
 danbri/londat: https://github.com/danbri/londat/blob/main/cwplans/skills/cwplans-web-harvest/SKILL.md). After an
 upgrade run `node cwplans/tools/check-factoidal.mjs` in a londat checkout (prints STILL or FIXED for each).
+The root `package.json` pins `@factoidal/core` ^0.11.0 (updated from 0.7.1 on 2026-10-22, owner: "Before progressing
+update Factoidal"; 0.11.0 is the newest on npm, there is no 1.11.0).
+
+**JSON-LD: inline `@vocab` only.** Owner, 2026-10-22, verbatim: "Only use JSON-LD with @vocab uris, never @ context as
+they require a successful network fetch before parsing can suceed". So a JSON-LD document here has
+`"@context": {"@vocab": "<IRI>"}` and nothing else: no context document by URL, no shared context file. Factoidal
+refuses a remote context ("loading remote context failed"), which is the failure this rule avoids. Example and check:
+`inklet/finkapp/apps/*.jsonld`, `npm run apps:check`.
 
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
@@ -222,6 +230,7 @@ clean"). So was the frozen second copy in `inklet/app/` and `inklet6.html`.
 Do not bring a second story engine back.
 
 - Boot: `inklet/finkapp/foafos-boot.js`. `?story=` names the story; `?player=none` opens the shell with no story; `?app=<id>` opens one app; a root with `boot.story: false` opens its apps.
+- `?story=` is a feature of this demo site, not a standard. Owner, 2026-10-22, verbatim, about https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?story=/glitchcan-minigam/inklet/toc.fink.js#1309d18b-ca4bd4a2f : "This is an example fink foafos etc demo where the public url is allowed to specify initial ink file. This is not expected to be a standard; some sites will hardcode or otherwise constrain this." Do not design anything that needs a public URL to name the story.
 - Links: `inklet/finkapp/fink-links.js` (`FinkLinks`) is the link-hash format for the shell; the runner keeps a byte-identical copy.
 - Story rows in the launcher (`toc`, `audiodemo`) open a runner window on their story (`opens: 'storyrunner'` in `foafos-apps.js`).
 - Tests drive a story through the runner frame's `window.__storyrunner` hooks; `inklet/finkapp/test/lib/story.mjs` wraps them (`openStory`, `goto`, `setVar`, `varOf`).

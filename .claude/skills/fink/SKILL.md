@@ -826,7 +826,8 @@ widgets are Apps." The tree half was already true (game nodes spawn under
   Edit a manifest, then `npm run apps:build` (writes `foafos-apps-data.js`,
   which `foafos-apps.js` re-exports as `APPS`). `npm run apps:check`
   validates JSON-LD and SHACL (`apps/shapes.ttl`) with @factoidal/core and
-  fails when the data module is stale. Never edit `foafos-apps-data.js`.
+  fails when the data module is stale. Each manifest's `@context` is exactly
+  `{"@vocab": ".../apps/vocab#"}`: no context documents (owner rule, CLAUDE.md). Never edit `foafos-apps-data.js`.
   Design and the members still to come (instances, handles, actions,
   storage, headless): `docs/foafos-apps-20261022.md`, section 4. `kind` ∈ window | game | story | panel decides how
   the shell opens it; nothing else distinguishes an office app from a maze.

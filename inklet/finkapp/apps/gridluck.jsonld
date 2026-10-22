@@ -1,5 +1,7 @@
 {
-  "@context": "context.jsonld",
+  "@context": {
+    "@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"
+  },
   "@id": "gridluck",
   "@type": "App",
   "position": 5,

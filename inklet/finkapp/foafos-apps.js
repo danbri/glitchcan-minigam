@@ -64,7 +64,8 @@
 // inklet/finkapp/apps/<id>.jsonld, holding its row and, in `notes`, the
 // reasons that used to be comments here. `node inklet/tools/app-manifests.mjs`
 // writes foafos-apps-data.js from them; `--check` validates them (JSON-LD
-// and SHACL with @factoidal/core) and fails if the data module is stale.
+// with an inline @vocab, and SHACL, with @factoidal/core) and fails if the
+// data module is stale.
 // Design: docs/foafos-apps-20261022.md, section 4.
 
 export const APP_FAMILIES = [

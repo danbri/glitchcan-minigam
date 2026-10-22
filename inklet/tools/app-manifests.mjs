@@ -5,9 +5,11 @@
 //   node inklet/tools/app-manifests.mjs --check   validate the manifests and check that the data
 //                                                 module is up to date; exit 1 on any problem
 //
-// The check: each file is JSON with "@context": "context.jsonld"; its "@id" and "id" match the
-// file name; positions are unique; every member is a term of the context; the manifests parse as
-// JSON-LD and conform to inklet/finkapp/apps/shapes.ttl (SHACL), both with @factoidal/core.
+// The check: each file is JSON whose "@context" is exactly {"@vocab": VOCAB} (owner rule,
+// 2026-10-22: JSON-LD with @vocab IRIs only, never a context document, which needs a network
+// fetch before parsing can succeed); its "@id" and "id" match the file name; positions are
+// unique; every member is a known one; the manifests parse as JSON-LD and conform to
+// inklet/finkapp/apps/shapes.ttl (SHACL), both with @factoidal/core.
 // Design: docs/foafos-apps-20261022.md, section 4.
 
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
@@ -18,20 +20,28 @@ const repo = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const dir = join(repo, 'inklet/finkapp/apps');
 const out = join(repo, 'inklet/finkapp/foafos-apps-data.js');
 const SITE = 'https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/';
+const VOCAB = `${SITE}vocab#`;
 const LD_KEYS = ['@context', '@id', '@type', 'position', 'notes'];   // manifest-only, not registry data
+// The members a manifest may have: today's registry members, then those of the design still to come.
+const MEMBERS = new Set(['position', 'notes', 'id', 'family', 'icon', 'name', 'surface', 'url', 'desc',
+  'capabilities', 'silent', 'game', 'controls', 'inline', 'aliases', 'args', 'variables', 'features', 'opens',
+  'story', 'bus', 'featured', 'external', 'persists', 'panel', 'mount',
+  'instances', 'handles', 'actions', 'delegates', 'storage', 'headless']);
 
-const context = JSON.parse(readFileSync(join(dir, 'context.jsonld'), 'utf8'));
-const files = readdirSync(dir).filter((f) => f.endsWith('.jsonld') && f !== 'context.jsonld').sort();
+const files = readdirSync(dir).filter((f) => f.endsWith('.jsonld')).sort();
 const problems = [];
 const manifests = files.map((f) => {
   let doc;
   try { doc = JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch (e) { problems.push(`${f}: not JSON: ${e.message}`); return null; }
   const id = f.replace(/\.jsonld$/, '');
-  if (doc['@context'] !== 'context.jsonld') problems.push(`${f}: "@context" must be "context.jsonld"`);
+  const ctx = doc['@context'];
+  if (!ctx || typeof ctx !== 'object' || Object.keys(ctx).join() !== '@vocab' || ctx['@vocab'] !== VOCAB) {
+    problems.push(`${f}: "@context" must be exactly {"@vocab": "${VOCAB}"}: no context documents`);
+  }
   if (doc['@id'] !== id || doc.id !== id) problems.push(`${f}: "@id" and "id" must both be "${id}"`);
   if (doc['@type'] !== 'App') problems.push(`${f}: "@type" must be "App"`);
   for (const k of Object.keys(doc)) {
-    if (!k.startsWith('@') && !(k in context['@context'])) problems.push(`${f}: "${k}" is not a term of context.jsonld`);
+    if (!k.startsWith('@') && !MEMBERS.has(k)) problems.push(`${f}: "${k}" is not a manifest member`);
   }
   return { file: f, doc };
 }).filter(Boolean);
@@ -54,11 +64,11 @@ if (process.argv.includes('--check')) {
   try { current = readFileSync(out, 'utf8'); } catch { /* missing */ }
   if (current !== data) problems.push('inklet/finkapp/foafos-apps-data.js is out of date: run node inklet/tools/app-manifests.mjs');
 
-  // RDF: each manifest as JSON-LD (context inlined, @id absolute), then SHACL, with Factoidal.
+  // RDF: each manifest as JSON-LD (@id made absolute: the file's own URL is its base), then SHACL.
   const { parse, serialize, shaclValidate } = await import('@factoidal/core');
   const nquads = [];
   for (const { file, doc } of manifests) {
-    const ld = { ...doc, '@context': context['@context'], '@id': SITE + doc['@id'] };
+    const ld = { ...doc, '@id': SITE + doc['@id'] };
     try { nquads.push(await serialize(await parse(JSON.stringify(ld), { format: 'jsonld' }), { format: 'nquads' })); }
     catch (e) { problems.push(`${file}: not valid JSON-LD: ${String(e.message || e).slice(0, 200)}`); }
   }

@@ -78,7 +78,10 @@ the MiniApp names where only MiniApp has one, and foafos names for the rest.
 ## 4. The app manifest (proposal)
 
 A JSON-LD document, so that the manifests themselves are RDF (R7) and Factoidal can check
-them with SHACL. The rows of `inklet/finkapp/foafos-apps.js` are the manifests in practice
+them with SHACL. Owner rule, 2026-10-22: JSON-LD with an inline `@vocab` only, never a context
+document ("they require a successful network fetch before parsing can suceed"). So each
+manifest says `"@context": {"@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"}`,
+and every member is an IRI in that vocabulary. The rows of `inklet/finkapp/foafos-apps.js` are the manifests in practice
 today. The first step generates those rows from manifest files, so there is one source.
 
 | Member | Meaning | From |
@@ -224,12 +227,13 @@ State, 2026-10-22 (owner: "Step 1 then 2"):
   read it; 13 story files moved by hand; `inklet/finkapp/test/e2e-app-tag.mjs` tests it.
   `inklet/tools/fink-graph.mjs` is not changed: it reads tags with regexes over ink source,
   which CLAUDE.md forbids, so it needs rebuilding on the compiler rather than extending.
-- Step 2 is built. `inklet/finkapp/apps/<id>.jsonld` (30 apps), `context.jsonld`,
-  `shapes.ttl`; `npm run apps:build` writes `foafos-apps-data.js`; `npm run apps:check`
+- Step 2 is built. `inklet/finkapp/apps/<id>.jsonld` (30 apps, inline `@vocab`, no
+  context file), `shapes.ttl`; `npm run apps:build` writes `foafos-apps-data.js`; `npm run apps:check`
   validates with @factoidal/core. The generated `APPS` equals the old hand-written one, row
   for row and in order. Only the members the registry already had are filled in; the new
   members of section 4 (`instances`, `handles`, `actions`, `storage`, `headless`,
-  `delegates`) are in the context and the shapes, and no manifest uses them yet.
+  `delegates`) are accepted by the check (and `instances`, `storage` by the shapes), and no
+  manifest uses them yet. @factoidal/core is 0.11.0 since 2026-10-22.
 
 Proposed order:
 1. `# APP:` in the story runner and the tools, with `then=wait` (what `# MINIGAME:` does
@@ -252,3 +256,103 @@ Questions:
 4. Where does the MiniApp code go? Proposal: the spec modules stay in `magpie/miniapps/src/`
    as a library; the host and UX parts move into `packages/foafos/` when the shell takes them
    over.
+
+## 10. Documents first: embedded objects, helper apps, and stories inside stories
+
+Owner, 2026-10-22, verbatim:
+
+> "This gets me thinking about doc-first architectures like OpenDoc. If I open a Fink Story do
+> we distinguish embedded objects from "helper apps"? Same with .docx etc, I don't know how
+> those aspects of MS's COM etc object models show up in the relevant xml based standards.
+>
+> Having two independent stories open makes sense
+>
+> Having one story spawn another (and original goes into suspended mode at OS level, maybe
+> "dreaming" in its own narrative terms?) also seems appealing. Would those be different
+> "Windows" or a bit more like the embed. I suspect latter; one story literally embedded in
+> the other. We could do it as a rectangle as if a photo or panorama or interactive map or
+> genuinely mini-game were embedded, but the embedded story area would need to be usually
+> maximized, even if it had a symbolic eg thick rectangle drawn round it, indicating a
+> possibly long nested stack of calling stories."
+
+### How the office formats keep OLE's two cases
+
+Both XML office formats keep the distinction that OLE/COM made between an object shown in
+the document and an object opened in its own application:
+
+- **OOXML (.docx, .xlsx, .pptx; ECMA-376).** An embedded object in WordprocessingML is a VML
+  `o:OLEObject` element with `ProgID` (the class of the application that owns the object,
+  for example an Excel sheet), `DrawAspect` (`Content`: draw the object in the page; `Icon`:
+  draw an icon that opens it), `ShapeID`, `ObjectID`, and `r:id`, a package relationship to
+  the object's bytes inside the ZIP. Office also writes a `Type` (`Embed` or `Link`: inside
+  the package or in a file outside it), which ISO/IEC 29500 does not define
+  ([MS-OI29500 note](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/19190ae3-5734-48eb-a919-b89d0b3ce114);
+  [VML OLEObject reference](https://webapp.docx4java.org/OnlineDemo/ecma376/VML/OLEObject.html)).
+  The shape that holds the object also carries a picture of it, so a reader without the
+  owning application still sees the last rendering.
+- **ODF (.odt, .ods, .odp; OASIS).** `draw:object` holds an object that has an ODF form, as a
+  sub-document in a folder of the package. `draw:object-ole` holds one that has not (an OLE
+  binary). A replacement picture is kept beside it (`ObjectReplacements/` in the package) for a
+  reader with no service for the object, and `draw:ole-draw-aspect` chooses between drawing
+  the content and drawing an icon
+  ([OASIS ODF list, 2007](https://lists.oasis-open.org/archives/office/200702/msg00048.html);
+  [OpenOffice issue 111488](https://bz.apache.org/ooo/show_bug.cgi?id=111488)).
+
+So both formats answer the owner's question the same way: an embedded object names its
+application, stores its own bytes (or a link), carries a picture of itself, and says whether
+it is drawn in place (content) or offered as an icon that opens a helper application.
+
+### The same distinction in a FINK story, today and proposed
+
+| In a story | Shown | Today | Office analogue |
+|---|---|---|---|
+| `# IMAGE:`, `# VIDEO:`, `# AUDIO:` | in the reading, inline | built | a picture |
+| a typed block, `OO('application/vnd.fink.playlist+json')` | handed to the app that handles its media type | format only (spec §1.1); no handler table yet | an embedded object with content aspect |
+| `# APP: <app>` (then=wait) | the app takes the reading surface; the story waits | built (stage) | in-place activation, full window |
+| `# APP: <app> then=beside` | the app beside the story; the story goes on | built (`# WORLD:` path) | — |
+| a link to open an app in its own window | a separate app instance | not built | icon aspect: opens the helper app |
+
+Proposal: `# APP:` gets a second word for presentation, kept apart from `then=` (what the
+story does): `show=full` (today's default: the app takes the reading surface), `show=inline`
+(drawn in the prose like an image, with a picture of itself when it is not running, as both
+office formats keep), and `show=icon` (an item in the prose that opens the app as its own
+instance, a helper application). Questions for the owner at the end of this section.
+
+### Stories inside stories
+
+- **Two independent stories** are two story runner instances (two windows). That works today:
+  each `launchApp` makes a new instance.
+- **A story that opens another and waits** is the dream (`# LINKREL: godeeper`, spec §3.4). It is
+  built: the outer story's ink state goes on a stack in the runner (`_frames`), the inner story
+  plays in the same frame and on the same reading surface, and its END returns the reader to
+  the outer story where it was (`inklet/apps/storyrunner/storyrunner.js`, "the dream stack").
+  The shell holds the depth and refuses past 8. So it is already "one story embedded in the
+  other", maximized, as the owner suspects it should be, and not a second window.
+
+What the owner's description adds:
+
+1. **The frame as the sign of depth.** Today the depth shows as a colour filter that grows
+   stronger, and at depth 2 and more a slow wobble animation
+   (`storyrunner.css`, `body[data-depth]`). Proposal: one ruled border per level round the
+   reading surface (thick, then thinner inside it, like nested picture frames), with a number
+   when there are more than three; no controls on it, so it stays a sign and not a window
+   to manage (the presentation invariant of the layer model). It does not move, so it suits
+   reduced motion; it is named for screen readers ("inside 2 stories"); and voice says the
+   same words.
+2. **The outer story suspended at OS level.** Today the outer story is suspended only inside the
+   runner (its saved state on the stack); the app tree does not show it. Proposal: each story
+   in the stack is a session node in the app tree; entering a dream marks the outer node
+   suspended (`AppTree.setSuspended`) and the inner one a child of it; surfacing closes the
+   inner node and resumes the outer. The shell's switcher and the Subtree panel then show the
+   stack, and anything the outer story opened (a playlist it queued, a world) is told it is
+   suspended, through the same lifecycle the shell already sends.
+3. **"Dreaming" in narrative terms.** A story may say what its own suspension means: proposal,
+   an optional `# DREAMING: <line>` tag on the outer story, shown or spoken while it waits
+   (default: nothing). This is a question for the owner, because it adds a tag.
+
+Questions for the owner:
+1. `show=full|inline|icon` on `# APP:`: yes, or other words?
+2. The depth frame (nested borders, a number past three) in place of the colour filter and the
+   wobble: yes?
+3. Session nodes in the app tree, with the outer story suspended, for each dream: yes?
+4. A tag for what a suspended story says while it waits: wanted?
