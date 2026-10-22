@@ -60,3 +60,4 @@ magpie/dbdb/splats/harvest/*.sog
 magpie/dbdb/tools/contact/
 magpie/dbdb/tools/contact-check/
 magpie/dbdb/splats/harvest/*.tmp
+magpie/miniapps/test/shots/

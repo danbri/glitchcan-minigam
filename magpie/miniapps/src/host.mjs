@@ -1,17 +1,22 @@
 // MiniAppHost: run one opened MiniApp package under the foafos capability tree.
 //
 //   logic layer  hidden iframe, sandbox="allow-scripts", runs app.js
-//   view layer   one iframe per open page (a page stack), same sandbox
+//   view layer   one iframe per open page (a page stack), three kinds of page:
+//                  package  a page file of the package, built into srcdoc
+//                  app      a foafos app (story runner, edot, ...) named by the page
+//                           file's foafos-app block, loaded by URL, app-sdk protocol
+//                  game     a FINK minigame opened by a story's # MINIGAME:
 //   governance   AppTree (grant(child) ⊆ grant(parent)), FoafStore, FoafBus
-//                from packages/foafos/src/
+//                from packages/foafos/src/; each app and game page is a child node
 //
-// The host is level 0: it plays nothing itself, and every API a guest calls
-// is checked against the node's capabilities when it is called.
-// Design, protocol and the choices made where the drafts are silent:
-// magpie/miniapps/README.md.
+// The host is level 0: it plays nothing itself, and every call a guest makes is
+// checked against that guest's node when it is made. The runner page (runner.mjs)
+// owns the chrome: titles, breadcrumbs, history, announcements, preferences.
+// Design and protocol: magpie/miniapps/README.md.
 
 import { GlobalLifecycle, PageLifecycle } from './lifecycle.mjs';
 import { pageFile } from './package.mjs';
+import { linkedAppOf, sameOriginUrl, skinTokensFor, answerStoryRequest, minigameInit } from './foafos-guests.mjs';
 
 /** MiniApp req_permissions names -> foafos capabilities. Unlisted names are refused. */
 export const PERMISSION_MAP = Object.freeze({
@@ -19,8 +24,17 @@ export const PERMISSION_MAP = Object.freeze({
   'system.permission.LOCATION': 'geolocation',
   'system.permission.AUDIO': 'audio',
 });
+/** foafos capabilities a package may request directly, as "foafos.<capability>". */
+export const FOAFOS_CAPS = Object.freeze(['storage', 'audio', 'geolocation', 'story:link', 'story:launch',
+  'story:navigate', 'story:observe', 'vars:read', 'vars:write']);
 
-/** Host APIs: name -> capability needed (null: none). */
+export function capabilityFor(permissionName) {
+  if (PERMISSION_MAP[permissionName]) return PERMISSION_MAP[permissionName];
+  const m = /^foafos\.(.+)$/.exec(permissionName);
+  return m && FOAFOS_CAPS.includes(m[1]) ? m[1] : null;
+}
+
+/** Host APIs for package pages: name -> capability needed (null: none). */
 export const API_CAPS = Object.freeze({
   'system.getInfo': null,
   'ui.toast': null,
@@ -32,7 +46,11 @@ export const API_CAPS = Object.freeze({
 });
 
 const MAX_PAGE_STACK = 10;
-const SANDBOX = 'allow-scripts';
+const MAX_QUOTA = 8 * 1024 * 1024;
+const PACKAGE_SANDBOX = 'allow-scripts';
+const APP_SANDBOX = 'allow-scripts allow-forms allow-modals allow-downloads';
+const GAME_SANDBOX = 'allow-scripts';
+const PAGE_SLOW_MS = 12000;
 const MIME = {
   png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', svg: 'image/svg+xml',
   webp: 'image/webp', css: 'text/css', js: 'text/javascript', json: 'application/json',
@@ -70,19 +88,22 @@ export function resolvePackagePath(from, ref) {
 export class MiniAppHost {
   /**
    * @param opened   the result of openPackage()
-   * @param opts     { container, tree, rootId, store, bus, platformCode, query, referrerInfo,
-   *                   backgroundUnloadMs, onNavigate(route, query), onToast(text), onClose() }
+   * @param opts     { container, tree, rootId, store, bus, platformCode, startPage, query, referrerInfo,
+   *                   siteBase, prefs, backgroundUnloadMs, granted (permission names the user allowed, or null for all),
+   *                   onNavigate(op, entry, stack), onTitle(entry), onAnnounce(text, kind), onProblem(problem),
+   *                   onToast(text), onClose(reason) }
    */
   constructor(opened, opts) {
     this.pkg = opened;
     this.manifest = opened.manifest;
-    this.o = { backgroundUnloadMs: 5 * 60 * 1000, platformCode: 1, ...opts };
+    this.o = { backgroundUnloadMs: 5 * 60 * 1000, platformCode: 1, siteBase: location.href, ...opts };
+    this.prefs = { scale: 1, theme: 'system', motion: 'system', ...(opts.prefs || {}) };
     this.bus = opts.bus;
     this.tree = opts.tree;
     this.store = opts.store;
     this.appKey = 'miniapp.' + this.manifest.app_id;
     this.global = new GlobalLifecycle();
-    this.pages = [];             // [{ route, query, frame, life }]
+    this.pages = [];             // entries, bottom first
     this.log = [];
     this.node = null;
     this.granted = [];
@@ -97,20 +118,22 @@ export class MiniAppHost {
   }
 
   _note(scope, state, detail = {}) {
-    const entry = { t: Date.now(), scope, state, ...detail };
-    this.log.push(entry);
-    this.bus?.publish(`miniapp.${scope}.${state}`, { summary: `${this.manifest.name}: ${scope} ${state}`, appId: this.manifest.app_id, ...detail });
+    this.log.push({ t: Date.now(), scope, state, ...detail });
+    this.bus?.publish(`miniapp.${scope}.${state}`, { summary: `${this.manifest.name}: ${scope} ${state}${detail.route ? ' ' + detail.route : ''}`,
+      appId: this.manifest.app_id, ...detail });
   }
 
-  /** Decide the grant: requested permissions, mapped, bounded by the parent node. */
+  /** Decide the grant: requested permissions the user allowed, mapped, bounded by the parent node. */
   _grant() {
     const parentCaps = this.tree.get(this.o.rootId)?.capabilities || [];
+    const allowed = this.o.granted ? new Set(this.o.granted) : null;
     const want = [];
     for (const p of this.manifest.req_permissions) {
-      const cap = PERMISSION_MAP[p.name];
+      const cap = capabilityFor(p.name);
       if (!cap) this.refused.push({ name: p.name, reason: 'no foafos capability for this permission' });
       else if (!parentCaps.includes(cap)) this.refused.push({ name: p.name, cap, reason: 'the root does not hold it' });
-      else { want.push(cap); this.granted.push({ name: p.name, cap, reason: p.reason || '' }); }
+      else if (allowed && !allowed.has(p.name)) this.refused.push({ name: p.name, cap, reason: 'not allowed by the user' });
+      else { if (!want.includes(cap)) want.push(cap); this.granted.push({ name: p.name, cap, reason: p.reason || '' }); }
     }
     const node = this.tree.spawn({ appId: this.appKey, parentId: this.o.rootId, capabilities: want,
       label: this.manifest.name, surface: 'miniapp' });
@@ -120,25 +143,26 @@ export class MiniAppHost {
     this.tree.setOnClose(node.id, () => this._teardown());
   }
 
-  can(cap) { return this.tree.can(this.node.id, cap); }
+  can(cap, nodeId = this.node.id) { return this.tree.can(nodeId, cap); }
 
   async launch() {
     await loadGuest();
     this._grant();
     window.addEventListener('message', this._onMessage);
     document.addEventListener('visibilitychange', this._onVisibility);
-    this.logicFrame = this._frame(this._logicDoc(), true);
-    // The logic frame's app.hello moves the app to "launched", then the start page opens.
+    this.logicFrame = this._frame({ srcdoc: this._logicDoc(), hidden: true, sandbox: PACKAGE_SANDBOX, title: `${this.manifest.name} logic layer` });
   }
 
-  _frame(srcdoc, hidden) {
+  _frame({ srcdoc = null, src = null, hidden = false, sandbox, title, allow = '' }) {
     const f = document.createElement('iframe');
-    f.setAttribute('sandbox', SANDBOX);
+    f.setAttribute('sandbox', sandbox);
     f.setAttribute('referrerpolicy', 'no-referrer');
+    if (allow) f.setAttribute('allow', allow);
     f.className = hidden ? 'miniapp-logic' : 'miniapp-page';
     if (hidden) { f.hidden = true; f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1; }
-    f.title = hidden ? `${this.manifest.name} logic layer` : this.manifest.name;
-    f.srcdoc = srcdoc;
+    f.title = title;
+    this._styleFrame(f);
+    if (srcdoc !== null) f.srcdoc = srcdoc; else f.src = src;
     this.o.container.appendChild(f);
     return f;
   }
@@ -152,7 +176,7 @@ export class MiniAppHost {
     return `<!doctype html><meta charset="utf-8">${this._bootScripts('logic')}${scriptTag(app)}`;
   }
 
-  /** Build the view document for a page route: inline CSS and scripts, data: URLs for media. */
+  /** Build the view document for a package page: inline CSS and scripts, data: URLs for media. */
   _pageDoc(route) {
     const files = this.pkg.files;
     const file = pageFile(files, route);
@@ -168,7 +192,7 @@ export class MiniAppHost {
     const scripts = [];
     for (const s of doc.querySelectorAll('script')) {
       const src = s.getAttribute('src');
-      if (src === null) { scripts.push(s.textContent); s.remove(); continue; }
+      if (src === null) { if (!s.type || /javascript|module/.test(s.type)) scripts.push(s.textContent); s.remove(); continue; }
       const p = resolvePackagePath(file, src);
       if (p && files.has(p)) scripts.push(text(p));
       s.remove();
@@ -179,7 +203,6 @@ export class MiniAppHost {
         if (p && files.has(p)) el.setAttribute(attr, dataUrl(files.get(p), MIME[extOf(p)] || 'application/octet-stream'));
       }
     }
-    // a[href] to a page in the package becomes an in-app link.
     for (const a of doc.querySelectorAll('a[href]')) {
       const p = resolvePackagePath(file, a.getAttribute('href'));
       const r = p && p.replace(/\.html?$/, '');
@@ -188,7 +211,6 @@ export class MiniAppHost {
         a.dataset.miniappQuery = (a.getAttribute('href').split('?')[1] || '').split('#')[0];
       }
     }
-    // Convention: pages/x/x.css and pages/x/x.js beside pages/x/x.html are included if not linked.
     const base = file.replace(/\.html?$/, '');
     const head = doc.head;
     head.prepend(styleEl(text('app.css')));
@@ -202,56 +224,211 @@ export class MiniAppHost {
     const meta = doc.createElement('meta');
     meta.setAttribute('charset', 'utf-8');
     head.prepend(meta);
-    return '<!doctype html>' + doc.documentElement.outerHTML.replace('</head>', this._bootScripts('view') + '</head>')
-      .replace(/<\/body>(?![\s\S]*<\/body>)/, scripts.map(scriptTag).join('') + '</body>');
+    return { title: doc.title || doc.querySelector('h1')?.textContent?.trim() || route,
+      srcdoc: '<!doctype html>' + doc.documentElement.outerHTML.replace('</head>', this._bootScripts('view') + '</head>')
+        .replace(/<\/body>(?![\s\S]*<\/body>)/, scripts.map(scriptTag).join('') + '</body>') };
   }
 
+  // ---- the page stack ----
+
+  /** Open a manifest page route on top of the stack (or in place of the top one). */
   _openPage(route, query = '', { replace = false } = {}) {
-    const top = this.pages.at(-1);
     if (!replace && this.pages.length >= MAX_PAGE_STACK) {
       this._note('page', 'refused', { route, reason: `page stack is full (${MAX_PAGE_STACK})` });
-      return;
+      this.o.onAnnounce?.(`page stack is full`, 'problem');
+      return null;
     }
-    if (replace && top) this._closePage(this.pages.pop());
-    else if (top) { this._pageTo(top, 'hidden'); top.frame.hidden = true; }
-    const life = new PageLifecycle(route);
-    for (const s of ['loaded', 'ready', 'shown', 'hidden', 'unloaded']) {
-      life.addEventListener('page' + s, (ev) => this._note('page', s, { route, ...ev.detail }));
+    const html = new TextDecoder().decode(this.pkg.files.get(pageFile(this.pkg.files, route)));
+    let linked = null;
+    try { linked = linkedAppOf(html); } catch (e) {
+      this.o.onProblem?.({ kind: 'page', page: route, message: `bad foafos-app block: ${e.message}` });
+      return null;
     }
-    const frame = this._frame(this._pageDoc(route), false);
-    const entry = { route, query, frame, life };
-    life.addEventListener('pageshown', () => this.o.onNavigate?.(route, query, this.pages.length));
-    this.pages.push(entry);
+    const kind = !linked ? 'package' : linked.protocol === 'minigame' ? 'game' : 'app';
+    const entry = { route, query, kind, linked, title: route, sessions: 0, linkDepth: 0 };
+    if (linked) {
+      const ok = this._prepareApp(entry);
+      if (!ok) return null;
+    } else {
+      const built = this._pageDoc(route);
+      entry.title = built.title;
+      entry.srcdoc = built.srcdoc;
+    }
+    this._push(entry, replace);
+    return entry;
   }
 
-  _closePage(entry) {
+  /** An app page: spawn its child node (attenuated) and choose its URL. */
+  _prepareApp(entry) {
+    const L = entry.linked;
+    let url;
+    try { url = sameOriginUrl(L.url, this.o.siteBase); } catch (e) {
+      this.o.onProblem?.({ kind: 'page', page: entry.route, message: e.message });
+      return false;
+    }
+    const parentCaps = this.node.capabilities;
+    const caps = L.capabilities.filter((c) => parentCaps.includes(c));
+    const missing = L.capabilities.filter((c) => !parentCaps.includes(c));
+    const node = this.tree.spawn({ appId: L.id, parentId: this.node.id, capabilities: caps, label: L.name, surface: 'window' });
+    if (node.refused) { this.o.onProblem?.({ kind: 'page', page: entry.route, message: `spawn refused: ${node.reason}` }); return false; }
+    entry.node = node;
+    entry.missing = missing;
+    entry.title = L.name;
+    if (this.store) {
+      this.store.grant(L.id, caps);
+      if (L.quotaBytes) this.store.setQuota(L.id, Math.min(L.quotaBytes, MAX_QUOTA));
+    }
+    let story = L.story;
+    const q = new URLSearchParams(entry.query);
+    if (L.storyFromQuery && q.get('story')) {
+      try { story = sameOriginUrl(q.get('story'), this.o.siteBase).pathname; } catch { /* keep the default story */ }
+    }
+    entry.story = story;
+    if (L.titleFromQuery && q.get('title')) entry.title = q.get('title').slice(0, 80);
+    entry.allow = caps.includes('audio') ? 'autoplay; fullscreen' : 'fullscreen';
+    if (L.protocol === 'minigame') {
+      // A game as a page of its own: no story waits for it, and its arguments come from the page.
+      for (const [k, v] of Object.entries(L.args)) if (!url.searchParams.has(k)) url.searchParams.set(k, v);
+      entry.game = L.id;
+      entry.init = minigameInit({ args: L.args, recent: [] });
+      entry.allow = 'autoplay; fullscreen; gamepad';
+      fetch(new URL('manifest.json', url)).then((r) => r.ok ? r.json() : null)
+        .then((m) => { entry.writes = new Set(m?.variables?.write || []); }).catch(() => { entry.writes = new Set(); });
+    }
+    entry.src = url.href;
+    return true;
+  }
+
+  _push(entry, replace) {
+    const top = this.pages.at(-1);
+    if (replace && top) this._closeEntry(this.pages.pop());
+    else if (top) { this._entryTo(top, 'hidden'); top.frame.hidden = true; }
+    entry.life = new PageLifecycle(entry.route);
+    for (const s of ['loaded', 'ready', 'shown', 'hidden', 'unloaded']) {
+      entry.life.addEventListener('page' + s, (ev) => this._note('page', s, { route: entry.route, ...ev.detail }));
+    }
+    const sandbox = entry.kind === 'package' ? PACKAGE_SANDBOX : entry.kind === 'app' ? APP_SANDBOX : GAME_SANDBOX;
+    entry.frame = this._frame({ srcdoc: entry.srcdoc ?? null, src: entry.src ?? null, sandbox, title: entry.title, allow: entry.allow || '' });
+    this._styleFrame(entry.frame, entry);
+    if (entry.kind !== 'package') {
+      // Foreign guests say nothing about their first render: the load event stands in for it.
+      entry.frame.addEventListener('load', () => this._foreignLoaded(entry));
+    }
+    entry.slowTimer = setTimeout(() => {
+      if (entry.life.state !== 'shown' && entry.life.state !== 'unloaded') {
+        this.o.onProblem?.({ kind: 'slow', page: entry.route, entry });
+      }
+    }, this.o.slowMs || PAGE_SLOW_MS);
+    this.pages.push(entry);
+    this.o.onNavigate?.(replace ? 'replace' : 'push', entry, this.pages);
+  }
+
+  _closeEntry(entry) {
+    clearTimeout(entry.slowTimer);
+    if (entry.kind === 'package') this._send(entry.frame, { type: 'miniapp.lifecycle', state: 'unloaded', detail: { route: entry.route } });
+    if (entry.kind === 'app') this._send(entry.frame, { type: 'app.terminate', reason: 'page closed' });
+    if (entry.kind === 'game') this._send(entry.frame, { type: 'terminate', reason: 'page closed' });
     entry.life.try('unloaded', { route: entry.route });
-    this._send(entry.frame, { type: 'miniapp.lifecycle', state: 'unloaded', detail: { route: entry.route } });
+    if (entry.node) this.tree.close(entry.node.id);
     entry.frame.remove();
   }
 
+  /** Go back one page. A game page that is left this way counts as not completed. */
   navigateBack() {
     if (this.pages.length <= 1) return false;
-    this._closePage(this.pages.pop());
+    const leaving = this.pages.pop();
+    this._closeEntry(leaving);
     const top = this.pages.at(-1);
+    if (leaving.kind === 'game' && leaving.storyEntry === top) {
+      this._send(top.frame, { type: 'story.event', event: 'minigame.complete',
+        detail: { game: leaving.game, success: false, score: 0, variables: {}, quit: true } });
+    }
     top.frame.hidden = false;
-    this._pageTo(top, 'shown');
+    this._entryTo(top, 'shown');
+    this.o.onNavigate?.('pop', top, this.pages);
     return true;
+  }
+
+  /** Load the top page again, in place (after an error or a slow load). */
+  reloadTop() {
+    const top = this.pages.at(-1);
+    if (!top) return;
+    if (top.kind === 'game') { this.navigateBack(); return; }
+    this._openPage(top.route, top.query, { replace: true });
+  }
+
+  /** Go back to the page at `depth` (0 is the first page). */
+  popTo(depth) {
+    while (this.pages.length > depth + 1) if (!this.navigateBack()) break;
   }
 
   _send(frame, msg) { frame?.contentWindow?.postMessage(msg, '*'); }
 
-  _pageTo(entry, state) {
-    if (entry.life.try(state, { route: entry.route })) {
-      this._send(entry.frame, { type: 'miniapp.lifecycle', state, detail: { route: entry.route } });
+  /** Move a page's lifecycle and tell its guest in that guest's own words. */
+  _entryTo(entry, state) {
+    if (!entry.life.try(state, { route: entry.route })) return;
+    // The first page of a session does not take the focus: the reader starts at the top
+    // of the runner (skip link first). Every page shown after a navigation does.
+    let focus = false;
+    if (state === 'shown') { clearTimeout(entry.slowTimer); focus = this._shownBefore === true; this._shownBefore = true; entry.takeFocus = focus; }
+    if (entry.kind === 'package') this._send(entry.frame, { type: 'miniapp.lifecycle', state, detail: { route: entry.route, focus } });
+    else if (entry.kind === 'app' && (state === 'hidden' || state === 'shown')) this._send(entry.frame, { type: state === 'hidden' ? 'app.suspend' : 'app.resume' });
+    else if (entry.kind === 'game' && (state === 'hidden' || state === 'shown')) this._send(entry.frame, { type: state === 'hidden' ? 'pause' : 'resume' });
+    if (state === 'shown') this.o.onTitle?.(entry);
+  }
+
+  _foreignLoaded(entry) {
+    if (entry.kind === 'game') this._send(entry.frame, entry.init);   // again after a redirect
+    if (entry.life.state === 'initial') this._entryTo(entry, 'loaded');
+    if (entry.life.state === 'loaded') {
+      this._entryTo(entry, 'ready');
+      if (entry === this.pages.at(-1) && this.global.state === 'shown') this._entryTo(entry, 'shown');
     }
   }
 
-  _globalTo(state, detail = {}) {
-    if (this.global.try(state, detail)) {
-      this._send(this.logicFrame, { type: 'miniapp.lifecycle', state, detail });
-    }
+  /** Open a minigame for the story page `storyEntry` (from story.launch). */
+  _openGame(storyEntry, game, args, recent) {
+    if (this.pages.length >= MAX_PAGE_STACK) throw new Error('page-stack-full');
+    const q = new URLSearchParams(args).toString();
+    const url = sameOriginUrl(`inklet/minigames/${game}/index.html${q ? '?' + q : ''}`, this.o.siteBase);
+    const node = this.tree.spawn({ appId: `game:${game}`, parentId: storyEntry.node.id, capabilities: [], label: game, surface: 'stage' });
+    if (node.refused) throw new Error(node.reason);
+    const entry = { route: `game:${game}`, query: q, kind: 'game', game, storyEntry, node, title: game,
+      src: url.href, allow: 'autoplay; fullscreen; gamepad', init: minigameInit({ args, recent }) };
+    this._push(entry, false);
+    fetch(new URL(`inklet/minigames/${game}/manifest.json`, this.o.siteBase)).then((r) => r.ok ? r.json() : null).then((m) => {
+      entry.writes = new Set(m?.variables?.write || []);
+      if (m?.title || m?.name) { entry.title = m.title || m.name; entry.frame.title = entry.title; if (entry === this.pages.at(-1)) this.o.onTitle?.(entry); }
+    }).catch(() => { entry.writes = new Set(); });
+    return game;
   }
+
+  _gameComplete(entry, result = {}) {
+    const idx = this.pages.indexOf(entry);
+    if (idx < 0) return;
+    if (!entry.storyEntry) {
+      // A game opened as a page: it stays open; the result is announced.
+      this.o.onAnnounce?.(`${entry.title}: ${result.success ? 'completed' : 'ended'}${result.score != null ? `, score ${result.score}` : ''}`, 'toast');
+      this._note('page', 'game-complete', { route: entry.route, success: !!result.success, score: Number(result.score) || 0 });
+      return;
+    }
+    const story = entry.storyEntry;
+    const variables = {};
+    for (const [k, v] of Object.entries(result.variables || {})) if (entry.writes?.has(k)) variables[k] = v;
+    // Close the game and everything above it, then hand the result to the story.
+    while (this.pages.length > idx) this._closeEntry(this.pages.pop());
+    const top = this.pages.at(-1);
+    top.frame.hidden = false;
+    this._entryTo(top, 'shown');
+    this.o.onNavigate?.('pop', top, this.pages);
+    if (top === story) {
+      this._send(story.frame, { type: 'story.event', event: 'minigame.complete',
+        detail: { game: entry.game, success: !!result.success, score: Number(result.score) || 0, variables } });
+    }
+    this.o.onAnnounce?.(`${entry.title}: ${result.success ? 'completed' : 'ended'}`, 'status');
+  }
+
+  // ---- visibility and closing ----
 
   /** The user switched away (false) or back (true). Hidden for backgroundUnloadMs unloads the app. */
   setVisible(visible) {
@@ -259,12 +436,16 @@ export class MiniAppHost {
     clearTimeout(this._unloadTimer);
     if (visible) {
       this._globalTo('shown');
-      if (top) this._pageTo(top, 'shown');
+      if (top) this._entryTo(top, 'shown');
     } else {
-      if (top) this._pageTo(top, 'hidden');
+      if (top) this._entryTo(top, 'hidden');
       this._globalTo('hidden');
       if (this.o.backgroundUnloadMs > 0) this._unloadTimer = setTimeout(() => this.close('background timeout'), this.o.backgroundUnloadMs);
     }
+  }
+
+  _globalTo(state, detail = {}) {
+    if (this.global.try(state, detail)) this._send(this.logicFrame, { type: 'miniapp.lifecycle', state, detail });
   }
 
   /** End the session: every page unloaded (top first), then the app, then the tree node. */
@@ -276,24 +457,60 @@ export class MiniAppHost {
 
   _teardown() {
     clearTimeout(this._unloadTimer);
-    while (this.pages.length) this._closePage(this.pages.pop());
+    while (this.pages.length) this._closeEntry(this.pages.pop());
     this._globalTo('unloaded', { reason: this._closeReason || 'closed' });
     window.removeEventListener('message', this._onMessage);
     document.removeEventListener('visibilitychange', this._onVisibility);
     this.store?.revoke(this.appKey);
     setTimeout(() => this.logicFrame?.remove(), 0);
-    this.o.onClose?.();
+    this.o.onClose?.(this._closeReason || 'closed');
   }
+
+  // ---- display preferences ----
+
+  /** Text size, colours and movement: package pages apply them; app pages get skin tokens and zoom. */
+  setPrefs(prefs) {
+    this.prefs = { ...this.prefs, ...prefs };
+    for (const e of this.pages) {
+      this._styleFrame(e.frame, e);
+      if (e.kind === 'package') this._send(e.frame, { type: 'miniapp.prefs', prefs: this.prefs });
+      if (e.kind === 'app') {
+        const { skin, tokens } = this._skin(e);
+        this._send(e.frame, { type: 'bus-event', event: { topic: 'ui.skin', data: { skin, tokens }, ts: Date.now(), source: 'local' } });
+      }
+    }
+  }
+
+  _skin(entry = null) {
+    return skinTokensFor(this.prefs, matchMedia('(prefers-color-scheme: dark)').matches, { size: entry?.linked?.textSize === 'skin' });
+  }
+
+  _styleFrame(f, entry = null) {
+    const p = this.prefs;
+    // An iframe's prefers-color-scheme follows the color-scheme of its element.
+    f.style.colorScheme = p.theme === 'dark' || p.theme === 'contrast' ? 'dark' : p.theme === 'light' ? 'light' : 'normal';
+    const scalesItself = !entry || entry.kind === 'package' || entry.linked?.textSize === 'skin';
+    f.style.zoom = scalesItself || p.scale === 1 ? '' : String(p.scale);
+    f.style.filter = entry && entry.kind !== 'package' && entry.linked?.colours !== 'skin' && p.theme === 'contrast' ? 'contrast(1.4)' : '';
+  }
+
+  // ---- messages ----
 
   _message(e) {
     const d = e.data || {};
-    const fromLogic = e.source === this.logicFrame?.contentWindow;
-    const page = fromLogic ? null : this.pages.find(p => e.source === p.frame.contentWindow);
-    if (!fromLogic && !page) return;
+    if (e.source === this.logicFrame?.contentWindow) return this._fromPackage(e, d, null);
+    const entry = this.pages.find((p) => e.source === p.frame.contentWindow);
+    if (!entry) return;
+    if (entry.kind === 'package') return this._fromPackage(e, d, entry);
+    if (entry.kind === 'app') return this._fromApp(e, d, entry);
+    if (entry.kind === 'game') return this._fromGame(e, d, entry);
+  }
+
+  _fromPackage(e, d, page) {
+    const fromLogic = page === null;
     const reply = (msg) => e.source.postMessage(msg, '*');
     const m = this.manifest;
     const pub = { app_id: m.app_id, name: m.name, version: m.version };
-
     switch (d.type) {
       case 'app.hello':
         if (fromLogic) {
@@ -305,16 +522,17 @@ export class MiniAppHost {
           if (document.visibilityState !== 'hidden') this._globalTo('shown');
           this._openPage(inputObject.pagePath, this.o.query || '');
         } else {
+          if (d.title) { page.title = d.title; page.frame.title = d.title; }
           reply({ type: 'app.init', layer: 'view', appId: m.app_id, capabilities: [...this.node.capabilities],
-            manifest: pub, messages: this.pkg.messages,
+            manifest: pub, messages: this.pkg.messages, prefs: this.prefs,
             pageInputObject: { pageInputQuery: Object.fromEntries(new URLSearchParams(page.query)), route: page.route, dir: m.dir || 'auto' } });
-          this._pageTo(page, 'loaded');
+          this._entryTo(page, 'loaded');
         }
         break;
       case 'miniapp.rendered':
         if (page && page.life.state === 'loaded') {
-          this._pageTo(page, 'ready');
-          if (page === this.pages.at(-1) && this.global.state === 'shown') this._pageTo(page, 'shown');
+          this._entryTo(page, 'ready');
+          if (page === this.pages.at(-1) && this.global.state === 'shown') this._entryTo(page, 'shown');
         }
         break;
       case 'miniapp.navigate':
@@ -324,14 +542,15 @@ export class MiniAppHost {
         this._openPage(d.route, String(d.query || ''), { replace: d.op === 'redirectTo' });
         break;
       case 'miniapp.message':
-        // The bridge between the layers: logic -> top page, page -> logic.
-        if (fromLogic) this._send(this.pages.at(-1)?.frame, { type: 'miniapp.message', data: d.data });
-        else this._send(this.logicFrame, { type: 'miniapp.message', data: d.data });
+        if (fromLogic) { const top = this.pages.at(-1); if (top?.kind === 'package') this._send(top.frame, { type: 'miniapp.message', data: d.data }); }
+        else this._send(this.logicFrame, { type: 'miniapp.message', data: d.data, from: page.route });
         break;
       case 'miniapp.error': {
         const before = this.global.state;
-        this._globalTo('error', { message: d.message, layer: fromLogic ? 'logic' : `view ${page.route}` });
+        const where = fromLogic ? 'logic' : `view ${page.route}`;
+        this._globalTo('error', { message: d.message, layer: where });
         if (before === 'shown' || before === 'hidden') this._globalTo(before);
+        this.o.onProblem?.({ kind: 'error', page: page?.route || null, entry: page, message: d.message, stack: d.stack });
         break;
       }
       case 'miniapp.invoke':
@@ -340,6 +559,92 @@ export class MiniAppHost {
           (err) => reply({ type: 'miniapp.result', rid: d.rid, ok: false, error: String(err?.message || err) }));
         break;
     }
+  }
+
+  /** app-sdk guests: the FINK story runner, edot, sheets, files. */
+  _fromApp(e, d, entry) {
+    const reply = (msg) => e.source.postMessage(msg, '*');
+    const id = entry.linked.id;
+    const node = entry.node;
+    switch (d.type) {
+      case 'app.hello': {
+        const { skin, tokens } = this._skin(entry);
+        const store = this.store && this.tree.can(node.id, 'storage') ? (this.store.snapshot(id) || {}) : {};
+        reply({ type: 'app.init', appId: id, capabilities: [...node.capabilities], store,
+          config: { surface: 'window', name: entry.linked.name,
+            bus: { publish: [`app.${id}.*`], subscribe: ['ui.skin', 'audio.volume'] },
+            story: entry.story, boot: false, mediaBase: null, skin, skinTokens: tokens } });
+        this._entryTo(entry, 'loaded');
+        break;
+      }
+      case 'store.set': case 'store.remove': case 'store.clear': {
+        if (!this.store) break;
+        const r = d.type === 'store.set' ? this.store.set(id, String(d.key), d.value)
+          : d.type === 'store.remove' ? this.store.remove(id, String(d.key)) : this.store.clear(id);
+        if (!r.ok) {
+          reply({ type: 'store.refused', op: d.type.slice(6), key: d.key, reason: r.reason });
+          if (r.reason === 'quota') this.o.onAnnounce?.(`${entry.title}: storage is full`, 'problem');
+        }
+        break;
+      }
+      case 'story.request': {
+        const fields = answerStoryRequest(d.verb, d.detail || {}, {
+          can: (cap) => this.tree.can(node.id, cap),
+          page: entry,
+          siteOrigin: this.o.siteBase,
+          openGame: (game, args, recent) => this._openGame(entry, game, args, recent),
+          onStory: (path) => this._replaceQuery(entry, { story: path }),
+          subtree: () => this.tree.descendants(node.id).map((n) => ({ id: n.id, appId: n.appId, label: n.label })),
+        });
+        if (!fields.ok && fields.reason === 'denied') this.bus?.publish('miniapp.denied', { summary: `${entry.title} may not use ${d.verb}`, verb: d.verb });
+        reply({ type: 'story.result', rid: d.rid, ...fields });
+        break;
+      }
+      case 'verb':
+        reply({ type: 'verb.result', rid: d.rid, ok: false, reason: 'unknown-verb' });
+        break;
+      case 'verbs.list':
+        reply({ type: 'verbs.result', rid: d.rid, verbs: [] });
+        break;
+      case 'secrets.put': case 'secrets.forget':
+        reply({ type: 'secrets.result', rid: d.rid, ok: false, reason: 'denied' });
+        break;
+      case 'secrets.names':
+        reply({ type: 'secrets.names.result', rid: d.rid, names: [] });
+        break;
+      case 'bus-publish':
+        if (typeof d.topic === 'string' && d.topic.startsWith(`app.${id}.`)) this.bus?.publish(d.topic, d.data || {}, { source: `app.${id}` });
+        break;
+      case 'announce':
+        if (typeof d.text === 'string') this.o.onAnnounce?.(d.text.slice(0, 200), 'status');
+        break;
+    }
+  }
+
+  /** Minigames: init, pause, resume, terminate; ready, complete, announce, error. */
+  _fromGame(e, d, entry) {
+    switch (d.type) {
+      case 'ready':
+        this._send(entry.frame, entry.init);
+        break;
+      case 'complete':
+        this._gameComplete(entry, d.result || {});
+        break;
+      case 'announce':
+        if (typeof d.text === 'string') this.o.onAnnounce?.(d.text.slice(0, 200), 'status');
+        break;
+      case 'error':
+        this.o.onProblem?.({ kind: 'error', page: entry.route, entry, message: String(d.message || d.code || 'game error') });
+        break;
+    }
+  }
+
+  /** Change the query of an open page (a story link moved to another story): keeps the address bar a deep link. */
+  _replaceQuery(entry, values) {
+    const q = new URLSearchParams(entry.query);
+    for (const [k, v] of Object.entries(values)) q.set(k, v);
+    entry.query = q.toString();
+    this.o.onNavigate?.('update', entry, this.pages);
   }
 
   async _invoke(api, args) {
@@ -354,8 +659,8 @@ export class MiniAppHost {
       case 'system.getInfo':
         return { runner: 'glitchcan miniapps', platformCode: this.o.platformCode, locale: this.pkg.locale,
           colorScheme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-          capabilities: [...this.node.capabilities] };
-      case 'ui.toast': this.o.onToast?.(String(args.text ?? '')); return true;
+          capabilities: [...this.node.capabilities], prefs: { ...this.prefs } };
+      case 'ui.toast': this.o.onAnnounce?.(String(args.text ?? '').slice(0, 200), 'toast'); return true;
       case 'storage.get': return this.store.snapshot(key)?.[String(args.key)] ?? null;
       case 'storage.keys': return Object.keys(this.store.snapshot(key) || {});
       case 'storage.set': {
@@ -367,7 +672,7 @@ export class MiniAppHost {
       case 'location.get':
         return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
           (p) => resolve({ latitude: p.coords.latitude, longitude: p.coords.longitude, accuracy: p.coords.accuracy }),
-          (e) => reject(new Error(e.message)), { timeout: 10000, maximumAge: 60000 }));
+          (err) => reject(new Error(err.message)), { timeout: 10000, maximumAge: 60000 }));
     }
     throw new Error(`unknown-api: ${api}`);
   }

@@ -1,0 +1,13 @@
+{
+  "title": "Glitchcan", "intro": "Stories, games and office apps. Everything opens as a page of this app; use Back to return.",
+  "stories": "Stories", "games": "Games", "office": "Office", "demos": "Demos",
+  "toc": "Table of contents", "toc_d": "Every FINK story and game, as an interactive story",
+  "hampstead": "Hampstead", "hampstead_d": "A tube-station story with a paper-robin game",
+  "audio": "Audio demo", "audio_d": "Sound beds and foley in a story",
+  "gems": "Gem Collector", "gems_d": "Tap the gems before time runs out",
+  "editor": "Documents", "editor_d": "The edot word processor",
+  "sheets": "Sheets", "sheets_d": "Spreadsheets and a SQL database",
+  "files": "Files", "files_d": "Your files in this browser",
+  "hello": "Page lifecycle", "hello_d": "What the app is told as you move between pages",
+  "recent": "Opened recently", "sessions": "Times this app has been opened: {n}"
+}

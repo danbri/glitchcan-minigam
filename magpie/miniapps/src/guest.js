@@ -117,7 +117,7 @@
         break;
       case 'miniapp.lifecycle':
         (layer === 'logic' ? miniapp.global : miniapp.page)._set(d.state, d.detail || {});
-        if (layer === 'view' && d.state === 'shown') focusStart();
+        if (layer === 'view' && d.state === 'shown' && d.detail?.focus) focusStart();
         if (layer === 'view' && d.state === 'loaded') {
           // First render: two animation frames. Browsers do not run rAF in an offscreen
           // cross-origin frame, so a timer stands in after 250 ms.

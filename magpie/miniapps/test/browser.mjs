@@ -1,10 +1,11 @@
-// Headless browser test of the runner. Needs a static server at the repo root:
-//   python3 -m http.server 8765   (from the repo root)
+// Headless browser test of the runner with the hello package. Needs a server that sends
+// Access-Control-Allow-Origin: * (GitHub Pages does; test/serve.mjs does):
+//   node magpie/miniapps/test/serve.mjs 8765 &
 //   node magpie/miniapps/test/browser.mjs [base-url]
 // Exit 0 when every check passes.
 import { chromium } from 'playwright';
 
-const base = process.argv[2] || 'http://localhost:8765/magpie/miniapps/';
+const base = process.argv[2] || 'http://127.0.0.1:8765/glitchcan-minigam/magpie/miniapps/';
 const browser = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errors = [];
@@ -17,7 +18,9 @@ const states = () => page.evaluate(() => window.__miniapps.host.log.map(e => `${
 const pageFrame = (i) => page.frames().filter(f => f.parentFrame() === page.mainFrame())[i];
 const waitFor = async (fn, ms = 5000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await page.waitForTimeout(50); } return false; };
 
-await page.goto(base + 'index.html?lang=zh-CN');
+await page.goto(base + 'index.html?app=org.glitchcan.hello&lang=zh-CN&dev');
+await page.waitForSelector('#perm-dialog[open]');
+await page.click('#perm-allow');
 await waitFor(() => page.evaluate(() => !!window.__miniapps));
 check(await waitFor(async () => (await states()).includes('page:shown:index')), 'start page reaches "shown"');
 const s1 = await states();
@@ -51,6 +54,8 @@ const deep = await page.evaluate(() => location.href.replace(/uri=[^&]*/, 'uri='
 const page2 = await browser.newPage();
 page2.on('pageerror', (e) => errors.push(`page2 pageerror: ${e.message}`));
 await page2.goto(deep);
+await page2.waitForSelector('#perm-dialog[open]');   // a new browser context: nothing remembered yet
+await page2.click('#perm-allow');
 const f2 = () => page2.frames().filter(f => f.parentFrame() === page2.mainFrame())[1];
 check(await (async () => { for (let i = 0; i < 100; i++) { const f = f2(); if (f && await f.evaluate(() => document.getElementById('q')?.textContent).catch(() => null) === '{"n":"7"}') return true; await page2.waitForTimeout(50); } return false; })(), 'deep link opens detail with n=7');
 await page2.close();
@@ -63,13 +68,14 @@ check(s.slice(-4).join(' ') === 'page:hidden:index global:hidden global:shown pa
 await pageFrame(1).click('#err');
 check(await waitFor(async () => (await states()).includes('global:error')), 'logic-layer exception -> global "error"');
 check((await states()).at(-1) === 'global:shown', 'after the error the app is "shown" again');
-await page.click('#close');
+await page.click('#menu-btn');
+await page.click('#menu-close-app');
 s = await states();
 check(s.slice(-2).join(' ') === 'page:unloaded:index global:unloaded', `close: ${s.slice(-2).join(' ')}`);
 check(await page.evaluate(() => window.__miniapps.tree.children(window.__miniapps.root.id).length) === 0, 'tree node closed');
 
 // Attenuation: a root without geolocation refuses LOCATION, and the API call is denied.
-await page.goto(base + 'index.html?deny=geolocation');
+await page.goto(base + 'index.html?app=org.glitchcan.hello&deny=geolocation&dev');
 await waitFor(async () => (await page.evaluate(() => window.__miniapps?.host.log.length || 0)) >= 5);
 const r2 = await page.evaluate(() => window.__miniapps.host.refused.map(x => `${x.name}:${x.reason}`));
 check(r2.includes('system.permission.LOCATION:the root does not hold it'), `LOCATION refused by attenuation: ${r2}`);

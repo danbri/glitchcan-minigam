@@ -36,7 +36,7 @@
   :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
   .skip { position: absolute; left: 0.5rem; top: -4rem; z-index: 10; background: var(--panel); color: var(--fg);
     padding: 0.75rem 1rem; border: 2px solid var(--focus); border-radius: 0.5rem; }
-  .skip:focus { top: 0.5rem; }
+  .skip:focus-visible { top: 0.5rem; }
   button, .button { font: inherit; min-height: var(--target); min-width: var(--target); padding: 0.5rem 1rem;
     border-radius: 0.6rem; border: 2px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
   button:disabled { opacity: 0.5; cursor: default; }
@@ -45,8 +45,12 @@
   .appbar button { background: transparent; color: inherit; border-color: transparent; font-size: 1.4rem; line-height: 1; }
   .appbar button:hover { border-color: currentColor; }
   .titles { flex: 1; min-width: 0; }
-  #page-title { font-size: 1.1rem; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #crumbs { list-style: none; display: flex; flex-wrap: wrap; gap: 0 0.25rem; margin: 0; padding: 0; font-size: 0.85rem; }
+  /* The title may take two lines; the breadcrumbs keep to one line and scroll sideways. */
+  #page-title { font-size: 1.1rem; line-height: 1.25; margin: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
+  #crumbs { list-style: none; display: flex; flex-wrap: nowrap; gap: 0 0.25rem; margin: 0; padding: 0; font-size: 0.85rem;
+    overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+  #crumbs li { flex: none; }
   #crumbs li + li::before { content: "›"; margin-right: 0.25rem; opacity: 0.8; }
   #crumbs button { min-height: 1.75rem; min-width: 0; padding: 0 0.25rem; font-size: inherit; border: 0; text-decoration: underline; }
   #crumbs [aria-current] { font-weight: 600; }
@@ -70,7 +74,7 @@
   .choices { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .choices label, .perm label { display: flex; align-items: center; gap: 0.5rem; min-height: var(--target); padding: 0 0.5rem;
     border: 1px solid var(--line); border-radius: 0.5rem; cursor: pointer; }
-  .choices input, .perm input { width: 1.25rem; height: 1.25rem; accent-color: var(--accent); }
+  .choices input, .perm input { flex: none; width: 1.25rem; height: 1.25rem; accent-color: var(--accent); }
   .perm { list-style: none; padding: 0; margin: 0 0 0.75rem; display: grid; gap: 0.5rem; }
   .perm small { display: block; color: var(--muted); }
   .muted { color: var(--muted); }
@@ -84,6 +88,8 @@
   #dev td:first-child { overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
   #log { font: 0.8rem/1.4 ui-monospace, monospace; max-height: 16rem; overflow: auto; padding-left: 2rem; }
   .bad { color: var(--bad); }
+  #toast { position: fixed; left: 50%; bottom: max(1rem, env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: calc(100vw - 2rem);
+    background: var(--fg); color: var(--bg); padding: 0.6rem 1rem; border-radius: 0.6rem; z-index: 5; }
   a { color: var(--accent); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   :root[data-motion="reduce"] * { transition: none !important; animation: none !important; }
@@ -121,6 +127,7 @@
   </section>
 </main>
 <div id="announce" class="vh" aria-live="polite" aria-atomic="true"></div>
+<div id="toast" aria-hidden="true" hidden></div>
 
 <dialog id="menu" aria-labelledby="menu-title">
   <h2 id="menu-title">App menu</h2>
@@ -131,6 +138,7 @@
   <fieldset><legend id="lg-about">About this app</legend><p id="about-text" class="muted"></p></fieldset>
   <p class="muted" id="shortcuts"></p>
   <div class="actions">
+    <button id="menu-dev" type="button">Developer details</button>
     <button id="menu-close-app" type="button">Close app</button>
     <button id="menu-done" type="button" autofocus>Done</button>
   </div>
@@ -146,7 +154,7 @@
   </div>
 </dialog>
 
-<details id="dev">
+<details id="dev" hidden>
   <summary id="dev-summary">Developer details</summary>
   <form id="go"><input id="uri" name="uri" spellcheck="false" autocomplete="off" aria-label="MiniApp URI"><button type="submit">Open</button></form>
   <p id="app-meta" class="muted"></p>

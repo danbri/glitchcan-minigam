@@ -8,7 +8,19 @@
           "bytes": 4158
         }
       },
-      "latest": "1.0.0"
+      "latest": "1.0.0",
+      "name": "Hello MiniApp"
+    },
+    "org.glitchcan.suite": {
+      "versions": {
+        "1.0.0": {
+          "href": "dist/org.glitchcan.suite-1.0.0.ma",
+          "code": 1,
+          "bytes": 8551
+        }
+      },
+      "latest": "1.0.0",
+      "name": "Glitchcan"
     }
   }
 }

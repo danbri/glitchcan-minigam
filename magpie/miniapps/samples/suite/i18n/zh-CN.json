@@ -1,0 +1,13 @@
+{
+  "title": "Glitchcan", "intro": "故事、游戏和办公应用。每一项都作为本应用的一页打开；用“返回”回到这里。",
+  "stories": "故事", "games": "游戏", "office": "办公", "demos": "演示",
+  "toc": "目录", "toc_d": "所有 FINK 故事和游戏，以互动故事的形式呈现",
+  "hampstead": "汉普斯特德", "hampstead_d": "地铁站的故事，含纸知更鸟小游戏",
+  "audio": "音频演示", "audio_d": "故事中的背景声和音效",
+  "gems": "宝石收集", "gems_d": "在时间结束前点击宝石",
+  "editor": "文档", "editor_d": "edot 文字处理器",
+  "sheets": "表格", "sheets_d": "电子表格和 SQL 数据库",
+  "files": "文件", "files_d": "此浏览器中的文件",
+  "hello": "页面生命周期", "hello_d": "在页面之间切换时应用收到的通知",
+  "recent": "最近打开", "sessions": "本应用已打开 {n} 次"
+}

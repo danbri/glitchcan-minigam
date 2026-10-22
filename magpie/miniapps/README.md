@@ -116,21 +116,30 @@ src/manifest.mjs         manifest processing (Manifest §1.7), defaults, warning
 src/zip.mjs              ZIP read and write with the Packaging §3 constraints; signing-block detection
 src/package.mjs          the seven processing steps (Packaging §5)
 src/lifecycle.mjs        Global and Page state machines (Lifecycle)
-src/host.mjs             MiniAppHost: frames, page stack, lifecycle, APIs, AppTree/FoafStore/FoafBus
-src/guest.js             the bootstrap that the host puts into each frame (the `miniapp` object)
-samples/hello/           a sample package source (en-US and zh-CN)
+src/host.mjs             MiniAppHost: frames, page stack (package, app and game pages), lifecycle,
+                         APIs, display preferences, AppTree/FoafStore/FoafBus
+src/foafos-guests.mjs    the host side of the foafos guest protocols (app-sdk, minigame SDK)
+src/guest.js             the bootstrap that the host puts into each package frame (the `miniapp` object)
+src/ui-strings.mjs       the chrome's words, English and Chinese
+samples/suite/           org.glitchcan.suite: launcher, FINK stories, games, edot, demos (en-US, zh-CN)
+samples/hello/           a small sample package (en-US and zh-CN)
 dist/*.ma                packed packages (committed, because Pages has no build step)
 tools/pack.mjs           pack a folder, check it with openPackage, update registry.json
 test/unit.mjs            Node tests (13)
-test/browser.mjs         headless Chromium test of the runner (25 checks)
+test/browser.mjs         headless Chromium test with the hello package (24 checks)
+test/ux.mjs              the suite end to end, with usability and accessibility checks (70 checks)
+test/serve.mjs           a static server that behaves like GitHub Pages (CORS, /glitchcan-minigam/ prefix)
 ```
 
 ### Deep links
 
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html opens the sample app.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html opens the suite (launcher).
 - https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?lang=zh-CN opens it in Chinese.
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.hello%3Bversion%3D1.0.0%2Fpages%2Fdetail%2Fdetail%3Fn%3D7 opens the detail page with `n=7`.
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?deny=geolocation opens it with a root that has no geolocation. The LOCATION request is then refused by attenuation.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.suite%2Fpages%2Fstory%2Fstory%3Fstory%3D%2Fglitchcan-minigam%2Finklet%2Fhampstead.fink.js%26title%3DHampstead opens the Hampstead story.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.suite%2Fpages%2Foffice%2Feditor opens edot Documents.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.hello opens the hello package.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.hello&deny=geolocation opens it with a root that has no geolocation. The LOCATION request is then refused by attenuation.
+- Add `&dev` to show the developer panel (URI box, grant table, warnings, bus log).
 
 The runner writes the current page back into `?uri=`, so the address bar is always a deep
 link.
@@ -173,13 +182,72 @@ reason "no foafos capability for this permission".
 | Where page scripts run | Packaging puts JS in `pages/`; the White Paper puts logic in workers. | `app.js` runs in the logic frame; page scripts run in their view frame. |
 | Background unload | "should" unload after some time; the example is 5 minutes. | 5 minutes, set by `backgroundUnloadMs`. |
 
-## 4. Test results (2026-10-21)
+### Pages that are foafos apps (the suite)
+
+A package page may name an existing foafos app instead of being a page of its own. The page
+file holds a JSON block, and its body is a fallback for readers outside the runner:
+
+```html
+<script type="application/json" id="foafos-app">
+{ "id": "storyrunner", "name": "Story", "url": "/glitchcan-minigam/inklet/apps/storyrunner/index.html",
+  "capabilities": ["story:launch", "story:link", "story:navigate", "story:observe", "audio", "vars:read", "vars:write"],
+  "story": "/glitchcan-minigam/inklet/toc.fink.js", "storyFromQuery": true, "titleFromQuery": true, "colours": "skin" }
+</script>
+```
+
+- `protocol` is `app-sdk` (the default: story runner, edot, Sheets, Files) or `minigame`
+  (a FINK minigame as a page of its own).
+- The URL must be on the same site (the shell's policy v0). The frame gets the shell's
+  sandbox, `allow-scripts allow-forms allow-modals`, plus `allow-downloads`.
+- Each such page is a child node of the MiniApp's node in the `AppTree`. Its capabilities
+  are the ones it asks for that the MiniApp holds; the rest are dropped. A minigame that
+  a story opens is a child of the story's node, with no capabilities.
+- The host answers the app-sdk protocol as `foafos-shell.js` does: `app.init` with the
+  app's store snapshot and config, `store.*` through `FoafStore` (the same namespace as in
+  the shell, so edot sees the same documents in both), `story.request` with the shell's
+  verb → capability table, and refusals for `verb` and `secrets.*`.
+- `# MINIGAME:` in a story pushes a game page, sends the game `init`, and on `complete`
+  closes the game page and sends the story `story.event minigame.complete`. Leaving the game
+  with Back counts as not completed.
+- Hidden pages are told: `app.suspend`/`app.resume` for apps, `pause`/`resume` for games.
+
+The suite (`samples/suite/`, app id `org.glitchcan.suite`) has seven pages: a launcher (a
+package page), the story runner (any story, chosen by the link), Gem Collector, Documents,
+Sheets, Files, and a lifecycle demo page. It asks for 8 permissions, each with a reason.
+
+### Usability and accessibility beyond the standards
+
+The MiniApp drafts say nothing about these; WCAG 2.2 AA asks for some of them. Each one
+is checked in `test/ux.mjs`.
+
+| What | How |
+|---|---|
+| Browser Back is the app's Back | each page is a history entry; Back, Alt+Left, the ← button and the breadcrumbs all move through history, and pops the host makes (a game ends) keep history in step |
+| Where am I | the app bar shows the page title (two lines at most) and a breadcrumb trail; `document.title` is "Page · App"; the ← button is named "Back to <page>" |
+| Announcements | a polite live region says "<app> is open", "<page> opened", "Back at <page>", game results and storage refusals, in the reader's language |
+| Focus | the first page leaves the focus at the top (the skip link comes first); every later page takes the focus, and a package page puts it on its heading; dialogs return the focus to the control that opened them; after the permission sheet the focus goes to the skip link |
+| Text size | 100–200% for every page: package pages through the root font size; foafos apps through zoom on their frame |
+| Colours | device, light, dark or high contrast; package pages get a high-contrast stylesheet that uses system colours; the story runner gets skin tokens; other apps get the iframe `color-scheme` and a contrast filter; the app bar refuses an app's own colours below 4.5:1 |
+| Movement | "reduce movement" stops animations in package pages |
+| Touch targets | every control in the chrome and the launcher is at least 44×44 px (WCAG 2.5.5, level AAA) |
+| Permissions | asked once per app version, before the app runs, in plain words with the app's own reason; each one can be refused; the answer is shown in the app menu |
+| Loading | a progress bar with a percentage while the package downloads |
+| Problems | a page that does not load in 12 s, an app error, a missing app and a failed download each get a plain message and a way on (reload, back, try again); nothing is left blank |
+| Language | the chrome is in English or Chinese, from `?lang=` or the browser |
+| Forced colours | the chrome works in Windows High Contrast (forced-colors) mode |
+
+## 4. Test results (2026-10-22)
 
 ```
-node --test magpie/miniapps/test/unit.mjs              # 13 pass, 0 fail (out of 13)
-python3 -m http.server 8765 &                          # from the repo root
-node magpie/miniapps/test/browser.mjs                  # 25 pass, 0 fail (out of 25)
+cd magpie/miniapps && npm install                      # axe-core, for the accessibility scans
+node --test test/unit.mjs                              # 13 pass, 0 fail (out of 13)
+node test/serve.mjs 8765 &                             # like GitHub Pages: CORS, /glitchcan-minigam/
+node test/browser.mjs                                  # 24 pass, 0 fail (out of 24)
+node test/ux.mjs                                       # 70 pass, 0 fail (out of 70); starts its own server
 ```
+
+Correction: this README said "25 checks" for `test/browser.mjs` on 2026-10-21. The file
+has 24 `check()` calls; the number was counted from output by eye, not from the file.
 
 The unit tests parse every example URI in the Addressing Note and process the Manifest
 draft's own example with no error and no warning. They also check that each ZIP
@@ -196,6 +264,47 @@ The browser test runs the sample in Chromium 1194 (headless), with Playwright. I
 - navigation with a query, back, and a deep link
 - home and return, a logic-layer error, close, and closure of the tree node
 - the attenuation refusal, and an API call denied at the time of use
+
+`test/ux.mjs` runs the suite in Chromium 1194 at phone size (390×844, touch). In one
+MiniApp instance it:
+- answers the permission sheet, and checks it is modal and holds the focus;
+- opens the FINK table of contents, takes it to GridLuck, lets `# MINIGAME:` open the game
+  page, finishes the game, and checks that the story goes on ("You return from the game.")
+  and that history went back with it;
+- opens Documents, Sheets and Files, and checks that each runs in an opaque origin and
+  saves through the runner's store;
+- opens Gem Collector as a page, pauses and resumes it, and checks the result announcement;
+- sets 200% text, high contrast and reduced movement, and checks each kind of page;
+- opens a deep link to Hampstead in Chinese, and checks that the story plays;
+- makes a page hang, asks for a missing app, and fails a download, and checks each message;
+- runs axe-core 4.10.3 (WCAG 2.0/2.1/2.2 A and AA, and best practice) six times: on the
+  chrome with the permission sheet, with the launcher, with the app menu, and in forced
+  colours; on the launcher page; and on the launcher at 200% in high contrast. 0 violations
+  in each.
+
+axe also ran on two existing foafos apps, as information, not as checks:
+- the FINK story runner: 0 violations;
+- edot Files: 3 moderate structure findings (no `main` landmark, no `h1`, and content
+  outside landmarks).
+
+Baseline before this work (the runner of 2026-10-21, same scan): 1 serious colour-contrast
+violation, and 7 controls under 44×44 px (the ← button was 27×32).
+
+### Defects found while building the suite
+
+1. The first page took the focus as soon as it was shown. A keyboard user's first Tab then
+   moved inside the app, and Enter opened a story. Now only pages after a navigation take
+   the focus.
+2. After the permission sheet closed, the browser's Tab start point stayed inside the
+   closed dialog, so Tab did not reach the skip link. The sheet now hands the focus to the
+   skip link, which shows only for keyboard focus.
+3. The story runner's prose uses `font-size: clamp(15px, 4vw, 19px)` and ignores its own
+   `--sk-size` token (`inklet/apps/storyrunner/storyrunner.css`), so text size did not reach
+   it. The runner now zooms its frame. Changing the story runner's CSS would also change its
+   look in the foafos shell; that is a separate decision.
+4. App frames got their zoom only when a preference changed, not when they were created.
+5. Closing the app from the menu: the menu's close handler took the focus back from
+   "Open again".
 
 ### Two defects that the browser test found
 
@@ -220,10 +329,14 @@ The browser test runs the sample in Chromium 1194 (headless), with Playwright. I
 - The logic layer is a hidden frame, not a Worker. A Worker made from a blob in the host
   would get the host's origin. A Worker made inside the sandboxed logic frame would keep
   the opaque origin, but this is not tried yet.
-- The runner is not yet in `foafos-shell.js`. The next step is a `surface: 'miniapp'` row
-  type (`package: 'magpie/miniapps/dist/…ma'`), so that `launchApp` spawns a MiniAppHost
-  inside a shell window. This also needs the window-manager events the shell does not
-  send yet (minimise and focus → `hidden` and `shown`).
+- The runner hosts foafos apps itself, but the shell does not host MiniApps yet. A
+  `surface: 'miniapp'` row type in `foafos-apps.js` would let `launchApp` start a MiniAppHost
+  in a shell window.
+- Not answered for foafos apps: `story.world` (`# WORLD:`), shared story variables (every
+  variable is private), foley mixing, `git.commit` and other verbs, secrets, and snapshots
+  (a story's reading place is not kept when its page closes).
+- Reduced movement reaches package pages only; foafos apps follow the device setting.
+- The colour filter for apps that have no skin tokens is coarse.
 - Security is the same as in foafos: open egress, no CSP on the frames (GitHub Pages cannot
   send `Allow-CSP-From`), and `data:` URLs that make large media expensive. See the `fink`
   skill, sections on exfiltration.

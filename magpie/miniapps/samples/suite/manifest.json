@@ -1,0 +1,38 @@
+{
+  "dir": "ltr",
+  "lang": "en-US",
+  "app_id": "org.glitchcan.suite",
+  "name": "Glitchcan",
+  "short_name": "Glitchcan",
+  "description": "FINK stories and games, the edot office apps and demos, as pages of one MiniApp.",
+  "version": { "name": "1.0.0", "code": 1 },
+  "icons": [{ "src": "common/icon.svg", "sizes": "any", "label": "Glitchcan" }],
+  "platform_version": { "min_code": 1, "target_code": 1 },
+  "pages": [
+    "pages/home/home",
+    "pages/story/story",
+    "pages/game/gems",
+    "pages/office/editor",
+    "pages/office/sheets",
+    "pages/office/files",
+    "pages/demo/hello"
+  ],
+  "window": {
+    "background_color": "#f4f2ec",
+    "navigation_bar_background_color": "#0b3a4a",
+    "navigation_bar_text_style": "white",
+    "navigation_bar_title_text": "Glitchcan"
+  },
+  "req_permissions": [
+    { "name": "system.permission.STORAGE", "reason": "Keep your documents, sheets, files and reading place in this browser" },
+    { "name": "system.permission.AUDIO", "reason": "Play the sound in stories and games" },
+    { "name": "foafos.story:link", "reason": "Let stories link to other stories" },
+    { "name": "foafos.story:launch", "reason": "Let stories open their games" },
+    { "name": "foafos.story:observe", "reason": "Let a story see the games it has opened" },
+    { "name": "foafos.story:navigate", "reason": "Keep your place in a story in the address bar, so you can share it" },
+    { "name": "foafos.vars:read", "reason": "Let a game read what you have found in a story" },
+    { "name": "foafos.vars:write", "reason": "Let a game add what you win to the story" }
+  ],
+  "color_scheme": "auto",
+  "device_type": ["phone", "tablet", "pc"]
+}

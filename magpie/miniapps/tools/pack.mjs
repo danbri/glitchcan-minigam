@@ -42,6 +42,7 @@ const regPath = join(root, 'registry.json');
 let reg = { packages: {} };
 try { reg = JSON.parse(await readFile(regPath, 'utf8')); } catch { /* first package */ }
 const rec = reg.packages[app_id] ||= { versions: {} };
+rec.name = opened.manifest.name;
 rec.versions[version.name] = { href: `dist/${name}`, code: version.code, bytes: bytes.length };
 rec.latest = Object.entries(rec.versions).sort((a, b) => b[1].code - a[1].code)[0][0];
 await writeFile(regPath, JSON.stringify(reg, null, 2) + '\n');
