@@ -71,6 +71,7 @@ function compile(ink) {
 function play(story) {
   const faults = [];       // { message, trail }
   const knots = new Set();
+  const oldTags = new Set();   // knots that still use # MINIGAME: (the old name of # APP:)
   let paths = 0, deepest = 0;
   const seen = new Set();
 
@@ -95,6 +96,18 @@ function play(story) {
         story.Continue();
         const p = story.state.currentPathString;
         if (p) knots.add(String(p).split('.')[0]);
+        // Tags as the runtime gives them, as the runner reads them.
+        for (const tag of story.currentTags || []) {
+          const at = tag.indexOf(':');
+          const key = (at < 0 ? tag : tag.slice(0, at)).trim().toUpperCase();
+          if (key === 'MINIGAME') oldTags.add(String(p || '(flow)').split('.')[0]);
+          if (key === 'APP') {
+            const then = tag.slice(at + 1).trim().split(/\s+/).find((t) => t.startsWith('then='));
+            if (then && !['then=wait', 'then=beside', 'then=go'].includes(then)) {
+              faults.push({ message: `APP: ${then} is not then=wait, then=beside or then=go (docs/foafos-apps-20261022.md)`, trail: [...trail] });
+            }
+          }
+        }
       }
     } catch (e) {
       faults.push({ message: `THREW: ${String(e).split('\n')[0]}`, trail: [...trail] });
@@ -131,7 +144,7 @@ function play(story) {
       queue.push({ save, choice: i, trail: [...trail, label] });
     }
   }
-  return { faults, knots, paths, deepest, truncated: queue.length > 0 };
+  return { faults, knots, paths, deepest, truncated: queue.length > 0, oldTags };
 }
 
 async function corpus() {
@@ -163,6 +176,7 @@ const fragments = new Set(unions.flatMap(u => u.merge.map(m => resolve(repoRoot,
 const targets = (files.length ? files.map(f => resolve(process.cwd(), f)) : await corpus())
   .filter(f => !fragments.has(f));
 let bad = 0;
+let warned = 0;      // files that still use # MINIGAME:
 console.log(`fink-check: ${targets.length} file(s), up to ${MAX_PATHS} paths each\n`);
 
 for (const file of targets) {
@@ -197,6 +211,11 @@ for (const file of targets) {
   } else {
     console.log(`✔ ${name}  ${r.paths} paths, ${r.knots.size} knots, depth ${r.deepest}`
       + (r.truncated ? ' (search truncated)' : ''));
+  }
+  // A warning, not a fault: the runner still reads the old name.
+  if (r.oldTags.size) {
+    warned++;
+    console.log(`    ⚠ # MINIGAME: is the old name of # APP: (knots: ${[...r.oldTags].slice(0, 6).join(', ')})`);
   }
 }
 
@@ -244,5 +263,6 @@ if (unions.length && !files.length) {
   }
 }
 
+if (warned) console.log(`\n${warned} file(s) still use # MINIGAME:, the old name of # APP: (a warning)`);
 console.log(bad ? `\nFINK CHECK: ${bad} file(s) with faults` : '\nFINK CHECK: all clean');
 process.exitCode = bad ? 1 : 0;

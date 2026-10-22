@@ -215,7 +215,22 @@ function handleTag(tag) {
       // used to do for everything.
       declareStatus(value);
       break;
+    case 'APP': {
+      // `# APP: <app> [then=wait|beside|go] [key=value ...]` replaces `# MINIGAME:`
+      // and covers `# WORLD:` (docs/foafos-apps-20261022.md, section 6). `then=`
+      // says what the story does while the app runs; it is the runner's word, so
+      // it is taken off before the arguments go to the shell.
+      const { then, rest } = appThen(value);
+      if (then === 'beside') _pendingWorldTag = rest;
+      else if (then === 'go') setStatus(`${gameTag(rest).name}: then=go needs a service app, and there are none yet`);
+      else {
+        if (then !== 'wait') setStatus(`${gameTag(rest).name}: then=${then} is not known; waiting for the app`);
+        _pendingGame = rest;
+      }
+      break;
+    }
     case 'MINIGAME':
+      // The old name of `# APP: <app>` (then=wait). Stories move to `# APP:`.
       // A game BREAKS the beat and PAUSES the story (#779), the same way
       // the host engine's Continue loop breaks on this tag. Before this
       // the runner fired the verb and carried straight on, so a story
@@ -668,8 +683,8 @@ function stepStory() {
       }
       addProse(trimmed, _lineClasses.join(' '));
     }
-    // A FINK link or a MINIGAME ends the beat — matching the host
-    // engine, which breaks its loop on exactly these two tags.
+    // A FINK link or an app the story waits for (# APP:, # MINIGAME:) ends the
+    // beat — matching the host engine, which broke its loop on these tags.
     if (_pendingLink !== undefined || _pendingGame !== undefined) break;
   }
   if (_pendingWorldTag !== undefined) openWorld(_pendingWorldTag);
@@ -772,6 +787,17 @@ let _awaitingGame = null;
 // row declares (plus the stage host's own mode= and controls=) and drops the
 // rest out loud. This split is of the tag's value, which the ink runtime has
 // already produced; it reads no story source.
+// `then=` is taken from the tag's value (which the ink runtime has already
+// produced, as for gameTag) and the rest is the app and its arguments.
+function appThen(value) {
+  let then = 'wait';
+  const rest = String(value).trim().split(/\s+/).filter((tok) => {
+    if (tok.startsWith('then=')) { then = tok.slice(5) || 'wait'; return false; }
+    return true;
+  }).join(' ');
+  return { then, rest };
+}
+
 function gameTag(value) {
   const [name = '', ...rest] = String(value).trim().split(/\s+/);
   const args = {};
@@ -790,7 +816,7 @@ function gameTag(value) {
 // those writes land in this story's VARs at once (world.var); it hears the
 // VARs its row reads when they change. The last lines sent are kept, so a
 // restore can rebuild the world (sent again as a replay, not spoken again).
-const RUNNER_TAGS = new Set(['BG', 'CLASS', 'BASEHREF', 'STATUS', 'MINIGAME', 'WORLD', 'FINK',
+const RUNNER_TAGS = new Set(['BG', 'CLASS', 'BASEHREF', 'STATUS', 'APP', 'MINIGAME', 'WORLD', 'FINK',
   'LINKREL', 'ENTRY', 'IMAGE', 'VIDEO', 'AUDIO', 'STOP_AUDIO', 'FOLEY']);
 function isWorldTag(tag) {
   const at = tag.indexOf(':');

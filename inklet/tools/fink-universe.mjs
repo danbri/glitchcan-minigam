@@ -118,7 +118,7 @@ async function build() {
     for (const k of knots) for (const t of knotTags(story, k)) seen.push({ knot: k, tag: t });
 
     for (const { knot, tag } of seen) {
-      const m = /^\s*(FINK|MINIGAME|LINKREL)\s*:\s*(.+)$/i.exec(tag);
+      const m = /^\s*(FINK|APP|MINIGAME|LINKREL)\s*:\s*(.+)$/i.exec(tag);
       if (!m) continue;
       const kind = m[1].toUpperCase();
       const value = m[2].trim();
@@ -136,8 +136,9 @@ async function build() {
         node(targetId, /^https?:/i.test(target) ? { kind: 'external', title: targetId } : {});
         edges.push({ from: id, to: targetId, type: 'fink', knot });
         self.links++;
-      } else if (kind === 'MINIGAME') {
-        const name = value.split(/\s+/)[0].toLowerCase();
+      } else if (kind === 'MINIGAME' || kind === 'APP') {
+        // `# APP:` is the new name; its then= word is the runner's, not the app's.
+        const name = value.split(/\s+/).filter(t => !t.startsWith('then='))[0].toLowerCase();
         const wid = `widget:${name}`;
         node(wid, { kind: 'widget', title: name });
         edges.push({ from: id, to: wid, type: 'minigame', knot, spec: value });

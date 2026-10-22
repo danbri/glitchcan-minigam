@@ -41,6 +41,9 @@ function withShell(ink) {
 const tagOf = (tags, name) =>
   (tags || []).filter(t => t.trim().toUpperCase().startsWith(`${name}:`))
               .map(t => t.trim().slice(name.length + 1).trim());
+// The apps a story opens: `# APP:` (its then= word removed) and the old name `# MINIGAME:`.
+const appsOf = (tags) => [...tagOf(tags, 'APP'), ...tagOf(tags, 'MINIGAME')]
+  .map(v => v.split(/\s+/).filter(t => !t.startsWith('then=')).join(' '));
 
 const rows = [];
 const patterns = ['inklet/**/*.fink.js', 'cozyverse/*.fink.js'];
@@ -62,7 +65,7 @@ for (const file of allFiles) {
     if (!map.has(g)) map.set(g, new Set());
     map.get(g).add(where);
   };
-  for (const g of tagOf(story.globalTags, 'MINIGAME')) note(minigames, g, '(global)');
+  for (const g of appsOf(story.globalTags)) note(minigames, g, '(global)');
   for (const g of tagOf(story.globalTags, 'FINK')) links.add(g);
   const knots = [...story.mainContentContainer.namedOnlyContent.keys()]
     .filter(k => !k.startsWith('_') && k !== 'global decl');
@@ -73,7 +76,7 @@ for (const file of allFiles) {
   // currentTags after every Continue — the same thing the player sees.
   const harvest = () => {
     const knot = (story.state.currentPathString || '').split('.')[0] || '(flow)';
-    for (const g of tagOf(story.currentTags, 'MINIGAME')) note(minigames, g, knot);
+    for (const g of appsOf(story.currentTags)) note(minigames, g, knot);
     for (const g of tagOf(story.currentTags, 'FINK')) links.add(g);
   };
   const queue = [[]];
