@@ -612,6 +612,20 @@ const currentSession = (runnerNodeId) => {
 };
 FoafOS.storySession = (runnerNodeId) => currentSession(runnerNodeId);
 
+// Sessions this shell suspended because a dream started inside them. Only
+// these are resumed when the dream ends: a session the reader paused by hand
+// stays paused. Resumed when it is the innermost live session again and no
+// live session is still its dream.
+const dreamSuspended = new Set();
+const wakeDreamer = (runnerNodeId) => {
+  const back = currentSession(runnerNodeId);
+  if (!back || !dreamSuspended.has(back.id)) return;
+  const stack = storySessions.get(runnerNodeId) || [];
+  if (stack.some((id) => apps.get(id)?.dreamOf === back.id)) return;
+  dreamSuspended.delete(back.id);
+  FoafOS.setSubtreeSuspended?.(back.id, false);
+};
+
 // WHICH PLAYTHROUGH IS THIS? Dream depth is a property of a session, so it is
 // keyed by one. A runner may NAME which of its sessions is asking — needed
 // once a peer forwards on another session's behalf — and the name is honoured
@@ -1907,7 +1921,7 @@ function buildUI() {
   const SKIN_TOKENS = ['--sk-bg', '--sk-bg-figure', '--sk-ink', '--sk-ink-dim',
     '--sk-accent', '--sk-accent-ink', '--sk-line', '--sk-font-ui',
     '--sk-font-body', '--sk-size', '--sk-radius', '--sk-choice-bg',
-    '--sk-choice-ink', '--sk-choice-line', '--sk-shadow'];
+    '--sk-choice-ink', '--sk-choice-line', '--sk-shadow', '--sk-depth'];
   const skinTokens = FoafOS.skinTokens = () => {
     const cs = getComputedStyle(document.documentElement);
     const out = {};
@@ -3174,6 +3188,7 @@ function buildUI() {
               if (at < 0) { reply({ ok: false, reason: 'not-mine' }); return; }
               const [id] = stack.splice(at, 1);
               if (id) apps.close(id);
+              wakeDreamer(runnerNode.id);
               reply({ ok: true, op, id: currentSession(runnerNode.id)?.id || null });
               return;
             }
@@ -3186,6 +3201,7 @@ function buildUI() {
             if (rel === 'surface' || rel === 'goshallower') {
               const inner = stack.pop();
               if (inner) apps.close(inner);
+              wakeDreamer(runnerNode.id);
               const back = currentSession(runnerNode.id);
               reply({ ok: true, op, rel, id: back?.id || null, label: back?.label || null });
               return;
@@ -3218,6 +3234,12 @@ function buildUI() {
               const d = storyDepth.get(outer.id) || 0;
               storyDepth.set(node.id, d);
               storyDepth.set(outer.id, Math.max(0, d - 1));
+              // The outer story DREAMS: its session node, and the apps it
+              // opened, are suspended until the dream ends. The dream is a
+              // child of the runner, not of the outer session, so it stays
+              // awake. Owner, 2026-10-22, on "session nodes in the app tree,
+              // with the outer story suspended": "Probably yes".
+              if (!outer.suspended && FoafOS.setSubtreeSuspended) { FoafOS.setSubtreeSuspended(outer.id, true); dreamSuspended.add(outer.id); }
             }
             bus.publish('story.session', {
               summary: `story session "${node.label}" started`

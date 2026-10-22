@@ -91,6 +91,7 @@ today. The first step generates those rows from manifest files, so there is one 
 | `pages` | optional page routes | MiniApp |
 | `surface` | `window`, `stage`, `panel`, `chrome`, or `none` (headless) | foafos registry |
 | `instances` | `many` (the default) or `single` | foafos; `launch_handler` for the behaviour |
+| `shows` | the presentations the app supports inside a story, most wanted first: `full`, `inline`, `icon` (section 10). The JSON keeps the order; the RDF view does not, because an inline `@vocab` context cannot declare a list container | foafos; the shape of `display_override` |
 | `handles` | `[{ "accept": ["audio/mpeg", ".mp3"], "action": "play" }]` | `file_handlers`, extended with an action |
 | `capabilities` | requested foafos capabilities, each with a `reason` | foafos + MiniApp `reason` |
 | `delegates` | the capabilities this app may pass on, and to which roles | foafos (R3) |
@@ -356,3 +357,71 @@ Questions for the owner:
    wobble: yes?
 3. Session nodes in the app tree, with the outer story suspended, for each dream: yes?
 4. A tag for what a suspended story says while it waits: wanted?
+
+### Decisions (owner, 2026-10-22)
+
+Owner, 2026-10-22, verbatim: "1. Sure for now, or borrow from web manifests. Consider input
+focus. 2 yes, but styling can be an option too 3. Probably yes. 4. Eventually"
+
+1. **`show=full|inline|icon`: accepted for now. Not built.** The input focus model is below.
+   From the Web App Manifest we borrow the shape of `display_override`
+   ([Web App Manifest](https://www.w3.org/TR/appmanifest/), W3C WD 2026-10-16):
+   a manifest member `shows`, an ordered list of the presentations the app supports, most
+   wanted first. When a story asks for a presentation the app does not list, the runner uses
+   the first one in `shows` that it can give, and says so in the status line. We do not reuse
+   the `display` words (`fullscreen`, `standalone`, `minimal-ui`, `browser`): they say how
+   much browser chrome a top-level window keeps, and our three say where an app is drawn
+   relative to a story.
+2. **Depth frames: built, with the style as a skin option.** One ruled frame round the reading
+   surface for each story that holds this one, three at most; a line at the top of the
+   reading surface says the number and names the outer stories, outermost first ("Inside 2
+   stories: toc › hampstead"). The names come from the frame URLs, never from story text. No
+   motion. The skin token `--sk-depth` chooses the look: `frames` (the default, set on
+   `:root` in `inklet/finkapp/fink-skins.css`), `filter` (the old colour filter and wobble;
+   the Aurora skin uses it) or `none`. The words show for every style, so the depth never
+   rests on colour or on counting lines. Code: `inklet/apps/storyrunner/storyrunner.css`
+   ("DREAM DEPTH"), `showDepth()` in `inklet/apps/storyrunner/storyrunner.js`; the shell
+   hands the token over with the other skin tokens (`SKIN_TOKENS` in
+   `inklet/finkapp/foafos-shell.js`).
+3. **The outer story suspended in the app tree: built.** Each story in the stack was already a
+   session node (`story-session`, made by the shell's `story.session` verb). Now, when a dream
+   starts, the shell suspends the outer session node and its subtree (the apps that story
+   opened get `app.suspend`), and resumes them when the dream ends (surface, or `end` of the
+   innermost session). The shell resumes only what it suspended for a dream: a session the
+   reader paused by hand stays paused. One change from the proposal above: the dream node
+   stays a child of the runner, with `dreamOf` naming the outer session, not a child of the
+   outer session. A child of a suspended node is suspended with it
+   (`AppTree.setSuspended` acts on the subtree), and the dream must stay awake.
+   Test: `inklet/finkapp/test/e2e-dream.mjs` (outer suspended and dream awake in the dream;
+   both resumed and the dream node gone after surfacing; the frame, the words, the filter
+   option and the skin token).
+4. **`# DREAMING:`: later.** Not built, and not in the tag list.
+
+### Input focus for `show=` (design, not built)
+
+The model is OLE's in-place activation, which both office formats inherit: an embedded object
+is drawn in the document but does not take input until the reader activates it, and it gives
+input back when it is deactivated. The rules:
+
+| Presentation | Input before activation | How to activate | While active | How to leave |
+|---|---|---|---|---|
+| `show=full` (then=wait) | none: the app opens active | opening is activation | focus moves into the app frame; the story waits and is `inert` | the app sends `complete`, or the reader closes it; focus returns to the story's new prose |
+| `show=inline` | none: the object is one tab stop, a control named "<app name>, embedded app: activate"; pointer and keys go to the story, so a swipe across it scrolls the story | Enter, Space, or one tap on it | a visible focus ring (the skin's `--sk-accent`, 3px, not colour alone: a "Done" control shows beside it); keys and pointer go to the app; the rest of the story is not `inert` | Escape, the "Done" control, or Tab past the last control in the app; focus returns to the object's tab stop |
+| `show=icon` | none: the item is a link-like control in the prose | Enter, Space, or a tap | the app opens as its own instance (or, for a single-instance app, the existing window is shown, as `launch_handler` `focus-existing` does) and that window gets focus | closing the window returns focus to the item in the story |
+| `then=beside` (a world) | none: focus stays in the story | the reader moves to it (F6, or the window switcher) | the world takes input; the story goes on | F6 or the switcher back |
+
+Further rules:
+- One inline object is active at a time; activating another deactivates the first.
+- An inactive inline frame has `inert` and `pointer-events: none`, so it cannot take focus or
+  pointer events however its content is written. The frame gets `app.activate` and
+  `app.deactivate` (new lifecycle messages, beside `app.suspend` and `app.resume`), so an app
+  can show its own idle state.
+- Escape always deactivates an inline app. An app that needs the Escape key asks for
+  `show=full`. The shell's own keys (window switcher, menu) always reach the shell, in every
+  presentation, so no app can hold the reader.
+- Screen readers: the inline object is a `role="group"` with the app's name and the state
+  ("not active", "active"); activating it moves focus to the first control in the app;
+  deactivating it says "back in the story".
+- Voice and switch access use the same control: "activate" and "done" are visible words, not
+  icons alone.
+

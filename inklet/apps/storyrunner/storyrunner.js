@@ -1253,7 +1253,7 @@ async function followLink(absUrl) {
     _frames.length = 0;            // the way back is burned
   }
   state.depth = res.depth ?? _frames.length;
-  document.body.dataset.depth = String(state.depth);
+  showDepth();
   state.linkedTo = res.url;
   await loadStory(res.url, null, rel || 'replace');
 }
@@ -1574,6 +1574,27 @@ window.addEventListener('message', (e) => {
   // nothing. Both are refusals by silence, which the SDK reads as a timeout.
 });
 
+// DREAM DEPTH, SHOWN: body[data-depth] drives the frames (or the old filter;
+// storyrunner.css), and #depth-mark says it in words, with the names of the
+// stories that hold this one, outermost first. The names come from the frame
+// URLs, never from story text.
+function storyName(url) {
+  try {
+    const base = decodeURIComponent(String(url).split('?')[0].split('#')[0]).split('/').pop() || '';
+    return base.replace(/\.fink\.js$/i, '').replace(/[_-]+/g, ' ').trim() || 'a story';
+  } catch { return 'a story'; }
+}
+function showDepth() {
+  const d = Math.max(0, Number(state.depth) || 0);
+  document.body.dataset.depth = String(d);
+  const mark = document.getElementById('depth-mark');
+  if (!mark) return;
+  mark.hidden = d === 0;
+  if (!d) { mark.textContent = ''; return; }
+  const names = _frames.length === d ? `: ${_frames.map((f) => storyName(f.url)).join(' › ')}` : '';
+  mark.textContent = `Inside ${d} ${d === 1 ? 'story' : 'stories'}${names}`;
+}
+
 // Surface one level: reload the outer document and restore its FULL ink
 // state, so the outer story resumes mid-breath rather than restarting at
 // a knot. No knot bookkeeping — LoadJson carries the position.
@@ -1582,7 +1603,7 @@ async function surface() {
   if (!frame) return false;
   const res = await storyRequest('story.link', { url: frame.url, rel: 'surface' });
   state.depth = res.ok ? (res.depth ?? _frames.length) : _frames.length;
-  document.body.dataset.depth = String(state.depth);
+  showDepth();
   setStatus('surfacing…');
   await loadStory(frame.url, frame.state, 'surface');
   return true;
@@ -1821,7 +1842,7 @@ window.addEventListener('message', (e) => {
       const top = _frames[_frames.length - 1];
       const go = top && abs(top.url) === want
         ? surface()
-        : (() => { _frames.length = 0; state.depth = 0; document.body.dataset.depth = '0'; return loadStory(named, null, 'replace'); })();
+        : (() => { _frames.length = 0; state.depth = 0; showDepth(); return loadStory(named, null, 'replace'); })();
       Promise.resolve(go)
         .then(() => { if (hash) gotoKnotHash(hash); })
         .finally(() => { _navigating = false; });
@@ -1888,6 +1909,9 @@ function applySkinTokens(tokens, skin) {
     try { document.documentElement.style.setProperty(k, v); } catch { /* bad token */ }
   }
   if (skin) { state.skin = skin; document.documentElement.dataset.skin = skin; }
+  // The skin chooses how dream depth looks (frames, filter or none).
+  const depthStyle = String(tokens['--sk-depth'] || '').trim();
+  if (depthStyle) document.documentElement.dataset.depthStyle = depthStyle;
 }
 
 // SAVE / RESTORE the playthrough (spec §5.5.4, #779). Closing the window
@@ -1938,6 +1962,7 @@ async function restorePlaythrough(snap) {
   _frames.length = 0;
   for (const f of (snap.frames || [])) _frames.push(f);
   state.depth = _frames.length;
+  showDepth();
   // The world first, so the steps loadStory takes land after the replay.
   if (snap.world?.tag) {
     _worldLines = Array.isArray(snap.world.lines) ? snap.world.lines.slice(-WORLD_KEEP) : [];

@@ -26,7 +26,7 @@ const LD_KEYS = ['@context', '@id', '@type', 'position', 'notes'];   // manifest
 const MEMBERS = new Set(['position', 'notes', 'id', 'family', 'icon', 'name', 'surface', 'url', 'desc',
   'capabilities', 'silent', 'game', 'controls', 'inline', 'aliases', 'args', 'variables', 'features', 'opens',
   'story', 'bus', 'featured', 'external', 'persists', 'panel', 'mount',
-  'instances', 'handles', 'actions', 'delegates', 'storage', 'headless']);
+  'instances', 'handles', 'actions', 'delegates', 'storage', 'headless', 'shows']);
 
 const files = readdirSync(dir).filter((f) => f.endsWith('.jsonld')).sort();
 const problems = [];

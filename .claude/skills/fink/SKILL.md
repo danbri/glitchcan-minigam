@@ -266,6 +266,14 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   {phase, depth}; body[data-fink-depth] drives the deepening-surface
   CSS. E2E: e2e-dream.mjs (assert position via OFFERED CHOICES, not
   page text — scrollback keeps history). Demo: demos/dream-outer/-inner.
+  Since 2026-10-22 (owner decisions in docs/foafos-apps-20261022.md §10):
+  the runner shows depth as ruled frames (three at most) plus a
+  `#depth-mark` line that says the number and names the outer stories;
+  the skin token `--sk-depth` (frames | filter | none) chooses the look
+  (Aurora keeps the old filter). The shell suspends the outer session
+  node and its subtree while a dream plays and resumes it on surfacing;
+  the dream node is a child of the RUNNER with `dreamOf`, never of the
+  outer session, or it would be suspended with it.
 - Composition without a frame (2026-07-30): `# FINK: url` + `# LINKREL: merge`
   + `# ENTRY: knot` APPENDS that file to the ordered set the session has
   parsed, recompiles the UNION with the real compiler and `LoadJson`s the

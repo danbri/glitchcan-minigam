@@ -14,6 +14,9 @@
  *   --sk-choice-hover-bg --sk-choice-hover-ink          engaged choice
  *   --sk-font-body --sk-font-ui --sk-size --sk-leading
  *   --sk-radius --sk-choice-marker --sk-shadow
+ *   --sk-depth   how the story runner shows dream depth: frames | filter |
+ *                none (inherited from :root when a skin does not set it;
+ *                inklet/apps/storyrunner/storyrunner.css, "DREAM DEPTH")
  *
  * ACCESSIBILITY IS NOT PART OF THE STYLE BUDGET. Every skin is checked
  * by test/skins-a11y.mjs for WCAG AA contrast (body text and choices),
@@ -24,6 +27,7 @@
 /* ── the contract, defaulted to the original identity ─────────────── */
 :root,
 :root[data-skin="spectrum"] {
+    --sk-depth: frames;
     --sk-info: #00c0c0;
     --sk-mega: #ffd24a;
     --sk-code-bg: #111111;
@@ -128,6 +132,7 @@
     --sk-radius: 16px;
     --sk-choice-marker: '';
     --sk-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+    --sk-depth: filter;
 }
 
 /* ── BROADSHEET — editorial print. Big type, rules, authority. ────── */

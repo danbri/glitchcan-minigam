@@ -89,6 +89,41 @@ try {
     ? pass('goDeeper pushed a frame: depth 1 — runner, shell count, broker, surface and bus agree')
     : fail(`depth wrong: ${JSON.stringify(deep)}`);
 
+  // The outer story DREAMS: its session node is suspended, the dream's is not.
+  // And the depth is shown: ruled frames round the surface, and the words.
+  const sessions = () => page.evaluate(() => [...FoafOS.apps.nodes.values()]
+    .filter((n) => n.appId === 'story-session')
+    .map((n) => ({ id: n.id, suspended: n.suspended, dreamOf: n.dreamOf || null })));
+  const inDream = await sessions();
+  const dreamNode = inDream.find((n) => n.dreamOf);
+  const outerNode = dreamNode && inDream.find((n) => n.id === dreamNode.dreamOf);
+  outerNode?.suspended === true && dreamNode?.suspended === false
+    ? pass('the outer session is suspended while its dream plays; the dream is awake')
+    : fail(`suspension wrong in the dream: ${JSON.stringify(inDream)}`);
+  const look = await r.evaluate(() => ({
+    mark: document.getElementById('depth-mark').hidden ? null : document.getElementById('depth-mark').textContent,
+    rings: getComputedStyle(document.body, '::after').boxShadow,
+    filter: getComputedStyle(document.getElementById('stage')).filter,
+  }));
+  look.mark === 'Inside 1 story: dream outer' && /inset/.test(look.rings) && look.filter === 'none'
+    ? pass(`depth 1 shown as a ruled frame and in words ("${look.mark}"), with no filter`)
+    : fail(`depth look wrong: ${JSON.stringify(look)}`);
+  // The skin may choose the old look instead (--sk-depth: filter).
+  const filtered = await r.evaluate(async () => {
+    document.documentElement.dataset.depthStyle = 'filter';
+    await new Promise((res) => requestAnimationFrame(() => res()));
+    const out = {
+      rings: getComputedStyle(document.body, '::after').boxShadow,
+      filter: getComputedStyle(document.getElementById('stage')).filter,
+      mark: !document.getElementById('depth-mark').hidden,
+    };
+    delete document.documentElement.dataset.depthStyle;
+    return out;
+  });
+  filtered.rings === 'none' && filtered.filter !== 'none' && filtered.mark
+    ? pass('depth style "filter": no frames, the old colour filter, and the words stay')
+    : fail(`filter style wrong: ${JSON.stringify(filtered)}`);
+
   // the dream read-only rule, reached by PLAYING into a dream
   const dreamSpend = await r.evaluate(() => window.__storyrunner.spend('diamonds', 5));
   dreamSpend?.ok === false && /dream/.test(dreamSpend.reason || '')
@@ -117,6 +152,15 @@ try {
     ? pass('dream END popped: outer resumed mid-breath (not from the start), every depth back to 0')
     : fail(`pop wrong: ${JSON.stringify({ back, backShell })}`);
 
+  const awake = await sessions();
+  const lookBack = await r.evaluate(() => ({
+    markHidden: document.getElementById('depth-mark').hidden,
+    rings: getComputedStyle(document.body, '::after').boxShadow,
+  }));
+  awake.length === 1 && awake[0].suspended === false && lookBack.markHidden && lookBack.rings === 'none'
+    ? pass('surfaced: the dream session is gone, the outer one resumed, no frame and no depth words')
+    : fail(`after surfacing: ${JSON.stringify({ awake, lookBack })}`);
+
   // awake again, the same spend is allowed — the rule is about depth, not a brake
   const awakeSpend = await r.evaluate(() => window.__storyrunner.spend('diamonds', 5));
   const mirror = await page.evaluate(() => FoafOS.storyVars.get('diamonds'));
@@ -137,6 +181,18 @@ try {
   end.ended && end.depth === 0 && end.announced
     ? pass('outer END is terminal at depth 0, and the runner announced it on the bus')
     : fail(`end state wrong: ${JSON.stringify(end)}`);
+
+  // The depth style is a skin token: the shell hands --sk-depth over with the
+  // other tokens. Aurora chooses the old filter; the default skins, frames.
+  const styleFor = async (skin) => {
+    await page.evaluate((k) => document.querySelector(`#skin-picker [data-skin="${k}"]`)?.click(), skin);
+    await page.waitForTimeout(300);
+    return r.evaluate(() => document.documentElement.dataset.depthStyle || null);
+  };
+  const viaSkin = { aurora: await styleFor('aurora'), broadsheet: await styleFor('broadsheet') };
+  viaSkin.aurora === 'filter' && viaSkin.broadsheet === 'frames'
+    ? pass('the skin chooses the depth style (aurora: filter; broadsheet: frames)')
+    : fail(`skin depth style wrong: ${JSON.stringify(viaSkin)}`);
 
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 3).join(' · ')}`);

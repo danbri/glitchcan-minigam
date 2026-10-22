@@ -27,4 +27,5 @@ app:AppShape a sh:NodeShape ;
                         "story:observe" "story:steer" ) ] ;
   sh:property [ sh:path app:silent ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
   sh:property [ sh:path app:instances ; sh:maxCount 1 ; sh:in ( "many" "single" ) ] ;
-  sh:property [ sh:path app:storage ; sh:maxCount 1 ; sh:in ( "app" "instance" "document" ) ] .
+  sh:property [ sh:path app:storage ; sh:maxCount 1 ; sh:in ( "app" "instance" "document" ) ] ;
+  sh:property [ sh:path app:shows ; sh:in ( "full" "inline" "icon" ) ] .
