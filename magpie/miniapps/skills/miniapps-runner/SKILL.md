@@ -9,6 +9,15 @@ The design record is `magpie/miniapps/README.md`. Read it first: it has the W3C
 status table, the foafos comparison, the protocol, and the list of choices made
 where the drafts contradict themselves. This file holds only the working rules.
 
+## Where MiniApps belong (owner correction, 2026-10-22)
+
+foafos is the app and widget platform and the only mediator. The FINK story runner is one
+foafos app; it contains MiniApps (as FINK add-ons) and sub-stories, and those add-ons are
+nodes in the foafos app tree. A MiniApp never contains foafos apps. The `samples/suite`
+experiment did exactly that and is kept only as a record (README, "Correction"). Before
+designing anything here, read `docs/foafos-story-layering-20260730.md`, sections "The
+layers" and "Owner statement, 2026-10-22" (instances, singleton service apps, haptics).
+
 ## Status of the source documents
 
 The MiniApp Manifest, Packaging and Lifecycle documents are W3C Discontinued Drafts

@@ -1,7 +1,8 @@
 // The runner page: resolve a MiniApp URI, fetch and open the package, run it in a MiniAppHost,
 // and give it accessible chrome.
 //
-//   index.html                                   the default app (the glitchcan suite)
+//   index.html                                   the default app (the hello package)
+//   index.html?app=org.glitchcan.suite           the suite experiment (inverted; see README)
 //   index.html?app=org.glitchcan.hello           an app id from registry.json
 //   index.html?uri=<MiniApp URI, URL-encoded>     e.g. foafos://miniapp/org.glitchcan.suite/pages/office/editor
 //   &lang=zh-CN                                  the language of the chrome and of the app
@@ -24,7 +25,9 @@ import { FoafStore, localBackend } from '../../packages/foafos/src/store.mjs';
 const SCHEME = 'foafos';
 const PLATFORM_CODE = 1;
 const ROOT_CAPS = ['storage', 'geolocation', 'audio', 'story:link', 'story:launch', 'story:navigate', 'story:observe', 'vars:read', 'vars:write'];
-const DEFAULT_APP = 'org.glitchcan.suite';
+// The hello package. The suite (org.glitchcan.suite) inverts the foafos layer model and
+// opens only by name: README, "Correction (2026-10-22)".
+const DEFAULT_APP = 'org.glitchcan.hello';
 const SCALES = [1, 1.25, 1.5, 2];
 const CAP_WORDS = {
   storage: 'Keep its data in this browser',

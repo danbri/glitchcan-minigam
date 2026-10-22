@@ -7,6 +7,49 @@ model that the foafos shell lacks: a declared manifest, a package, a lifecycle a
 address? The code is JavaScript for now. If the model holds, it will be written again in
 Lean 4, as part of Factoidal or beside it.
 
+## Correction (2026-10-22): where MiniApps belong
+
+Owner, 2026-10-22, verbatim: "Ah no, you misunderstood the architecture / foafos is an
+app/widget platform / One app is the FINK Runner - this is a hub of knowledge about ink as a
+language, fink, inter story refs, fink miniapp addons, … these pop up new apps/widgets
+visible to the foafos level. foafos brokers access from these and the fink runner (which in
+foafos is the containing app for the miniapps and substories etc.) …brokers access to audio,
+haptics, and other os services." The full statement is in
+[docs/foafos-story-layering-20260730.md](../../docs/foafos-story-layering-20260730.md),
+section "Owner statement, 2026-10-22".
+
+The intended shape:
+
+```
+foafos (0)          app and widget platform; the only mediator: bus, app tree, brokers
+                    (storage, secrets, vars, audio, haptics, input, ...)
+  ├─ Sheets ×3, Documents, ...       app instances (many of each)
+  ├─ Playlist                         a singleton service app, on the foafos bus
+  └─ FINK story runner (1)            hub of ink, FINK, story links and FINK add-ons
+        ├─ story session (2) ×2      each may use the Playlist through foafos
+        │     └─ MiniApp add-on, minigame, widget (3)   visible to foafos as tree nodes
+        └─ ...
+```
+
+What in this folder follows that shape, and what does not:
+
+- **Fits:** the spec layer (`src/addressing.mjs`, `manifest.mjs`, `zip.mjs`, `package.mjs`,
+  `lifecycle.mjs`) and the MiniApp host's isolation, lifecycle and capability checks. A
+  MiniApp is a FINK add-on; the host gives its frames, page stack and lifecycle to the story
+  runner, which contains it.
+- **Inverted, kept as a record:** the "suite" experiment of 2026-10-22
+  (`samples/suite/`, `org.glitchcan.suite`, section "Pages that are foafos apps" below). It
+  makes ONE MiniApp the container of the story runner, edot and the games. That puts a
+  MiniApp above foafos apps, which is the wrong way round. Its protocol code
+  (`src/foafos-guests.mjs`) and its usability and accessibility work (the chrome, the
+  checks in `test/ux.mjs`) remain useful: they are what the shell and the story runner must
+  do for their own children. Since this correction the runner opens the hello package by
+  default; the suite opens only with `?app=org.glitchcan.suite`.
+- **Not built:** the story runner hosting MiniApps (for example a `# MINIAPP:` tag, by
+  analogy with `# MINIGAME:`); singleton service apps; a haptics broker; per-instance
+  storage for apps with many instances. Each is listed in the layer model doc with the
+  state of the code.
+
 ## 1. The W3C MiniApps work
 
 ### Status (checked 2026-10-21)
@@ -133,11 +176,11 @@ test/serve.mjs           a static server that behaves like GitHub Pages (CORS, /
 
 ### Deep links
 
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html opens the suite (launcher).
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?lang=zh-CN opens it in Chinese.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html opens the hello package.
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.suite opens the suite experiment (inverted; see the correction).
+- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.suite&lang=zh-CN opens it in Chinese.
 - https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.suite%2Fpages%2Fstory%2Fstory%3Fstory%3D%2Fglitchcan-minigam%2Finklet%2Fhampstead.fink.js%26title%3DHampstead opens the Hampstead story.
 - https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?uri=foafos%3A%2F%2Fminiapp%2Forg.glitchcan.suite%2Fpages%2Foffice%2Feditor opens edot Documents.
-- https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.hello opens the hello package.
 - https://danbri.github.io/glitchcan-minigam/magpie/miniapps/index.html?app=org.glitchcan.hello&deny=geolocation opens it with a root that has no geolocation. The LOCATION request is then refused by attenuation.
 - Add `&dev` to show the developer panel (URI box, grant table, warnings, bus log).
 
@@ -182,7 +225,7 @@ reason "no foafos capability for this permission".
 | Where page scripts run | Packaging puts JS in `pages/`; the White Paper puts logic in workers. | `app.js` runs in the logic frame; page scripts run in their view frame. |
 | Background unload | "should" unload after some time; the example is 5 minutes. | 5 minutes, set by `backgroundUnloadMs`. |
 
-### Pages that are foafos apps (the suite)
+### Pages that are foafos apps (the suite; inverted, see the correction above)
 
 A package page may name an existing foafos app instead of being a page of its own. The page
 file holds a JSON block, and its body is a fallback for readers outside the runner:
@@ -211,7 +254,8 @@ file holds a JSON block, and its body is a fallback for readers outside the runn
   with Back counts as not completed.
 - Hidden pages are told: `app.suspend`/`app.resume` for apps, `pause`/`resume` for games.
 
-The suite (`samples/suite/`, app id `org.glitchcan.suite`) has seven pages: a launcher (a
+The suite (`samples/suite/`, app id `org.glitchcan.suite`) is the experiment that the
+correction above describes as inverted. It has seven pages: a launcher (a
 package page), the story runner (any story, chosen by the link), Gem Collector, Documents,
 Sheets, Files, and a lifecycle demo page. It asks for 8 permissions, each with a reason.
 

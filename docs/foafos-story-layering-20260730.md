@@ -283,6 +283,50 @@ narrative-respecting relationships (dream/inception or peering), which spawn
 subApps and use StoryRunner-mediated platform services — every effect flowing
 through foafos.
 
+## Owner statement, 2026-10-22: an app and widget platform, with instances and singletons
+
+Owner, 2026-10-22, verbatim:
+
+> "foafos is an app/widget platform
+>
+> One app is the FINK Runner - this is a hub of knowledge about ink as a language, fink,
+> inter story refs, fink miniapp addons, … these pop up new apps/widgets visible to the
+> foafos level. foafos brokers access from these and the fink runner (which in foafos is the
+> containing app for the miniapps and substories etc.) …brokers access to audio, haptics,
+> and other os services."
+>
+> "It should be possible in foafos to have 3 spreadsheets and two stories open, both of
+> which use a system wide music playlist app (flagged as singleton so playlist is exposed
+> on foafos bus, rather than competing player instances)."
+>
+> "Some details are not fully specified cos we are busy researching how foafos might use
+> lws, oidc, XMPP, lws eetc., or indeed MINIAPPS"
+
+What this adds to the layer model above:
+
+- **MiniApps are FINK add-ons, below the story runner.** The story runner is the containing
+  app for MiniApps and sub-stories. They are levels 2 and 3 of the shape above, not a level
+  beside or above foafos.
+- **Widgets that a story opens are visible to foafos.** They are nodes in the foafos app tree
+  (level 3), so the shell can show, switch and close them. The story runner observes them.
+- **Haptics is a foafos service**, beside audio. foafos brokers it for the story runner and
+  for everything below the runner.
+- **An app may have many instances.** For example, three spreadsheets and two stories may
+  be open at the same time.
+- **An app may be a singleton service.** A system-wide music playlist has one instance. It
+  exposes the playlist on the foafos bus, and every story that wants music uses it, so
+  stories do not run competing players.
+
+State of the code on 2026-10-22, against this statement:
+
+| Point | Today |
+|---|---|
+| Many instances | Works for window apps: each `launchApp` spawns a new node and window (`inklet/finkapp/foafos-shell.js`, `launchApp`). But every instance of an app shares one `FoafStore` namespace (the app id; `packages/foafos/src/store.mjs`). So three spreadsheets would overwrite one another's `edot.data.db`. Per-instance or per-document storage is not designed. |
+| Singletons | Only `surface: 'chrome'` apps are single ("there is only ever one of it", `launchApp`). There is no registry flag for a singleton *service* app, no rule for what a second launch does (focus the first instance?), and no bus contract for a playlist. `docs/fink-spec-v1.md` (v2 audio notes) and `docs/foafos-notes.md` (typed-block widgets) name `application/vnd.fink.playlist+json` as the playlist format. |
+| Haptics | No broker. Only the window manager vibrates, for its own gestures (`inklet/finkapp/fink-wm.js`, `_haptic`). There is no `haptics` capability. |
+| MiniApps | `magpie/miniapps/` (2026-10-21) implements the W3C MiniApp drafts as a separate runner page. Its "suite" experiment (2026-10-22) put foafos apps *inside* one MiniApp, which inverts this model; its README records the correction. MiniApps are not yet hosted by the story runner. |
+| Open research | identity (OIDC), storage (LWS), transport (XMPP), and MiniApps. See `docs/foafos-lws-20261021.md` and `magpie/miniapps/README.md`. |
+
 ## Observability — StoryRunner sees the story subtree
 
 Because everything a story does flows up through the StoryRunner, the

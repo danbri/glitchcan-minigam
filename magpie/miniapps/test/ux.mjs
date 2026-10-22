@@ -1,4 +1,5 @@
-// One MiniApp instance (org.glitchcan.suite) running the FINK story runner, a FINK minigame
+// The suite experiment (org.glitchcan.suite; it inverts the foafos layer model, see the README
+// correction of 2026-10-22): one MiniApp instance running the FINK story runner, a FINK minigame
 // opened from a story, a minigame page, edot Documents, Sheets and Files, and a package
 // page; and the runner's usability and accessibility, checked as it does so.
 //
@@ -59,7 +60,7 @@ const announced = () => host(() => document.getElementById('announce').textConte
 const storyFrame = () => page.frames().find(f => /storyrunner\/index\.html/.test(f.url()));
 
 // ---------- 1. first launch: the permission sheet ----------
-await page.goto(RUNNER);
+await page.goto(`${RUNNER}?app=org.glitchcan.suite`);
 await page.waitForSelector('#perm-dialog[open]', { timeout: 15000 });
 const sheet = await host(() => ({
   modal: document.getElementById('perm-dialog').matches(':modal'),
@@ -252,7 +253,7 @@ check(/taking a long time/.test(slow.text) && slow.actions.includes('Reload this
 await p3.goto(`${RUNNER}?app=org.example.nothing`);
 check(!!await until(() => p3.evaluate(() => /There is no app called/.test(document.getElementById('problem-text').textContent))), 'an unknown app id gets a plain message');
 await p3.route('**/dist/org.glitchcan.suite-*.ma', (r) => r.abort());
-await p3.goto(RUNNER);
+await p3.goto(`${RUNNER}?app=org.glitchcan.suite`);
 check(!!await until(() => p3.evaluate(() => /could not be downloaded/.test(document.getElementById('problem-text').textContent))), 'a failed download says what to do');
 check(await p3.evaluate(() => [...document.querySelectorAll('#problem-actions button')].some(b => b.textContent === 'Try again')), 'and offers Try again');
 await p3.close();
