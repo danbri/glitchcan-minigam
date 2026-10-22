@@ -1,0 +1,241 @@
+# foafos apps: what an app is, and the `# APP:` tag (design, 2026-10-22)
+
+Status: design for review. Nothing in this note is built unless a line says so.
+Read with: `docs/foafos-story-layering-20260730.md` (the layer model, and the owner
+statement of 2026-10-22 on instances, singletons and haptics), `magpie/miniapps/README.md`
+(what the W3C MiniApp drafts gave us), `docs/foafos-lws-20261021.md` (storage and identity).
+
+## 1. The owner's direction
+
+Owner, 2026-10-22, verbatim:
+
+> "Ok stop and think time.
+>
+> We have found enough places where miniapps (an incomplete abandonware project) fails to
+> meet foafos and fink needs.
+>
+> Let's reconceptualize: we need full Apps, safely sandboxed and interoperating, and with
+> modern storage, accessibility, scripting etc capabilities. We should continue trying to
+> use the bits of miniapps that fit but also allow foafos design ethic and requirements to
+> freely overrule or change, eg for apps to have delegated capabilities, bus and rdf/sparql
+> comms, headless modes etc as we see fit.
+>
+> But yes lets phase out MINIGAME: f)INK tag and just use "# APP: " as our preferred
+> version. We may need the singleton mode for eg as media player. For jpegs, svgs, audio,
+> or even those that come with their own app/player or format handler. In a way we are
+> making something like a browser or desktop app but with the ui constraints from mobile
+> and mobile web."
+
+Decided by the owner: the target is full apps; MiniApp parts are used where they fit, and
+the foafos design overrules them where it needs to; `# APP:` replaces `# MINIGAME:`; there is
+a singleton mode. Everything else below is a proposal.
+
+## 2. What a foafos app must be
+
+Requirements, each with where it comes from.
+
+| # | Requirement | Source |
+|---|---|---|
+| R1 | Sandboxed: an opaque origin, no ambient authority; every effect through a foafos broker | layer model, mediation invariant |
+| R2 | Capabilities granted by attenuation (`grant(child) ⊆ grant(parent)`) and checked at the time of use | `packages/foafos/src/apptree.mjs` |
+| R3 | Delegated capabilities: an app can pass a narrower capability to an app it opens or to a service it uses, and the delegation ends when it ends | owner, 2026-10-22 |
+| R4 | Many instances of one app, each with its own state (three spreadsheets) | owner, 2026-10-22 |
+| R5 | Singleton apps: one instance, shared by every app that needs it (a media player or playlist), reached through the bus | owner, 2026-10-22 |
+| R6 | Format handlers: an app can declare the media types it opens (JPEG, SVG, audio, a playlist), and a resource that comes with its own player can name it | owner, 2026-10-22 |
+| R7 | Bus communication, and RDF/SPARQL communication | owner, 2026-10-22 |
+| R8 | Headless mode: an app that runs with no user interface, for services, agents, voice and tests | owner, 2026-10-22; layer model "The browser surface is an API" |
+| R9 | Modern storage: per instance or per document, with LWS as the remote store and OIDC identity | owner, 2026-10-21; `docs/foafos-lws-20261021.md` |
+| R10 | Accessibility as a contract: the accessibility tree is the one API for screen readers, voice and agents | layer model, "The browser surface is an API" |
+| R11 | Mobile UI constraints: one app in view on a phone, back as history, touch targets, text size, reduced motion | owner, 2026-10-22; MiniApp runner UX work |
+| R12 | Scripting: apps can be driven by scripts and agents through declared actions | owner, 2026-10-22 ("scripting etc capabilities") |
+
+## 3. What we keep from the W3C MiniApp drafts, and what foafos overrules
+
+| MiniApp part | Keep? | foafos change |
+|---|---|---|
+| Manifest: `app_id`, `name`, `short_name`, `version {code,name}`, `icons`, `lang`, `dir`, `description`, `color_scheme` | Keep | — |
+| `req_permissions` with a `reason` | Keep the reason | The names are foafos capabilities, not `system.permission.*`; R2 and R3 decide the grant |
+| `pages` and the page stack | Keep as optional | Many apps are one page; a page stack is for apps that need one |
+| Package: a ZIP with the Packaging constraints | Keep as optional | A URL on the same site stays the default; the package is for offline use, installation and integrity |
+| Signing block | Keep the slot | Signatures and integrity hashes are the trust work (`# INTEGRITY:` in the layer model) |
+| Lifecycle: launched, shown, hidden, error, unloaded; page loaded, ready, shown, hidden, unloaded | Keep | Add `headless` (running with no view) and map the shell's suspend and resume to hidden and shown |
+| Addressing: `scheme://miniapp/<id>;version=<v>/<path>` | Keep the parser | Use `foafos://app/<id>/<path>`; resource IRIs stay `https://` |
+| Logic layer and view layer as two frames | Overrule | One frame by default; a separate logic layer is the headless mode (R8) |
+| No bus, no inter-app protocol | Overrule | The foafos bus, verbs, and RDF messages (R7) |
+| One instance per app | Overrule | `instances: many | single` (R4, R5) |
+| No format handlers | Overrule | `handles` (R6) |
+
+The Web App Manifest (W3C Working Draft, 2026-10-16, https://www.w3.org/TR/appmanifest/) is
+the nearer standard for several of these. Two incubations that Chromium ships, and that are
+not in that draft, describe R5 and R6:
+- `launch_handler` with `client_mode: "focus-existing"`: a new launch goes to the open
+  instance. MDN marks it experimental (https://developer.mozilla.org/docs/Web/Manifest/launch_handler).
+- `file_handlers`: the media types and file extensions an app opens.
+
+Proposal: the foafos app manifest uses the Web App Manifest member names where one exists,
+the MiniApp names where only MiniApp has one, and foafos names for the rest.
+
+## 4. The app manifest (proposal)
+
+A JSON-LD document, so that the manifests themselves are RDF (R7) and Factoidal can check
+them with SHACL. The rows of `inklet/finkapp/foafos-apps.js` are the manifests in practice
+today. The first step generates those rows from manifest files, so there is one source.
+
+| Member | Meaning | From |
+|---|---|---|
+| `id`, `name`, `short_name`, `icons`, `version`, `lang`, `dir`, `description` | identity and labels | Web App Manifest / MiniApp |
+| `start_url` or `package` | a same-site URL, or a ZIP package | Web App Manifest / MiniApp Packaging |
+| `pages` | optional page routes | MiniApp |
+| `surface` | `window`, `stage`, `panel`, `chrome`, or `none` (headless) | foafos registry |
+| `instances` | `many` (the default) or `single` | foafos; `launch_handler` for the behaviour |
+| `handles` | `[{ "accept": ["audio/mpeg", ".mp3"], "action": "play" }]` | `file_handlers`, extended with an action |
+| `capabilities` | requested foafos capabilities, each with a `reason` | foafos + MiniApp `reason` |
+| `delegates` | the capabilities this app may pass on, and to which roles | foafos (R3) |
+| `bus` | topics published and subscribed, each with a JSON-LD type for the payload | foafos registry + R7 |
+| `actions` | named operations for scripts, agents and voice: `play`, `queue`, `open`, `export` | R12; the edot command registry is the existing model |
+| `storage` | `instance`, `document` or `app`: what the app's store is keyed by | R4, R9 |
+| `headless` | the entry to run with no view, and which actions work there | R8 |
+| `args` | launch keys a story may pass (today's registry `args`) | foafos registry |
+
+## 5. Instances, singletons and format handlers
+
+**Many instances (R4).** This already works for window apps: every `launchApp` spawns a new
+node. What does not work is storage: every instance of an app shares one `FoafStore`
+namespace. Proposal: a store key `<appId>/<instanceId>` for `storage: "instance"`, and
+`<appId>/<documentIRI>` for `storage: "document"`. A document is then something the user
+opens; three spreadsheets are three documents, possibly on an LWS storage.
+
+**Singletons (R5).** For `instances: "single"`:
+- A second launch does not start a second instance. foafos gives the launch to the open
+  instance as an intent (`focus-existing`), and focuses it only if the launch came from the
+  user.
+- The singleton's lifetime is its own. A story that uses the media player does not own it,
+  and closing the story does not close the player.
+- It offers its service on the bus under its own topics: `media.queue`, `media.play`,
+  `media.state`.
+- Who may control it is a delegated capability (R3). A story may add to the queue for its
+  own session; it may not clear the whole queue unless the reader allows that.
+- Sound still goes through the foafos audio broker, so master volume and ducking stay in one
+  place.
+
+The owner's example: three spreadsheets and two stories are open. Both stories send
+`media.queue` with a playlist (`application/vnd.fink.playlist+json`, already named in
+`docs/fink-spec-v1.md`). The one player plays them in turn, and the bus reports
+`media.state` to every app that subscribes.
+
+**Format handlers (R6).** foafos keeps a table from media type to handler apps, built from
+`handles` in the manifests. To open a resource:
+1. A resource that names its own player (a package, or a typed block that names an app)
+   uses that player, if the user allows it.
+2. Otherwise the user's chosen default handler for the media type.
+3. Otherwise the only handler, or a choice among several.
+4. Otherwise the resource is downloaded.
+
+Inline story media (`# IMAGE:`, `# AUDIO:`, `# VIDEO:`) stays inline. A handler is used when
+the story or the reader asks for one, for example by opening an image full screen.
+
+## 6. The `# APP:` tag (replaces `# MINIGAME:`)
+
+Grammar, the same as `# MINIGAME:` today, so that the runner's existing `gameTag()` split
+works unchanged:
+
+    # APP: <app-id or resource> [key=value ...]
+
+What the story does while the app runs comes from the app's manifest, and the tag can
+override it with `then=`:
+
+| Manifest | Default `then` | Story behaviour | Today's tag |
+|---|---|---|---|
+| the app returns a result (a game) | `wait` | the story pauses and resumes with the result (`game_success`, `game_score`, written VARs) | `# MINIGAME:` |
+| the app shows the story's world | `beside` | the story goes on; tags and VARs flow as `# WORLD:` does now | `# WORLD:` |
+| `instances: "single"` (a service) | `go` | the story sends the intent (for example `play`) and goes on | — |
+
+Examples:
+
+    # APP: gridluck                           (waits, as # MINIGAME: gridluck did)
+    # APP: robbin mode=hampstead controls=dpad
+    # APP: player then=go play=/glitchcan-minigam/media/bed.mp3
+    # APP: drift then=beside tale=peraspera
+
+Proposal for `# WORLD:`: keep it as an alias of `# APP: <app> then=beside`, because the
+word says what it does. This is a question for the owner (section 9).
+
+Phasing out `# MINIGAME:`:
+1. The story runner accepts `APP` wherever it accepts `MINIGAME` (`storyrunner.js:218`, and
+   `RUNNER_TAGS` at :793). The shell verb `story.launch` stays; `then` decides how the
+   runner waits.
+2. The tools that read the tag learn `APP`: `inklet/tools/fink-graph.mjs`,
+   `fink-minigame-map.mjs` and `fink-universe.mjs`, and `inklet/finkapp/fink-config.js`.
+   `npm run fink:check` (`inklet/tools/fink-check.mjs`) does not read the tag today; it gets
+   a deprecation warning for `# MINIGAME:`.
+3. The 14 story files that use `# MINIGAME:` move to `# APP:` by hand edits, one file at a
+   time, each checked with `npm run fink:check`. They are not rewritten by a script: a regex
+   over ink source is the hackparsing that CLAUDE.md forbids. The files (2026-10-22):
+   `inklet/`: toc, hampstead, mudslidemines, shane-manor, skydock, world-between-worlds;
+   `inklet/demos/`: diamond-cave, foafos-tour, hamfink2026-ch2;
+   `inklet/apps/storyrunner/`: demo, peer (test fixtures);
+   `drift-city/`: foafos-entry, novel/cellar-entry, story/peraspera.
+4. The `glitchcanary` and `fink` skills and `docs/fink-spec-v1.md` say `# APP:`, and keep
+   one line on `# MINIGAME:` as the old name.
+5. When no file uses `# MINIGAME:`, the validator reports it as an error. The runner keeps
+   reading it for old stories on other sites.
+
+## 7. Delegated capabilities, communication, headless mode
+
+**Delegation (R3).** Today a capability moves only down the tree, at spawn. Proposal: an app
+may also hand a narrower capability to another node, through foafos, for example "this
+story may add to the media queue". foafos records it in the app tree (who gave what to whom),
+and it ends when the giver closes or takes it back. Only capabilities listed in the giver's
+`delegates` can be passed on. This is the object-capability model the app tree already
+follows, extended from parent→child to app→service.
+
+**Communication (R7).** Three levels:
+1. The bus, as now: JSON events on topics, scoped per app (`bus: {publish, subscribe}`).
+2. Typed payloads: each topic names a JSON-LD type, so an event is also RDF. A playlist on
+   the bus is the same `application/vnd.fink.playlist+json` that a FINK typed block carries.
+3. A shared graph: foafos keeps an RDF graph of the installation (the app tree, the open
+   documents, the declared actions and handlers). An app with `graph:read` can ask it a
+   SPARQL query through Factoidal (`@factoidal/core`, per CLAUDE.md "Factoidal first").
+   Writes go through verbs, never straight into the graph.
+
+**Headless mode (R8).** An app with a `headless` entry runs with `surface: "none"`, with no
+frame in view. It serves its `actions` to scripts, agents and voice, and the same actions
+are what its view calls. A singleton media player is the first case: the player runs
+headless, and its view is opened only when the reader asks for it. Tests and the project MCP
+server (`tools/game-mcp/`) drive apps the same way.
+
+## 8. The user interface on phones (R10, R11)
+
+- A phone shows one app at a time, as a stack with history; Back is the browser's Back. A
+  tablet may show two side by side; a desktop has windows. foafos chooses; apps do not.
+- The MiniApp runner's work carries over to the shell: titles, breadcrumbs, announcements,
+  focus rules, text size, colours, reduced motion, the permission sheet with the app's own
+  reasons, plain messages for failures, and 44×44 px targets (`magpie/miniapps/README.md`,
+  "Usability and accessibility beyond the standards"; `test/ux.mjs` checks each).
+- A singleton player has a small persistent control (the "now playing" bar), named and
+  reachable by keyboard and voice. It is a chrome surface of the player, not part of any
+  story.
+
+## 9. Order of work, and the questions for the owner
+
+Proposed order:
+1. `# APP:` in the story runner and the tools, with `then=wait` (what `# MINIGAME:` does
+   today). The 14 stories move by hand afterwards.
+2. The manifest as JSON-LD files, with the registry rows generated from them.
+3. Per-instance and per-document storage keys.
+4. `instances: "single"`, intents to the open instance, and a headless media player on the
+   bus that two stories can use at the same time.
+5. Format handlers (`handles`) and "open with".
+6. Delegated capabilities.
+7. The installation graph and SPARQL access.
+8. Packages (ZIP, integrity), when offline use or installation is needed.
+
+Questions:
+1. Does `# WORLD:` stay as a name, or become `# APP: <app> then=beside` only?
+2. Should the manifest be JSON-LD from the start, or plain JSON first with a JSON-LD
+   context added later?
+3. For a singleton launched by a story (not by the reader): does it come into view, or only
+   start headless?
+4. Where does the MiniApp code go? Proposal: the spec modules stay in `magpie/miniapps/src/`
+   as a library; the host and UX parts move into `packages/foafos/` when the shell takes them
+   over.

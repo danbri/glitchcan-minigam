@@ -327,6 +327,10 @@ State of the code on 2026-10-22, against this statement:
 | MiniApps | `magpie/miniapps/` (2026-10-21) implements the W3C MiniApp drafts as a separate runner page. Its "suite" experiment (2026-10-22) put foafos apps *inside* one MiniApp, which inverts this model; its README records the correction. MiniApps are not yet hosted by the story runner. |
 | Open research | identity (OIDC), storage (LWS), transport (XMPP), and MiniApps. See `docs/foafos-lws-20261021.md` and `magpie/miniapps/README.md`. |
 
+The design that follows from this statement (what an app is, singletons, format handlers,
+delegated capabilities, headless mode, and the `# APP:` tag that replaces `# MINIGAME:`) is
+`docs/foafos-apps-20261022.md`.
+
 ## Observability — StoryRunner sees the story subtree
 
 Because everything a story does flows up through the StoryRunner, the

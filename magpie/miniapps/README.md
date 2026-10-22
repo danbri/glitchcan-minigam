@@ -50,6 +50,11 @@ What in this folder follows that shape, and what does not:
   storage for apps with many instances. Each is listed in the layer model doc with the
   state of the code.
 
+Owner, later on 2026-10-22: MiniApps are "an incomplete abandonware project" that fails foafos
+and FINK needs in enough places; the target is full foafos apps, using the MiniApp parts that
+fit. That design, including which MiniApp parts are kept and which foafos overrules, is
+[docs/foafos-apps-20261022.md](../../docs/foafos-apps-20261022.md).
+
 ## 1. The W3C MiniApps work
 
 ### Status (checked 2026-10-21)
