@@ -1,0 +1,9 @@
+{
+  "name": "miniapps-runner-tests",
+  "private": true,
+  "type": "module",
+  "description": "Test-only dependencies for the MiniApp runner (accessibility scans)",
+  "devDependencies": {
+    "axe-core": "4.10.3"
+  }
+}
