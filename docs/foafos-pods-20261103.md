@@ -227,3 +227,19 @@ servers are tested:
 
 The two failures are on `master` without this work, on this machine with Google Chrome in place
 of the container's Chromium 141. Not investigated here.
+
+### Factoidal issues for the gaps above (2026-11-03)
+
+Owner, 2026-11-03: danbri/factoidal is the main tracker for Factoidal-related work. The Factoidal
+side of this note's gaps:
+
+- a browser host for the LWS engine (Service Worker, sealed persistence in OPFS or IndexedDB):
+  https://github.com/danbri/factoidal/issues/1239 (filed today);
+- LWS notifications to browsers as XMPP messages: https://github.com/danbri/factoidal/issues/925;
+- CORS headers on the LWS HTTP binding: https://github.com/danbri/factoidal/issues/923, CLOSED.
+  The prototype's "the engine sends no `Access-Control-Allow-Origin`" was measured with npm 0.11.0;
+  recheck with a current build before relying on it either way;
+- LWS as in-process storage through the same authorization path, and the audit of the LWS ops:
+  https://github.com/danbri/factoidal/issues/1238;
+- an IQ to an offline account held instead of answered (fixed in factoidal-core `main`, #315):
+  https://github.com/danbri/factoidal/issues/1234.
