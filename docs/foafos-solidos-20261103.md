@@ -155,9 +155,9 @@ grants). The capability tree enforces the grants that the runner passes down.
 
 ## 6. A first experiment (proposal)
 
-The XMPP pane made on 2026-11-02 is a small first case. It is local only, not committed:
-`/Users/danbri/working/solid/solidos/workspaces/xmpp-pane` (Strophe.js; reads `foaf:jabberID`
-and `vcard:hasInstantMessage` from a profile).
+The XMPP pane made on 2026-11-02 is a small first case: `solidos/xmpp-pane/` in this
+repository (moved here on 2026-11-03; Strophe.js; reads `foaf:jabberID` and
+`vcard:hasInstantMessage` from a profile).
 
 - Data needed: one read of the subject's profile document.
 - Network needed: one WebSocket to an XMPP server (RFC 7395). The Factoidal Lean server now

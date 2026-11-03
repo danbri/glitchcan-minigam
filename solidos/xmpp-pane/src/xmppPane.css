@@ -1,0 +1,38 @@
+.xmpp-pane {
+  --xmpp-accent: var(--solid-ui-color-primary, #7c4dff);
+  --xmpp-border: var(--solid-ui-color-gray-200, #e5e7eb);
+  --xmpp-muted: var(--solid-ui-color-gray-500, #6b7280);
+  font-family: var(--font-family-ui, system-ui, sans-serif);
+  max-width: 52rem;
+  padding: 0.5rem;
+}
+.xmpp-pane button { font: inherit; padding: 0.4rem 0.9rem; border-radius: 0.4rem; border: 1px solid var(--xmpp-border); background: #fff; cursor: pointer; }
+.xmpp-pane button.xmpp-primary { background: var(--xmpp-accent); border-color: var(--xmpp-accent); color: #fff; }
+.xmpp-pane button:disabled { opacity: 0.5; cursor: default; }
+.xmpp-pane input { font: inherit; padding: 0.4rem 0.5rem; border: 1px solid var(--xmpp-border); border-radius: 0.4rem; min-width: 0; }
+.xmpp-status { color: var(--xmpp-muted); margin: 0 0 0.5rem; font-size: 0.9em; }
+.xmpp-status.error { color: var(--solid-ui-color-error, #b91c1c); }
+.xmpp-login:not([hidden]) { display: grid; gap: 0.6rem; max-width: 22rem; }
+.xmpp-login label { display: grid; gap: 0.2rem; }
+.xmpp-login label span { font-size: 0.85em; color: var(--xmpp-muted); }
+.xmpp-login summary { cursor: pointer; font-size: 0.85em; color: var(--xmpp-muted); }
+.xmpp-chat:not([hidden]) { display: grid; grid-template-columns: minmax(10rem, 14rem) 1fr; gap: 0.75rem; min-height: 22rem; }
+.xmpp-chat aside { display: flex; flex-direction: column; gap: 0.5rem; }
+.xmpp-contacts { list-style: none; margin: 0; padding: 0; border: 1px solid var(--xmpp-border); border-radius: 0.5rem; flex: 1; overflow: auto; }
+.xmpp-contacts li { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.6rem; cursor: pointer; }
+.xmpp-contacts li[aria-selected="true"] { background: var(--solid-ui-color-violet-50, #f5f3ff); }
+.xmpp-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--solid-ui-color-gray-300, #d1d5db); flex: none; }
+.xmpp-contacts li.online .xmpp-dot { background: #16a34a; }
+.xmpp-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xmpp-unread { background: var(--xmpp-accent); color: #fff; border-radius: 1rem; padding: 0 0.45rem; font-size: 0.75em; }
+.xmpp-conv { display: flex; flex-direction: column; border: 1px solid var(--xmpp-border); border-radius: 0.5rem; min-width: 0; }
+.xmpp-conv-title { margin: 0; padding: 0.5rem 0.75rem; font-size: 1em; border-bottom: 1px solid var(--xmpp-border); }
+.xmpp-log { list-style: none; margin: 0; padding: 0.75rem; flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 0.4rem; max-height: 24rem; }
+.xmpp-log li { max-width: 75%; padding: 0.35rem 0.6rem; border-radius: 0.8rem; display: flex; gap: 0.5rem; align-items: baseline; overflow-wrap: anywhere; }
+.xmpp-log li.in { align-self: flex-start; background: var(--solid-ui-color-gray-100, #f3f4f6); }
+.xmpp-log li.out { align-self: flex-end; background: var(--xmpp-accent); color: #fff; }
+.xmpp-log li.error { background: #fee2e2; color: #991b1b; }
+.xmpp-log time { font-size: 0.7em; opacity: 0.7; white-space: nowrap; flex: none; }
+.xmpp-send { display: flex; gap: 0.5rem; padding: 0.5rem; border-top: 1px solid var(--xmpp-border); }
+.xmpp-send input { flex: 1; }
+@media (max-width: 36rem) { .xmpp-chat:not([hidden]) { grid-template-columns: 1fr; } }
