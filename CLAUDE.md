@@ -43,7 +43,15 @@ Owner instructions, October 2026; the owner's exact words and dates are in the `
 **Safe Permissions:** Issues (Read/Write), PRs, Pages, Workflows, Hooks
 **NOT Granted:** Administration (cannot delete repo, transfer ownership, change visibility)
 
-**Best practice:** Use `gh` only for issue tracking. Code changes go through normal git with branch restrictions (`claude/*` prefix).
+**Best practice:** Use `gh` only for issue tracking. Code changes go through normal git.
+
+**Commit to `master`, not to side branches.** Owner, 2026-11-03, verbatim: "I don't want things bured in claude/*
+obscure branches, we will never see them again. USE /main ffs:) it is an experiment-friendly repo." (The default
+branch here is `master`.) Pull with `git pull --rebase` first; other sessions push too.
+
+**Write substantive work to `.md` files in the repo** (for example `docs/`), not only into the chat. Owner,
+2026-11-03, verbatim: "make sure all the substantive work you do is serialized out in .md files for us e.g. in docs/
+rather than left in chatlogs."
 
 ## 🚨 CRITICAL RULE: DATA ETHICS — REAL-WORLD DATASETS 🚨
 **This repo uses real open data (Bristol City Council trees, ImageSnippets, OSM). Real data touches real people.**
