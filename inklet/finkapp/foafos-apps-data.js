@@ -559,5 +559,19 @@ export const APPS = [
       "pod:write"
     ],
     "silent": true
+  },
+  {
+    "id": "docklands",
+    "family": "play",
+    "icon": "🏙️",
+    "name": "Docklands",
+    "surface": "stage",
+    "game": "docklands",
+    "url": "https://danbri.github.io/londat/docklands/",
+    "desc": "moglob: the Docklands model, places and the planet in 3D",
+    "controls": "none",
+    "capabilities": [],
+    "external": true,
+    "persists": false
   }
 ];

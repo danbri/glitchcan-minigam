@@ -1,0 +1,26 @@
+{
+  "@context": {
+    "@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"
+  },
+  "@id": "docklands",
+  "@type": "App",
+  "position": 33,
+  "id": "docklands",
+  "family": "play",
+  "icon": "🏙️",
+  "name": "Docklands",
+  "surface": "stage",
+  "game": "docklands",
+  "url": "https://danbri.github.io/londat/docklands/",
+  "desc": "moglob: the Docklands model, places and the planet in 3D",
+  "controls": "none",
+  "capabilities": [],
+  "external": true,
+  "persists": false,
+  "notes": [
+    "The Docklands 3D page (the app called moglob) from the danbri/londat repo, referenced at its deployed GitHub Pages URL rather than vendored: it is a large three.js r186 world (WebGPU where the browser has it, else WebGL) with live data feeds, and it changes every day. Source: https://github.com/danbri/londat/tree/main/docklands. Modelled on Drift City (drift.jsonld): a heavy full-screen world on the stage surface, so `# APP: docklands` in a story opens it, and the window manager can show it full, split or picture-in-picture.",
+    "IT WANTS THE WHOLE SCREEN. The page is designed as a full-screen app (its own menu drawer, HUD and touch navigation). Expect it to struggle in a split or picture-in-picture stage or on a small phone (not tested): a cramped HUD and drawer, a lower frame rate, and perhaps a lower memory tier from its governor (docklands/governor.js). Use full stage for a fair view; open https://danbri.github.io/londat/docklands/ directly for the best one.",
+    "It knows nothing about foafos: it does not load app-sdk.js and does not speak the guest protocol (no ready, no init, no variables, no audio or controls probe answers), like Tellyclub. In the sandbox it gets an opaque origin, so its localStorage, its service worker (sw.js) and its crash-recovery record (governor.js, `moglob.run`) are not available; it survives that, but view settings do not persist here. NO capabilities declared: storage would be a lie (no broker client), and geolocation (its Locate button) and WebXR (its headset mode) are deliberately NOT delegated to a third-party page. Its music is its own and is not under the master volume, so it is not `silent`.",
+    "Framing works: GitHub Pages sends no X-Frame-Options and no Content-Security-Policy frame-ancestors for this page, and it sends `Access-Control-Allow-Origin: *`, which the opaque-origin frame needs for its module scripts and data (checked 2026-11-03). Seen in Chrome 2026-11-03 at ?app=docklands, full stage, 1280x800: the page booted, drew with WebGPU and answered its own page API (window.docklands). Its only errors were the refused service worker and xr-spatial-tracking. Split and picture-in-picture were not tried. Findings: docs/foafos-docklands-20261103.md."
+  ]
+}
