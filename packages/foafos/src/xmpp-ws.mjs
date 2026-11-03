@@ -9,7 +9,7 @@
 // Covers: framing, SASL SCRAM-SHA-256 / SCRAM-SHA-1 (WebCrypto, server signature
 // checked), resource binding, presence, IQ request/response. Not covered: stream
 // management, reconnection, XEP-0332 chunked bodies. Browser only (DOMParser).
-// Design and limits: magpie/miniapps/lws/README.md.
+// Design and limits: packages/foafos/pod/README.md.
 
 const NS_FRAMING = 'urn:ietf:params:xml:ns:xmpp-framing';
 const NS_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl';
@@ -173,7 +173,18 @@ export class XmppWs {
         data = `<data><base64>${b64(bytes)}</base64></data>`;
       }
       const id = this.#id();
-      const reply = await this.iq(`<iq xmlns="jabber:client" type="set" to="${esc(jid)}" id="${id}"><req xmlns="${NS_HTTP}" method="${esc(method)}" resource="${esc(target)}" version="1.1"><headers xmlns="${NS_SHIM}">${headers}</headers>${data}</req></iq>`, timeoutMs);
+      let reply;
+      try {
+        reply = await this.iq(`<iq xmlns="jabber:client" type="set" to="${esc(jid)}" id="${id}"><req xmlns="${NS_HTTP}" method="${esc(method)}" resource="${esc(target)}" version="1.1"><headers xmlns="${NS_SHIM}">${headers}</headers>${data}</req></iq>`, timeoutMs);
+      } catch (e) {
+        // No answer at all. RFC 6121 section 8.5.2.2 makes a server answer an IQ
+        // for an offline account with service-unavailable, but a relay that
+        // holds it instead (Factoidal xmpp-serve, 2026-11-03) gives silence.
+        // Either way the pod is unreachable: say so in HTTP terms.
+        if (!(e instanceof XmppError) || !/timed out/.test(e.message)) throw e;
+        return new Response(JSON.stringify({ status: 504, detail: `no answer from ${jid} in ${timeoutMs} ms` }),
+          { status: 504, headers: { 'Content-Type': 'application/problem+json', 'X-Xmpp-Error': 'timeout' } });
+      }
       if (reply.getAttribute('type') === 'error') {
         const cond = reply.getElementsByTagName('error')[0]?.firstElementChild?.localName || 'error';
         // The pod is offline or unreachable: say so in HTTP terms.

@@ -4,7 +4,7 @@ Owner, 2026-10-21, verbatim: "Can we do this and wire up comms to the LWS over a
 binding? Is that just wanky and needless? Could it be a pod at home?"
 
 This folder answers those questions with a running prototype and a test. The plan it
-belongs to is [docs/foafos-lws-20261021.md](../../../docs/foafos-lws-20261021.md).
+belongs to is [docs/foafos-lws-20261021.md](../../../docs/foafos-lws-20261021.md) and [docs/foafos-pods-20261103.md](../../../docs/foafos-pods-20261103.md).
 
 ```
 browser (foafos, any origin)                 home machine (behind NAT)
@@ -40,13 +40,30 @@ browser (foafos, any origin)                 home machine (behind NAT)
 | `test/run.mjs` | end-to-end test: Prosody, the pod, a static server, Chromium |
 | `test/prosody.cfg.lua` | the local relay (plain `ws://` on 127.0.0.1, test only) |
 
-Run it:
+Run it (moved here from `magpie/miniapps/lws/` on 2026-11-03):
 
 ```
-apt-get install -y prosody                 # the relay used by the test
-cd magpie/miniapps/lws && npm install
-node test/run.mjs                          # 15 pass, 0 fail (2026-10-21)
+cd packages/foafos/pod && npm install
+
+# relay: Prosody
+apt-get install -y prosody
+node test/run.mjs                          # 15 pass, 0 fail (2026-10-21, Linux container)
+
+# relay: Factoidal's Lean XMPP server (needs a build with `xmpp-serve --ws-port`,
+# https://github.com/danbri/factoidal-core/pull/311; not yet on npm)
+RELAY=factoidal FACTOIDAL_BIN=<factoidal-core>/npm/factoidal/bin/factoidal.mjs node test/run.mjs
+                                           # 15 pass, 0 fail (2026-11-03, macOS, Google Chrome)
 ```
+
+With the Factoidal relay, the test runs both listeners over TLS (XEP-0368 direct TLS and
+`wss:`) with a throwaway certificate. `@xmpp/client` (the pod's library) has SCRAM-SHA-1 and
+PLAIN and uses PLAIN only over TLS; Factoidal offers SCRAM-SHA-256 and PLAIN. The browser
+client logs in with SCRAM-SHA-256.
+
+Relay difference, measured 2026-11-03: when the pod is offline, Prosody answers the browser's
+IQ with `service-unavailable` (RFC 6121 section 8.5.2.2); Factoidal holds the IQ and does not
+answer (https://github.com/danbri/factoidal/issues/1234). `httpFetch` gives HTTP 504 in both
+cases: `X-Xmpp-Error` is the error condition, or `timeout`.
 
 Run a pod:
 

@@ -68,14 +68,14 @@ accessibility table is beside it. Rules:
 - foafos apps share `FoafStore` namespaces (`edot`, `files`, `sheets`) with the shell on
   the same origin. That is on purpose: the same documents in both.
 
-## LWS over XMPP (magpie/miniapps/lws/)
+## LWS over XMPP (packages/foafos/pod/, moved from magpie/miniapps/lws/ on 2026-11-03)
 
 The home pod (`lws/pod.mjs`) serves one Factoidal LWS storage over HTTP and over
 XEP-0332. The browser side is `src/xmpp-ws.mjs` (RFC 7395) and `src/lws-store.mjs`
 (the FoafStore backend). The answers and measurements are in `lws/README.md`.
 
     apt-get install -y prosody
-    cd magpie/miniapps/lws && npm install && node test/run.mjs     # 15 checks
+    cd packages/foafos/pod && npm install && node test/run.mjs     # 15 checks
 
 Rules: keep LWS semantics out of the XMPP layer (the request and answer are the
 same bytes as over HTTP), and keep resource IRIs `https://`.

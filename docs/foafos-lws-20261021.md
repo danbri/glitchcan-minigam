@@ -170,10 +170,10 @@ the Service Worker would load once and cache.
 Owner, verbatim: "Can we do this and wire up comms to the LWS over an xmpp binding? Is that
 just wanky and needless? Could it be a pod at home?"
 
-A prototype is in `magpie/miniapps/lws/`: one Factoidal LWS storage served over HTTP and over
+A prototype is in `magpie/miniapps/lws/` (moved on 2026-11-03 to `packages/foafos/pod/`): one Factoidal LWS storage served over HTTP and over
 XEP-0332 through an XMPP relay. The browser client uses RFC 7395 and SCRAM, and FoafStore runs
 over LWS with ETag merge. The end-to-end test passes 15 of 15. The verdict, the measurements
-and the costs are in `magpie/miniapps/lws/README.md`.
+and the costs are in `packages/foafos/pod/README.md`.
 
 ## Sources
 

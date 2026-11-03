@@ -9,7 +9,7 @@
 // Both carriages call the same storage.step(): the LWS request, its headers
 // (Authorization, If-Match, ...) and its answer are byte-identical whichever
 // way they travel. Only the framing differs. Design and limits:
-// magpie/miniapps/lws/README.md.
+// packages/foafos/pod/README.md.
 //
 //   node pod.mjs --base https://pod.example/ --dir ./data \
 //     --xmpp xmpp://127.0.0.1:15222 --domain localhost --jid pod --password ... \

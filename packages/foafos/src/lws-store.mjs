@@ -9,7 +9,7 @@
 //
 // `fetch` may be the browser's fetch (HTTPS to a pod, needs CORS) or
 // XmppWs.httpFetch() (XEP-0332 through an XMPP relay). The store cannot tell
-// which, and the LWS requests are the same. Design: magpie/miniapps/lws/README.md.
+// which, and the LWS requests are the same. Design: packages/foafos/pod/README.md.
 
 const CONTAINER_TYPE = '<https://www.w3.org/ns/lws#Container>; rel="type"';
 

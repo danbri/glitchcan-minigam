@@ -130,4 +130,18 @@ servers are tested:
 
 ## 5. Log
 
-(Filled in as each step lands.)
+### Step 1, 2026-11-03: moved, and the test runs on Factoidal's relay (built)
+
+- Moved with `git mv`: `packages/foafos/src/xmpp-ws.mjs`, `packages/foafos/src/lws-store.mjs`,
+  `packages/foafos/pod/` (was `magpie/miniapps/lws/`). References updated in
+  `docs/foafos-lws-20261021.md` and the `miniapps-runner` skill.
+- `packages/foafos/pod/test/run.mjs` now chooses its relay (`RELAY=prosody` or
+  `RELAY=factoidal` with `FACTOIDAL_BIN`) and its browser (`CHROMIUM_PATH`, the container's
+  Chromium, or the installed Google Chrome).
+- Result: 15 pass, 0 fail, with `factoidal xmpp-serve` from the factoidal-core branch of
+  https://github.com/danbri/factoidal-core/pull/311 as the relay, on macOS. The browser logs in
+  with SCRAM-SHA-256 over `wss:`; the pod logs in with PLAIN over direct TLS.
+- Found: Factoidal holds an IQ for an offline account instead of answering
+  `service-unavailable`. Filed: https://github.com/danbri/factoidal/issues/1234. `httpFetch` now
+  reports a timeout as HTTP 504 (`X-Xmpp-Error: timeout`), so a relay that holds IQs cannot make
+  a foafos request hang.
