@@ -145,3 +145,26 @@ servers are tested:
   `service-unavailable`. Filed: https://github.com/danbri/factoidal/issues/1234. `httpFetch` now
   reports a timeout as HTTP 504 (`X-Xmpp-Error: timeout`), so a relay that holds IQs cannot make
   a foafos request hang.
+
+### Step 2, 2026-11-03: `FoafPods` (built)
+
+- `packages/foafos/src/pods.mjs`: `FoafPods`, `checkPod`, `POD_OWNER`, `POD_VERBS`; exported
+  from `packages/foafos/src/index.mjs` and as `foafos/pods`, `foafos/xmpp-ws`,
+  `foafos/lws-store`.
+- What it decides:
+  - a pod record is refused unless its base is `https:` (or `http:` on loopback), it ends in
+    `/`, and, for XMPP, the relay is `wss:` (or `ws:` on loopback) and the pod JID is a JID;
+  - records persist without the password; the password is a FoafSecrets secret of the owner
+    `foafos.pods`, reached only through `secrets.use` during the relay login;
+  - `connect` probes the storage with `HEAD <base>`: online, or an error that says why (no
+    password, login failed, pod offline, a 5xx);
+  - the four verbs are checked in this order, with no network until the last step: verb known,
+    capability granted, path clean and inside the prefix, body a string of 1 MiB or less,
+    throttle, pod connected;
+  - `pod.put` makes missing parent containers top down;
+  - a listing comes back as paths relative to the prefix, so an app does not learn the pod's
+    address;
+  - removing a pod removes its password and every grant that names it.
+- Test: `packages/foafos/test/pods.test.js`, 15 cases, no network (an in-memory storage that
+  records what was sent). It checks that the password never appears in a result, an audit line,
+  a bus message, the pod list or the saved records. The whole package suite passes (14 files).

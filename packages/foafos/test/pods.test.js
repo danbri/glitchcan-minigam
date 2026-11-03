@@ -1,0 +1,250 @@
+// FoafPods: the pod list, connections, and the four app verbs. As in ops.test.js, most of this
+// is REFUSALS: an app must not be able to aim a pod call outside its grant, learn the pod's
+// address, or see the relay password. The storage is an in-memory fake that records what was
+// sent; the real engine over a real relay is packages/foafos/pod/test/run.mjs.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { FoafSecrets } from '../src/secrets.mjs';
+import { FoafPods, POD_OWNER, checkPod } from '../src/pods.mjs';
+
+const PASSWORD = 'relay-pw-THIS_MUST_NEVER_APPEAR_ANYWHERE_41c2';
+const BASE = 'https://pod.example/';
+
+/** A tiny LWS-ish storage: resources with ETags, containers with listings. */
+function fakeStorage() {
+  const res = new Map([['/', { container: true }]]);
+  let n = 0;
+  const calls = [];
+  const fetch = async (url, init = {}) => {
+    const method = (init.method || 'GET').toUpperCase();
+    const headers = new Headers(init.headers || {});
+    calls.push({ url: String(url), method, headers: Object.fromEntries(headers) });
+    if (!String(url).startsWith(BASE)) return new Response(null, { status: 400 });
+    const path = '/' + decodeURIComponent(String(url).slice(BASE.length));
+    const cur = res.get(path);
+    if (method === 'HEAD') return new Response(null, { status: cur ? 200 : 404 });
+    if (method === 'GET') {
+      if (!cur) return new Response(null, { status: 404 });
+      if (cur.container) {
+        const items = [...res.keys()].filter((k) => k !== path && k.startsWith(path) && !k.slice(path.length).replace(/\/$/, '').includes('/'))
+          .map((k) => ({ id: BASE + k.slice(1).split('/').map(encodeURIComponent).join('/'), type: res.get(k).container ? 'Container' : 'DataResource' }));
+        return new Response(JSON.stringify({ id: BASE + path.slice(1), items }), { status: 200, headers: { 'Content-Type': 'application/lws+json' } });
+      }
+      return new Response(cur.body, { status: 200, headers: { 'Content-Type': cur.type, ETag: cur.etag } });
+    }
+    if (method === 'PUT') {
+      const parent = path.replace(/\/?[^/]*\/?$/, '/') || '/';
+      if (!res.has(parent)) return new Response(null, { status: 409 });
+      if (headers.get('if-match') && headers.get('if-match') !== cur?.etag) return new Response(null, { status: 412 });
+      if (headers.get('if-none-match') === '*' && cur) return new Response(null, { status: 412 });
+      if (path.endsWith('/')) { res.set(path, { container: true }); return new Response(null, { status: 201 }); }
+      const etag = `"e${++n}"`;
+      res.set(path, { body: String(init.body ?? ''), type: headers.get('content-type') || 'text/plain', etag });
+      return new Response(null, { status: cur ? 204 : 201, headers: { ETag: etag } });
+    }
+    if (method === 'DELETE') {
+      if (!cur) return new Response(null, { status: 404 });
+      res.delete(path);
+      return new Response(null, { status: 204 });
+    }
+    return new Response(null, { status: 405 });
+  };
+  return { fetch, calls, res };
+}
+
+const busSpy = () => { const seen = []; return { seen, publish: (topic, data) => seen.push({ topic, data }) }; };
+
+function rig({ carriage = 'xmpp', storageImpl = fakeStorage(), loginFails = false } = {}) {
+  const bus = busSpy();
+  const secrets = new FoafSecrets({ bus });
+  const logins = [];
+  const connectXmpp = async (opts) => {
+    logins.push(opts);
+    if (loginFails || opts.password !== PASSWORD) throw new Error(`SASL failed for ${opts.password}`);
+    return { httpFetch: ({ base }) => { assert.equal(base, BASE); return storageImpl.fetch; }, close() {} };
+  };
+  const saved = new Map();
+  const local = { getItem: (k) => saved.get(k) ?? null, setItem: (k, v) => saved.set(k, v) };
+  const pods = new FoafPods({ secrets, bus, storage: local, connectXmpp, fetchImpl: storageImpl.fetch });
+  const rec = carriage === 'xmpp'
+    ? { id: 'home', base: BASE, carriage, relay: { url: 'wss://relay.example/xmpp-websocket', domain: 'relay.example', username: 'me' }, podJid: 'pod@relay.example/lws' }
+    : { id: 'home', base: BASE, carriage };
+  pods.add(rec, carriage === 'xmpp' ? { password: PASSWORD } : {});
+  return { pods, secrets, bus, logins, storage: storageImpl, saved, local };
+}
+
+const leaks = (r) => JSON.stringify([r.bus.seen, r.pods.audit, r.secrets.audit, r.pods.list(), [...r.saved.values()]]).includes(PASSWORD);
+
+// ── records ───────────────────────────────────────────────────────────────
+
+test('checkPod refuses addresses that would let a pod be spoofed or sniffed', () => {
+  const ok = { id: 'home', base: BASE, carriage: 'https' };
+  assert.equal(checkPod(ok).base, BASE);
+  assert.throws(() => checkPod({ ...ok, base: 'http://pod.example/' }), /https/);
+  assert.equal(checkPod({ ...ok, base: 'http://127.0.0.1:8787/' }).base, 'http://127.0.0.1:8787/');
+  assert.throws(() => checkPod({ ...ok, base: 'https://pod.example/x' }), /end with/);
+  assert.throws(() => checkPod({ ...ok, id: '../x' }), /id/);
+  assert.throws(() => checkPod({ ...ok, carriage: 'ftp' }), /carriage/);
+  const x = { ...ok, carriage: 'xmpp', relay: { url: 'ws://relay.example/ws', domain: 'd', username: 'u' }, podJid: 'pod@d/lws' };
+  assert.throws(() => checkPod(x), /wss/);
+  assert.ok(checkPod({ ...x, relay: { ...x.relay, url: 'ws://127.0.0.1:5280/ws' } }));
+  assert.throws(() => checkPod({ ...x, relay: { ...x.relay, url: 'wss://r/ws' }, podJid: 'nope' }), /podJid/);
+});
+
+test('records persist without the password; the password stays in FoafSecrets', () => {
+  const r = rig();
+  const stored = JSON.parse(r.saved.get('foafos.pods'));
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].id, 'home');
+  assert.equal(r.pods.get('home').hasPassword, true);
+  assert.ok(r.secrets.has(POD_OWNER, 'pod.home.password'));
+  assert.equal(leaks(r), false);
+  // A second shell on the same storage sees the pod, not the password.
+  const again = new FoafPods({ secrets: new FoafSecrets(), storage: r.local });
+  assert.equal(again.get('home').carriage, 'xmpp');
+  assert.equal(again.get('home').hasPassword, false);
+});
+
+// ── connections ─────────────────────────────────────────────────────────
+
+test('connect over XMPP logs in with the held password and probes the storage', async () => {
+  const r = rig();
+  const p = await r.pods.connect('home');
+  assert.equal(p.status, 'online');
+  assert.equal(r.logins.length, 1);
+  assert.equal(r.logins[0].username, 'me');
+  assert.deepEqual(r.storage.calls[0], { url: BASE, method: 'HEAD', headers: {} });
+  assert.equal(leaks(r), false);
+  await r.pods.disconnect('home');
+  assert.equal(r.pods.status('home'), 'offline');
+});
+
+test('a failed login is an error status whose text carries no password', async () => {
+  const r = rig({ loginFails: true });
+  const p = await r.pods.connect('home');
+  assert.equal(p.status, 'error');
+  assert.match(p.detail, /could not log in/);
+  assert.equal(leaks(r), false);
+});
+
+test('no password set: the pod says so instead of trying', async () => {
+  const r = rig();
+  r.secrets.forget(POD_OWNER, 'pod.home.password');
+  const p = await r.pods.connect('home');
+  assert.equal(p.status, 'error');
+  assert.match(p.detail, /no password/);
+  assert.equal(r.logins.length, 0);
+});
+
+test('an offline pod (504 from the carriage) is reported as offline, not online', async () => {
+  const r = rig({ storageImpl: { fetch: async () => new Response(null, { status: 504 }), calls: [] } });
+  assert.equal((await r.pods.connect('home')).status, 'error');
+  assert.match(r.pods.get('home').detail, /offline/);
+});
+
+// ── the app verbs ───────────────────────────────────────────────────────
+
+async function granted(opts) {
+  const r = rig(opts);
+  await r.pods.connect('home');
+  r.pods.grant('notes', { 'pod:read': { pod: 'home' }, 'pod:write': { pod: 'home' } });
+  r.pods.grant('reader', { 'pod:read': { pod: 'home', prefix: 'apps/notes/' } });
+  return r;
+}
+
+test('put then get then list then delete, inside apps/<appId>/', async () => {
+  const r = await granted();
+  const put = await r.pods.invoke('notes', 'pod.put', { path: 'today.json', body: '{"a":1}', contentType: 'application/json' });
+  assert.equal(put.ok, true);
+  assert.equal(put.status, 201);
+  // The parent containers were made top down.
+  assert.ok(r.storage.res.get('/apps/').container && r.storage.res.get('/apps/notes/').container);
+  const got = await r.pods.invoke('notes', 'pod.get', { path: 'today.json' });
+  assert.deepEqual([got.ok, got.body, got.etag], [true, '{"a":1}', put.etag]);
+  const ls = await r.pods.invoke('notes', 'pod.list', { path: '' });
+  assert.deepEqual(ls.items, [{ path: 'today.json', container: false }]);
+  // Nothing an app receives names the pod.
+  assert.ok(!JSON.stringify([put, got, ls]).includes('pod.example'));
+  assert.equal((await r.pods.invoke('notes', 'pod.delete', { path: 'today.json' })).status, 204);
+});
+
+test('If-Match conflicts come back as conflict, and If-None-Match guards a create', async () => {
+  const r = await granted();
+  const first = await r.pods.invoke('notes', 'pod.put', { path: 'x.json', body: '1', ifNoneMatch: true });
+  assert.equal(first.ok, true);
+  const again = await r.pods.invoke('notes', 'pod.put', { path: 'x.json', body: '2', ifNoneMatch: true });
+  assert.deepEqual([again.ok, again.reason, again.status], [false, 'conflict', 412]);
+  const stale = await r.pods.invoke('notes', 'pod.put', { path: 'x.json', body: '3', etag: '"old"' });
+  assert.equal(stale.reason, 'conflict');
+  const fresh = await r.pods.invoke('notes', 'pod.put', { path: 'x.json', body: '4', etag: first.etag });
+  assert.equal(fresh.ok, true);
+});
+
+test('an app cannot leave its prefix: traversal, absolute IRIs and other apps are refused before any fetch', async () => {
+  const r = await granted();
+  const before = r.storage.calls.length;
+  for (const path of ['../other/x', 'a/../../x', '..', 'https://evil.example/x', '/../x']) {
+    const out = await r.pods.invoke('notes', 'pod.put', { path, body: 'x' });
+    // An absolute IRI is not traversal: it becomes a path INSIDE the prefix, which is harmless.
+    if (path.startsWith('https:')) { assert.equal(out.ok, true); continue; }
+    assert.equal(out.reason, 'bad-params', path);
+  }
+  assert.ok(r.storage.calls.slice(before).every((c) => c.url.startsWith(BASE + 'apps/notes/') || c.url === BASE + 'apps/'));
+});
+
+test('capabilities are checked per verb; a reader cannot write; unknown verbs and apps are refused', async () => {
+  const r = await granted();
+  assert.equal((await r.pods.invoke('reader', 'pod.put', { path: 'x', body: 'x' })).reason, 'denied');
+  assert.equal((await r.pods.invoke('reader', 'pod.delete', { path: 'x' })).reason, 'denied');
+  assert.equal((await r.pods.invoke('stranger', 'pod.get', { path: 'x' })).reason, 'denied');
+  assert.equal((await r.pods.invoke('notes', 'pod.chmod', { path: 'x' })).reason, 'unknown-verb');
+  // The reader's grant names the notes prefix, so it reads what notes wrote.
+  await r.pods.invoke('notes', 'pod.put', { path: 'shared.txt', body: 'hello' });
+  assert.equal((await r.pods.invoke('reader', 'pod.get', { path: 'shared.txt' })).body, 'hello');
+});
+
+test('a pod that is not connected refuses instead of queuing; a removed pod takes its grants with it', async () => {
+  const r = await granted();
+  await r.pods.disconnect('home');
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'x' })).reason, 'offline');
+  await r.pods.remove('home');
+  assert.equal(r.pods.scopeFor('notes', 'pod:read'), null);
+  assert.equal(r.secrets.has(POD_OWNER, 'pod.home.password'), false);
+});
+
+test('grants are checked when given: unknown pod, unknown capability, dirty prefix', () => {
+  const r = rig();
+  assert.throws(() => r.pods.grant('a', { 'pod:read': { pod: 'nope' } }), /no known pod/);
+  assert.throws(() => r.pods.grant('a', { 'pod:admin': { pod: 'home' } }), /unknown capability/);
+  assert.throws(() => r.pods.grant('a', { 'pod:read': { pod: 'home', prefix: '../x' } }), /clean path/);
+  r.pods.grant('a', { 'pod:read': { pod: 'home' } });
+  assert.equal(r.pods.scopeFor('a', 'pod:read').prefix, 'apps/a/');
+});
+
+test('throttle, size limit, and non-text reads', async () => {
+  const r = await granted();
+  r.pods.perMinute = 2;
+  await r.pods.invoke('notes', 'pod.list', {});
+  await r.pods.invoke('notes', 'pod.list', {});
+  assert.equal((await r.pods.invoke('notes', 'pod.list', {})).reason, 'throttled');
+  r.pods.perMinute = 100;
+  assert.equal((await r.pods.invoke('notes', 'pod.put', { path: 'big', body: 'x'.repeat(1024 * 1024 + 1) })).reason, 'too-large');
+  await r.pods.invoke('notes', 'pod.put', { path: 'b.bin', body: 'x', contentType: 'application/octet-stream' });
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'b.bin' })).reason, 'not-text');
+});
+
+test('the audit names verb, path and status, and never a body or the password', async () => {
+  const r = await granted();
+  await r.pods.invoke('notes', 'pod.put', { path: 'secret-diary.txt', body: 'BODY_TEXT_NOT_FOR_THE_BUS' });
+  const topics = r.bus.seen.map((s) => s.topic);
+  assert.ok(topics.includes('pods.invoke') && topics.includes('pods.done'));
+  assert.ok(JSON.stringify(r.bus.seen).includes('apps/notes/secret-diary.txt'));
+  assert.ok(!JSON.stringify(r.bus.seen).includes('BODY_TEXT_NOT_FOR_THE_BUS'));
+  assert.equal(leaks(r), false);
+});
+
+test('carriage https uses the injected fetch directly', async () => {
+  const r = rig({ carriage: 'https' });
+  assert.equal((await r.pods.connect('home')).status, 'online');
+  assert.equal(r.logins.length, 0);
+});

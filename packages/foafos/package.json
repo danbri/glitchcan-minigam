@@ -14,7 +14,10 @@
     "./input": "./src/input.mjs",
     "./session": "./src/session.mjs",
     "./widgets": "./src/widgets.mjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./pods": "./src/pods.mjs",
+    "./xmpp-ws": "./src/xmpp-ws.mjs",
+    "./lws-store": "./src/lws-store.mjs"
   },
   "files": [
     "src",

@@ -36,3 +36,8 @@ export {
 } from './ops.mjs';
 export { sigv4, awsUriEncode, sha256hex, amzDate, EMPTY_SHA256 } from './sigv4.mjs';
 export { AppTree } from './apptree.mjs';
+// The user's LWS storages ("pods"), over HTTPS or XMPP (XEP-0332), held by the shell and
+// brokered to apps by grant. See pods.mjs and docs/foafos-pods-20261103.md.
+export { FoafPods, POD_OWNER, POD_VERBS, checkPod } from './pods.mjs';
+export { XmppWs, XmppError } from './xmpp-ws.mjs';
+export { lwsStore, cachedBackend, mergeKeys, LwsConflict } from './lws-store.mjs';
