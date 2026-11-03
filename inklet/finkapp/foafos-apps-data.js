@@ -532,5 +532,32 @@ export const APPS = [
         "audio.volume"
       ]
     }
+  },
+  {
+    "id": "pods",
+    "family": "make",
+    "icon": "🗄️",
+    "name": "Pods",
+    "surface": "panel",
+    "panel": "pods",
+    "desc": "Your Linked Web Storages, over HTTPS or XMPP",
+    "capabilities": [
+      "shell"
+    ],
+    "silent": true
+  },
+  {
+    "id": "podnotes",
+    "family": "office",
+    "icon": "🗒️",
+    "name": "Pod Notes",
+    "surface": "window",
+    "url": "../apps/podnotes/index.html",
+    "desc": "Plain notes, kept in your pod",
+    "capabilities": [
+      "pod:read",
+      "pod:write"
+    ],
+    "silent": true
   }
 ];

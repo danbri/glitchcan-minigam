@@ -46,6 +46,8 @@ export const ROOTS = {
     // row that asked for it would get ambient authority by default.
     capabilities: ['storage', 'secrets', 'vars:read', 'vars:write', 'audio', 'input',
                    'launch', 'navigate', 'chrome', 'shell', 'git:write',
+                   // the user's LWS pods (Pods panel, Pod Notes; 2026-11-03)
+                   'pod:read', 'pod:write',
                    'story:launch', 'story:link', 'story:navigate', 'story:observe',
                    // for a world beside a story to re-enter the reader's scene (spec §5.8)
                    'story:steer'],
@@ -86,7 +88,8 @@ export const ROOTS = {
     // e2e-caps, which reported "edot frame never appeared". A capability
     // nothing grants is not a safe default, it is a dead app. When adding
     // one to an app, add it to every root that offers that app.
-    capabilities: ['storage', 'secrets', 'shell', 'git:write'],
+    // `pod:read`/`pod:write` for Pod Notes, aimed by the Pods panel (2026-11-03).
+    capabilities: ['storage', 'secrets', 'shell', 'git:write', 'pod:read', 'pod:write'],
     boot: { story: false, apps: ['edot'] },
     // No chrome ids here, so an office installation has no breadcrumb,
     // no story status line and no FINK load meter — not hidden, absent.
@@ -94,7 +97,9 @@ export const ROOTS = {
     // no way to aim it has a capability nobody can use — the same
     // dead-capability shape as the `shell` and `secrets` bugs above, just
     // arriving from the UI side instead of the manifest side.
-    apps: ['edot', 'sheets', 'calendar', 'files', 'maker', 'publishing'],
+    // `pods` for the same reason as `publishing`: `pod:*` with no way to
+    // choose a pod is a capability nobody can use.
+    apps: ['edot', 'sheets', 'calendar', 'files', 'maker', 'publishing', 'pods', 'podnotes'],
   },
 
   // THE TV — one root (owner's call, July 2026: "should be one"; there

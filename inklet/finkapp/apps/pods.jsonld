@@ -1,0 +1,22 @@
+{
+  "@context": {
+    "@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"
+  },
+  "@id": "pods",
+  "@type": "App",
+  "position": 31,
+  "id": "pods",
+  "family": "make",
+  "icon": "🗄️",
+  "name": "Pods",
+  "surface": "panel",
+  "panel": "pods",
+  "desc": "Your Linked Web Storages, over HTTPS or XMPP",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true,
+  "notes": [
+    "The user's LWS storages (FoafPods, packages/foafos/src/pods.mjs): add one, connect over HTTPS or through an XMPP relay (XEP-0332), browse it, and choose the pod that apps use. Shell chrome for the Publishing panel's reason: the relay password is typed here and goes straight into FoafSecrets. Design: docs/foafos-pods-20261103.md."
+  ]
+}

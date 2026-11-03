@@ -1617,6 +1617,37 @@ sandboxed app commits a file it has no credential for while every request
 goes to the granted repo — `page.route()` intercepts, so the shell's own
 `fetch` runs (remember the CORS preflight: fulfil `OPTIONS` too).
 
+## Pods: the user's LWS storages (November 2026)
+
+`packages/foafos/src/pods.mjs` (`FoafPods`), `FoafOS.pods`, the **Pods** panel (`openPods`,
+`?app=pods`), app verbs `foaf.pod.get/list/put/delete`, first caller **Pod Notes**
+(`inklet/apps/podnotes/`). Design and log: `docs/foafos-pods-20261103.md`. A pod is a Linked Web
+Storage reached over HTTPS or, for a pod at home, over XEP-0332 through an XMPP relay
+(`packages/foafos/src/xmpp-ws.mjs`; the Node pod is `packages/foafos/pod/pod.mjs`).
+
+- **The ops rule again.** The grant supplies the pod and the prefix (`apps/<appId>/`); the app
+  supplies a path and a body. Listings come back RELATIVE to the prefix, so an app never learns the
+  pod's address. The relay password lives in FoafSecrets under `POD_OWNER` (`foafos.pods`) and is
+  reached only through `secrets.use` during the login.
+- **The grant sync revokes shell owners too.** `syncBrokerGrants` revokes every secrets grant that
+  no live app node holds, and the shell's own `foafos.pods` is not an app node: the first shell run
+  held no password at all (the put was `denied`, silently). It is now exempt, like
+  `FoafOS.snapshotNs`. Any new shell-side secrets owner needs the same exemption.
+- **Pod grants follow the tree** (`syncPodGrants`): `pod:read`/`pod:write` on a live node, AND a pod
+  marked "apps use this". No pod chosen is the named reason `no-pod`, so an app can tell the person
+  what to do.
+- **A relay that holds IQs makes a request hang.** Factoidal's `xmpp-serve` holds an IQ for an
+  offline account instead of answering `service-unavailable`
+  (https://github.com/danbri/factoidal/issues/1234); `httpFetch` maps an IQ timeout to HTTP 504.
+- **`@xmpp/client` (the pod) has only SCRAM-SHA-1 and PLAIN**, and uses PLAIN only over TLS.
+  Against Factoidal (SCRAM-SHA-256 and PLAIN) the pod needs TLS: the tests run the relay with a
+  throwaway certificate (`packages/foafos/pod/test/relay.mjs`).
+- Tests: `packages/foafos/test/pods.test.js` (15, no network, mostly refusals, and a grep of every
+  observable surface for the password); `packages/foafos/pod/test/run.mjs` (15, the carriage);
+  `packages/foafos/pod/test/e2e-shell.mjs` (22, the real shell under `?root=office`, attacks from
+  inside the Pod Notes frame). Both pod e2e tests: `cd packages/foafos/pod && npm install`, then
+  `RELAY=prosody` or `RELAY=factoidal FACTOIDAL_BIN=…`.
+
 ## Migrating an app off `same-origin` (the Calendar pattern)
 
 Calendar is the first Office app off the escape hatch, and the pattern

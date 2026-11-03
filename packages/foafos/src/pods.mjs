@@ -68,7 +68,7 @@ export function checkPod(rec) {
   } else {
     delete r.relay; delete r.podJid;
   }
-  r.useForStorage = !!r.useForStorage;
+  r.forApps = !!r.forApps;
   return r;
 }
 
@@ -142,7 +142,10 @@ export class FoafPods {
     if (this.pods.has(r.id)) throw new Error(`a pod "${r.id}" exists already`);
     this.pods.set(r.id, r);
     this._save();
-    if (password != null) this.setPassword(r.id, password);
+    if (password != null) {
+      const held = this.setPassword(r.id, password);
+      if (!held.ok) this._say('pods.refused', { summary: `the password for ${r.id} was not held (${held.reason})`, id: r.id, reason: held.reason });
+    }
     this._say('pods.added', { summary: `pod ${r.id} added (${r.carriage})`, id: r.id, carriage: r.carriage });
     return this.get(r.id);
   }
@@ -166,6 +169,17 @@ export class FoafPods {
     }
     this._save();
     this._say('pods.removed', { summary: `pod ${id} removed`, id });
+  }
+
+  /** The pod that apps' grants point at (at most one), or null. */
+  appsPod() { return [...this.pods.values()].find((r) => r.forApps)?.id || null; }
+
+  /** Make `id` the pod for apps (null: none). Each app still reaches only its own prefix. */
+  setAppsPod(id) {
+    if (id !== null && !this.pods.has(id)) throw new Error(`no pod "${id}"`);
+    for (const r of this.pods.values()) r.forApps = r.id === id;
+    this._save();
+    this._say('pods.updated', { summary: id ? `apps now use pod ${id}` : 'no pod for apps', id });
   }
 
   setPassword(id, password) {

@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Home LWS pod for foafos: the Factoidal LWS engine behind HTTP and an XMPP (XEP-0332) binding",
   "scripts": {
-    "test": "node test/run.mjs"
+    "test": "node test/run.mjs",
+    "test:shell": "node test/e2e-shell.mjs"
   },
   "dependencies": {
     "@factoidal/core": "0.11.0",

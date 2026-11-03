@@ -39,6 +39,8 @@ browser (foafos, any origin)                 home machine (behind NAT)
 | `../src/lws-store.mjs` | `lwsStore`: one JSON resource per FoafStore namespace, `If-Match`/`If-None-Match: *`; `cachedBackend`: the synchronous `{read, write}` that FoafStore takes, writes sent behind, 412 merged key by key (three-way) and retried |
 | `test/run.mjs` | end-to-end test: Prosody, the pod, a static server, Chromium |
 | `test/prosody.cfg.lua` | the local relay (plain `ws://` on 127.0.0.1, test only) |
+| `test/relay.mjs` | starts the test relay: Prosody, or Factoidal's Lean server with TLS (`RELAY`, `FACTOIDAL_BIN`) |
+| `test/e2e-shell.mjs` | the whole path through the real foafos shell: the Pods panel, the relay, this pod, and the sandboxed Pod Notes app (`npm run test:shell`) |
 
 Run it (moved here from `magpie/miniapps/lws/` on 2026-11-03):
 

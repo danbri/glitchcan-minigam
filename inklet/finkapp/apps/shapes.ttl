@@ -24,7 +24,7 @@ app:AppShape a sh:NodeShape ;
   sh:property [ sh:path app:capabilities ;
                 sh:in ( "storage" "secrets" "vars:read" "vars:write" "audio" "input" "geolocation"
                         "same-origin" "shell" "git:write" "story:launch" "story:link" "story:navigate"
-                        "story:observe" "story:steer" ) ] ;
+                        "story:observe" "story:steer" "pod:read" "pod:write" ) ] ;
   sh:property [ sh:path app:silent ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
   sh:property [ sh:path app:instances ; sh:maxCount 1 ; sh:in ( "many" "single" ) ] ;
   sh:property [ sh:path app:storage ; sh:maxCount 1 ; sh:in ( "app" "instance" "document" ) ] ;

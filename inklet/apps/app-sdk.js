@@ -296,6 +296,29 @@
     verbs: () => reqVerb({ type: 'verbs.list' }, 4000).then(r => r.verbs || []),
 
     /**
+     * The pod: the user's Linked Web Storage, held by the shell. Paths are
+     * relative to this app's own container; the app never learns the pod's
+     * address, JID or password. Needs `pod:read` (get, list) or `pod:write`
+     * (put, delete) in the manifest.
+     *
+     *   await foaf.pod.put('notes/today.txt', 'hello', { contentType: 'text/plain' })
+     *   const { body, etag } = await foaf.pod.get('notes/today.txt')
+     *   const { items } = await foaf.pod.list('notes/')   // [{ path, container }]
+     *
+     * Resolves `{ ok: true, status, … }` or `{ ok: false, reason }`, where
+     * reason is `denied`, `no-pod` (the person has not chosen a pod for
+     * apps), `offline`, `bad-params`, `conflict` (412: pass the newer etag),
+     * `http` (with a `status`), `not-text`, `too-large`, `throttled`,
+     * `unreachable`, or `no-shell` standalone.
+     */
+    pod: {
+      get: (path, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.get', params: { ...opts, path } }),
+      list: (path = '') => reqVerb({ type: 'pod', verb: 'pod.list', params: { path } }),
+      put: (path, body, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.put', params: { ...opts, path, body } }),
+      delete: (path, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.delete', params: { ...opts, path } }),
+    },
+
+    /**
      * Secrets: hand one over, list your own by name, forget one.
      *
      * THERE IS NO `get`. A token you cannot read back is a token you
@@ -373,7 +396,7 @@
       if (resolve) { secretWaiters.delete(d.rid); resolve(d); }
       return;
     }
-    if (d.type === 'verb.result' || d.type === 'verbs.result') {
+    if (d.type === 'verb.result' || d.type === 'verbs.result' || d.type === 'pod.result') {
       const resolve = verbWaiters.get(d.rid);
       if (resolve) { verbWaiters.delete(d.rid); resolve(d); }
       return;

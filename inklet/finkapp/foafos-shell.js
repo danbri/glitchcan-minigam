@@ -15,7 +15,7 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
-  defaultOps, scopeBus,
+  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, XmppWs,
 } from '../../packages/foafos/src/index.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
@@ -232,6 +232,18 @@ FoafOS.secrets = secrets;
 const ops = defaultOps({ secrets, bus });
 FoafOS.ops = ops;
 
+// ── pods: the user's LWS storages, over HTTPS or XMPP (XEP-0332) ────────
+// The same rule as ops, for storage: the shell holds the pod list, the
+// connections and the relay password (in FoafSecrets, never in an app); an
+// app holding `pod:read` / `pod:write` gets four verbs aimed by its grant at
+// `apps/<appId>/` in the pod chosen for apps. Design and log:
+// docs/foafos-pods-20261103.md. The window is openPods() below.
+const pods = new FoafPods({
+  secrets, bus, storage: audioStore || null,
+  connectXmpp: (opts) => XmppWs.connect(opts),
+});
+FoafOS.pods = pods;
+
 // Scopes are configuration, not code: which repo, which bucket, which pod.
 // Persisted in the shell's own storage (never an app's), so a user sets it
 // once. Nothing prompts for these yet — see `FoafOS.aimOp` below, which is
@@ -413,7 +425,9 @@ function syncBrokerGrants() {
       live.set(n.appId, held);
     }
     for (const appId of [...broker.grants.keys()]) {
-      if (!live.has(appId) && appId !== FoafOS.snapshotNs) broker.revoke(appId);
+      // The shell's own holders are not apps: its snapshot namespace, and
+      // FoafPods' relay passwords (POD_OWNER), which no app node holds.
+      if (!live.has(appId) && appId !== FoafOS.snapshotNs && appId !== POD_OWNER) broker.revoke(appId);
     }
     for (const [appId, caps] of live) broker.grant(appId, [...caps]);
   }
@@ -421,6 +435,31 @@ function syncBrokerGrants() {
 FoafOS.syncBrokerGrants = syncBrokerGrants;
 bus.subscribe('app.spawn', syncBrokerGrants);
 bus.subscribe('app.close', syncBrokerGrants);
+
+// Pod grants follow the tree the same way: an app reaches the pod chosen for
+// apps exactly while a live node of it holds `pod:read` or `pod:write`, and
+// only its own container. No pod chosen means no grant (the verb answers
+// `no-pod`, so the app can say what the person must do).
+const POD_CAPS = ['pod:read', 'pod:write'];
+function syncPodGrants() {
+  for (const appId of [...pods.grants.keys()]) pods.revoke(appId);
+  const target = pods.appsPod();
+  if (!target) return;
+  const live = new Map();
+  for (const cap of POD_CAPS) {
+    for (const n of apps.holders(cap)) {
+      if (n.surface === 'root') continue;
+      if (!live.has(n.appId)) live.set(n.appId, new Set());
+      live.get(n.appId).add(cap);
+    }
+  }
+  for (const [appId, caps] of live) {
+    try { pods.grant(appId, Object.fromEntries([...caps].map((c) => [c, { pod: target }]))); }
+    catch (e) { bus.publish('pods.refused', { summary: `${appId}'s pod grant failed: ${e.message}`, appId, reason: 'bad-scope' }); }
+  }
+}
+FoafOS.syncPodGrants = syncPodGrants;
+for (const t of ['app.spawn', 'app.close', 'pods.added', 'pods.updated', 'pods.removed']) bus.subscribe(t, syncPodGrants);
 // An installation with no stories should not wear story chrome. The flag
 // stays because it is a true statement about the installation and skins
 // may want it — but it is no longer what REMOVES the narrative
@@ -1705,6 +1744,8 @@ function buildAnnouncer() {
     // has nothing for a screen reader to read; this is how it speaks.
     'guest.announce': (d) => d.summary,
     'minigame.instance': (d) => d.summary,
+    // A pod coming online, going offline or failing to connect (FoafPods).
+    'pods.status': (d) => d.summary,
     'story.state': (d) => d.phase === 'fault' ? 'Story error'
       : d.phase === 'loading' ? 'Loading' : d.depth ? `Dream depth ${d.depth}` : null,
   };
@@ -2817,6 +2858,7 @@ function buildUI() {
         if (app.panel === 'logger') return openLogger();
         if (app.panel === 'activity') return FoafOS.openActivity();
         if (app.panel === 'publishing') return openPublishing();
+        if (app.panel === 'pods') return openPods();
         return null;
       case 'window':
       default: {
@@ -3698,6 +3740,22 @@ function buildUI() {
       // NAME and data, never a function and never a host. `ops` decides
       // what the name means and where it points; an unknown or unaimed verb
       // is refused with a reason.
+      // A POD verb: the app names a path inside its own container; the pod,
+      // the prefix and the connection are the shell's (FoafOS.pods). The
+      // node must hold the capability at the moment of use.
+      if (d.type === 'pod') {
+        const reply = (r) => {
+          try { frame.contentWindow?.postMessage({ type: 'pod.result', rid: d.rid, verb: d.verb, ...r }, '*'); }
+          catch (err) { /* closed */ }
+        };
+        const need = POD_VERBS[d.verb];
+        if (!need) { reply({ ok: false, reason: 'unknown-verb' }); return; }
+        tallyCap(app.id, need);
+        if (!holds(need)) { refuseAtNode('pods', need, d.verb); reply({ ok: false, reason: 'denied' }); return; }
+        if (!pods.scopeFor(app.id, need)) { reply({ ok: false, reason: 'no-pod' }); return; }
+        pods.invoke(app.id, d.verb, d.params || {}).then(reply);
+        return;
+      }
       if (d.type === 'verb') {
         tallyCap(app.id, d.verb?.startsWith('git.') ? 'git:write' : 'ops');
         const need = ops.list().find((o) => o.verb === d.verb)?.capability;
@@ -5044,6 +5102,189 @@ function buildUI() {
     return win;
   }
   FoafOS.openPublishing = openPublishing;
+
+  // ── Pods: the user's LWS storages (FoafPods) ───────────────────────────
+  // Shell chrome, not a sandboxed app, for the Publishing panel's reason:
+  // the relay password is typed here, goes straight into FoafSecrets
+  // (pods.setPassword) and the field is cleared. Apps never see a pod's
+  // address, JID or password; they get pod.* verbs aimed at their own
+  // container in the pod marked "apps use this". docs/foafos-pods-20261103.md.
+  function openPods() {
+    const existing = document.getElementById('foafos-pods');
+    if (existing) return existing;
+    const win = makeWindow('🗄️ Pods', 460, 560);
+    win.id = 'foafos-pods';
+    win.classList.add('foafos-panel');
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:10px;display:flex;'
+      + 'flex-direction:column;gap:10px;font:11px monospace;color:#eee;';
+    win.appendChild(body);
+
+    const el = (tag, text, css) => {
+      const e = document.createElement(tag);
+      if (text != null) e.textContent = text;
+      if (css) e.style.cssText = css;
+      return e;
+    };
+    const button = (parent, label, fn, name) => {
+      const b = el('button', label);
+      b.type = 'button';
+      if (name) b.setAttribute('aria-label', name);
+      b.addEventListener('click', fn);
+      parent.appendChild(b);
+      return b;
+    };
+    const field = (parent, labelText, id, opts = {}) => {
+      const wrap = el('label', labelText, 'display:flex;gap:6px;align-items:center;');
+      const input = document.createElement(opts.select ? 'select' : 'input');
+      if (opts.select) for (const v of opts.select) input.appendChild(Object.assign(el('option', v), { value: v }));
+      else { input.type = opts.type || 'text'; input.placeholder = opts.placeholder || ''; }
+      if (opts.type === 'password') input.autocomplete = 'off';
+      input.id = id;
+      input.style.cssText = 'flex:1;min-width:0;background:#111;color:#eee;border:1px solid #456;padding:3px;font:11px monospace;';
+      wrap.appendChild(input);
+      parent.appendChild(wrap);
+      return input;
+    };
+    const COLOURS = { online: '#8f8', connecting: '#ff8', error: '#f88', offline: '#aaa' };
+    let browsing = null;   // { id, path }
+
+    const drawBrowse = async (card, id, path) => {
+      const out = el('div', 'loading…', 'border-top:1px solid #345;padding-top:6px;display:flex;flex-direction:column;gap:4px;');
+      card.appendChild(out);
+      const podFetch = pods.fetchFor(id);
+      const base = pods.get(id)?.base;
+      if (!podFetch || !base) { out.textContent = 'not connected'; return; }
+      try {
+        if (path === '' || path.endsWith('/')) {
+          const r = await podFetch(base + path, { headers: { Accept: 'application/lws+json' } });
+          out.textContent = '';
+          const head = el('div', `/${path}  (${r.status})`, 'color:#9ad;');
+          out.appendChild(head);
+          if (path) {
+            const up = path.replace(/[^/]+\/$/, '');
+            button(out, '↑ up', () => { browsing = { id, path: up }; draw(); }, `Up to /${up}`);
+          }
+          if (!r.ok) return;
+          const doc = await r.json();
+          for (const it of doc.items || []) {
+            const rel = String(it.id || '').startsWith(base) ? decodeURIComponent(String(it.id).slice(base.length)) : null;
+            if (rel === null) continue;
+            button(out, rel.slice(path.length) || rel, () => { browsing = { id, path: rel }; draw(); }, `Open /${rel}`);
+          }
+          if (!(doc.items || []).length) out.appendChild(el('div', '(empty)', 'color:#888;'));
+        } else {
+          const r = await podFetch(base + path.split('/').map(encodeURIComponent).join('/'));
+          const type = r.headers.get('content-type') || '';
+          out.textContent = '';
+          out.appendChild(el('div', `/${path}  (${r.status}, ${type || 'no type'})`, 'color:#9ad;'));
+          button(out, '↑ up', () => { browsing = { id, path: path.replace(/[^/]+$/, '') }; draw(); }, 'Up to the container');
+          if (/^(text\/|application\/([a-z0-9.+-]*\+)?(json|xml|turtle|n-triples|n-quads|trig))/i.test(type)) {
+            const text = await r.text();
+            out.appendChild(el('pre', text.slice(0, 64 * 1024), 'margin:0;white-space:pre-wrap;max-height:16em;overflow:auto;background:#111;padding:4px;'));
+          } else out.appendChild(el('div', 'not text; not shown', 'color:#888;'));
+        }
+      } catch (e) {
+        out.textContent = `could not read (${e?.name || 'Error'})`;
+      }
+    };
+
+    const draw = () => {
+      if (!win.isConnected) return;
+      body.textContent = '';
+      body.appendChild(el('p',
+        'A pod is a Linked Web Storage (LWS) that you keep: over HTTPS, or at home through an XMPP relay. '
+        + 'Apps that hold pod:read or pod:write reach only their own folder (apps/<app>/) in the pod marked '
+        + '"apps use this". They never see its address or your password.',
+        'margin:0;color:#9ad;line-height:1.5;'));
+
+      const list = pods.list();
+      if (!list.length) body.appendChild(el('p', 'No pods yet. Add one below.', 'margin:0;color:#fa6;'));
+      for (const p of list) {
+        const card = el('section', null, 'border:1px solid #345;padding:8px;display:flex;flex-direction:column;gap:6px;');
+        card.dataset.pod = p.id;
+        card.appendChild(el('h3', `${p.label} (${p.id})${p.forApps ? ' · apps use this' : ''}`, 'margin:0;font:bold 11px monospace;color:#fff;'));
+        const st = el('p', `${p.status}${p.detail ? ` — ${p.detail}` : ''}`, `margin:0;color:${COLOURS[p.status] || '#eee'};`);
+        st.className = 'pod-status';
+        card.appendChild(st);
+        card.appendChild(el('p', p.carriage === 'xmpp'
+          ? `${p.base} through ${p.podJid}, relay ${p.relay.url} as ${p.relay.username}@${p.relay.domain}`
+          : `${p.base} over HTTPS`, 'margin:0;color:#ccc;word-break:break-all;'));
+        if (p.carriage === 'xmpp') {
+          const pw = field(card, 'password', `pod-${p.id}-password`, { type: 'password', placeholder: p.hasPassword ? '•••• held' : 'relay password' });
+          const row = el('div', null, 'display:flex;gap:6px;flex-wrap:wrap;');
+          button(row, 'HOLD PASSWORD', () => {
+            if (!pw.value) return;
+            // Straight into the broker; never stored here, never echoed.
+            const r = pods.setPassword(p.id, pw.value);
+            pw.value = '';
+            draw();
+            if (!r.ok) bus.publish('pods.refused', { summary: `the password for ${p.id} was not held (${r.reason})`, id: p.id, reason: r.reason });
+          });
+          card.appendChild(row);
+        }
+        const buttons = el('div', null, 'display:flex;gap:6px;flex-wrap:wrap;');
+        if (p.status === 'online' || p.status === 'connecting') button(buttons, 'DISCONNECT', () => pods.disconnect(p.id).then(draw));
+        else button(buttons, 'CONNECT', () => { pods.connect(p.id).then(draw); draw(); });
+        if (p.status === 'online') button(buttons, 'BROWSE', () => { browsing = browsing?.id === p.id ? null : { id: p.id, path: '' }; draw(); });
+        if (p.forApps) button(buttons, 'APPS: STOP', () => { pods.setAppsPod(null); draw(); });
+        else button(buttons, 'APPS USE THIS', () => { pods.setAppsPod(p.id); draw(); });
+        button(buttons, 'REMOVE', () => { if (browsing?.id === p.id) browsing = null; pods.remove(p.id).then(draw); });
+        card.appendChild(buttons);
+        if (browsing?.id === p.id && p.status === 'online') drawBrowse(card, p.id, browsing.path);
+        body.appendChild(card);
+      }
+
+      const holders = pods.holders();
+      body.appendChild(el('p', holders.length
+        ? 'Apps that may reach a pod now: ' + holders.map((h) => `${h.appId} ${h.capability} ${h.pod}:/${h.prefix}`).join('; ')
+        : 'No running app may reach a pod now.', 'margin:0;color:#ccc;'));
+
+      const add = el('section', null, 'border:1px dashed #456;padding:8px;display:flex;flex-direction:column;gap:6px;');
+      add.appendChild(el('h3', 'Add a pod', 'margin:0;font:bold 11px monospace;color:#fff;'));
+      const f = {
+        id: field(add, 'id', 'pod-add-id', { placeholder: 'home' }),
+        label: field(add, 'label', 'pod-add-label', { placeholder: 'My pod at home' }),
+        base: field(add, 'storage IRI', 'pod-add-base', { placeholder: 'https://pod.example/' }),
+        carriage: field(add, 'carriage', 'pod-add-carriage', { select: ['xmpp', 'https'] }),
+        url: field(add, 'relay', 'pod-add-relay', { placeholder: 'wss://xmpp.example/xmpp-websocket' }),
+        domain: field(add, 'domain', 'pod-add-domain', { placeholder: 'xmpp.example' }),
+        username: field(add, 'account', 'pod-add-username', { placeholder: 'me' }),
+        password: field(add, 'password', 'pod-add-password', { type: 'password', placeholder: 'relay password' }),
+        podJid: field(add, 'pod JID', 'pod-add-podjid', { placeholder: 'pod@xmpp.example/lws' }),
+      };
+      const err = el('p', '', 'margin:0;color:#f88;');
+      err.setAttribute('role', 'status');
+      const row = el('div', null, 'display:flex;gap:6px;');
+      button(row, 'ADD', () => {
+        const xmpp = f.carriage.value === 'xmpp';
+        const rec = {
+          id: f.id.value.trim(), label: f.label.value.trim(), base: f.base.value.trim(), carriage: f.carriage.value,
+          ...(xmpp ? { relay: { url: f.url.value.trim(), domain: f.domain.value.trim(), username: f.username.value.trim() },
+            podJid: f.podJid.value.trim() } : {}),
+        };
+        const password = f.password.value;
+        f.password.value = '';
+        try { pods.add(rec, xmpp && password ? { password } : {}); draw(); }
+        catch (e) { err.textContent = `refused: ${e.message}`; }
+      }, 'Add this pod');
+      add.appendChild(row);
+      add.appendChild(err);
+      body.appendChild(add);
+      body.appendChild(el('p', secrets.sealed
+        ? 'Passwords are sealed at rest with your session passphrase.'
+        : 'No session passphrase, so passwords are held for this run only; they are not written to disk in the clear.',
+      'margin:0;color:#888;line-height:1.5;'));
+    };
+
+    const unsubs = ['pods.*', 'app.spawn', 'app.close'].map((t) => bus.subscribe(t, () => draw()));
+    new MutationObserver(() => { if (!win.isConnected) unsubs.forEach((u) => u()); })
+      .observe(document.body, { childList: true });
+    document.body.appendChild(win);
+    draw();
+    return win;
+  }
+  FoafOS.openPods = openPods;
 }
 
 if (document.readyState === 'loading') {

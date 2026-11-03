@@ -1,0 +1,23 @@
+{
+  "@context": {
+    "@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"
+  },
+  "@id": "podnotes",
+  "@type": "App",
+  "position": 32,
+  "id": "podnotes",
+  "family": "office",
+  "icon": "🗒️",
+  "name": "Pod Notes",
+  "surface": "window",
+  "url": "../apps/podnotes/index.html",
+  "desc": "Plain notes, kept in your pod",
+  "capabilities": [
+    "pod:read",
+    "pod:write"
+  ],
+  "silent": true,
+  "notes": [
+    "The first caller of the pod verbs (foaf.pod.get/list/put/delete in inklet/apps/app-sdk.js). It reaches only apps/podnotes/ in the pod the person marked \"apps use this\" in the Pods panel, and never sees the pod's address or password. Saves send the ETag it read, so a note changed elsewhere is not overwritten."
+  ]
+}

@@ -168,3 +168,62 @@ servers are tested:
 - Test: `packages/foafos/test/pods.test.js`, 15 cases, no network (an in-memory storage that
   records what was sent). It checks that the password never appears in a result, an audit line,
   a bus message, the pod list or the saved records. The whole package suite passes (14 files).
+
+### Steps 3 and 4, 2026-11-03: the shell, the Pods panel, the app verbs, Pod Notes, and the shell test (built)
+
+- Shell (`inklet/finkapp/foafos-shell.js`):
+  - `FoafOS.pods`, a `FoafPods` with `XmppWs.connect` as its XMPP client;
+  - `syncPodGrants`: an app gets a pod grant exactly while a live node of it holds `pod:read` or
+    `pod:write`, aimed at the pod marked "apps use this", prefix `apps/<appId>/`. Run on
+    `app.spawn`, `app.close` and `pods.added/updated/removed`;
+  - `governAppFrame` answers `{type:'pod'}` messages: unknown verb, then `holds(cap)` on the asking
+    node, then `no-pod` when no pod is chosen, then `pods.invoke`;
+  - `syncBrokerGrants` no longer revokes the secrets grant of `POD_OWNER`. Found by the shell test:
+    the first run held no password, because the grant sync revoked every secrets holder that is
+    not a live app node, the shell's own pod owner included;
+  - the announcer speaks `pods.status`.
+- The **Pods** panel (`openPods`, app `pods`, `surface: 'panel'`, `?app=pods`): the pod list with
+  status, HOLD PASSWORD, CONNECT and DISCONNECT, BROWSE (container listings and text resources),
+  APPS USE THIS, REMOVE, the apps that may reach a pod now, and an Add form. The password field is
+  cleared after use; the value goes only to `pods.setPassword`.
+- App API (`inklet/apps/app-sdk.js`): `foaf.pod.get / list / put / delete`, on the same bounded
+  round trip as `foaf.invoke` (result type `pod.result`).
+- **Pod Notes** (`inklet/apps/podnotes/`, app `podnotes`, `pod:read` + `pod:write`): the first
+  caller. Notes are `notes/<name>.txt` in its own container; a save sends the ETag it read, so a
+  note changed elsewhere is refused (412), not overwritten.
+- Manifests: `inklet/finkapp/apps/pods.jsonld`, `podnotes.jsonld`; `pod:read` and `pod:write` added
+  to the SHACL capability list (`apps/shapes.ttl`); `npm run apps:check` is clean (33 apps).
+- Roots: `glitchcanary` (offers every app) and `office` hold `pod:read` and `pod:write`; `office`
+  offers `pods` and `podnotes`. Live:
+  https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?root=office&app=pods
+- Test: `packages/foafos/pod/test/e2e-shell.mjs`, 22 checks, all pass with the Factoidal relay on
+  macOS (2026-11-03): add a pod from the form, connect through the relay, browse, choose it for apps,
+  Pod Notes saves and lists a note, a stale save is refused, traversal and an unknown verb are
+  refused from inside the frame, nothing is written outside the app's container, an app without the
+  capability (Calendar) is refused, `no-pod` when none is chosen, the password is in no audit line,
+  pod record or `localStorage` key, the form field is cleared, and a pod that went offline is
+  reported. The relay helper is `packages/foafos/pod/test/relay.mjs`.
+
+### Not done, stated
+
+- FoafStore namespaces on a pod (`cachedBackend` in the shell): `lws-store.mjs` and its test exist,
+  but the shell does not switch FoafStore to a pod.
+- `inklet/apps/app-sdk.js` does not check `e.source` on the messages it receives (a limit stated in
+  `docs/foafos-solidos-20261103.md` section 3.2). A sibling frame that holds a reference to this
+  frame could post a forged `pod.result`. It cannot read a pod through that; it can only lie to the
+  app about a result.
+- No reconnection: a dropped relay connection leaves the pod `online` until the next call answers
+  504 and the person connects again.
+- LWS authorization on the pod, notifications, and XEP-0332 chunking (section 3.7).
+
+### Regression run, 2026-11-03 (macOS, Google Chrome through `PW_CHROME`)
+
+| Suite | With this work | On `master` before it |
+|---|---|---|
+| `e2e-caps`, `e2e-taskmanager`, `e2e-foafos`, `e2e-desktop`, `aria-audit` | pass | (not rerun) |
+| `e2e-powers` | pass, after one test change: the shell's pod owner `foafos.pods` is not an app, so "no closed app holds secrets" excludes it, and a new check asserts that it keeps its grant | (not rerun) |
+| `e2e.mjs` | fail: `no choice "Boot the Speccy"`, Hampstead does not reach its end | the same failure |
+| `e2e-root` | fail: webtv and logger frames throw `SecurityError` reading `navigator.serviceWorker` | the same failure |
+
+The two failures are on `master` without this work, on this machine with Google Chrome in place
+of the container's Chromium 141. Not investigated here.
