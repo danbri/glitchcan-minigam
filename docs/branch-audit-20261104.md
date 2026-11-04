@@ -173,3 +173,11 @@ Owner, verbatim: "keep crankign on all this!"
   were kept, and the README hunk was changed to agree with it. The new anti-pattern is rule 30.
 - **Release trackers:** https://github.com/danbri/factoidal/issues/893, #1210 and #1211 are closed.
   Their open items are in https://github.com/danbri/factoidal/issues/1242 (0.31.0).
+
+**Merged after CI passed:** #278 and https://github.com/danbri/factoidal/pull/1243.
+
+**A stacked-base mistake, and its repair.** #279 had the #283 branch as its base, and #288 had the #286
+branch. The audit read "contains #283" as "can go to main", and the merge of #279 went into
+`claude/service-variable-correlation`, not into `main`. Repair: #283 is reopened, retitled "#283 +
+#279", main is merged into it, and it goes to main after CI. #288's base is now `main`. Rule: before a
+merge, check `baseRefName`.
