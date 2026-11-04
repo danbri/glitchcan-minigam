@@ -29,7 +29,15 @@
     "mock-server": "node proxy/mock-server.mjs",
     "demo": "concurrently -k -n mock,proxy,pane \"npm run mock-server\" \"XMPP_TLS_INSECURE=1 npm run proxy\" \"npm start\""
   },
-  "keywords": ["solid", "xmpp", "jabber", "strophe", "chat", "pane", "foaf"],
+  "keywords": [
+    "solid",
+    "xmpp",
+    "jabber",
+    "strophe",
+    "chat",
+    "pane",
+    "foaf"
+  ],
   "license": "MIT",
   "dependencies": {
     "strophe.js": "^5.0.0"
@@ -49,7 +57,7 @@
     "globals": "^17.1.0",
     "jsdom": "^29.1.1",
     "ltx": "^3.1.2",
-    "neostandard": "^0.13.0",
+    "neostandard": "^0.14.1",
     "pane-registry": "dev",
     "rdflib": "2.4.1",
     "solid-logic": "dev",
