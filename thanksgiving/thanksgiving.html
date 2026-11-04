@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Thanksgiving Story Map</title>
+<meta name="description" content="A true story of the 1621 harvest feast for children: the Wampanoag people, the Mayflower, and what came after, on a map with a timeline you can drag.">
+<style>
+:root {
+  --ink: #2b2118;
+  --paper: #fff8ea;
+  --paper-2: #f6e9cc;
+  --sea: #8fd0e3;
+  --sea-dark: #5fb1cb;
+  --land: #bcd88f;
+  --land-edge: #4f6b2f;
+  --shore: #e9f8fb;
+  --accent: #c8541c;
+  --accent-2: #2f6f8f;
+  --muted: #6d5c49;
+  --sad: #5a5f78;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.45;
+}
+header {
+  padding: 0.7rem 1rem 0.4rem;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1rem;
+}
+header h1 { margin: 0; font-size: clamp(1.25rem, 3.6vw, 1.9rem); letter-spacing: 0.01em; }
+header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-rows: auto auto;
+  gap: 0.8rem;
+  padding: 0 1rem 1rem;
+}
+.stage {
+  position: relative;
+  height: min(68vh, 640px);
+  min-height: 320px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  box-shadow: 0 5px 0 var(--ink);
+  background-color: var(--sea);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='34'%3E%3Cpath d='M4 20 q6 -6 12 0 t12 0' fill='none' stroke='%23ffffff' stroke-opacity='.45' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M34 8 q5 -5 10 0 t10 0' fill='none' stroke='%23ffffff' stroke-opacity='.3' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"),
+    radial-gradient(circle at 30% 30%, #a6dcec, var(--sea) 60%, var(--sea-dark));
+  touch-action: none;
+}
+.stage svg.map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.land-shore { fill: none; stroke: var(--shore); stroke-linejoin: round; }
+.land-fill { fill: var(--land); stroke: var(--land-edge); stroke-linejoin: round; }
+.route { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.route.ahead { stroke: #ffffff; stroke-opacity: 0.55; }
+.route.done { stroke: var(--accent); }
+.route.squanto.done { stroke: #7a3f8f; }
+.route.home.done { stroke: #9a6a2a; }
+.mk text, .region text {
+  font-family: inherit; font-weight: 700; paint-order: stroke; stroke: var(--paper); stroke-width: 4px;
+  stroke-linejoin: round; fill: var(--ink);
+}
+.region text { fill: #2f5b74; font-style: italic; letter-spacing: 0.12em; font-weight: 700; }
+.region.landname text { fill: #47602a; }
+.mk { transition: opacity 0.4s; cursor: pointer; }
+.mk.nolabel text { display: none; }
+.mk .badge { fill: #fff; stroke: var(--ink); stroke-width: 2.5; }
+.mk.now .badge { fill: #ffe7a3; }
+.mk .pulse { fill: none; stroke: var(--accent); stroke-width: 3; opacity: 0; }
+.mk.now .pulse { animation: pulse 1.6s ease-out infinite; }
+@keyframes pulse { 0% { r: 16; opacity: 0.9; } 100% { r: 30; opacity: 0; } }
+.vessel .bob { animation: bob 2.4s ease-in-out infinite; transform-origin: 0 8px; }
+@keyframes bob { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(4deg) translateY(-2px); } }
+.overlay { position: absolute; pointer-events: none; }
+.datebadge {
+  top: 10px; left: 10px; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 12px;
+  padding: 0.3rem 0.7rem; box-shadow: 0 3px 0 var(--ink); max-width: calc(100% - 100px);
+}
+.datebadge .d { font-size: clamp(1rem, 3vw, 1.35rem); font-weight: 800; display: block; }
+.datebadge .w { font-size: 0.8rem; color: var(--muted); }
+.compass { right: 10px; top: 10px; width: 62px; height: 62px; }
+.scalehint { left: 10px; bottom: 8px; font-size: 0.75rem; color: #1d4659; background: rgba(255,255,255,0.6); padding: 1px 6px; border-radius: 6px; }
+.zoombtns { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.zoombtns button { width: 38px; height: 38px; font-size: 1.2rem; }
+
+.card {
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 0 5px 0 var(--ink);
+  padding: 0.9rem 1rem 1rem;
+  height: min(68vh, 640px);
+  overflow-y: auto;
+}
+.card .era { text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.12em; color: var(--accent); font-weight: 800; }
+.card h2 { margin: 0.15rem 0 0.2rem; font-size: 1.45rem; line-height: 1.2; display: flex; gap: 0.5rem; align-items: center; }
+.card h2 svg { width: 40px; height: 40px; flex: none; }
+.card .when { font-weight: 700; margin: 0 0 0.2rem; }
+.card .calendar { font-size: 0.82rem; color: var(--muted); margin: 0 0 0.5rem; }
+.card p.body { margin: 0.4rem 0; font-size: 1.05rem; }
+.card .box {
+  border-radius: 10px; padding: 0.5rem 0.7rem; margin: 0.7rem 0 0; font-size: 0.92rem;
+}
+.card .how { background: #e6f1f5; border-left: 5px solid var(--accent-2); }
+.card .myth { background: #fff0d6; border-left: 5px solid #e2a03a; }
+.card .sad { background: #e8e9f1; border-left: 5px solid var(--sad); }
+.card .box b { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.food { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.7rem; }
+.food div { background: #f2f7e6; border-radius: 10px; padding: 0.45rem 0.6rem; font-size: 0.9rem; }
+.food div.no { background: #f9e5e0; }
+.food h3 { margin: 0 0 0.2rem; font-size: 0.85rem; }
+.food ul { margin: 0; padding-left: 1.1rem; }
+
+.timeline {
+  grid-column: 1 / -1;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 0 5px 0 var(--ink);
+  padding: 0.6rem 0.9rem 0.7rem;
+}
+.controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+button {
+  font: inherit; font-weight: 700; background: #fff; color: var(--ink); border: 2.5px solid var(--ink);
+  border-radius: 10px; padding: 0.3rem 0.8rem; cursor: pointer; box-shadow: 0 3px 0 var(--ink);
+}
+button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: #fff; }
+.controls .count { margin-left: auto; color: var(--muted); font-size: 0.9rem; }
+.track { position: relative; padding: 26px 0 4px; }
+.eras { position: absolute; top: 0; left: 0; right: 0; height: 22px; }
+.eras span {
+  position: absolute; top: 0; height: 20px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;
+  color: #fff; padding: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.eras b { font-weight: 800; }
+.eras .short, .years .short { display: none; }
+.ticks { position: absolute; left: 0; right: 0; top: 33px; height: 14px; pointer-events: none; }
+.ticks i {
+  position: absolute; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #fff;
+  border: 2.5px solid var(--ink);
+}
+.ticks i.seen { background: var(--accent); }
+input[type=range] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; margin: 0;
+  position: relative; z-index: 2;
+}
+input[type=range]::-webkit-slider-runnable-track { height: 8px; background: #d9c7a3; border-radius: 4px; border: 2px solid var(--ink); }
+input[type=range]::-moz-range-track { height: 8px; background: #d9c7a3; border-radius: 4px; border: 2px solid var(--ink); }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent);
+  border: 3px solid var(--ink); margin-top: -13px; cursor: grab;
+}
+input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); border: 3px solid var(--ink); cursor: grab; }
+.years { position: relative; height: 34px; margin-top: 0.5rem; }
+.years .bar { position: absolute; left: 0; right: 0; top: 12px; height: 4px; background: #d9c7a3; border-radius: 2px; }
+.years .yt { position: absolute; top: 9px; width: 2px; height: 10px; background: var(--muted); }
+.years .yl { position: absolute; top: 20px; font-size: 0.7rem; color: var(--muted); transform: translateX(-50%); }
+.years .dot { position: absolute; top: 5px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: var(--accent-2); border: 2.5px solid var(--ink); }
+.years .cap { position: absolute; top: -6px; left: 0; font-size: 0.72rem; color: var(--muted); }
+
+.more { padding: 0 1rem 2rem; max-width: 980px; }
+.more h2 { font-size: 1.3rem; margin: 1.4rem 0 0.4rem; }
+.more ol.story { padding-left: 1.3rem; }
+.more ol.story li { margin: 0.5rem 0; }
+.more ol.story li button { font-size: 0.8rem; padding: 0.05rem 0.5rem; margin-left: 0.3rem; box-shadow: 0 2px 0 var(--ink); }
+.more .grownups { background: var(--paper); border: 2px solid var(--ink); border-radius: var(--radius); padding: 0.4rem 1rem 0.8rem; }
+.more li { margin: 0.25rem 0; }
+.more a { color: var(--accent-2); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; padding: 0 0.6rem 0.8rem; gap: 0.6rem; }
+  header { padding: 0.6rem 0.8rem 0.3rem; }
+  .stage { height: 52vh; min-height: 280px; }
+  .timeline { grid-row: 2; }
+  .card { height: auto; max-height: none; }
+  .more { padding: 0 0.8rem 2rem; }
+  .compass { width: 48px; height: 48px; }
+  .eras .long, .years .long { display: none; }
+  .eras .short, .years .short { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mk.now .pulse, .vessel .bob { animation: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>The Thanksgiving story, on a map</h1>
+  <p>What happened in 1621, before it, and after it. Drag the timeline or press Play.</p>
+</header>
+
+<div class="layout">
+  <div class="stage" id="stage">
+    <svg class="map" id="map" role="img" aria-label="Map that follows the story">
+      <defs>
+        <symbol id="i-wetu" viewBox="0 0 24 24"><path d="M2.5 19.5 Q2.5 5.5 12 5.5 Q21.5 5.5 21.5 19.5Z" fill="#b07a40" stroke="#3d2810" stroke-width="1.6"/><path d="M5 12.5h14M3.6 16h16.8M8 7.5v12M16 7.5v12" stroke="#7a5326" stroke-width="1" fill="none"/><path d="M10 19.5v-5a2 2 0 0 1 4 0v5z" fill="#3d2810"/></symbol>
+        <symbol id="i-house" viewBox="0 0 24 24"><path d="M4.5 11 L12 4.5 L19.5 11 V20 H4.5Z" fill="#efdcb2" stroke="#3d2810" stroke-width="1.5"/><path d="M2.8 11.8 L12 3.6 L21.2 11.8" fill="none" stroke="#8a5a2b" stroke-width="2.6" stroke-linecap="round"/><rect x="10" y="14" width="4" height="6" fill="#8a5a2b"/><rect x="6.5" y="12.5" width="2.5" height="2.5" fill="#8fd0e3" stroke="#3d2810" stroke-width=".8"/></symbol>
+        <symbol id="i-corn" viewBox="0 0 24 24"><path d="M12 22 C6 18 5 12 6 9 C8 13 10 15 12 16Z" fill="#6fa53a" stroke="#2f5a14"/><path d="M12 22 C18 18 19 12 18 9 C16 13 14 15 12 16Z" fill="#7fb546" stroke="#2f5a14"/><ellipse cx="12" cy="10" rx="3.6" ry="7.5" fill="#f4c430" stroke="#8a6a00" stroke-width="1.2"/><path d="M10.2 6h3.6M9.6 9h4.8M9.6 12h4.8M10.2 15h3.6" stroke="#c99a10" stroke-width="1"/></symbol>
+        <symbol id="i-scroll" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2" fill="#fff4d6" stroke="#3d2810" stroke-width="1.5"/><path d="M8 8h8M8 11h8M8 14h5" stroke="#8a5a2b" stroke-width="1.4"/><path d="M14 17.5 l1.5 -2 l1.5 2" fill="none" stroke="#c8541c" stroke-width="1.5"/></symbol>
+        <symbol id="i-arrows" viewBox="0 0 24 24"><path d="M5 19 L19 5 M19 19 L5 5" stroke="#3d2810" stroke-width="2" stroke-linecap="round"/><path d="M19 5 l-5 1 l4 4z M5 5 l1 5 l4-4z" fill="#3d2810"/></symbol>
+        <symbol id="i-feast" viewBox="0 0 24 24"><path d="M3 12 h18 a9 7 0 0 1 -18 0z" fill="#c8541c" stroke="#3d2810" stroke-width="1.5"/><path d="M8 9 q-1.5 -2 0 -4 M12 9 q-1.5 -2 0 -4 M16 9 q-1.5 -2 0 -4" fill="none" stroke="#6d5c49" stroke-width="1.4" stroke-linecap="round"/><path d="M5 21h14" stroke="#3d2810" stroke-width="2" stroke-linecap="round"/></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24"><path d="M5 17 a7 7 0 0 1 14 0z" fill="#ffc93c" stroke="#a5640a" stroke-width="1.4"/><path d="M12 6v2.5M5.2 9.2l1.8 1.8M18.8 9.2l-1.8 1.8M2.5 15h2M19.5 15h2" stroke="#e28a0a" stroke-width="1.8" stroke-linecap="round"/><path d="M2 19.5h20" stroke="#2f6f8f" stroke-width="2" stroke-linecap="round"/></symbol>
+        <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3 C12 3 5 11 5 15 a7 7 0 0 0 14 0 C19 11 12 3 12 3z" fill="#8c90a8" stroke="#3a3d52" stroke-width="1.5"/></symbol>
+        <symbol id="i-boat" viewBox="0 0 24 24"><path d="M3 15 h18 l-3 5 h-12z" fill="#8a5a2b" stroke="#3d2810" stroke-width="1.4"/><path d="M12 3 v12" stroke="#3d2810" stroke-width="1.4"/><path d="M12 4 l6 9 h-6z" fill="#fff" stroke="#3d2810" stroke-width="1.2"/></symbol>
+        <symbol id="i-capitol" viewBox="0 0 24 24"><path d="M7 11 a5 5 0 0 1 10 0z" fill="#fff" stroke="#3d2810" stroke-width="1.4"/><path d="M12 3v3" stroke="#3d2810" stroke-width="1.4"/><rect x="4" y="11" width="16" height="8" fill="#fff" stroke="#3d2810" stroke-width="1.4"/><path d="M7 12.5v5M10 12.5v5M14 12.5v5M17 12.5v5" stroke="#3d2810"/><path d="M2.5 20.5h19" stroke="#3d2810" stroke-width="2" stroke-linecap="round"/></symbol>
+        <symbol id="i-rain" viewBox="0 0 24 24"><path d="M6 13 a4 4 0 0 1 1 -7.8 a5 5 0 0 1 9.5 1 a3.5 3.5 0 0 1 1 6.8z" fill="#fff" stroke="#2f6f8f" stroke-width="1.5"/><path d="M8 16l-1 3M12 16l-1 3M16 16l-1 3" stroke="#2f6f8f" stroke-width="1.8" stroke-linecap="round"/></symbol>
+        <symbol id="i-candle" viewBox="0 0 24 24"><rect x="9" y="10" width="6" height="11" rx="1" fill="#fff" stroke="#3d2810" stroke-width="1.4"/><path d="M12 9 c-2 -2 0 -5 0 -6 c0 1 2 4 0 6z" fill="#ffb02e" stroke="#c8541c"/></symbol>
+        <symbol id="i-speech" viewBox="0 0 24 24"><path d="M4 5 h16 v10 h-9 l-4 4 v-4 h-3z" fill="#fff" stroke="#3d2810" stroke-width="1.5" stroke-linejoin="round"/><path d="M7.5 9h9M7.5 12h6" stroke="#2f6f8f" stroke-width="1.5"/></symbol>
+        <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3 L22 20 H2Z" fill="#ffd34d" stroke="#3d2810" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9v5" stroke="#3d2810" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="#3d2810"/></symbol>
+        <symbol id="i-broken" viewBox="0 0 24 24"><path d="M11 4 a8 8 0 0 0 0 16 l1.5 -4 l-2 -2 l2 -3 l-1.5 -3z" fill="#9aa0b8" stroke="#3a3d52" stroke-width="1.4"/><path d="M14 4.4 a8 8 0 0 1 0 15.2 l1 -3.6 l-2 -2 l2 -3 l-1.5 -3z" fill="#9aa0b8" stroke="#3a3d52" stroke-width="1.4"/></symbol>
+        <symbol id="i-quill" viewBox="0 0 24 24"><path d="M19 3 C10 5 7 11 6 18 l2 -1 C10 12 13 9 19 3z" fill="#fff" stroke="#3d2810" stroke-width="1.4"/><path d="M6 18 l-2 3" stroke="#3d2810" stroke-width="1.6" stroke-linecap="round"/><path d="M4 21h9" stroke="#2f6f8f" stroke-width="1.6" stroke-linecap="round"/></symbol>
+        <symbol id="i-seed" viewBox="0 0 24 24"><path d="M3 19h18" stroke="#6b4a22" stroke-width="2" stroke-linecap="round"/><path d="M6 19 q6 -6 12 0" fill="#9b6b3a" stroke="#3d2810" stroke-width="1.3"/><path d="M12 15 v-6" stroke="#2f5a14" stroke-width="1.6"/><path d="M12 11 c-3 0 -4 -3 -4 -4 c2 0 4 1 4 4z M12 10 c3 0 4 -3 4 -4 c-2 0 -4 1 -4 4z" fill="#6fa53a" stroke="#2f5a14"/><path d="M15 18 l3 -1.5 l-1 2.5 l2 0" fill="#c0d0dc" stroke="#2f6f8f" stroke-width=".9"/></symbol>
+      </defs>
+      <g id="world">
+        <path id="coarse-shore" class="land-shore"/>
+        <path id="coarse" class="land-fill"/>
+        <g id="fine-g"><path id="fine-shore" class="land-shore"/><path id="fine" class="land-fill"/></g>
+        <g id="regions"></g>
+        <g id="routes"></g>
+        <g id="markers"></g>
+        <g id="vessel" class="vessel"></g>
+      </g>
+    </svg>
+    <div class="overlay datebadge" aria-hidden="true"><span class="d" id="badge-date"></span><span class="w" id="badge-where"></span></div>
+    <svg class="overlay compass" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="29" fill="#fff8ea" stroke="#2b2118" stroke-width="2.5"/>
+      <path d="M32 7 L38 32 L32 57 L26 32Z" fill="#c8541c" stroke="#2b2118" stroke-width="1.5"/>
+      <path d="M32 32 L26 32 L32 57Z" fill="#fff"/>
+      <path d="M7 32 L32 27 L57 32 L32 37Z" fill="#d9c7a3" stroke="#2b2118" stroke-width="1"/>
+      <text x="32" y="19" text-anchor="middle" font-size="10" font-weight="800" fill="#2b2118">N</text>
+    </svg>
+    <div class="overlay scalehint" id="scalehint"></div>
+    <div class="zoombtns">
+      <button type="button" id="zoom-out" aria-label="Zoom out to see more">−</button>
+      <button type="button" id="zoom-reset" aria-label="Go back to this part of the story's view">⟲</button>
+    </div>
+  </div>
+
+  <article class="card" id="card" aria-live="polite"></article>
+
+  <section class="timeline" aria-label="Timeline">
+    <div class="controls">
+      <button type="button" id="prev" aria-label="Previous part">◀</button>
+      <button type="button" class="primary" id="play">▶ Play</button>
+      <button type="button" id="next" aria-label="Next part">▶</button>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="track">
+      <div class="eras" id="eras"></div>
+      <div class="ticks" id="ticks"></div>
+      <label class="sr-only" for="scrub">Story timeline</label>
+      <input type="range" id="scrub" min="0" step="any" value="0">
+    </div>
+    <div class="years" id="years" aria-hidden="true"><span class="cap"><span class="long">Real years, to scale: see how much happened in 1620 and 1621</span><span class="short">Real years, to scale</span></span><div class="bar"></div></div>
+  </section>
+</div>
+
+<section class="more">
+  <h2>The whole story, to read</h2>
+  <ol class="story" id="storylist"></ol>
+
+  <div class="grownups">
+    <h2>For grown-ups: how this page was made</h2>
+    <p>Every event here comes from a written record or from Wampanoag accounts of their own history. Where historians are not sure, the page says so. Some things we do not know: the exact day of the 1621 feast, whether Massasoit was invited or arrived for another reason, which sickness emptied Patuxet, and the exact path the Mayflower took across the ocean (the line on the map is a drawing, not a log).</p>
+    <p><b>Two calendars.</b> In 1620 England used the old Julian calendar, which was 10 days behind the calendar we use now. William Bradford and Edward Winslow wrote their dates in the old calendar, so the page gives both. The English also began the new year on March 25, so Bradford writes "1620" for events we would put in March 1621.</p>
+    <p><b>The hard parts.</b> The page tells children, in plain words, about the 1614 kidnapping, the epidemic, the corn and graves the English took on Cape Cod, the war of 1675, and the National Day of Mourning. The Wampanoag Nation is not only in the past: it is here today, with its own governments, schools and language.</p>
+    <h3>Sources</h3>
+    <ul>
+      <li>William Bradford, <i>Of Plymouth Plantation</i> (written 1630 to 1651, first printed 1856).</li>
+      <li><i>Mourt's Relation</i> (London, 1622), with Edward Winslow's letter of December 11, 1621, the only eyewitness description of the harvest feast.</li>
+      <li>Abraham Lincoln, Proclamation of Thanksgiving, October 3, 1863. George Washington, Thanksgiving Proclamation, October 3, 1789. Public Law 77-379 (December 26, 1941).</li>
+      <li>Plimoth Patuxet Museums: <a href="https://www.plimoth.org/">https://www.plimoth.org/</a></li>
+      <li>National Museum of the American Indian, Native Knowledge 360°: <a href="https://americanindian.si.edu/nk360/">https://americanindian.si.edu/nk360/</a></li>
+      <li>Mashpee Wampanoag Tribe: <a href="https://mashpeewampanoagtribe-nsn.gov/">https://mashpeewampanoagtribe-nsn.gov/</a> · Wampanoag Tribe of Gay Head (Aquinnah): <a href="https://wampanoagtribe-nsn.gov/">https://wampanoagtribe-nsn.gov/</a></li>
+      <li>Wôpanâak Language Reclamation Project: <a href="https://www.wlrp.org/">https://www.wlrp.org/</a></li>
+      <li>United American Indians of New England, National Day of Mourning (held at Plymouth since 1970).</li>
+      <li>Map: coastlines from Natural Earth (public domain).</li>
+    </ul>
+  </div>
+</section>
+
+<script type="module">
+import { PROJ, COARSE, FINE } from './coast-data.js';
+
+// ---------- projection (must match tools/build-coast.mjs) ----------
+const px = (lon) => (lon - PROJ.lon0) * PROJ.k * PROJ.c;
+const py = (lat) => (PROJ.lat0 - lat) * PROJ.k;
+const P = ([lat, lon]) => [px(lon), py(lat)];
+
+// ---------- views: centre and the area (degrees) that must fit ----------
+const V = {
+  newEngland: { lat: 42.0, lon: -70.45, w: 2.6, h: 1.6, fine: 1 },
+  wideNE:     { lat: 42.9, lon: -70.4, w: 5.0, h: 3.4, fine: 1 },
+  europe:     { lat: 52.0, lon: 0.6, w: 11, h: 5.5, fine: 0 },
+  channel:    { lat: 51.0, lon: 0.0, w: 11, h: 4.0, fine: 0 },
+  atlantic:   { lat: 46.5, lon: -36, w: 76, h: 22, fine: 0 },
+  atlanticS:  { lat: 45.0, lon: -38, w: 78, h: 24, fine: 0 },
+  capeCod:    { lat: 41.82, lon: -70.15, w: 1.15, h: 0.75, fine: 1 },
+  capeTip:    { lat: 42.0, lon: -70.2, w: 0.7, h: 0.45, fine: 1 },
+  plymouth:   { lat: 41.96, lon: -70.5, w: 0.8, h: 0.42, fine: 1 },
+  bayToPly:   { lat: 41.95, lon: -70.35, w: 1.0, h: 0.55, fine: 1 },
+  southNE:    { lat: 41.7, lon: -70.6, w: 1.9, h: 1.0, fine: 1 },
+  usEast:     { lat: 40.5, lon: -73.8, w: 9.5, h: 5.5, fine: 0 },
+};
+
+// ---------- routes (lat, lon waypoints; drawn as a sketch, not a ship's log) ----------
+const ROUTES = {
+  voyage: {
+    cls: 'voyage',
+    pts: [
+      ['delfshaven', 51.91, 4.45], [null, 51.75, 3.6], [null, 51.2, 1.7], [null, 50.72, 0.4], [null, 50.68, -1.0],
+      ['southampton', 50.88, -1.40], [null, 50.62, -1.6], [null, 50.3, -3.0], ['plymouthUK', 50.34, -4.14],
+      [null, 50.0, -6.0], [null, 49.0, -14], [null, 47.6, -24], ['midAtlantic', 46.2, -34], [null, 44.6, -46],
+      [null, 43.2, -57], [null, 42.4, -65], ['capeSighted', 42.03, -69.86], [null, 41.8, -69.88],
+      ['shoals', 41.58, -69.9], [null, 41.85, -69.9], [null, 42.08, -70.02], [null, 42.1, -70.2],
+      ['provincetown', 42.04, -70.17], [null, 41.99, -70.4], [null, 41.97, -70.6], ['plymouthMA', 41.958, -70.645],
+    ],
+  },
+  squanto: {
+    cls: 'squanto',
+    pts: [
+      ['patuxet', 41.96, -70.66], [null, 41.6, -68], [null, 40.5, -55], [null, 38.5, -35], [null, 37, -17],
+      [null, 36.3, -8], ['malaga', 36.68, -4.42], [null, 36.0, -6.3], [null, 38, -10.5], [null, 43.5, -10.5],
+      [null, 48.6, -5.5], [null, 50.6, -1.0], ['london', 51.5, 0.0], [null, 50.2, -5.5], [null, 49, -25],
+      [null, 48, -45], ['newfoundland', 47.55, -53.0], [null, 44.6, -62], [null, 42.4, -68.5], ['home', 41.96, -70.66],
+    ],
+  },
+  home: {
+    cls: 'home',
+    pts: [['plymouthMA', 41.958, -70.645], ['leaving', 41.99, -70.4], [null, 42.08, -70.0], [null, 42.6, -64],
+      [null, 44.5, -45], [null, 47.5, -25], [null, 49.8, -8], ['england', 50.6, -2.0]],
+  },
+};
+for (const r of Object.values(ROUTES)) {
+  r.xy = r.pts.map(([, lat, lon]) => P([lat, lon]));
+  r.cum = [0];
+  for (let i = 1; i < r.xy.length; i++) r.cum.push(r.cum[i - 1] + Math.hypot(r.xy[i][0] - r.xy[i - 1][0], r.xy[i][1] - r.xy[i - 1][1]));
+  r.len = r.cum[r.cum.length - 1];
+  r.at = (name) => r.cum[r.pts.findIndex((p) => p[0] === name)] / r.len;
+}
+function pointOnRoute(r, t) {
+  const d = Math.max(0, Math.min(1, t)) * r.len;
+  let i = 1;
+  while (i < r.cum.length - 1 && r.cum[i] < d) i++;
+  const a = r.xy[i - 1], b = r.xy[i], seg = (r.cum[i] - r.cum[i - 1]) || 1, u = (d - r.cum[i - 1]) / seg;
+  return { x: a[0] + (b[0] - a[0]) * u, y: a[1] + (b[1] - a[1]) * u, dir: Math.sign(b[0] - a[0]) || 1, i, u };
+}
+
+// ---------- places on the map ----------
+// from/to: story parts (by id) during which the marker shows. now: parts where it pulses.
+const MARKERS = [
+  { id: 'patuxet', at: [41.958, -70.668], icon: 'wetu', label: 'Patuxet', from: 'first-light', to: 'squanto-home', now: ['first-light', 'squanto-home'], local: true },
+  { id: 'nauset', at: [41.83, -69.97], icon: 'wetu', label: 'Nauset', from: 'first-light', now: ['first-encounter', 'billington'], local: true, dx: 14 },
+  { id: 'sowams', at: [41.73, -71.28], icon: 'wetu', label: 'Sowams (Pokanoket)', from: 'first-light', now: ['agreement'], local: true },
+  { id: 'mashpee', at: [41.65, -70.48], icon: 'wetu', label: 'Mashpee', from: 'first-light', now: ['today'], local: true },
+  { id: 'aquinnah', at: [41.345, -70.8], icon: 'wetu', label: 'Aquinnah', from: 'first-light', now: ['today', 'mourning'], local: true },
+  { id: 'pemaquid', at: [43.88, -69.52], icon: 'wetu', label: "Pemaquid (Samoset's home)", from: 'samoset', now: ['samoset'], local: true },
+  { id: 'scrooby', at: [53.41, -1.02], icon: 'house', label: 'Scrooby', from: 'leaving-england', to: 'set-sail', now: ['leaving-england'] },
+  { id: 'leiden', at: [52.16, 4.49], icon: 'house', label: 'Leiden', from: 'leaving-england', to: 'set-sail', now: ['leaving-england', 'two-ships'] },
+  { id: 'southampton', at: [50.9, -1.4], icon: 'boat', label: 'Southampton', from: 'two-ships', to: 'set-sail', dx: 12, dy: -20, now: ['two-ships'] },
+  { id: 'plymouthUK', at: [50.37, -4.14], icon: 'boat', label: 'Plymouth, England', from: 'two-ships', to: 'at-sea', now: ['set-sail'] },
+  { id: 'malaga', at: [36.72, -4.42], icon: 'drop', label: 'Málaga, Spain', from: 'kidnapped', to: 'squanto-home', dx: 44, dy: 8, now: ['kidnapped'] },
+  { id: 'london', at: [51.51, -0.13], icon: 'house', label: 'London', from: 'kidnapped', to: 'squanto-home', now: ['kidnapped'] },
+  { id: 'newfoundland', at: [47.6, -53.2], icon: 'boat', label: 'Newfoundland', from: 'squanto-home', to: 'squanto-home', now: ['squanto-home'] },
+  { id: 'sickness', at: [42.3, -70.9], icon: 'drop', label: 'Sickness along the coast', from: 'squanto-home', to: 'squanto-home', now: ['squanto-home'], local: true },
+  { id: 'shoals', at: [41.56, -69.92], icon: 'warn', label: 'Dangerous shoals', from: 'land', now: ['land'], local: true, dx: 16 },
+  { id: 'compact', at: [42.05, -70.19], icon: 'scroll', label: 'Mayflower Compact', from: 'compact', now: ['compact'], local: true, dy: -6 },
+  { id: 'cornhill', at: [42.01, -70.07], icon: 'corn', label: 'Corn Hill', from: 'corn', now: ['corn', 'billington'], local: true, dx: 16 },
+  { id: 'encounter', at: [41.825, -69.995], icon: 'arrows', label: 'First Encounter', from: 'first-encounter', now: ['first-encounter'], local: true, dx: -10, dy: 26 },
+  { id: 'plymouthMA', at: [41.958, -70.668], icon: 'house', label: 'Plymouth (on Patuxet land)', from: 'plymouth', now: ['plymouth', 'winter', 'planting', 'samoset'], local: true },
+  { id: 'feast', at: [41.958, -70.668], icon: 'feast', label: 'Harvest feast', from: 'feast', now: ['feast'], local: true, dy: 58 },
+  { id: 'rain', at: [41.958, -70.668], icon: 'rain', label: 'Day of thanksgiving', from: 'thanksgiving-1623', to: 'thanksgiving-1623', now: ['thanksgiving-1623'], local: true, dy: 58 },
+  { id: 'war', at: [41.75, -71.1], icon: 'broken', label: "War, 1675 to 1676", from: 'war', to: 'war', now: ['war'], local: true },
+  { id: 'nyc', at: [40.71, -74.0], icon: 'capitol', label: 'New York (capital in 1789)', from: 'washington', to: 'washington', now: ['washington'] },
+  { id: 'dc', at: [38.9, -77.03], icon: 'capitol', label: 'Washington, D.C.', from: 'lincoln', to: 'fourth-thursday', now: ['lincoln', 'fourth-thursday'] },
+  { id: 'philly', at: [39.95, -75.16], icon: 'quill', label: "Philadelphia (Sarah Hale's magazine)", from: 'lincoln', to: 'lincoln', now: ['lincoln'] },
+  { id: 'coles', at: [41.958, -70.668], icon: 'candle', label: "Cole's Hill", from: 'mourning', now: ['mourning'], local: true, dy: 58 },
+  { id: 'language', at: [41.65, -70.48], icon: 'speech', label: 'Wôpanâak spoken again', from: 'today', now: ['today'], local: true, dx: 28, dy: -16 },
+];
+
+const REGIONS = [
+  { at: [44.5, -35], text: 'ATLANTIC OCEAN', size: 18, max: 200, min: 25 },
+  { at: [52.6, -1.6], text: 'ENGLAND', size: 13, max: 30, min: 4, land: true },
+  { at: [52.4, 5.6], text: 'NETHERLANDS', size: 12, max: 30, min: 4, land: true },
+  { at: [40.0, -4.0], text: 'SPAIN', size: 13, max: 200, min: 15, land: true },
+  { at: [42.15, -70.6], text: 'Cape Cod Bay', size: 13, max: 4, min: 0 },
+  { at: [41.72, -69.84], text: 'Cape Cod', size: 12, max: 4, min: 0.5, land: true },
+  { at: [42.6, -71.6], text: 'Massachusetts', size: 13, max: 9, min: 1.5, land: true },
+  { at: [42.3, -70.65], text: 'Massachusetts Bay', size: 12, max: 6, min: 1.5 },
+  { at: [44.0, -71.3], text: 'Maine', size: 12, max: 9, min: 2, land: true },
+  { at: [46.0, -66.0], text: 'NORTH AMERICA', size: 15, max: 200, min: 25, land: true },
+  { at: [53.0, -7.0], text: 'IRELAND', size: 11, max: 30, min: 8, land: true },
+];
+
+// ---------- the story ----------
+// when: what the date badge says. calendar: both calendars where the source gives a day.
+// view, vessel: { route, stop } (a named waypoint), places: shown in the card's "where".
+const ERAS = [
+  { id: 'before', label: 'Before the Mayflower', short: 'Before', color: '#7a3f8f' },
+  { id: 'voyage', label: 'The voyage', short: 'Voyage', color: '#2f6f8f' },
+  { id: 'first-year', label: 'The first year', short: '1620–21', color: '#c8541c' },
+  { id: 'after', label: 'Afterwards', short: 'After', color: '#4f6b2f' },
+];
+const STORY = [
+  { id: 'first-light', era: 'before', year: 1600, when: 'Long before 1620', where: 'Wampanoag homelands', icon: 'sun', view: V.newEngland,
+    title: 'People of the First Light',
+    body: ['The Wampanoag people have lived along this coast, in what is now Massachusetts and Rhode Island, for more than 12,000 years. Wampanoag means "People of the First Light", or "People of the East": the sun comes up over their land first.',
+      'Families moved with the seasons. In summer they fished, gathered clams and grew corn, beans and squash by the sea. In winter they moved inland to hunt deer. Their round houses were called wetus, made of bent saplings covered with bark or mats.',
+      'One Wampanoag village, beside a good harbor, was called Patuxet. Remember it: this story comes back to it.'],
+    how: 'Wampanoag families pass down their history by telling it. Archaeologists also find tools, shell heaps and old fields along this coast.' },
+  { id: 'leaving-england', era: 'before', year: 1608, when: '1608 to 1609', where: 'England and the Netherlands', icon: 'house', view: V.europe,
+    title: 'A church of their own',
+    body: ['In England, the law said everyone had to go to the Church of England. A small group of people from villages around Scrooby wanted to run their own church in their own way. That was against the law, and some of them were put in prison.',
+      'So in 1608 they moved to the Netherlands, where the law let them worship as they liked. In 1609 they settled in the city of Leiden. The work was hard, and they worried that their children were growing up Dutch, not English. After about 11 years, some of them decided to cross the ocean and start a colony.',
+      'Bradford later wrote that when they left Leiden "they knew they were pilgrims". That is where the name Pilgrims comes from.'],
+    how: 'William Bradford, one of the group, wrote their history in a book called Of Plymouth Plantation.' },
+  { id: 'kidnapped', era: 'before', year: 1614, when: '1614', where: 'Patuxet to Spain to London', icon: 'boat', view: V.atlanticS,
+    vessel: { route: 'squanto', stop: 'malaga', label: "Hunt's ship" },
+    title: 'Tisquantum is taken',
+    body: ['European ships came to this coast to fish and trade. In 1614 an English captain named Thomas Hunt tricked about 20 men from Patuxet, and 7 from Nauset, onto his ship. He took them across the ocean to Málaga, in Spain, to sell them as slaves.',
+      'One of them was a Patuxet man named Tisquantum. (The English later called him Squanto.) He got away, reached England, and lived in London, where he learned to speak English.'],
+    sad: 'Other English people at the time said Hunt had done a great wrong. They also wrote that it made the people of the coast distrust every English ship that came after.',
+    how: 'Captain John Smith and Sir Ferdinando Gorges both wrote about what Hunt did.' },
+  { id: 'squanto-home', era: 'before', year: 1619, when: '1616 to 1619', where: 'The New England coast', icon: 'drop', view: V.atlantic,
+    vessel: { route: 'squanto', stop: 'home', label: "Tisquantum's journey home" },
+    title: 'The great sickness',
+    body: ['From about 1616 to 1619, a terrible sickness spread along the coast. It came with European sailors and traders. Doctors today still do not know for sure which disease it was.',
+      'In many villages, most people died. At Patuxet, almost everyone died.',
+      'In 1619, Tisquantum sailed home by way of Newfoundland. When he reached Patuxet, his village was empty. His family was gone. He went to live among the Pokanoket Wampanoag, whose leader was Massasoit.'],
+    how: 'English explorers who sailed past in 1619 wrote about the empty villages. So did Bradford and Winslow when they saw Patuxet in 1620.' },
+  { id: 'two-ships', era: 'voyage', year: 1620.55, when: 'July 22, 1620', calendar: 'Old calendar: July 22, 1620 · Our calendar: August 1, 1620', where: 'Delfshaven to Southampton', icon: 'boat', view: V.channel,
+    vessel: { route: 'voyage', stop: 'southampton', label: 'Speedwell' },
+    title: 'Two ships',
+    body: ['The group from Leiden sailed out of the port of Delfshaven on a small ship called the Speedwell. At Southampton, in England, they met a bigger ship, the Mayflower, with more passengers who wanted to go too. Not all of them shared the Leiden church: some were going to work, or to start a new life.',
+      'The two ships set out together in August. But the Speedwell leaked. Twice they had to turn back. In the end they left the Speedwell behind and squeezed as many people as they could onto the Mayflower.'],
+    how: 'Bradford describes the leaking Speedwell. He later wrote that its captain and crew may have made it leak on purpose, because they did not want to go.' },
+  { id: 'set-sail', era: 'voyage', year: 1620.68, when: 'September 6, 1620', calendar: 'Old calendar: September 6, 1620 · Our calendar: September 16, 1620', where: 'Plymouth, England', icon: 'boat', view: V.channel,
+    vessel: { route: 'voyage', stop: 'plymouthUK', label: 'Mayflower' },
+    title: 'The Mayflower sets out alone',
+    body: ['On September 6, the Mayflower left Plymouth, in England, with 102 passengers and about 30 sailors. The ship was about 30 meters (100 feet) long.',
+      'The passengers lived on the deck below the main deck, a dark room not tall enough for a grown man to stand straight. There were more than 30 children on board, and two dogs.'],
+    how: 'Bradford gives the date. We know the passengers\' names because Bradford wrote a list of everyone who came.' },
+  { id: 'at-sea', era: 'voyage', year: 1620.77, when: 'October 1620', where: 'The middle of the Atlantic', icon: 'boat', view: V.atlantic,
+    vessel: { route: 'voyage', stop: 'midAtlantic', label: 'Mayflower' },
+    title: 'Storms at sea',
+    body: ['Halfway across, great storms hit the ship. A big wooden beam that held up the deck cracked. The passengers had brought a large iron screw (a jack), and they used it to push the beam back into place.',
+      'In one storm a young man named John Howland was thrown into the sea. He caught hold of a rope hanging over the side and held on until the sailors pulled him back up with a boat hook.',
+      'A baby was born at sea. His parents named him Oceanus.'],
+    how: 'All three stories come from Bradford\'s book.' },
+  { id: 'land', era: 'voyage', year: 1620.86, when: 'November 9 to 11, 1620', calendar: 'Old calendar: November 9 to 11, 1620 · Our calendar: November 19 to 21, 1620', where: 'Cape Cod', icon: 'warn', view: V.capeCod,
+    vessel: { route: 'voyage', stop: 'provincetown', label: 'Mayflower' },
+    title: 'Land!',
+    body: ['After nine weeks at sea, the sailors saw land. It was Cape Cod.',
+      'The colonists had permission from England to settle near the Hudson River, far to the south, so the ship turned south. Soon it was in among dangerous shoals, where the sea is shallow and the waves break on hidden sand. The captain turned back.',
+      'On November 11 the Mayflower dropped anchor in the harbor at the tip of Cape Cod, where the town of Provincetown is now.'],
+    how: 'Bradford writes that they "fell amongst dangerous shoals and roaring breakers" and turned back.' },
+  { id: 'compact', era: 'voyage', year: 1620.865, when: 'November 11, 1620', calendar: 'Old calendar: November 11, 1620 · Our calendar: November 21, 1620', where: 'Aboard the Mayflower, Cape Cod harbor', icon: 'scroll', view: V.capeTip,
+    vessel: { route: 'voyage', stop: 'provincetown', label: 'Mayflower' },
+    title: 'The Mayflower Compact',
+    body: ['They were not where their permission said they could be. Some passengers said that meant no one could tell them what to do once they got ashore.',
+      'So before anyone went ashore, the leaders wrote a short agreement. The people who signed it promised to make fair laws together and to obey them. 41 men signed. The women were not asked to sign.'],
+    how: 'The words of the Compact were printed in Mourt\'s Relation in 1622 and copied into Bradford\'s book. The paper they signed has been lost.' },
+  { id: 'corn', era: 'first-year', year: 1620.875, when: 'Mid-November 1620', where: 'Corn Hill, on Cape Cod', icon: 'corn', view: V.capeTip,
+    vessel: { route: 'voyage', stop: 'provincetown', label: 'Mayflower' },
+    title: 'The corn they took',
+    body: ['Groups of men went ashore to explore. On a hill they found baskets of corn buried in the sand. Nauset families had stored it there to eat in the winter and to plant in the spring.',
+      'The explorers took the corn to use as seed. They also dug into graves and took things from them. They called the place Corn Hill.'],
+    sad: 'This corn belonged to Nauset families who needed it. Bradford wrote that they meant to pay the owners back. (Keep watching: they did, the next summer.)',
+    how: 'Mourt\'s Relation describes the corn and the graves. Bradford\'s book does too.' },
+  { id: 'first-encounter', era: 'first-year', year: 1620.93, when: 'December 8, 1620', calendar: 'Old calendar: December 8, 1620 · Our calendar: December 18, 1620', where: 'Eastham, on Cape Cod', icon: 'arrows', view: V.capeCod,
+    title: 'The First Encounter',
+    body: ['Early one morning, while a group of English explorers camped on the beach, Nauset men shot arrows at them. The English fired back with guns. Then the Nauset men left. No one on either side was hurt.',
+      'The Nauset had good reasons not to trust English sailors. Six years before, Thomas Hunt had kidnapped seven of their people. And these strangers had just taken their corn.',
+      'The beach is still called First Encounter Beach.'],
+    how: 'Mourt\'s Relation tells the English side. The English collected the arrows and sent some home to England.' },
+  { id: 'plymouth', era: 'first-year', year: 1620.96, when: 'December 1620', calendar: 'Explorers landed December 11; the Mayflower arrived December 16 (old calendar). In our calendar: December 21 and 26.', where: 'Plymouth harbor', icon: 'house', view: V.bayToPly,
+    vessel: { route: 'voyage', stop: 'plymouthMA', label: 'Mayflower' },
+    title: 'A town on an empty village',
+    body: ['The explorers found a harbor across the bay with fresh water and fields already cleared for planting. The fields were cleared because people had farmed them for a very long time. This was Patuxet, the village that the sickness had emptied.',
+      'The Mayflower sailed across the bay, and on December 25 the colonists started to build houses. The place already had the English name Plymouth on a map that Captain John Smith made in 1616, and the colonists kept it.'],
+    myth: 'Did they step onto Plymouth Rock? Nobody who was there wrote about a rock. The story of the rock was first told in 1741, more than 120 years later.',
+    how: 'Bradford and Mourt\'s Relation give the dates. Both say the fields had been planted by people who were gone.' },
+  { id: 'winter', era: 'first-year', year: 1621.05, when: 'Winter 1620 to 1621', where: 'Plymouth', icon: 'drop', view: V.plymouth,
+    vessel: { route: 'voyage', stop: 'plymouthMA', label: 'Mayflower' },
+    title: 'The hard winter',
+    body: ['Most of the colonists stayed on the cold, damp ship while the men built houses on shore. Many got very sick from cold, hunger and disease.',
+      'By spring, about half of the people who had sailed on the Mayflower had died. Bradford wrote that at the worst time only six or seven people were well enough to look after all the others.',
+      'The Wampanoag watched the newcomers through that winter. They had to decide what to do about them.'],
+    how: 'Bradford kept a list of who died. Of the 102 passengers, about 52 were still alive in the spring.' },
+  { id: 'samoset', era: 'first-year', year: 1621.21, when: 'March 16, 1621', calendar: 'Old calendar: March 16, 1621 · Our calendar: March 26, 1621', where: 'Plymouth, and Pemaquid in Maine', icon: 'speech', view: V.wideNE,
+    title: '"Welcome!" in English',
+    body: ['One day a man walked straight into the little town and greeted the colonists in English. They were amazed.',
+      'He was Samoset, an Abenaki leader from Pemaquid, far to the north in what is now Maine. He had learned some English from the English fishermen who came to his coast each year.',
+      'He stayed the night, and he told them about the people of this land. A few days later he came back, and he brought Tisquantum with him.'],
+    how: 'Mourt\'s Relation says Samoset "saluted us in English, and bade us welcome". Ever since, people have told it as "Welcome, Englishmen!"' },
+  { id: 'agreement', era: 'first-year', year: 1621.225, when: 'March 22, 1621', calendar: 'Old calendar: March 22, 1621 · Our calendar: April 1, 1621', where: 'Plymouth, with the leader from Sowams', icon: 'scroll', view: V.southNE,
+    title: 'An agreement',
+    body: ['Massasoit, the leader (sachem) of the Pokanoket Wampanoag, came to Plymouth with about 60 men. His own name was Ousamequin; Massasoit was his title. Tisquantum spoke for both sides.',
+      'They made an agreement. Neither side would harm the other. If anyone attacked one of them, the other would help.',
+      'Both sides had reasons. The colonists were few and weak. The Wampanoag had lost so many people to the sickness that they feared their strong neighbors, the Narragansett. English friends with guns could help keep them safe.'],
+    how: 'The terms of the agreement are written in Mourt\'s Relation. It held for more than 50 years.' },
+  { id: 'planting', era: 'first-year', year: 1621.3, when: 'Spring 1621', where: 'Plymouth', icon: 'seed', view: V.plymouth,
+    vessel: { route: 'home', stop: 'leaving', label: 'Mayflower, going home' },
+    title: 'Planting time',
+    body: ['In April the Mayflower sailed back to England. None of the colonists went with it. The same month their governor, John Carver, died, and William Bradford became governor.',
+      'Tisquantum stayed with the colonists and helped them. He showed them how to plant corn in little hills, with fish buried in each hill to feed the soil. He showed them where to catch fish and eels.',
+      'The English peas they planted did badly. The corn grew well.'],
+    how: 'Bradford calls Tisquantum "a special instrument sent of God" because he helped them so much. Winslow wrote that they planted about 20 acres of corn.' },
+  { id: 'billington', era: 'first-year', year: 1621.55, when: 'July 1621', where: 'Plymouth to Nauset', icon: 'corn', view: V.capeCod,
+    title: 'A lost boy, and the corn paid back',
+    body: ['A boy named John Billington got lost in the woods. He wandered for days and ended up with the Nauset people on Cape Cod.',
+      'The colonists sailed to Nauset to fetch him. There they met the sachem Aspinet, who brought the boy back safe. They also met the family whose corn they had taken in November, and they agreed to pay them for it.'],
+    how: 'Mourt\'s Relation describes the trip. Bradford writes that they "gave them full content" for the corn.' },
+  { id: 'feast', era: 'first-year', year: 1621.8, when: 'Autumn 1621', calendar: 'The exact day is not known. It was some time between late September and early November.', where: 'Plymouth', icon: 'feast', view: V.plymouth,
+    title: 'The harvest feast',
+    body: ['The corn harvest was good. Governor Bradford sent four men out to hunt birds, so that the colonists could celebrate together.',
+      'Massasoit came to Plymouth with about 90 men. That was nearly twice as many as all the colonists left alive. They stayed for three days. They ate, and played games, and the English showed off their guns. The Wampanoag men went out and hunted five deer, and gave them to the governor and the colonists.',
+      'Winslow wrote a letter about it, and that letter is the only description we have from someone who was there.'],
+    food: true,
+    myth: 'Nobody at the time called this "Thanksgiving". For the colonists, a thanksgiving was a day of prayer, not a feast. Winslow\'s letter does not say if Massasoit was invited, or why he came.',
+    how: 'Edward Winslow\'s letter of December 11, 1621, printed in Mourt\'s Relation in 1622. The part about the feast is only a few sentences long.' },
+  { id: 'thanksgiving-1623', era: 'after', year: 1623.55, when: 'July 1623', where: 'Plymouth', icon: 'rain', view: V.plymouth,
+    title: 'A day of thanksgiving',
+    body: ['In the summer of 1623 it did not rain for weeks. The corn was dying. The colonists spent a day praying for rain. Soon after, gentle rain came, and it rained on and off for days.',
+      'So the governor set a day of thanksgiving: a day to go to church and thank God. That is what "a thanksgiving" meant to the colonists.'],
+    how: 'Bradford describes the drought, the rain and the day of thanksgiving.' },
+  { id: 'war', era: 'after', year: 1675.5, when: '1675 to 1676', where: 'New England', icon: 'broken', view: V.southNE,
+    title: 'The peace breaks',
+    body: ['More and more English settlers came. Their towns spread over Native land, and their laws were forced on Native people. Massasoit kept his agreement until he died, in about 1661.',
+      'In 1675 his son Metacom (the English called him King Philip) led a war to keep his people\'s land. It was one of the deadliest wars in American history, for the number of people living here then. Thousands of Native people and English colonists died.',
+      'After the war, many Wampanoag people were killed, or forced off their land, or sold into slavery far away.'],
+    sad: 'This part of the story is sad, and it is true. It is part of the Thanksgiving story, because it happened to the grandchildren of the people who ate together in 1621.',
+    how: 'Many colonists wrote about this war. Wampanoag families also tell its history.' },
+  { id: 'washington', era: 'after', year: 1789.8, when: 'November 26, 1789', where: 'New York, the first capital', icon: 'capitol', view: V.usEast,
+    title: 'A president asks for a day of thanks',
+    body: ['George Washington, the first President of the United States, asked Americans to keep Thursday, November 26, 1789, as a day of thanksgiving for the new country.',
+      'After that, some presidents and many states named days of thanksgiving, but on different days. There was no single national holiday yet.'],
+    how: 'Washington\'s proclamation of October 3, 1789, still survives.' },
+  { id: 'lincoln', era: 'after', year: 1863.75, when: 'October 3, 1863', where: 'Washington, D.C.', icon: 'quill', view: V.usEast,
+    title: 'Sarah Hale and President Lincoln',
+    body: ['Sarah Josepha Hale edited a popular magazine in Philadelphia. For about 17 years she wrote articles and letters to presidents, asking for one national Thanksgiving Day.',
+      'In 1863, in the middle of the Civil War, President Abraham Lincoln agreed. He named the last Thursday of November as a day of thanksgiving for the whole country. It has been held every year since.',
+      'In those years, people began to call the 1621 feast "the first Thanksgiving". A historian named Alexander Young first used those words for it, in 1841, when he printed Winslow\'s letter.'],
+    how: 'Hale\'s letter to Lincoln and his proclamation of October 3, 1863, both survive.' },
+  { id: 'fourth-thursday', era: 'after', year: 1941.95, when: 'December 26, 1941', where: 'Washington, D.C.', icon: 'capitol', view: V.usEast,
+    title: 'The fourth Thursday',
+    body: ['In 1939, President Franklin Roosevelt moved Thanksgiving one week earlier, to give stores more shopping days before Christmas. Some states followed him and some did not, so for three years people had Thanksgiving on different days.',
+      'In 1941 Congress passed a law: from 1942 on, Thanksgiving is the fourth Thursday of November. That is the rule today.'],
+    how: 'The law is Public Law 77-379, signed on December 26, 1941.' },
+  { id: 'mourning', era: 'after', year: 1970.9, when: 'November 26, 1970', where: "Cole's Hill, Plymouth", icon: 'candle', view: V.plymouth,
+    title: 'A National Day of Mourning',
+    body: ['In 1970, Plymouth celebrated 350 years since the Mayflower came. The organizers asked Wamsutta Frank James, an Aquinnah Wampanoag man, to give a speech.',
+      'His speech told the hard parts of the story. The organizers did not let him give it. So he and other Native people gathered on Cole\'s Hill, above Plymouth Rock, and he spoke there.',
+      'Every Thanksgiving Day since then, Native people and friends gather on Cole\'s Hill for a National Day of Mourning, to remember what happened to their ancestors.'],
+    how: 'The text of Wamsutta Frank James\'s speech was printed and is still read aloud. United American Indians of New England organizes the gathering.' },
+  { id: 'today', era: 'after', year: 2026, when: 'Today', where: 'Wampanoag homelands', icon: 'speech', view: V.southNE,
+    title: 'The Wampanoag today',
+    body: ['The Wampanoag Nation is still here. The Mashpee Wampanoag Tribe on Cape Cod and the Wampanoag Tribe of Gay Head (Aquinnah) on Martha\'s Vineyard have their own governments. Other Wampanoag communities live all around this area too.',
+      'For many years almost nobody spoke the Wampanoag language, Wôpanâak. Since 1993, Wampanoag people have been bringing it back, using old books written in it. Now there is a school where children learn in Wôpanâak.',
+      'So the Thanksgiving story is not only about one meal in 1621. It is about two peoples, and everything that happened before and after.'],
+    how: 'The tribes and the Wôpanâak Language Reclamation Project share their own news on their websites (see the list at the bottom of this page).' },
+];
+const FOOD = {
+  yes: ['Deer meat (venison): Winslow says five deer', 'Wild birds: ducks, geese, maybe wild turkey', 'Corn, made into bread or porridge', 'Probably fish, eels, clams and mussels', 'Probably squash, beans, nuts and berries'],
+  no: ['Potatoes: not grown in New England yet', 'Pumpkin pie: no ovens, butter or wheat flour to spare', 'Cranberry sauce: no sugar to make it', 'Forks: the English ate with spoons, knives and fingers'],
+};
+
+// ---------- build the map ----------
+const SVGNS = 'http://www.w3.org/2000/svg';
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, parent) => {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+$('coarse').setAttribute('d', COARSE); $('coarse-shore').setAttribute('d', COARSE);
+$('fine').setAttribute('d', FINE); $('fine-shore').setAttribute('d', FINE);
+for (const id of ['coarse', 'coarse-shore', 'fine', 'fine-shore']) $(id).setAttribute('vector-effect', 'non-scaling-stroke');
+
+const idx = Object.fromEntries(STORY.map((s, i) => [s.id, i]));
+const N = STORY.length;
+
+const routeEls = {};
+for (const [name, r] of Object.entries(ROUTES)) {
+  const pts = r.xy.map((p) => p.join(',')).join(' ');
+  const ahead = el('polyline', { points: pts, class: `route ahead ${r.cls}`, 'vector-effect': 'non-scaling-stroke' }, $('routes'));
+  const done = el('polyline', { points: '', class: `route done ${r.cls}`, 'vector-effect': 'non-scaling-stroke' }, $('routes'));
+  routeEls[name] = { ahead, done };
+}
+
+const regionEls = REGIONS.map((r) => {
+  const [x, y] = P(r.at);
+  const g = el('g', { class: 'region' + (r.land ? ' landname' : '') }, $('regions'));
+  const t = el('text', { 'text-anchor': 'middle', 'font-size': r.size }, g);
+  t.textContent = r.text;
+  return { ...r, x, y, g };
+});
+
+const markerEls = MARKERS.map((m) => {
+  const [x, y] = P(m.at);
+  const g = el('g', { class: 'mk', tabindex: '-1' }, $('markers'));
+  const inner = el('g', { transform: `translate(${m.dx || 0},${m.dy || 0})` }, g);
+  el('circle', { class: 'pulse', r: 16 }, inner);
+  el('circle', { class: 'badge', r: 15 }, inner);
+  el('use', { href: `#i-${m.icon}`, x: -11, y: -11, width: 22, height: 22 }, inner);
+  const t = el('text', { y: 30, 'text-anchor': 'middle', 'font-size': 12 }, inner);
+  t.textContent = m.label;
+  const firstNow = m.now && m.now.length ? idx[m.now[0]] : idx[m.from];
+  g.addEventListener('click', () => goTo(firstNow));
+  return { ...m, x, y, g, from: idx[m.from], to: m.to ? idx[m.to] : Infinity, nowIdx: (m.now || []).map((n) => idx[n]) };
+});
+
+// vessel drawing (a cartoon ship; faces the way it is sailing)
+const vessel = $('vessel');
+const vflip = el('g', {}, vessel);
+const vbob = el('g', { class: 'bob' }, vflip);
+vbob.innerHTML = `
+  <path d="M-22 4 H22 L15 16 H-15 Z" fill="#8a5a2b" stroke="#2b2118" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M-18 4 V-2 H-8 V4" fill="#a8743c" stroke="#2b2118" stroke-width="1.8"/>
+  <path d="M-4 4 V-30 M8 4 V-24 M-14 -2 V-18" stroke="#2b2118" stroke-width="2"/>
+  <path d="M-4 -28 Q4 -20 -4 -12 Q-12 -20 -4 -28Z M-4 -10 Q6 -3 -4 3 Q-14 -3 -4 -10Z" fill="#fffdf3" stroke="#2b2118" stroke-width="1.6"/>
+  <path d="M8 -22 Q15 -16 8 -9 Q1 -16 8 -22Z" fill="#fffdf3" stroke="#2b2118" stroke-width="1.6"/>
+  <path d="M-14 -17 Q-8 -12 -14 -6 Q-20 -12 -14 -17Z" fill="#fffdf3" stroke="#2b2118" stroke-width="1.4"/>
+  <path d="M-4 -30 L6 -33 L-4 -36Z" fill="#c8541c" stroke="#2b2118" stroke-width="1"/>
+  <path d="M-30 18 q5 -4 10 0 t10 0 M10 18 q5 -4 10 0 t10 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`;
+const vlabel = el('text', { y: 34, 'text-anchor': 'middle', 'font-size': 12, class: '' }, vessel);
+vlabel.setAttribute('style', 'font-weight:700;paint-order:stroke;stroke:#fff8ea;stroke-width:4px;fill:#2b2118');
+
+// ---------- timeline UI ----------
+const scrub = $('scrub');
+scrub.max = String(N - 1);
+const eraBox = $('eras'), ticks = $('ticks');
+const pct = (i) => `calc(${(i / (N - 1)) * 100}% + ${15 - (i / (N - 1)) * 30}px)`; // follow the range thumb's travel
+for (const e of ERAS) {
+  const ids = STORY.map((s, i) => [s, i]).filter(([s]) => s.era === e.id).map(([, i]) => i);
+  const a = Math.min(...ids), b = Math.max(...ids);
+  const span = document.createElement('span');
+  span.innerHTML = `<b class="long">${e.label}</b><b class="short">${e.short}</b>`; span.title = e.label;
+  span.style.background = e.color;
+  span.style.left = `calc(${pct(a)} - 6px)`;
+  span.style.width = `calc(${pct(b)} - ${pct(a)} + 12px)`;
+  eraBox.appendChild(span);
+}
+const tickEls = STORY.map((s, i) => {
+  const t = document.createElement('i');
+  t.style.left = pct(i);
+  ticks.appendChild(t);
+  return t;
+});
+
+const years = $('years');
+const Y0 = 1600, Y1 = 2030;
+const ypct = (y) => ((Math.max(Y0, Math.min(Y1, y)) - Y0) / (Y1 - Y0)) * 100;
+for (const y of [1600, 1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000]) {
+  const t = document.createElement('span'); t.className = 'yt'; t.style.left = ypct(y) + '%'; years.appendChild(t);
+  const l = document.createElement('span'); l.className = 'yl'; l.style.left = ypct(y) + '%'; l.textContent = y; years.appendChild(l);
+}
+const ydot = document.createElement('span'); ydot.className = 'dot'; years.appendChild(ydot);
+
+// the readable list under the map
+const list = $('storylist');
+STORY.forEach((s, i) => {
+  const li = document.createElement('li');
+  const b = document.createElement('b'); b.textContent = `${s.title} (${s.when}). `;
+  li.appendChild(b);
+  li.appendChild(document.createTextNode(s.body.join(' ') + ' '));
+  const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Show on map';
+  btn.addEventListener('click', () => { goTo(i); $('stage').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  li.appendChild(btn);
+  list.appendChild(li);
+});
+
+// ---------- the story card ----------
+const card = $('card');
+const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function renderCard(i) {
+  const s = STORY[i];
+  const era = ERAS.find((e) => e.id === s.era);
+  let h = `<div class="era" style="color:${era.color}">${esc(era.label)} · part ${i + 1} of ${N}</div>`;
+  h += `<h2><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${s.icon}"/></svg>${esc(s.title)}</h2>`;
+  h += `<p class="when">${esc(s.when)} · ${esc(s.where)}</p>`;
+  if (s.calendar) h += `<p class="calendar">${esc(s.calendar)}</p>`;
+  for (const p of s.body) h += `<p class="body">${esc(p)}</p>`;
+  if (s.food) {
+    h += `<div class="food"><div><h3>On the table (likely)</h3><ul>${FOOD.yes.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>`;
+    h += `<div class="no"><h3>Not on the table</h3><ul>${FOOD.no.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div></div>`;
+  }
+  if (s.sad) h += `<div class="box sad"><b>A hard part</b>${esc(s.sad)}</div>`;
+  if (s.myth) h += `<div class="box myth"><b>True or not?</b>${esc(s.myth)}</div>`;
+  if (s.how) h += `<div class="box how"><b>How do we know?</b>${esc(s.how)}</div>`;
+  card.innerHTML = h;
+  card.scrollTop = 0;
+  $('count').textContent = `${s.when}`;
+  $('badge-date').textContent = s.when;
+  $('badge-where').textContent = s.where;
+  tickEls.forEach((t, k) => t.classList.toggle('seen', k <= i));
+  markerEls.forEach((m) => m.g.classList.toggle('now', m.nowIdx.includes(i)));
+}
+
+// ---------- animation state ----------
+let pos = 0, target = 0, shown = -1, playing = false, playTimer = 0, extraZoom = 1, extraZoomTarget = 1, dragging = false;
+const stage = $('stage'), svg = $('map');
+const lerp = (a, b, u) => a + (b - a) * u;
+const smooth = (u) => u * u * (3 - 2 * u);
+
+function vesselAt(i) { // where the vessel is at story part i (or null)
+  const s = STORY[i];
+  if (!s.vessel) return null;
+  const r = ROUTES[s.vessel.route];
+  return { route: s.vessel.route, t: r.at(s.vessel.stop), label: s.vessel.label };
+}
+// the vessel continues along the voyage route while the story goes on, so a part without a
+// vessel still keeps the Mayflower at its last stop until the next part moves it.
+const vesselKeys = STORY.map((s, i) => vesselAt(i));
+
+function viewAt(p) {
+  const i = Math.floor(p), j = Math.min(N - 1, i + 1), u = smooth(p - i);
+  const a = STORY[i].view, b = STORY[j].view;
+  const [ax, ay] = P([a.lat, a.lon]), [bx, by] = P([b.lat, b.lon]);
+  const law = Math.log(a.w), lbw = Math.log(b.w), lah = Math.log(a.h), lbh = Math.log(b.h);
+  // fly out when the two views are far apart, so the move is easy to follow
+  const dist = Math.hypot((b.lon - a.lon) * PROJ.c, b.lat - a.lat);
+  const lift = Math.max(0, Math.log(dist * 1.6 + 1e-6) - Math.max(law, lbw));
+  const bump = 4 * u * (1 - u) * lift;
+  return {
+    x: lerp(ax, bx, u), y: lerp(ay, by, u),
+    w: Math.exp(lerp(law, lbw, u) + bump), h: Math.exp(lerp(lah, lbh, u) + bump),
+    fine: lerp(a.fine, b.fine, u),
+  };
+}
+
+function frame() {
+  const W = stage.clientWidth, H = stage.clientHeight;
+  // ease towards target
+  const d = target - pos;
+  pos = Math.abs(d) < 0.0005 ? target : pos + d * (dragging ? 0.35 : 0.08);
+  extraZoom += (extraZoomTarget - extraZoom) * 0.12;
+
+  const v = viewAt(pos);
+  const s = Math.max((v.w * extraZoom * PROJ.k * PROJ.c) / W, (v.h * extraZoom * PROJ.k) / H); // map units per pixel
+  const vbW = W * s, vbH = H * s;
+  svg.setAttribute('viewBox', `${v.x - vbW / 2} ${v.y - vbH / 2} ${vbW} ${vbH}`);
+
+  const fineOp = Math.max(0, Math.min(1, v.fine * (extraZoom < 2 ? 1 : 0)));
+  $('fine-g').style.opacity = fineOp;
+  $('coarse').style.opacity = $('coarse-shore').style.opacity = 1 - fineOp;
+  $('coarse').style.strokeWidth = $('fine').style.strokeWidth = '2.2px';
+  $('coarse-shore').style.strokeWidth = $('fine-shore').style.strokeWidth = '9px';
+
+  const degAcross = vbW / (PROJ.k * PROJ.c);
+  const near = Math.round(pos);
+  const sc = `scale(${s})`;
+  for (const r of regionEls) {
+    const on = degAcross <= r.max && degAcross >= r.min;
+    r.g.style.opacity = on ? 0.9 : 0;
+    if (on) r.g.setAttribute('transform', `translate(${r.x},${r.y}) ${sc}`);
+  }
+  for (const m of markerEls) {
+    let op = near >= m.from && near <= m.to ? 1 : 0;
+    if (m.local && degAcross > 9) op = 0;
+    m.g.style.opacity = op;
+    m.g.style.pointerEvents = op ? 'auto' : 'none';
+    m.g.classList.toggle('nolabel', degAcross > 30 && !m.nowIdx.includes(near));
+    if (op) m.g.setAttribute('transform', `translate(${m.x},${m.y}) ${sc}`);
+  }
+
+  // routes: the part already travelled is drawn in colour, the rest faintly
+  const i = Math.floor(pos), j = Math.min(N - 1, i + 1), u = pos - i;
+  const progress = {};
+  for (let k = 0; k <= j; k++) {
+    const key = vesselKeys[k];
+    if (!key) continue;
+    progress[key.route] = Math.max(progress[key.route] || 0, k <= i ? key.t : 0);
+  }
+  let vNow = null;
+  const ka = vesselKeys[i], kb = vesselKeys[j];
+  if (ka && kb && ka.route === kb.route) vNow = { route: ka.route, t: lerp(ka.t, kb.t, smooth(u)), label: u < 0.5 ? ka.label : kb.label };
+  else if (kb && u > 0.5) vNow = { route: kb.route, t: lerp(kb.route === 'voyage' ? (progress.voyage || 0) : 0, kb.t, smooth((u - 0.5) * 2)), label: kb.label };
+  else if (ka && u <= 0.5) vNow = { ...ka };
+  if (vNow) progress[vNow.route] = Math.max(progress[vNow.route] || 0, vNow.t);
+
+  for (const [name, r] of Object.entries(ROUTES)) {
+    const t = progress[name] || 0;
+    const show = (name === 'voyage' && pos >= idx['two-ships'] - 0.5 && pos <= idx['winter'] + 0.5)
+      || (name === 'squanto' && pos >= idx['kidnapped'] - 0.5 && pos <= idx['squanto-home'] + 0.5)
+      || (name === 'home' && pos >= idx['planting'] - 0.5 && pos <= idx['planting'] + 0.5);
+    const re = routeEls[name];
+    re.ahead.style.opacity = re.done.style.opacity = show ? 1 : 0;
+    if (!show) continue;
+    re.ahead.style.strokeWidth = '2.5px';
+    re.done.style.strokeWidth = '4px';
+    const end = pointOnRoute(r, t);
+    const pts = r.xy.slice(0, end.i).map((p) => p.join(','));
+    pts.push(`${end.x},${end.y}`);
+    re.done.setAttribute('points', t > 0 ? pts.join(' ') : '');
+  }
+
+  if (vNow) {
+    const p = pointOnRoute(ROUTES[vNow.route], vNow.t);
+    vessel.style.opacity = 1;
+    vessel.setAttribute('transform', `translate(${p.x},${p.y}) ${sc}`);
+    vflip.setAttribute('transform', p.dir < 0 ? 'scale(-1,1)' : '');
+    vlabel.textContent = vNow.label;
+  } else vessel.style.opacity = 0;
+
+  // years bar and scale hint
+  const ya = STORY[i].year, yb = STORY[j].year;
+  ydot.style.left = ypct(lerp(ya, yb, u)) + '%';
+  const km = Math.round((degAcross * 111 * PROJ.c) / 10) * 10;
+  $('scalehint').textContent = km >= 20 ? `This view is about ${km.toLocaleString('en-US')} km (${Math.round(km * 0.621).toLocaleString('en-US')} miles) across` : `This view is about ${Math.round(degAcross * 111 * PROJ.c)} km across`;
+
+  if (near !== shown) { shown = near; renderCard(near); }
+  if (!dragging && document.activeElement !== scrub) scrub.value = String(pos);
+  requestAnimationFrame(frame);
+}
+
+function goTo(i, { keepPlaying = false } = {}) {
+  target = Math.max(0, Math.min(N - 1, i));
+  extraZoomTarget = 1;
+  if (!keepPlaying) stopPlay();
+  scrub.value = String(target);
+  try { history.replaceState(null, '', `#${STORY[Math.round(target)].id}`); } catch (e) { /* file:// or sandbox */ }
+}
+function stopPlay() { playing = false; clearInterval(playTimer); $('play').textContent = '▶ Play'; }
+function startPlay() {
+  if (Math.round(target) >= N - 1) goTo(0);
+  playing = true; $('play').textContent = '❚❚ Pause';
+  playTimer = setInterval(() => {
+    if (Math.round(target) >= N - 1) return stopPlay();
+    goTo(Math.round(target) + 1, { keepPlaying: true });
+  }, 9000);
+}
+
+scrub.addEventListener('input', () => { dragging = true; stopPlay(); target = parseFloat(scrub.value); extraZoomTarget = 1; });
+scrub.addEventListener('change', () => { dragging = false; goTo(Math.round(parseFloat(scrub.value))); });
+scrub.addEventListener('pointerup', () => { dragging = false; goTo(Math.round(parseFloat(scrub.value))); });
+scrub.addEventListener('keydown', (e) => {
+  if (['ArrowRight', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); goTo(Math.round(target) + 1); }
+  else if (['ArrowLeft', 'ArrowDown', 'PageDown'].includes(e.key)) { e.preventDefault(); goTo(Math.round(target) - 1); }
+  else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+  else if (e.key === 'End') { e.preventDefault(); goTo(N - 1); }
+});
+$('prev').addEventListener('click', () => goTo(Math.round(target) - 1));
+$('next').addEventListener('click', () => goTo(Math.round(target) + 1));
+$('play').addEventListener('click', () => (playing ? stopPlay() : startPlay()));
+$('zoom-out').addEventListener('click', () => { extraZoomTarget = Math.min(extraZoomTarget * 2.5, 60); });
+$('zoom-reset').addEventListener('click', () => { extraZoomTarget = 1; });
+document.addEventListener('keydown', (e) => {
+  if (e.target === scrub || e.target.closest('button,a,input')) return;
+  if (e.key === 'ArrowRight') goTo(Math.round(target) + 1);
+  else if (e.key === 'ArrowLeft') goTo(Math.round(target) - 1);
+  else if (e.key === ' ') { e.preventDefault(); playing ? stopPlay() : startPlay(); }
+});
+
+// drag on the map itself also scrubs through time (left/right)
+let dragX = null, dragStart = 0;
+stage.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('button, .mk')) return;
+  dragX = e.clientX; dragStart = target; stopPlay(); stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('pointermove', (e) => {
+  if (dragX === null) return;
+  dragging = true;
+  target = Math.max(0, Math.min(N - 1, dragStart - ((e.clientX - dragX) / stage.clientWidth) * 4));
+});
+const endDrag = () => { if (dragX === null) return; dragX = null; dragging = false; goTo(Math.round(target)); };
+stage.addEventListener('pointerup', endDrag);
+stage.addEventListener('pointercancel', endDrag);
+
+const start = idx[decodeURIComponent(location.hash.slice(1))];
+if (Number.isInteger(start)) { pos = target = start; }
+scrub.value = String(pos);
+window.__thanksgiving = { story: STORY, goTo, get pos() { return pos; } }; // test hook
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
