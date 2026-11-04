@@ -11,6 +11,7 @@
   const REASONS = {
     'no-pod': 'No pod is chosen for apps. Open Pods in the shell, connect one, and press "APPS USE THIS".',
     offline: 'The pod is not connected. Connect it in the Pods window.',
+    locked: 'Your notes are on this device, sealed. UNLOCK the session (passphrase) to open them.',
     denied: 'This app holds no pod capability here.',
     conflict: 'The note changed elsewhere since you opened it. Reload it, then save again.',
     'no-shell': 'Open this app inside foafos: it keeps notes in your pod through the shell.',

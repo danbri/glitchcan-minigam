@@ -1636,6 +1636,16 @@ Storage reached over HTTPS or, for a pod at home, over XEP-0332 through an XMPP 
 - **Pod grants follow the tree** (`syncPodGrants`): `pod:read`/`pod:write` on a live node, AND a pod
   marked "apps use this". No pod chosen is the named reason `no-pod`, so an app can tell the person
   what to do.
+- **The built-in pod** (carriage `builtin`, 2026-11-04): the Factoidal LWS engine in the page
+  (`@factoidal/core/lws/inpage`, shared engine with chat via `loadFactoidal()`).
+  - A new shell starts with pod `browser`, chosen for apps, so Pod Notes works with no setup. It
+    opens at the first app call.
+  - Its key is a FoafSecrets secret (`pod.browser.key`). The sealed snapshot goes to IndexedDB only
+    while secrets are sealed: with no passphrase it is for this run; after a reload it is `locked`
+    until UNLOCK.
+  - Test: `inklet/finkapp/test/e2e-builtin-pod.mjs` (`FACTOIDAL=`).
+- **The Pods window redraws on every pods.* and app event.** Anything typed in it must survive
+  (`draft` in `openPods`), and a test click can land on a button that a redraw has just removed.
 - **A relay that holds IQs makes a request hang.** Factoidal's `xmpp-serve` holds an IQ for an
   offline account instead of answering `service-unavailable`
   (https://github.com/danbri/factoidal/issues/1234); `httpFetch` maps an IQ timeout to HTTP 504.
@@ -1667,8 +1677,9 @@ root, manifest `apps/chat.jsonld`). Design and localhost setup: `docs/foafos-cha
   and are NOT acted on. Control must arrive as an app-tree node with grants, never raw bus events.
 - Test: `inklet/finkapp/test/e2e-chat.mjs` (built-in room, then a localhost Node server and an
   outside client). Needs a factoidal-core checkout with `xmpp/inpage.mjs` (`FACTOIDAL=`).
-- `packages/foafos/pod/test/e2e-shell.mjs` failed once in four runs (Pod Notes save timed out at 15 s)
-  on 2026-11-04, with and without this change in the tree: a flake, not yet explained.
+- `packages/foafos/pod/test/e2e-shell.mjs` failed about one run in four until 2026-11-04. The
+  causes: the Pods redraw cleared the Add form (fixed in the shell), and two test races ("Saved hello."
+  replaced by the listing, and a click lost in a redraw; fixed in the test). Then it passed 6 runs of 6.
 
 ## Migrating an app off `same-origin` (the Calendar pattern)
 

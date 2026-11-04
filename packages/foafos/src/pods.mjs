@@ -5,6 +5,12 @@
 //   carriage 'https'  the browser's fetch to the storage's own base IRI (the pod must send CORS)
 //   carriage 'xmpp'   XEP-0332 through an XMPP relay (XmppWs.httpFetch): a pod at home, behind
 //                     NAT, with no public HTTPS. The LWS requests are the same bytes either way.
+//   carriage 'builtin' the Factoidal Lean LWS engine running IN THIS PAGE (@factoidal/core
+//                     lws/inpage.mjs; the shell supplies `openBuiltin`). No server, no network.
+//                     Its storage key is a secret under POD_OWNER, so the pod is kept (in
+//                     `snapshots`, IndexedDB in the shell) only while secrets are sealed with
+//                     the session passphrase; without one it lasts for this run, and says so.
+//                     A shell with no pods starts with one, "browser", chosen for apps.
 //
 // The shell holds the pod list, the connections and the XMPP password (in FoafSecrets, under
 // POD_OWNER). Apps never see a pod address, a JID or a credential: they get four verbs, aimed
@@ -37,6 +43,20 @@ const TEXTUAL = /^(text\/|application\/([a-z0-9.+-]*\+)?(json|xml|turtle|n-tripl
 const ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
 
 const secretName = (id) => `pod.${id}.password`;
+const keyName = (id) => `pod.${id}.key`;
+/** The built-in pod's IRI: never fetched; the in-page engine answers it. */
+export const BUILTIN_BASE = 'https://pod.foafos.local/';
+export const BUILTIN_PRINCIPAL = 'urn:foafos:shell';
+/** The root ACL of a new built-in pod: the shell, and only the shell, may do everything. */
+export const BUILTIN_ACL = `@prefix acl: <http://www.w3.org/ns/auth/acl#> .
+<#shell> a acl:Authorization ; acl:agent <${BUILTIN_PRINCIPAL}> ; acl:accessTo <./> ; acl:default <./> ;
+  acl:mode acl:Read, acl:Write, acl:Control .
+`;
+function randomKeyHex() {
+  const b = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(b);
+  return [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
 const isLoopback = (u) => ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname);
 
 /** A pod record, checked. Throws with a reason a person can act on. */
@@ -53,7 +73,7 @@ export function checkPod(rec) {
   }
   if (!base.pathname.endsWith('/') || base.search || base.hash) throw new Error('base: must end with "/" and have no query or fragment');
   r.base = base.href;
-  if (r.carriage !== 'https' && r.carriage !== 'xmpp') throw new Error('carriage: "https" or "xmpp"');
+  if (!['https', 'xmpp', 'builtin'].includes(r.carriage)) throw new Error('carriage: "https", "xmpp" or "builtin"');
   if (r.carriage === 'xmpp') {
     const relay = r.relay || {};
     let url;
@@ -78,15 +98,20 @@ export class FoafPods {
    * @param storage      localStorage-shaped, for the pod records (never for a secret)
    * @param connectXmpp  (opts) => Promise<XmppWs>; injected so tests need no relay
    * @param fetchImpl    the browser's fetch, for carriage 'https'; injected for tests
+   * @param openBuiltin  async ({ storageKey, snapshot, onSnapshot }) => { fetch, close }, for
+   *                     carriage 'builtin' (the shell loads the engine); null: no built-in pod
+   * @param snapshots    async { get(id), put(id, snapshot) }: where a built-in pod is kept
    */
   constructor({ secrets, bus = null, storage = null, key = 'foafos.pods', connectXmpp = null,
-    fetchImpl = null, now = () => Date.now(), perMinute = 120 } = {}) {
+    fetchImpl = null, now = () => Date.now(), perMinute = 120, openBuiltin = null, snapshots = null } = {}) {
     if (!secrets) throw new Error('foafos pods: a FoafSecrets is required');
     this.secrets = secrets;
     this.bus = bus;
     this.storage = storage;
     this.key = key;
     this.connectXmpp = connectXmpp;
+    this.openBuiltin = openBuiltin;
+    this.snapshots = snapshots;
     this.fetch = fetchImpl || ((...a) => globalThis.fetch(...a));
     this.now = now;
     this.perMinute = perMinute;
@@ -96,7 +121,18 @@ export class FoafPods {
     this.calls = new Map();
     this.audit = [];
     if (!secrets.can(POD_OWNER)) secrets.grant(POD_OWNER, [SECRETS_CAP]);
-    this._load();
+    const fresh = this._load();
+    // A shell that has never kept a pod list starts with the built-in pod, chosen for apps,
+    // so an app holding pod:write works with no setup. Once the list exists (even empty, after
+    // REMOVE) this does not come back.
+    if (fresh && openBuiltin) {
+      this.pods.set('browser', checkPod({ id: 'browser', label: 'This browser', base: BUILTIN_BASE, carriage: 'builtin', forApps: true }));
+      this._save();
+    }
+    // A built-in pod is written out only while secrets are sealed. When they become sealed
+    // (a passphrase is set or unlocked), write what is held now, and open a locked pod.
+    bus?.subscribe?.('secrets.sealed', () => this._keepBuiltins());
+    bus?.subscribe?.('secrets.unsealed', () => this._unlockBuiltins());
   }
 
   _say(topic, data) {
@@ -105,12 +141,16 @@ export class FoafPods {
     this.bus?.publish(topic, data);
   }
 
+  /** Read the saved pod list. True when there was none (a new shell). */
   _load() {
-    if (!this.storage) return;
+    let raw = null;
+    try { raw = this.storage?.getItem(this.key) ?? null; } catch { /* blocked */ }
+    if (raw === null) return true;
     try {
-      const saved = JSON.parse(this.storage.getItem(this.key) || '[]');
+      const saved = JSON.parse(raw || '[]');
       for (const rec of saved) { try { const r = checkPod(rec); this.pods.set(r.id, r); } catch { /* dropped */ } }
     } catch { /* unreadable: start empty */ }
+    return false;
   }
 
   _save() {
@@ -132,6 +172,8 @@ export class FoafPods {
       status: this.live.get(r.id)?.status || 'offline',
       detail: this.live.get(r.id)?.detail || '',
       hasPassword: r.carriage === 'xmpp' ? this.secrets.has(POD_OWNER, secretName(r.id)) : null,
+      // 'builtin': is it written out (sealed), or held for this run only?
+      kept: r.carriage === 'builtin' ? (this.secrets.sealed ? 'sealed' : 'run') : null,
     }));
   }
 
@@ -200,7 +242,12 @@ export class FoafPods {
     this._setStatus(id, 'connecting');
     let podFetch;
     let conn = null;
-    if (rec.carriage === 'xmpp') {
+    if (rec.carriage === 'builtin') {
+      const opened = await this._openBuiltin(rec);
+      if (!opened) return this.get(id);
+      conn = opened;
+      podFetch = opened.fetch;
+    } else if (rec.carriage === 'xmpp') {
       if (!this.connectXmpp) { this._setStatus(id, 'error', 'no XMPP client in this shell'); return this.get(id); }
       const used = await this.secrets.use(POD_OWNER, secretName(id), (password) =>
         this.connectXmpp({ url: rec.relay.url, domain: rec.relay.domain, username: rec.relay.username, password }));
@@ -221,6 +268,49 @@ export class FoafPods {
     else if (probe.status >= 500) this._setStatus(id, 'error', `the storage answered ${probe.status}`);
     else this._setStatus(id, 'online', probe.status === 200 ? '' : `HEAD ${probe.status}`);
     return this.get(id);
+  }
+
+  /** Open a built-in pod: its key from the secrets (made on first use), its saved snapshot. */
+  async _openBuiltin(rec) {
+    const id = rec.id;
+    if (!this.openBuiltin) { this._setStatus(id, 'error', 'this shell has no built-in pod engine'); return null; }
+    let saved = null;
+    try { saved = (await this.snapshots?.get(id)) ?? null; } catch { /* unreadable: as none */ }
+    if (!this.secrets.has(POD_OWNER, keyName(id))) {
+      if (saved !== null) {
+        // The pod is on this device, sealed, and its key is in the sealed secrets: wait for
+        // UNLOCK. With no sealed secrets the key is gone and the pod cannot be opened; it is
+        // left as it is, not overwritten.
+        if (this.secrets.hasSealed()) this._setStatus(id, 'locked', 'UNLOCK the session to open it');
+        else this._setStatus(id, 'error', 'the saved pod cannot be opened: its key is not on this device');
+        return null;
+      }
+      const put = this.secrets.put(POD_OWNER, keyName(id), randomKeyHex());
+      if (!put.ok) { this._setStatus(id, 'error', `no key could be held (${put.reason})`); return null; }
+      this.secrets.flush?.();
+    }
+    const used = await this.secrets.use(POD_OWNER, keyName(id), (storageKey) => this.openBuiltin({
+      storageKey, snapshot: saved,
+      onSnapshot: (s) => { const l = this.live.get(id); if (l) l.snapshot = s; this._keep(id, s); },
+    }));
+    if (!used.ok) { this._setStatus(id, 'error', 'the built-in pod did not open'); return null; }
+    return used.result;
+  }
+
+  _keep(id, snapshot) {
+    if (!this.secrets.sealed || !this.snapshots || snapshot == null) return;
+    Promise.resolve(this.snapshots.put(id, snapshot)).catch(() =>
+      this._say('pods.refused', { summary: `pod ${id} could not be written to this browser`, id, reason: 'not-kept' }));
+  }
+
+  _keepBuiltins() {
+    for (const r of this.pods.values()) {
+      if (r.carriage === 'builtin') this._keep(r.id, this.live.get(r.id)?.snapshot ?? this.live.get(r.id)?.conn?.snapshot?.());
+    }
+  }
+
+  _unlockBuiltins() {
+    for (const r of this.pods.values()) if (r.carriage === 'builtin' && this.status(r.id) === 'locked') this.connect(r.id);
   }
 
   async disconnect(id, { quiet = false } = {}) {
@@ -320,7 +410,13 @@ export class FoafPods {
       }
     }
     if (this._throttled(appId, verb)) return this._refuse(appId, verb, 'throttled', `${appId} called "${verb}" more than ${this.perMinute} times in a minute`);
-    const podFetch = this.fetchFor(scope.pod);
+    let podFetch = this.fetchFor(scope.pod);
+    // The built-in pod opens on first use: its engine is a large download.
+    if (!podFetch && this.pods.get(scope.pod)?.carriage === 'builtin' && this.status(scope.pod) === 'offline') {
+      await this.connect(scope.pod);
+      podFetch = this.fetchFor(scope.pod);
+    }
+    if (!podFetch && this.status(scope.pod) === 'locked') return this._refuse(appId, verb, 'locked', `${appId}'s "${verb}": pod ${scope.pod} is locked`, { pod: scope.pod });
     if (!podFetch) return this._refuse(appId, verb, 'offline', `${appId}'s "${verb}": pod ${scope.pod} is not connected`, { pod: scope.pod });
 
     const base = this.pods.get(scope.pod).base;

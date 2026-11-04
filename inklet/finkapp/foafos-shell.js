@@ -15,7 +15,7 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
-  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, XmppWs, FoafChat, CHAT_OWNER,
+  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
@@ -238,9 +238,55 @@ FoafOS.ops = ops;
 // app holding `pod:read` / `pod:write` gets four verbs aimed by its grant at
 // `apps/<appId>/` in the pod chosen for apps. Design and log:
 // docs/foafos-pods-20261103.md. The window is openPods() below.
+//
+// The Factoidal Lean engine (@factoidal/core) runs the built-in pod and the built-in chat
+// server in this page. It is a 31 MB WebAssembly download, loaded once, on first use.
+const FACTOIDAL_BASE = (() => {
+  // `?factoidal=/path/` names a SAME-ORIGIN copy (a local build, for tests). Never another
+  // origin: this code runs in the shell itself, so a link must not choose where it comes from.
+  try {
+    const v = new URLSearchParams(location.search).get('factoidal');
+    if (v && v.startsWith('/') && !v.startsWith('//') && new URL(v, location.href).origin === location.origin) return v.endsWith('/') ? v : v + '/';
+  } catch { /* no location */ }
+  return 'https://cdn.jsdelivr.net/npm/@factoidal/core@0.30.0/';
+})();
+let factoidalEngine = null;
+const loadFactoidal = () => (factoidalEngine ??= import(FACTOIDAL_BASE + 'browser.js').then((core) => core.loadEngine())
+  .catch((e) => { factoidalEngine = null; throw e; }));
+// Where a built-in pod is kept: its SEALED snapshot, one IndexedDB record per pod. FoafPods
+// writes here only while secrets are sealed with the session passphrase.
+const podSnapshots = (() => {
+  const db = () => new Promise((resolve, reject) => {
+    const req = indexedDB.open('foafos-pods', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('snapshots');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const run = async (mode, fn) => {
+    const d = await db();
+    try {
+      return await new Promise((resolve, reject) => {
+        const req = fn(d.transaction('snapshots', mode).objectStore('snapshots'));
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    } finally { d.close(); }
+  };
+  return {
+    get: (id) => run('readonly', (st) => st.get(id)),
+    put: (id, snapshot) => run('readwrite', (st) => st.put(snapshot, id)),
+  };
+})();
 const pods = new FoafPods({
   secrets, bus, storage: audioStore || null,
   connectXmpp: (opts) => XmppWs.connect(opts),
+  snapshots: podSnapshots,
+  openBuiltin: async ({ storageKey, snapshot, onSnapshot }) => {
+    const engine = await loadFactoidal();
+    const { openInPageLwsStorage } = await import(FACTOIDAL_BASE + 'lws/inpage.mjs');
+    return openInPageLwsStorage({ engine, baseIri: BUILTIN_BASE, principal: BUILTIN_PRINCIPAL,
+      rootAcl: BUILTIN_ACL, storageKey, snapshot, onSnapshot });
+  },
 });
 FoafOS.pods = pods;
 
@@ -252,22 +298,13 @@ FoafOS.pods = pods;
 // `factoidal xmpp-serve --muc` on localhost, so an ordinary XMPP client can
 // watch. It starts once the shell is idle: the engine is a 31 MB download.
 // Design: docs/foafos-chat-20261103.md.
-const FACTOIDAL_BASE = (() => {
-  // `?factoidal=/path/` names a SAME-ORIGIN copy (a local build, for tests). Never another
-  // origin: this code runs in the shell itself, so a link must not choose where it comes from.
-  try {
-    const v = new URLSearchParams(location.search).get('factoidal');
-    if (v && v.startsWith('/') && !v.startsWith('//') && new URL(v, location.href).origin === location.origin) return v.endsWith('/') ? v : v + '/';
-  } catch { /* no location */ }
-  return 'https://cdn.jsdelivr.net/npm/@factoidal/core@0.30.0/';
-})();
 const chat = new FoafChat({
   bus, secrets, storage: audioStore || null,
   connect: (opts) => XmppWs.connect(opts),
   startBuiltin: async ({ domain, roomDomain, accounts }) => {
-    const core = await import(FACTOIDAL_BASE + 'browser.js');
+    const engine = await loadFactoidal();
     const inpage = await import(FACTOIDAL_BASE + 'xmpp/inpage.mjs');
-    const server = await inpage.openInPageXmppServer({ engine: await core.loadEngine(), domain, mucDomain: roomDomain, accounts,
+    const server = await inpage.openInPageXmppServer({ engine, domain, mucDomain: roomDomain, accounts,
       onError: (e) => bus.publish('chat.error', { summary: e.message }) });
     return { WebSocket: inpage.inPageWebSocket(server), close: () => server.close(), server };
   },
@@ -5182,8 +5219,12 @@ function buildUI() {
       parent.appendChild(wrap);
       return input;
     };
-    const COLOURS = { online: '#8f8', connecting: '#ff8', error: '#f88', offline: '#aaa' };
+    const COLOURS = { online: '#8f8', connecting: '#ff8', error: '#f88', offline: '#aaa', locked: '#fa6' };
     let browsing = null;   // { id, path }
+    // What is typed in the Add form. The window redraws on every pods.* and app event, and a
+    // redraw must not clear what the person is typing. It lives only in this window, like the
+    // field itself, and ADD empties it (the password goes to FoafSecrets).
+    const draft = {};
 
     const drawBrowse = async (card, id, path) => {
       const out = el('div', 'loading…', 'border-top:1px solid #345;padding-top:6px;display:flex;flex-direction:column;gap:4px;');
@@ -5245,7 +5286,11 @@ function buildUI() {
         card.appendChild(st);
         card.appendChild(el('p', p.carriage === 'xmpp'
           ? `${p.base} through ${p.podJid}, relay ${p.relay.url} as ${p.relay.username}@${p.relay.domain}`
-          : `${p.base} over HTTPS`, 'margin:0;color:#ccc;word-break:break-all;'));
+          : p.carriage === 'builtin'
+            ? (p.kept === 'sealed'
+              ? 'In this browser (the Factoidal LWS engine in the page), sealed with your session passphrase and kept on this device.'
+              : 'In this browser (the Factoidal LWS engine in the page), held for this run only. Set a passphrase and SAVE in the session bar to keep it on this device, sealed.')
+            : `${p.base} over HTTPS`, 'margin:0;color:#ccc;word-break:break-all;'));
         if (p.carriage === 'xmpp') {
           const pw = field(card, 'password', `pod-${p.id}-password`, { type: 'password', placeholder: p.hasPassword ? '•••• held' : 'relay password' });
           const row = el('div', null, 'display:flex;gap:6px;flex-wrap:wrap;');
@@ -5278,6 +5323,13 @@ function buildUI() {
 
       const add = el('section', null, 'border:1px dashed #456;padding:8px;display:flex;flex-direction:column;gap:6px;');
       add.appendChild(el('h3', 'Add a pod', 'margin:0;font:bold 11px monospace;color:#fff;'));
+      if (!list.some((p) => p.carriage === 'builtin')) {
+        // REMOVE keeps a built-in pod's data and key, so adding "browser" again reopens it.
+        button(add, 'ADD THIS BROWSER\'S POD', () => {
+          try { pods.add({ id: 'browser', label: 'This browser', base: BUILTIN_BASE, carriage: 'builtin' }); draw(); }
+          catch (e) { err.textContent = `refused: ${e.message}`; }
+        }, 'Add the built-in pod, in this browser');
+      }
       const f = {
         id: field(add, 'id', 'pod-add-id', { placeholder: 'home' }),
         label: field(add, 'label', 'pod-add-label', { placeholder: 'My pod at home' }),
@@ -5289,19 +5341,27 @@ function buildUI() {
         password: field(add, 'password', 'pod-add-password', { type: 'password', placeholder: 'relay password' }),
         podJid: field(add, 'pod JID', 'pod-add-podjid', { placeholder: 'pod@xmpp.example/lws' }),
       };
+      for (const [k, input] of Object.entries(f)) {
+        if (draft[k] !== undefined) input.value = draft[k];
+        input.addEventListener('input', () => { draft[k] = input.value; });
+        input.addEventListener('change', () => { draft[k] = input.value; });
+      }
       const err = el('p', '', 'margin:0;color:#f88;');
       err.setAttribute('role', 'status');
       const row = el('div', null, 'display:flex;gap:6px;');
       button(row, 'ADD', () => {
-        const xmpp = f.carriage.value === 'xmpp';
+        // From the draft first: a redraw during typing leaves the text in the old field.
+        const v = (k) => String(draft[k] ?? f[k].value);
+        const xmpp = v('carriage') === 'xmpp';
         const rec = {
-          id: f.id.value.trim(), label: f.label.value.trim(), base: f.base.value.trim(), carriage: f.carriage.value,
-          ...(xmpp ? { relay: { url: f.url.value.trim(), domain: f.domain.value.trim(), username: f.username.value.trim() },
-            podJid: f.podJid.value.trim() } : {}),
+          id: v('id').trim(), label: v('label').trim(), base: v('base').trim(), carriage: v('carriage'),
+          ...(xmpp ? { relay: { url: v('url').trim(), domain: v('domain').trim(), username: v('username').trim() },
+            podJid: v('podJid').trim() } : {}),
         };
-        const password = f.password.value;
+        const password = v('password');
         f.password.value = '';
-        try { pods.add(rec, xmpp && password ? { password } : {}); draw(); }
+        delete draft.password;
+        try { pods.add(rec, xmpp && password ? { password } : {}); for (const k of Object.keys(draft)) delete draft[k]; draw(); }
         catch (e) { err.textContent = `refused: ${e.message}`; }
       }, 'Add this pod');
       add.appendChild(row);

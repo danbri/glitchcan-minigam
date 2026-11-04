@@ -5,13 +5,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FoafSecrets } from '../src/secrets.mjs';
-import { FoafPods, POD_OWNER, checkPod } from '../src/pods.mjs';
+import { FoafPods, POD_OWNER, checkPod, BUILTIN_BASE } from '../src/pods.mjs';
 
 const PASSWORD = 'relay-pw-THIS_MUST_NEVER_APPEAR_ANYWHERE_41c2';
 const BASE = 'https://pod.example/';
 
 /** A tiny LWS-ish storage: resources with ETags, containers with listings. */
-function fakeStorage() {
+function fakeStorage(BASE = 'https://pod.example/') {
   const res = new Map([['/', { container: true }]]);
   let n = 0;
   const calls = [];
@@ -247,4 +247,104 @@ test('carriage https uses the injected fetch directly', async () => {
   const r = rig({ carriage: 'https' });
   assert.equal((await r.pods.connect('home')).status, 'online');
   assert.equal(r.logins.length, 0);
+});
+
+// ── the built-in pod (carriage 'builtin') ─────────────────────────────────
+
+/** A shell's pieces for the built-in pod: a fake engine (fakeStorage, sealed "snapshots" that
+ *  record the key they were made with) and an in-memory snapshot store. */
+function builtinRig({ saved = new Map(), snaps = new Map(), sealedSecrets = null } = {}) {
+  const listeners = new Map();
+  const bus = {
+    seen: [],
+    publish(topic, data) { this.seen.push({ topic, data }); for (const f of listeners.get(topic) || []) f(data); },
+    subscribe(topic, f) { listeners.set(topic, [...(listeners.get(topic) || []), f]); return () => {}; },
+  };
+  const local = { getItem: (k) => saved.get(k) ?? null, setItem: (k, v) => saved.set(k, v), removeItem: (k) => saved.delete(k) };
+  const secrets = new FoafSecrets({ bus, storage: local });
+  const opens = [];
+  const openBuiltin = async ({ storageKey, snapshot, onSnapshot }) => {
+    if (snapshot && snapshot.key !== storageKey) throw new Error('sealed under another key');
+    const store = fakeStorage(BUILTIN_BASE);
+    if (snapshot) for (const [k, v] of snapshot.res) store.res.set(k, v);
+    opens.push({ storageKey, snapshot });
+    const fetch = async (url, init) => {
+      const r = await store.fetch(url, init);
+      if (['PUT', 'DELETE'].includes((init?.method || 'GET').toUpperCase())) onSnapshot({ key: storageKey, res: [...store.res] });
+      return r;
+    };
+    return { fetch, close() {}, snapshot: () => ({ key: storageKey, res: [...store.res] }) };
+  };
+  const snapshots = { get: async (id) => snaps.get(id), put: async (id, s) => { snaps.set(id, s); } };
+  const pods = new FoafPods({ secrets, bus, storage: local, openBuiltin, snapshots });
+  return { pods, secrets, bus, saved, snaps, opens, local };
+}
+const write = { 'pod:read': { pod: 'browser' }, 'pod:write': { pod: 'browser' } };
+const settle = () => new Promise((r) => setTimeout(r, 0));
+
+test('a new shell starts with the built-in pod, chosen for apps; after REMOVE it does not come back', async () => {
+  const r = builtinRig();
+  assert.equal(r.pods.appsPod(), 'browser');
+  assert.equal(r.pods.get('browser').carriage, 'builtin');
+  assert.equal(r.pods.get('browser').kept, 'run');
+  await r.pods.remove('browser');
+  const again = builtinRig({ saved: r.saved });
+  assert.equal(again.pods.list().length, 0);
+  // A shell with no built-in engine adds nothing.
+  assert.equal(new FoafPods({ secrets: new FoafSecrets(), storage: { getItem: () => null, setItem() {} } }).list().length, 0);
+});
+
+test('the built-in pod opens on first use, with a new key held as a secret', async () => {
+  const r = builtinRig();
+  r.pods.grant('podnotes', write);
+  assert.equal(r.pods.status('browser'), 'offline');
+  const put = await r.pods.invoke('podnotes', 'pod.put', { path: 'notes/a.txt', body: 'hello' });
+  assert.equal(put.ok, true, JSON.stringify(put));
+  assert.equal(r.pods.status('browser'), 'online');
+  assert.equal(r.opens.length, 1);
+  assert.match(r.opens[0].storageKey, /^[0-9a-f]{64}$/);
+  assert.ok(r.secrets.has(POD_OWNER, 'pod.browser.key'));
+  const got = await r.pods.invoke('podnotes', 'pod.get', { path: 'notes/a.txt' });
+  assert.equal(got.body, 'hello');
+  // Not sealed: nothing is written out, and the key appears in no log or record.
+  await settle();
+  assert.equal(r.snaps.size, 0);
+  const key = r.opens[0].storageKey;
+  assert.ok(!JSON.stringify([r.bus.seen, r.pods.audit, r.pods.list(), [...r.saved.values()]]).includes(key));
+});
+
+test('sealed: each change is kept; a reload opens the same notes after UNLOCK', async () => {
+  const r = builtinRig();
+  r.pods.grant('podnotes', write);
+  await r.pods.invoke('podnotes', 'pod.put', { path: 'notes/a.txt', body: 'first' });
+  await r.secrets.seal('correct horse');           // what SAVE in the session bar does
+  await settle();
+  assert.equal(r.snaps.size, 1, 'sealing writes what is held now');
+  assert.equal(r.pods.get('browser').kept, 'sealed');
+  await r.pods.invoke('podnotes', 'pod.put', { path: 'notes/b.txt', body: 'second' });
+  await settle();
+
+  // A reload: the pod list, the sealed secrets and the snapshot are on the device.
+  const b = builtinRig({ saved: r.saved, snaps: r.snaps });
+  b.pods.grant('podnotes', write);
+  const before = await b.pods.invoke('podnotes', 'pod.get', { path: 'notes/b.txt' });
+  assert.equal(before.ok, false);
+  assert.equal(before.reason, 'locked');
+  assert.equal(b.pods.status('browser'), 'locked');
+  assert.equal(b.opens.length, 0, 'nothing is opened, and nothing overwritten, without the key');
+  await b.secrets.unseal('correct horse');
+  await settle(); await settle();
+  assert.equal(b.pods.status('browser'), 'online');
+  assert.equal((await b.pods.invoke('podnotes', 'pod.get', { path: 'notes/b.txt' })).body, 'second');
+});
+
+test('a snapshot with no key on the device is an error, and is left as it is', async () => {
+  const snaps = new Map([['browser', { key: 'f'.repeat(64), res: [] }]]);
+  const r = builtinRig({ snaps });
+  r.pods.grant('podnotes', write);
+  const got = await r.pods.invoke('podnotes', 'pod.list', { path: 'notes/' });
+  assert.equal(got.ok, false);
+  assert.equal(r.pods.status('browser'), 'error');
+  assert.equal(r.snaps.get('browser').key, 'f'.repeat(64));
+  assert.equal(r.opens.length, 0);
 });

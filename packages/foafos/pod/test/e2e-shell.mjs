@@ -80,7 +80,11 @@ try {
   await fill('pod-add-username', 'user');
   await fill('pod-add-password', PASSWORD);
   await fill('pod-add-podjid', 'pod@localhost/lws');
-  await page.click('#foafos-pods button[aria-label="Add this pod"]');
+  // The window redraws on every app and pod event; a click that lands during a redraw is lost
+  // (the button it pressed is gone), so press again until the pod is there.
+  for (let i = 0; i < 5 && !(await page.evaluate(() => FoafOS.pods.get('home'))); i++) {
+    await page.click('#foafos-pods button[aria-label="Add this pod"]');
+  }
   const added = await page.evaluate(() => FoafOS.pods.get('home'));
   check(added?.carriage === 'xmpp' && added.hasPassword === true, `pod added from the form, password held (${JSON.stringify(added && { status: added.status, hasPassword: added.hasPassword })})`);
 
@@ -119,7 +123,8 @@ try {
   await notes.fill('#name', 'hello');
   await notes.fill('#text', 'kept at home, reached over XMPP');
   await notes.click('#save');
-  await notes.waitForFunction(() => /Saved hello/.test(document.getElementById('status').textContent), null, { timeout: 15000 });
+  // Not the status line: "Saved hello." is replaced by the listing as soon as refresh() ends.
+  await notes.waitForFunction(() => window.__podnotes.state().current?.name === 'hello', null, { timeout: 15000 });
   const onPod = await viaHttp('apps/podnotes/notes/hello.txt');
   check(onPod.status === 200 && (await onPod.text()) === 'kept at home, reached over XMPP', `the note is in the pod at apps/podnotes/notes/hello.txt (${onPod.status})`);
   const listed = await notes.evaluate(() => [...document.querySelectorAll('#notes button')].map((b) => b.textContent));

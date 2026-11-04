@@ -243,3 +243,55 @@ side of this note's gaps:
   https://github.com/danbri/factoidal/issues/1238;
 - an IQ to an offline account held instead of answered (fixed in factoidal-core `main`, #315):
   https://github.com/danbri/factoidal/issues/1234.
+
+### Step 5, 2026-11-04: the built-in pod, so Pod Notes works with no setup (built)
+
+Owner, 2026-11-04, about the Pod Notes window: "all Apps lists a Pod Notes app but "Pod Notes / No
+pod is chosen for apps. Open Pods in the shell, connect one, and press "APPS USE THIS"."" A new shell
+had no pod, so the one pod app was a dead end. The fix follows the built-in chat server
+(`docs/foafos-chat-20261103.md`): the Factoidal Lean LWS engine runs in the page.
+
+- **factoidal-core:** `openInPageLwsStorage` (`@factoidal/core/lws/inpage`, PR
+  https://github.com/danbri/factoidal-core/pull/332, merged). This is one storage with no network,
+  behind a `fetch`-shaped function. Its component principal (issue 1238) is `urn:foafos:shell`, and
+  WAC decides every request. It is kept as one snapshot, sealed by the engine with a `storageKey`.
+  `test/lws-inpage.test.mjs`: 3 pass, 0 fail.
+- **`FoafPods` carriage `builtin`** (`packages/foafos/src/pods.mjs`):
+  - A shell that has never saved a pod list starts with the pod `browser` ("This browser",
+    `https://pod.foafos.local/`), chosen for apps. After REMOVE it does not come back. The Pods window
+    then has ADD THIS BROWSER'S POD, and because REMOVE keeps the data and the key, adding it again
+    reopens it.
+  - It opens at the first app call, not at boot (the engine is a 31 MB download, shared with chat
+    through `loadFactoidal()` in the shell).
+  - **Keys and keeping, on the FoafSecrets rule.** The storage key is a secret
+    (`POD_OWNER`, `pod.browser.key`), made at first use. The sealed snapshot is written to IndexedDB
+    (`foafos-pods` / `snapshots`) only while secrets are sealed with the session passphrase.
+    - With no passphrase, the pod lasts for this run, and the Pods window says so.
+    - SAVE in the session bar writes what is held now.
+    - After a reload the pod is `locked` (the Pod Notes reason `locked`: "UNLOCK the session") until
+      UNLOCK, and then it opens.
+    - A snapshot whose key is not on the device is an `error`. It is left as it is, not
+      overwritten.
+- **The Pods window Add form keeps what is typed.** The window redraws on every `pods.*`,
+  `app.spawn` and `app.close` event. A redraw while a person typed cleared the form, and ADD then read
+  empty fields. This was the cause of the `e2e-shell` "1 failure in 4 runs" recorded on 2026-11-04,
+  together with two races in the test itself:
+  - "Saved hello." is replaced by the listing when `refresh()` ends;
+  - a click that lands during a redraw is lost.
+- Tests:
+  - `packages/foafos/test/pods.test.js`: 19 pass, 0 fail (4 new);
+  - `inklet/finkapp/test/e2e-builtin-pod.mjs`, new: 10 pass, 0 fail. It covers a new shell, Pod
+    Notes saving, the Pods window text, sealing to IndexedDB (the note text is not in it), reload,
+    `locked`, UNLOCK, and the note back;
+  - `packages/foafos/pod/test/e2e-shell.mjs`: 22 pass, 6 runs of 6;
+  - `e2e-chat`, `e2e-powers`, `e2e-foafos`: pass;
+  - foafos unit tests: 83 pass, 0 fail.
+- **Live site:** this needs `@factoidal/core` 0.30.0 on npm, with `lws/inpage.mjs` (the same release
+  the built-in chat needs). Until then the first app call makes the pod `error` and Pod Notes says
+  so. Local test: `?factoidal=/path/to/npm/factoidal/` (same origin only).
+- **Not done:**
+  - one snapshot is written whole after each change. That is acceptable for notes, but not for large
+    data (the engine's files mode over IndexedDB or OPFS would write only what changed;
+    https://github.com/danbri/factoidal/issues/1239);
+  - each tab has its own engine, so two tabs of the shell are two pods over one IndexedDB record,
+    and the last write wins (the SharedWorker step in the chat note would fix both).
