@@ -63,6 +63,32 @@ because a closed ring's first and last points are the same point.
 - Things the page tells as uncertain: which disease caused the 1616 to 1619 epidemic; whether Massasoit was invited
   to the feast; whether turkey was eaten; the Speedwell's leaks (Bradford suspected the crew).
 
+## Footnotes and the Sources tab (2026-11-04)
+
+Owner: "Footnote all substantive claims to a footnote which is simple but links to a detailed tab with bibliographic
+info etc". Done in the page:
+
+- Each claim in the story text ends with a small number. The number jumps to the part's Notes list (short source
+  name and the place in it: book and chapter, year, date of the journal entry, or a quoted phrase). "Details" opens
+  the Sources tab at the full entry.
+- The Sources tab (side panel, next to the Story tab) lists 35 entries in five groups: primary sources, government
+  records, Wampanoag sources, histories and museums, and notes on estimates (crew, ship size, children, feast date).
+  Each entry has the full reference, what the source is and how far to trust it, links to online texts, and
+  "Used in" buttons that open the parts that cite it.
+- Deep links: https://danbri.github.io/glitchcan-minigam/thanksgiving/thanksgiving.html#sources opens the tab;
+  `#src-<key>` opens one entry, for example
+  https://danbri.github.io/glitchcan-minigam/thanksgiving/thanksgiving.html#src-mourt
+- Data: `BIB` (the sources) and the `[[key, locator]]` marks in `STORY` and `FOOD`, in `thanksgiving/thanksgiving.html`.
+  A missing key is logged as a console error. The list under the map shows the text without the marks.
+- Locators for Bradford and Mourt's Relation were checked against the Project Gutenberg texts (#24950, the 1898
+  edition; #66359, the Heath edition). Chapter numbers for Salisbury and Lepore were not checked, so those notes give
+  the book only.
+- Changes found while adding notes: the "Corn Hill" name is from Mourt's Relation, not Bradford; "People of the First
+  Light" is now cited to the Aquinnah tribe and to Plimoth Patuxet (not WLRP, whose page does not say it); the ship's
+  size is now stated as an estimate ("Nobody wrote down the size of the ship"); "more than 30 children" is now "about
+  30" (counts run 30 to 34); "no forks" is cited to Kathleen Curtin (Archaeology, 2006), because the Smithsonian
+  article does not say it.
+
 ## Fact check (2026-11-04)
 
 Owner: "Fact check your work vigorously!" Three agents checked every claim in the 25 parts against the primary
