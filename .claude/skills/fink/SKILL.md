@@ -1648,6 +1648,28 @@ Storage reached over HTTPS or, for a pod at home, over XEP-0332 through an XMPP 
   inside the Pod Notes frame). Both pod e2e tests: `cd packages/foafos/pod && npm install`, then
   `RELAY=prosody` or `RELAY=factoidal FACTOIDAL_BIN=…`.
 
+## Chat: the bus room over XMPP (November 2026)
+
+`packages/foafos/src/chat.mjs` (`FoafChat`), `FoafOS.chat`, the **Chat** panel (`openChat`, office
+root, manifest `apps/chat.jsonld`). Design and localhost setup: `docs/foafos-chat-20261103.md`.
+
+- Mode `builtin` (default) runs the Factoidal Lean XMPP server IN THE PAGE (`@factoidal/core`
+  `xmpp/inpage.mjs`, the engine's `xmppMsg*` message carrier) and joins `bus@rooms.foafos.local`.
+  Mode `server` points at any RFC 7395 endpoint, e.g. `factoidal xmpp-serve --muc --ws-port`.
+- The engine loads from `FACTOIDAL_BASE` (jsDelivr, pinned). `?factoidal=/path/` may name a
+  SAME-ORIGIN copy only; that code runs in the shell, so a link must never choose another origin.
+- `XmppWs.connect({ WebSocket })` takes a WebSocket class; `inPageWebSocket(server)` is the in-page
+  one, and Strophe.js works the same way.
+- **The grant-sync trap again:** `syncBrokerGrants` revokes secrets grants of anything that is not a
+  live app node. `CHAT_OWNER` (`foafos.chat`) is exempt beside `POD_OWNER`; without it the server
+  password is "denied". `e2e-powers` lists both as shell holders.
+- Only topics on the mirror list leave the shell; room messages come back as `net.xmpp.message`
+  and are NOT acted on. Control must arrive as an app-tree node with grants, never raw bus events.
+- Test: `inklet/finkapp/test/e2e-chat.mjs` (built-in room, then a localhost Node server and an
+  outside client). Needs a factoidal-core checkout with `xmpp/inpage.mjs` (`FACTOIDAL=`).
+- `packages/foafos/pod/test/e2e-shell.mjs` failed once in four runs (Pod Notes save timed out at 15 s)
+  on 2026-11-04, with and without this change in the tree: a flake, not yet explained.
+
 ## Migrating an app off `same-origin` (the Calendar pattern)
 
 Calendar is the first Office app off the escape hatch, and the pattern

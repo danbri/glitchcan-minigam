@@ -15,7 +15,7 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
-  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, XmppWs,
+  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, XmppWs, FoafChat, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
@@ -244,6 +244,40 @@ const pods = new FoafPods({
 });
 FoafOS.pods = pods;
 
+// ── chat: the shell's XMPP connection and the bus room (MUC) ────────────
+// By default the Factoidal Lean XMPP server runs IN THIS PAGE (no install, no
+// network; @factoidal/core xmpp/inpage.mjs) and the shell joins its room
+// bus@rooms.foafos.local, where bus events on the mirror list are posted. The
+// Chat window can point it at any XMPP WebSocket server instead, such as
+// `factoidal xmpp-serve --muc` on localhost, so an ordinary XMPP client can
+// watch. It starts once the shell is idle: the engine is a 31 MB download.
+// Design: docs/foafos-chat-20261103.md.
+const FACTOIDAL_BASE = (() => {
+  // `?factoidal=/path/` names a SAME-ORIGIN copy (a local build, for tests). Never another
+  // origin: this code runs in the shell itself, so a link must not choose where it comes from.
+  try {
+    const v = new URLSearchParams(location.search).get('factoidal');
+    if (v && v.startsWith('/') && !v.startsWith('//') && new URL(v, location.href).origin === location.origin) return v.endsWith('/') ? v : v + '/';
+  } catch { /* no location */ }
+  return 'https://cdn.jsdelivr.net/npm/@factoidal/core@0.30.0/';
+})();
+const chat = new FoafChat({
+  bus, secrets, storage: audioStore || null,
+  connect: (opts) => XmppWs.connect(opts),
+  startBuiltin: async ({ domain, roomDomain, accounts }) => {
+    const core = await import(FACTOIDAL_BASE + 'browser.js');
+    const inpage = await import(FACTOIDAL_BASE + 'xmpp/inpage.mjs');
+    const server = await inpage.openInPageXmppServer({ engine: await core.loadEngine(), domain, mucDomain: roomDomain, accounts,
+      onError: (e) => bus.publish('chat.error', { summary: e.message }) });
+    return { WebSocket: inpage.inPageWebSocket(server), close: () => server.close(), server };
+  },
+});
+FoafOS.chat = chat;
+{
+  const begin = () => { if (chat.config().mode !== 'off') chat.start(); };
+  if ('requestIdleCallback' in window) requestIdleCallback(begin, { timeout: 5000 }); else setTimeout(begin, 2000);
+}
+
 // Scopes are configuration, not code: which repo, which bucket, which pod.
 // Persisted in the shell's own storage (never an app's), so a user sets it
 // once. Nothing prompts for these yet — see `FoafOS.aimOp` below, which is
@@ -426,8 +460,9 @@ function syncBrokerGrants() {
     }
     for (const appId of [...broker.grants.keys()]) {
       // The shell's own holders are not apps: its snapshot namespace, and
-      // FoafPods' relay passwords (POD_OWNER), which no app node holds.
-      if (!live.has(appId) && appId !== FoafOS.snapshotNs && appId !== POD_OWNER) broker.revoke(appId);
+      // FoafPods' relay passwords (POD_OWNER) and FoafChat's server password
+      // (CHAT_OWNER), which no app node holds.
+      if (!live.has(appId) && appId !== FoafOS.snapshotNs && appId !== POD_OWNER && appId !== CHAT_OWNER) broker.revoke(appId);
     }
     for (const [appId, caps] of live) broker.grant(appId, [...caps]);
   }
@@ -2859,6 +2894,7 @@ function buildUI() {
         if (app.panel === 'activity') return FoafOS.openActivity();
         if (app.panel === 'publishing') return openPublishing();
         if (app.panel === 'pods') return openPods();
+        if (app.panel === 'chat') return openChat();
         return null;
       case 'window':
       default: {
@@ -5285,6 +5321,117 @@ function buildUI() {
     return win;
   }
   FoafOS.openPods = openPods;
+
+  // ── Chat: the shell's XMPP connection and the bus room (FoafChat) ──────
+  // Shell chrome for the Pods panel's reason: a server password typed here
+  // goes straight into FoafSecrets (chat.configure) and the field is cleared.
+  // The log shows the bus room: the shell's mirrored events and what anyone
+  // else in the room says. docs/foafos-chat-20261103.md.
+  function openChat() {
+    const existing = document.getElementById('foafos-chat');
+    if (existing) return existing;
+    const win = makeWindow('💬 Chat', 460, 560);
+    win.id = 'foafos-chat';
+    win.classList.add('foafos-panel');
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:10px;display:flex;'
+      + 'flex-direction:column;gap:10px;font:11px monospace;color:#eee;';
+    win.appendChild(body);
+    const el = (tag, text, css) => {
+      const e = document.createElement(tag);
+      if (text != null) e.textContent = text;
+      if (css) e.style.cssText = css;
+      return e;
+    };
+    const button = (parent, label, fn, name) => {
+      const b = el('button', label);
+      b.type = 'button';
+      if (name) b.setAttribute('aria-label', name);
+      b.addEventListener('click', fn);
+      parent.appendChild(b);
+      return b;
+    };
+    const field = (parent, labelText, id, opts = {}) => {
+      const wrap = el('label', labelText, 'display:flex;gap:6px;align-items:center;');
+      const input = document.createElement(opts.select ? 'select' : 'input');
+      if (opts.select) for (const v of opts.select) input.appendChild(Object.assign(el('option', v), { value: v }));
+      else { input.type = opts.type || 'text'; input.placeholder = opts.placeholder || ''; }
+      input.id = id;
+      if (opts.value != null) input.value = opts.value;
+      input.style.cssText = 'flex:1;min-width:0;font:11px monospace;';
+      wrap.appendChild(input);
+      parent.appendChild(wrap);
+      return input;
+    };
+
+    const status = el('p', '', 'margin:0;color:#9ad;');
+    status.setAttribute('role', 'status');
+    const log = el('ol', null, 'margin:0;padding:0 0 0 18px;max-height:220px;overflow-y:auto;color:#ccc;');
+    log.setAttribute('aria-label', 'Bus room messages');
+    log.setAttribute('aria-live', 'polite');
+    const drawStatus = () => {
+      const c = chat.config();
+      status.textContent = `${c.mode === 'builtin' ? 'Built-in server (in this page)' : c.mode === 'server' ? c.url : 'Off'} · `
+        + `room ${chat.roomJid()} · ${chat.state}${chat.detail ? ' (' + chat.detail + ')' : ''}`;
+    };
+    const drawLog = () => {
+      log.textContent = '';
+      for (const m of chat.log.slice(-100)) log.appendChild(el('li', `${m.nick}: ${m.body}`, m.self ? 'color:#888;' : 'color:#fff;'));
+      log.scrollTop = log.scrollHeight;
+    };
+    body.appendChild(el('p',
+      'The shell is in one XMPP group chat room, the bus room. It posts what the apps do there '
+      + '(the topics in the mirror list). With the built-in server, the room is in this page only. '
+      + 'With a server on this computer (factoidal xmpp-serve --muc), any XMPP client can join the room and watch.',
+      'margin:0;color:#9ad;line-height:1.5;'));
+    body.appendChild(status);
+    body.appendChild(log);
+    const sayRow = el('div', null, 'display:flex;gap:6px;');
+    const say = field(sayRow, 'say', 'chat-say', { placeholder: 'a message to the room' });
+    button(sayRow, 'SEND', () => { if (say.value) { chat.say(say.value); say.value = ''; } }, 'Send to the room');
+    body.appendChild(sayRow);
+
+    const c = chat.config();
+    const form = el('section', null, 'border:1px dashed #456;padding:8px;display:flex;flex-direction:column;gap:6px;');
+    form.appendChild(el('h3', 'Server', 'margin:0;font:bold 11px monospace;color:#fff;'));
+    const f = {
+      mode: field(form, 'mode', 'chat-mode', { select: ['builtin', 'server', 'off'], value: c.mode }),
+      url: field(form, 'WebSocket', 'chat-url', { value: c.url }),
+      domain: field(form, 'domain', 'chat-domain', { value: c.domain }),
+      username: field(form, 'account', 'chat-username', { value: c.username, placeholder: 'foafos' }),
+      password: field(form, 'password', 'chat-password', { type: 'password', placeholder: c.hasPassword ? '(held)' : 'server password' }),
+      room: field(form, 'room', 'chat-room', { value: c.room }),
+      roomDomain: field(form, 'rooms at', 'chat-room-domain', { value: c.roomDomain, placeholder: 'rooms.<domain>' }),
+      nick: field(form, 'nick', 'chat-nick', { value: c.nick }),
+      mirror: field(form, 'mirror', 'chat-mirror', { value: c.mirror.join(' ') }),
+    };
+    const err = el('p', '', 'margin:0;color:#f88;');
+    err.setAttribute('role', 'status');
+    const row = el('div', null, 'display:flex;gap:6px;');
+    button(row, 'SAVE AND RECONNECT', async () => {
+      const password = f.password.value;
+      f.password.value = '';
+      const r = chat.configure({ mode: f.mode.value, url: f.url.value.trim(), domain: f.domain.value.trim(),
+        username: f.username.value.trim(), room: f.room.value.trim(), roomDomain: f.roomDomain.value.trim(),
+        nick: f.nick.value.trim(), mirror: f.mirror.value.split(/\s+/).filter(Boolean) }, { password });
+      if (!r.ok) { err.textContent = `refused: ${r.reason}`; return; }
+      err.textContent = '';
+      const started = await chat.start();
+      if (!started.ok) err.textContent = `could not connect: ${started.reason}`;
+    }, 'Save the chat settings and reconnect');
+    form.appendChild(row);
+    form.appendChild(err);
+    body.appendChild(form);
+
+    const unsubs = [bus.subscribe('chat.*', () => { drawStatus(); drawLog(); })];
+    new MutationObserver(() => { if (!win.isConnected) unsubs.forEach((u) => u()); })
+      .observe(document.body, { childList: true });
+    document.body.appendChild(win);
+    drawStatus();
+    drawLog();
+    return win;
+  }
+  FoafOS.openChat = openChat;
 }
 
 if (document.readyState === 'loading') {

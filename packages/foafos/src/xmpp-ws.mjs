@@ -45,17 +45,19 @@ export class XmppWs {
   jid = null;
   onstanza = null;   // (element) => void, for presence and messages after login
 
-  static async connect({ url, domain, username, password, resource = 'foafos', timeoutMs = 10000, onwire = null }) {
+  static async connect({ url, domain, username, password, resource = 'foafos', timeoutMs = 10000, onwire = null, WebSocket: Ws = globalThis.WebSocket }) {
     const x = new XmppWs();
     x.onwire = onwire;   // (direction, text) => void, for debugging
-    await x.#open(url);
+    await x.#open(url, Ws);
     await x.#negotiate({ domain, username, password, resource, timeoutMs });
     return x;
   }
 
-  #open(url) {
+  // `Ws` is the WebSocket class: the browser's, or a WebSocket-shaped one such as
+  // @factoidal/core's inPageWebSocket (the in-page server; FoafChat 'builtin').
+  #open(url, Ws) {
     return new Promise((resolve, reject) => {
-      this.#ws = new WebSocket(url, 'xmpp');
+      this.#ws = new Ws(url, 'xmpp');
       this.#ws.onopen = () => resolve();
       this.#ws.onerror = () => reject(new XmppError(`cannot open ${url}`));
       this.#ws.onclose = (e) => {

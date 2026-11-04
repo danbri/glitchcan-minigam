@@ -40,4 +40,7 @@ export { AppTree } from './apptree.mjs';
 // brokered to apps by grant. See pods.mjs and docs/foafos-pods-20261103.md.
 export { FoafPods, POD_OWNER, POD_VERBS, checkPod } from './pods.mjs';
 export { XmppWs, XmppError } from './xmpp-ws.mjs';
+// The shell's XMPP connection and the bus room (MUC), on the in-page Factoidal server or a
+// localhost one. See chat.mjs and docs/foafos-chat-20261103.md.
+export { FoafChat, CHAT_OWNER, DEFAULT_MIRROR, BUILTIN_DOMAIN } from './chat.mjs';
 export { lwsStore, cachedBackend, mergeKeys, LwsConflict } from './lws-store.mjs';

@@ -573,5 +573,18 @@ export const APPS = [
     "capabilities": [],
     "external": true,
     "persists": false
+  },
+  {
+    "id": "chat",
+    "family": "make",
+    "icon": "💬",
+    "name": "Chat",
+    "surface": "panel",
+    "panel": "chat",
+    "desc": "The bus room: watch the apps talk over XMPP",
+    "capabilities": [
+      "shell"
+    ],
+    "silent": true
   }
 ];

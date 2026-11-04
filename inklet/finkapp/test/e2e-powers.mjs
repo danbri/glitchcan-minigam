@@ -121,9 +121,11 @@ try {
   const afterClose = await page.evaluate(() => ({
     sheets: FoafOS.store.can('sheets', 'storage'),
     shellNs: FoafOS.root.capabilities.includes('storage') ? FoafOS.store.can(FoafOS.snapshotNs, 'storage') : true,
-    // The shell's own secrets holder (FoafPods' relay passwords) is not an app.
-    secretsHolders: [...FoafOS.secrets.grants.keys()].filter((k) => k !== 'foafos.pods'),
+    // The shell's own secrets holders (FoafPods' relay passwords, FoafChat's
+    // server password) are not apps.
+    secretsHolders: [...FoafOS.secrets.grants.keys()].filter((k) => k !== 'foafos.pods' && k !== 'foafos.chat'),
     podsOwner: FoafOS.secrets.can('foafos.pods'),
+    chatOwner: FoafOS.secrets.can('foafos.chat'),
   }));
   whileOpen && !afterClose.sheets
     ? pass('closing an app\'s last node revokes its storage grant in the broker')
@@ -134,6 +136,9 @@ try {
   afterClose.podsOwner
     ? pass('the shell\'s pod owner is not an app, and keeps its secrets grant')
     : fail('the grant sync revoked the shell\'s pod owner (relay passwords could not be held)');
+  afterClose.chatOwner
+    ? pass('the shell\'s chat owner is not an app, and keeps its secrets grant')
+    : fail('the grant sync revoked the shell\'s chat owner (a server password could not be used)');
   afterClose.secretsHolders.length === 0
     ? pass('no closed app is left holding secrets')
     : fail(`secrets still held by: ${afterClose.secretsHolders.join(', ')}`);

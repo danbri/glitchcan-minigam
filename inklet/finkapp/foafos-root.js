@@ -99,7 +99,7 @@ export const ROOTS = {
     // arriving from the UI side instead of the manifest side.
     // `pods` for the same reason as `publishing`: `pod:*` with no way to
     // choose a pod is a capability nobody can use.
-    apps: ['edot', 'sheets', 'calendar', 'files', 'maker', 'publishing', 'pods', 'podnotes'],
+    apps: ['edot', 'sheets', 'calendar', 'files', 'maker', 'publishing', 'pods', 'podnotes', 'chat'],
   },
 
   // THE TV — one root (owner's call, July 2026: "should be one"; there
