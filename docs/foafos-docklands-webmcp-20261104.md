@@ -30,11 +30,13 @@ Status: a survey. Nothing below is built yet, except where it says "exists".
 
 ## 3. The plan, in order
 
-1. **londat: a frame bridge in `registerWebMCP()`.** If there is no `modelContext` and `window.parent !== window`, the
-   page listens for `{type:'webmcp.list'}` and `{type:'webmcp.call', id, name, args}` and answers with
-   `{type:'webmcp.tools', tools}` (name, description, inputSchema, readOnly) and `{type:'webmcp.result', id, ok,
-   value|error}`. It sends `webmcp.tools` once at boot, because of the init race (fink skill). About 30 lines, no
-   foafos code in londat.
+1. **londat: the frame path. DONE 2026-11-04,** https://github.com/danbri/londat/commit/f5b4af67 (page API 1.10.0).
+   `docklands/frame-bridge.js` answers the parent frame only: `webmcp.tools` at start and on `webmcp.list`, and
+   `webmcp.call` gives `webmcp.result`. WebMCP registration is unchanged. Both run, with no condition on
+   `modelContext` (owner, 2026-11-04: "if model context is in-browser agents etc., it shouldn't stop other things using
+   same info, no?"). Test: `docklands/test/api-check.mjs --only 4`: 7 checks pass (25 tools; get_view and go_to through
+   the frame; an unknown tool is an error answer; a call from another frame is not answered). Parts 1, 2 and 3 pass;
+   two old checks there expected version 1.7.0 and 18 tools and now compare with `api.js`.
 2. **foafos: a `tools` capability.** The shell keeps each frame's tool list as a node in the app tree, and publishes
    `app.tools` on the bus. A call is a brokered action: `tools.call {app, name, args}`. The shell sends it only if the
    caller holds the grant. A tool that is not `readOnly` needs a write grant. The manifest declares `tools`, and the
@@ -54,3 +56,34 @@ Status: a survey. Nothing below is built yet, except where it says "exists".
 
 Security: every path from outside the shell (WebMCP at the top, XMPP) reaches a frame only through a granted node in
 the app tree. No path gives a frame's tools to another frame without a grant, and the pod is reached only through WAC.
+
+## 4. Ask the shell what is going on (owner, 2026-11-04)
+
+Owner, verbatim: "we ought to be able to talk to the foafos outer shell to understand what is going on, eg. without AI,
+by simple chat commands or SPARQL; with AI, in more sophisticated (tool use / mcp / rag) sorts of ways."
+
+So the shell keeps one description of its state, and every way in reads that one description. The state is:
+- the app tree (nodes, apps, parents, capabilities, grants);
+- the windows and their modes;
+- the pods and their status;
+- the bus (topics, the last messages of each, mirrored or not);
+- each app's tools (step 2).
+
+The ways in:
+
+| Way in | Who | What it gives |
+|---|---|---|
+| Chat commands | a person, no AI: the Chat window, or an XMPP client from the owner's JID | `/help`, `/apps`, `/tree`, `/caps <app>`, `/tools <app>`, `/call <app> <tool> {json}`, `/bus [topic] [n]`, `/pods`, `/sparql <query>`. Plain text answers. `/call` needs a grant. |
+| SPARQL | a person or a program, no AI | The state as RDF, made on each query with Factoidal (`@factoidal/core`), plus the built-in pod as a dataset (`openLwsDataset`). In the Chat window (`/sparql`), and later over XMPP (XEP-0332 `POST /sparql`, step 7). |
+| Tools | an AI | WebMCP at the top (step 3), and the project MCP server (`tools/game-mcp`), which drives the same shell in a test browser. Each chat command is also a tool, with the same name and a JSON schema. |
+| RAG | an AI | Search over this description, the app manifests (`inklet/finkapp/apps/*.jsonld`, already RDF), the skills and `docs/`. Later. |
+
+Rules:
+- A read (`/apps`, `/tree`, `/bus`, `/sparql`) shows what the shell shows its owner. A secret value (a pod key, a
+  passphrase) is never in the state.
+- Anything that changes something (`/call` with a tool that is not `readOnly`, a grant) goes through the same broker
+  and grants as a button press.
+- From XMPP, only the owner's JID gets commands (chat "Next" 1). Any other JID gets nothing.
+
+Order: the chat commands and the state description come first, in the Chat window with no network. They are the base
+for SPARQL, XMPP and the tools.
