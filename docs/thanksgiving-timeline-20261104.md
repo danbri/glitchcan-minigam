@@ -63,6 +63,46 @@ because a closed ring's first and last points are the same point.
 - Things the page tells as uncertain: which disease caused the 1616 to 1619 epidemic; whether Massasoit was invited
   to the feast; whether turkey was eaten; the Speedwell's leaks (Bradford suspected the crew).
 
+## Fact check (2026-11-04)
+
+Owner: "Fact check your work vigorously!" Three agents checked every claim in the 25 parts against the primary
+texts and reliable secondary sources. The primary texts used: Bradford, https://www.gutenberg.org/ebooks/24950 ;
+Mourt's Relation with Winslow's letter, https://www.gutenberg.org/ebooks/66359 . Result: one wrong quotation and
+about 20 imprecise items. No date, number or name was wrong. All were corrected:
+
+| part | was | now | why |
+|---|---|---|---|
+| billington | Bradford: "gave them full content" | "gave full satisfaction" | the quotation mixed two Bradford phrases |
+| billington | met "the family" whose corn they took, agreed to pay | met "a man", promised to pay | Mourt's: "one of those whose corn we had formerly found; we promised him restitution" |
+| squanto-home | sailed home "by way of Newfoundland" in 1619 | London to Newfoundland, back to England, home with Thomas Dermer in 1619 | Newfoundland was about 1617; route redrawn via England and Monhegan |
+| squanto-home | "went to live" with Massasoit | lived among the Pokanoket; may have been held as a captive | Salisbury and others |
+| squanto-home | "English explorers" wrote of empty villages in 1619 | Thomas Dermer, quoted | one writer, Dermer's 1619 letter |
+| corn | graves dug when corn was found; "Nauset families" | first trip left a grave alone; second trip (about two weeks later) dug graves; "Pamet or Nauset" | Mourt's; Corn Hill is in Pamet land |
+| first-encounter | "no one on either side was hurt" | no English person was hurt; Nauset injuries unknown | Mourt's records only the English side |
+| plymouth | "both" sources say the fields were planted by people who were gone | Mourt's says it, quoted | Bradford does not say it about these fields |
+| winter | "Bradford kept a list of who died" | Bradford's "scarce 50 remained"; the list was made years later | the list dates from about 1651 |
+| samoset | came back "a few days later" with Tisquantum | came back on March 18 with five men; brought Tisquantum on March 22 | Mourt's |
+| planting | showed "where to catch fish and eels" | taught them to catch the spring fish; brought eels | Bradford, Mourt's |
+| feast | "played games"; deer "to the governor and the colonists" | ate together; deer to the governor, Captain Standish and others | Winslow: "bestowed on our governor, and upon the captain and others" |
+| compact | women "were not asked" | only men signed; women were not included | no source records asking |
+| at-sea | "the passengers" brought the screw; Howland detail | one passenger brought it from Holland; he was pulled up, then got aboard with a boat hook | Bradford |
+| thanksgiving-1623 | "July 1623" | "Summer 1623"; Winslow (1624) added as a source | Bradford gives no date |
+| lincoln | Hale "about 17 years"; Young "first used those words" | "more than 15 years"; Young called it that in 1841, the name spread later | Hale's 1863 letter; earlier uses exist |
+| mourning | "Plymouth celebrated"; "did not let him give it" | Massachusetts celebrated, at a dinner; would not let him give the speech he wrote | the state ran the 350th event |
+| today | "almost nobody spoke"; "old books"; "now there is a school" | nobody for more than 100 years; books, letters and land records; a school opened in 2016 | WLRP; no source after 2019 confirms the school is open now |
+| marker war | 41.75, -71.10 (Somerset) | 41.70, -71.26 (Mount Hope) | Metacom's home |
+| grown-ups | "1620" for March 1621 | "1620" for January 1 to March 24, 1621 | the year began March 25 |
+
+Checked and correct (examples): 102 passengers; 41 signers; the 10-day calendar offset and every Old Style / New
+Style pair; 20 from Patuxet and 7 from Nauset (1614), Málaga; "six or seven" sound persons; about 60 men in March
+1621 and about 90 in autumn; three days; five deer; "a special instrument sent of God"; "saluted us in English, and
+bade us welcome"; "fell amongst dangerous shoals and roaring breakers"; "they knew they were pilgrims"; the
+Washington (1789), Lincoln (1863) and 1941 dates; Public Law 77-379; Mashpee (recognized 2007) and Aquinnah
+(recognized 1987); WLRP founded 1993. All marker coordinates are within about 2 km, except the war marker (fixed).
+
+Still uncertain, and the page says so or does not claim it: the exact day of the feast; which disease caused the
+epidemic; whether Massasoit was invited; whether the Wôpanâak school is still open in 2026.
+
 ## Sources
 
 - William Bradford, *Of Plymouth Plantation* (written 1630 to 1651).

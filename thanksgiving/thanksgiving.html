@@ -273,18 +273,18 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
   <div class="grownups">
     <h2>For grown-ups: how this page was made</h2>
     <p>Every event here comes from a written record or from Wampanoag accounts of their own history. Where historians are not sure, the page says so. Some things we do not know: the exact day of the 1621 feast, whether Massasoit was invited or arrived for another reason, which sickness emptied Patuxet, and the exact path the Mayflower took across the ocean (the line on the map is a drawing, not a log).</p>
-    <p><b>Two calendars.</b> In 1620 England used the old Julian calendar, which was 10 days behind the calendar we use now. William Bradford and Edward Winslow wrote their dates in the old calendar, so the page gives both. The English also began the new year on March 25, so Bradford writes "1620" for events we would put in March 1621.</p>
+    <p><b>Two calendars.</b> In 1620 England used the old Julian calendar, which was 10 days behind the calendar we use now. William Bradford and Edward Winslow wrote their dates in the old calendar, so the page gives both. The English also began the new year on March 25, so Bradford writes "1620" for events from January 1 to March 24, 1621.</p>
     <p><b>The hard parts.</b> The page tells children, in plain words, about the 1614 kidnapping, the epidemic, the corn and graves the English took on Cape Cod, the war of 1675, and the National Day of Mourning. The Wampanoag Nation is not only in the past: it is here today, with its own governments, schools and language.</p>
     <h3>Sources</h3>
     <ul>
-      <li>William Bradford, <i>Of Plymouth Plantation</i> (written 1630 to 1651, first printed 1856).</li>
-      <li><i>Mourt's Relation</i> (London, 1622), with Edward Winslow's letter of December 11, 1621, the only eyewitness description of the harvest feast.</li>
+      <li>William Bradford, <i>Of Plymouth Plantation</i> (written 1630 to 1651, first printed 1856). Text: <a href="https://www.gutenberg.org/ebooks/24950">https://www.gutenberg.org/ebooks/24950</a></li>
+      <li><i>Mourt's Relation</i> (London, 1622), with Edward Winslow's letter of December 11, 1621, the only eyewitness description of the harvest feast. Text: <a href="https://www.gutenberg.org/ebooks/66359">https://www.gutenberg.org/ebooks/66359</a></li>
       <li>Abraham Lincoln, Proclamation of Thanksgiving, October 3, 1863. George Washington, Thanksgiving Proclamation, October 3, 1789. Public Law 77-379 (December 26, 1941).</li>
       <li>Plimoth Patuxet Museums: <a href="https://www.plimoth.org/">https://www.plimoth.org/</a></li>
       <li>National Museum of the American Indian, Native Knowledge 360°: <a href="https://americanindian.si.edu/nk360/">https://americanindian.si.edu/nk360/</a></li>
       <li>Mashpee Wampanoag Tribe: <a href="https://mashpeewampanoagtribe-nsn.gov/">https://mashpeewampanoagtribe-nsn.gov/</a> · Wampanoag Tribe of Gay Head (Aquinnah): <a href="https://wampanoagtribe-nsn.gov/">https://wampanoagtribe-nsn.gov/</a></li>
       <li>Wôpanâak Language Reclamation Project: <a href="https://www.wlrp.org/">https://www.wlrp.org/</a></li>
-      <li>United American Indians of New England, National Day of Mourning (held at Plymouth since 1970).</li>
+      <li>United American Indians of New England, National Day of Mourning (held at Plymouth since 1970): <a href="http://www.uaine.org/">http://www.uaine.org/</a></li>
       <li>Map: coastlines from Natural Earth (public domain).</li>
     </ul>
   </div>
@@ -333,7 +333,8 @@ const ROUTES = {
       ['patuxet', 41.96, -70.66], [null, 41.6, -68], [null, 40.5, -55], [null, 38.5, -35], [null, 37, -17],
       [null, 36.3, -8], ['malaga', 36.68, -4.42], [null, 36.0, -6.3], [null, 38, -10.5], [null, 43.5, -10.5],
       [null, 48.6, -5.5], [null, 50.6, -1.0], ['london', 51.5, 0.0], [null, 50.2, -5.5], [null, 49, -25],
-      [null, 48, -45], ['newfoundland', 47.55, -53.0], [null, 44.6, -62], [null, 42.4, -68.5], ['home', 41.96, -70.66],
+      [null, 48, -45], ['newfoundland', 47.55, -53.0], [null, 49.2, -35], [null, 50.1, -8], ['englandAgain', 50.37, -4.14],
+      [null, 49.0, -20], [null, 46.0, -45], [null, 44.0, -62], ['monhegan', 43.76, -69.32], [null, 42.6, -70.4], ['home', 41.96, -70.66],
     ],
   },
   home: {
@@ -381,7 +382,7 @@ const MARKERS = [
   { id: 'plymouthMA', at: [41.958, -70.668], icon: 'house', label: 'Plymouth (on Patuxet land)', from: 'plymouth', now: ['plymouth', 'winter', 'planting', 'samoset'], local: true },
   { id: 'feast', at: [41.958, -70.668], icon: 'feast', label: 'Harvest feast', from: 'feast', now: ['feast'], local: true, dy: 58 },
   { id: 'rain', at: [41.958, -70.668], icon: 'rain', label: 'Day of thanksgiving', from: 'thanksgiving-1623', to: 'thanksgiving-1623', now: ['thanksgiving-1623'], local: true, dy: 58 },
-  { id: 'war', at: [41.75, -71.1], icon: 'broken', label: "War, 1675 to 1676", from: 'war', to: 'war', now: ['war'], local: true },
+  { id: 'war', at: [41.70, -71.26], icon: 'broken', label: "War, 1675 to 1676", from: 'war', to: 'war', now: ['war'], local: true },
   { id: 'nyc', at: [40.71, -74.0], icon: 'capitol', label: 'New York (capital in 1789)', from: 'washington', to: 'washington', now: ['washington'] },
   { id: 'dc', at: [38.9, -77.03], icon: 'capitol', label: 'Washington, D.C.', from: 'lincoln', to: 'fourth-thursday', now: ['lincoln', 'fourth-thursday'] },
   { id: 'philly', at: [39.95, -75.16], icon: 'quill', label: "Philadelphia (Sarah Hale's magazine)", from: 'lincoln', to: 'lincoln', now: ['lincoln'] },
@@ -437,8 +438,9 @@ const STORY = [
     title: 'The great sickness',
     body: ['From about 1616 to 1619, a terrible sickness spread along the coast. It came with European sailors and traders. Doctors today still do not know for sure which disease it was.',
       'In many villages, most people died. At Patuxet, almost everyone died.',
-      'In 1619, Tisquantum sailed home by way of Newfoundland. When he reached Patuxet, his village was empty. His family was gone. He went to live among the Pokanoket Wampanoag, whose leader was Massasoit.'],
-    how: 'English explorers who sailed past in 1619 wrote about the empty villages. So did Bradford and Winslow when they saw Patuxet in 1620.' },
+      'Tisquantum was trying to get home. From London he was sent to Newfoundland, then back to England. In 1619 he sailed home with an English captain, Thomas Dermer. When he reached Patuxet, his village was empty. His family was gone.',
+      'Later he lived among the Pokanoket Wampanoag, whose leader was Massasoit. Some historians think Massasoit kept him there as a captive.'],
+    how: 'Thomas Dermer wrote in 1619 that he found villages "not long since populous, now utterly void". In 1620 the colonists saw that the fields at Patuxet had been cleared and planted before.' },
   { id: 'two-ships', era: 'voyage', year: 1620.55, when: 'July 22, 1620', calendar: 'Old calendar: July 22, 1620 · Our calendar: August 1, 1620', where: 'Delfshaven to Southampton', icon: 'boat', view: V.channel,
     vessel: { route: 'voyage', stop: 'southampton', label: 'Speedwell' },
     title: 'Two ships',
@@ -454,8 +456,8 @@ const STORY = [
   { id: 'at-sea', era: 'voyage', year: 1620.77, when: 'October 1620', where: 'The middle of the Atlantic', icon: 'boat', view: V.atlantic,
     vessel: { route: 'voyage', stop: 'midAtlantic', label: 'Mayflower' },
     title: 'Storms at sea',
-    body: ['Halfway across, great storms hit the ship. A big wooden beam that held up the deck cracked. The passengers had brought a large iron screw (a jack), and they used it to push the beam back into place.',
-      'In one storm a young man named John Howland was thrown into the sea. He caught hold of a rope hanging over the side and held on until the sailors pulled him back up with a boat hook.',
+    body: ['Halfway across, great storms hit the ship. A big wooden beam that held up the deck cracked. One passenger had brought a large iron screw (a jack) from Holland, and they used it to push the beam back into place.',
+      'In one storm a young man named John Howland was thrown into the sea. He caught hold of a rope that trailed in the water and held on, deep under the waves, until the sailors pulled him up and got him aboard with a boat hook.',
       'A baby was born at sea. His parents named him Oceanus.'],
     how: 'All three stories come from Bradford\'s book.' },
   { id: 'land', era: 'voyage', year: 1620.86, when: 'November 9 to 11, 1620', calendar: 'Old calendar: November 9 to 11, 1620 · Our calendar: November 19 to 21, 1620', where: 'Cape Cod', icon: 'warn', view: V.capeCod,
@@ -469,18 +471,18 @@ const STORY = [
     vessel: { route: 'voyage', stop: 'provincetown', label: 'Mayflower' },
     title: 'The Mayflower Compact',
     body: ['They were not where their permission said they could be. Some passengers said that meant no one could tell them what to do once they got ashore.',
-      'So before anyone went ashore, the leaders wrote a short agreement. The people who signed it promised to make fair laws together and to obey them. 41 men signed. The women were not asked to sign.'],
+      'So before anyone went ashore, the leaders wrote a short agreement. The people who signed it promised to make fair laws together and to obey them. 41 men signed. Only men signed: in those days women were not included.'],
     how: 'The words of the Compact were printed in Mourt\'s Relation in 1622 and copied into Bradford\'s book. The paper they signed has been lost.' },
-  { id: 'corn', era: 'first-year', year: 1620.875, when: 'Mid-November 1620', where: 'Corn Hill, on Cape Cod', icon: 'corn', view: V.capeTip,
+  { id: 'corn', era: 'first-year', year: 1620.875, when: 'November 1620', where: 'Corn Hill, on Cape Cod', icon: 'corn', view: V.capeTip,
     vessel: { route: 'voyage', stop: 'provincetown', label: 'Mayflower' },
     title: 'The corn they took',
-    body: ['Groups of men went ashore to explore. On a hill they found baskets of corn buried in the sand. Nauset families had stored it there to eat in the winter and to plant in the spring.',
-      'The explorers took the corn to use as seed. They also dug into graves and took things from them. They called the place Corn Hill.'],
-    sad: 'This corn belonged to Nauset families who needed it. Bradford wrote that they meant to pay the owners back. (Keep watching: they did, the next summer.)',
+    body: ['Groups of men went ashore to explore. On a hill they found baskets of corn buried in the sand. Native families of Pamet or Nauset had stored it there to eat in the winter and to plant in the spring.',
+      'The explorers took the corn to use as seed. They called the place Corn Hill. On their first trip they found a grave and left it alone. On a second trip, about two weeks later, they took more corn and beans, dug into graves and took things from them.'],
+    sad: 'This corn belonged to Native families who needed it. Bradford wrote that they meant to pay the owners back. (Keep watching: they did, the next summer.)',
     how: 'Mourt\'s Relation describes the corn and the graves. Bradford\'s book does too.' },
   { id: 'first-encounter', era: 'first-year', year: 1620.93, when: 'December 8, 1620', calendar: 'Old calendar: December 8, 1620 · Our calendar: December 18, 1620', where: 'Eastham, on Cape Cod', icon: 'arrows', view: V.capeCod,
     title: 'The First Encounter',
-    body: ['Early one morning, while a group of English explorers camped on the beach, Nauset men shot arrows at them. The English fired back with guns. Then the Nauset men left. No one on either side was hurt.',
+    body: ['Early one morning, while a group of English explorers camped on the beach, Nauset men shot arrows at them. The English fired back with guns. Then the Nauset men left. No English person was hurt. We do not know if any Nauset men were.',
       'The Nauset had good reasons not to trust English sailors. Six years before, Thomas Hunt had kidnapped seven of their people. And these strangers had just taken their corn.',
       'The beach is still called First Encounter Beach.'],
     how: 'Mourt\'s Relation tells the English side. The English collected the arrows and sent some home to England.' },
@@ -490,19 +492,19 @@ const STORY = [
     body: ['The explorers found a harbor across the bay with fresh water and fields already cleared for planting. The fields were cleared because people had farmed them for a very long time. This was Patuxet, the village that the sickness had emptied.',
       'The Mayflower sailed across the bay, and on December 25 the colonists started to build houses. The place already had the English name Plymouth on a map that Captain John Smith made in 1616, and the colonists kept it.'],
     myth: 'Did they step onto Plymouth Rock? Nobody who was there wrote about a rock. The story of the rock was first told in 1741, more than 120 years later.',
-    how: 'Bradford and Mourt\'s Relation give the dates. Both say the fields had been planted by people who were gone.' },
+    how: 'Mourt\'s Relation gives the dates. It also says the land "hath been planted with corn three or four years ago".' },
   { id: 'winter', era: 'first-year', year: 1621.05, when: 'Winter 1620 to 1621', where: 'Plymouth', icon: 'drop', view: V.plymouth,
     vessel: { route: 'voyage', stop: 'plymouthMA', label: 'Mayflower' },
     title: 'The hard winter',
     body: ['Most of the colonists stayed on the cold, damp ship while the men built houses on shore. Many got very sick from cold, hunger and disease.',
       'By spring, about half of the people who had sailed on the Mayflower had died. Bradford wrote that at the worst time only six or seven people were well enough to look after all the others.',
       'The Wampanoag watched the newcomers through that winter. They had to decide what to do about them.'],
-    how: 'Bradford kept a list of who died. Of the 102 passengers, about 52 were still alive in the spring.' },
+    how: 'Bradford wrote that "of 100 and odd persons, scarce 50 remained". Years later he made a list of every passenger and what happened to each.' },
   { id: 'samoset', era: 'first-year', year: 1621.21, when: 'March 16, 1621', calendar: 'Old calendar: March 16, 1621 · Our calendar: March 26, 1621', where: 'Plymouth, and Pemaquid in Maine', icon: 'speech', view: V.wideNE,
     title: '"Welcome!" in English',
     body: ['One day a man walked straight into the little town and greeted the colonists in English. They were amazed.',
       'He was Samoset, an Abenaki leader from Pemaquid, far to the north in what is now Maine. He had learned some English from the English fishermen who came to his coast each year.',
-      'He stayed the night, and he told them about the people of this land. A few days later he came back, and he brought Tisquantum with him.'],
+      'He stayed the night, and he told them about the people of this land. He came back two days later with five more men. On March 22 he came again, and this time he brought Tisquantum with him.'],
     how: 'Mourt\'s Relation says Samoset "saluted us in English, and bade us welcome". Ever since, people have told it as "Welcome, Englishmen!"' },
   { id: 'agreement', era: 'first-year', year: 1621.225, when: 'March 22, 1621', calendar: 'Old calendar: March 22, 1621 · Our calendar: April 1, 1621', where: 'Plymouth, with the leader from Sowams', icon: 'scroll', view: V.southNE,
     title: 'An agreement',
@@ -514,27 +516,27 @@ const STORY = [
     vessel: { route: 'home', stop: 'leaving', label: 'Mayflower, going home' },
     title: 'Planting time',
     body: ['In April the Mayflower sailed back to England. None of the colonists went with it. The same month their governor, John Carver, died, and William Bradford became governor.',
-      'Tisquantum stayed with the colonists and helped them. He showed them how to plant corn in little hills, with fish buried in each hill to feed the soil. He showed them where to catch fish and eels.',
+      'Tisquantum stayed with the colonists and helped them. He showed them how to plant corn in little hills, with fish buried in each hill to feed the soil. He showed them how to catch the fish that swam up the brook in spring, and he brought them eels he had caught.',
       'The English peas they planted did badly. The corn grew well.'],
     how: 'Bradford calls Tisquantum "a special instrument sent of God" because he helped them so much. Winslow wrote that they planted about 20 acres of corn.' },
   { id: 'billington', era: 'first-year', year: 1621.55, when: 'July 1621', where: 'Plymouth to Nauset', icon: 'corn', view: V.capeCod,
     title: 'A lost boy, and the corn paid back',
     body: ['A boy named John Billington got lost in the woods. He wandered for days and ended up with the Nauset people on Cape Cod.',
-      'The colonists sailed to Nauset to fetch him. There they met the sachem Aspinet, who brought the boy back safe. They also met the family whose corn they had taken in November, and they agreed to pay them for it.'],
-    how: 'Mourt\'s Relation describes the trip. Bradford writes that they "gave them full content" for the corn.' },
+      'The colonists sailed to Nauset to fetch him. There they met the sachem Aspinet, who brought the boy back safe. They also met a man whose corn they had taken in November, and they promised to pay him back.'],
+    how: 'Mourt\'s Relation describes the trip. Bradford writes that they later "gave full satisfaction" for the corn.' },
   { id: 'feast', era: 'first-year', year: 1621.8, when: 'Autumn 1621', calendar: 'The exact day is not known. It was some time between late September and early November.', where: 'Plymouth', icon: 'feast', view: V.plymouth,
     title: 'The harvest feast',
     body: ['The corn harvest was good. Governor Bradford sent four men out to hunt birds, so that the colonists could celebrate together.',
-      'Massasoit came to Plymouth with about 90 men. That was nearly twice as many as all the colonists left alive. They stayed for three days. They ate, and played games, and the English showed off their guns. The Wampanoag men went out and hunted five deer, and gave them to the governor and the colonists.',
+      'Massasoit came to Plymouth with about 90 men. That was nearly twice as many as all the colonists left alive. They stayed for three days. They ate together, and the English showed off their guns. The Wampanoag men went out and hunted five deer, and gave them to the governor, to Captain Myles Standish and to others.',
       'Winslow wrote a letter about it, and that letter is the only description we have from someone who was there.'],
     food: true,
     myth: 'Nobody at the time called this "Thanksgiving". For the colonists, a thanksgiving was a day of prayer, not a feast. Winslow\'s letter does not say if Massasoit was invited, or why he came.',
     how: 'Edward Winslow\'s letter of December 11, 1621, printed in Mourt\'s Relation in 1622. The part about the feast is only a few sentences long.' },
-  { id: 'thanksgiving-1623', era: 'after', year: 1623.55, when: 'July 1623', where: 'Plymouth', icon: 'rain', view: V.plymouth,
+  { id: 'thanksgiving-1623', era: 'after', year: 1623.55, when: 'Summer 1623', where: 'Plymouth', icon: 'rain', view: V.plymouth,
     title: 'A day of thanksgiving',
     body: ['In the summer of 1623 it did not rain for weeks. The corn was dying. The colonists spent a day praying for rain. Soon after, gentle rain came, and it rained on and off for days.',
       'So the governor set a day of thanksgiving: a day to go to church and thank God. That is what "a thanksgiving" meant to the colonists.'],
-    how: 'Bradford describes the drought, the rain and the day of thanksgiving.' },
+    how: 'Bradford describes the drought, the "sweet and gentle showers" and the day of thanksgiving. Edward Winslow also wrote about it in 1624.' },
   { id: 'war', era: 'after', year: 1675.5, when: '1675 to 1676', where: 'New England', icon: 'broken', view: V.southNE,
     title: 'The peace breaks',
     body: ['More and more English settlers came. Their towns spread over Native land, and their laws were forced on Native people. Massasoit kept his agreement until he died, in about 1661.',
@@ -549,9 +551,9 @@ const STORY = [
     how: 'Washington\'s proclamation of October 3, 1789, still survives.' },
   { id: 'lincoln', era: 'after', year: 1863.75, when: 'October 3, 1863', where: 'Washington, D.C.', icon: 'quill', view: V.usEast,
     title: 'Sarah Hale and President Lincoln',
-    body: ['Sarah Josepha Hale edited a popular magazine in Philadelphia. For about 17 years she wrote articles and letters to presidents, asking for one national Thanksgiving Day.',
+    body: ['Sarah Josepha Hale edited a popular magazine in Philadelphia. For more than 15 years she wrote articles, and letters to presidents,, asking for one national Thanksgiving Day.',
       'In 1863, in the middle of the Civil War, President Abraham Lincoln agreed. He named the last Thursday of November as a day of thanksgiving for the whole country. It has been held every year since.',
-      'In those years, people began to call the 1621 feast "the first Thanksgiving". A historian named Alexander Young first used those words for it, in 1841, when he printed Winslow\'s letter.'],
+      'In 1841 a historian named Alexander Young printed Winslow\'s letter and called the 1621 feast "the first Thanksgiving". Many people took up that name later.'],
     how: 'Hale\'s letter to Lincoln and his proclamation of October 3, 1863, both survive.' },
   { id: 'fourth-thursday', era: 'after', year: 1941.95, when: 'December 26, 1941', where: 'Washington, D.C.', icon: 'capitol', view: V.usEast,
     title: 'The fourth Thursday',
@@ -560,19 +562,19 @@ const STORY = [
     how: 'The law is Public Law 77-379, signed on December 26, 1941.' },
   { id: 'mourning', era: 'after', year: 1970.9, when: 'November 26, 1970', where: "Cole's Hill, Plymouth", icon: 'candle', view: V.plymouth,
     title: 'A National Day of Mourning',
-    body: ['In 1970, Plymouth celebrated 350 years since the Mayflower came. The organizers asked Wamsutta Frank James, an Aquinnah Wampanoag man, to give a speech.',
-      'His speech told the hard parts of the story. The organizers did not let him give it. So he and other Native people gathered on Cole\'s Hill, above Plymouth Rock, and he spoke there.',
+    body: ['In 1970, Massachusetts celebrated 350 years since the Mayflower came. The organizers asked Wamsutta Frank James, an Aquinnah Wampanoag man, to give a speech at a dinner.',
+      'His speech told the hard parts of the story. The organizers read it first and would not let him give the speech he wrote. So he and other Native people gathered on Cole\'s Hill, above Plymouth Rock, and he spoke there.',
       'Every Thanksgiving Day since then, Native people and friends gather on Cole\'s Hill for a National Day of Mourning, to remember what happened to their ancestors.'],
     how: 'The text of Wamsutta Frank James\'s speech was printed and is still read aloud. United American Indians of New England organizes the gathering.' },
   { id: 'today', era: 'after', year: 2026, when: 'Today', where: 'Wampanoag homelands', icon: 'speech', view: V.southNE,
     title: 'The Wampanoag today',
     body: ['The Wampanoag Nation is still here. The Mashpee Wampanoag Tribe on Cape Cod and the Wampanoag Tribe of Gay Head (Aquinnah) on Martha\'s Vineyard have their own governments. Other Wampanoag communities live all around this area too.',
-      'For many years almost nobody spoke the Wampanoag language, Wôpanâak. Since 1993, Wampanoag people have been bringing it back, using old books written in it. Now there is a school where children learn in Wôpanâak.',
+      'For more than 100 years, nobody spoke the Wampanoag language, Wôpanâak. Since 1993, Wampanoag people have been bringing it back, using old books, letters and land records written in it. In 2016 a school opened where young children learn in Wôpanâak.',
       'So the Thanksgiving story is not only about one meal in 1621. It is about two peoples, and everything that happened before and after.'],
     how: 'The tribes and the Wôpanâak Language Reclamation Project share their own news on their websites (see the list at the bottom of this page).' },
 ];
 const FOOD = {
-  yes: ['Deer meat (venison): Winslow says five deer', 'Wild birds: ducks, geese, maybe wild turkey', 'Corn, made into bread or porridge', 'Probably fish, eels, clams and mussels', 'Probably squash, beans, nuts and berries'],
+  yes: ['Deer meat (venison): Winslow says five deer', 'Wild birds: ducks and geese; Bradford says there were many wild turkeys that autumn', 'Corn, made into bread or porridge', 'Probably fish, eels, clams and mussels', 'Probably squash, beans, nuts and berries'],
   no: ['Potatoes: not grown in New England yet', 'Pumpkin pie: no ovens, butter or wheat flour to spare', 'Cranberry sauce: no sugar to make it', 'Forks: the English ate with spoons, knives and fingers'],
 };
 
