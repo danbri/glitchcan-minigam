@@ -87,3 +87,32 @@ Rules:
 
 Order: the chat commands and the state description come first, in the Chat window with no network. They are the base
 for SPARQL, XMPP and the tools.
+
+## 5. Open points, 2026-11-04 (owner questions, later the same evening)
+
+1. **Names (done, d71aab25):** Pods is **PodStore** (a foafos term, `docs/glossary.md`); Pod Notes is **Notes**. App ids
+   are unchanged.
+2. **The PodStore as a service, not shell code.** The shell keeps the gate (which app asks, which folder it may reach,
+   locked or not). The storage engine, its snapshot and its key move to a service that always runs.
+3. **One session / window manager, not four surfaces** (owner: "shouldn't it be one thing, foafos-session or
+   -windowmanager or whatever. Which then might have panels or windows or headless or buttons ... but those things can
+   avoid being baked deep into infra"). The app tree knows only apps, capabilities and lifecycles. `surface`
+   (`window`, `panel`, `stage`, `chrome`) becomes a presentation hint that one session module reads. A service is an
+   app with no presentation. Nothing below the session module reads the hint.
+4. **Files.** Checked in the shell (headless Chrome, `?app=files`): New folder and Upload both work. But Files shows the
+   shell's device storage, not the PodStore. It has no "New file" and no edit. An LWS store reaches it only as an edot
+   Connections mount (`SolidResourceSource`, the LDP form). Against a Factoidal LWS storage (Node, `lws/inpage`) that
+   backend makes folders, uploads, lists and reads; `stat` of a folder without its final `/` gives 404. To do: the
+   PodStore as a Files mount (through the shell), and "New file".
+5. **The CLI.** The built-in PodStore is in the browser (IndexedDB `foafos-pods`, sealed), not in a directory. On
+   2026-11-04 no Factoidal server ran on the Mac. A store to inspect from the CLI is `factoidal lws-serve DIR` (then
+   `curl` or `factoidal lws-client`), the home pod `packages/foafos/pod/pod.mjs --dir`, or `factoidal webdav-serve` to
+   mount it in Finder. PodStore can add any of them.
+6. **Normal XMPP clients.** The in-page server has no network side. `factoidal xmpp-serve` (setup in
+   `docs/foafos-chat-20261103.md`) takes Profanity, Gajim, Dino, and on macOS and iOS Monal, Beagle IM and Siskin. A
+   phone needs `--cert`/`--key` on a LAN address, because it cannot reach the Mac's 127.0.0.1. Not yet tested with a
+   third-party client.
+7. **An LLM over XMPP.** Recommended: an LLM is one more XMPP account (`claude@…`), run by a small bot process that
+   holds the API key. It joins a room or gets direct messages, and it uses the shell's chat commands as its tools
+   (section 4). The other way, the REST API tunnelled over XEP-0332, needs a forwarder to an outside HTTPS host. That is
+   new egress (factoidal issue 1126) and is not recommended first.
