@@ -73,14 +73,14 @@ try {
   await notes.waitForFunction(() => window.__podnotes.state().current?.name === 'hello' || document.getElementById('status').classList.contains('bad'), null, { timeout: 30000 });
   const saved = await notes.evaluate(() => window.__podnotes.state());
   if (saved.current?.name !== 'hello') throw new Error(`save failed: ${saved.status}`);
-  check(true, 'Pod Notes saves a note in the built-in pod');
+  check(true, 'Notes saves a note in the built-in pod');
   const st = await page.evaluate(() => ({ status: FoafOS.pods.status('browser'), kept: FoafOS.pods.get('browser').kept }));
   check(st.status === 'online' && st.kept === 'run', `the pod is online and held for this run (${JSON.stringify(st)})`);
 
   // The Pods window says where it is and how it is kept.
   await page.evaluate(() => FoafOS.openPods());
   const card = await page.textContent('#foafos-pods section[data-pod="browser"]');
-  check(/In this browser/.test(card) && /this run only/.test(card), 'the Pods window shows the built-in pod, held for this run only');
+  check(/In this browser/.test(card) && /this run only/.test(card), 'PodStore shows the built-in pod, held for this run only');
 
   // ── 3. seal with a passphrase, reload, UNLOCK: the note is still there ──
   await page.evaluate(() => { document.getElementById('foafos-pass').value = 'correct horse battery'; document.getElementById('foafos-save').click(); });

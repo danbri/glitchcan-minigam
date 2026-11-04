@@ -67,7 +67,7 @@ page.on('pageerror', (e) => errors.push(e.message));
 try {
   await page.goto(SHELL);
   await page.waitForSelector('#foafos-pods', { timeout: 20000 });
-  check(true, 'the Pods panel opens from ?app=pods under ?root=office');
+  check(true, 'PodStore opens from ?app=pods under ?root=office');
 
   // Add the pod through the form.
   const fill = async (id, v) => page.fill(`#${id}`, v);

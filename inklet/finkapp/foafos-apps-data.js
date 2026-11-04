@@ -537,7 +537,7 @@ export const APPS = [
     "id": "pods",
     "family": "make",
     "icon": "🗄️",
-    "name": "Pods",
+    "name": "PodStore",
     "surface": "panel",
     "panel": "pods",
     "desc": "Your Linked Web Storages, over HTTPS or XMPP",
@@ -550,10 +550,10 @@ export const APPS = [
     "id": "podnotes",
     "family": "office",
     "icon": "🗒️",
-    "name": "Pod Notes",
+    "name": "Notes",
     "surface": "window",
     "url": "../apps/podnotes/index.html",
-    "desc": "Plain notes, kept in your pod",
+    "desc": "Plain notes, kept in your PodStore",
     "capabilities": [
       "pod:read",
       "pod:write"

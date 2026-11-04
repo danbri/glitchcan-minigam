@@ -5176,7 +5176,7 @@ function buildUI() {
   }
   FoafOS.openPublishing = openPublishing;
 
-  // ── Pods: the user's LWS storages (FoafPods) ───────────────────────────
+  // ── PodStore (app id pods): the user's LWS storages (FoafPods) ───────────────────────────
   // Shell chrome, not a sandboxed app, for the Publishing panel's reason:
   // the relay password is typed here, goes straight into FoafSecrets
   // (pods.setPassword) and the field is cleared. Apps never see a pod's
@@ -5185,7 +5185,7 @@ function buildUI() {
   function openPods() {
     const existing = document.getElementById('foafos-pods');
     if (existing) return existing;
-    const win = makeWindow('🗄️ Pods', 460, 560);
+    const win = makeWindow('🗄️ PodStore', 460, 560);
     win.id = 'foafos-pods';
     win.classList.add('foafos-panel');
     const body = document.createElement('div');

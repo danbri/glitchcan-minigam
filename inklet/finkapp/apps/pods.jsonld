@@ -8,7 +8,7 @@
   "id": "pods",
   "family": "make",
   "icon": "🗄️",
-  "name": "Pods",
+  "name": "PodStore",
   "surface": "panel",
   "panel": "pods",
   "desc": "Your Linked Web Storages, over HTTPS or XMPP",
