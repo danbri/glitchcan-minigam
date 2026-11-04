@@ -91,8 +91,9 @@ Known Factoidal faults and behaviours (BNODE() blank nodes dropped by `serialize
 default-graph view of named graphs) and their workarounds: the `cwplans-web-harvest` skill, "Factoidal notes" (in
 danbri/londat: https://github.com/danbri/londat/blob/main/cwplans/skills/cwplans-web-harvest/SKILL.md). After an
 upgrade run `node cwplans/tools/check-factoidal.mjs` in a londat checkout (prints STILL or FIXED for each).
-The root `package.json` pins `@factoidal/core` ^0.11.0 (updated from 0.7.1 on 2026-10-22, owner: "Before progressing
-update Factoidal"; 0.11.0 is the newest on npm, there is no 1.11.0).
+The root `package.json` pins `@factoidal/core` ^0.30.0 and `packages/foafos/pod` pins 0.30.0 (updated from 0.11.0 on
+2026-11-04, owner: "0.3.0 is out, please update accordingly" — 0.30.0 is meant; the shell's jsDelivr URL was already
+0.30.0). Before that: 0.7.1 → 0.11.0 on 2026-10-22, owner: "Before progressing update Factoidal".
 
 **JSON-LD: inline `@vocab` only.** Owner, 2026-10-22, verbatim: "Only use JSON-LD with @vocab uris, never @ context as
 they require a successful network fetch before parsing can suceed". So a JSON-LD document here has
