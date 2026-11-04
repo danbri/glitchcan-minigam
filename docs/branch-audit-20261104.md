@@ -151,3 +151,25 @@ F* is still in `claude/main`, and issues #103 and #566 are open. The migration h
 
 The Parquet migration (Phases A to D and its plan document) belongs to issue #103. It is about 5,100
 commits behind.
+
+## 4. Actions, 2026-11-04 (later the same day)
+
+Owner, verbatim: "keep crankign on all this!"
+
+- **Merged:** https://github.com/danbri/factoidal-core/pull/232 (VC-JOSE-COSE plan, one doc).
+- **Closed as superseded:** https://github.com/danbri/factoidal-core/pull/312 (main 48e3ccfce has it) and
+  https://github.com/danbri/factoidal-core/pull/263 (#281 replaces it).
+- **Made ready, with main merged in:** #278, #279 and #288. GitHub said #279 and #288 were "CLEAN",
+  but a local merge of main had conflicts in `.github/workflows/verify-lean4.yml`,
+  `docs/worknotes-index.md` and `skills/semantic-assurance/SKILL.md`. Both sides were kept: the
+  `lake build` line has main's `+L4Factoidal.Dataflow.FailureConditions` and the branch's targets.
+  They merge after the Lean CI passes. #279 and #288 both change the same `lake build` line, so
+  whichever merges second needs the same fix again. #283 and #286 close when #279 and #288 merge.
+- **Draft PRs for branches with no PR:** https://github.com/danbri/factoidal-core/pull/336
+  (`claude/lean-shaper`), #337 (`wip/1125-1128-xmpp-login`), #338 (`wip/lws-reader-paths-lean`),
+  #339 (`port/laptop-20260908-owl-dl`, owner decision) and #340 (`claude/xproc31-2`).
+- **PR 260 docs:** https://github.com/danbri/factoidal/pull/1243 on `claude/main`. The `fstar-env`
+  skill on `claude/main` was newer than PR 260 (pinned F* version, no opam `z3` package). Its rules
+  were kept, and the README hunk was changed to agree with it. The new anti-pattern is rule 30.
+- **Release trackers:** https://github.com/danbri/factoidal/issues/893, #1210 and #1211 are closed.
+  Their open items are in https://github.com/danbri/factoidal/issues/1242 (0.31.0).
