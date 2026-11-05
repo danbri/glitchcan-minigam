@@ -45,5 +45,6 @@ export { XmppWs, XmppError } from './xmpp-ws.mjs';
 export { FoafChat, CHAT_OWNER, DEFAULT_MIRROR, BUILTIN_DOMAIN } from './chat.mjs';
 // The tools framed apps offer, and chat commands that reach them. See tools.mjs.
 export { FoafTools } from './tools.mjs';
+export { ToolGrants, PERSON, BROWSER_AGENT, SHELL_APP, accountCaller, describeGrant } from './tool-grants.mjs';
 export { createChatCommands, explainToolFailure } from './chat-commands.mjs';
 export { lwsStore, cachedBackend, mergeKeys, LwsConflict } from './lws-store.mjs';

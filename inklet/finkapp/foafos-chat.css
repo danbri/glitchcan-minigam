@@ -45,6 +45,13 @@
 .fc-server { display: grid; gap: 14px; }
 .fc-field { display: grid; gap: 4px; }
 .fc-field > span { font-weight: 600; font-size: 14px; }
+.fc-grants { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 2px; }
+.fc-grants li { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: center; font-size: 14px; }
+.fc-grants .fc-quiet { min-height: 32px; margin-left: auto; }
+.fc-grant-who { font-weight: 600; overflow-wrap: anywhere; }
+.fc-grant-add { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.fc-grant-add input[type=text], .fc-grant-add select { flex: 1 1 8em; min-width: 0; min-height: 40px; }
+.fc-grant-all { display: inline-flex; gap: 4px; align-items: center; font-size: 14px; }
 .fc-field small, .fc-muted { color: var(--sk-ink-dim); font-size: 13px; }
 .fc-advanced summary { cursor: pointer; padding: 6px 0; color: var(--sk-ink-dim); }
 .fc-advanced[open] { display: grid; gap: 12px; }

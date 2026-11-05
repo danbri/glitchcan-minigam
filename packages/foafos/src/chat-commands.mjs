@@ -1,9 +1,12 @@
 // Chat commands: asking the shell what is going on, and calling app tools, by
 // typing. The Chat window uses all of them. A direct message from an account
-// on the allowed list uses the remote set. See docs/foafos-chat-window-20261104.md.
+// holding a grant uses the remote set, and each thing it asks for is checked
+// against that account's grants. See docs/foafos-caller-grants-20261105.md.
 //
 // A room cannot carry commands: its members are known by nickname only, and
 // anyone can take a nickname. A direct message has a `from` the server stamps.
+
+import { PERSON, SHELL_APP, accountCaller, describeGrant } from './tool-grants.mjs';
 
 const HELP = [
   ['/help', 'Show this list'],
@@ -14,6 +17,9 @@ const HELP = [
   ['/call APP TOOL {json}', 'Call a tool, for example /call moglob get_view'],
   ['/open APP', 'Open an app'],
   ['/bus [COUNT]', 'Show recent activity'],
+  ['/grants', 'List who may use what (this window only)'],
+  ['/grant ACCOUNT APP look|all|TOOL...', 'Let an account use an app, for example /grant foafbot@localhost moglob go_to (this window only)'],
+  ['/revoke ACCOUNT [APP]', 'Take that back (this window only)'],
   ['/join ROOM', 'Join a room (this window only)'],
   ['/leave', 'Leave this room (this window only)'],
   ['/clear', 'Clear this conversation (this window only)'],
@@ -23,7 +29,8 @@ const WHY = {
   'no-app': 'That app is not offering tools. Open it first, or use /apps.',
   'no-tool': 'That app has no such tool. Use /tools to list them.',
   'bad-args': 'Those arguments do not fit the tool.',
-  'read-only-caller': 'That tool changes something, and this caller may only read.',
+  'not-granted': 'This account may not do that. Someone at the Chat window can allow it with /grant.',
+  revoked: 'Permission was taken back while this ran, so there is no result. The app may still finish it.',
   timeout: 'The app did not answer in time.',
   closed: 'The app closed before it answered.',
   replaced: 'The app reloaded before it answered.',
@@ -40,10 +47,13 @@ const worldOf = (tools) => tools.list().find((a) => ['get_view', 'go_to'].every(
 const NO_WORLD = 'No world is open. Open one with /open moglob or /open drift.';
 const placeIn = (v) => v?.found?.name || v?.place_title || v?.place || v?.site || null;
 
+// `agent` is the short name for the browser agent in /grant and /revoke.
+const callerName = (who) => (who === 'agent' ? 'browser-agent' : who);
+
 const say = (text) => ({ text });
 const data = (text, value) => ({ text, value });
 
-export function createChatCommands({ chat, tools, bus, openApp = null, findApp = () => null, keep = 100 } = {}) {
+export function createChatCommands({ chat, tools, grants = tools?.grants, bus, openApp = null, findApp = () => null, keep = 100 } = {}) {
   const recent = [];
   bus?.subscribe?.('*', (e) => {
     if (e.source !== 'local' || !chat?.mirrors?.(e.topic)) return;
@@ -63,6 +73,8 @@ export function createChatCommands({ chat, tools, bus, openApp = null, findApp =
     const rest = (m?.[2] || '').trim();
     if (!name) return say('That is not a command. Use /help.');
     if (remote && !REMOTE.has(name)) return say(`/${name} works only in the Chat window.`);
+    const caller = remote ? accountCaller(remote.from) : PERSON;
+    const mayShell = (tool, readOnly) => grants.allows(caller, SHELL_APP, { name: tool, readOnly });
 
     switch (name) {
       case 'help':
@@ -71,7 +83,7 @@ export function createChatCommands({ chat, tools, bus, openApp = null, findApp =
         const w = worldOf(tools);
         if (!w) return say(NO_WORLD);
         const describes = w.tools.some((t) => t.name === 'describe_view');
-        const r = await tools.call(w.id, describes ? 'describe_view' : 'get_view', {}, { caller: remote ? remote.from : 'you' });
+        const r = await tools.call(w.id, describes ? 'describe_view' : 'get_view', {}, { caller });
         if (!r.ok) return say(explainToolFailure(r));
         const text = typeof r.value === 'string' ? r.value : r.value?.text || r.value?.description || placeIn(r.value);
         return data(text ? `${w.label}: ${text}` : `Here is the view in ${w.label}.`, r.value);
@@ -80,7 +92,7 @@ export function createChatCommands({ chat, tools, bus, openApp = null, findApp =
         const w = worldOf(tools);
         if (!w) return say(NO_WORLD);
         if (!rest) return say('Where to? Use /go PLACE.');
-        const r = await tools.call(w.id, 'go_to', { place: rest }, { caller: remote ? remote.from : 'you', allowWrite: true });
+        const r = await tools.call(w.id, 'go_to', { place: rest }, { caller });
         if (!r.ok) return say(explainToolFailure(r));
         return data(`Going to ${placeIn(r.value) || rest} in ${w.label}.`, r.value);
       }
@@ -99,17 +111,38 @@ export function createChatCommands({ chat, tools, bus, openApp = null, findApp =
         if (!c) return say('Use /call APP TOOL {json}.');
         let args = {};
         if (c[3]) { try { args = JSON.parse(c[3]); } catch { return say('Those arguments are not valid JSON.'); } }
-        const r = await tools.call(c[1], c[2], args, { caller: remote ? remote.from : 'you', allowWrite: true });
+        const r = await tools.call(c[1], c[2], args, { caller });
         if (!r.ok) return say(explainToolFailure(r));
         return data(`${c[2]} done`, r.value);
       }
       case 'open': {
+        if (!mayShell('open', false)) return say(WHY['not-granted']);
         const app = findApp(rest);
         if (!app || !openApp) return say('There is no app by that name.');
         await openApp(app.id);
         return say(`Opening ${app.name}.`);
       }
+      case 'grants': {
+        const all = grants.list();
+        if (!all.length) return say('Nobody else may use anything. You always can, here in this window.');
+        return say(all.map((g) => `${g.caller}, ${g.app === '*' ? 'every app' : g.app}: ${describeGrant(g)}`).join('\n'));
+      }
+      case 'grant': {
+        const [who, app, ...what] = rest.split(/\s+/);
+        if (!who || !app || !what.length) return say('Use /grant ACCOUNT APP look, /grant ACCOUNT APP all, or /grant ACCOUNT APP TOOL...');
+        const known = app === '*' || app === 'shell' ? app : tools.find(app)?.id ?? app;
+        const r = grants.grant(callerName(who), known, { level: what.includes('all') ? 'all' : 'look', tools: what.filter((w) => w !== 'all' && w !== 'look') });
+        return say(r.ok ? `${who} may use ${app}: ${describeGrant(r.grant)}.` : `Refused: ${r.reason}.`);
+      }
+      case 'revoke': {
+        const [who, app] = rest.split(/\s+/);
+        if (!who) return say('Use /revoke ACCOUNT, or /revoke ACCOUNT APP.');
+        const known = !app || app === '*' || app === 'shell' ? app ?? null : tools.find(app)?.id ?? app;
+        const r = grants.revoke(callerName(who), known);
+        return say(r.removed ? `Taken back from ${who}.` : `${who} held no such grant.`);
+      }
       case 'bus': {
+        if (!mayShell('bus', true)) return say(WHY['not-granted']);
         const n = Math.max(1, Math.min(50, Number(rest) || 10));
         const last = recent.slice(-n);
         return say(last.length ? last.map((r) => `${r.topic}: ${r.summary}`).join('\n') : 'Nothing has happened yet.');
