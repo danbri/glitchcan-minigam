@@ -8,7 +8,7 @@
 //
 // Covers: framing, SASL SCRAM-SHA-256 / SCRAM-SHA-1 (WebCrypto, server signature
 // checked), resource binding, presence, IQ request/response. Not covered: stream
-// management, reconnection, XEP-0332 chunked bodies. Browser only (DOMParser).
+// management, XEP-0332 chunked bodies. Reconnection is the caller's job (onclose). Browser only (DOMParser).
 // Design and limits: packages/foafos/pod/README.md.
 
 const NS_FRAMING = 'urn:ietf:params:xml:ns:xmpp-framing';
@@ -44,12 +44,20 @@ export class XmppWs {
   #ws; #queue = []; #waiters = []; #pending = new Map(); #seq = 0;
   jid = null;
   onstanza = null;   // (element) => void, for presence and messages after login
+  onclose = null;    // (event) => void, when the connection ends after login
 
   static async connect({ url, domain, username, password, resource = 'foafos', timeoutMs = 10000, onwire = null, WebSocket: Ws = globalThis.WebSocket }) {
     const x = new XmppWs();
     x.onwire = onwire;   // (direction, text) => void, for debugging
-    await x.#open(url, Ws);
-    await x.#negotiate({ domain, username, password, resource, timeoutMs });
+    try {
+      await x.#open(url, Ws);
+      await x.#negotiate({ domain, username, password, resource, timeoutMs });
+    } catch (e) {
+      // A refused login leaves the socket open: the server waits for another
+      // try. Nobody will use this one, so close it rather than leak it.
+      try { x.#ws?.close(); } catch { /* already gone */ }
+      throw e;
+    }
     return x;
   }
 
@@ -65,6 +73,7 @@ export class XmppWs {
         for (const [, p] of this.#pending) p.reject(new XmppError('connection closed'));
         this.#pending.clear();
         for (const w of this.#waiters.splice(0)) w.reject(new XmppError('connection closed'));
+        if (this.jid) this.onclose?.(e);
       };
       this.#ws.onmessage = (e) => { this.onwire?.('in', e.data); this.#frame(e.data); };
     });

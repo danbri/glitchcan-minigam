@@ -17,6 +17,8 @@
     "./package.json": "./package.json",
     "./pods": "./src/pods.mjs",
     "./xmpp-ws": "./src/xmpp-ws.mjs",
+    "./tools": "./src/tools.mjs",
+    "./chat-commands": "./src/chat-commands.mjs",
     "./lws-store": "./src/lws-store.mjs"
   },
   "files": [
