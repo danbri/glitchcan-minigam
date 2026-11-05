@@ -64,10 +64,10 @@
   }
 
   async function open(name) {
-    shared = null;        // a note from the list is not the file from Files
-    showShared();
     const r = await foaf.pod.get(`notes/${name}.txt`);
     if (!r.ok) { say(explain(r), true); return; }
+    shared = null;        // a note from the list is not the file from Files
+    showShared();
     current = { name, etag: r.etag };
     $('name').value = name;
     $('text').value = r.body;

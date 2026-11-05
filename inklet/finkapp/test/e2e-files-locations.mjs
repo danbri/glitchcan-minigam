@@ -146,6 +146,19 @@ try {
     const still = await f.evaluate(() => foaf.pod.get('in-folder.txt'));
     check(switched.shared === null && !switched.locked && still.body === 'edited in Notes', `picking a note leaves the shared file alone (${still.body})`);
     check(/markdown/.test(md), `a Markdown file reports its type (${md})`);
+    await f.evaluate(() => window.__files.pick({ path: 'kept.md' }));
+    await f.waitForFunction(() => /kept\.md/.test(document.querySelector('.detail-head')?.textContent || '') && !!document.querySelector('.open-with button'), null, { timeout: 8000 });
+    await f.evaluate(() => document.querySelector('.open-with button').click());   // Notes' first window may cover Files here
+    let mdEditor = null;
+    for (let i = 0; i < 40 && !mdEditor; i++) {
+      for (const x of page.frames()) if (/apps\/podnotes\//.test(x.url()) && await x.evaluate(() => window.__podnotes?.state().shared?.name === 'kept.md').catch(() => false)) mdEditor = x;
+      if (!mdEditor) await page.waitForTimeout(200);
+    }
+    await mdEditor.evaluate(async () => { document.getElementById('text').value = '# edited'; await window.__podnotes.save(); });
+    const kept = await f.evaluate(() => foaf.pod.get('kept.md'));
+    check(kept.body === '# edited' && /markdown/.test(kept.contentType), `saving in Notes keeps the file's type (${kept.contentType})`);
+    await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => w.querySelector('iframe')?.src.includes('podnotes')).at(-1).querySelector('[aria-label^="Close"]').click());
+    await page.waitForTimeout(400);
     const before = await page.evaluate(() => FoafOS.pods.shares.size);
     await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => w.querySelector('iframe')?.src.includes('podnotes')).at(-1).querySelector('[aria-label^="Close"]').click());
     await page.waitForTimeout(500);

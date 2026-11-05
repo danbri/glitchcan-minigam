@@ -224,7 +224,9 @@
       // Rename and Delete act on `picked`, and rename needs the file's text, so neither is offered here.
       picked = null;
       markPicked();
-      drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), await openWithBox(it.path, r.contentType), h('div', { class: 'detail-actions' }, backBtn));
+      const offers = await openWithBox(it.path, r.contentType);
+      if (mine !== picking) return;
+      drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), offers, h('div', { class: 'detail-actions' }, backBtn));
       return;
     }
     if (!r.ok) { say(explain(r), true); drawDetail(head); return; }
