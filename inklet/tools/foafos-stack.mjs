@@ -7,7 +7,7 @@
 // and LWS runs with no authorization. Never expose any of this to a network.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, statfsSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, statfsSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -98,11 +98,14 @@ async function probeLws() {
   const allow = r?.headers.get('access-control-allow-origin');
   const other = await web(`http://127.0.0.1:${C.lwsPort}/`, { headers: { Origin: FOREIGN, Accept: 'application/lws+json' } });
   const otherAllow = other?.headers.get('access-control-allow-origin');
+  const sandbox = await web(`http://127.0.0.1:${C.lwsPort}/`, { headers: { Origin: 'null', Accept: 'application/lws+json' } });
+  const sandboxAllow = sandbox?.headers.get('access-control-allow-origin');
   return [
     check('storage answers', r && r.status < 500, r ? `HTTP ${r.status}` : 'no answer'),
     check('browser may use it', allow === '*' || allow === SHELL_ORIGIN, allow ? `allows ${allow}` : `no CORS header for ${SHELL_ORIGIN}`),
     // With no authorization, a site the server allows can read and write this storage from your browser.
     check('other sites refused', other && !(otherAllow === '*' || otherAllow === FOREIGN), otherAllow ? `allows ${otherAllow}` : 'no CORS header for another site'),
+    check('sandboxed pages refused', sandbox && !(sandboxAllow === '*' || sandboxAllow === 'null'), sandboxAllow ? `allows ${sandboxAllow}` : 'no CORS header for Origin: null'),
   ];
 }
 
@@ -146,7 +149,7 @@ const SERVICES = {
     title: 'file storage', always: true, ports: () => [C.lwsPort], sign: 'lws-serve', factoidal: true, probe: probeLws, cwd: () => HOME,
     argv: () => ['factoidal', 'lws-serve', C.lwsDir, ...C.lwsAuth, '--host', '127.0.0.1', '--port', String(C.lwsPort), '--storage', 'files',
       '--cors-origin', SHELL_ORIGIN, '--cors-origin', 'https://danbri.github.io'],
-    needs: () => { mkdirSync(C.lwsDir, { recursive: true }); return []; },
+    needs: () => [],
   },
   sparql: {
     title: 'data queries', always: true, ports: () => [C.sparqlPort], sign: 'serve --file', factoidal: true, probe: probeSparql, cwd: () => HOME,
@@ -307,6 +310,7 @@ function launch(n) {
   try { if (statSync(log).size > LOG_MAX) renameSync(log, `${log}.1`); } catch { /* no log yet */ }
   const fd = openSync(log, 'a', 0o600);
   writeFileSync(fd, `\n=== start ${new Date().toISOString()} ${n} ===\n`);
+  if (n === 'lws') mkdirSync(C.lwsDir, { recursive: true });
   const [cmd, ...args] = s.argv();
   // detached: its own session, so no closing terminal can hang it up.
   const child = spawn(cmd, args, { cwd: s.cwd(), detached: true, stdio: ['ignore', fd, fd], env: { ...env, PYTHONUNBUFFERED: '1' } });
@@ -316,6 +320,7 @@ function launch(n) {
   if (!child.pid) return null;
   const rec = { pid: child.pid, startedAt: Date.now(), argv: s.argv(), cwd: s.cwd(), version: s.factoidal ? installedVersion() : undefined };
   rec.lstart = processOf(n, { pid: child.pid })?.lstart;
+  if (!rec.lstart) { spawnSync('sleep', ['0.1']); rec.lstart = processOf(n, { pid: child.pid })?.lstart; }
   writeFileSync(recordFile(n), JSON.stringify(rec, null, 2));
   rmSync(oldPidFile(n), { force: true });
   return rec;
@@ -366,7 +371,7 @@ async function stopOne(n) {
   if (processOf(n, rec)) { signal('SIGKILL'); killed = true; await sleep(300); }
   const left = SERVICES[n].ports().filter((p) => listeners(p).length);
   forget(n);
-  try { writeFileSync(openSync(join(LOGS, `${n}.log`), 'a'), `=== stop ${new Date().toISOString()} ${n} ===\n`); } catch { /* no log */ }
+  try { appendFileSync(join(LOGS, `${n}.log`), `=== stop ${new Date().toISOString()} ${n} ===\n`); } catch { /* no log */ }
   if (left.length) { say(red(`${n}: stopped, but port ${left.join(',')} is still in use`)); return false; }
   say(killed ? yellow(`${n}: did not stop in ${STOP_WAIT / 1000}s, so it was killed`) : `${n}: stopped`);
   return true;
@@ -457,7 +462,7 @@ function doctor() {
   const rows = [];
   const add = (ok, what, fix = '') => rows.push({ ok, what, fix });
   const major = Number(process.versions.node.split('.')[0]);
-  add(major >= 20 ? true : false, `node ${process.versions.node}`, 'needs node 20 or later');
+  add(major >= 20, `node ${process.versions.node}`, 'needs node 20 or later');
   add(!!run('which', ['lsof']), 'lsof, for status', 'status cannot see ports without it');
   add(!!run('which', ['python3']), 'python3, for the shell');
   const v = installedVersion();
@@ -496,7 +501,7 @@ const HELP = `foafos-stack: the local Foafos servers, with one command.
   foafos-stack logs    [service...] [-n LINES] [--no-follow]
   foafos-stack doctor                 check what the servers need
   foafos-stack urls                   the addresses
-  foafos-stack open                   open Foafos in your browser
+  foafos-stack open                   open Foafos in your browser (macOS)
 
 Services: ${NAMES.join(' ')}. foafbot is optional, and starts only when named.
 Guide: docs/foafos-local-setup-20261104.md`;
@@ -511,7 +516,9 @@ function services(args, fallback) {
 const order = (list) => NAMES.filter((n) => list.includes(n));
 
 async function main([cmd = 'status', ...args]) {
-  if (!run('which', ['lsof']) && cmd !== 'help') { say(red('this tool needs lsof to see what is listening')); return 1; }
+  if (['help', '-h', '--help'].includes(cmd)) { say(HELP); return 0; }
+  if (cmd === 'urls') { urls(); return 0; }
+  if (!run('which', ['lsof'])) { say(red('this tool needs lsof to see what is listening')); return 1; }
   mkdirSync(STATE, { recursive: true, mode: 0o700 });
   mkdirSync(LOGS, { recursive: true, mode: 0o700 });
   mkdirSync(RUN, { recursive: true, mode: 0o700 });
@@ -548,11 +555,10 @@ async function main([cmd = 'status', ...args]) {
     case 'status': return status({ verbose: args.includes('-v'), json: args.includes('--json') });
     case 'logs': return logs(args);
     case 'doctor': return doctor();
-    case 'urls': urls(); return 0;
     case 'open': spawnSync('open', [`${SHELL_ORIGIN}${SHELL_PAGE}?root=office`]); return 0;
-    case 'help': case '-h': case '--help': say(HELP); return 0;
     default: say(red(`unknown command: ${cmd}`)); say(HELP); return 2;
   }
 }
 
-process.exit(await main(process.argv.slice(2)));
+// Not process.exit: that can cut off long output sent down a pipe. The servers are unref'd, so nothing keeps this alive.
+process.exitCode = await main(process.argv.slice(2));

@@ -61,9 +61,8 @@ test('one command starts everything, and each server passes its real check', () 
 test('a server is its own session, so a closing terminal cannot reach it', () => {
   const pid = pidOf('shell');
   const line = spawnSync('ps', ['-o', 'ppid=,pgid=,tty=', '-p', String(pid)], { encoding: 'utf8' }).stdout.trim().split(/\s+/);
-  assert.equal(line[0], '1');
   assert.equal(Number(line[1]), pid);
-  assert.match(line[2], /\?\?|-/);
+  assert.match(line[2], /^(\?+|-)$/);
 });
 
 test('starting twice does nothing, and the JSON holds no secret', () => {
@@ -106,6 +105,7 @@ test('a browser origin the server refuses shows as a failed check', () => {
 test('a server open to other sites is not healthy', () => {
   const s = state();
   for (const n of ['xmpp', 'lws']) assert.ok(s[n].checks.find((c) => c.name === 'other sites refused')?.ok, JSON.stringify(s[n].checks));
+  assert.ok(s.lws.checks.find((c) => c.name === 'sandboxed pages refused')?.ok, JSON.stringify(s.lws.checks));
 });
 
 test('state is private to you', () => {

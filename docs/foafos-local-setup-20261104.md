@@ -55,7 +55,7 @@ The checks:
 | Service | Checks |
 |---|---|
 | `xmpp` | Opens a real XMPP stream. Opens a WebSocket as the shell's origin, so a browser refusal shows here. Confirms another site is refused |
-| `lws` | Storage answers, sends the CORS header the shell needs, and does not allow other sites |
+| `lws` | Storage answers, sends the CORS header the shell needs, and does not allow other sites or sandboxed pages |
 | `sparql` | Runs a real `ASK` query |
 | `shell` | The page and `foafos-shell.js` load, and the CORS header sandboxed apps need is there |
 | `foafbot` | Holds a connection to the XMPP server. This does not prove it can reach Claude |
@@ -71,7 +71,7 @@ Status also says which folder, branch and commit the shell is serving, read from
 | `~/.foafos-stack/run/` | One record per server: pid, start time, command. A record with no live process is what `crashed` means |
 | `~/.foafos-stack/logs/` | One log per server. A log over 20 MB moves to `.log.1` at the next start |
 
-All settings are optional environment variables: `FOAFOS_STACK_HOME`, `FOAFOS_SHELL_ROOT` (the folder holding `glitchcan-minigam`; default `~/working/solid`, a full checkout of the default branch), `FOAFOS_SHELL_PORT`, `FOAFOS_XMPP_PORT`, `FOAFOS_XMPP_WS_PORT`, `FOAFOS_LWS_PORT`, `FOAFOS_SPARQL_PORT`, `FOAFOS_SPARQL_FILE`, `FOAFOS_XMPP_DIR`, `FOAFOS_XMPP_KEY`, `FOAFOS_LWS_DIR`, `FOAFOS_LWS_AUTH`, `FOAFOS_BOT_ACCOUNT` and `FOAFOS_START_WAIT`. Keep the same settings for `status` and `stop` as for `start`.
+All settings are optional environment variables: `FOAFOS_STACK_HOME`, `FOAFOS_SHELL_ROOT` (the folder holding `glitchcan-minigam`; default `~/working/solid`, a full checkout of the default branch), `FOAFOS_SHELL_PORT`, `FOAFOS_XMPP_PORT`, `FOAFOS_XMPP_WS_PORT`, `FOAFOS_LWS_PORT`, `FOAFOS_SPARQL_PORT`, `FOAFOS_SPARQL_FILE`, `FOAFOS_XMPP_DIR`, `FOAFOS_XMPP_KEY`, `FOAFOS_LWS_DIR`, `FOAFOS_LWS_AUTH`, `FOAFOS_BOT_ACCOUNT` and `FOAFOS_START_WAIT`. Keep the same settings for `status` and `stop` as for `start`. `FOAFOS_LWS_AUTH` is split on spaces, and shows in `status`, so keep paths simple and put no secret in it.
 
 It never touches a server it did not start. It tells you the pid instead.
 
