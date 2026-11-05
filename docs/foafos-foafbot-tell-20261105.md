@@ -145,7 +145,7 @@ So "not an owner" is tested by restarting the bot with another owner and asking 
 ## Test results, 2026-11-05
 
 - `test-foafbot-tell.py`: 14 of 14 pass.
-- `e2e-foafbot-tell.mjs` with `E2E_REAL_CLAUDE=1`: all 47 checks pass on the live stack. The real model was `claude-haiku-5-5`. It
+- `e2e-foafbot-tell.mjs` with `E2E_REAL_CLAUDE=1`: all 45 checks pass on the live stack. The real model was `claude-haiku-5-5`. It
   refused the room injection in words, and it sent the owner's direct-message request. The injection check proves little
   about the design: the stand-in model is the proof, because it obeys the injection every time.
 - Without the real model: repeated runs passed, except two runs that failed one check on the `not-live` log line. That line is
