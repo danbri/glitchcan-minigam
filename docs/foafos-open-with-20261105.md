@@ -49,6 +49,8 @@ Rules of a share:
 
 `handlers` and `openWith` are for apps with `wholePod`. Any app may call `shared`.
 
+An app needs its own pod grant before a share works: with no pod chosen for apps, it is refused. The share's write permission is fixed when it is made, so taking the opener's grant away later does not end it.
+
 ## Not solved yet
 
 - Choosing by more than type and extension, for example by the shape of RDF data.
@@ -57,3 +59,5 @@ Rules of a share:
 - Handing a file to an app that is already open.
 - Sharing a folder, or several files.
 - Binary files: pod verbs carry text.
+- An app giving a share up before its window closes.
+- An offer to a single-instance app, which has no new window to bind to.

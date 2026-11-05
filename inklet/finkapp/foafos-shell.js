@@ -370,7 +370,11 @@ function openWith(fromApp, { app, path, contentType }) {
   if (!handler || !scope) return { ok: false, reason: 'denied' };
   const write = handler.actions.includes('edit') && !!pods.scopeFor(fromApp, 'pod:write');
   const token = pods.offerShare(app, { pod: scope.pod, path, write });
-  if (FoafOS.launchApp(app)) return { ok: true };
+  const win = FoafOS.launchApp(app);
+  if (win) {
+    if (win.dataset?.instance) pods.bindOffer(token, win.dataset.instance);
+    return { ok: true };
+  }
   pods.cancelOffer(token);
   return { ok: false, reason: 'not-opened' };
 }

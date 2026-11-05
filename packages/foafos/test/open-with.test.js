@@ -110,11 +110,21 @@ test('an offer goes to one window of that app, once, and can be withdrawn', asyn
   assert.equal(pods.claimShare('other', 'w9'), null);
   assert.equal(pods.claimShare('notes', null), null);
   assert.equal(pods.claimShare('notes', 'w1').token, token);
+  assert.equal(pods.claimShare('notes', 'w1').token, token);   // a reloaded window keeps it
   assert.equal(pods.claimShare('notes', 'w2'), null);
   pods.cancelOffer(pods.offerShare('notes', { pod: 'device', path: 'work/a.txt' }));
   assert.equal(pods.claimShare('notes', 'w3'), null);
+  assert.equal(pods.claimShare('notes', undefined), null);
   assert.throws(() => pods.offerShare('notes', { pod: 'device', path: '../x' }));
   assert.throws(() => pods.offerShare('notes', { pod: 'nope', path: 'x' }));
+});
+
+test('an offer bound to a window goes to that window, not to another of the same app', async () => {
+  const pods = await setup();
+  const token = pods.offerShare('notes', { pod: 'device', path: 'work/a.txt' });
+  pods.bindOffer(token, 'w2');
+  assert.equal(pods.claimShare('notes', 'w1'), null);
+  assert.equal(pods.claimShare('notes', 'w2').token, token);
 });
 
 test('a stale save through a share is refused', async () => {

@@ -135,6 +135,17 @@ try {
       del: (await foaf.pod.delete('', { share })).reason,
     }), token);
     check(reach.via === 'edited in Notes' && reach.own === false && reach.del === 'denied', `the share reaches only that file (${JSON.stringify(reach)})`);
+    const md = await f.evaluate(async () => { await foaf.pod.put('kept.md', '# hi', { contentType: 'text/markdown' }); return (await foaf.pod.get('kept.md')).contentType; });
+    const switched = await editor.evaluate(async () => {
+      await window.__podnotes.save();
+      await foaf.pod.put('notes/mine.txt', 'my own note', { contentType: 'text/plain' });
+      await window.__podnotes.open('mine');
+      await window.__podnotes.save();
+      return { shared: window.__podnotes.state().shared, locked: document.getElementById('name').readOnly };
+    });
+    const still = await f.evaluate(() => foaf.pod.get('in-folder.txt'));
+    check(switched.shared === null && !switched.locked && still.body === 'edited in Notes', `picking a note leaves the shared file alone (${still.body})`);
+    check(/markdown/.test(md), `a Markdown file reports its type (${md})`);
     const before = await page.evaluate(() => FoafOS.pods.shares.size);
     await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => w.querySelector('iframe')?.src.includes('podnotes')).at(-1).querySelector('[aria-label^="Close"]').click());
     await page.waitForTimeout(500);

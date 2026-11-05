@@ -202,7 +202,9 @@
   // ── the third pane ─────────────────────────────────────────────────────
   const drawDetail = (...kids) => $('detail').replaceChildren(...kids);
 
+  let picking = 0;               // only the newest pick may draw
   async function pick(it) {
+    const mine = ++picking;
     $('panes').dataset.show = it ? 'detail' : 'items';
     if (!it) { picked = null; drawDetail(h('p', { class: 'detail-none' }, 'Pick a file to see it here.')); return; }
     const k = kindOf(it);
@@ -217,7 +219,14 @@
       return;
     }
     const r = await foaf.pod.get(it.path);
-    if (r.reason === 'not-text') { drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), await openWithBox(it.path, r.contentType), actions(backBtn)); return; }
+    if (mine !== picking) return;
+    if (r.reason === 'not-text') {
+      // Rename and Delete act on `picked`, and rename needs the file's text, so neither is offered here.
+      picked = null;
+      markPicked();
+      drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), await openWithBox(it.path, r.contentType), h('div', { class: 'detail-actions' }, backBtn));
+      return;
+    }
     if (!r.ok) { say(explain(r), true); drawDetail(head); return; }
     picked = { path: it.path, body: r.body, etag: r.etag, contentType: r.contentType || '', dirty: false };
     markPicked();
@@ -230,7 +239,9 @@
       on: { input: () => { picked.dirty = text.value !== picked.body; save.disabled = !picked.dirty; } } });
     const save = h('button', { class: 'tool tool-main', type: 'button', disabled: true, on: { click: () => saveFile(text.value, save) } }, 'Save');
     head.querySelector('p').textContent = `${k.name}, ${r.body.length.toLocaleString()} characters`;
-    drawDetail(head, h('div', { class: 'detail-body' }, text), await openWithBox(it.path, picked.contentType), actions(backBtn, save));
+    const offers = await openWithBox(it.path, picked.contentType);
+    if (mine !== picking) return;
+    drawDetail(head, h('div', { class: 'detail-body' }, text), offers, actions(backBtn, save));
   }
 
   // Apps that can open this file, each with its own comment: what a person or an

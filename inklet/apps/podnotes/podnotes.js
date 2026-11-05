@@ -32,7 +32,7 @@
   async function openShared() {
     const r = await foaf.pod.get('', { share: shared.token });
     if (!r.ok) { say(explain(r), true); return; }
-    current = { name: shared.name, etag: r.etag };
+    current = { name: shared.name, etag: r.etag, contentType: r.contentType };
     $('name').value = shared.name;
     $('text').value = r.body;
     showShared();
@@ -64,6 +64,8 @@
   }
 
   async function open(name) {
+    shared = null;        // a note from the list is not the file from Files
+    showShared();
     const r = await foaf.pod.get(`notes/${name}.txt`);
     if (!r.ok) { say(explain(r), true); return; }
     current = { name, etag: r.etag };
@@ -75,9 +77,11 @@
 
   async function save() {
     if (shared) {
-      const r = await foaf.pod.put('', $('text').value, { share: shared.token, contentType: 'text/plain; charset=utf-8', ...(current?.etag ? { etag: current.etag } : {}) });
+      // Keep the file's own type: a Markdown file stays Markdown.
+      const contentType = current?.contentType || 'text/plain; charset=utf-8';
+      const r = await foaf.pod.put('', $('text').value, { share: shared.token, contentType, ...(current?.etag ? { etag: current.etag } : {}) });
       if (!r.ok) { say(explain(r), true); return; }
-      current = { name: shared.name, etag: r.etag };
+      current = { name: shared.name, etag: r.etag, contentType };
       say(`Saved ${shared.name}.`);
       return;
     }

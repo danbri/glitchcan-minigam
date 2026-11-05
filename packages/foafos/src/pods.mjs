@@ -390,14 +390,23 @@ export class FoafPods {
     const clean = cleanPath(String(path ?? ''));
     if (clean === null || clean === '' || !this.pods.has(pod)) throw new Error('pods: a share needs a pod and a file path');
     const token = crypto.randomUUID();
-    this.offers.push({ token, appId, pod, path: clean, write: !!write, name: clean.split('/').pop(), holder: null });
+    this.offers.push({ token, appId, pod, path: clean, write: !!write, name: clean.split('/').pop(), holder: null, window: null });
     return token;
   }
 
-  /** The newest window of an app takes what was offered to it, or nothing. */
+  /** The shell has opened the window this offer is for: only that one may take it. */
+  bindOffer(token, window) {
+    const s = this.offers.find((x) => x.token === token);
+    if (s) s.window = window;
+  }
+
+  /** A window of an app takes what was offered to it, or nothing. */
   claimShare(appId, holder) {
-    const i = this.offers.findIndex((s) => s.appId === appId);
-    if (i < 0 || holder === null) return null;
+    if (holder == null) return null;
+    // A window that reloads asks again, and keeps what it had.
+    for (const s of this.shares.values()) if (s.appId === appId && s.holder === holder) return { token: s.token, name: s.name, write: s.write };
+    const i = this.offers.findIndex((s) => s.appId === appId && (s.window === null || s.window === holder));
+    if (i < 0) return null;
     const [s] = this.offers.splice(i, 1);
     s.holder = holder;
     this.shares.set(s.token, s);
