@@ -58,7 +58,7 @@ try {
   let f = await filesFrame(page);
   let s = await state(f);
   check(s.ids.includes('device') && s.ids.includes('browser'), `locations listed: ${s.ids.join(', ')}`);
-  check(/Where/.test(s.where) && /Needs/.test(s.where) && /Could lose it/.test(s.where), 'the current location says where it is, what it needs and what could lose it');
+  check(/Where/.test(s.where) && /Needs/.test(s.where) && /Encrypted/.test(s.where) && /Could lose it/.test(s.where), 'the current location says where it is, what it needs, whether it is encrypted and what could lose it');
   check(/memory only|encrypted/.test(s.where), 'the built-in pod says how it is kept');
 
   await f.evaluate(() => window.__files.useLocation('device'));

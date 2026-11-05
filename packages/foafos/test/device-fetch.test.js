@@ -186,10 +186,13 @@ test('every location says where it is, what it needs, and what could lose it', (
   ];
   for (const p of kinds) {
     const d = describeLocation({ id: 'x', status: 'online', ...p });
-    for (const k of ['where', 'needs', 'risk', 'icon', 'kind']) assert.ok(d[k], `${p.carriage} ${k}`);
+    for (const k of ['where', 'needs', 'encrypted', 'risk', 'icon', 'kind']) assert.ok(d[k], `${p.carriage} ${k}`);
     assert.equal(d.dev.carriage, p.carriage);
   }
   assert.equal(describeLocation({ id: 'x', status: 'online', ...kinds[0] }).finder, true);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[2] }).encrypted, /^Yes/);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[0] }).encrypted, /^Not by Foafos/);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[6] }).encrypted, /relay can read/);
   assert.equal(describeLocation({ id: 'x', status: 'online', ...kinds[1] }).finder, false);
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[3] }).risk, /loses them/);
   assert.equal(describeLocation({ id: 'x', status: 'needs-ok', ...kinds[0] }).statusText, 'Needs your OK');

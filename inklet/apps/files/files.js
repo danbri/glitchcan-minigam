@@ -126,7 +126,7 @@
     const row = (k, v) => [h('dt', {}, k), h('dd', {}, v)];
     box.replaceChildren(h('div', { class: 'where-head' }, h('h2', {}, `${l.icon} ${l.label}: ${l.statusText}`),
         h('button', { id: 'change-location', class: 'tool', type: 'button', on: { click: () => { $('panes').dataset.places = 'open'; } } }, 'Change')),
-      h('dl', {}, row('Where', l.where), row('Needs', l.needs), row('Could lose it', l.risk), l.detail ? row('Now', l.detail) : null),
+      h('dl', {}, row('Where', l.where), row('Needs', l.needs), row('Encrypted', l.encrypted), row('Could lose it', l.risk), l.detail ? row('Now', l.detail) : null),
       ...(l.status === 'needs-ok' ? [h('button', { class: 'tool tool-main', type: 'button', on: { click: () => useLocation(l.id) } }, 'Allow access')] : []),
       h('details', {}, h('summary', {}, 'For developers'), h('dl', {},
         row('Pod id', l.id), row('Carriage', l.dev.carriage), row('Base', l.dev.base),
