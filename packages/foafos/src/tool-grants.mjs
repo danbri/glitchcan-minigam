@@ -77,6 +77,16 @@ export class ToolGrants {
       && (g.level === 'all' || tool.readOnly === true || g.tools.includes(tool.name)));
   }
 
+  /**
+   * May this account send this action to this app? Stricter than `allows`: the
+   * action must be named in a grant for that app, so 'all' and '*' do not reach it.
+   */
+  allowsAction(caller, app, action) {
+    if (caller === PERSON) return true;
+    if (caller?.kind !== 'account') return false;
+    return this._grants.some((g) => g.caller === caller.id && (g.app === app.id || g.app === app.slug) && g.tools.includes(action));
+  }
+
   /** Add to what a caller may do. A grant never takes anything away: use revoke. */
   grant(caller, app, { level = 'look', tools = [] } = {}) {
     if (!validCaller(caller)) return { ok: false, reason: 'bad-caller' };

@@ -77,8 +77,8 @@ test('a lost connection tries again, and stopping cancels that', async () => {
 test('mirrored events become events, and other talk stays talk', async () => {
   const { chat, x } = connected();
   await chat.start();
-  const g = (nick, text) => x.onstanza(el('message', { from: `bus@rooms.localhost/${nick}`, type: 'groupchat' }, [el('body', { text })]));
-  g('foafos', 'app.spawn {"summary":"Notes started"}');
+  const g = (nick, text, ...more) => x.onstanza(el('message', { from: `bus@rooms.localhost/${nick}`, type: 'groupchat' }, [el('body', { text }), ...more]));
+  g('foafos', 'app.spawn {"summary":"Notes started"}', { ...el('x', {}), namespaceURI: 'urn:foafos:bus:0' });
   g('dan', 'app.spawn was fun');
   const [a, b] = chat.conversations.get('bus@rooms.localhost').messages;
   assert.equal(a.kind, 'event');

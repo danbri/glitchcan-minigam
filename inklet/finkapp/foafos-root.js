@@ -144,7 +144,7 @@ export const ROOTS = {
         { id: 'storyrunner', story: '/glitchcan-minigam/inklet/demos/apps/second-story.fink.js' },
       ],
     },
-    apps: ['sheets', 'storyrunner', 'playlist', 'channels', 'menubar'],
+    apps: ['sheets', 'storyrunner', 'playlist', 'channels', 'menubar', 'chat'],
   },
 };
 

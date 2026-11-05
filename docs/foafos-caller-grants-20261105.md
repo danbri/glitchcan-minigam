@@ -48,6 +48,12 @@ Rules the code keeps:
 
 The Codex work on 2026-11-04, `FoafControls`, had per-caller grants, but it was never committed and its clone in `/private/tmp` went in a reboot. This is a new build on `FoafTools`, not that code. It keeps what that work's independent review found to matter: authority comes from a verified source, never from fields the caller sends; it is checked on each call; and revoking reaches calls in flight. It does not include typed verbs for the app tree, the SPARQL worker, or the SDK reply check. A capture of `controls.mjs` from Codex's logs and the review are in `~/working/foafos-chat/recovered-codex-controls/`, outside the repo.
 
+## Actions
+
+`/tell APP ACTION` reaches an app's manifest `actions`. It is stricter than tools: the owner's `inbound` switch must be on, and
+a grant for that app must name that action. `all` and `*` do not reach it. See
+[foafos-bus-xmpp-20261105.md](foafos-bus-xmpp-20261105.md).
+
 ## Not done
 
 A grant has no expiry and no limit on arguments, so `go_to` allows any place. Per-resource limits belong with pods.

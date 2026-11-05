@@ -83,6 +83,12 @@ export function mountChat(root, { chat, tools, grants, run }) {
   const fRoom = h('input', { id: 'chat-room', type: 'text', spellcheck: false, autocomplete: 'off' });
   const fRoomDomain = h('input', { id: 'chat-room-domain', type: 'text', spellcheck: false, autocomplete: 'off' });
   const fMirror = h('textarea', { id: 'chat-mirror', rows: 3, spellcheck: false });
+  // These two apply at once, so that switching one off needs no reconnect.
+  const fMirrorApps = h('select', { id: 'chat-mirror-apps', on: { change: () => chat.configure({ mirrorApps: fMirrorApps.value }) } },
+    h('option', { value: 'off' }, 'Nothing'),
+    h('option', { value: 'topics' }, 'Only that they spoke'),
+    h('option', { value: 'data' }, 'What they said, with secrets removed'));
+  const fInbound = h('input', { id: 'chat-inbound', type: 'checkbox', on: { change: () => chat.configure({ inbound: fInbound.checked }) } });
   const row = (label, input, hint) => h('label', { class: 'fc-field' }, h('span', {}, label), input, hint ? h('small', {}, hint) : null);
   // Who may use the apps from outside this window. An account or a browser agent
   // can do nothing here until it is listed, and what is listed is all it can do.
@@ -139,6 +145,9 @@ export function mountChat(root, { chat, tools, grants, run }) {
     h('details', { class: 'fc-advanced' }, h('summary', {}, 'Advanced'),
       row('Your nickname', fNick), row('Activity room', fRoom), row('Rooms service', fRoomDomain, 'Leave empty to use rooms.DOMAIN'),
       row('Activity to share', fMirror, 'Topics sent to the activity room, separated by spaces'),
+      row('What apps say on the bus', fMirrorApps, 'Everyone in the activity room can read this'),
+      h('label', { class: 'fc-field' }, h('span', {}, 'Let allowed accounts send actions to apps'), fInbound,
+        h('small', {}, 'Each account also needs a grant that names the action, for example /grant me@localhost playlist pause')),
       grantsPanel),
     connectError,
     h('div', { class: 'fc-actions' }, connectBtn, backBtn, offBtn));
@@ -151,6 +160,8 @@ export function mountChat(root, { chat, tools, grants, run }) {
     fUrl.value = c.url; fDomain.value = c.domain; fUser.value = c.username || 'foafos';
     fNick.value = c.nick; fRoom.value = c.room; fRoomDomain.value = c.roomDomain;
     fMirror.value = c.mirror.join(' ');
+    fMirrorApps.value = c.mirrorApps;
+    fInbound.checked = c.inbound;
     drawForm();
   }
   function drawForm() {

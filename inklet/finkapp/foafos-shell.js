@@ -439,6 +439,7 @@ const runChatCommand = createChatCommands({
   chat, tools: appTools, bus,
   openApp: (id) => FoafOS.launchApp?.(id),
   findApp: (name) => { const n = String(name).trim().toLowerCase(); return APPS.find((a) => a.id === n || a.name.toLowerCase() === n) || null; },
+  deliver: (id, action, args, from) => FoafOS.deliverAction?.(id, action, args, from) === true,
 });
 FoafOS.chatCommand = runChatCommand;
 chat.onCommand = async (text, { from }) => {
@@ -3229,9 +3230,9 @@ function buildUI() {
     try { frame?.contentWindow?.postMessage(msg, '*'); } catch (err) { /* closed */ }
     return true;
   }
-  FoafOS.deliverAction = (id, action, args = {}) => {
+  FoafOS.deliverAction = (id, action, args = {}, from = null) => {
     const node = [...apps.nodes.values()].find((n) => n.appId === id);
-    return node ? deliverAction(node.id, appById(id), { action, args }) : false;
+    return node ? deliverAction(node.id, appById(id), { action, args, from }) : false;
   };
 
   // One-tap deep link: `?app=<id>` opens an app straight after boot, so a

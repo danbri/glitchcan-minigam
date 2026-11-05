@@ -1,5 +1,9 @@
 # FoafOS Chat: the bus room over XMPP (2026-11-03)
 
+**Update 2026-11-05:** `@factoidal/core` 0.30.0 is published, so built-in mode works. What sandboxed apps publish, redaction,
+the loop marker and actions from accounts are in [foafos-bus-xmpp-20261105.md](foafos-bus-xmpp-20261105.md). That document
+replaces item 5 of "How it works", the security note "Nothing from the room changes anything yet", and "Next" 1.
+
 ## Owner requests (2026-11-03, verbatim)
 
 > "so for the foafos information bus, ... can we echo it into a local MUC? MIX or GC3 server? and

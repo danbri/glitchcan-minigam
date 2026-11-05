@@ -62,6 +62,7 @@ There is no public Foafos XMPP server yet. One needs security work in Factoidal 
 |---|---|
 | Who may use app tools | [foafos-caller-grants-20261105.md](foafos-caller-grants-20261105.md) |
 | Chat | [foafos-chat-window-20261104.md](foafos-chat-window-20261104.md) |
+| The app bus over XMPP | [foafos-bus-xmpp-20261105.md](foafos-bus-xmpp-20261105.md) |
 | World tools for Moglob and Drift | [foafos-world-tools-20261104.md](foafos-world-tools-20261104.md) |
 | Pods | [foafos-pods-20261103.md](foafos-pods-20261103.md) |
 | Where a person's files live | [foafos-where-files-live-20261105.md](foafos-where-files-live-20261105.md) |

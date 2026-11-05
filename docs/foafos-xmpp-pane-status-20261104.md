@@ -67,6 +67,9 @@ Before that, check that the Chat session did not already apply the same Devices 
 
 ## Open points for the owner
 
+Update 2026-11-05: the app bus over XMPP is built on master, in the code the Chat session landed. See
+[foafos-bus-xmpp-20261105.md](foafos-bus-xmpp-20261105.md). That work decided none of the points below.
+
 1. Approve or refuse the Devices and mixer patch.
 2. Tell the Chat session about the staged work and the Chat controls patch, so that the work is not done twice.
 3. Decide whether to add a launcher command for `xmpp-serve` and Profanity. It is not built.

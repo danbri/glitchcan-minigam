@@ -1673,8 +1673,13 @@ root, manifest `apps/chat.jsonld`). Design and localhost setup: `docs/foafos-cha
 - **The grant-sync trap again:** `syncBrokerGrants` revokes secrets grants of anything that is not a
   live app node. `CHAT_OWNER` (`foafos.chat`) is exempt beside `POD_OWNER`; without it the server
   password is "denied". `e2e-powers` lists both as shell holders.
-- Only topics on the mirror list leave the shell; room messages come back as `net.xmpp.message`
-  and are NOT acted on. Control must arrive as an app-tree node with grants, never raw bus events.
+- Local events leave the shell only if on the mirror list; what apps publish leaves as `mirrorApps`
+  says (`off`, `topics` by default, `data`). All of it goes through `bus-mirror.mjs` (redaction, size).
+  Room messages come back as `net.xmpp.message` and are NOT acted on. A mirrored stanza carries
+  `<x xmlns="urn:foafos:bus:0"/>` and never goes back on the bus: keep that, or a mirror list of `*` loops.
+- Control: `/tell APP ACTION` by direct message, through `deliverAction`, never raw bus events. It needs
+  the owner's `inbound` switch and a grant that names the action. `docs/foafos-bus-xmpp-20261105.md`.
+- `e2e-bus-xmpp.mjs` runs against the live `foafos-stack` xmpp and shell, in a new room.
 - Test: `inklet/finkapp/test/e2e-chat.mjs` (built-in room, then a localhost Node server and an
   outside client). Needs a factoidal-core checkout with `xmpp/inpage.mjs` (`FACTOIDAL=`).
 - `packages/foafos/pod/test/e2e-shell.mjs` failed about one run in four until 2026-11-04. The

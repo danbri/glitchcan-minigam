@@ -3,12 +3,15 @@
 // The shell holds one XMPP connection and is an occupant of one MUC room
 // (XEP-0045), "the bus room". Bus events on the mirror list go into the room
 // as groupchat messages, so a person with an ordinary XMPP client (Gajim,
-// Dino, Conversations, Profanity) can watch the apps talk; what others say in
-// the room comes back onto the bus as `net.xmpp.message`, marked with source
-// `net.xmpp`. Nothing said in a room is acted on: its members are nicknames.
-// Commands come only by direct message, whose `from` the server stamps, from
-// an account `mayCommand` accepts, and they go to `onCommand`. The shell makes
-// that ToolGrants; `commandJids` is the old list, which it reads once and retires.
+// Dino, Conversations, Profanity) can watch the apps talk. What sandboxed apps
+// publish goes there too, as `mirrorApps` says. Everything is redacted first
+// (bus-mirror.mjs), and each mirrored stanza carries a marker, so it never
+// comes back onto the bus. What others say in the room comes onto the bus as
+// `net.xmpp.message`, marked with source `net.xmpp`. Nothing said in a room is
+// acted on: its members are nicknames. Commands come only by direct message,
+// whose `from` the server stamps, from an account `mayCommand` accepts, and they
+// go to `onCommand`. The shell makes that ToolGrants; `commandJids` is the old
+// list, which it reads once and retires. Design: docs/foafos-bus-xmpp-20261105.md.
 //
 // Beside the bus room the connection carries other rooms and direct
 // conversations, kept in `conversations` for the Chat window. Those are the
@@ -28,12 +31,15 @@
 //
 // Design and log: docs/foafos-chat-20261103.md.
 
+import { MIRROR_NS, neverMirrored, redact, cleanName, eventBody } from './bus-mirror.mjs';
+
 export const CHAT_OWNER = 'foafos.chat';
 const PASSWORD = 'chat.password';
 
 /** Bus topics that go into the room by default: what the apps do, not what they hold. */
 const OLD_MIRROR = ['app.spawn', 'app.close', 'audio.*', 'minigame.*', 'wm.mode', 'story.state', 'pods.status', 'chat.say'];
-export const DEFAULT_MIRROR = [...OLD_MIRROR, 'app.tools', 'tools.called'];
+const SECOND_MIRROR = [...OLD_MIRROR, 'app.tools', 'tools.called'];
+export const DEFAULT_MIRROR = [...SECOND_MIRROR, 'app.action', 'app.action.refused', 'chat.refused'];
 
 export const DEFAULT_CONFIG = Object.freeze({
   mode: 'builtin',
@@ -46,6 +52,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   roomDomain: '',          // '' = 'rooms.' + domain
   nick: 'foafos',
   mirror: DEFAULT_MIRROR,
+  mirrorApps: 'topics',    // what apps publish: 'off', 'topics' (no content), 'data' (redacted)
+  inbound: false,          // may granted accounts send actions to apps (/tell)?
   rooms: [],               // other rooms to rejoin, as bare JIDs
   commandJids: [],         // accounts whose direct messages may run commands
 });
@@ -57,6 +65,12 @@ const RETRY_MS = [1000, 2000, 5000, 10000, 30000];
 const NS_MUC_USER = 'http://jabber.org/protocol/muc#user';
 const NS_ITEMS = 'http://jabber.org/protocol/disco#items';
 const RATE = 20;            // mirrored events per second, at most
+const APP_RATE = 5;         // of those, from any one app
+const ROOM_IN_RATE = 20;    // room messages onto the bus per second, at most
+const COMMAND_RATE = 10;    // commands from one account in COMMAND_WINDOW
+const COMMAND_WINDOW = 10000;
+const MAX_COMMAND = 4096;   // characters of one command
+const NOTED = 256;          // accounts and apps the rate limits remember
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 const matches = (pattern, topic) => pattern === '*' || pattern === topic ||
@@ -94,7 +108,9 @@ export class FoafChat {
     this._x = null;
     this._server = null;
     this._unsub = null;
-    this._sent = [];
+    this._limits = new Map();
+    this._dropped = 0;
+    this._dropTimer = null;
     this._seq = 0;
     this._retry = 0;
     this._retryTimer = null;
@@ -105,7 +121,7 @@ export class FoafChat {
     try {
       const saved = JSON.parse(storage?.getItem(key) || 'null');
       if (saved && typeof saved === 'object') this.cfg = { ...DEFAULT_CONFIG, ...saved };
-      if (this.cfg.mirror.join(' ') === OLD_MIRROR.join(' ')) this.cfg.mirror = DEFAULT_MIRROR;
+      if ([OLD_MIRROR, SECOND_MIRROR].some((m) => this.cfg.mirror.join(' ') === m.join(' '))) this.cfg.mirror = DEFAULT_MIRROR;
     } catch { /* unreadable: defaults */ }
   }
 
@@ -114,6 +130,38 @@ export class FoafChat {
 
   /** Is this topic on the mirror list? */
   mirrors(topic) { return this.cfg.mirror.some((p) => matches(p, topic)); }
+
+  /**
+   * What the room may see of this event, or null. A local event must be on the
+   * mirror list. An app's own event was scope-checked when it was published, and
+   * `mirrorApps` says how much of it goes: 'topics' sends none of its content.
+   * Events from another tab or from the room itself never go.
+   */
+  publicEvent(e) {
+    if (typeof e?.topic !== 'string' || neverMirrored(e.topic)) return null;
+    const topic = cleanName(e.topic);
+    if (e.source === 'local') {
+      if (!this.mirrors(e.topic)) return null;
+      const data = redact(e.data);
+      return { topic, source: 'local', data, body: eventBody(topic, data, MAX_BODY) };
+    }
+    if (typeof e.source !== 'string' || !e.source.startsWith('guest:') || this.cfg.mirrorApps === 'off') return null;
+    const source = cleanName(e.source);
+    const data = this.cfg.mirrorApps === 'data' ? { from: source, data: redact(e.data) } : { from: source };
+    return { topic, source, data, body: eventBody(topic, data, MAX_BODY) };
+  }
+
+  /** At most `n` in the last `ms` for this key. */
+  _allow(key, n, ms) {
+    const now = Date.now();
+    const seen = (this._limits.get(key) || []).filter((t) => now - t < ms);
+    const ok = seen.length < n;
+    if (ok) seen.push(now);
+    this._limits.delete(key);
+    this._limits.set(key, seen);
+    if (this._limits.size > NOTED) this._limits.delete(this._limits.keys().next().value);
+    return ok;
+  }
 
   /** Be told when anything the Chat window shows has changed. */
   subscribe(fn) { this._listeners.add(fn); return () => this._listeners.delete(fn); }
@@ -131,6 +179,8 @@ export class FoafChat {
     }
     if (!/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(next.room) || !/^[^\s/@<>'"&]{1,64}$/.test(next.nick)) return { ok: false, reason: 'bad-name' };
     if (!Array.isArray(next.mirror) || next.mirror.some((t) => typeof t !== 'string')) return { ok: false, reason: 'bad-mirror' };
+    if (!['off', 'topics', 'data'].includes(next.mirrorApps)) return { ok: false, reason: 'bad-mirror' };
+    next.inbound = next.inbound === true;
     if (!Array.isArray(next.commandJids) || next.commandJids.some((j) => !/^[^\s@/]+@[^\s@/]+$/.test(j))) return { ok: false, reason: 'bad-jid' };
     this.cfg = next;
     this._save();
@@ -217,6 +267,7 @@ export class FoafChat {
 
   async _teardown() {
     this._unsub?.(); this._unsub = null;
+    clearTimeout(this._dropTimer); this._dropTimer = null; this._dropped = 0;
     const x = this._x;
     this._x = null;
     if (x) x.onclose = null;
@@ -317,8 +368,8 @@ export class FoafChat {
     return { ok: true };
   }
 
-  _groupchat(jid, body) {
-    this._x.send(`<message xmlns="jabber:client" to="${esc(jid)}" type="groupchat"><body>${esc(body)}</body></message>`);
+  _groupchat(jid, body, mark = '') {
+    this._x.send(`<message xmlns="jabber:client" to="${esc(jid)}" type="groupchat"><body>${esc(body)}</body>${mark}</message>`);
   }
 
   _direct(jid, body) {
@@ -326,15 +377,33 @@ export class FoafChat {
   }
 
   _mirror(e, room) {
-    if (!this._x || e.source !== 'local' || e.topic.startsWith('chat.status') || e.topic.startsWith('net.')) return;
-    if (!this.mirrors(e.topic)) return;
-    const now = Date.now();
-    this._sent = this._sent.filter((t) => now - t < 1000);
-    if (this._sent.length >= RATE) return;
-    this._sent.push(now);
-    let data = '';
-    try { data = JSON.stringify(e.data); } catch { data = '"(not serialisable)"'; }
-    this._groupchat(room, `${e.topic} ${data}`.slice(0, MAX_BODY));
+    if (!this._x) return;
+    const pub = this.publicEvent(e);
+    if (!pub) return;
+    if ((pub.source !== 'local' && !this._allow(`app ${pub.source}`, APP_RATE, 1000)) || !this._allow('mirror', RATE, 1000)) {
+      this._dropped++;
+      this._dropTimer ??= setTimeout(() => this._reportDropped(room), 1000);
+      return;
+    }
+    this._sendMirrored(room, pub.topic, pub.source, pub.body);
+  }
+
+  _sendMirrored(room, topic, source, body) {
+    this._groupchat(room, body, `<x xmlns="${MIRROR_NS}" topic="${esc(topic)}" source="${esc(source)}"/>`);
+  }
+
+  // Someone watching should know when the room shows less than happened.
+  _reportDropped(room) {
+    this._dropTimer = null;
+    const count = this._dropped;
+    this._dropped = 0;
+    if (count && this._x) this._sendMirrored(room, 'chat.dropped', 'local', eventBody('chat.dropped', { summary: `${count} events were not sent: too many at once`, count }, MAX_BODY));
+  }
+
+  /** Someone was refused. Announced once a second at most, and never with what they sent. */
+  _refused(from, reason) {
+    if (!this._allow(`refused ${from} ${reason}`, 1, 1000)) return;
+    this.bus?.publish('chat.refused', { summary: `${from} refused: ${reason}`, from, reason });
   }
 
   _stanza(el) {
@@ -369,35 +438,44 @@ export class FoafChat {
     const from = el.getAttribute('from') || '';
     const [bare, resource] = splitJid(from);
     const body = [...el.children].find((c) => c.localName === 'body')?.textContent ?? '';
+    const marked = [...el.children].some((c) => c.namespaceURI === MIRROR_NS);
     if (type === 'error') {
       const c = this.conversations.get(bare);
       if (c) this._push(c, { kind: 'notice', body: `That message was not delivered: ${errorCondition(el)}.` });
       return;
     }
     if (!body) return;
-    if (type === 'groupchat') this._roomMessage(bare, resource, body);
+    if (type === 'groupchat') this._roomMessage(bare, resource, body, marked);
+    else if (marked) return;   // mirrored traffic is never a command
     else if (!resource || !this.conversations.get(bare) || this.conversations.get(bare).kind === 'direct') this._directMessage(bare, body);
     else this._push(this.conversations.get(bare), { kind: 'message', nick: resource, body, private: true });
   }
 
-  _roomMessage(jid, nick, body) {
+  // Only a marked stanza is an event. Anyone can type text that looks like one,
+  // and anyone can add the marker, which only keeps their words off the bus.
+  _roomMessage(jid, nick, text, marked) {
     const c = this.conversations.get(jid);
     if (!c || !nick) return;
     const self = nick === c.nick;
-    const event = c.bus ? parseEvent(body) : null;
+    const body = text.slice(0, MAX_BODY);
+    const event = c.bus && marked ? parseEvent(body) : null;
     this._push(c, event ? { kind: 'event', nick, self, ...event } : { kind: 'message', nick, body, self });
     if (!c.bus) return;
     this.log.push({ ts: Date.now(), nick, body, self });
     if (this.log.length > 200) this.log.shift();
-    this.bus.publish('chat.message', { nick, body, self });
+    if (marked || !this._allow('room in', ROOM_IN_RATE, 1000)) return;
+    this.bus.publish('chat.message', { nick, body, self }, { source: 'net.xmpp' });
     if (!self) this.bus.publish('net.xmpp.message', { summary: `${nick}: ${body.slice(0, 80)}`, room: jid, nick, body }, { source: 'net.xmpp' });
   }
 
   async _directMessage(jid, body) {
     const c = this._conversation(jid, 'direct');
-    this._push(c, { kind: 'message', nick: jid.split('@')[0], body, self: false });
+    this._push(c, { kind: 'message', nick: jid.split('@')[0], body: body.slice(0, MAX_BODY), self: false });
+    if (!body.startsWith('/') || !this.onCommand) return;
     const may = this.mayCommand ? this.mayCommand(jid) : this.cfg.commandJids.includes(jid);
-    if (!body.startsWith('/') || !this.onCommand || !may) return;
+    if (!may) { this._refused(jid, 'no-grant'); return; }
+    if (!this._allow(`command ${jid}`, COMMAND_RATE, COMMAND_WINDOW)) { this._refused(jid, 'too-fast'); return; }
+    if (body.length > MAX_COMMAND) { this._refused(jid, 'too-large'); return; }
     let reply;
     try { reply = await this.onCommand(body, { from: jid }); } catch (e) { reply = `That failed: ${e.message}`; }
     if (!reply || !this._x) return;
