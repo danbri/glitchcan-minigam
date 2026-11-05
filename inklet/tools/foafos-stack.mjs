@@ -557,7 +557,7 @@ function doctor() {
 
 function urls() {
   say(`Moglob   ${SHELL_ORIGIN}${SHELL_PAGE}?app=docklands`);
-  say(`Office   ${SHELL_ORIGIN}${SHELL_PAGE}?root=office`);
+  say(`All apps ${SHELL_ORIGIN}${SHELL_PAGE}?root=all`);
   say(`Drift    ${SHELL_ORIGIN}${SHELL_PAGE}?app=drift`);
   say(`XMPP     ws://127.0.0.1:${C.wsPort}/xmpp-websocket  (TCP 127.0.0.1:${C.xmppPort}, room bus@rooms.localhost)`);
   say(`LWS      http://127.0.0.1:${C.lwsPort}/`);
@@ -632,7 +632,7 @@ async function main([cmd = 'status', ...args]) {
     case 'logs': return logs(args);
     case 'chat': return spawnSync('python3', [join(HERE, 'xmpp-chat.py'), ...args], { stdio: 'inherit' }).status ?? 1;
     case 'doctor': return doctor();
-    case 'open': spawnSync('open', [`${SHELL_ORIGIN}${SHELL_PAGE}?root=office`]); return 0;
+    case 'open': spawnSync('open', [`${SHELL_ORIGIN}${SHELL_PAGE}?root=all`]); return 0;
     default: say(red(`unknown command: ${cmd}`)); say(HELP); return 2;
   }
 }

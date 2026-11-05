@@ -114,9 +114,12 @@ try {
 
   const camera = () => page.evaluate(async () => { const r = await FoafOS.chatCommand('/call moglob get_view'); return r.value?.target ? [r.value.target.lon, r.value.target.lat].map((n) => +n.toFixed(3)) : null; });
   const before = await camera();
-  const human = outside([`me@${DOMAIN}`, account('me'), `bus@rooms.${DOMAIN}`, `person-${Date.now() % 100000}`, '9', `dm:foafos@${DOMAIN}:/go Tower Bridge`]);
-  await page.waitForTimeout(3000);
-  await page.evaluate(() => FoafOS.bus.publish('app.spawn', { summary: 'activity the room can see', id: 'x', appId: 'goal' }));
+  const human = outside([`me@${DOMAIN}`, account('me'), `bus@rooms.${DOMAIN}`, `person-${Date.now() % 100000}`, '12', `dm:foafos@${DOMAIN}:/go Tower Bridge`]);
+  // Activity over several seconds, so a client that joins slowly still sees some.
+  for (let i = 0; i < 6; i++) {
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => FoafOS.bus.publish('app.spawn', { summary: 'activity the room can see', id: 'x', appId: 'goal' }));
+  }
   const seen = await human;
   await page.waitForTimeout(1500);
   const moved = await camera();

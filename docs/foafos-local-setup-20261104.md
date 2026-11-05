@@ -21,7 +21,7 @@ foafos-stack start     # xmpp, lws, sparql and shell, then a full status
 foafos-stack stop      # everything this tool started
 ```
 
-Then open <http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=office>.
+Then open <http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all>.
 
 The servers run detached from any terminal, so closing a tab cannot stop them. They do not come back after a reboot: run `foafos-stack start` again.
 
@@ -102,11 +102,10 @@ factoidal serve --file data.ttl /ds --port 3030
 cd ~/working/solid && python3 serve-foafos.py 8080
 ```
 
-Open: <http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=office>
+Open: <http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all>
 
 Use `localhost`, not `127.0.0.1`: the XMPP server only accepts the WebSocket
-from the origins listed in `--ws-origin`. The Chat window's manifest is under
-the office root, which is why the URL has `?root=office`.
+from the origins listed in `--ws-origin`. `?root=all` offers every app; other roots offer a chosen few.
 
 ### One-time XMPP setup (already done)
 

@@ -457,7 +457,8 @@ bus.subscribe('app.close', (e) => pods.endShares(e.data?.closed || []));
 
 const runChatCommand = createChatCommands({
   chat, tools: appTools, bus,
-  openApp: (id) => FoafOS.launchApp?.(id),
+  // A stage app opens and returns nothing, so what counts is whether this installation offers it.
+  openApp: (id) => { if (!rootOffers(ROOT, id)) return false; FoafOS.launchApp?.(id); return true; },
   findApp: (name) => { const n = String(name).trim().toLowerCase(); return APPS.find((a) => a.id === n || a.name.toLowerCase() === n) || null; },
   deliver: (id, action, args, from) => FoafOS.deliverAction?.(id, action, args, from) === true,
 });
