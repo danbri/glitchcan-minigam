@@ -320,6 +320,11 @@
       locations: () => reqVerb({ type: 'pod', verb: 'pod.locations' }),
       use: (id) => reqVerb({ type: 'pod', verb: 'pod.use', params: { id } }, 120000),
       addFolder: () => reqVerb({ type: 'pod', verb: 'pod.addFolder' }, 120000),
+      handlers: (path, contentType) => reqVerb({ type: 'pod', verb: 'pod.handlers', params: { path, contentType } }),
+      openWith: (app, path, contentType) => reqVerb({ type: 'pod', verb: 'pod.openWith', params: { app, path, contentType } }),
+      // Any app: was this window opened on a file? Then { share: { token, name, write } }.
+      // Read and write it with foaf.pod.get('', { share: token }) and foaf.pod.put('', body, { share: token }).
+      shared: () => reqVerb({ type: 'pod', verb: 'pod.shared' }),
     },
 
     /**

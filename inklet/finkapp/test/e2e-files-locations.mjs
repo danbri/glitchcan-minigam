@@ -106,6 +106,80 @@ try {
   s = await state(f);
   check(s.current?.startsWith('folder-') && s.items.includes('in-folder.txt'), `the folder comes back after a reload (${s.items.join(', ')})`);
 
+  // Open with: Notes gets this one file, in this one window, and nothing else.
+  await f.evaluate(() => foaf.pod.put('other.txt', 'not shared', { contentType: 'text/plain' }));
+  await f.evaluate(() => window.__files.pick({ path: 'in-folder.txt' }));
+  await f.waitForSelector('.open-with button', { timeout: 8000 });
+  const offer = await f.evaluate(() => ({ button: document.querySelector('.open-with button').textContent, comment: document.querySelector('.open-with-comment')?.textContent }));
+  check(offer.button === 'Open in Notes' && /Markdown opens as its source/.test(offer.comment || ''), `Files offers Notes, with its comment (${offer.button})`);
+  await f.click('.open-with button');
+  let editor = null;
+  for (let i = 0; i < 40 && !editor; i++) {
+    for (const x of page.frames()) if (/apps\/podnotes\//.test(x.url()) && await x.evaluate(() => !!window.__podnotes?.state().shared).catch(() => false)) editor = x;
+    if (!editor) await page.waitForTimeout(200);
+  }
+  check(!!editor, 'Notes opens on the file');
+  if (editor) {
+    const opened = await editor.evaluate(() => ({ text: document.getElementById('text').value, name: document.getElementById('name').value, locked: document.getElementById('name').readOnly }));
+    check(opened.text === 'hi' && opened.name === 'in-folder.txt' && opened.locked, `Notes shows the file (${JSON.stringify(opened)})`);
+    const token = await editor.evaluate(async () => {
+      document.getElementById('text').value = 'edited in Notes';
+      await window.__podnotes.save();
+      return window.__podnotes.state().shared.token;
+    });
+    const saved = await f.evaluate(() => foaf.pod.get('in-folder.txt'));
+    check(saved.body === 'edited in Notes', `saving in Notes writes the file in the folder (${saved.body})`);
+    const reach = await editor.evaluate(async (share) => ({
+      via: (await foaf.pod.get('other.txt', { share })).body,
+      own: (await foaf.pod.get('../../other.txt')).ok,
+      del: (await foaf.pod.delete('', { share })).reason,
+    }), token);
+    check(reach.via === 'edited in Notes' && reach.own === false && reach.del === 'denied', `the share reaches only that file (${JSON.stringify(reach)})`);
+    const failedLoad = await editor.evaluate(async () => {
+      const get = foaf.pod.get;
+      foaf.pod.get = async () => ({ ok: false, reason: 'offline' });
+      document.getElementById('reload').click();
+      await new Promise((r) => setTimeout(r, 200));
+      foaf.pod.get = get;
+      const out = { save: document.getElementById('save').disabled, text: document.getElementById('text').readOnly };
+      document.getElementById('reload').click();
+      await new Promise((r) => setTimeout(r, 300));
+      return { ...out, back: !document.getElementById('save').disabled };
+    });
+    check(failedLoad.save && failedLoad.text && failedLoad.back, `a shared file that fails to load cannot be saved over (${JSON.stringify(failedLoad)})`);
+    const md = await f.evaluate(async () => { await foaf.pod.put('kept.md', '# hi', { contentType: 'text/markdown' }); return (await foaf.pod.get('kept.md')).contentType; });
+    const switched = await editor.evaluate(async () => {
+      await window.__podnotes.save();
+      await foaf.pod.put('notes/mine.txt', 'my own note', { contentType: 'text/plain' });
+      await window.__podnotes.open('mine');
+      await window.__podnotes.save();
+      return { shared: window.__podnotes.state().shared, locked: document.getElementById('name').readOnly };
+    });
+    const still = await f.evaluate(() => foaf.pod.get('in-folder.txt'));
+    check(switched.shared === null && !switched.locked && still.body === 'edited in Notes', `picking a note leaves the shared file alone (${still.body})`);
+    check(/markdown/.test(md), `a Markdown file reports its type (${md})`);
+    await f.evaluate(() => window.__files.pick({ path: 'kept.md' }));
+    await f.waitForFunction(() => /kept\.md/.test(document.querySelector('.detail-head')?.textContent || '') && !!document.querySelector('.open-with button'), null, { timeout: 8000 });
+    await f.evaluate(() => document.querySelector('.open-with button').click());   // Notes' first window may cover Files here
+    let mdEditor = null;
+    for (let i = 0; i < 40 && !mdEditor; i++) {
+      for (const x of page.frames()) if (/apps\/podnotes\//.test(x.url()) && await x.evaluate(() => window.__podnotes?.state().shared?.name === 'kept.md').catch(() => false)) mdEditor = x;
+      if (!mdEditor) await page.waitForTimeout(200);
+    }
+    await mdEditor.evaluate(async () => { document.getElementById('text').value = '# edited'; await window.__podnotes.save(); });
+    const kept = await f.evaluate(() => foaf.pod.get('kept.md'));
+    check(kept.body === '# edited' && /markdown/.test(kept.contentType), `saving in Notes keeps the file's type (${kept.contentType})`);
+    await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => w.querySelector('iframe')?.src.includes('podnotes')).at(-1).querySelector('[aria-label^="Close"]').click());
+    await page.waitForTimeout(400);
+    const before = await page.evaluate(() => FoafOS.pods.shares.size);
+    await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => w.querySelector('iframe')?.src.includes('podnotes')).at(-1).querySelector('[aria-label^="Close"]').click());
+    await page.waitForTimeout(500);
+    const after = await page.evaluate(() => FoafOS.pods.shares.size);
+    check(before === 1 && after === 0, `closing the window ends the share (${before} then ${after})`);
+  }
+  const notText = await f.evaluate(() => foaf.pod.openWith('podnotes', 'photo.png', 'image/png'));
+  check(notText.reason === 'denied', `an app is not opened on a file it does not handle (${notText.reason})`);
+
   const denied = await page.evaluate(async () => {
     await FoafOS.launchApp('podnotes');
     return true;

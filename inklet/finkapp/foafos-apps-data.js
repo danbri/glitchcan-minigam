@@ -562,7 +562,25 @@ export const APPS = [
       "pod:read",
       "pod:write"
     ],
-    "silent": true
+    "silent": true,
+    "handles": [
+      {
+        "types": [
+          "text/plain",
+          "text/markdown"
+        ],
+        "extensions": [
+          "txt",
+          "md",
+          "text"
+        ],
+        "actions": [
+          "view",
+          "edit"
+        ],
+        "comment": "A plain text editor. Markdown opens as its source, with no preview. Pod verbs carry at most 1 MiB, so very large logs will not open."
+      }
+    ]
   },
   {
     "id": "docklands",

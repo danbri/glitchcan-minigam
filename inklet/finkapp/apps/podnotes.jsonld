@@ -17,7 +17,27 @@
     "pod:write"
   ],
   "silent": true,
+  "handles": [
+    {
+      "types": [
+        "text/plain",
+        "text/markdown"
+      ],
+      "extensions": [
+        "txt",
+        "md",
+        "text"
+      ],
+      "actions": [
+        "view",
+        "edit"
+      ],
+      "comment": "A plain text editor. Markdown opens as its source, with no preview. Pod verbs carry at most 1 MiB, so very large logs will not open."
+    }
+  ],
   "notes": [
-    "The first caller of the pod verbs (foaf.pod.get/list/put/delete in inklet/apps/app-sdk.js). It reaches only apps/podnotes/ in the pod the person marked \"apps use this\" in the Pods panel, and never sees the pod's address or password. Saves send the ETag it read, so a note changed elsewhere is not overwritten."
+    "The first caller of the pod verbs (foaf.pod.get/list/put/delete in inklet/apps/app-sdk.js). It reaches only apps/podnotes/ in the pod the person marked \"apps use this\" in the Pods panel, and never sees the pod's address or password. Saves send the ETag it read, so a note changed elsewhere is not overwritten.",
+    "handles: exploring, and may change. docs/foafos-open-with-20261105.md.",
+    "Beyond its own container, a window can hold one file the shell shared with it."
   ]
 }

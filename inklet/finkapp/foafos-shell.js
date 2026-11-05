@@ -15,7 +15,7 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
-  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, describeLocation, CHAT_OWNER,
+  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, describeLocation, handlersFor, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { FoafTools } from '../../packages/foafos/src/tools.mjs';
 import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
@@ -340,7 +340,7 @@ if (typeof navigator.storage?.getDirectory === 'function' && !audioStore?.getIte
     audioStore?.setItem('foafos.deviceAdded', '1');
   } catch (e) { bus.publish('pods.refused', { summary: `no device location: ${e.message}`, reason: 'bad-record' }); }
 }
-const LOCATION_VERBS = new Set(['pod.locations', 'pod.use', 'pod.addFolder']);
+const LOCATION_VERBS = new Set(['pod.locations', 'pod.use', 'pod.addFolder', 'pod.handlers', 'pod.openWith']);
 const locationKey = (appId) => `foafos.location.${appId}`;
 function chosenLocation(appId, fallback) {
   try { const id = audioStore?.getItem(locationKey(appId)); if (id && pods.get(id)) return id; } catch { /* blocked */ }
@@ -361,8 +361,27 @@ async function useLocation(appId, id) {
   const status = pods.status(id);
   return { ...locationsFor(appId), ok: status === 'online', reason: status === 'online' ? undefined : status };
 }
-async function locationVerb(appId, verb, { id }) {
+// Open with (exploring): docs/foafos-open-with-20261105.md. Only an app that may
+// use the pod, in this installation, is offered; the person chooses.
+const fileHandlers = (file) => handlersFor(APPS.filter((a) => rootOffers(ROOT, a.id) && (a.capabilities || []).includes('pod:read')), file);
+function openWith(fromApp, { app, path, contentType }) {
+  const handler = fileHandlers({ path, contentType }).find((h) => h.appId === app);
+  const scope = pods.scopeFor(fromApp, 'pod:read');
+  if (!handler || !scope) return { ok: false, reason: 'denied' };
+  const write = handler.actions.includes('edit') && !!pods.scopeFor(fromApp, 'pod:write');
+  const token = pods.offerShare(app, { pod: scope.pod, path, write });
+  const win = FoafOS.launchApp(app);
+  if (win) {
+    if (win.dataset?.instance) pods.bindOffer(token, win.dataset.instance);
+    return { ok: true };
+  }
+  pods.cancelOffer(token);
+  return { ok: false, reason: 'not-opened' };
+}
+async function locationVerb(appId, verb, { id, app, path, contentType }) {
   if (verb === 'pod.locations') return locationsFor(appId);
+  if (verb === 'pod.handlers') return { ok: true, handlers: fileHandlers({ path, contentType }) };
+  if (verb === 'pod.openWith') return openWith(appId, { app: String(app), path: String(path ?? ''), contentType });
   if (verb === 'pod.use') return useLocation(appId, String(id));
   let handle;
   try { handle = await window.showDirectoryPicker({ id: 'foafos-files', mode: 'readwrite' }); }
@@ -434,6 +453,7 @@ window.addEventListener('message', (e) => {
   appTools.receive(p, d);
 });
 for (const t of ['app.close', 'minigame.instance']) bus.subscribe(t, () => setTimeout(() => appTools.prune(), 0));
+bus.subscribe('app.close', (e) => pods.endShares(e.data?.closed || []));
 
 const runChatCommand = createChatCommands({
   chat, tools: appTools, bus,
@@ -3993,12 +4013,13 @@ function buildUI() {
           locationVerb(app.id, d.verb, d.params || {}).then(reply, () => reply({ ok: false, reason: 'failed' }));
           return;
         }
+        if (d.verb === 'pod.shared') { reply({ ok: true, share: pods.claimShare(app.id, nodeId) }); return; }
         const need = POD_VERBS[d.verb];
         if (!need) { reply({ ok: false, reason: 'unknown-verb' }); return; }
         tallyCap(app.id, need);
         if (!holds(need)) { refuseAtNode('pods', need, d.verb); reply({ ok: false, reason: 'denied' }); return; }
         if (!pods.scopeFor(app.id, need)) { reply({ ok: false, reason: 'no-pod' }); return; }
-        pods.invoke(app.id, d.verb, d.params || {}).then(reply);
+        pods.invoke(app.id, d.verb, d.params || {}, { holder: nodeId }).then(reply);
         return;
       }
       if (d.type === 'verb') {

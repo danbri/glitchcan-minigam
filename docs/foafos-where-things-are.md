@@ -66,4 +66,5 @@ There is no public Foafos XMPP server yet. One needs security work in Factoidal 
 | World tools for Moglob and Drift | [foafos-world-tools-20261104.md](foafos-world-tools-20261104.md) |
 | Pods | [foafos-pods-20261103.md](foafos-pods-20261103.md) |
 | Where a person's files live | [foafos-where-files-live-20261105.md](foafos-where-files-live-20261105.md) |
+| Opening a file with another app (exploring) | [foafos-open-with-20261105.md](foafos-open-with-20261105.md) |
 | Lost Codex controls work | [archive/codex-controls-20261104/](archive/codex-controls-20261104/README.md) |
