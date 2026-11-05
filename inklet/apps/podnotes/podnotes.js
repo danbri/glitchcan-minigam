@@ -31,7 +31,13 @@
 
   async function openShared() {
     const r = await foaf.pod.get('', { share: shared.token });
-    if (!r.ok) { say(explain(r), true); return; }
+    if (!r.ok) {
+      // Nothing was loaded, so nothing may be saved over the file.
+      $('save').disabled = true;
+      $('text').readOnly = true;
+      say(explain(r), true);
+      return;
+    }
     current = { name: shared.name, etag: r.etag, contentType: r.contentType };
     $('name').value = shared.name;
     $('text').value = r.body;

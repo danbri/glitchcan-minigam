@@ -135,6 +135,18 @@ try {
       del: (await foaf.pod.delete('', { share })).reason,
     }), token);
     check(reach.via === 'edited in Notes' && reach.own === false && reach.del === 'denied', `the share reaches only that file (${JSON.stringify(reach)})`);
+    const failedLoad = await editor.evaluate(async () => {
+      const get = foaf.pod.get;
+      foaf.pod.get = async () => ({ ok: false, reason: 'offline' });
+      document.getElementById('reload').click();
+      await new Promise((r) => setTimeout(r, 200));
+      foaf.pod.get = get;
+      const out = { save: document.getElementById('save').disabled, text: document.getElementById('text').readOnly };
+      document.getElementById('reload').click();
+      await new Promise((r) => setTimeout(r, 300));
+      return { ...out, back: !document.getElementById('save').disabled };
+    });
+    check(failedLoad.save && failedLoad.text && failedLoad.back, `a shared file that fails to load cannot be saved over (${JSON.stringify(failedLoad)})`);
     const md = await f.evaluate(async () => { await foaf.pod.put('kept.md', '# hi', { contentType: 'text/markdown' }); return (await foaf.pod.get('kept.md')).contentType; });
     const switched = await editor.evaluate(async () => {
       await window.__podnotes.save();
