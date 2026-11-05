@@ -7,7 +7,8 @@
 // the room comes back onto the bus as `net.xmpp.message`, marked with source
 // `net.xmpp`. Nothing said in a room is acted on: its members are nicknames.
 // Commands come only by direct message, whose `from` the server stamps, from
-// an account on the `commandJids` list, and they go to `onCommand`.
+// an account `mayCommand` accepts, and they go to `onCommand`. The shell makes
+// that ToolGrants; `commandJids` is the old list, which it reads once and retires.
 //
 // Beside the bus room the connection carries other rooms and direct
 // conversations, kept in `conversations` for the Chat window. Those are the
@@ -98,6 +99,7 @@ export class FoafChat {
     this._retry = 0;
     this._retryTimer = null;
     this._wanted = false;     // the person wants this connected
+    this.mayCommand = null;   // (jid) => boolean; null: the commandJids list
     secrets?.grant?.(CHAT_OWNER, ['secrets']);
     this.cfg = { ...DEFAULT_CONFIG };
     try {
@@ -394,7 +396,8 @@ export class FoafChat {
   async _directMessage(jid, body) {
     const c = this._conversation(jid, 'direct');
     this._push(c, { kind: 'message', nick: jid.split('@')[0], body, self: false });
-    if (!body.startsWith('/') || !this.onCommand || !this.cfg.commandJids.includes(jid)) return;
+    const may = this.mayCommand ? this.mayCommand(jid) : this.cfg.commandJids.includes(jid);
+    if (!body.startsWith('/') || !this.onCommand || !may) return;
     let reply;
     try { reply = await this.onCommand(body, { from: jid }); } catch (e) { reply = `That failed: ${e.message}`; }
     if (!reply || !this._x) return;

@@ -5,6 +5,8 @@
 // comes through textContent, so nothing said in a room can become markup.
 // Design and log: docs/foafos-chat-window-20261104.md.
 
+import { describeGrant } from '../../packages/foafos/src/tool-grants.mjs';
+
 const h = (tag, props = {}, ...kids) => {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) {
@@ -51,7 +53,7 @@ const glyphFor = (topic) => {
   return '·';
 };
 
-export function mountChat(root, { chat, tools, run }) {
+export function mountChat(root, { chat, tools, grants, run }) {
   let current = null;                 // the open conversation's jid
   let view = 'connect';
   let settingsByHand = false;         // the person opened the connect screen themselves
@@ -81,8 +83,45 @@ export function mountChat(root, { chat, tools, run }) {
   const fRoom = h('input', { id: 'chat-room', type: 'text', spellcheck: false, autocomplete: 'off' });
   const fRoomDomain = h('input', { id: 'chat-room-domain', type: 'text', spellcheck: false, autocomplete: 'off' });
   const fMirror = h('textarea', { id: 'chat-mirror', rows: 3, spellcheck: false });
-  const fCommands = h('input', { id: 'chat-commands', type: 'text', spellcheck: false, autocomplete: 'off', placeholder: 'me@localhost' });
   const row = (label, input, hint) => h('label', { class: 'fc-field' }, h('span', {}, label), input, hint ? h('small', {}, hint) : null);
+  // Who may use the apps from outside this window. An account or a browser agent
+  // can do nothing here until it is listed, and what is listed is all it can do.
+  const grantList = h('ul', { class: 'fc-grants' });
+  const gWho = h('input', { id: 'chat-grant-who', type: 'text', spellcheck: false, autocomplete: 'off', placeholder: 'foafbot@localhost', 'aria-label': 'Account' });
+  const gApp = h('select', { id: 'chat-grant-app', 'aria-label': 'App' });
+  const gWhat = h('input', { id: 'chat-grant-what', type: 'text', spellcheck: false, autocomplete: 'off', placeholder: 'go_to', 'aria-label': 'Tools it may use as well as looking' });
+  const gAll = h('input', { id: 'chat-grant-all', type: 'checkbox' });
+  const gError = h('p', { class: 'fc-error', role: 'alert' });
+  const appName = (id) => (id === '*' ? 'Every app' : id === 'shell' ? 'Opening apps, activity' : tools.list().find((a) => a.id === id)?.label || id);
+  const whoName = (id) => (id === 'browser-agent' ? 'Browser agent' : id);
+  function drawGrants() {
+    grantList.replaceChildren(...grants.list().map((g) => h('li', {},
+      h('span', { class: 'fc-grant-who' }, whoName(g.caller)),
+      h('span', {}, `${appName(g.app)}: ${describeGrant(g)}`),
+      h('button', { type: 'button', class: 'fc-quiet', 'aria-label': `Take back ${appName(g.app)} from ${whoName(g.caller)}`, on: { click: () => grants.revoke(g.caller, g.app) } }, 'Take back'))));
+    if (!grantList.children.length) grantList.append(h('li', { class: 'fc-muted' }, 'Nobody else can use your apps.'));
+    const picked = gApp.value;
+    gApp.replaceChildren(...['*', ...tools.list().map((a) => a.id), 'shell'].map((id) => h('option', { value: id }, appName(id))));
+    if ([...gApp.options].some((o) => o.value === picked)) gApp.value = picked;
+  }
+  function addGrant() {
+    const who = gWho.value.trim();
+    const r = grants.grant(who === 'agent' ? 'browser-agent' : who, gApp.value, { level: gAll.checked ? 'all' : 'look', tools: gWhat.value.split(/[\s,]+/).filter(Boolean) });
+    gError.textContent = r.ok ? '' : { 'bad-caller': 'Enter an account such as foafbot@localhost, or agent for a browser agent.', 'bad-tool': 'Tool names are single words, such as go_to.' }[r.reason] || `Refused: ${r.reason}`;
+    if (r.ok) { gWho.value = ''; gWhat.value = ''; gAll.checked = false; }
+  }
+  const onEnter = (e) => { if (e.key === 'Enter') { e.preventDefault(); addGrant(); } };
+  gWho.addEventListener('keydown', onEnter);
+  gWhat.addEventListener('keydown', onEnter);
+  const grantsPanel = h('div', { class: 'fc-field', id: 'chat-grants' },
+    h('span', {}, 'Who may use your apps'),
+    h('small', {}, 'Accounts that message this shell, and browser agents. Looking changes nothing. Add tools by name, or tick Everything.'),
+    grantList,
+    h('div', { class: 'fc-grant-add' }, gWho, gApp, gWhat,
+      h('label', { class: 'fc-grant-all' }, gAll, 'Everything'),
+      h('button', { type: 'button', id: 'chat-grant-add', class: 'fc-primary', on: { click: addGrant } }, 'Allow')),
+    gError);
+  drawGrants();
   const passRow = row('Password', fPass);
   const userRow = row('Account', fUser);
   const serverRows = h('div', { class: 'fc-server' }, row('Server address', fUrl, 'A WebSocket address, such as wss://example.org/xmpp-websocket'), row('Domain', fDomain));
@@ -100,7 +139,7 @@ export function mountChat(root, { chat, tools, run }) {
     h('details', { class: 'fc-advanced' }, h('summary', {}, 'Advanced'),
       row('Your nickname', fNick), row('Activity room', fRoom), row('Rooms service', fRoomDomain, 'Leave empty to use rooms.DOMAIN'),
       row('Activity to share', fMirror, 'Topics sent to the activity room, separated by spaces'),
-      row('Accounts that may send commands', fCommands, 'Direct messages from these accounts can use /call. Separate them with spaces.')),
+      grantsPanel),
     connectError,
     h('div', { class: 'fc-actions' }, connectBtn, backBtn, offBtn));
   const places = () => [...form.querySelectorAll('input[name=fc-place]')];
@@ -111,7 +150,7 @@ export function mountChat(root, { chat, tools, run }) {
     for (const r of places()) r.checked = r.value === p;
     fUrl.value = c.url; fDomain.value = c.domain; fUser.value = c.username || 'foafos';
     fNick.value = c.nick; fRoom.value = c.room; fRoomDomain.value = c.roomDomain;
-    fMirror.value = c.mirror.join(' '); fCommands.value = c.commandJids.join(' ');
+    fMirror.value = c.mirror.join(' ');
     drawForm();
   }
   function drawForm() {
@@ -134,7 +173,6 @@ export function mountChat(root, { chat, tools, run }) {
       mode: p === 'builtin' ? 'builtin' : 'server', url: fUrl.value.trim(), domain: fDomain.value.trim(),
       username: fUser.value.trim(), nick: fNick.value.trim(), room: fRoom.value.trim(),
       roomDomain: fRoomDomain.value.trim(), mirror: fMirror.value.split(/\s+/).filter(Boolean),
-      commandJids: fCommands.value.split(/[\s,]+/).filter(Boolean),
     }, { password });
     if (!r.ok) { connectError.textContent = REFUSED[r.reason] || `Refused: ${r.reason}`; return; }
     connectBtn.disabled = true;
@@ -383,9 +421,10 @@ export function mountChat(root, { chat, tools, run }) {
     else if (what === 'members') drawInfo();
     else drawList();
   });
-  const stopTools = tools.subscribe(() => { if (view === 'chat') drawInfo(); });
+  const stopTools = tools.subscribe(() => { if (view === 'chat') drawInfo(); drawGrants(); });
+  const stopGrants = grants.subscribe(drawGrants);
 
   setView(chat.state === 'online' || chat.state === 'reconnecting' ? 'chat' : 'connect');
   if (chat.state === 'error') connectError.textContent = explainConnect(chat.detail);
-  return () => { stopChat(); stopTools(); };
+  return () => { stopChat(); stopTools(); stopGrants(); };
 }

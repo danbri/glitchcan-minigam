@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FoafTools } from '../src/tools.mjs';
+import { ToolGrants, PERSON, BROWSER_AGENT, accountCaller } from '../src/tool-grants.mjs';
 import { createChatCommands } from '../src/chat-commands.mjs';
 
 const bus = () => { const seen = []; return { seen, publish: (topic, data) => seen.push({ topic, data }), subscribe: () => () => {} }; };
@@ -25,12 +26,13 @@ test('an app is found by its id or its name, in any case', () => {
   assert.equal(t.find('nothing'), null);
 });
 
-test('a read needs no write permission; a change does', async () => {
+test('the person may do everything; nobody else is named, so nobody else may', async () => {
   const t = new FoafTools();
   moglob(t);
-  assert.equal((await t.call('moglob', 'get_view')).ok, true);
-  assert.equal((await t.call('moglob', 'go_to', { place: 'x' })).reason, 'read-only-caller');
-  assert.equal((await t.call('moglob', 'go_to', { place: 'x' }, { allowWrite: true })).ok, true);
+  assert.equal((await t.call('moglob', 'get_view', {}, { caller: PERSON })).ok, true);
+  assert.equal((await t.call('moglob', 'get_view')).reason, 'not-granted');
+  assert.equal((await t.call('moglob', 'go_to', { place: 'x' })).reason, 'not-granted');
+  assert.equal((await t.call('moglob', 'go_to', { place: 'x' }, { caller: PERSON })).ok, true);
 });
 
 test('bad calls are refused before they reach the frame', async () => {
@@ -38,16 +40,16 @@ test('bad calls are refused before they reach the frame', async () => {
   moglob(t);
   assert.equal((await t.call('nope', 'get_view')).reason, 'no-app');
   assert.equal((await t.call('moglob', 'nope')).reason, 'no-tool');
-  assert.equal((await t.call('moglob', 'get_view', [])).reason, 'bad-args');
-  assert.equal((await t.call('moglob', 'go_to', {}, { allowWrite: true })).reason, 'bad-args');
+  assert.equal((await t.call('moglob', 'get_view', [], { caller: PERSON })).reason, 'bad-args');
+  assert.equal((await t.call('moglob', 'go_to', {}, { caller: PERSON })).reason, 'bad-args');
 });
 
 test('a frame that never answers times out, and one that closes fails its calls', async () => {
   const t = new FoafTools();
   let here = true;
   moglob(t, { reply: false, alive: () => here });
-  assert.equal((await t.call('moglob', 'get_view', {}, { timeoutMs: 10 })).reason, 'timeout');
-  const waiting = t.call('moglob', 'get_view');
+  assert.equal((await t.call('moglob', 'get_view', {}, { timeoutMs: 10, caller: PERSON })).reason, 'timeout');
+  const waiting = t.call('moglob', 'get_view', {}, { caller: PERSON });
   here = false;
   t.prune();
   assert.equal((await waiting).reason, 'closed');
@@ -58,7 +60,8 @@ test('the bus hears who called what, never the arguments', async () => {
   const b = bus();
   const t = new FoafTools({ bus: b });
   moglob(t);
-  await t.call('moglob', 'go_to', { place: 'a secret place' }, { allowWrite: true, caller: 'me@localhost' });
+  t.grants.grant('me@localhost', 'docklands', { tools: ['go_to'] });
+  await t.call('moglob', 'go_to', { place: 'a secret place' }, { caller: accountCaller('me@localhost') });
   const e = b.seen.find((x) => x.topic === 'tools.called');
   assert.match(e.data.summary, /me@localhost called Moglob go_to: ok/);
   assert.doesNotMatch(JSON.stringify(e.data), /secret/);
@@ -75,12 +78,14 @@ test('WebMCP gets every tool under the app name, and a new list replaces the old
   const first = added[0].o.signal;
   t.receive(p, { type: 'webmcp.tools', tools: TOOLS });
   assert.equal(first.aborted, true);
+  t.grants.grant('browser-agent', 'docklands', { level: 'all' });
   assert.equal(await added[1].tool.execute({ place: 'x' }).then(JSON.parse).then((v) => v.echo), 'go_to');
 });
 
 test('commands: a remote caller gets the remote set only', async () => {
   const t = new FoafTools();
   moglob(t);
+  t.grants.grant('me@x', '*', { level: 'all' });
   const run = createChatCommands({ chat: { mirrors: () => false }, tools: t, bus: bus() });
   assert.equal(await run('hello'), null);
   assert.match((await run('/apps')).text, /moglob: 2 tools/);
@@ -93,6 +98,7 @@ test('commands: a remote caller gets the remote set only', async () => {
 
 test('/where and /go work on whichever world is open, and say so when none is', async () => {
   const t = new FoafTools();
+  t.grants.grant('me@x', '*', { level: 'all' });
   const run = createChatCommands({ chat: { mirrors: () => false }, tools: t, bus: bus() });
   assert.match((await run('/go somewhere')).text, /No world is open/);
   moglob(t);

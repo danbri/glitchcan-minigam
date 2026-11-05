@@ -12,19 +12,24 @@
 //
 // This module speaks that protocol for any app whose manifest says `tools`.
 // It is the one place a call goes through: the Chat window, a direct message
-// from an allowed account, and a browser agent all reach a frame here, and a
-// tool that is not read-only needs `allowWrite` from whoever is asking.
+// from an account, and a browser agent all reach a frame here, and each is
+// checked against ToolGrants (tool-grants.mjs): the shell names the caller, and
+// a caller holding no grant is refused. Taking a grant back stops its calls.
 //
 // Where the shell's page has document.modelContext (WebMCP), the same tools
 // are registered there as `<app>.<tool>`, so a browser agent can use them.
 // Design: docs/foafos-docklands-webmcp-20261104.md, steps 2 and 3.
 
+import { ToolGrants, BROWSER_AGENT } from './tool-grants.mjs';
+
 const MAX_ARGS = 65536;
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
 
 export class FoafTools {
-  constructor({ bus = null, document = null, timeoutMs = 90000 } = {}) {
+  constructor({ bus = null, document = null, timeoutMs = 90000, grants = new ToolGrants() } = {}) {
     this.bus = bus;
+    this.grants = grants;
+    grants.subscribe(() => this._recheck());
     this.document = document;
     this.timeoutMs = timeoutMs;
     this.providers = new Map();
@@ -69,7 +74,19 @@ export class FoafTools {
       const w = p.pending.get(m.id);
       if (!w) return;
       p.pending.delete(m.id);
-      w(m.ok ? { ok: true, value: m.value } : { ok: false, reason: 'tool-error', error: String(m.error ?? 'failed') });
+      w.settle(m.ok ? { ok: true, value: m.value } : { ok: false, reason: 'tool-error', error: String(m.error ?? 'failed') });
+    }
+  }
+
+  // A grant was taken back. A call already running stops here, and its caller
+  // sees no result; the app may still finish what it had started.
+  _recheck() {
+    for (const p of this.providers.values()) {
+      for (const [id, w] of p.pending) {
+        if (this.grants.allows(w.caller, p, w.tool)) continue;
+        p.pending.delete(id);
+        w.settle({ ok: false, reason: 'revoked' });
+      }
     }
   }
 
@@ -79,7 +96,7 @@ export class FoafTools {
   _drop(p, reason) {
     this.providers.delete(p.id);
     p.abort?.abort();
-    for (const w of p.pending.values()) w({ ok: false, reason });
+    for (const w of p.pending.values()) w.settle({ ok: false, reason });
     p.pending.clear();
     this.bus?.publish('app.tools', { summary: `${p.label} offers no tools now`, app: p.id, count: 0 });
     this._changed();
@@ -99,15 +116,20 @@ export class FoafTools {
 
   /**
    * Call a tool. Resolves to {ok:true,value} or {ok:false,reason}, and never
-   * rejects. `caller` is named on the bus; the arguments are not, because they
-   * may say what an app holds, and the bus room shows what apps do.
+   * rejects. `caller` comes from tool-grants.mjs and is named on the bus, even
+   * when refused; the arguments are not, because they may say what an app
+   * holds, and the bus room shows what apps do.
    */
-  async call(appName, toolName, args = {}, { caller = 'shell', allowWrite = false, timeoutMs = this.timeoutMs } = {}) {
+  async call(appName, toolName, args = {}, { caller = null, timeoutMs = this.timeoutMs } = {}) {
     const p = this.find(appName);
     if (!p) return { ok: false, reason: 'no-app' };
     const tool = p.tools.find((t) => t.name === toolName);
     if (!tool) return { ok: false, reason: 'no-tool' };
-    if (!tool.readOnly && !allowWrite) return { ok: false, reason: 'read-only-caller' };
+    const who = caller?.label || 'nobody';
+    if (!this.grants.allows(caller, p, tool)) {
+      this.bus?.publish('tools.called', { summary: `${who} called ${p.label} ${toolName}: not-granted`, app: p.id, tool: toolName, caller: who, ok: false, ms: 0 });
+      return { ok: false, reason: 'not-granted' };
+    }
     if (!args || typeof args !== 'object' || Array.isArray(args)) return { ok: false, reason: 'bad-args' };
     let text;
     try { text = JSON.stringify(args); } catch { return { ok: false, reason: 'bad-args' }; }
@@ -118,13 +140,13 @@ export class FoafTools {
     const started = Date.now();
     const result = await new Promise((resolve) => {
       const timer = setTimeout(() => { p.pending.delete(id); resolve({ ok: false, reason: 'timeout' }); }, timeoutMs);
-      p.pending.set(id, (r) => { clearTimeout(timer); resolve(r); });
+      p.pending.set(id, { caller, tool, settle: (r) => { clearTimeout(timer); resolve(r); } });
       try { p.post({ type: 'webmcp.call', id, name: toolName, args: JSON.parse(text) }); }
       catch { p.pending.delete(id); clearTimeout(timer); resolve({ ok: false, reason: 'closed' }); }
     });
     this.bus?.publish('tools.called', {
-      summary: `${caller} called ${p.label} ${toolName}: ${result.ok ? 'ok' : result.reason}`,
-      app: p.id, tool: toolName, caller, ok: result.ok, ms: Date.now() - started,
+      summary: `${who} called ${p.label} ${toolName}: ${result.ok ? 'ok' : result.reason}`,
+      app: p.id, tool: toolName, caller: who, ok: result.ok, ms: Date.now() - started,
     });
     return result;
   }
@@ -143,7 +165,7 @@ export class FoafTools {
           ...(t.inputSchema ? { inputSchema: t.inputSchema } : {}),
           annotations: { readOnlyHint: t.readOnly },
           execute: async (args) => {
-            const r = await this.call(p.id, t.name, args || {}, { caller: 'a browser agent', allowWrite: true });
+            const r = await this.call(p.id, t.name, args || {}, { caller: BROWSER_AGENT });
             if (!r.ok) throw new Error(r.error || r.reason);
             return JSON.stringify(r.value ?? null);
           },

@@ -15,7 +15,7 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
-  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, CHAT_OWNER,
+  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { FoafTools } from '../../packages/foafos/src/tools.mjs';
 import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
@@ -318,8 +318,20 @@ FoafOS.chat = chat;
 // An app whose manifest says `tools: true` may offer tools over its frame
 // (the webmcp.* messages in tools.mjs). The frame is found by the window that
 // sent the message, never by anything the message says.
-const appTools = new FoafTools({ bus, document });
+// Who may use them: docs/foafos-caller-grants-20261105.md. A browser agent may
+// look until the person says otherwise; every other caller starts with nothing.
+const toolGrants = new ToolGrants({ storage: audioStore || null, bus,
+  defaults: [{ caller: 'browser-agent', app: '*', level: 'look' }] });
+const appTools = new FoafTools({ bus, document, grants: toolGrants });
 FoafOS.tools = appTools;
+FoafOS.grants = toolGrants;
+chat.mayCommand = (jid) => toolGrants.holds(jid);
+// The old list of accounts could call anything. Each keeps what is safe, looking,
+// and the rest is asked for again with /grant.
+if (chat.config().commandJids.length) {
+  for (const jid of chat.config().commandJids) if (!toolGrants.holds(jid)) toolGrants.grant(jid, '*');
+  chat.configure({ commandJids: [] });
+}
 window.addEventListener('message', (e) => {
   const d = e.data;
   if (!d || typeof d.type !== 'string' || !d.type.startsWith('webmcp.') || !e.source) return;
@@ -5482,7 +5494,7 @@ function buildUI() {
     const body = document.createElement('div');
     body.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;';
     win.appendChild(body);
-    const unmount = mountChat(body, { chat, tools: appTools, run: runChatCommand });
+    const unmount = mountChat(body, { chat, tools: appTools, grants: toolGrants, run: runChatCommand });
     new MutationObserver((_, o) => { if (!win.isConnected) { unmount(); o.disconnect(); } })
       .observe(document.body, { childList: true });
     document.body.appendChild(win);
