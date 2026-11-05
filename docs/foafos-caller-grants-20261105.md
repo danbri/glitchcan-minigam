@@ -19,7 +19,7 @@ Open Chat, then Advanced, then "Who may use your apps", or type in Chat:
 
 These work only in the Chat window, never from a message. Each call, allowed or refused, shows in activity as `tools.called`, naming the caller. The arguments are not shown.
 
-The room bot, `inklet/tools/chat-ai.py`, signs in as its own account, `foafbot`, so a grant to it is not a grant to you. Ask it with `@foafbot` in the room; it can do nothing until `/grant foafbot@localhost moglob go_to`.
+The room bot, `inklet/tools/chat-ai.py`, signs in as its own account, `foafbot`, so a grant to it is not a grant to you. Ask it with `@foafbot` in the room; it can do nothing until `/grant foafbot@localhost moglob go_to`. It can send `/tell` only for an owner's direct message, and only from the owner's own file: [foafos-foafbot-tell-20261105.md](foafos-foafbot-tell-20261105.md).
 
 ## For developers
 

@@ -152,7 +152,7 @@ def direct_path():
         with guard:
             to = pending.pop('to', None)
             pending.pop('timer', None)
-        if to: dm(to, 'The shell did not answer. It ignores an account with no grant at all, and it may not be connected.')
+        if to: dm(to, 'The shell did not answer. It ignores an account with no grant at all. If it is not connected, the server may keep this and it may run later.')
 
     def attempt(frm, line):
         with guard:
@@ -228,6 +228,9 @@ def on_room(who, text):
     threading.Thread(target=run, daemon=True).start()
 
 NOT_NOW = {'{urn:xmpp:delay}delay', '{jabber:x:delay}x', '{urn:foafos:bus:0}x'}   # sent earlier, or a mirrored event
+# The server keeps a direct message for an offline account, and hands it over at the next sign-in, with no delay stamp
+# and before it echoes our own presence. A /tell from last week must not run, so direct messages count from the echo on.
+live = False
 
 def on_message(el):
     frm, typ = el.get('from', ''), el.get('type', '')
@@ -239,7 +242,7 @@ def on_message(el):
         line = text.split('\n', 1)[0][:600]    # what the shell said back: its sentence, not the JSON under it
         if not shell_answered_owner(line): say(line)
     elif typ == 'chat':
-        if any(c.tag in NOT_NOW for c in el): refused(frm, 'not-live')
+        if not live or any(c.tag in NOT_NOW for c in el): refused(frm, 'not-live')
         else: heard_direct(frm, text)
     elif typ == 'groupchat' and frm.startswith(o.room + '/'):
         on_room(frm.split('/', 1)[1], text)
@@ -268,4 +271,5 @@ while True:
             depth -= 1
             if depth == 1:
                 if local(el) == 'message': on_message(el)
+                elif local(el) == 'presence' and not el.get('type') and el.get('from', '').split('/')[0] == f'{o.account}@{o.domain}': live = True
                 root.remove(el)        # a bot runs for days: keep nothing it has read

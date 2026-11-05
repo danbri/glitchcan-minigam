@@ -66,6 +66,11 @@ Each comes before the next, and a failure stops the message:
 Nothing from XMPP is published on a bus topic that an app or the shell reads as fact. An outside account cannot make
 `app.close` or `story.state`, because raw bus publishing from XMPP does not exist.
 
+A stored direct message is a known gap. The server keeps a message for an offline account and delivers it later with no
+`<delay>` stamp, so a `/tell` sent while no shell is connected can probably run at the next connect. This was found at the bot,
+which now refuses such messages. It was not tested at the shell. See
+[foafos-foafbot-tell-20261105.md](foafos-foafbot-tell-20261105.md).
+
 ## Bounds and redaction
 
 `packages/foafos/src/bus-mirror.mjs`, pure functions, used for each mirrored event and for `/bus`.
@@ -127,8 +132,6 @@ Chat window.
 - **Commands in a room.** Room members are nicknames here. This needs a room that shows real JIDs to the shell, and that
   is a Factoidal change. Members-only rooms are now on Factoidal main (`--muc-members`), not yet in a release.
 - **XEP-0050 ad-hoc commands**, so that Gajim shows buttons.
-- **foafbot and `/tell`.** `inklet/tools/chat-ai.py` acts only on `/go` and `/where`, and a change there is a decision about
-  what an AI may do.
 - **MIX and GC3** forms of the room.
 - **Per-value limits on arguments.** A grant for `queue` allows any track.
 - **Conversations from strangers** are limited by rate, not by count, in the Chat window's list.
@@ -140,7 +143,8 @@ Chat window.
 2. **The bus room is open to every account on the server**, as before.
 3. **Chat in the `apps` root.** This work added it, so that the Playlist and Chat can open together. A revert is one word in
    `foafos-root.js`.
-4. **`/tell` for foafbot.** See above. It is not built.
+4. **`/tell` for foafbot.** Built on 2026-11-05, off by default, with the bot's own rules: an owner's direct message only, and
+   never room text. See [foafos-foafbot-tell-20261105.md](foafos-foafbot-tell-20261105.md).
 
 ## Test results, 2026-11-05
 

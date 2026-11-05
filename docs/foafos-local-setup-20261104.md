@@ -35,7 +35,7 @@ The servers run detached from any terminal, so closing a tab cannot stop them. T
 | `foafos-stack doctor` | Checks what the servers need, before or after starting |
 | `foafos-stack urls`, `foafos-stack open` | The addresses, or opens Foafos |
 
-Services are `xmpp`, `lws`, `sparql`, `shell`, and the optional `foafbot`, which starts only when named: `foafos-stack start foafbot`.
+Services are `xmpp`, `lws`, `sparql`, `shell`, and the optional `foafbot`, which starts only when named: `foafos-stack start foafbot`. Its `/tell` is off until `~/foafos-xmpp/foafbot-tell.json` exists: [foafos-foafbot-tell-20261105.md](foafos-foafbot-tell-20261105.md).
 
 ### What status means
 

@@ -13,81 +13,24 @@
 // replies mix with these. SHELL_URL names another copy of the shell.
 
 import { chromium } from 'playwright';
-import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { connect } from 'node:net';
 import { dirname, resolve, relative, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Client, accounts, wait } from './lib/xmpp-client.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../../..');
 const served = relative(join(homedir(), 'working/solid'), repo);
 const SHELL = process.env.SHELL_URL || `http://localhost:8080/${served}/inklet/finkapp/?root=apps&player=none`;
-const accounts = Object.fromEntries(readFileSync(join(homedir(), 'foafos-xmpp/accounts'), 'utf8').split('\n')
-  .filter((l) => l.includes(':')).map((l) => [l.slice(0, l.indexOf(':')), l.slice(l.indexOf(':') + 1)]));
 const NS = 'urn:foafos:bus:0';
 const ROOM = `e2e-bus-${Date.now().toString(36)}`;
 const ROOM_JID = `${ROOM}@rooms.localhost`;
 const SHELL_JID = 'foafos@localhost';
 const AGENT_JID = 'foafbot@localhost';
+const SHELL_TO = `${SHELL_JID}/foafos`;
 
 let failed = 0;
 const check = (cond, what) => { console.log(`${cond ? 'PASS' : 'FAIL'} ${what}`); if (!cond) failed++; };
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const unescape = (s) => s.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-// An outside client: plain TCP, as chat-ai.py and any desktop client use.
-class Client {
-  static async open(account, nick) {
-    const c = new Client();
-    c.got = '';
-    c.s = connect(5222, '127.0.0.1');
-    c.s.on('data', (d) => { c.got += d; });
-    const stream = `<?xml version='1.0'?><stream:stream to='localhost' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>`;
-    c.s.write(stream); await c.until(/<\/stream:features>/);
-    c.s.write(`<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>${Buffer.from(`\0${account}\0${accounts[account]}`).toString('base64')}</auth>`);
-    await c.until(/<success/);
-    c.s.write(stream); await c.until(/<\/stream:features>/);
-    c.s.write(`<iq type='set' id='b'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>e2e-bus</resource></bind></iq>`);
-    await c.until(/<\/iq>/);
-    c.s.write(`<presence/>`);
-    c.s.write(`<presence to='${ROOM_JID}/${nick}'><x xmlns='http://jabber.org/protocol/muc'/></presence>`);
-    await c.until(/code=.110./);
-    return c;
-  }
-
-  async until(re, ms = 15000) {
-    const t0 = Date.now();
-    for (;;) {
-      const m = re.exec(this.got);
-      if (m) { const hit = this.got.slice(0, m.index + m[0].length); this.got = this.got.slice(m.index + m[0].length); return hit; }
-      if (Date.now() - t0 > ms) throw new Error(`timed out on ${re}; have ${this.got.slice(-400)}`);
-      await wait(25);
-    }
-  }
-
-  /** The next whole <message> from the server that passes `pred`. */
-  async message(pred, ms = 15000) {
-    const t0 = Date.now();
-    for (;;) {
-      for (;;) {
-        const m = /<message[\s\S]*?<\/message>/.exec(this.got);
-        if (!m) break;
-        this.got = this.got.slice(m.index + m[0].length);
-        const text = unescape(m[0]);
-        if (pred(text, m[0])) return text;
-      }
-      if (Date.now() - t0 > ms) return null;
-      await wait(25);
-    }
-  }
-
-  say(text) { this.s.write(`<message to='${ROOM_JID}' type='groupchat'><body>${esc(text)}</body></message>`); }
-  dm(text) { this.s.write(`<message to='${SHELL_JID}/foafos' type='chat'><body>${esc(text)}</body></message>`); }
-  raw(xml) { this.s.write(xml); }
-  close() { try { this.s.destroy(); } catch { /* gone */ } }
-}
 
 const fromRoom = (t) => t.includes(`from="${ROOM_JID}/foafos"`);
 const reply = (t) => t.includes(`from="${SHELL_JID}/`) && t.includes('type="chat"');
@@ -134,8 +77,8 @@ try {
   await page.click('#foafos-chat .fc-status');
   await page.evaluate(() => document.querySelector('#foafos-chat .fc-advanced').open = true);
 
-  agent = await Client.open('foafbot', 'agent');
-  outsider = await Client.open('me', 'outsider');
+  agent = await Client.open('foafbot', { room: ROOM_JID, nick: 'agent' });
+  outsider = await Client.open('me', { room: ROOM_JID, nick: 'outsider' });
   check(true, `two outside clients joined ${ROOM_JID}`);
 
   const frame = async () => {
@@ -189,17 +132,17 @@ try {
   const tell = `/tell playlist queue {"track":"${channel.id}"}`;
   const actions = () => seen("e => e.topic === 'app.action'");
 
-  agent.dm(tell);
+  agent.dm(SHELL_TO, tell);
   const noGrant = await agent.message((t) => t.includes('chat.refused') && t.includes('no-grant'));
   check(!!noGrant && !(await actions()).length, 'an account with no grant is refused, and the room sees the refusal');
 
   await page.evaluate((j) => FoafOS.chatCommand(`/grant ${j} playlist queue`), AGENT_JID);
-  agent.dm(tell);
+  agent.dm(SHELL_TO, tell);
   const off = await agent.message(reply);
   check(!!off && off.includes('switched off') && !(await actions()).length, 'with a grant but the switch off, the action is refused');
 
   await page.check('#chat-inbound');
-  outsider.dm(tell);
+  outsider.dm(SHELL_TO, tell);
   const outsiderRefused = await agent.message((t) => t.includes('chat.refused') && t.includes('me@localhost'));
   check(!!outsiderRefused && !(await outsider.message(reply, 1000)), 'an unauthorised account is refused, with no answer, even with the switch on');
 
@@ -210,7 +153,7 @@ try {
   check((await queueText()) === before, 'the app received nothing so far');
 
   // ── the allowed one ──
-  agent.dm(tell);
+  agent.dm(SHELL_TO, tell);
   const sent = await agent.message(reply);
   check(!!sent && sent.includes('Sent queue'), 'the granted account is told the action was sent');
   await playlist.waitForFunction((who) => document.querySelector('#queue').textContent.includes(who) || document.querySelector('#msg').textContent.includes(who), AGENT_JID, { timeout: 10000 });
@@ -222,22 +165,22 @@ try {
   check(!!now, 'the app\'s answer, app.playlist.now from its own frame, comes back to the room');
 
   // ── disallowed ones ──
-  agent.dm('/tell playlist pause');
+  agent.dm(SHELL_TO, '/tell playlist pause');
   const notGranted = await agent.message(reply);
   check(!!notGranted && notGranted.includes('may not do that'), 'a verb outside the account\'s grant is refused');
   await page.evaluate((j) => FoafOS.chatCommand(`/grant ${j} playlist all`), AGENT_JID);
-  agent.dm('/tell playlist pause');
+  agent.dm(SHELL_TO, '/tell playlist pause');
   const notByAll = await agent.message(reply);
   check(!!notByAll && notByAll.includes('may not do that'), 'level "all" does not reach actions: each verb must be named');
   await page.evaluate((j) => FoafOS.chatCommand(`/grant ${j} playlist erase`), AGENT_JID);
-  agent.dm('/tell playlist erase');
+  agent.dm(SHELL_TO, '/tell playlist erase');
   const notOffered = await agent.message(reply);
   check(!!notOffered && notOffered.includes('no action erase') && (await seen("e => e.topic === 'app.action.refused'")).length === 1,
     'a verb the manifest does not offer is refused by deliverAction, even with a grant');
-  agent.dm(`/tell playlist queue {"track":{"a":1}}`);
+  agent.dm(SHELL_TO, `/tell playlist queue {"track":{"a":1}}`);
   const badArgs = await agent.message(reply);
   check(!!badArgs && (await actions()).length === 1, 'arguments that are not flat plain values are refused');
-  agent.dm(`/tell playlist queue ${'x'.repeat(5000)}`);
+  agent.dm(SHELL_TO, `/tell playlist queue ${'x'.repeat(5000)}`);
   const tooBig = await agent.message((t) => t.includes('chat.refused') && t.includes('too-large'));
   check(!!tooBig, 'an oversized command is refused');
 
@@ -252,7 +195,7 @@ try {
 
   // ── off again, at once ──
   await page.uncheck('#chat-inbound');
-  agent.dm(tell);
+  agent.dm(SHELL_TO, tell);
   const offAgain = await agent.message(reply);
   check(!!offAgain && offAgain.includes('switched off') && (await actions()).length === 1, 'switching off applies at once, with no reconnect');
 

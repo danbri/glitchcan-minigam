@@ -1680,6 +1680,15 @@ root, manifest `apps/chat.jsonld`). Design and localhost setup: `docs/foafos-cha
 - Control: `/tell APP ACTION` by direct message, through `deliverAction`, never raw bus events. It needs
   the owner's `inbound` switch and a grant that names the action. `docs/foafos-bus-xmpp-20261105.md`.
 - `e2e-bus-xmpp.mjs` runs against the live `foafos-stack` xmpp and shell, in a new room.
+- foafbot's `/tell` has its own gate before the shell's checks, off by default: `inklet/tools/foafbot_tell.py`, the owner's
+  `foafbot-tell.json`, `docs/foafos-foafbot-tell-20261105.md`. **Room text must never reach it.** The `Gate` is a local of
+  `direct_path()` in `chat-ai.py`; `on_room` and `answer` hold no reference, and `test-foafbot-tell.py` reads the code to keep
+  that true. Do not pass room history to the direct path, and do not add a module-level gate. `e2e-foafbot-tell.mjs` uses a
+  stand-in `claude` that always answers `/tell`, because a steered model is the case that matters.
+- **The XMPP server delivers stored direct messages with no `<delay>` stamp.** A command sent while the receiver is offline
+  looks live at the next sign-in. It comes before the echo of the receiver's own presence, so the bot ignores direct messages
+  until that echo. The shell has no such guard yet. Tests that read a client buffer: `message(pred)` drops what does not
+  match, so keep a second client to read the room.
 - Test: `inklet/finkapp/test/e2e-chat.mjs` (built-in room, then a localhost Node server and an
   outside client). Needs a factoidal-core checkout with `xmpp/inpage.mjs` (`FACTOIDAL=`).
 - `packages/foafos/pod/test/e2e-shell.mjs` failed about one run in four until 2026-11-04. The
