@@ -1,0 +1,146 @@
+/* The Chat window. It belongs to the shell, so every colour, face and corner
+   comes from the reader's skin (fink-skins.css) and it looks at home in all
+   of them. The one idea of its own: people speak in the body of the page,
+   and what the apps do runs quietly along a thin line beside them. */
+
+#foafos-chat.foafos-window.foafos-panel { background: var(--sk-bg); color: var(--sk-ink); }
+
+.fc {
+  container-type: inline-size;
+  --fc-line: color-mix(in srgb, var(--sk-ink) 16%, transparent);
+  --fc-tint: color-mix(in srgb, var(--sk-ink) 5%, transparent);
+  --fc-corner: min(var(--sk-radius, 6px), 8px);
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  background: var(--sk-bg); color: var(--sk-ink);
+  font: 15px/1.45 var(--sk-font-ui, system-ui, sans-serif);
+}
+.fc *, .fc *::before { box-sizing: border-box; }
+.fc [hidden] { display: none !important; }
+.fc :focus-visible { outline: 2px solid var(--sk-accent); outline-offset: 1px; }
+.fc h2, .fc h3, .fc p, .fc ul, .fc ol { margin: 0; padding: 0; }
+.fc ul, .fc ol { list-style: none; }
+.fc button, .fc input, .fc textarea { font: inherit; color: inherit; }
+.fc input[type=text], .fc input[type=password], .fc textarea {
+  width: 100%; min-height: 40px; padding: 8px 10px; background: var(--sk-bg);
+  border: 1px solid var(--fc-line); border-radius: var(--fc-corner);
+}
+.fc .fc-primary {
+  min-height: 40px; padding: 0 18px; cursor: pointer; font-weight: 600;
+  background: var(--sk-accent); color: var(--sk-accent-ink);
+  border: 1px solid var(--sk-accent); border-radius: var(--fc-corner);
+}
+.fc .fc-primary:disabled { opacity: .5; cursor: default; }
+.fc-quiet { min-height: 40px; padding: 0 12px; cursor: pointer; background: none; border: 0; text-decoration: underline; }
+
+/* connect: one question, then only what that answer needs */
+.fc-connect { flex: 1; overflow-y: auto; width: 100%; max-width: 30rem; margin: 0 auto; padding: 28px 20px; display: flex; flex-direction: column; gap: 14px; }
+.fc-connect > * { flex: none; }
+.fc-connect h2 { font: 600 24px/1.2 var(--sk-font-body, inherit); margin-bottom: 4px; }
+.fc-places { display: grid; gap: 8px; }
+.fc-place { display: flex; gap: 12px; align-items: flex-start; padding: 12px; cursor: pointer; border: 1px solid var(--fc-line); border-radius: var(--fc-corner); }
+.fc-place:has(input:checked) { border-color: var(--sk-accent); box-shadow: inset 3px 0 0 var(--sk-accent); }
+.fc-place input { margin-top: 4px; accent-color: var(--sk-accent); }
+.fc-place-text { display: grid; }
+.fc-place-text span { color: var(--sk-ink-dim); font-size: 14px; }
+.fc-server { display: grid; gap: 14px; }
+.fc-field { display: grid; gap: 4px; }
+.fc-field > span { font-weight: 600; font-size: 14px; }
+.fc-field small, .fc-muted { color: var(--sk-ink-dim); font-size: 13px; }
+.fc-advanced summary { cursor: pointer; padding: 6px 0; color: var(--sk-ink-dim); }
+.fc-advanced[open] { display: grid; gap: 12px; }
+.fc-error { color: var(--sk-mega, #a00); }
+.fc-error:empty { display: none; }
+.fc-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* conversation */
+.fc-chat { flex: 1; min-height: 0; display: grid; grid-template-columns: 11rem minmax(0, 1fr) 13rem; }
+.fc-side, .fc-info { min-height: 0; display: flex; flex-direction: column; background: var(--fc-tint); }
+.fc-side { border-right: 1px solid var(--fc-line); }
+.fc-info { border-left: 1px solid var(--fc-line); }
+.fc-list { flex: 1; overflow-y: auto; padding: 12px 8px; display: grid; gap: 14px; align-content: start; }
+.fc-list h3 { font-size: 13px; font-weight: 600; color: var(--sk-ink-dim); padding: 0 8px 4px; }
+.fc-conv { width: 100%; min-height: 36px; display: flex; align-items: center; gap: 6px; padding: 4px 8px; text-align: left; cursor: pointer; background: none; border: 0; border-radius: var(--fc-corner); }
+.fc-conv:hover { background: var(--fc-tint); }
+.fc-conv[aria-current=true] { background: var(--sk-accent); color: var(--sk-accent-ink); }
+.fc-conv-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-badge { min-width: 20px; padding: 0 5px; text-align: center; font-size: 12px; font-weight: 600; background: var(--sk-accent); color: var(--sk-accent-ink); border-radius: 10px; }
+.fc-new { padding: 8px; border-top: 1px solid var(--fc-line); }
+.fc-new input { font-size: 14px; }
+
+.fc-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.fc-head { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 14px; border-bottom: 1px solid var(--fc-line); }
+.fc-title { flex: 1; min-width: 0; font: 600 18px/1.2 var(--sk-font-body, inherit); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-toggle { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--sk-ink-dim); white-space: nowrap; }
+.fc-toggle input { accent-color: var(--sk-accent); }
+.fc-status { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 4px; font-size: 14px; white-space: nowrap; cursor: pointer; color: var(--sk-ink-dim); background: none; border: 0; }
+.fc-status::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--sk-ink-dim); }
+.fc-status[data-state=online]::before { background: #2e9e5b; }
+.fc-status[data-state=connecting]::before, .fc-status[data-state=reconnecting]::before { background: #d39a18; }
+.fc-status[data-state=error]::before { background: #d0433a; }
+.fc-icon { display: none; width: 36px; height: 36px; cursor: pointer; background: none; border: 0; }
+
+.fc-logwrap { position: relative; flex: 1; min-height: 0; display: flex; }
+.fc-log { flex: 1; min-width: 0; overflow-y: auto; padding: 14px 18px 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.fc-log > :first-child { margin-top: auto; }
+.fc-msg { display: grid; grid-template-columns: 34px minmax(0, 1fr); column-gap: 10px; margin-top: 12px; }
+.fc-msg.fc-grouped { margin-top: 2px; }
+.fc-avatar { grid-row: span 2; width: 34px; height: 34px; display: grid; place-items: center; font-weight: 600; background: var(--fc-tint); border: 1px solid var(--fc-line); border-radius: var(--fc-corner); }
+.fc-self .fc-avatar { background: var(--sk-accent); color: var(--sk-accent-ink); border-color: var(--sk-accent); }
+.fc-meta { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.fc-meta time, .fc-event time { color: var(--sk-ink-dim); font-size: 12px; }
+.fc-body { grid-column: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* the apps' line: narrow, quiet, and out of the way of people talking */
+.fc-event { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; column-gap: 10px; align-items: baseline; padding: 1px 0; color: var(--sk-ink-dim); font-size: 13.5px; }
+.fc-event::before { content: ''; position: absolute; left: 16.5px; top: 0; bottom: 0; width: 1px; background: var(--fc-line); }
+.fc-glyph { position: relative; justify-self: center; width: 18px; height: 18px; line-height: 18px; text-align: center; background: var(--sk-bg); }
+.fc-event details { min-width: 0; }
+.fc-event summary { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-event details[open] summary { white-space: normal; }
+.fc-event-group button { justify-self: start; padding: 0; cursor: pointer; background: none; border: 0; text-decoration: underline; color: inherit; }
+.fc pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 0; padding: 8px 10px; max-height: 240px; overflow: auto; font-size: 12.5px; background: var(--sk-code-bg, var(--fc-tint)); color: var(--sk-code-ink, inherit); border-radius: var(--fc-corner); }
+.fc-system { margin: 10px 0 0 44px; }
+.fc-result { padding: 8px 12px; border-left: 3px solid var(--sk-accent); background: var(--fc-tint); }
+.fc-result p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.fc-notice { margin: 10px 0 0 44px; color: var(--sk-mega, inherit); }
+.fc-empty { align-self: center; max-width: 24rem; padding: 24px; text-align: center; color: var(--sk-ink-dim); }
+.fc .fc-jump { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); min-height: 32px; padding: 0 14px; cursor: pointer; background: var(--sk-accent); color: var(--sk-accent-ink); border: 0; border-radius: 16px; }
+
+.fc-composer { position: relative; display: flex; gap: 8px; align-items: flex-end; padding: 10px 14px; border-top: 1px solid var(--fc-line); }
+.fc-composer textarea { flex: 1; resize: none; max-height: 140px; }
+.fc-composer textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }  /* wide skin fonts: clip, never wrap in one row */
+/* On a phone the window fills the screen and the ☰ starts at bottom right, on top of Send: keep Send clear of it. */
+@media (max-width: 600px) { .fc-composer { padding-right: 60px; } }
+.fc-hints { position: absolute; left: 14px; bottom: calc(100% - 4px); display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; background: var(--sk-bg); border: 1px solid var(--fc-line); border-radius: var(--fc-corner); }
+.fc-hints button { min-height: 30px; padding: 0 8px; cursor: pointer; background: var(--fc-tint); border: 0; border-radius: var(--fc-corner); }
+
+.fc-tabs { display: flex; border-bottom: 1px solid var(--fc-line); }
+.fc-tabs button { flex: 1; min-height: 52px; cursor: pointer; font-size: 14px; color: var(--sk-ink-dim); background: none; border: 0; border-bottom: 2px solid transparent; }
+.fc-tabs button[aria-selected=true] { color: var(--sk-ink); font-weight: 600; border-bottom-color: var(--sk-accent); }
+.fc-info-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; }
+.fc-people { display: grid; gap: 8px; }
+.fc-people li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fc-people .fc-avatar { width: 26px; height: 26px; font-size: 13px; }
+.fc-people span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.fc-people small { color: var(--sk-ink-dim); }
+.fc-app h3 { font-size: 15px; margin-bottom: 6px; }
+.fc-tools { display: grid; gap: 2px; }
+.fc-tools button { padding: 4px 0; cursor: pointer; background: none; border: 0; text-align: left; overflow-wrap: anywhere; text-decoration: underline; text-decoration-color: var(--fc-line); }
+.fc-app h4 { margin: 12px 0 4px; font-size: 13px; font-weight: 600; color: var(--sk-ink-dim); }
+
+/* narrow windows and phones: one column, the rest slide over it */
+@container (max-width: 760px) {
+  .fc-chat { grid-template-columns: minmax(0, 1fr); position: relative; }
+  .fc-icon { display: block; }
+  .fc-side, .fc-info { position: absolute; top: 0; bottom: 0; z-index: 2; width: min(16rem, 85%); background: var(--sk-bg); }
+  .fc-side { left: 0; transform: translateX(-102%); }
+  .fc-info { right: 0; transform: translateX(102%); }
+  .fc.fc-show-side .fc-side, .fc.fc-show-info .fc-info { transform: none; box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--sk-ink) 25%, transparent); }
+  .fc-toggle { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fc-side, .fc-info { transition: transform .16s ease-out; }
+}
+
+.fc-result details, .fc-more { margin-top: 4px; }
+.fc-result summary, .fc-more summary { cursor: pointer; color: var(--sk-ink-dim); font-size: 14px; }

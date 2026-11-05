@@ -1363,3 +1363,33 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Game, story and options side by side (setStagePanes). The split mode's
+   geometry is measured pixels on inline styles, so this overrides it. Only
+   where there is room: a phone keeps the stacked split. */
+@media (min-width: 900px) {
+    body.foafos-panes { --foaf-panes-side: clamp(20rem, 32vw, 30rem); }
+    body.foafos-panes[data-wm-mode="split"] #minigame-view.state-split {
+        position: fixed !important;
+        inset: 0 var(--foaf-panes-side) 0 0 !important;
+        width: auto !important;
+        height: auto !important;
+    }
+    body.foafos-panes[data-wm-mode="split"] #narrative-view,
+    body.foafos-panes[data-wm-mode="split"] .foafos-window:has(iframe[src*="storyrunner"]),
+    body.foafos-panes[data-wm-mode="split"] .foafos-window:has(iframe[src*="storyrunner"]).maximized {
+        position: fixed !important;
+        inset: 0 0 0 auto !important;
+        width: var(--foaf-panes-side) !important;
+        height: auto !important;
+        max-height: none !important;
+        border-radius: 0;
+    }
+    body.foafos-panes .wm-split-grip { display: none; }
+    /* the menu stays on the game, clear of the options */
+    body.foafos-panes[data-wm-mode="split"] #wm-chrome {
+        top: 40px !important;
+        left: auto !important;
+        right: calc(var(--foaf-panes-side) + 8px) !important;
+    }
+}

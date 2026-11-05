@@ -320,6 +320,9 @@ button:focus-visible {
     color: var(--sk-accent);
 }
 .breadcrumb-container.mode-minimal .breadcrumb-toggle { color: var(--sk-accent); }
+/* The ☰'s holder is only a positioning box exactly the size of the round handle: painted, it shows as a square behind
+   the circle over anything darker than the page (a 3D world). The handle and the menu paint themselves. */
+#wm-chrome { background: transparent; }
 #wm-chrome button { background: var(--sk-choice-bg); color: var(--sk-choice-ink); border-color: var(--sk-choice-line); }
 #wm-chrome button.active { background: var(--sk-accent); color: var(--sk-accent-ink); border-color: var(--sk-accent); }
 .foafos-window-bar { background: var(--sk-accent); color: var(--sk-accent-ink); border-color: var(--sk-line); }

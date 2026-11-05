@@ -1,0 +1,61 @@
+/* The foafos three-pane layout, for apps that show where you are, what is
+   here, and the thing you picked: Files, and any app with the same shape.
+
+     <div class="panes">
+       <nav class="pane pane-places">   where you are
+       <main class="pane pane-items">   what is here
+       <aside class="pane pane-detail"> the thing you picked
+
+   Wide: three columns. Medium: the first folds into a drawer, opened by
+   .panes-toggle. Narrow: one pane at a time, set by data-show on .panes. */
+:root {
+  color-scheme: light dark;
+  --p-bg: #fbfbf9; --p-side: #f1f1ee; --p-ink: #1c1d1f; --p-dim: #62646a; --p-line: #d9d9d3;
+  --p-accent: #1f5fa8; --p-accent-ink: #fff; --p-pick: #dbe7f5; --p-bad: #a8261c;
+  --p-font: system-ui, -apple-system, "Segoe UI", sans-serif; --p-corner: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --p-bg: #17191d; --p-side: #1f2228; --p-ink: #ececE8; --p-dim: #a5a7ad; --p-line: #363a42;
+    --p-accent: #7fb2ee; --p-accent-ink: #10151c; --p-pick: #26364b; --p-bad: #f0877d; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--p-bg); color: var(--p-ink); font: 14.5px/1.45 var(--p-font); }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--p-accent); outline-offset: 1px; }
+[hidden] { display: none !important; }
+
+.app { height: 100dvh; display: flex; flex-direction: column; container-type: inline-size; }
+.toolbar { display: flex; align-items: center; gap: 6px; min-height: 46px; padding: 5px 10px; border-bottom: 1px solid var(--p-line); }
+.toolbar .grow { flex: 1; min-width: 0; }
+.tool { min-width: 34px; min-height: 34px; padding: 0 9px; cursor: pointer; background: none; border: 1px solid transparent; border-radius: var(--p-corner); }
+.tool:hover:not(:disabled) { background: var(--p-side); }
+.tool:disabled { opacity: .4; cursor: default; }
+.tool[aria-pressed=true] { background: var(--p-pick); }
+.tool-main { background: var(--p-accent); color: var(--p-accent-ink); }
+.tool-main:hover:not(:disabled) { background: var(--p-accent); filter: brightness(1.08); }
+.crumbs { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; list-style: none; margin: 0; padding: 0; min-width: 0; }
+.crumbs li + li::before { content: '/'; margin: 0 3px; color: var(--p-dim); }
+.crumbs button { padding: 2px 4px; cursor: pointer; background: none; border: 0; border-radius: 4px; }
+.crumbs button:hover { background: var(--p-side); }
+.crumbs li:last-child button { font-weight: 600; }
+
+.panes { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr) minmax(14rem, 34%); }
+.pane { min-width: 0; min-height: 0; overflow: auto; }
+.pane-places { background: var(--p-side); border-right: 1px solid var(--p-line); padding: 8px; }
+.pane-detail { border-left: 1px solid var(--p-line); display: flex; flex-direction: column; }
+.panes-toggle { display: none; }
+.statusbar { min-height: 26px; padding: 3px 10px; color: var(--p-dim); font-size: 13px; border-top: 1px solid var(--p-line); }
+.statusbar.bad { color: var(--p-bad); }
+
+@container (max-width: 760px) {
+  .panes { grid-template-columns: minmax(0, 1fr) minmax(12rem, 42%); position: relative; }
+  .panes-toggle { display: inline-block; }
+  .pane-places { position: absolute; z-index: 2; inset: 0 auto 0 0; width: min(15rem, 80%); transform: translateX(-102%); }
+  .panes[data-places=open] .pane-places { transform: none; box-shadow: 4px 0 12px rgb(0 0 0 / .2); }
+}
+@container (max-width: 520px) {
+  .panes { grid-template-columns: minmax(0, 1fr); }
+  .pane-detail { border-left: 0; }
+  .panes[data-show=items] .pane-detail, .panes[data-show=detail] .pane-items { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) { .pane-places { transition: transform .15s ease-out; } }

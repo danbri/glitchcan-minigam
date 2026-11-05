@@ -2060,6 +2060,16 @@ if (window.foaf?.onInit) {
   // hand over a stylesheet across an opaque origin, and a second copy of
   // fink-skins.css would drift). Applied to our own root, so the box reads
   // as part of the same installation instead of a foreign panel.
+  window.foaf.bus?.subscribe('wm.panes', (e) => {
+    document.documentElement.classList.toggle('panes', !!e.data?.on);
+    const prose = document.getElementById('prose');
+    if (prose) prose.scrollTop = prose.scrollHeight;
+  });
+  new MutationObserver(() => {
+    if (!document.documentElement.classList.contains('panes')) return;
+    const prose = document.getElementById('prose');
+    prose.scrollTop = prose.scrollHeight;
+  }).observe(document.getElementById('prose'), { childList: true });
   window.foaf.bus?.subscribe('ui.skin', (e) =>
     applySkinTokens(e?.data?.tokens, e?.data?.skin));
 } else {

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Files</title>
+<link rel="stylesheet" href="../ui/panes.css">
+<link rel="stylesheet" href="files.css">
+</head>
+<body>
+<div class="app">
+  <div class="toolbar">
+    <button id="places" class="tool panes-toggle" type="button" aria-label="Show folders">☰</button>
+    <button id="back" class="tool" type="button" aria-label="Back" title="Back">‹</button>
+    <button id="up" class="tool" type="button" aria-label="Enclosing folder" title="Enclosing folder">↑</button>
+    <ol id="crumbs" class="crumbs grow" aria-label="Location"></ol>
+    <input id="filter" type="search" aria-label="Filter this folder" placeholder="Filter">
+    <button id="view" class="tool" type="button" aria-label="Show as icons" aria-pressed="false" title="Show as icons">▦</button>
+    <button id="new-file" class="tool tool-main" type="button">New file</button>
+    <button id="new-folder" class="tool" type="button">New folder</button>
+  </div>
+  <div id="panes" class="panes" data-show="items">
+    <nav class="pane pane-places" aria-label="Folders"><ul id="tree" class="tree"></ul></nav>
+    <main class="pane pane-items" id="items-pane" tabindex="-1"><div id="items"></div></main>
+    <aside class="pane pane-detail" id="detail" aria-label="Preview"></aside>
+  </div>
+  <p id="status" class="statusbar" role="status"></p>
+</div>
+<script src="../app-sdk.js"></script>
+<script src="files.js"></script>
+</body>
+</html>

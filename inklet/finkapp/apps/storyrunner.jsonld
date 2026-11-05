@@ -30,6 +30,7 @@
     ],
     "subscribe": [
       "wm.mode",
+      "wm.panes",
       "audio.volume",
       "ui.skin"
     ]

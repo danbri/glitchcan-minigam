@@ -23,7 +23,7 @@ const repo = resolve(here, '../../..');
 const serveRoot = resolve(repo, '..');
 const FACTOIDAL = process.env.FACTOIDAL || resolve(repo, '../../factoidal-core/npm/factoidal');
 if (!existsSync(join(FACTOIDAL, 'xmpp/inpage.mjs'))) { console.log(`SKIP no @factoidal/core with xmpp/inpage.mjs at ${FACTOIDAL}`); process.exit(0); }
-const PORT = 18791;
+const PORT = Number(process.env.PORT) || 18791;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const SHELL = `${ORIGIN}/${basename(repo)}/inklet/finkapp/?root=office&player=none&app=chat&factoidal=/factoidal/`;
 
@@ -73,12 +73,13 @@ try {
   check(!(await page.evaluate(() => FoafOS.chat.log.some((m) => m.body.startsWith('secrets.')))), 'a topic not on the mirror list stays out of the room');
 
   // ── 2. localhost server ──
-  await page.selectOption('#chat-mode', 'server');
+  await page.click('#foafos-chat .fc-status');
+  await page.check('input[name=fc-place][value=other]');
   await page.fill('#chat-url', xmpp.wsOrigin);
   await page.fill('#chat-domain', 'localhost');
   await page.fill('#chat-username', 'foafos');
   await page.fill('#chat-password', 'shell-pw-1');
-  await page.click('#foafos-chat button[aria-label="Save the chat settings and reconnect"]');
+  await page.click('#foafos-chat .fc-connect .fc-primary');
   await page.waitForFunction(() => ['online', 'error'].includes(FoafOS.chat.state) && FoafOS.chat.config().mode === 'server', null, { timeout: 20000 });
   const s2 = await page.evaluate(() => ({ state: FoafOS.chat.state, detail: FoafOS.chat.detail, pw: document.getElementById('chat-password').value,
     stored: localStorage.getItem('foafos.chat') }));

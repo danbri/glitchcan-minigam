@@ -1,0 +1,266 @@
+// Files: the person's pod as folders and files, through foaf.pod.* only.
+//
+// Three panes (../ui/panes.css): folders, what is in this folder, and the file
+// you picked, which you can read and edit. Paths are relative to this app's
+// own pod container, and the app never learns the pod's address or password.
+//
+// The pod verbs carry text, so anything else shows its details but no preview.
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $('status');
+  const REASONS = {
+    denied: 'Files may not use your pod. Check its permissions.',
+    'no-pod': 'No pod is chosen for apps yet. Choose one in PodStore.',
+    conflict: 'This file changed elsewhere since you opened it. Open it again, then save.',
+    offline: 'The pod is not connected.',
+  };
+  const say = (text, bad = false) => { statusEl.textContent = text; statusEl.classList.toggle('bad', bad); };
+  const explain = (r) => REASONS[r.reason] || `That did not work: ${r.reason}${r.status ? ` (${r.status})` : ''}.`;
+  const h = (tag, props = {}, ...kids) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'on') for (const [ev, fn] of Object.entries(v)) e.addEventListener(ev, fn);
+      else if (k === 'class') e.className = v;
+      else if (k in e) e[k] = v; else e.setAttribute(k, v);
+    }
+    for (const kid of kids.flat()) if (kid != null) e.append(kid);
+    return e;
+  };
+
+  const KINDS = [
+    [/\.(txt|text|md)$/i, '📄', 'Text'], [/\.(ttl|n3|nt|nq|trig|rdf|jsonld)$/i, '🔗', 'Linked data'],
+    [/\.json$/i, '{ }', 'JSON'], [/\.(html?|css|m?js|ts|xml|svg)$/i, '⌨', 'Code'], [/\.csv$/i, '▤', 'Table'],
+    [/\.(png|jpe?g|gif|webp|avif)$/i, '🖼', 'Image'], [/\.(mp3|wav|ogg|m4a)$/i, '♪', 'Audio'], [/\.(mp4|webm|mov)$/i, '🎞', 'Video'],
+  ];
+  const kindOf = (it) => {
+    if (it.container) return { icon: '📁', name: 'Folder' };
+    const k = KINDS.find(([re]) => re.test(it.path));
+    return k ? { icon: k[1], name: k[2] } : { icon: '📄', name: 'File' };
+  };
+  const nameOf = (p) => p.replace(/\/$/, '').split('/').pop();
+  const parentOf = (p) => { const s = p.replace(/\/$/, ''); const i = s.lastIndexOf('/'); return i < 0 ? '' : s.slice(0, i + 1); };
+  const cleanName = (s) => String(s).trim().replace(/[^\p{L}\p{N} ._-]+/gu, '-').replace(/^\.+/, '').slice(0, 100);
+  const hiddenName = (n) => n.startsWith('.');
+
+  let folder = '';               // current folder: '' or 'a/b/'
+  let items = [];
+  let picked = null;             // { path, body, etag, contentType, dirty }
+  let icons = false;
+  let sort = { key: 'name', dir: 1 };
+  const trail = [];
+  const children = new Map();    // folder -> subfolders, for the tree
+  const expanded = new Set(['']);
+
+  async function list(path) {
+    const r = await foaf.pod.list(path);
+    if (r.ok) return r;
+    // A folder that does not exist yet is an empty folder, not a fault.
+    if (r.reason === 'http' && r.status === 404) return { ok: true, items: [] };
+    return r;
+  }
+
+  async function go(path, { remember = true } = {}) {
+    const r = await list(path);
+    if (!r.ok) { say(explain(r), true); return; }
+    if (remember && path !== folder) trail.push(folder);
+    folder = path;
+    items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
+      .filter((it) => !hiddenName(nameOf(it.path)));
+    children.set(folder, items.filter((i) => i.container).map((i) => i.path));
+    for (let p = folder; ; p = parentOf(p)) { expanded.add(p); if (!p) break; }
+    pick(null);
+    draw();
+    const n = items.length;
+    say(n ? `${n} item${n === 1 ? '' : 's'}` : 'This folder is empty.');
+  }
+
+  function shown() {
+    const q = $('filter').value.trim().toLowerCase();
+    const rows = items.filter((i) => !q || nameOf(i.path).toLowerCase().includes(q));
+    const key = (i) => sort.key === 'kind' ? kindOf(i).name : nameOf(i.path).toLowerCase();
+    return rows.sort((a, b) => (b.container - a.container) || key(a).localeCompare(key(b)) * sort.dir);
+  }
+
+  function draw() {
+    $('back').disabled = !trail.length;
+    $('up').disabled = !folder;
+    const parts = folder.split('/').filter(Boolean);
+    $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => go('') } }, 'My files')),
+      ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', on: { click: () => go(parts.slice(0, i + 1).join('/') + '/') } }, p))));
+    drawTree();
+    drawItems();
+  }
+
+  function treeNode(path, label) {
+    const open = expanded.has(path);
+    const b = h('button', { type: 'button', title: label, on: { click: () => { $('panes').dataset.places = 'closed'; go(path); } } }, `${open ? '📂' : '📁'} ${label}`);
+    if (path === folder) b.setAttribute('aria-current', 'true');
+    const li = h('li', {}, b);
+    const kids = open ? children.get(path) || [] : [];
+    if (kids.length) li.append(h('ul', {}, kids.map((k) => treeNode(k, nameOf(k)))));
+    return li;
+  }
+  const shortcut = (label, path) => h('li', {}, h('button', { type: 'button', on: { click: () => { $('panes').dataset.places = 'closed'; go(path); } } }, label));
+  const drawTree = () => $('tree').replaceChildren(treeNode('', 'My files'), shortcut('🗒️ Notes', 'apps/podnotes/notes/'));
+
+  function activate(it) { if (it.container) go(it.path); else pick(it); }
+
+  function drawItems() {
+    const rows = shown();
+    const box = $('items');
+    if (!rows.length) {
+      box.replaceChildren(h('div', { class: 'empty' }, h('p', {}, $('filter').value ? 'Nothing here matches that filter.' : 'This folder is empty.'),
+        $('filter').value ? null : h('button', { class: 'tool tool-main', type: 'button', on: { click: askNewFile } }, 'New file')));
+      return;
+    }
+    if (icons) {
+      box.replaceChildren(h('div', { class: 'grid', role: 'listbox', 'aria-label': 'Items' }, rows.map((it) => {
+        const k = kindOf(it);
+        return h('button', { type: 'button', role: 'option', 'aria-selected': String(picked?.path === it.path),
+          on: { click: () => (it.container ? pick(it) : activate(it)), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
+        h('span', { class: 'ico', 'aria-hidden': 'true' }, k.icon), nameOf(it.path));
+      })));
+      return;
+    }
+    const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; drawItems(); } } },
+      `${label}${sort.key === key ? (sort.dir > 0 ? ' ↑' : ' ↓') : ''}`));
+    box.replaceChildren(h('table', { class: 'list' },
+      h('thead', {}, h('tr', {}, head('name', 'Name'), head('kind', 'Kind'))),
+      h('tbody', {}, rows.map((it) => {
+        const k = kindOf(it);
+        const tr = h('tr', { tabIndex: 0, on: {
+          click: () => (it.container ? pick(it) : activate(it)), dblclick: () => activate(it),
+          keydown: (e) => {
+            if (e.key === 'Enter') activate(it);
+            if (e.key === 'ArrowDown') tr.nextElementSibling?.focus();
+            if (e.key === 'ArrowUp') tr.previousElementSibling?.focus();
+          } } },
+        h('td', {}, h('span', { class: 'ico', 'aria-hidden': 'true' }, k.icon), nameOf(it.path)), h('td', {}, k.name));
+        tr.dataset.path = it.path;
+        tr.setAttribute('aria-selected', String(picked?.path === it.path));
+        return tr;
+      }))));
+  }
+
+  // ── the third pane ─────────────────────────────────────────────────────
+  const drawDetail = (...kids) => $('detail').replaceChildren(...kids);
+
+  async function pick(it) {
+    $('panes').dataset.show = it ? 'detail' : 'items';
+    if (!it) { picked = null; drawDetail(h('p', { class: 'detail-none' }, 'Pick a file to see it here.')); return; }
+    const k = kindOf(it);
+    const head = h('div', { class: 'detail-head' }, h('h2', {}, `${k.icon} ${nameOf(it.path)}`), h('p', {}, k.name));
+    const backBtn = h('button', { class: 'tool panes-back', type: 'button', on: { click: () => { $('panes').dataset.show = 'items'; } } }, 'Back to list');
+    if (it.container) {
+      picked = { path: it.path, container: true };
+      drawDetail(head, h('div', { class: 'detail-actions' },
+        h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(it.path) } }, 'Open'), backBtn,
+        h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')));
+      markPicked();
+      return;
+    }
+    const r = await foaf.pod.get(it.path);
+    if (!r.ok) { say(explain(r), true); drawDetail(head); return; }
+    picked = { path: it.path, body: r.body, etag: r.etag, contentType: r.contentType || '', dirty: false };
+    markPicked();
+    const binary = /^(image|audio|video)\//.test(picked.contentType);
+    if (binary) {
+      drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), actions(backBtn));
+      return;
+    }
+    const text = h('textarea', { value: r.body, spellcheck: false, 'aria-label': `Contents of ${nameOf(it.path)}`,
+      on: { input: () => { picked.dirty = text.value !== picked.body; save.disabled = !picked.dirty; } } });
+    const save = h('button', { class: 'tool tool-main', type: 'button', disabled: true, on: { click: () => saveFile(text.value, save) } }, 'Save');
+    head.querySelector('p').textContent = `${k.name}, ${r.body.length.toLocaleString()} characters`;
+    drawDetail(head, h('div', { class: 'detail-body' }, text), actions(backBtn, save));
+  }
+  const actions = (...first) => h('div', { class: 'detail-actions' }, ...first,
+    h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
+    h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete'));
+
+  function markPicked() {
+    for (const e of document.querySelectorAll('[aria-selected]')) e.setAttribute('aria-selected', String(e.dataset.path === picked?.path));
+  }
+
+  async function saveFile(value, btn) {
+    const r = await foaf.pod.put(picked.path, value, { contentType: picked.contentType || 'text/plain', etag: picked.etag });
+    if (!r.ok) { say(explain(r), true); return; }
+    picked.etag = r.etag; picked.body = value; picked.dirty = false; btn.disabled = true;
+    say(`Saved ${nameOf(picked.path)}.`);
+  }
+
+  // Questions are asked in the pane: a sandboxed frame has no reliable dialogs.
+  function ask(label, action, { value = '', danger = false, input = true } = {}, done) {
+    document.querySelector('.ask')?.remove();
+    const field = input ? h('input', { type: 'text', value, 'aria-label': label }) : null;
+    const close = () => bar.remove();
+    const submit = async (e) => { e.preventDefault(); const v = field ? cleanName(field.value) : ''; if (input && !v) return; close(); await done(v); };
+    const bar = h('form', { class: 'ask', on: { submit } }, input ? null : h('span', {}, label), field,
+      h('button', { class: `tool ${danger ? 'danger' : 'tool-main'}`, type: 'submit' }, action),
+      h('button', { class: 'tool', type: 'button', on: { click: close } }, 'Cancel'));
+    statusEl.before(bar);
+    (field || bar.querySelector('button')).focus();
+    field?.select();
+  }
+
+  const askNewFile = () => ask('Name of the new file', 'Create', { value: 'untitled.txt' }, async (name) => {
+    const path = folder + name;
+    if (items.some((i) => i.path === path)) { say(`${name} exists already.`, true); return; }
+    const r = await foaf.pod.put(path, '', { contentType: 'text/plain' });
+    if (!r.ok) { say(explain(r), true); return; }
+    await go(folder, { remember: false });
+    pick({ path, container: false });
+  });
+
+  // A pod folder exists once something is in it, so a new one gets a hidden marker.
+  const askNewFolder = () => ask('Name of the new folder', 'Create', { value: 'New folder' }, async (name) => {
+    const r = await foaf.pod.put(`${folder}${name}/.folder`, '', { contentType: 'text/plain' });
+    if (!r.ok) { say(explain(r), true); return; }
+    await go(folder, { remember: false });
+    say(`Created ${name}.`);
+  });
+
+  const askRename = () => ask('New name', 'Rename', { value: nameOf(picked.path) }, async (name) => {
+    const to = parentOf(picked.path) + name;
+    if (to === picked.path) return;
+    const put = await foaf.pod.put(to, picked.body, { contentType: picked.contentType || 'text/plain' });
+    if (!put.ok) { say(explain(put), true); return; }
+    const del = await foaf.pod.delete(picked.path, picked.etag ? { etag: picked.etag } : {});
+    if (!del.ok) say(`Copied to ${name}, but the old file is still there: ${explain(del)}`, true);
+    await go(folder, { remember: false });
+    pick({ path: to, container: false });
+  });
+
+  const askDelete = () => ask(`Delete ${nameOf(picked.path)}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
+    const name = nameOf(picked.path);
+    let path = picked.path;
+    if (picked.container) {
+      const r = await list(path);
+      const rest = (r.items || []).filter((i) => !hiddenName(i.path.replace(/\/$/, '')));
+      if (rest.length) { say('Empty this folder before deleting it.', true); return; }
+      await foaf.pod.delete(`${path}.folder`);
+    }
+    const r = await foaf.pod.delete(path, picked.etag ? { etag: picked.etag } : {});
+    if (!r.ok) { say(explain(r), true); return; }
+    await go(folder, { remember: false });
+    say(`Deleted ${name}.`);
+  });
+
+  $('back').addEventListener('click', () => { if (trail.length) go(trail.pop(), { remember: false }); });
+  $('up').addEventListener('click', () => go(parentOf(folder)));
+  $('filter').addEventListener('input', drawItems);
+  $('new-file').addEventListener('click', askNewFile);
+  $('new-folder').addEventListener('click', askNewFolder);
+  $('places').addEventListener('click', () => { const p = $('panes'); p.dataset.places = p.dataset.places === 'open' ? 'closed' : 'open'; });
+  $('view').addEventListener('click', (e) => {
+    icons = !icons;
+    e.currentTarget.setAttribute('aria-pressed', String(icons));
+    e.currentTarget.textContent = icons ? '☰' : '▦';
+    e.currentTarget.setAttribute('aria-label', icons ? 'Show as a list' : 'Show as icons');
+    drawItems();
+  });
+
+  pick(null);
+  window.__files = { go, state: () => ({ folder, items, picked, status: statusEl.textContent }) };
+  foaf.onInit(() => go('', { remember: false }));
+})();
