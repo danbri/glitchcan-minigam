@@ -11,7 +11,7 @@
   "name": "Chat",
   "surface": "panel",
   "panel": "chat",
-  "desc": "The bus room: watch the apps talk over XMPP",
+  "desc": "Rooms, messages and app activity, over XMPP",
   "capabilities": [
     "shell"
   ],

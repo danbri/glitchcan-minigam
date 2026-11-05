@@ -1,0 +1,391 @@
+// The Chat window: rooms, direct messages, and the apps talking beside them.
+//
+// Shell chrome, not a sandboxed app: a server password typed here goes straight
+// into FoafSecrets (chat.configure) and the field is cleared. Everything shown
+// comes through textContent, so nothing said in a room can become markup.
+// Design and log: docs/foafos-chat-window-20261104.md.
+
+const h = (tag, props = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v;
+    else if (k === 'on') for (const [ev, fn] of Object.entries(v)) e.addEventListener(ev, fn);
+    else if (k in e && k !== 'list') e[k] = v;
+    else e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) e.append(kid);
+  return e;
+};
+
+const LOCAL_URL = 'ws://127.0.0.1:5280/xmpp-websocket';
+const time = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+// Errors say what happened and what to do about it.
+export function explainConnect(reason = '') {
+  if (/no password/i.test(reason)) return 'Enter the password to connect. To keep it after a reload, set a passphrase under Session in the menu.';
+  if (/not-authorized/.test(reason)) return 'The server refused that account or password. Check both, then connect again.';
+  if (/cannot open/.test(reason)) return `Nothing answered at that address. Check that the server is running and allows this page (${location.origin}).`;
+  if (/stream:features|host-unknown/.test(reason)) return 'That server does not host this domain. Check the domain in Advanced.';
+  if (/timed out/.test(reason)) return 'The server did not answer in time. Check that it is running, then connect again.';
+  if (/SCRAM mechanism/.test(reason)) return 'That server does not offer a sign-in method this window can use.';
+  return reason || 'Could not connect.';
+}
+const REFUSED = {
+  'bad-url': 'The server address must start with ws:// or wss://.',
+  'bad-name': 'The room or nickname has a character it cannot contain.',
+  'bad-mirror': 'Check the list of shared activity.',
+  'bad-jid': 'Allowed accounts must look like name@server, separated by spaces.',
+};
+
+const STATE = {
+  online: 'Connected', connecting: 'Connecting', reconnecting: 'Reconnecting', error: 'Not connected',
+  stopped: 'Not connected', off: 'Chat is off',
+};
+
+const glyphFor = (topic) => {
+  if (topic.startsWith('tools.') || topic === 'app.tools') return '⌘';
+  if (topic === 'app.spawn') return '+';
+  if (topic === 'app.close') return '−';
+  if (topic.startsWith('audio.')) return '♪';
+  if (topic.startsWith('pods.')) return '◇';
+  return '·';
+};
+
+export function mountChat(root, { chat, tools, run }) {
+  let current = null;                 // the open conversation's jid
+  let view = 'connect';
+  let settingsByHand = false;         // the person opened the connect screen themselves
+  let showActivity = true;
+  let infoTab = 'members';
+  let drawn = { jid: null, count: 0, last: 0 };
+  const history = [];
+  let historyAt = -1;
+  const open = new Set();             // event groups the person expanded
+
+  root.classList.add('fc');
+
+  // ── the connect screen ──────────────────────────────────────────────────
+  const place = () => {
+    const c = chat.config();
+    if (c.mode !== 'server') return 'builtin';
+    return c.url === LOCAL_URL && c.domain === 'localhost' ? 'computer' : 'other';
+  };
+  const radio = (value, title, text) => h('label', { class: 'fc-place' },
+    h('input', { type: 'radio', name: 'fc-place', value, on: { change: drawForm } }),
+    h('span', { class: 'fc-place-text' }, h('strong', {}, title), h('span', {}, text)));
+  const fUrl = h('input', { id: 'chat-url', type: 'text', spellcheck: false, autocomplete: 'off' });
+  const fDomain = h('input', { id: 'chat-domain', type: 'text', spellcheck: false, autocomplete: 'off' });
+  const fUser = h('input', { id: 'chat-username', type: 'text', spellcheck: false, autocomplete: 'off' });
+  const fPass = h('input', { id: 'chat-password', type: 'password', autocomplete: 'new-password' });
+  const fNick = h('input', { id: 'chat-nick', type: 'text', spellcheck: false, autocomplete: 'off' });
+  const fRoom = h('input', { id: 'chat-room', type: 'text', spellcheck: false, autocomplete: 'off' });
+  const fRoomDomain = h('input', { id: 'chat-room-domain', type: 'text', spellcheck: false, autocomplete: 'off' });
+  const fMirror = h('textarea', { id: 'chat-mirror', rows: 3, spellcheck: false });
+  const fCommands = h('input', { id: 'chat-commands', type: 'text', spellcheck: false, autocomplete: 'off', placeholder: 'me@localhost' });
+  const row = (label, input, hint) => h('label', { class: 'fc-field' }, h('span', {}, label), input, hint ? h('small', {}, hint) : null);
+  const passRow = row('Password', fPass);
+  const userRow = row('Account', fUser);
+  const serverRows = h('div', { class: 'fc-server' }, row('Server address', fUrl, 'A WebSocket address, such as wss://example.org/xmpp-websocket'), row('Domain', fDomain));
+  const connectError = h('p', { class: 'fc-error', role: 'alert' });
+  const connectBtn = h('button', { type: 'submit', class: 'fc-primary' }, 'Connect');
+  const backBtn = h('button', { type: 'button', class: 'fc-quiet', on: { click: () => { settingsByHand = false; setView('chat'); } } }, 'Back to chat');
+  const offBtn = h('button', { type: 'button', class: 'fc-quiet', on: { click: () => chat.stop() } }, 'Disconnect');
+  const form = h('form', { class: 'fc-connect', autocomplete: 'off', on: { submit: connect } },
+    h('h2', {}, 'Where should chat connect?'),
+    h('div', { class: 'fc-places', role: 'radiogroup', 'aria-label': 'Where to connect' },
+      radio('builtin', 'In this page', 'Private to this tab. Nothing to set up.'),
+      radio('computer', 'This computer', 'Use a server on this machine, so other chat apps can join.'),
+      radio('other', 'Another server', 'Use any XMPP server that offers a WebSocket.')),
+    serverRows, userRow, passRow,
+    h('details', { class: 'fc-advanced' }, h('summary', {}, 'Advanced'),
+      row('Your nickname', fNick), row('Activity room', fRoom), row('Rooms service', fRoomDomain, 'Leave empty to use rooms.DOMAIN'),
+      row('Activity to share', fMirror, 'Topics sent to the activity room, separated by spaces'),
+      row('Accounts that may send commands', fCommands, 'Direct messages from these accounts can use /call. Separate them with spaces.')),
+    connectError,
+    h('div', { class: 'fc-actions' }, connectBtn, backBtn, offBtn));
+  const places = () => [...form.querySelectorAll('input[name=fc-place]')];
+
+  function fillForm() {
+    const c = chat.config();
+    const p = place();
+    for (const r of places()) r.checked = r.value === p;
+    fUrl.value = c.url; fDomain.value = c.domain; fUser.value = c.username || 'foafos';
+    fNick.value = c.nick; fRoom.value = c.room; fRoomDomain.value = c.roomDomain;
+    fMirror.value = c.mirror.join(' '); fCommands.value = c.commandJids.join(' ');
+    drawForm();
+  }
+  function drawForm() {
+    const p = places().find((r) => r.checked)?.value || 'builtin';
+    serverRows.hidden = p !== 'other';
+    userRow.hidden = passRow.hidden = p === 'builtin';
+    fPass.placeholder = chat.hasPassword() ? 'Saved until you reload this page' : '';
+    if (p === 'computer') { fUrl.value = LOCAL_URL; fDomain.value = 'localhost'; }
+    connectBtn.textContent = chat.state === 'online' ? 'Reconnect' : 'Connect';
+    backBtn.hidden = chat.state !== 'online';
+    offBtn.hidden = !['online', 'reconnecting'].includes(chat.state);
+  }
+  async function connect(e) {
+    e.preventDefault();
+    connectError.textContent = '';
+    const p = places().find((r) => r.checked)?.value || 'builtin';
+    const password = fPass.value;
+    fPass.value = '';
+    const r = chat.configure({
+      mode: p === 'builtin' ? 'builtin' : 'server', url: fUrl.value.trim(), domain: fDomain.value.trim(),
+      username: fUser.value.trim(), nick: fNick.value.trim(), room: fRoom.value.trim(),
+      roomDomain: fRoomDomain.value.trim(), mirror: fMirror.value.split(/\s+/).filter(Boolean),
+      commandJids: fCommands.value.split(/[\s,]+/).filter(Boolean),
+    }, { password });
+    if (!r.ok) { connectError.textContent = REFUSED[r.reason] || `Refused: ${r.reason}`; return; }
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Connecting';
+    const started = await chat.start();
+    connectBtn.disabled = false;
+    if (!started.ok) { connectError.textContent = explainConnect(started.reason); drawForm(); return; }
+    current = chat.roomJid();
+    settingsByHand = false;
+    setView('chat');
+  }
+
+  // ── the conversation screen ─────────────────────────────────────────────
+  const list = h('nav', { class: 'fc-list', 'aria-label': 'Conversations' });
+  const newBox = h('input', { type: 'text', 'aria-label': 'Room name or account', placeholder: 'Room or name@server', spellcheck: false, autocomplete: 'off' });
+  const newForm = h('form', { class: 'fc-new', on: { submit: startNew } }, newBox);
+  const side = h('aside', { class: 'fc-side' }, list, newForm);
+  const title = h('h2', { class: 'fc-title' });
+  const status = h('button', { type: 'button', class: 'fc-status', title: 'Connection settings', on: { click: () => { settingsByHand = true; setView('connect'); } } });
+  const sideBtn = h('button', { type: 'button', class: 'fc-icon fc-side-toggle', 'aria-label': 'Show conversations', on: { click: () => root.classList.toggle('fc-show-side') } }, '☰');
+  const actToggle = h('label', { class: 'fc-toggle' },
+    h('input', { type: 'checkbox', checked: true, on: { change: (e) => { showActivity = e.target.checked; drawLog(true); } } }), 'App activity');
+  const infoBtn = h('button', { type: 'button', class: 'fc-icon fc-info-toggle', 'aria-label': 'Show details', on: { click: () => root.classList.toggle('fc-show-info') } }, 'ⓘ');
+  const head = h('header', { class: 'fc-head' }, sideBtn, title, actToggle, status, infoBtn);
+  const log = h('ol', { class: 'fc-log', role: 'log', 'aria-label': 'Messages', 'aria-live': 'polite', tabIndex: 0, on: { scroll: onScroll } });
+  const jump = h('button', { type: 'button', class: 'fc-jump', hidden: true, on: { click: () => stick(true) } }, 'Jump to latest');
+  const input = h('textarea', { id: 'chat-say', rows: 1, 'aria-label': 'Message', placeholder: 'Message, or / for commands', on: { keydown: onKey, input: onInput } });
+  const send = h('button', { type: 'submit', class: 'fc-primary' }, 'Send');
+  const hints = h('ul', { class: 'fc-hints', hidden: true });
+  const composer = h('form', { class: 'fc-composer', on: { submit: (e) => { e.preventDefault(); submit(); } } }, hints, input, send);
+  const main = h('section', { class: 'fc-main' }, head, h('div', { class: 'fc-logwrap' }, log, jump), composer);
+  const tabM = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'members'; drawInfo(); } } }, 'People');
+  const tabT = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'tools'; drawInfo(); } } }, 'App tools');
+  const infoBody = h('div', { class: 'fc-info-body' });
+  const info = h('aside', { class: 'fc-info' }, h('div', { class: 'fc-tabs', role: 'tablist' }, tabM, tabT), infoBody);
+  const chatView = h('div', { class: 'fc-chat' }, side, main, info);
+  root.append(form, chatView);
+
+  function setView(v) {
+    view = v;
+    form.hidden = v !== 'connect';
+    chatView.hidden = v !== 'chat';
+    if (v === 'connect') { fillForm(); (fPass.hidden ? form.querySelector('input:checked') : fPass)?.focus?.(); }
+    else { if (!current || !chat.conversations.has(current)) current = chat.roomJid(); drawAll(); input.focus(); }
+  }
+
+  function startNew(e) {
+    e.preventDefault();
+    const v = newBox.value.trim();
+    if (!v) return;
+    const room = !v.includes('@') || v.endsWith('@' + chat.roomDomain()) || v.split('@')[1].startsWith('rooms.') || v.split('@')[1].startsWith('conference.');
+    const r = room ? chat.joinRoom(v) : chat.openDirect(v);
+    if (!r.ok) { addNote(r.reason === 'offline' ? 'Connect first.' : 'That is not a room name or an account.'); return; }
+    newBox.value = '';
+    select(r.jid);
+  }
+
+  function select(jid) {
+    current = jid;
+    root.classList.remove('fc-show-side');
+    chat.markRead(jid);
+    drawAll();
+    input.focus();
+  }
+
+  function drawList() {
+    const items = [...chat.conversations.values()];
+    const group = (name, kind) => {
+      const rows = items.filter((c) => c.kind === kind);
+      if (!rows.length) return null;
+      return h('section', {}, h('h3', {}, name), rows.map((c) => h('button', {
+        type: 'button', class: 'fc-conv', 'aria-current': c.jid === current ? 'true' : 'false', title: c.jid,
+        on: { click: () => select(c.jid) },
+      }, h('span', { class: 'fc-conv-name' }, c.bus ? 'Activity' : c.title), c.unread && c.jid !== current ? h('span', { class: 'fc-badge', 'aria-label': `${c.unread} unread` }, String(c.unread)) : null)));
+    };
+    list.replaceChildren(...[group('Rooms', 'room'), group('People', 'direct')].filter(Boolean));
+  }
+
+  function drawHead() {
+    const c = chat.conversations.get(current);
+    title.textContent = c ? (c.bus ? 'Activity' : c.title) : 'Chat';
+    title.title = c?.jid || '';
+    actToggle.hidden = !c?.bus;
+    status.textContent = STATE[chat.state] || chat.state;
+    status.dataset.state = chat.state;
+    input.disabled = send.disabled = chat.state !== 'online';
+    input.placeholder = chat.state === 'online' ? 'Message, or / for commands' : 'Connect to send messages';
+  }
+
+  const avatar = (nick) => h('span', { class: 'fc-avatar', 'aria-hidden': 'true' }, [...nick][0]?.toUpperCase() || '?');
+
+  function messageRow(m, grouped) {
+    if (m.kind === 'notice') return h('li', { class: 'fc-notice' }, m.body);
+    if (m.kind === 'result') {
+      const body = h('div', { class: 'fc-result' }, h('p', {}, m.body));
+      if (m.value !== undefined) {
+        const text = JSON.stringify(m.value, null, 2);
+        body.append(text.length < 200 ? h('pre', {}, text) : h('details', {}, h('summary', {}, 'Show the result'), h('pre', {}, text)));
+      }
+      return h('li', { class: 'fc-system' }, body);
+    }
+    const li = h('li', { class: `fc-msg${m.self ? ' fc-self' : ''}${grouped ? ' fc-grouped' : ''}` });
+    if (!grouped) li.append(avatar(m.nick), h('div', { class: 'fc-meta' }, h('strong', {}, m.nick), h('time', {}, time(m.ts))));
+    const lines = m.body.split('\n');
+    if (lines.length > 6) {
+      li.append(h('p', { class: 'fc-body' }, lines[0]),
+        h('details', { class: 'fc-more' }, h('summary', {}, `Show ${lines.length - 1} more lines`), h('pre', {}, lines.slice(1).join('\n'))));
+    } else li.append(h('p', { class: 'fc-body' }, m.body));
+    return li;
+  }
+
+  function eventRows(events) {
+    const key = events[0].id;
+    const line = (m) => h('li', { class: 'fc-event' },
+      h('span', { class: 'fc-glyph', 'aria-hidden': 'true' }, glyphFor(m.topic)),
+      h('details', {}, h('summary', {}, m.data?.summary || m.topic), h('pre', {}, `${m.topic}\n${JSON.stringify(m.data, null, 2)}`)),
+      h('time', {}, time(m.ts)));
+    if (events.length < 4 || open.has(key)) return events.map(line);
+    return [h('li', { class: 'fc-event fc-event-group' }, h('span', { class: 'fc-glyph', 'aria-hidden': 'true' }, '…'),
+      h('button', { type: 'button', on: { click: () => { open.add(key); drawLog(true); } } }, `${events.length} app events`),
+      h('time', {}, time(events[events.length - 1].ts)))];
+  }
+
+  function emptyRow(c) {
+    if (c?.bus) return h('li', { class: 'fc-empty' }, h('p', {}, 'Nothing yet. Open or close an app and it shows up here.'));
+    return h('li', { class: 'fc-empty' }, h('p', {}, 'No messages yet. Say hello.'));
+  }
+
+  function drawLog(force = false) {
+    const c = chat.conversations.get(current);
+    const msgs = (c?.messages || []).filter((m) => showActivity || m.kind !== 'event');
+    const last = msgs.length ? msgs[msgs.length - 1].id : 0;
+    if (!force && drawn.jid === current && drawn.last === last && drawn.count === msgs.length) return;
+    const stay = !nearEnd();
+    const switched = drawn.jid !== current;
+    const rows = [];
+    let events = [];
+    let prev = null;
+    const flush = () => { if (events.length) rows.push(...eventRows(events)); events = []; };
+    for (const m of msgs) {
+      if (m.kind === 'event') { events.push(m); prev = null; continue; }
+      flush();
+      rows.push(messageRow(m, prev && prev.kind === 'message' && m.kind === 'message' && prev.nick === m.nick && m.ts - prev.ts < 300000));
+      prev = m;
+    }
+    flush();
+    log.replaceChildren(...(rows.length ? rows : [emptyRow(c)]));
+    drawn = { jid: current, count: msgs.length, last };
+    if (switched || !stay) stick(true); else jump.hidden = false;
+  }
+
+  const nearEnd = () => log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+  function stick(now) { if (now) log.scrollTop = log.scrollHeight; jump.hidden = true; }
+  function onScroll() { if (nearEnd()) jump.hidden = true; }
+
+  function drawInfo() {
+    tabM.setAttribute('aria-selected', String(infoTab === 'members'));
+    tabT.setAttribute('aria-selected', String(infoTab === 'tools'));
+    if (infoTab === 'members') {
+      const c = chat.conversations.get(current);
+      const people = [...(c?.occupants.values() || [])].sort((a, b) => a.nick.localeCompare(b.nick));
+      infoBody.replaceChildren(people.length
+        ? h('ul', { class: 'fc-people' }, people.map((p) => h('li', {}, avatar(p.nick), h('span', {}, p.nick), p.self ? h('small', {}, 'you') : null)))
+        : h('p', { class: 'fc-muted' }, c?.kind === 'direct' ? 'This is a conversation with one account.' : 'Nobody here yet.'));
+      return;
+    }
+    const apps = tools.list();
+    infoBody.replaceChildren(apps.length ? h('div', {}, apps.map((a) => h('section', { class: 'fc-app' },
+      h('h3', {}, a.label),
+      toolGroup(a, 'Look', a.tools.filter((t) => t.readOnly)),
+      toolGroup(a, 'Act', a.tools.filter((t) => !t.readOnly))))) : h('p', { class: 'fc-muted' }, 'No app is offering tools. Open Moglob to see its tools here.'));
+  }
+
+  function toolGroup(a, name, list) {
+    if (!list.length) return null;
+    return h('div', {}, h('h4', {}, name), h('ul', { class: 'fc-tools' }, list.map((t) => h('li', {}, h('button', {
+      type: 'button', title: t.description, on: { click: () => useTool(a, t) },
+    }, t.name)))));
+  }
+
+  function useTool(a, t) {
+    const example = {};
+    for (const k of t.inputSchema?.required || []) example[k] = '';
+    const args = Object.keys(example).length ? ` ${JSON.stringify(example)}` : '';
+    input.value = `/call ${a.name} ${t.name}${args}`;
+    onInput();
+    input.focus();
+  }
+
+  function drawAll() { drawList(); drawHead(); drawLog(true); drawInfo(); }
+
+  function addNote(body, value) {
+    const c = chat.conversations.get(current);
+    if (!c) return;
+    chat._push(c, { kind: 'result', body, value, self: true });
+  }
+
+  async function submit() {
+    const text = input.value.trim();
+    if (!text || !current) return;
+    history.unshift(text); historyAt = -1;
+    input.value = ''; onInput();
+    if (text.startsWith('/')) {
+      const r = await run(text, { conversation: current });
+      if (r?.action?.open) select(r.action.open);
+      if (r && (r.text || r.value !== undefined)) addNote(r.text, r.value);
+      return;
+    }
+    const r = chat.send(current, text);
+    if (!r.ok) addNote('Connect first, then send this again.');
+    stick(true);
+  }
+
+  const COMMANDS = ['/help', '/where', '/go', '/apps', '/tools', '/call', '/open', '/bus', '/join', '/leave', '/clear'];
+  function onInput() {
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 140)}px`;
+    const v = input.value;
+    const show = v.startsWith('/') && !v.includes(' ');
+    const found = show ? COMMANDS.filter((c) => c.startsWith(v)) : [];
+    hints.hidden = !found.length;
+    hints.replaceChildren(...found.map((c) => h('li', {}, h('button', { type: 'button', on: { click: () => { input.value = `${c} `; onInput(); input.focus(); } } }, c))));
+  }
+  function onKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); return; }
+    if (e.key === 'ArrowUp' && !input.value && history.length) { e.preventDefault(); input.value = history[historyAt = 0]; return; }
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && historyAt >= 0) {
+      e.preventDefault();
+      historyAt = Math.max(-1, Math.min(history.length - 1, historyAt + (e.key === 'ArrowUp' ? 1 : -1)));
+      input.value = historyAt < 0 ? '' : history[historyAt];
+    }
+  }
+
+  const stopChat = chat.subscribe((what) => {
+    if (what === 'status') {
+      // Opened while the shell was still connecting: show the conversation as soon as it can.
+      if (view === 'connect' && chat.state === 'online' && !settingsByHand) { current = chat.roomJid(); setView('chat'); }
+      else if (view === 'connect') drawForm();
+      else if (chat.state === 'error') { setView('connect'); connectError.textContent = explainConnect(chat.detail); }
+      drawHead();
+      if (view === 'chat') drawInfo();
+      return;
+    }
+    if (view !== 'chat') return;
+    if (what === 'messages') { const c = chat.conversations.get(current); if (c) c.unread = 0; drawLog(); drawList(); }
+    else if (what === 'members') drawInfo();
+    else drawList();
+  });
+  const stopTools = tools.subscribe(() => { if (view === 'chat') drawInfo(); });
+
+  setView(chat.state === 'online' || chat.state === 'reconnecting' ? 'chat' : 'connect');
+  if (chat.state === 'error') connectError.textContent = explainConnect(chat.detail);
+  return () => { stopChat(); stopTools(); };
+}

@@ -24,7 +24,7 @@ const VOCAB = `${SITE}vocab#`;
 const LD_KEYS = ['@context', '@id', '@type', 'position', 'notes'];   // manifest-only, not registry data
 // The members a manifest may have: today's registry members, then those of the design still to come.
 const MEMBERS = new Set(['position', 'notes', 'id', 'family', 'icon', 'name', 'surface', 'url', 'desc',
-  'capabilities', 'silent', 'game', 'controls', 'inline', 'aliases', 'args', 'variables', 'features', 'opens',
+  'capabilities', 'silent', 'game', 'controls', 'tools', 'wholePod', 'inline', 'aliases', 'args', 'variables', 'features', 'opens',
   'story', 'bus', 'featured', 'external', 'persists', 'panel', 'mount',
   'instances', 'handles', 'actions', 'delegates', 'storage', 'headless', 'shows']);
 

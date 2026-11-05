@@ -10,13 +10,17 @@
   "icon": "📁",
   "name": "Files",
   "surface": "window",
-  "url": "../../magpie/edot/files/files.html",
-  "desc": "Pod explorer",
+  "url": "../apps/files/index.html",
+  "desc": "Browse, read and edit your files",
+  "wholePod": true,
   "capabilities": [
-    "storage"
+    "pod:read",
+    "pod:write"
   ],
   "silent": true,
   "notes": [
+    "wholePod: as the person's file manager, Files is granted the whole pod rather than apps/files/, so it shows what other apps saved. Every other app keeps its own container.",
+    "Rebuilt 2026-11-04 as a three-pane explorer over foaf.pod.* (folders, contents, preview), with inklet/apps/ui/panes.css, the layout other complex apps can share. The old edot component in magpie/edot/files is left in place and is no longer launched. It also reached the device (OPFS) mount, which this one does not: the pod verbs are the only storage here.",
     "MIGRATED (July 2026). Files stored nothing itself — its escape hatch was bought for OPFS, which needs an origin to hang a storage bucket on and so is refused outright in a sandboxed frame. It now probes the device mount and falls back to BrokeredResourceSource: the same list/read/write/remove/stat/mkdir interface over the shell's store.",
     "files.html, not the directory: there is no index.html here, so the bare path served a directory listing locally and would 404 on GitHub Pages. The app had never actually loaded inside the shell."
   ]

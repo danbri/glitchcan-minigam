@@ -43,4 +43,7 @@ export { XmppWs, XmppError } from './xmpp-ws.mjs';
 // The shell's XMPP connection and the bus room (MUC), on the in-page Factoidal server or a
 // localhost one. See chat.mjs and docs/foafos-chat-20261103.md.
 export { FoafChat, CHAT_OWNER, DEFAULT_MIRROR, BUILTIN_DOMAIN } from './chat.mjs';
+// The tools framed apps offer, and chat commands that reach them. See tools.mjs.
+export { FoafTools } from './tools.mjs';
+export { createChatCommands, explainToolFailure } from './chat-commands.mjs';
 export { lwsStore, cachedBackend, mergeKeys, LwsConflict } from './lws-store.mjs';

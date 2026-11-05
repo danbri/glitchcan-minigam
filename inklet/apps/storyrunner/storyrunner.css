@@ -276,6 +276,18 @@ body:not([data-depth="0"]):not([data-depth="1"]):not([data-depth="2"])[data-dept
   0%, 100% { transform: skewX(0deg); }
   50% { transform: skewX(0.4deg); }
 }
+/* On a phone the shell's ☰ starts at bottom right: lift the last choice clear of it. */
+@media (max-width: 700px) { #choices { padding-bottom: 18px; } }
+
 @media (prefers-reduced-motion: reduce) {
   body[data-depth] #stage { animation: none; }
 }
+
+/* Beside a game (wm.panes): what is happening, with its history running above
+   it, then what you can do, always in view at the foot of the pane. */
+html.panes, html.panes body { height: 100%; overflow: hidden; }
+html.panes #stage { height: 100dvh; max-width: none; display: flex; flex-direction: column; padding-bottom: 0; }
+html.panes #prose { flex: 1; min-height: 0; overflow-y: auto; }
+html.panes #prose > :not(:last-child) { opacity: 0.62; }
+html.panes #choices { flex: none; max-height: 45%; overflow-y: auto; margin: 0; padding: 0.7em 0 1em; border-top: 1px solid var(--sk-line, rgba(255,255,255,.25)); }
+html.panes #choices:empty { display: none; }

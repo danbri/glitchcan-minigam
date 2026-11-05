@@ -13,6 +13,7 @@
   "game": "drift",
   "url": "../../drift-city/dist/city.html",
   "desc": "The city on Titan and its stories",
+  "tools": true,
   "controls": "sticks",
   "args": [
     "tale"

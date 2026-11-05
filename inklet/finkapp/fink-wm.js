@@ -886,6 +886,7 @@ window.FinkWM = {
             chrome.style.left = `${this._drag.left + dx}px`;
             chrome.style.top = `${this._drag.top + dy}px`;
             chrome.style.right = 'auto';
+            chrome.style.bottom = 'auto';
         });
         const finish = (e) => {
             if (!this._drag) return;
@@ -939,13 +940,14 @@ window.FinkWM = {
             // a game's own header band (it sat exactly on Robbin's QUIT
             // chip). Inline geometry is the record of a user's drag — no
             // drag, no inline.
-            chrome.style.top = chrome.style.left = chrome.style.right = '';
+            chrome.style.top = chrome.style.left = chrome.style.right = chrome.style.bottom = '';
             chrome.classList.remove('dock-left');
             return;
         }
         const d = dock;
         const maxTop = Math.max(8, window.innerHeight - 56);
         chrome.style.top = `${Math.min(d.top, maxTop)}px`;
+        chrome.style.bottom = 'auto';
         if (d.side === 'left') {
             chrome.style.left = '8px';
             chrome.style.right = 'auto';

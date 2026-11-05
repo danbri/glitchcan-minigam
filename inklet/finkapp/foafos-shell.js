@@ -17,7 +17,10 @@ import {
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
   defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
+import { FoafTools } from '../../packages/foafos/src/tools.mjs';
+import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
+import { mountChat } from './foafos-chat-ui.js';
 import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
 window.__foafAppRegistry = APPS;   // the service inventory counts holders from this
 
@@ -310,6 +313,39 @@ const chat = new FoafChat({
   },
 });
 FoafOS.chat = chat;
+
+// ── tools: what framed apps offer, brokered here (FoafTools) ─────────────
+// An app whose manifest says `tools: true` may offer tools over its frame
+// (the webmcp.* messages in tools.mjs). The frame is found by the window that
+// sent the message, never by anything the message says.
+const appTools = new FoafTools({ bus, document });
+FoafOS.tools = appTools;
+window.addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d || typeof d.type !== 'string' || !d.type.startsWith('webmcp.') || !e.source) return;
+  let p = appTools.bySource(e.source);
+  if (!p) {
+    const frame = [...document.querySelectorAll('iframe')].find((f) => f.contentWindow === e.source);
+    const app = frame && APPS.find((a) => a.tools === true && a.url && frame.src.startsWith(new URL(a.url, location.href).href));
+    if (!app) return;
+    p = appTools.attach({ id: app.id, label: app.name, source: e.source,
+      post: (m) => e.source.postMessage(m, '*'), alive: () => frame.isConnected });
+  }
+  appTools.receive(p, d);
+});
+for (const t of ['app.close', 'minigame.instance']) bus.subscribe(t, () => setTimeout(() => appTools.prune(), 0));
+
+const runChatCommand = createChatCommands({
+  chat, tools: appTools, bus,
+  openApp: (id) => FoafOS.launchApp?.(id),
+  findApp: (name) => { const n = String(name).trim().toLowerCase(); return APPS.find((a) => a.id === n || a.name.toLowerCase() === n) || null; },
+});
+FoafOS.chatCommand = runChatCommand;
+chat.onCommand = async (text, { from }) => {
+  const r = await runChatCommand(text, { remote: { from } });
+  if (!r) return null;
+  return r.value === undefined ? r.text : `${r.text}\n${JSON.stringify(r.value, null, 2)}`;
+};
 {
   const begin = () => { if (chat.config().mode !== 'off') chat.start(); };
   if ('requestIdleCallback' in window) requestIdleCallback(begin, { timeout: 5000 }); else setTimeout(begin, 2000);
@@ -526,7 +562,9 @@ function syncPodGrants() {
     }
   }
   for (const [appId, caps] of live) {
-    try { pods.grant(appId, Object.fromEntries([...caps].map((c) => [c, { pod: target }]))); }
+    // An app reaches its own container unless its manifest says it manages the whole pod.
+    const whole = APPS.find((a) => a.id === appId)?.wholePod === true;
+    try { pods.grant(appId, Object.fromEntries([...caps].map((c) => [c, whole ? { pod: target, prefix: '' } : { pod: target }]))); }
     catch (e) { bus.publish('pods.refused', { summary: `${appId}'s pod grant failed: ${e.message}`, appId, reason: 'bad-scope' }); }
   }
 }
@@ -1828,6 +1866,23 @@ function buildAnnouncer() {
   return el;
 }
 
+// Game, story and options side by side: the game big, what is happening with
+// its history beside it, and what you can do under that. It is the split mode
+// laid out across the screen, on screens wide enough for it. The story runner
+// hears wm.panes and shapes itself to match.
+const PANES_KEY = 'foafos.panes';
+function setStagePanes(on) {
+  document.body.classList.toggle('foafos-panes', on);
+  try { localStorage.setItem(PANES_KEY, on ? '1' : ''); } catch { /* blocked */ }
+  document.getElementById('wm-panes')?.setAttribute('aria-pressed', String(on));
+  if (on) window.FinkWM?.setMode?.('split');
+  bus.publish('wm.panes', { summary: on ? 'Game beside the story' : 'Game above the story', on });
+}
+FoafOS.setStagePanes = setStagePanes;
+for (const t of ['wm.settled', 'story.world']) {
+  bus.subscribe(t, () => { if (document.body.classList.contains('foafos-panes')) bus.publish('wm.panes', { on: true }); });
+}
+
 function buildUI() {
   buildAnnouncer();
   buildPad();
@@ -1836,18 +1891,18 @@ function buildUI() {
   const dock = document.createElement('button');
   dock.id = 'foafos-dock';
   dock.type = 'button';
-  dock.setAttribute('aria-label', 'foafos shell');
+  dock.setAttribute('aria-label', 'Menu');
   dock.setAttribute('aria-expanded', 'false');
   dock.setAttribute('aria-controls', 'foafos-drawer');
-  dock.textContent = '⊞';
+  dock.textContent = '☰';
 
   const drawer = document.createElement('aside');
   drawer.id = 'foafos-drawer';
-  drawer.setAttribute('aria-label', 'foafos shell');
+  drawer.setAttribute('aria-label', 'Foafos menu');
   drawer.innerHTML = `
     <header>
-      <b>FOAFOS</b> <span class="foafos-sub">shell</span>
-      <button type="button" id="foafos-close" aria-label="Close shell">✕</button>
+      <b>Foafos</b>
+      <button type="button" id="foafos-close" aria-label="Close menu">✕</button>
     </header>
     <section id="foafos-session">
       <!-- Rarely used, so it folds to one quiet line (owner's call). The
@@ -1876,32 +1931,42 @@ function buildUI() {
       <p id="foafos-audio-note" class="foafos-sub" role="status"></p>
     </section>
     <section id="foafos-skin-wrap">
-      <h4>SKIN</h4>
+      <h4>Appearance</h4>
       <div id="skin-picker" role="group" aria-label="Visual skin"></div>
     </section>
     <section id="foafos-apps-wrap">
-      <h4>APPS</h4>
+      <h4>Apps</h4>
       <div class="foafos-row">
-        <button type="button" id="foafos-home-btn" title="All apps (Alt+H)">⊞ Apps</button>
+        <button type="button" id="foafos-home-btn" title="All apps (Alt+H)">⊞ All apps</button>
         <button type="button" id="foafos-switch-btn" title="Task Manager: what is running (Alt+Tab)">⧉ Task Manager</button>
         <button type="button" id="foafos-windows-btn">▭ All windows</button>
       </div>
     </section>
     <section id="foafos-caps-wrap">
-      <h4>CAPABILITIES</h4>
+      <h4>What apps can do</h4>
       <p id="foafos-caps-note" class="foafos-sub" role="status"></p>
     </section>
     <section id="foafos-shelf-wrap">
-      <h4>WINDOWS</h4>
+      <h4>Open windows</h4>
       <div id="foafos-shelf"></div>
-      <h4>WIDGETS</h4>
+      <h4>Widgets</h4>
       <div id="foafos-launcher"></div>
     </section>
     <section id="foafos-feed-wrap">
-      <h4>FEED</h4>
+      <h4>Recent activity</h4>
     </section>`;
 
+  // Most used first: what you came for, then settings, then the fine print.
+  for (const id of ['foafos-apps-wrap', 'foafos-shelf-wrap', 'foafos-audio-wrap', 'foafos-skin-wrap', 'foafos-session', 'foafos-caps-wrap', 'foafos-feed-wrap']) {
+    const s = drawer.querySelector(`#${id}`);
+    if (s) drawer.append(s);
+  }
   document.body.append(dock, drawer);
+  document.getElementById('wm-panes')?.addEventListener('click', () => {
+    setStagePanes(!document.body.classList.contains('foafos-panes'));
+    window.FinkWM?._setCollapsed?.(true);
+  });
+  try { if (localStorage.getItem(PANES_KEY)) document.body.classList.add('foafos-panes'); } catch { /* blocked */ }
 
   const feed = document.createElement('foafos-feed');
   feed.bus = bus;
@@ -3149,7 +3214,7 @@ function buildUI() {
     // Recorded on the node, and the scoped bus is built from that record.
     const busGrants = apps.setScope(nodeId, 'bus', app.bus || {
       publish: [`app.${app.id}.*`],
-      subscribe: ['wm.mode', 'audio.volume', 'ui.skin'],
+      subscribe: ['wm.mode', 'wm.panes', 'audio.volume', 'ui.skin'],
     }) || { publish: [], subscribe: [] };
     const busName = `${app.id}#${win.dataset.wid}`;
     const scoped = scopeBus(bus, { name: busName, ...busGrants });
@@ -5376,119 +5441,51 @@ function buildUI() {
     const unsubs = ['pods.*', 'app.spawn', 'app.close'].map((t) => bus.subscribe(t, () => draw()));
     new MutationObserver(() => { if (!win.isConnected) unsubs.forEach((u) => u()); })
       .observe(document.body, { childList: true });
+    // One press for the common case: storage on this computer, for every app.
+    const localRow = document.createElement('div');
+    localRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
+    const localBtn = document.createElement('button');
+    localBtn.type = 'button';
+    localBtn.textContent = 'Use storage on this computer';
+    const localNote = document.createElement('span');
+    localNote.setAttribute('role', 'status');
+    localBtn.addEventListener('click', async () => {
+      localNote.textContent = 'Connecting';
+      try {
+        if (!pods.get('laptop')) pods.add({ id: 'laptop', label: 'This computer', carriage: 'https', base: 'http://127.0.0.1:3000/' });
+        const r = await pods.connect('laptop');
+        if (r?.ok === false) throw new Error(r.reason);
+        pods.setAppsPod('laptop');
+        localNote.textContent = 'Apps now save on this computer.';
+      } catch (e) {
+        localNote.textContent = `Nothing answered on port 3000, or it does not allow this page (${location.origin}). Start lws-serve, then try again.`;
+      }
+    });
+    localRow.append(localBtn, localNote);
+    body.prepend(localRow);
     document.body.appendChild(win);
     draw();
     return win;
   }
   FoafOS.openPods = openPods;
 
-  // ── Chat: the shell's XMPP connection and the bus room (FoafChat) ──────
+  // ── Chat: rooms, direct messages and the apps' activity (FoafChat) ─────
   // Shell chrome for the Pods panel's reason: a server password typed here
   // goes straight into FoafSecrets (chat.configure) and the field is cleared.
-  // The log shows the bus room: the shell's mirrored events and what anyone
-  // else in the room says. docs/foafos-chat-20261103.md.
+  // The window itself is foafos-chat-ui.js; docs/foafos-chat-window-20261104.md.
   function openChat() {
     const existing = document.getElementById('foafos-chat');
     if (existing) return existing;
-    const win = makeWindow('💬 Chat', 460, 560);
+    const win = makeWindow('💬 Chat', 860, 600);
     win.id = 'foafos-chat';
     win.classList.add('foafos-panel');
     const body = document.createElement('div');
-    body.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:10px;display:flex;'
-      + 'flex-direction:column;gap:10px;font:11px monospace;color:#eee;';
+    body.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;';
     win.appendChild(body);
-    const el = (tag, text, css) => {
-      const e = document.createElement(tag);
-      if (text != null) e.textContent = text;
-      if (css) e.style.cssText = css;
-      return e;
-    };
-    const button = (parent, label, fn, name) => {
-      const b = el('button', label);
-      b.type = 'button';
-      if (name) b.setAttribute('aria-label', name);
-      b.addEventListener('click', fn);
-      parent.appendChild(b);
-      return b;
-    };
-    const field = (parent, labelText, id, opts = {}) => {
-      const wrap = el('label', labelText, 'display:flex;gap:6px;align-items:center;');
-      const input = document.createElement(opts.select ? 'select' : 'input');
-      if (opts.select) for (const v of opts.select) input.appendChild(Object.assign(el('option', v), { value: v }));
-      else { input.type = opts.type || 'text'; input.placeholder = opts.placeholder || ''; }
-      input.id = id;
-      if (opts.value != null) input.value = opts.value;
-      input.style.cssText = 'flex:1;min-width:0;font:11px monospace;';
-      wrap.appendChild(input);
-      parent.appendChild(wrap);
-      return input;
-    };
-
-    const status = el('p', '', 'margin:0;color:#9ad;');
-    status.setAttribute('role', 'status');
-    const log = el('ol', null, 'margin:0;padding:0 0 0 18px;max-height:220px;overflow-y:auto;color:#ccc;');
-    log.setAttribute('aria-label', 'Bus room messages');
-    log.setAttribute('aria-live', 'polite');
-    const drawStatus = () => {
-      const c = chat.config();
-      status.textContent = `${c.mode === 'builtin' ? 'Built-in server (in this page)' : c.mode === 'server' ? c.url : 'Off'} · `
-        + `room ${chat.roomJid()} · ${chat.state}${chat.detail ? ' (' + chat.detail + ')' : ''}`;
-    };
-    const drawLog = () => {
-      log.textContent = '';
-      for (const m of chat.log.slice(-100)) log.appendChild(el('li', `${m.nick}: ${m.body}`, m.self ? 'color:#888;' : 'color:#fff;'));
-      log.scrollTop = log.scrollHeight;
-    };
-    body.appendChild(el('p',
-      'The shell is in one XMPP group chat room, the bus room. It posts what the apps do there '
-      + '(the topics in the mirror list). With the built-in server, the room is in this page only. '
-      + 'With a server on this computer (factoidal xmpp-serve --muc), any XMPP client can join the room and watch.',
-      'margin:0;color:#9ad;line-height:1.5;'));
-    body.appendChild(status);
-    body.appendChild(log);
-    const sayRow = el('div', null, 'display:flex;gap:6px;');
-    const say = field(sayRow, 'say', 'chat-say', { placeholder: 'a message to the room' });
-    button(sayRow, 'SEND', () => { if (say.value) { chat.say(say.value); say.value = ''; } }, 'Send to the room');
-    body.appendChild(sayRow);
-
-    const c = chat.config();
-    const form = el('section', null, 'border:1px dashed #456;padding:8px;display:flex;flex-direction:column;gap:6px;');
-    form.appendChild(el('h3', 'Server', 'margin:0;font:bold 11px monospace;color:#fff;'));
-    const f = {
-      mode: field(form, 'mode', 'chat-mode', { select: ['builtin', 'server', 'off'], value: c.mode }),
-      url: field(form, 'WebSocket', 'chat-url', { value: c.url }),
-      domain: field(form, 'domain', 'chat-domain', { value: c.domain }),
-      username: field(form, 'account', 'chat-username', { value: c.username, placeholder: 'foafos' }),
-      password: field(form, 'password', 'chat-password', { type: 'password', placeholder: c.hasPassword ? '(held)' : 'server password' }),
-      room: field(form, 'room', 'chat-room', { value: c.room }),
-      roomDomain: field(form, 'rooms at', 'chat-room-domain', { value: c.roomDomain, placeholder: 'rooms.<domain>' }),
-      nick: field(form, 'nick', 'chat-nick', { value: c.nick }),
-      mirror: field(form, 'mirror', 'chat-mirror', { value: c.mirror.join(' ') }),
-    };
-    const err = el('p', '', 'margin:0;color:#f88;');
-    err.setAttribute('role', 'status');
-    const row = el('div', null, 'display:flex;gap:6px;');
-    button(row, 'SAVE AND RECONNECT', async () => {
-      const password = f.password.value;
-      f.password.value = '';
-      const r = chat.configure({ mode: f.mode.value, url: f.url.value.trim(), domain: f.domain.value.trim(),
-        username: f.username.value.trim(), room: f.room.value.trim(), roomDomain: f.roomDomain.value.trim(),
-        nick: f.nick.value.trim(), mirror: f.mirror.value.split(/\s+/).filter(Boolean) }, { password });
-      if (!r.ok) { err.textContent = `refused: ${r.reason}`; return; }
-      err.textContent = '';
-      const started = await chat.start();
-      if (!started.ok) err.textContent = `could not connect: ${started.reason}`;
-    }, 'Save the chat settings and reconnect');
-    form.appendChild(row);
-    form.appendChild(err);
-    body.appendChild(form);
-
-    const unsubs = [bus.subscribe('chat.*', () => { drawStatus(); drawLog(); })];
-    new MutationObserver(() => { if (!win.isConnected) unsubs.forEach((u) => u()); })
+    const unmount = mountChat(body, { chat, tools: appTools, run: runChatCommand });
+    new MutationObserver((_, o) => { if (!win.isConnected) { unmount(); o.disconnect(); } })
       .observe(document.body, { childList: true });
     document.body.appendChild(win);
-    drawStatus();
-    drawLog();
     return win;
   }
   FoafOS.openChat = openChat;

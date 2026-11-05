@@ -1,0 +1,304 @@
+#!/bin/bash
+# foafos-stack: run the local Foafos servers together, detached from any terminal.
+#
+#   foafos-stack start   [service...]    start (all, if none named)
+#   foafos-stack stop    [service...]
+#   foafos-stack restart [service...]
+#   foafos-stack status
+#   foafos-stack logs    [service...] [-n LINES] [--no-follow]
+#   foafos-stack urls
+#   foafos-stack open                    open the shell in your browser
+#
+# Services: xmpp lws sparql shell.  Laptop only: everything binds to 127.0.0.1.
+# lws runs with --insecure-no-auth, so never expose it to a network.
+#
+# Settings, all optional, as environment variables:
+#   FOAFOS_STACK_HOME   pid files and logs        (~/.foafos-stack)
+#   FOAFOS_SHELL_ROOT   folder the shell serves   (~/working/foafos-chat)
+#   FOAFOS_SHELL_PORT   8080    FOAFOS_LWS_PORT   3000    FOAFOS_SPARQL_PORT 3030
+#   FOAFOS_SPARQL_FILE  RDF file for SPARQL       (see below)
+#
+# Written for the bash 3.2 that macOS ships.
+
+set -u
+
+STATE=${FOAFOS_STACK_HOME:-$HOME/.foafos-stack}
+LOGS=$STATE/logs
+RUN=$STATE/run
+
+SHELL_ROOT=${FOAFOS_SHELL_ROOT:-$HOME/working/foafos-chat}
+SHELL_PORT=${FOAFOS_SHELL_PORT:-8080}
+LWS_PORT=${FOAFOS_LWS_PORT:-3000}
+SPARQL_PORT=${FOAFOS_SPARQL_PORT:-3030}
+SPARQL_FILE=${FOAFOS_SPARQL_FILE:-$HOME/working/sandbox/october/tpac/depmap/data.ttl}
+# serve-foafos.py sits beside this script, wherever it is linked from.
+HERE=$(dirname "$(perl -MCwd=abs_path -e 'print abs_path(shift)' "$0")")
+SERVE_PY=$HERE/serve-foafos.py
+XMPP_DIR=$HOME/foafos-xmpp
+XMPP_KEY=$HOME/foafos-xmpp.key
+LWS_DIR=$HOME/foafos-lws
+
+ALL="xmpp lws sparql shell"
+START_WAIT=15   # seconds a service gets to open its ports
+STOP_WAIT=8     # seconds before a stop turns into kill -9
+LOG_MAX=20971520  # rotate a log past 20 MB, at start
+
+if [ -t 1 ]; then G=$'\033[32m'; R=$'\033[31m'; Y=$'\033[33m'; D=$'\033[2m'; N=$'\033[0m'
+else G=; R=; Y=; D=; N=; fi
+
+say()  { printf '%s\n' "$*"; }
+fail() { printf '%s%s%s\n' "$R" "$*" "$N" >&2; }
+
+is_service() { case " $ALL " in *" $1 "*) return 0;; esac; return 1; }
+
+ports_of() {
+  case $1 in
+    xmpp)   say "5222 5280";;
+    lws)    say "$LWS_PORT";;
+    sparql) say "$SPARQL_PORT";;
+    shell)  say "$SHELL_PORT";;
+  esac
+}
+
+# Text that must appear in the process's command line, so a reused pid
+# is never mistaken for one of ours.
+signature_of() {
+  case $1 in
+    xmpp)   say "xmpp-serve";;
+    lws)    say "lws-serve";;
+    sparql) say "serve --file";;
+    shell)  say "serve-foafos.py";;
+  esac
+}
+
+pidfile() { say "$RUN/$1.pid"; }
+logfile() { say "$LOGS/$1.log"; }
+
+# The pid of a live service we started, or nothing.
+managed_pid() {
+  local f pid; f=$(pidfile "$1")
+  [ -f "$f" ] || return 1
+  pid=$(cat "$f" 2>/dev/null)
+  [ -n "$pid" ] || return 1
+  ps -o command= -p "$pid" 2>/dev/null | grep -qF -- "$(signature_of "$1")" || return 1
+  say "$pid"
+}
+
+port_owner() { lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | head -1; }
+
+ports_up() {
+  local p
+  for p in $(ports_of "$1"); do [ -n "$(port_owner "$p")" ] || return 1; done
+}
+
+# Fails with a clear message when something a service needs is missing.
+check_needs() {
+  case $1 in
+    xmpp|lws|sparql)
+      command -v factoidal >/dev/null || { fail "$1: factoidal is not on PATH (npm i -g @factoidal/core@0.30.0)"; return 1; };;
+  esac
+  case $1 in
+    xmpp)
+      [ -f "$XMPP_DIR/accounts" ] || { fail "xmpp: no $XMPP_DIR/accounts (one-time setup is in foafos-local-setup.md)"; return 1; }
+      [ -f "$XMPP_KEY" ] || { fail "xmpp: no $XMPP_KEY (one-time setup is in foafos-local-setup.md)"; return 1; };;
+    lws)
+      mkdir -p "$LWS_DIR";;
+    sparql)
+      [ -f "$SPARQL_FILE" ] || { fail "sparql: no RDF file at $SPARQL_FILE (set FOAFOS_SPARQL_FILE)"; return 1; };;
+    shell)
+      [ -f "$SERVE_PY" ] || { fail "shell: no $SERVE_PY"; return 1; }
+      [ -d "$SHELL_ROOT/glitchcan-minigam" ] || { fail "shell: no glitchcan-minigam under $SHELL_ROOT (set FOAFOS_SHELL_ROOT)"; return 1; };;
+  esac
+}
+
+# New session, so no terminal closing can send it a hangup.
+launch() {
+  local svc=$1 dir=$2; shift 2
+  local log; log=$(logfile "$svc")
+  if [ -f "$log" ] && [ "$(stat -f %z "$log")" -gt "$LOG_MAX" ]; then mv -f "$log" "$log.1"; fi
+  printf '\n=== %s start %s ===\n' "$svc" "$(date '+%Y-%m-%d %H:%M:%S')" >>"$log"
+  ( cd "$dir" && PYTHONUNBUFFERED=1 exec perl -MPOSIX -e 'POSIX::setsid(); exec { $ARGV[0] } @ARGV or die "exec: $!\n"' -- "$@" ) \
+    </dev/null >>"$log" 2>&1 &
+  say $! >"$(pidfile "$svc")"
+}
+
+start_one() {
+  local svc=$1 pid p owner
+  if pid=$(managed_pid "$svc"); then say "$svc: already running (pid $pid)"; return 0; fi
+  for p in $(ports_of "$svc"); do
+    owner=$(port_owner "$p")
+    if [ -n "$owner" ]; then
+      fail "$svc: port $p is held by pid $owner, which this script did not start:"
+      fail "  $(ps -o command= -p "$owner" | cut -c1-100)"
+      fail "  stop it first (kill $owner), then run this again"
+      return 1
+    fi
+  done
+  check_needs "$svc" || return 1
+
+  case $svc in
+    xmpp)
+      launch xmpp "$HOME" factoidal xmpp-serve "$XMPP_DIR" --domain localhost --muc rooms.localhost \
+        --ws-port 5280 --ws-origin https://danbri.github.io --ws-origin "http://localhost:$SHELL_PORT" \
+        --state-key "$XMPP_KEY";;
+    lws)
+      launch lws "$HOME" factoidal lws-serve "$LWS_DIR" --insecure-no-auth --host 127.0.0.1 --port "$LWS_PORT" \
+        --storage files --cors-origin "http://localhost:$SHELL_PORT" --cors-origin https://danbri.github.io;;
+    sparql)
+      launch sparql "$HOME" factoidal serve --file "$SPARQL_FILE" /ds --host 127.0.0.1 --port "$SPARQL_PORT";;
+    shell)
+      launch shell "$SHELL_ROOT" python3 "$SERVE_PY" "$SHELL_PORT";;
+  esac
+
+  local i=0
+  while [ $i -lt $((START_WAIT * 4)) ]; do
+    if ! pid=$(managed_pid "$svc"); then
+      # perl has not exec'd yet on the very first tick; only then is this normal.
+      if [ $i -gt 2 ]; then
+        fail "$svc: exited during start. Last lines of $(logfile "$svc"):"
+        tail -n 12 "$(logfile "$svc")" >&2
+        rm -f "$(pidfile "$svc")"
+        return 1
+      fi
+    elif ports_up "$svc"; then
+      say "${G}$svc: started${N} (pid $pid, port $(ports_of "$svc" | tr ' ' ','))"
+      return 0
+    fi
+    i=$((i + 1)); perl -e 'select(undef,undef,undef,0.25)'
+  done
+  fail "$svc: running but its ports did not open in ${START_WAIT}s. See $(logfile "$svc")"
+  return 1
+}
+
+stop_one() {
+  local svc=$1 pid p owner i=0
+  if ! pid=$(managed_pid "$svc"); then
+    rm -f "$(pidfile "$svc")"
+    for p in $(ports_of "$svc"); do
+      owner=$(port_owner "$p")
+      if [ -n "$owner" ]; then
+        fail "$svc: not started by this script, but pid $owner holds port $p. Leaving it alone."
+        return 1
+      fi
+    done
+    say "$svc: not running"
+    return 0
+  fi
+  kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null
+  while [ $i -lt $((STOP_WAIT * 4)) ] && managed_pid "$svc" >/dev/null; do
+    i=$((i + 1)); perl -e 'select(undef,undef,undef,0.25)'
+  done
+  if managed_pid "$svc" >/dev/null; then
+    kill -KILL -- "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null
+    say "${Y}$svc: did not stop in ${STOP_WAIT}s, killed${N}"
+  else
+    say "$svc: stopped"
+  fi
+  printf '=== %s stop %s ===\n' "$svc" "$(date '+%Y-%m-%d %H:%M:%S')" >>"$(logfile "$svc")"
+  rm -f "$(pidfile "$svc")"
+}
+
+status_all() {
+  local svc pid p owner state detail bad=0
+  printf '%-8s %-11s %-8s %-11s %s\n' SERVICE STATE PID UPTIME PORTS
+  for svc in $ALL; do
+    detail=$(ports_of "$svc")
+    if pid=$(managed_pid "$svc"); then
+      if ports_up "$svc"; then state="${G}running${N}    "
+      else state="${Y}no ports${N}   "; bad=1; fi
+      printf '%-8s %s %-8s %-11s %s\n' "$svc" "$state" "$pid" \
+        "$(ps -o etime= -p "$pid" | tr -d ' ')" "$detail"
+    else
+      owner=
+      for p in $detail; do [ -n "$owner" ] || owner=$(port_owner "$p"); done
+      bad=1
+      if [ -n "$owner" ]; then
+        printf '%-8s %s %-8s %-11s %s\n' "$svc" "${Y}unmanaged${N}  " "$owner" "-" "$detail"
+      else
+        printf '%-8s %s %-8s %-11s %s\n' "$svc" "${R}stopped${N}    " "-" "-" "$detail"
+      fi
+    fi
+  done
+  printf '%slogs: %s%s\n' "$D" "$LOGS" "$N"
+  return $bad
+}
+
+show_urls() {
+  cat <<EOF
+Moglob   http://localhost:$SHELL_PORT/glitchcan-minigam/inklet/finkapp/?app=docklands
+Office   http://localhost:$SHELL_PORT/glitchcan-minigam/inklet/finkapp/?root=office
+XMPP     ws://127.0.0.1:5280/xmpp-websocket  (TCP 127.0.0.1:5222, room bus@rooms.localhost)
+LWS      http://127.0.0.1:$LWS_PORT/
+SPARQL   http://127.0.0.1:$SPARQL_PORT/ds/sparql
+EOF
+}
+
+show_logs() {
+  local lines=40 follow=1 picked="" a svc f
+  while [ $# -gt 0 ]; do
+    case $1 in
+      -n) [ $# -ge 2 ] || { fail "-n needs a number"; return 2; }; lines=$2; shift;;
+      --no-follow) follow=0;;
+      *) is_service "$1" || { fail "unknown service: $1 (have: $ALL)"; return 2; }
+         picked="$picked $1";;
+    esac
+    shift
+  done
+  [ -n "$picked" ] || picked=$ALL
+
+  if [ $follow = 0 ]; then
+    for svc in $picked; do
+      f=$(logfile "$svc"); [ -f "$f" ] || continue
+      tail -n "$lines" "$f" | awk -v p="$svc" '{ printf "%-7s| %s\n", p, $0 }'
+    done
+    return 0
+  fi
+  # One tail per service, each line labelled, until Ctrl-C.
+  trap 'kill $(jobs -p) 2>/dev/null; exit 0' INT TERM
+  for svc in $picked; do
+    f=$(logfile "$svc"); touch "$f"
+    tail -n "$lines" -F "$f" 2>/dev/null | awk -v p="$svc" '{ printf "%-7s| %s\n", p, $0; fflush() }' &
+  done
+  wait
+}
+
+# Turns the service arguments into a list, or all of them when none are named.
+services_from() {
+  local a
+  [ $# -gt 0 ] || { say "$ALL"; return 0; }
+  for a in "$@"; do
+    is_service "$a" || { fail "unknown service: $a (have: $ALL)"; return 1; }
+  done
+  say "$*"
+}
+
+reverse() { local out="" a; for a in "$@"; do out="$a $out"; done; say "$out"; }
+
+usage() { sed -n '2,20p' "$0" | sed -e 's/^# \{0,1\}//'; }
+
+mkdir -p "$LOGS" "$RUN"
+cmd=${1:-status}; [ $# -gt 0 ] && shift
+
+case $cmd in
+  start)
+    list=$(services_from "$@") || exit 2
+    rc=0; for s in $list; do start_one "$s" || rc=1; done
+    [ $rc = 0 ] && [ $# = 0 ] && { say; show_urls; }
+    exit $rc;;
+  stop)
+    list=$(services_from "$@") || exit 2
+    rc=0; for s in $(reverse $list); do stop_one "$s" || rc=1; done
+    exit $rc;;
+  restart)
+    list=$(services_from "$@") || exit 2
+    rc=0
+    for s in $(reverse $list); do stop_one "$s" || rc=1; done
+    for s in $list; do start_one "$s" || rc=1; done
+    exit $rc;;
+  status)  status_all; exit $?;;
+  logs)    show_logs "$@"; exit $?;;
+  urls)    show_urls;;
+  open)    open "http://localhost:$SHELL_PORT/glitchcan-minigam/inklet/finkapp/?root=office";;
+  help|-h|--help) usage;;
+  *) fail "unknown command: $cmd"; usage >&2; exit 2;;
+esac

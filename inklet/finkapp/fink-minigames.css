@@ -1133,9 +1133,10 @@ body.fink-wm-dragging iframe { pointer-events: none; }
 }
 
 /* No game: the ☰ is still the one menu (owner, September 2026: menus "all in one place"), bottom right where the
-   ⊞ dock was, with only foafos's own rows. */
-#wm-chrome.wm-shell-only { z-index: 2650; top: auto !important; left: auto !important; right: 12px !important;
-  bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+   ⊞ dock was, with only foafos's own rows. That is only where it starts: a drag writes inline geometry, which must
+   win here, so nothing in this rule may be !important (owner, November 2026: "not being fixed in lower right"). */
+#wm-chrome.wm-shell-only { z-index: 2650; top: auto; left: auto; right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom)); }
 #wm-chrome.wm-shell-only #wm-win-sect, #wm-chrome.wm-shell-only #wm-pad-sect, #wm-chrome.wm-shell-only #wm-app-sect,
 #wm-chrome.wm-shell-only #wm-exit-sect, #wm-chrome.wm-shell-only #wm-target, #wm-chrome.wm-shell-only #wm-status { display: none !important; }
 #foafos-dock { display: none !important; }

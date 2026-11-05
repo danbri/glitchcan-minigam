@@ -48,10 +48,12 @@ export const APPS = [
     "icon": "📁",
     "name": "Files",
     "surface": "window",
-    "url": "../../magpie/edot/files/files.html",
-    "desc": "Pod explorer",
+    "url": "../apps/files/index.html",
+    "desc": "Browse, read and edit your files",
+    "wholePod": true,
     "capabilities": [
-      "storage"
+      "pod:read",
+      "pod:write"
     ],
     "silent": true
   },
@@ -206,6 +208,7 @@ export const APPS = [
     "game": "drift",
     "url": "../../drift-city/dist/city.html",
     "desc": "The city on Titan and its stories",
+    "tools": true,
     "controls": "sticks",
     "args": [
       "tale"
@@ -345,6 +348,7 @@ export const APPS = [
       ],
       "subscribe": [
         "wm.mode",
+        "wm.panes",
         "audio.volume",
         "ui.skin"
       ]
@@ -564,11 +568,12 @@ export const APPS = [
     "id": "docklands",
     "family": "play",
     "icon": "🏙️",
-    "name": "Docklands",
+    "name": "Moglob",
     "surface": "stage",
     "game": "docklands",
     "url": "https://danbri.github.io/londat/docklands/",
-    "desc": "moglob: the Docklands model, places and the planet in 3D",
+    "desc": "The Docklands model, places and the planet in 3D",
+    "tools": true,
     "controls": "none",
     "capabilities": [],
     "external": true,
@@ -581,7 +586,7 @@ export const APPS = [
     "name": "Chat",
     "surface": "panel",
     "panel": "chat",
-    "desc": "The bus room: watch the apps talk over XMPP",
+    "desc": "Rooms, messages and app activity, over XMPP",
     "capabilities": [
       "shell"
     ],
