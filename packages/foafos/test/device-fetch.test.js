@@ -143,6 +143,25 @@ test('calls made while a location opens wait for it, and it opens once', async (
   assert.equal(opened, 1);
 });
 
+test('a very large file is refused before it is read', async () => {
+  const { root, f } = setup();
+  const big = new FileH();
+  big.getFile = async () => ({ size: 9 * 1024 * 1024, lastModified: 1, arrayBuffer: async () => { throw new Error('read it'); } });
+  root.kids.set('big.txt', big);
+  assert.equal((await f(BASE + 'big.txt')).status, 413);
+  assert.equal((await f(BASE + 'big.txt', { method: 'HEAD' })).status, 200);
+});
+
+test('a folder whose permission ends becomes a question, not a failure', async () => {
+  const root = new Dir();
+  const pods = devicePods(async () => ({ ok: true, root }));
+  assert.equal((await pods.invoke('files', 'pod.list', { path: '' })).ok, true);
+  root.getDirectoryHandle = root.getFileHandle = async () => { throw err('NotAllowedError'); };
+  root.entries = async function* () { throw err('NotAllowedError'); };
+  assert.equal((await pods.invoke('files', 'pod.get', { path: 'a.txt' })).reason, 'needs-ok');
+  assert.equal(pods.status('device'), 'needs-ok');
+});
+
 test('a shell with no device support says so', async () => {
   const pods = devicePods(null);
   await pods.connect('device');

@@ -13,6 +13,7 @@ const TYPES = [
   [/\.png$/i, 'image/png'], [/\.jpe?g$/i, 'image/jpeg'], [/\.gif$/i, 'image/gif'], [/\.webp$/i, 'image/webp'],
   [/\.mp3$/i, 'audio/mpeg'], [/\.wav$/i, 'audio/wav'], [/\.mp4$/i, 'video/mp4'], [/\.pdf$/i, 'application/pdf'],
 ];
+const MAX_READ = 8 * 1024 * 1024;   // more than a pod verb may carry: refuse before reading it into memory
 const typeOf = (name) => TYPES.find(([re]) => re.test(name))?.[1] || 'application/octet-stream';
 const etagOf = (file) => `"${file.size}-${file.lastModified}"`;
 const status = (code, headers = {}) => new Response(null, { status: code, headers });
@@ -59,6 +60,7 @@ export function deviceFetch(root, base) {
   async function read(names, head) {
     const file = await (await fileAt(root, names)).getFile();
     const headers = { 'Content-Type': typeOf(names[names.length - 1]), ETag: etagOf(file), 'Content-Length': String(file.size) };
+    if (!head && file.size > MAX_READ) return status(413, headers);
     return new Response(head ? null : await file.arrayBuffer(), { status: 200, headers });
   }
 

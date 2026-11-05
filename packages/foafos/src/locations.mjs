@@ -20,7 +20,7 @@ function words(p) {
       icon: '💽', kind: 'device', finder: false,
       where: 'In this browser’s private storage on this computer. Finder and Explorer cannot show these files.',
       needs: 'Nothing, as long as you use this browser on this computer.',
-      risk: 'Clearing this site’s data in the browser deletes them. Copy anything you want to keep to a folder or a pod.',
+      risk: 'Clearing this site’s data deletes them, and a browser may remove them if the disk runs low or the site goes unused. Copy anything you want to keep to a folder or a pod.',
     };
   }
   if (p.carriage === 'builtin') {

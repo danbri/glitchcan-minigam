@@ -452,6 +452,11 @@ export class FoafPods {
     try {
       if (verb === 'pod.put') await this._ensureContainers(podFetch, base, path);
       result = await this._run(verb, podFetch, base, path, params, body);
+      // A folder's permission can end during a visit: that is a question for the person, not a failure.
+      if (result.status === 403 && this.pods.get(scope.pod)?.carriage === 'device') {
+        this._setStatus(scope.pod, 'needs-ok', 'allow access to this folder');
+        result = { ok: false, reason: 'needs-ok', status: 403 };
+      }
     } catch {
       // A failed fetch's message can carry a URL; report only that it failed.
       result = { ok: false, reason: 'unreachable' };
@@ -480,6 +485,7 @@ export class FoafPods {
     if (verb === 'pod.get') {
       const r = await podFetch(url, { headers: { Accept: String(params.accept || '*/*') } });
       const type = r.headers.get('content-type') || '';
+      if (r.status === 413) return { ok: false, reason: 'too-large', status: 413 };
       if (!r.ok) return { ok: false, reason: 'http', status: r.status };
       if (!TEXTUAL.test(type)) return { ok: false, reason: 'not-text', status: r.status, contentType: type };
       const text = await r.text();

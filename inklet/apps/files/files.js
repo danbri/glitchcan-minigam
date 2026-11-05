@@ -19,6 +19,7 @@
     error: 'That location cannot be reached.',
     cancelled: 'No folder was chosen.',
     'no-folder': 'That folder could not be added.',
+    'too-large': 'This file is too large to open here.',
   };
   const say = (text, bad = false) => { statusEl.textContent = text; statusEl.classList.toggle('bad', bad); };
   const explain = (r) => REASONS[r.reason] || `That did not work: ${r.reason}${r.status ? ` (${r.status})` : ''}.`;
@@ -67,8 +68,12 @@
     return r;
   }
 
+  let listing = 0;               // only the newest listing may draw: an old one may be from another location
   async function go(path, { remember = true } = {}) {
+    const mine = ++listing;
     const r = await list(path);
+    if (mine !== listing) return;
+    if (r.reason === 'needs-ok') takeLocations(await foaf.pod.locations());
     if (!r.ok) { say(explain(r), true); return; }
     if (remember && path !== folder) trail.push(folder);
     folder = path;
@@ -136,8 +141,9 @@
     draw();
   }
 
-  async function useLocation(id) {
-    const r = await foaf.pod.use(id);
+  async function useLocation(id) { await showLocation(await foaf.pod.use(id)); }
+
+  async function showLocation(r) {
     takeLocations(r);
     folder = ''; items = []; trail.length = 0; children.clear(); expanded.clear(); expanded.add(''); pick(null);
     drawItems(); drawTree();
@@ -151,8 +157,7 @@
   async function addFolder() {
     const r = await foaf.pod.addFolder();
     if (!r.ok && !r.locations) { say(explain(r), true); return; }
-    takeLocations(r);
-    await useLocation(r.current);
+    await showLocation(r);
   }
 
   function activate(it) { if (it.container) go(it.path); else pick(it); }

@@ -7,7 +7,7 @@ Files lists every location and says, for the one in use, where it is, what it ne
 | Location | Where the files are | Can Finder see them? | What it needs | What could lose them |
 |---|---|---|---|---|
 | A folder you added | That folder on your computer | Yes | Your OK once per visit, in Chrome or Edge | Moving or renaming it breaks the link. The files stay, and you add it again |
-| This device | The browser's private storage | No | This browser on this computer | Clearing this site's data |
+| This device | The browser's private storage | No | This browser on this computer | Clearing this site's data. The browser may also remove it if the disk runs low or the site goes unused, though Foafos asks it not to |
 | This browser, with a sealed session | The browser, encrypted | No | Your session passphrase | Clearing site data, or forgetting the passphrase |
 | This browser, without one | The tab's memory | No | Nothing | **Closing or reloading the tab** |
 | A pod on this computer | A storage server's folder | Only that folder | The server running: `foafos-stack start lws` | As safe as that folder |
@@ -37,3 +37,5 @@ Tests: `packages/foafos/test/device-fetch.test.js`, and `inklet/finkapp/test/e2e
 ## Not done
 
 Files carries text only: no image or audio preview, and no upload. There is no way yet to copy between locations, or to remove a folder from the list except in PodStore.
+
+Removing a folder in PodStore leaves its handle in IndexedDB. Two tabs can both pass the conflict check on a device location, because the check and the write are separate steps, and two same-size edits in one file-system tick share an etag. These are low risk for one person.

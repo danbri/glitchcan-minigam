@@ -289,17 +289,25 @@ const deviceFolders = (() => {
     req.onupgradeneeded = () => req.result.createObjectStore('folders');
     req.onerror = () => reject(req.error);
     req.onsuccess = () => {
-      const r = fn(req.result.transaction('folders', mode).objectStore('folders'));
-      r.onsuccess = () => resolve(r.result);
-      r.onerror = () => reject(r.error);
+      const db = req.result;
+      try {
+        const r = fn(db.transaction('folders', mode).objectStore('folders'));
+        r.onsuccess = () => { db.close(); resolve(r.result); };
+        r.onerror = () => { db.close(); reject(r.error); };
+      } catch (e) { db.close(); reject(e); }
     };
   });
-  return { get: (id) => run('readonly', (s) => s.get(id)), put: (id, handle) => run('readwrite', (s) => s.put(handle, id)) };
+  return {
+    get: (id) => run('readonly', (s) => s.get(id)),
+    put: (id, handle) => run('readwrite', (s) => s.put(handle, id)),
+    ids: () => run('readonly', (s) => s.getAllKeys()),
+  };
 })();
 
 async function openDevice(rec, { ask = false } = {}) {
   if (rec.device === 'opfs') {
     if (!navigator.storage?.getDirectory) return { ok: false, detail: 'this browser has no private storage' };
+    navigator.storage.persist?.().catch(() => {});   // asks the browser not to evict it; the browser may say no
     const top = await navigator.storage.getDirectory();
     return { ok: true, root: await top.getDirectoryHandle('foafos', { create: true }) };
   }
@@ -325,9 +333,12 @@ const pods = new FoafPods({
 
 // A location is any pod. Only an app that manages the whole pod, such as Files,
 // may list them, because this names addresses. The choice is per app, and kept.
-if (typeof navigator.storage?.getDirectory === 'function' && !pods.get('device')) {
-  try { pods.add({ id: 'device', label: 'This device', base: 'https://device.foafos.local/opfs/', carriage: 'device', device: 'opfs' }); }
-  catch (e) { bus.publish('pods.refused', { summary: `no device location: ${e.message}`, reason: 'bad-record' }); }
+// Added once, so someone who removes it in PodStore does not get it back.
+if (typeof navigator.storage?.getDirectory === 'function' && !audioStore?.getItem('foafos.deviceAdded')) {
+  try {
+    if (!pods.get('device')) pods.add({ id: 'device', label: 'This device', base: 'https://device.foafos.local/opfs/', carriage: 'device', device: 'opfs' });
+    audioStore?.setItem('foafos.deviceAdded', '1');
+  } catch (e) { bus.publish('pods.refused', { summary: `no device location: ${e.message}`, reason: 'bad-record' }); }
 }
 const LOCATION_VERBS = new Set(['pod.locations', 'pod.use', 'pod.addFolder']);
 const locationKey = (appId) => `foafos.location.${appId}`;
@@ -356,6 +367,11 @@ async function locationVerb(appId, verb, { id }) {
   let handle;
   try { handle = await window.showDirectoryPicker({ id: 'foafos-files', mode: 'readwrite' }); }
   catch (e) { return { ok: false, reason: e?.name === 'AbortError' ? 'cancelled' : 'no-folder' }; }
+  // The same folder chosen twice is one location.
+  for (const known of await deviceFolders.ids().catch(() => [])) {
+    const other = pods.get(known) && await deviceFolders.get(known).catch(() => null);
+    if (other && await handle.isSameEntry(other).catch(() => false)) return useLocation(appId, known);
+  }
   const slug = handle.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20) || 'folder';
   let folderId = `folder-${slug}`;
   for (let n = 2; pods.get(folderId); n++) folderId = `folder-${slug}-${n}`;
