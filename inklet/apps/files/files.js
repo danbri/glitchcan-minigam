@@ -217,19 +217,33 @@
       return;
     }
     const r = await foaf.pod.get(it.path);
+    if (r.reason === 'not-text') { drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), await openWithBox(it.path, r.contentType), actions(backBtn)); return; }
     if (!r.ok) { say(explain(r), true); drawDetail(head); return; }
     picked = { path: it.path, body: r.body, etag: r.etag, contentType: r.contentType || '', dirty: false };
     markPicked();
     const binary = /^(image|audio|video)\//.test(picked.contentType);
     if (binary) {
-      drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), actions(backBtn));
+      drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), await openWithBox(it.path, picked.contentType), actions(backBtn));
       return;
     }
     const text = h('textarea', { value: r.body, spellcheck: false, 'aria-label': `Contents of ${nameOf(it.path)}`,
       on: { input: () => { picked.dirty = text.value !== picked.body; save.disabled = !picked.dirty; } } });
     const save = h('button', { class: 'tool tool-main', type: 'button', disabled: true, on: { click: () => saveFile(text.value, save) } }, 'Save');
     head.querySelector('p').textContent = `${k.name}, ${r.body.length.toLocaleString()} characters`;
-    drawDetail(head, h('div', { class: 'detail-body' }, text), actions(backBtn, save));
+    drawDetail(head, h('div', { class: 'detail-body' }, text), await openWithBox(it.path, picked.contentType), actions(backBtn, save));
+  }
+
+  // Apps that can open this file, each with its own comment: what a person or an
+  // agent should know before choosing. Exploring: docs/foafos-open-with-20261105.md.
+  async function openWithBox(path, contentType) {
+    const r = await foaf.pod.handlers(path, contentType);
+    if (!r.ok || !r.handlers?.length) return null;
+    return h('div', { class: 'open-with' }, r.handlers.map((a) => h('div', { class: 'open-with-app' },
+      h('button', { class: 'tool', type: 'button', on: { click: async () => {
+        const o = await foaf.pod.openWith(a.appId, path, contentType);
+        if (!o.ok) say(explain(o), true);
+      } } }, `Open in ${a.name}`),
+      a.comment ? h('p', { class: 'open-with-comment' }, a.comment) : null)));
   }
   const actions = (...first) => h('div', { class: 'detail-actions' }, ...first,
     h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
@@ -319,7 +333,7 @@
   });
 
   pick(null);
-  window.__files = { go, useLocation, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+  window.__files = { go, pick, useLocation, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
   foaf.onInit(async () => {
     takeLocations(await foaf.pod.locations());
     await go('', { remember: false });

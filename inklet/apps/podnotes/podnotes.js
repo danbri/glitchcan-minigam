@@ -7,6 +7,7 @@
   const $ = (id) => document.getElementById(id);
   const statusEl = $('status');
   let current = null;   // { name, etag }
+  let shared = null;    // a file the shell gave this window: { token, name, write }, or null
 
   const REASONS = {
     'no-pod': 'No pod is chosen for apps. Open PodStore in the shell, connect one, and press "APPS USE THIS".',
@@ -20,6 +21,23 @@
   const say = (text, bad = false) => { statusEl.textContent = text; statusEl.classList.toggle('bad', bad); };
   const explain = (r) => REASONS[r.reason] || `Refused: ${r.reason}${r.status ? ` (${r.status})` : ''}`;
   const cleanName = (s) => String(s).trim().replace(/[^\p{L}\p{N} ._-]+/gu, '-').replace(/^\.+/, '').slice(0, 80);
+
+  function showShared() {
+    $('name').readOnly = !!shared;
+    $('del').disabled = !!shared;
+    $('text').readOnly = !!shared && !shared.write;
+    $('save').disabled = !!shared && !shared.write;
+  }
+
+  async function openShared() {
+    const r = await foaf.pod.get('', { share: shared.token });
+    if (!r.ok) { say(explain(r), true); return; }
+    current = { name: shared.name, etag: r.etag };
+    $('name').value = shared.name;
+    $('text').value = r.body;
+    showShared();
+    say(`${shared.name}, from Files. ${shared.write ? 'Save writes to that file.' : 'Read only.'}`);
+  }
 
   async function refresh() {
     const r = await foaf.pod.list('notes/');
@@ -56,6 +74,13 @@
   }
 
   async function save() {
+    if (shared) {
+      const r = await foaf.pod.put('', $('text').value, { share: shared.token, contentType: 'text/plain; charset=utf-8', ...(current?.etag ? { etag: current.etag } : {}) });
+      if (!r.ok) { say(explain(r), true); return; }
+      current = { name: shared.name, etag: r.etag };
+      say(`Saved ${shared.name}.`);
+      return;
+    }
     const name = cleanName($('name').value);
     if (!name) { say('Give the note a name first.', true); $('name').focus(); return; }
     const sameNote = current?.name === name;
@@ -85,13 +110,17 @@
   }
 
   $('save').addEventListener('click', save);
-  $('new').addEventListener('click', () => { current = null; $('name').value = ''; $('text').value = ''; $('name').focus(); refresh(); });
+  $('new').addEventListener('click', () => { shared = null; showShared(); current = null; $('name').value = ''; $('text').value = ''; $('name').focus(); refresh(); });
   $('del').addEventListener('click', remove);
-  $('reload').addEventListener('click', () => (current ? open(current.name) : refresh()));
+  $('reload').addEventListener('click', () => (shared ? openShared() : current ? open(current.name) : refresh()));
 
   // For tests and agents: the same calls the buttons make.
-  window.__podnotes = { refresh, open, save, remove, state: () => ({ current, status: statusEl.textContent }) };
+  window.__podnotes = { refresh, open, save, remove, state: () => ({ current, shared, status: statusEl.textContent }) };
 
-  foaf.onInit(() => refresh());
+  foaf.onInit(async () => {
+    await refresh();
+    const r = await foaf.pod.shared();
+    if (r.ok && r.share) { shared = r.share; await openShared(); }
+  });
   if (window.parent === window) say(REASONS['no-shell'], true);
 })();

@@ -29,6 +29,7 @@ const MEMBERS = new Set(['position', 'notes', 'id', 'family', 'icon', 'name', 's
   'instances', 'handles', 'actions', 'delegates', 'storage', 'headless', 'shows']);
 
 const files = readdirSync(dir).filter((f) => f.endsWith('.jsonld')).sort();
+const { handlesProblems } = await import('../../packages/foafos/src/handlers.mjs');
 const problems = [];
 const manifests = files.map((f) => {
   let doc;
@@ -40,6 +41,7 @@ const manifests = files.map((f) => {
   }
   if (doc['@id'] !== id || doc.id !== id) problems.push(`${f}: "@id" and "id" must both be "${id}"`);
   if (doc['@type'] !== 'App') problems.push(`${f}: "@type" must be "App"`);
+  if (doc.handles !== undefined) for (const p of handlesProblems(doc.handles)) problems.push(`${f}: ${p}`);
   for (const k of Object.keys(doc)) {
     if (!k.startsWith('@') && !MEMBERS.has(k)) problems.push(`${f}: "${k}" is not a manifest member`);
   }

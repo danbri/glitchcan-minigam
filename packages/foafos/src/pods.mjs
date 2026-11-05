@@ -115,6 +115,8 @@ export class FoafPods {
     this.connectXmpp = connectXmpp;
     this.openBuiltin = openBuiltin;
     this._opening = new Map();      // pod id -> the connect() under way
+    this.shares = new Map();        // token -> one file, held by one window
+    this.offers = [];               // shares waiting for their window to open
     this.openDevice = openDevice;   // async (rec, {ask}) => {ok, root} | {ok:false, status, detail}, for carriage 'device'
     this.snapshots = snapshots;
     this.fetch = fetchImpl || ((...a) => globalThis.fetch(...a));
@@ -379,6 +381,37 @@ export class FoafPods {
   revoke(appId) { this.grants.delete(appId); return this; }
   scopeFor(appId, cap) { return this.grants.get(appId)?.get(cap) || null; }
 
+  // ── one file, shared with one window ──────────────────────────────────
+  // Exploring: docs/foafos-open-with-20261105.md. A share is apart from an app's
+  // grants: it adds one file, and takes nothing else from the app's own scope.
+
+  /** Offer one file to the next window of an app to ask. Returns the token. */
+  offerShare(appId, { pod, path, write = false }) {
+    const clean = cleanPath(String(path ?? ''));
+    if (clean === null || clean === '' || !this.pods.has(pod)) throw new Error('pods: a share needs a pod and a file path');
+    const token = crypto.randomUUID();
+    this.offers.push({ token, appId, pod, path: clean, write: !!write, name: clean.split('/').pop(), holder: null });
+    return token;
+  }
+
+  /** The newest window of an app takes what was offered to it, or nothing. */
+  claimShare(appId, holder) {
+    const i = this.offers.findIndex((s) => s.appId === appId);
+    if (i < 0 || holder === null) return null;
+    const [s] = this.offers.splice(i, 1);
+    s.holder = holder;
+    this.shares.set(s.token, s);
+    this._say('pods.shared', { summary: `${appId} has ${s.name}${s.write ? '' : ', to read'}`, appId, pod: s.pod });
+    return { token: s.token, name: s.name, write: s.write };
+  }
+
+  cancelOffer(token) { this.offers = this.offers.filter((s) => s.token !== token); }
+
+  /** These windows have closed: what they held ends. */
+  endShares(holders) {
+    for (const [token, s] of this.shares) if (holders.includes(s.holder)) this.shares.delete(token);
+  }
+
   /** Who may reach which pod, and where. For the Pods window. */
   holders() {
     const out = [];
@@ -417,12 +450,20 @@ export class FoafPods {
    * Results carry the HTTP status, and for reads the body as text; never a URL or a header
    * other than ETag and Content-Type.
    */
-  async invoke(appId, verb, params = {}) {
+  async invoke(appId, verb, params = {}, { holder = null } = {}) {
     const cap = POD_VERBS[verb];
     if (!cap) return this._refuse(appId, verb, 'unknown-verb', `${appId} asked for unknown verb "${verb}"`);
-    const scope = this.scopeFor(appId, cap);
+    // One shared file reaches that file only, whatever path the app sends.
+    let shared = null;
+    if (params.share !== undefined) {
+      shared = this.shares.get(params.share) ?? null;
+      if (!shared || shared.appId !== appId || shared.holder !== holder) return this._refuse(appId, verb, 'denied', `${appId} holds no such shared file`);
+      if (verb !== 'pod.get' && verb !== 'pod.put') return this._refuse(appId, verb, 'denied', `${appId} may only read or write a shared file`);
+      if (verb === 'pod.put' && !shared.write) return this._refuse(appId, verb, 'read-only', `${shared.name} was shared with ${appId} to read`);
+    }
+    const scope = shared ? { pod: shared.pod, prefix: '' } : this.scopeFor(appId, cap);
     if (!scope) return this._refuse(appId, verb, 'denied', `${appId} may not "${verb}": no ${cap} grant`, { capability: cap });
-    const path = FoafPods.target(scope, params.path, { container: verb === 'pod.list' });
+    const path = shared ? shared.path : FoafPods.target(scope, params.path, { container: verb === 'pod.list' });
     if (path === null) {
       return this._refuse(appId, verb, 'bad-params', `${appId}'s "${verb}" path was refused`,
         { detail: verb === 'pod.list' ? 'a container path, without ".."' : 'a resource path, without ".." and not ending in "/"' });
