@@ -54,8 +54,8 @@ The checks:
 
 | Service | Checks |
 |---|---|
-| `xmpp` | Opens a real XMPP stream. Opens a WebSocket as the shell's origin, so a browser refusal shows here |
-| `lws` | Storage answers, and sends the CORS header the shell needs |
+| `xmpp` | Opens a real XMPP stream. Opens a WebSocket as the shell's origin, so a browser refusal shows here. Confirms another site is refused |
+| `lws` | Storage answers, sends the CORS header the shell needs, and does not allow other sites |
 | `sparql` | Runs a real `ASK` query |
 | `shell` | The page and `foafos-shell.js` load, and the CORS header sandboxed apps need is there |
 | `foafbot` | Holds a connection to the XMPP server. This does not prove it can reach Claude |

@@ -7,7 +7,7 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync, spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -103,6 +103,19 @@ test('a browser origin the server refuses shows as a failed check', () => {
   assert.equal(s.checks.find((c) => c.name === 'browser websocket').ok, false, JSON.stringify(s.checks));
 });
 
+test('a server open to other sites is not healthy', () => {
+  const s = state();
+  for (const n of ['xmpp', 'lws']) assert.ok(s[n].checks.find((c) => c.name === 'other sites refused')?.ok, JSON.stringify(s[n].checks));
+});
+
+test('state is private to you', () => {
+  const mode = (f) => (statSync(f).mode & 0o777).toString(8);
+  assert.equal(mode(join(T, 'state')), '700');
+  assert.equal(mode(join(T, 'state/logs/shell.log')), '600');
+  assert.equal(stack(['logs', 'shell', '-n']).code, 2);
+  assert.equal(stack(['logs', 'shell', '-n', 'abc']).code, 2);
+});
+
 test('settings that changed since the start are pointed out', () => {
   const s = JSON.parse(stack(['status', '--json'], { FOAFOS_SPARQL_FILE: join(T, 'other.ttl') }).out).services.find((x) => x.name === 'sparql');
   assert.match(s.notes.join(), /older settings/);
@@ -116,6 +129,16 @@ test('a pid reused by another program is not mistaken for the server', () => {
     const s = state().sparql;
     assert.equal(s.state, 'blocked', JSON.stringify(s));
   } finally { writeFileSync(file, saved); }
+});
+
+test('a start time recorded in another locale still matches', () => {
+  const file = join(T, 'state/run/sparql.json');
+  const saved = readFileSync(file, 'utf8');
+  const rec = JSON.parse(saved);
+  const m = /^(\w+) (\w+) +(\d+) (\S+) (\d+)$/.exec(rec.lstart);
+  assert.ok(m, rec.lstart);
+  writeFileSync(file, JSON.stringify({ ...rec, lstart: `${m[1]} ${m[3].padStart(2)} ${m[2]} ${m[4]} ${m[5]}` }));
+  try { assert.equal(state().sparql.state, 'healthy'); } finally { writeFileSync(file, saved); }
 });
 
 test('a pid file from the old script is adopted, not lost', () => {

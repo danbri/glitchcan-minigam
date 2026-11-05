@@ -7,7 +7,7 @@
 // and LWS runs with no authorization. Never expose any of this to a network.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, statfsSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, statfsSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -49,7 +49,7 @@ const say = (s = '') => console.log(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const short = (p) => (p.startsWith(HOME) ? '~' + p.slice(HOME.length) : p);
 const run = (cmd, args, opts = {}) => {
-  const r = spawnSync(cmd, args, { encoding: 'utf8', timeout: 5000, ...opts });
+  const r = spawnSync(cmd, args, { encoding: 'utf8', timeout: 5000, env: { ...env, LC_ALL: 'C' }, ...opts });
   return r.status === 0 ? r.stdout : '';
 };
 const accountNames = () => {
@@ -76,23 +76,33 @@ async function web(url, init = {}) {
   try { return await fetch(url, { ...init, signal: AbortSignal.timeout(PROBE_WAIT) }); } catch { return null; }
 }
 
+const FOREIGN = 'https://not-allowed.example';
+
+const wsHandshake = (origin) => talk(C.wsPort, ['GET /xmpp-websocket HTTP/1.1', `Host: 127.0.0.1:${C.wsPort}`, `Origin: ${origin}`, 'Upgrade: websocket', 'Connection: Upgrade',
+  'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==', 'Sec-WebSocket-Version: 13', 'Sec-WebSocket-Protocol: xmpp', '', ''].join('\r\n'), (g) => g.includes('\r\n'));
+
 async function probeXmpp() {
   const stream = await talk(C.xmppPort, `<?xml version='1.0'?><stream:stream to='localhost' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>`,
     (g) => g.includes('</stream:features>'));
-  const ws = await talk(C.wsPort, ['GET /xmpp-websocket HTTP/1.1', `Host: 127.0.0.1:${C.wsPort}`, `Origin: ${SHELL_ORIGIN}`, 'Upgrade: websocket', 'Connection: Upgrade',
-    'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==', 'Sec-WebSocket-Version: 13', 'Sec-WebSocket-Protocol: xmpp', '', ''].join('\r\n'), (g) => g.includes('\r\n'));
+  const ws = await wsHandshake(SHELL_ORIGIN);
+  const foreign = await wsHandshake(FOREIGN);
   return [
     check('xmpp stream', stream.includes('stream:features'), stream ? '' : 'no answer'),
     check('browser websocket', / 101 /.test(ws.split('\r\n')[0]), ws ? `${ws.split('\r\n')[0]}, for origin ${SHELL_ORIGIN}` : 'no answer'),
+    check('other sites refused', foreign && !/ 101 /.test(foreign.split('\r\n')[0]), foreign ? foreign.split('\r\n')[0] : 'no answer'),
   ];
 }
 
 async function probeLws() {
   const r = await web(`http://127.0.0.1:${C.lwsPort}/`, { headers: { Origin: SHELL_ORIGIN, Accept: 'application/lws+json' } });
   const allow = r?.headers.get('access-control-allow-origin');
+  const other = await web(`http://127.0.0.1:${C.lwsPort}/`, { headers: { Origin: FOREIGN, Accept: 'application/lws+json' } });
+  const otherAllow = other?.headers.get('access-control-allow-origin');
   return [
     check('storage answers', r && r.status < 500, r ? `HTTP ${r.status}` : 'no answer'),
     check('browser may use it', allow === '*' || allow === SHELL_ORIGIN, allow ? `allows ${allow}` : `no CORS header for ${SHELL_ORIGIN}`),
+    // With no authorization, a site the server allows can read and write this storage from your browser.
+    check('other sites refused', other && !(otherAllow === '*' || otherAllow === FOREIGN), otherAllow ? `allows ${otherAllow}` : 'no CORS header for another site'),
   ];
 }
 
@@ -116,7 +126,7 @@ async function probeShell() {
 
 async function probeBot(pid) {
   const link = run('lsof', ['-nP', '-a', '-p', String(pid), '-iTCP', '-sTCP:ESTABLISHED', '-Fn']);
-  return [check('signed in to xmpp', link.includes(`:${C.xmppPort}`), link ? '' : 'no connection to the XMPP server')];
+  return [check('signed in to xmpp', new RegExp(`:${C.xmppPort}\\b`).test(link), link ? '' : 'no connection to the XMPP server')];
 }
 
 // ── the services ────────────────────────────────────────────────────────
@@ -178,7 +188,8 @@ function processOf(n, rec) {
   const line = run('ps', ['-o', 'stat=,pgid=,lstart=,command=', '-p', String(rec.pid)]).trim();
   const m = /^(\S+)\s+(\d+)\s+(\w{3}\s+\w{3}\s+\d+\s+[\d:]{8}\s+\d{4}|\w{3}\s+\d+\s+\w{3}\s+[\d:]{8}\s+\d{4})\s+(.*)$/.exec(line);
   if (!m || m[1].startsWith('Z') || !m[4].includes(SERVICES[n].sign)) return null;
-  if (rec.lstart && rec.lstart !== m[3]) return null;
+  // Compared as times: the text of a start time depends on the locale it was recorded in.
+  if (rec.lstart && Date.parse(rec.lstart) !== Date.parse(m[3])) return null;
   return { pid: rec.pid, pgid: Number(m[2]), lstart: m[3], command: m[4] };
 }
 
@@ -294,7 +305,7 @@ const installedVersion = () => (versionCache ??= /@factoidal\/core\s+(\S+)/.exec
 function launch(n) {
   const s = SERVICES[n], log = join(LOGS, `${n}.log`);
   try { if (statSync(log).size > LOG_MAX) renameSync(log, `${log}.1`); } catch { /* no log yet */ }
-  const fd = openSync(log, 'a');
+  const fd = openSync(log, 'a', 0o600);
   writeFileSync(fd, `\n=== start ${new Date().toISOString()} ${n} ===\n`);
   const [cmd, ...args] = s.argv();
   // detached: its own session, so no closing terminal can hang it up.
@@ -328,6 +339,7 @@ async function startOne(n) {
     await sleep(250);
     const r = await inspect(n);
     if (r.state === 'healthy') { say(green(`${n}: started`) + ` (pid ${r.pid}${r.ports.length ? `, port ${r.ports.map((p) => p.port).join(',')}` : ''})`); return true; }
+    if (r.state === 'blocked') { for (const p of r.problems) say(red(`${n}: ${p}`)); return false; }
     if (r.state === 'crashed' || r.state === 'stopped') {
       say(red(`${n}: exited during start. Its log:`));
       say(logSinceStart(n).trim().split('\n').slice(-12).map((l) => `  ${l.slice(0, 150)}`).join('\n'));
@@ -412,11 +424,15 @@ async function logs(args) {
   let lines = '40', follow = true;
   const names = [];
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '-n') lines = args[++i];
+    if (args[i] === '-n') {
+      lines = args[++i];
+      if (!/^\d+$/.test(lines ?? '')) { say(red('-n needs a number of lines')); return 2; }
+    }
     else if (args[i] === '--no-follow') follow = false;
     else if (SERVICES[args[i]]) names.push(args[i]);
     else { say(red(`unknown: ${args[i]} (services: ${NAMES.join(' ')})`)); return 2; }
   }
+  const tails = [];
   const chosen = (names.length ? names : NAMES).filter((n) => names.length || existsSync(join(LOGS, `${n}.log`)));
   const kids = chosen.map((n) => {
     const file = join(LOGS, `${n}.log`);
@@ -428,9 +444,10 @@ async function logs(args) {
       rest = part.pop();
       for (const l of part) say(`${dim(n.padEnd(8) + '|')} ${l}`);
     });
-    return new Promise((r) => k.on('close', r)).then(() => k);
+    tails.push(k);
+    return new Promise((r) => k.on('close', r));
   });
-  const stop = () => process.exit(0);
+  const stop = () => { for (const k of tails) k.kill(); process.exit(0); };
   process.on('SIGINT', stop); process.on('SIGTERM', stop);
   await Promise.all(kids);
   return 0;
@@ -449,6 +466,7 @@ function doctor() {
   add(accounts.length > 0, `XMPP accounts: ${accounts.join(', ') || 'none'}`, 'see "One-time setup" in the guide');
   try { const m = statSync(join(C.xmppDir, 'accounts')).mode & 0o077; add(!m, 'accounts file is private', `chmod 600 ${short(join(C.xmppDir, 'accounts'))}`); } catch { /* reported above */ }
   add(existsSync(C.xmppKey), `state key ${short(C.xmppKey)}`, 'see "One-time setup" in the guide');
+  try { add(!(statSync(C.xmppKey).mode & 0o077), 'state key is private', `chmod 600 ${short(C.xmppKey)}`); } catch { /* reported above */ }
   add(existsSync(join(C.shellRoot, 'glitchcan-minigam')), `shell code in ${short(C.shellRoot)}`, 'set FOAFOS_SHELL_ROOT');
   add(existsSync(join(HERE, 'serve-foafos.py')), 'serve-foafos.py beside this script');
   add(existsSync(C.sparqlFile), `RDF file ${short(C.sparqlFile)}`, 'set FOAFOS_SPARQL_FILE');
@@ -493,8 +511,11 @@ function services(args, fallback) {
 const order = (list) => NAMES.filter((n) => list.includes(n));
 
 async function main([cmd = 'status', ...args]) {
-  mkdirSync(LOGS, { recursive: true });
-  mkdirSync(RUN, { recursive: true });
+  if (!run('which', ['lsof']) && cmd !== 'help') { say(red('this tool needs lsof to see what is listening')); return 1; }
+  mkdirSync(STATE, { recursive: true, mode: 0o700 });
+  mkdirSync(LOGS, { recursive: true, mode: 0o700 });
+  mkdirSync(RUN, { recursive: true, mode: 0o700 });
+  chmodSync(STATE, 0o700);
   const stopAll = async (list) => {
     let ok = true;
     for (const n of order(list).reverse()) ok = (await stopOne(n)) && ok;
