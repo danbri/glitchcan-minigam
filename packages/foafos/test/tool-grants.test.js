@@ -182,6 +182,12 @@ test('/grant, /grants and /revoke work in the Chat window, and never from outsid
   assert.match((await run('/grant not-a-jid moglob look')).text, /Refused: bad-caller/);
 });
 
+test('/open says so when an app did not open', async () => {
+  const t = new FoafTools();
+  const run = createChatCommands({ chat: { mirrors: () => false }, tools: t, bus: bus(), openApp: async () => null, findApp: (n) => ({ id: n, name: 'Moglob' }) });
+  assert.match((await run('/open moglob')).text, /Moglob did not open/);
+});
+
 test('the person is always allowed, whatever the grants say', () => {
   assert.equal(new ToolGrants().allows(PERSON, { id: 'x', slug: 'x' }, { name: 'y' }), true);
 });

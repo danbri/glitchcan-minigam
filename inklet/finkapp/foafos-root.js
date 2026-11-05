@@ -152,6 +152,12 @@ export const ROOTS = {
 // must not strand anyone's bookmark, so the id aliases to the one TV root.
 ROOTS.tellyclub = ROOTS.webtv;
 
+// Every app, and no story at boot. The other roots each offer a chosen few, and
+// a filter nobody asked for is the commonest way to think an app is missing
+// (owner, November 2026: "default to listing all apps"). Same authority as the
+// default root: only the boot differs.
+ROOTS.all = { ...ROOTS.glitchcanary, id: 'all', label: 'All apps', boot: { story: false } };
+
 export const DEFAULT_ROOT = 'glitchcanary';
 
 /** Resolve the manifest for this run. Never returns null. */

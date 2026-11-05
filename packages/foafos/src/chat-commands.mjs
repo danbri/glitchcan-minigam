@@ -149,8 +149,8 @@ export function createChatCommands({ chat, tools, grants = tools?.grants, bus, o
         if (!mayShell('open', false)) return say(WHY['not-granted']);
         const app = findApp(rest);
         if (!app || !openApp) return say('There is no app by that name.');
-        await openApp(app.id);
-        return say(`Opening ${app.name}.`);
+        const opened = await openApp(app.id);
+        return say(opened ? `Opening ${app.name}.` : `${app.name} did not open: it may not be part of this installation. Try ?root=all.`);
       }
       case 'grants': {
         const all = grants.list();
