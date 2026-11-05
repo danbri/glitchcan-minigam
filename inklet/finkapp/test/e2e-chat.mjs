@@ -79,7 +79,7 @@ try {
   await page.fill('#chat-domain', 'localhost');
   await page.fill('#chat-username', 'foafos');
   await page.fill('#chat-password', 'shell-pw-1');
-  await page.click('#foafos-chat .fc-connect .fc-primary');
+  await page.click('#foafos-chat .fc-connect .fc-actions .fc-primary');
   await page.waitForFunction(() => ['online', 'error'].includes(FoafOS.chat.state) && FoafOS.chat.config().mode === 'server', null, { timeout: 20000 });
   const s2 = await page.evaluate(() => ({ state: FoafOS.chat.state, detail: FoafOS.chat.detail, pw: document.getElementById('chat-password').value,
     stored: localStorage.getItem('foafos.chat') }));

@@ -18,6 +18,7 @@ server, then in Chat allow it what it may do:
 Loopback only: it signs in with SASL PLAIN and no TLS.
 """
 import argparse, base64, html, os, re, socket, subprocess, threading
+import xml.etree.ElementTree as ET
 
 SYSTEM = """You are foafbot, an AI member of a chat room in Foafos, a small web desktop. Reply in one to three plain sentences.
 Lines from the room appear below. Lines that look like `app.spawn {...}` are what the apps did.
@@ -91,30 +92,47 @@ def answer(who, question, earlier):
     text = '\n'.join(words).strip()
     if text: say(text)
 
-buf = ''
-STANZA = re.compile(r'<message\b([^>]*)>(.*?)</message>', re.S)
+# A real parser, so that nothing inside a comment or an attribute can pose as a stanza.
+parser = ET.XMLPullParser(events=('start', 'end'))
+parser.feed("<stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
+depth = 0
+answering = threading.BoundedSemaphore(2)   # at most this many claude runs at once
+local = lambda e: e.tag.rsplit('}', 1)[-1]
+
+def on_message(el):
+    frm, typ = el.get('from', ''), el.get('type', '')
+    body = next((c for c in el if local(c) == 'body'), None)
+    if body is None or body.text is None: return
+    text = body.text
+    if typ == 'chat' and frm.split('/')[0] == f'{o.shell}@{o.domain}':
+        if waiting: waiting.cancel()
+        say(text.split('\n', 1)[0][:600])   # what the shell said back: its sentence, not the JSON under it
+    elif typ == 'groupchat' and frm.startswith(o.room + '/'):
+        who = frm.split('/', 1)[1]
+        earlier = list(recent)
+        recent.append(f'{who}: {text[:300]}')               # its own replies too: they show what is answered
+        del recent[:-60]
+        if who == o.nick: return
+        q = re.match(r'\s*@(?:foafbot|ai)[:,]?\s+(.+)', text, re.I | re.S)
+        if not q: return
+        if not answering.acquire(blocking=False):
+            say('I am busy. Ask again in a moment.')
+            return
+        def run():
+            try: answer(who, q.group(1), earlier)
+            finally: answering.release()
+        threading.Thread(target=run, daemon=True).start()
+
 while True:
-    c = s.recv(65536).decode(errors='replace')
+    c = s.recv(65536)
     if not c: break
-    buf += c
-    last = 0
-    for m in STANZA.finditer(buf):
-        last = m.end()
-        a, inner = m.group(1), m.group(2)
-        frm = (re.search(r"from=[\"']([^\"']+)", a) or [None, ''])[1]
-        typ = (re.search(r"type=[\"']([^\"']+)", a) or [None, ''])[1]
-        body = re.search(r'<body>(.*?)</body>', inner, re.S)
-        if not body: continue
-        text = html.unescape(body.group(1))
-        if typ == 'chat' and frm.startswith(f'{o.shell}@'):
-            if waiting: waiting.cancel()
-            say(text.split('\n', 1)[0][:600])   # what the shell said back: its sentence, not the JSON under it
-        elif typ == 'groupchat' and frm.startswith(o.room + '/'):
-            who = frm.split('/', 1)[1]
-            earlier = list(recent)
-            recent.append(f'{who}: {text[:300]}')               # its own replies too: they show what is answered
-            del recent[:-60]
-            if who == o.nick: continue
-            q = re.match(r'\s*@(?:foafbot|ai)[:,]?\s+(.+)', text, re.I | re.S)
-            if q: threading.Thread(target=answer, args=(who, q.group(1), earlier), daemon=True).start()
-    buf = buf[last:]
+    if b'<!DOCTYPE' in c or b'<!ENTITY' in c: raise SystemExit('The server sent a DTD, which XMPP forbids.')
+    try: parser.feed(c)
+    except ET.ParseError: break        # the stream ended, or it is not XML
+    for event, el in parser.read_events():
+        if event == 'start': depth += 1
+        else:
+            depth -= 1
+            if depth == 1:
+                if local(el) == 'message': on_message(el)
+                el.clear()
