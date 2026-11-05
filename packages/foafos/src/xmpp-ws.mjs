@@ -40,7 +40,8 @@ async function scram(hash, password, saltB64, iterations, authMessage) {
 
 export class XmppError extends Error {}
 
-const bareOf = (jid) => String(jid ?? '').split('/')[0];
+// Lower case because a server normalises the `from` it stamps, and someone may have typed Pod@Localhost.
+const bareOf = (jid) => String(jid ?? '').split('/')[0].toLowerCase();
 
 /**
  * Is this IQ reply from whoever the request went to? The server stamps `from`,

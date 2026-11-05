@@ -92,6 +92,7 @@ test('an IQ reply counts only from the account the request went to', () => {
   const no = (to, from) => assert.equal(replyIsFrom({ ...me, to, from }), false, `${to} ${from}`);
   yes('pod@localhost/lws', 'pod@localhost/lws');
   yes('pod@localhost', 'pod@localhost/lws');
+  yes('Pod@Localhost/lws', 'pod@localhost/lws');
   yes('pod@localhost/lws', 'pod@localhost');
   no('pod@localhost/lws', 'mallory@localhost/x');
   no('pod@localhost/lws', 'pod@localhost.evil/x');

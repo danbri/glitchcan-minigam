@@ -17,7 +17,7 @@ server, then in Chat allow it what it may do:
 
 Loopback only: it signs in with SASL PLAIN and no TLS.
 """
-import argparse, base64, html, os, re, socket, subprocess, threading
+import argparse, base64, html, os, re, socket, subprocess, sys, threading
 import xml.etree.ElementTree as ET
 
 SYSTEM = """You are foafbot, an AI member of a chat room in Foafos, a small web desktop. Reply in one to three plain sentences.
@@ -96,6 +96,8 @@ def answer(who, question, earlier):
 parser = ET.XMLPullParser(events=('start', 'end'))
 parser.feed("<stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
 depth = 0
+root = None
+tail = b''                                  # the end of the last read, so a DTD split across two reads is still seen
 answering = threading.BoundedSemaphore(2)   # at most this many claude runs at once
 local = lambda e: e.tag.rsplit('}', 1)[-1]
 
@@ -126,13 +128,19 @@ def on_message(el):
 while True:
     c = s.recv(65536)
     if not c: break
-    if b'<!DOCTYPE' in c or b'<!ENTITY' in c: raise SystemExit('The server sent a DTD, which XMPP forbids.')
+    seen = tail + c
+    if b'<!DOCTYPE' in seen or b'<!ENTITY' in seen: raise SystemExit('The server sent a DTD, which XMPP forbids.')
+    tail = c[-8:]
     try: parser.feed(c)
-    except ET.ParseError: break        # the stream ended, or it is not XML
+    except ET.ParseError as e:
+        print(f'The stream ended: {e}', file=sys.stderr, flush=True)
+        break
     for event, el in parser.read_events():
-        if event == 'start': depth += 1
+        if event == 'start':
+            if root is None: root = el
+            depth += 1
         else:
             depth -= 1
             if depth == 1:
                 if local(el) == 'message': on_message(el)
-                el.clear()
+                root.remove(el)        # a bot runs for days: keep nothing it has read
