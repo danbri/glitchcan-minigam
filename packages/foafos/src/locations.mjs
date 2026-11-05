@@ -54,8 +54,8 @@ function words(p) {
     icon: local ? '🖥' : '🌐', kind: 'pod', finder: false,
     where: local ? `On a storage server on this computer, at ${hostOf(p.base)}.` : `On the server ${hostOf(p.base)}.`,
     needs: local ? 'That server running. For the local one: foafos-stack start lws.' : 'A connection to that server.',
-    encrypted: local ? 'Traffic does not leave this computer, so it is not encrypted. How the server stores files depends on the server.'
-      : 'On the way, by HTTPS. How the server stores files is up to the server.',
+    encrypted: /^https:/i.test(String(p.base)) ? 'On the way, by HTTPS. How the server stores files is up to the server.'
+      : 'Traffic does not leave this computer, so it is not encrypted. How the server stores files depends on the server.',
     risk: local ? 'As safe as that server’s folder on this computer.' : 'As safe as that server and whoever runs it.',
   };
 }

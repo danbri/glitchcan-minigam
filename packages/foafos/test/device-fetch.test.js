@@ -199,6 +199,7 @@ test('every location says where it is, what it needs, and what could lose it', (
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[4] }).encrypted, /not encrypted/);
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[5] }).encrypted, /by HTTPS/);
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[3] }).encrypted, /^No/);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[4], base: 'https://localhost:8443/' }).encrypted, /by HTTPS/);
   assert.equal(describeLocation({ id: 'x', status: 'online', ...kinds[1] }).finder, false);
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[3] }).risk, /loses them/);
   assert.equal(describeLocation({ id: 'x', status: 'needs-ok', ...kinds[0] }).statusText, 'Needs your OK');
