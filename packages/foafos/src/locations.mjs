@@ -12,6 +12,7 @@ function words(p) {
       icon: '📁', kind: 'folder', finder: true,
       where: `In the folder “${p.label}” on this computer. You can open it in Finder or Explorer, though browsers do not show its full path.`,
       needs: 'Your OK, once each time you open Foafos, in Chrome or Edge on this computer.',
+      encrypted: 'Not by Foafos. These are ordinary files, protected only if your disk is, for example by FileVault or BitLocker.',
       risk: 'If you move or rename the folder, Foafos loses it and you choose it again. Your files stay put.',
     };
   }
@@ -20,6 +21,7 @@ function words(p) {
       icon: '💽', kind: 'device', finder: false,
       where: 'In this browser’s private storage on this computer. Finder and Explorer cannot show these files.',
       needs: 'Nothing, as long as you use this browser on this computer.',
+      encrypted: 'Not by Foafos. Protected only if your disk is, for example by FileVault or BitLocker.',
       risk: 'Clearing this site’s data deletes them, and a browser may remove them if the disk runs low or the site goes unused. Copy anything you want to keep to a folder or a pod.',
     };
   }
@@ -28,11 +30,13 @@ function words(p) {
       icon: '🔒', kind: 'browser', finder: false,
       where: 'In this browser, encrypted with your session.',
       needs: 'Your session passphrase, if the session is locked.',
+      encrypted: 'Yes, in the browser’s storage, with a key sealed by your passphrase.',
       risk: 'Clearing this site’s data in the browser deletes them. Forgetting the passphrase loses them.',
     } : {
       icon: '⏳', kind: 'browser', finder: false,
       where: 'In this tab’s memory only. Nothing is written to disk.',
       needs: 'Nothing.',
+      encrypted: 'No, but nothing is kept once the tab closes.',
       risk: 'Closing or reloading this tab loses them. Protect your session with a passphrase to keep them, or use another location.',
     };
   }
@@ -41,6 +45,7 @@ function words(p) {
       icon: '🌐', kind: 'pod', finder: false,
       where: `On a pod at ${p.podJid}, reached through ${hostOf(p.relay?.url)}.`,
       needs: 'That relay and pod running, and the pod’s password in PodStore.',
+      encrypted: 'On the way to the relay, by TLS. The relay can read what passes through it. How the pod stores files is up to that pod.',
       risk: 'As safe as that pod and whoever runs it.',
     };
   }
@@ -49,6 +54,8 @@ function words(p) {
     icon: local ? '🖥' : '🌐', kind: 'pod', finder: false,
     where: local ? `On a storage server on this computer, at ${hostOf(p.base)}.` : `On the server ${hostOf(p.base)}.`,
     needs: local ? 'That server running. For the local one: foafos-stack start lws.' : 'A connection to that server.',
+    encrypted: local ? 'Not on the way, which stays on this computer. How it stores files depends on the server: the local one does not encrypt them unless it is given a storage key.'
+      : 'On the way, by HTTPS. How the server stores files is up to the server.',
     risk: local ? 'As safe as that server’s folder on this computer.' : 'As safe as that server and whoever runs it.',
   };
 }

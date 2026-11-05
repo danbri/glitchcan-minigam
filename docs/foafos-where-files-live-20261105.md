@@ -1,6 +1,6 @@
 # Foafos: where your files live
 
-Files lists every location and says, for the one in use, where it is, what it needs, and what could lose it. A person should never have to guess. The words come from `packages/foafos/src/locations.mjs`, so change them there.
+Files lists every location and says, for the one in use, where it is, what it needs, whether it is encrypted, and what could lose it. A person should never have to guess. The words come from `packages/foafos/src/locations.mjs`, so change them there.
 
 ## For someone using Foafos
 
@@ -14,6 +14,16 @@ Files lists every location and says, for the one in use, where it is, what it ne
 | A pod elsewhere | That server | No | A connection, and its password if it uses a relay | As safe as that server |
 
 To keep something you can always find, add a folder.
+
+| Location | Encrypted? |
+|---|---|
+| A folder you added | Not by Foafos: only if your disk is, by FileVault or BitLocker |
+| This device | Not by Foafos: only if your disk is |
+| This browser, with a sealed session | Yes, in the browser's storage, with a key sealed by your passphrase |
+| This browser, without one | No, but nothing is kept once the tab closes |
+| A pod on this computer | Traffic stays on the computer. The local server does not encrypt files unless given a storage key |
+| A pod elsewhere | In transit by HTTPS. Storage is up to the server |
+| A pod through a relay | To the relay by TLS. The relay can read what passes through it |
 
 ## For developers
 
