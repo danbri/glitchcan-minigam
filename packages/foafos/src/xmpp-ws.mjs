@@ -40,8 +40,21 @@ async function scram(hash, password, saltB64, iterations, authMessage) {
 
 export class XmppError extends Error {}
 
+// Lower case because a server normalises the `from` it stamps, and someone may have typed Pod@Localhost.
+const bareOf = (jid) => String(jid ?? '').split('/')[0].toLowerCase();
+
+/**
+ * Is this IQ reply from whoever the request went to? The server stamps `from`,
+ * and any account can send an IQ to any full JID, so an id alone proves nothing.
+ * `to` is the request's address, or null for a request to our own server.
+ */
+export function replyIsFrom({ to, from, jid, domain }) {
+  if (to) return !!from && bareOf(from) === bareOf(to);
+  return !from || from === domain || (!!jid && bareOf(from) === bareOf(jid));
+}
+
 export class XmppWs {
-  #ws; #queue = []; #waiters = []; #pending = new Map(); #seq = 0;
+  #ws; #queue = []; #waiters = []; #pending = new Map(); #seq = 0; #domain = null;
   jid = null;
   onstanza = null;   // (element) => void, for presence and messages after login
   onclose = null;    // (event) => void, when the connection ends after login
@@ -50,6 +63,7 @@ export class XmppWs {
     const x = new XmppWs();
     x.onwire = onwire;   // (direction, text) => void, for debugging
     try {
+      x.#domain = domain;
       await x.#open(url, Ws);
       await x.#negotiate({ domain, username, password, resource, timeoutMs });
     } catch (e) {
@@ -84,7 +98,11 @@ export class XmppWs {
     if (!el || el.nodeName === 'parsererror') return;
     if (el.localName === 'iq' && (el.getAttribute('type') === 'result' || el.getAttribute('type') === 'error')) {
       const p = this.#pending.get(el.getAttribute('id'));
-      if (p) { this.#pending.delete(el.getAttribute('id')); p.resolve(el); return; }
+      if (p && replyIsFrom({ to: p.to, from: el.getAttribute('from'), jid: this.jid, domain: this.#domain })) {
+        this.#pending.delete(el.getAttribute('id'));
+        p.resolve(el);
+        return;
+      }
     }
     if (el.localName === 'iq' && (el.getAttribute('type') === 'get' || el.getAttribute('type') === 'set')) {
       // We serve nothing: answer every request with service-unavailable.
@@ -147,14 +165,16 @@ export class XmppWs {
     this.send(`<presence xmlns="jabber:client"/>`);
   }
 
-  #id() { return `f${(++this.#seq).toString(36)}`; }
+  // Unguessable, as a second defence behind replyIsFrom.
+  #id() { return `f${(++this.#seq).toString(36)}-${[...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('')}`; }
 
   /** Send an IQ (its id must be set) and resolve with the result or error <iq>. */
   iq(xmlText, timeoutMs = 15000) {
     const id = /\bid="([^"]+)"/.exec(xmlText)[1];
+    const to = /^<iq\b[^>]*?\bto="([^"]*)"/.exec(xmlText)?.[1]?.replace(/&amp;/g, '&') ?? null;
     return new Promise((resolve, reject) => {
       const t = setTimeout(() => { this.#pending.delete(id); reject(new XmppError(`IQ ${id} timed out`)); }, timeoutMs);
-      this.#pending.set(id, { resolve: (v) => { clearTimeout(t); resolve(v); }, reject: (e) => { clearTimeout(t); reject(e); } });
+      this.#pending.set(id, { to, resolve: (v) => { clearTimeout(t); resolve(v); }, reject: (e) => { clearTimeout(t); reject(e); } });
       this.send(xmlText);
     });
   }

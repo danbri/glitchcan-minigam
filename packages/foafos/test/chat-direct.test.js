@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { replyIsFrom } from '../src/xmpp-ws.mjs';
 import { FoafChat } from '../src/chat.mjs';
 
 const secrets = (pw) => ({ grant() {}, names: () => (pw ? ['chat.password'] : []), put() {},
@@ -83,4 +84,23 @@ test('mirrored events become events, and other talk stays talk', async () => {
   assert.equal(a.kind, 'event');
   assert.equal(a.data.summary, 'Notes started');
   assert.equal(b.kind, 'message');
+});
+
+test('an IQ reply counts only from the account the request went to', () => {
+  const me = { jid: 'alice@localhost/foafos', domain: 'localhost' };
+  const yes = (to, from) => assert.equal(replyIsFrom({ ...me, to, from }), true, `${to} ${from}`);
+  const no = (to, from) => assert.equal(replyIsFrom({ ...me, to, from }), false, `${to} ${from}`);
+  yes('pod@localhost/lws', 'pod@localhost/lws');
+  yes('pod@localhost', 'pod@localhost/lws');
+  yes('Pod@Localhost/lws', 'pod@localhost/lws');
+  yes('pod@localhost/lws', 'pod@localhost');
+  no('pod@localhost/lws', 'mallory@localhost/x');
+  no('pod@localhost/lws', 'pod@localhost.evil/x');
+  no('pod@localhost/lws', null);
+  no('pod@localhost/lws', 'localhost');
+  yes(null, null);
+  yes(null, 'localhost');
+  yes(null, 'alice@localhost');
+  no(null, 'mallory@localhost/x');
+  assert.equal(replyIsFrom({ to: null, from: 'mallory@localhost/x', jid: null, domain: 'localhost' }), false);
 });
