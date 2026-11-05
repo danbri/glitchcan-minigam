@@ -30,6 +30,10 @@ Status: a survey. Nothing below is built yet, except where it says "exists".
 
 ## 3. The plan, in order
 
+Update, late 2026-11-04 (branch `claude/foafos-chat-moglob`): steps 2, 3 and 4 are built, in a first form. See
+`docs/foafos-chat-window-20261104.md`. Step 4 differs from what follows: commands come by direct message, not in a room,
+because a room's members are nicknames and anyone can take one.
+
 1. **londat: the frame path. DONE 2026-11-04,** https://github.com/danbri/londat/commit/f5b4af67 (page API 1.10.0).
    `docklands/frame-bridge.js` answers the parent frame only: `webmcp.tools` at start and on `webmcp.list`, and
    `webmcp.call` gives `webmcp.result`. WebMCP registration is unchanged. Both run, with no condition on
