@@ -4,6 +4,7 @@
 set -euo pipefail
 D=/data
 DOMAIN=${XMPP_DOMAIN:?}
+: "${POD_TOKEN:?the https pod has no other lock, so it must not start without its token}"
 mkdir -p "$D/xmpp" "$D/pod-https" "$D/pod-xmpp"
 # A lock from before a reboot names a process id that may now belong to something
 # else, and the storage then refuses to open. Nothing of ours is running yet.
@@ -12,7 +13,9 @@ printf '%s' "${XMPP_ACCOUNTS_B64:?}" | base64 -d > "$D/xmpp/accounts"
 chmod 600 "$D/xmpp/accounts"
 [ -f "$D/xmpp.key" ] || { openssl rand -hex 32 > "$D/xmpp.key"; chmod 600 "$D/xmpp.key"; }
 # A certificate for traffic inside this machine and through the tunnel only.
-[ -f "$D/tls.key" ] || openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout "$D/tls.key" -out "$D/tls.crt" -days 3650 -subj "/CN=$DOMAIN" 2>/dev/null
+openssl x509 -in "$D/tls.crt" -noout -ext subjectAltName 2>/dev/null | grep -q 127.0.0.1 || \
+  openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout "$D/tls.key" -out "$D/tls.crt" -days 3650 \
+    -subj "/CN=$DOMAIN" -addext "subjectAltName=DNS:$DOMAIN,IP:127.0.0.1" 2>/dev/null
 
 factoidal xmpp-serve "$D/xmpp" --domain "$DOMAIN" --muc "rooms.$DOMAIN" --host '::' --port 5223 \
   --cert "$D/tls.crt" --key "$D/tls.key" --ws-port 5280 \
@@ -27,8 +30,7 @@ LWS=$!
 sleep 3
 POD_PASSWORD=$(printf '%s' "$XMPP_ACCOUNTS_B64" | base64 -d | sed -n 's/^pod://p')
 export POD_PASSWORD
-# The certificate is this machine's own, and this connection stays inside it.
-NODE_TLS_REJECT_UNAUTHORIZED=0 node /opt/foafos/pod.mjs --base "https://pod.$DOMAIN/" --dir "$D/pod-xmpp" \
+NODE_EXTRA_CA_CERTS="$D/tls.crt" node /opt/foafos/pod.mjs --base "https://pod.$DOMAIN/" --dir "$D/pod-xmpp" \
   --xmpp xmpps://127.0.0.1:5223 --domain "$DOMAIN" --jid pod --allow "foafos@$DOMAIN" --insecure-no-auth &
 POD=$!
 

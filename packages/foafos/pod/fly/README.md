@@ -5,7 +5,7 @@
 | Part | Reached by | Notes |
 |---|---|---|
 | LWS pod over HTTPS | `https://foafos-proto.fly.dev/` with a bearer token | Caddy holds the token. Files are not encrypted at rest beyond Fly's volume |
-| XMPP | `fly proxy` only | No public port. `fly proxy 15280:8081 15223:5223 -a foafos-proto` |
+| XMPP | `fly proxy` only | No public port, but private to the Fly organisation network, not to this app: other `contextris` apps can reach it. Run `fly proxy 15280:8081 -a foafos-proto` and `fly proxy 15223:5223 -a foafos-proto`, or `foafos-stack start fly` |
 | LWS pod over XMPP | `pod@foafos-proto.fly.dev/lws`, through XMPP | Dials out to XMPP inside the machine |
 
 Credentials are in `~/.config/foafos-proto/` on the laptop, and in Fly secrets: `accounts`, `token`. Data is on the `proto_data` volume, so it survives restarts and deploys.

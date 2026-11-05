@@ -45,6 +45,7 @@ if o.tls:
     tls.check_hostname = False
     tls.verify_mode = ssl.CERT_NONE        # loopback to a tunnel, whose far end has a self-signed certificate
     s = tls.wrap_socket(s, server_hostname=o.domain)
+    s.settimeout(0.2)                      # the reader takes turns with writers: an SSL socket is not safe across threads
 lock = threading.Lock()
 def send(x):
     with lock: s.sendall(x.encode())
@@ -130,8 +131,14 @@ def on_message(el):
             finally: answering.release()
         threading.Thread(target=run, daemon=True).start()
 
+def receive():
+    with lock:
+        try: return s.recv(65536)
+        except (TimeoutError, ssl.SSLWantReadError): return None
+
 while True:
-    c = s.recv(65536)
+    c = receive() if o.tls else s.recv(65536)
+    if c is None: continue
     if not c: break
     seen = tail + c
     if b'<!DOCTYPE' in seen or b'<!ENTITY' in seen: raise SystemExit('The server sent a DTD, which XMPP forbids.')

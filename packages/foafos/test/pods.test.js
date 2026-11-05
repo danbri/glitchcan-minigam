@@ -378,3 +378,16 @@ test('an https pod that refuses its token, or has none, says so', async () => {
   assert.match(pods.get('b').detail, /no access token/);
   assert.throws(() => pods.add({ id: 'c', base: 'https://c.example/', carriage: 'https', auth: 'basic' }), /auth/);
 });
+
+test('an https pod can gain a token after it was added', async () => {
+  const seen = [];
+  const fetchImpl = async (url, init = {}) => { seen.push(new Headers(init.headers).get('authorization')); return new Response(null, { status: 200 }); };
+  const pods = new FoafPods({ secrets: new FoafSecrets(), storage: null, fetchImpl });
+  pods.add({ id: 'a', label: 'A', base: 'https://a.example/', carriage: 'https' });
+  await pods.connect('a');
+  assert.equal(seen.pop(), null);
+  pods.setPassword('a', 'later-token');
+  assert.equal(pods.get('a').auth, 'bearer');
+  await pods.connect('a');
+  assert.equal(seen.pop(), 'Bearer later-token');
+});

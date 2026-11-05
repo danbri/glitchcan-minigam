@@ -5484,16 +5484,17 @@ function buildUI() {
               ? 'In this browser (the Factoidal LWS engine in the page), sealed with your session passphrase and kept on this device.'
               : 'In this browser (the Factoidal LWS engine in the page), held for this run only. Set a passphrase and SAVE in the session bar to keep it on this device, sealed.')
             : `${p.base} over HTTPS`, 'margin:0;color:#ccc;word-break:break-all;'));
-        if (p.carriage === 'xmpp' || p.auth === 'bearer') {
-          const pw = field(card, p.auth === 'bearer' ? 'access token' : 'password', `pod-${p.id}-password`, { type: 'password', placeholder: p.hasPassword ? '•••• held' : 'relay password' });
+        if (p.carriage === 'xmpp' || p.carriage === 'https') {
+          const tokenPod = p.carriage === 'https';
+          const pw = field(card, tokenPod ? 'access token' : 'password', `pod-${p.id}-password`, { type: 'password', placeholder: p.hasPassword ? '•••• held' : tokenPod ? 'access token' : 'relay password' });
           const row = el('div', null, 'display:flex;gap:6px;flex-wrap:wrap;');
-          button(row, 'HOLD PASSWORD', () => {
+          button(row, tokenPod ? 'HOLD TOKEN' : 'HOLD PASSWORD', () => {
             if (!pw.value) return;
             // Straight into the broker; never stored here, never echoed.
             const r = pods.setPassword(p.id, pw.value);
             pw.value = '';
             draw();
-            if (!r.ok) bus.publish('pods.refused', { summary: `the password for ${p.id} was not held (${r.reason})`, id: p.id, reason: r.reason });
+            if (!r.ok) bus.publish('pods.refused', { summary: `the ${tokenPod ? 'token' : 'password'} for ${p.id} was not held (${r.reason})`, id: p.id, reason: r.reason });
           });
           card.appendChild(row);
         }
@@ -5531,7 +5532,7 @@ function buildUI() {
         url: field(add, 'relay', 'pod-add-relay', { placeholder: 'wss://xmpp.example/xmpp-websocket' }),
         domain: field(add, 'domain', 'pod-add-domain', { placeholder: 'xmpp.example' }),
         username: field(add, 'account', 'pod-add-username', { placeholder: 'me' }),
-        password: field(add, 'password', 'pod-add-password', { type: 'password', placeholder: 'relay password' }),
+        password: field(add, 'password or access token', 'pod-add-password', { type: 'password', placeholder: 'relay password, or an https pod\'s token' }),
         podJid: field(add, 'pod JID', 'pod-add-podjid', { placeholder: 'pod@xmpp.example/lws' }),
       };
       for (const [k, input] of Object.entries(f)) {

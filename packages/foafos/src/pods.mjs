@@ -237,6 +237,9 @@ export class FoafPods {
     if (!this.pods.has(id)) return { ok: false, reason: 'no-such-pod' };
     const r = this.secrets.put(POD_OWNER, secretName(id), password);
     if (r.ok) this.secrets.flush?.();
+    // For an https pod this is its access token, so it may gain one after it was added.
+    const rec = this.pods.get(id);
+    if (r.ok && rec.carriage === 'https' && rec.auth !== 'bearer') { rec.auth = 'bearer'; this._save(); }
     return r;
   }
 
@@ -280,7 +283,7 @@ export class FoafPods {
     } else if (rec.carriage === 'xmpp') {
       if (!this.connectXmpp) { this._setStatus(id, 'error', 'no XMPP client in this shell'); return this.get(id); }
       const used = await this.secrets.use(POD_OWNER, secretName(id), (password) =>
-        this.connectXmpp({ url: rec.relay.url, domain: rec.relay.domain, username: rec.relay.username, password, resource: `pod-${id}` }));
+        this.connectXmpp({ url: rec.relay.url, domain: rec.relay.domain, username: rec.relay.username, password, resource: `pod-${id}-${crypto.randomUUID().slice(0, 8)}` }));
       if (!used.ok) {
         this._setStatus(id, 'error', used.reason === 'missing' ? 'no password set' : 'could not log in to the relay');
         return this.get(id);
