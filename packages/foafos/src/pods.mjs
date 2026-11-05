@@ -77,6 +77,8 @@ export function checkPod(rec) {
   if (!['https', 'xmpp', 'builtin', 'device'].includes(r.carriage)) throw new Error('carriage: "https", "xmpp", "builtin" or "device"');
   if (r.carriage === 'device' && !['opfs', 'folder'].includes(r.device)) throw new Error('device: "opfs" or "folder"');
   if (r.carriage !== 'device') delete r.device;
+  // An https pod may need a bearer token, kept as the pod's secret. Apps never see it.
+  if (r.auth !== undefined && !(r.auth === 'bearer' && r.carriage === 'https')) throw new Error('auth: only "bearer", for carriage "https"');
   if (r.carriage === 'xmpp') {
     const relay = r.relay || {};
     let url;
@@ -178,7 +180,7 @@ export class FoafPods {
       ...r,
       status: this.live.get(r.id)?.status || 'offline',
       detail: this.live.get(r.id)?.detail || '',
-      hasPassword: r.carriage === 'xmpp' ? this.secrets.has(POD_OWNER, secretName(r.id)) : null,
+      hasPassword: r.carriage === 'xmpp' || r.auth === 'bearer' ? this.secrets.has(POD_OWNER, secretName(r.id)) : null,
       // 'builtin': is it written out (sealed), or held for this run only?
       kept: r.carriage === 'builtin' ? (this.secrets.sealed ? 'sealed' : 'run') : null,
     }));
@@ -235,6 +237,9 @@ export class FoafPods {
     if (!this.pods.has(id)) return { ok: false, reason: 'no-such-pod' };
     const r = this.secrets.put(POD_OWNER, secretName(id), password);
     if (r.ok) this.secrets.flush?.();
+    // For an https pod this is its access token, so it may gain one after it was added.
+    const rec = this.pods.get(id);
+    if (r.ok && rec.carriage === 'https' && rec.auth !== 'bearer') { rec.auth = 'bearer'; this._save(); }
     return r;
   }
 
@@ -278,13 +283,21 @@ export class FoafPods {
     } else if (rec.carriage === 'xmpp') {
       if (!this.connectXmpp) { this._setStatus(id, 'error', 'no XMPP client in this shell'); return this.get(id); }
       const used = await this.secrets.use(POD_OWNER, secretName(id), (password) =>
-        this.connectXmpp({ url: rec.relay.url, domain: rec.relay.domain, username: rec.relay.username, password }));
+        this.connectXmpp({ url: rec.relay.url, domain: rec.relay.domain, username: rec.relay.username, password, resource: `pod-${id}-${crypto.randomUUID().slice(0, 8)}` }));
       if (!used.ok) {
         this._setStatus(id, 'error', used.reason === 'missing' ? 'no password set' : 'could not log in to the relay');
         return this.get(id);
       }
       conn = used.result;
       podFetch = conn.httpFetch({ jid: rec.podJid, base: rec.base });
+    } else if (rec.auth === 'bearer') {
+      if (!this.secrets.has(POD_OWNER, secretName(id))) { this._setStatus(id, 'error', 'no access token set'); return this.get(id); }
+      podFetch = async (url, init = {}) => {
+        const used = await this.secrets.use(POD_OWNER, secretName(id), (token) =>
+          this.fetch(url, { ...init, headers: { ...init.headers, Authorization: `Bearer ${token}` } }));
+        if (!used.ok) throw new Error('the access token is not available');
+        return used.result;
+      };
     } else {
       podFetch = (url, init) => this.fetch(url, init);
     }
@@ -294,6 +307,7 @@ export class FoafPods {
     if (!probe) this._setStatus(id, 'error', 'the storage did not answer');
     else if (probe.status === 504) this._setStatus(id, 'error', 'the pod is offline');
     else if (probe.status >= 500) this._setStatus(id, 'error', `the storage answered ${probe.status}`);
+    else if (rec.auth === 'bearer' && (probe.status === 401 || probe.status === 403)) this._setStatus(id, 'error', 'the storage refused the access token');
     else this._setStatus(id, 'online', probe.status === 200 ? '' : `HEAD ${probe.status}`);
     return this.get(id);
   }

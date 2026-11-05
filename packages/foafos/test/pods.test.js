@@ -348,3 +348,46 @@ test('a snapshot with no key on the device is an error, and is left as it is', a
   assert.equal(r.snaps.get('browser').key, 'f'.repeat(64));
   assert.equal(r.opens.length, 0);
 });
+
+test('an https pod with a bearer token sends it, and apps never see it', async () => {
+  const seen = [];
+  const fetchImpl = async (url, init = {}) => { seen.push({ method: init.method || 'GET', auth: new Headers(init.headers).get('authorization') }); return new Response(init.method === 'HEAD' ? null : 'body', { status: 200, headers: { 'Content-Type': 'text/plain', ETag: '"1"' } }); };
+  const events = [];
+  const bus = { publish: (t, d) => events.push(JSON.stringify(d)) };
+  const pods = new FoafPods({ secrets: new FoafSecrets({ bus }), bus, storage: null, fetchImpl });
+  pods.add({ id: 'cloud', label: 'C', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }, { password: 's3cret-token' });
+  assert.equal(pods.get('cloud').hasPassword, true);
+  await pods.connect('cloud');
+  assert.equal(pods.status('cloud'), 'online');
+  pods.grant('app', { 'pod:read': { pod: 'cloud' } });
+  const r = await pods.invoke('app', 'pod.get', { path: 'a.txt' });
+  assert.equal(r.body, 'body');
+  assert.ok(seen.length >= 2 && seen.every((s) => s.auth === 'Bearer s3cret-token'), JSON.stringify(seen));
+  assert.doesNotMatch(JSON.stringify(r) + events.join() + JSON.stringify(pods.list()), /s3cret-token/);
+});
+
+test('an https pod that refuses its token, or has none, says so', async () => {
+  const fetchImpl = async () => new Response(null, { status: 401 });
+  const pods = new FoafPods({ secrets: new FoafSecrets(), storage: null, fetchImpl });
+  pods.add({ id: 'a', label: 'A', base: 'https://a.example/', carriage: 'https', auth: 'bearer' }, { password: 'bad' });
+  await pods.connect('a');
+  assert.equal(pods.status('a'), 'error');
+  assert.match(pods.get('a').detail, /refused the access token/);
+  pods.add({ id: 'b', label: 'B', base: 'https://b.example/', carriage: 'https', auth: 'bearer' });
+  await pods.connect('b');
+  assert.match(pods.get('b').detail, /no access token/);
+  assert.throws(() => pods.add({ id: 'c', base: 'https://c.example/', carriage: 'https', auth: 'basic' }), /auth/);
+});
+
+test('an https pod can gain a token after it was added', async () => {
+  const seen = [];
+  const fetchImpl = async (url, init = {}) => { seen.push(new Headers(init.headers).get('authorization')); return new Response(null, { status: 200 }); };
+  const pods = new FoafPods({ secrets: new FoafSecrets(), storage: null, fetchImpl });
+  pods.add({ id: 'a', label: 'A', base: 'https://a.example/', carriage: 'https' });
+  await pods.connect('a');
+  assert.equal(seen.pop(), null);
+  pods.setPassword('a', 'later-token');
+  assert.equal(pods.get('a').auth, 'bearer');
+  await pods.connect('a');
+  assert.equal(seen.pop(), 'Bearer later-token');
+});

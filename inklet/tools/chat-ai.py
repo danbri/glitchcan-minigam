@@ -18,9 +18,13 @@ server, then in Chat allow it what it may do:
 
   python3 inklet/tools/chat-ai.py [--account foafbot] [--port 5222] [--dir ~/foafos-xmpp]
 
-Loopback only: it signs in with SASL PLAIN and no TLS.
+Loopback only: it signs in with SASL PLAIN, with no TLS unless --tls.
 """
+<<<<<<< HEAD
+import argparse, base64, html, os, re, socket, ssl, subprocess, sys, threading
+=======
 import argparse, base64, html, json, os, re, socket, subprocess, sys, threading, time
+>>>>>>> origin/master
 import xml.etree.ElementTree as ET
 sys.dont_write_bytecode = True     # no __pycache__ in a served folder
 import foafbot_tell
@@ -43,8 +47,12 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--account', default='foafbot'); ap.add_argument('--shell', default='foafos')
 ap.add_argument('--domain', default='localhost'); ap.add_argument('--room', default='bus@rooms.localhost')
 ap.add_argument('--nick', default='foafbot'); ap.add_argument('--port', type=int, default=5222)
+<<<<<<< HEAD
+ap.add_argument('--tls', action='store_true', help='direct TLS, for a tunnel to a server whose certificate is its own'); ap.add_argument('--dir', default='~/foafos-xmpp'); ap.add_argument('--model', default='claude-haiku-5-5')
+=======
 ap.add_argument('--dir', default='~/foafos-xmpp'); ap.add_argument('--model', default='claude-haiku-5-5')
 ap.add_argument('--tell-config', help="the owner's /tell file. Default: foafbot-tell.json in --dir")
+>>>>>>> origin/master
 o = ap.parse_args()
 accounts = dict(l.rstrip('\n').split(':', 1) for l in open(os.path.join(os.path.expanduser(o.dir), 'accounts')) if ':' in l)
 
@@ -52,6 +60,12 @@ if o.account not in accounts:
     raise SystemExit(f"No {o.account} account in {o.dir}/accounts. The top of this file says how to add one.")
 
 s = socket.create_connection(('127.0.0.1', o.port))
+if o.tls:
+    tls = ssl.create_default_context()
+    tls.check_hostname = False
+    tls.verify_mode = ssl.CERT_NONE        # loopback to a tunnel, whose far end has a self-signed certificate
+    s = tls.wrap_socket(s, server_hostname=o.domain)
+    s.settimeout(0.2)                      # the reader takes turns with writers: an SSL socket is not safe across threads
 lock = threading.Lock()
 def send(x):
     with lock: s.sendall(x.encode())
@@ -237,8 +251,14 @@ def on_message(el):
     elif typ == 'groupchat' and frm.startswith(o.room + '/'):
         on_room(frm.split('/', 1)[1], text)
 
+def receive():
+    with lock:
+        try: return s.recv(65536)
+        except (TimeoutError, ssl.SSLWantReadError): return None
+
 while True:
-    c = s.recv(65536)
+    c = receive() if o.tls else s.recv(65536)
+    if c is None: continue
     if not c: break
     seen = tail + c
     if b'<!DOCTYPE' in seen or b'<!ENTITY' in seen: raise SystemExit('The server sent a DTD, which XMPP forbids.')
