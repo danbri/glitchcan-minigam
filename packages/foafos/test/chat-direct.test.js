@@ -9,6 +9,11 @@ const bus = { publish() {}, subscribe: () => () => {} };
 const el = (name, attrs, kids = []) => ({ localName: name, getAttribute: (k) => attrs[k] ?? null, children: kids, textContent: attrs.text ?? '', firstElementChild: kids[0] || null });
 const dm = (from, text) => el('message', { from, type: 'chat' }, [el('body', { text })]);
 
+// The server's answer to our room entry: what comes after it is not a stored message.
+const live = (x) => x.onstanza(el('presence', { from: 'bus@rooms.localhost/foafos' }, [
+  { namespaceURI: 'http://jabber.org/protocol/muc#user', localName: 'x', getAttribute: () => null,
+    children: [el('status', { code: '110' })] }]));
+
 function connected(cfg = {}) {
   const sent = [];
   const x = { jid: 'foafos@localhost/foafos', send: (s) => sent.push(s), close() {} };
@@ -20,6 +25,7 @@ function connected(cfg = {}) {
 test('a direct message runs a command only from an allowed account', async () => {
   const { chat, x, sent } = connected({ commandJids: ['me@localhost'] });
   await chat.start();
+  live(x);
   const ran = [];
   chat.onCommand = async (t, { from }) => { ran.push([t, from]); return 'done'; };
   x.onstanza(dm('mallory@localhost/r', '/call moglob go_to {}'));
@@ -34,6 +40,7 @@ test('a direct message runs a command only from an allowed account', async () =>
 test('nobody can send commands until an account is allowed', async () => {
   const { chat, x } = connected();
   await chat.start();
+  live(x);
   let ran = false;
   chat.onCommand = async () => { ran = true; };
   x.onstanza(dm('me@localhost/r', '/apps'));
@@ -44,6 +51,7 @@ test('nobody can send commands until an account is allowed', async () => {
 test('a room message is never a command, whatever its nickname', async () => {
   const { chat, x } = connected({ commandJids: ['me@localhost'] });
   await chat.start();
+  live(x);
   let ran = false;
   chat.onCommand = async () => { ran = true; };
   x.onstanza(el('message', { from: 'bus@rooms.localhost/me@localhost', type: 'groupchat' }, [el('body', { text: '/apps' })]));
@@ -67,6 +75,7 @@ test('any other failure keeps its message hidden, as it might hold the secret', 
 test('a lost connection tries again, and stopping cancels that', async () => {
   const { chat, x } = connected();
   await chat.start();
+  live(x);
   x.onclose();
   await new Promise((r) => setTimeout(r));
   assert.equal(chat.state, 'reconnecting');
@@ -77,6 +86,7 @@ test('a lost connection tries again, and stopping cancels that', async () => {
 test('mirrored events become events, and other talk stays talk', async () => {
   const { chat, x } = connected();
   await chat.start();
+  live(x);
   const g = (nick, text, ...more) => x.onstanza(el('message', { from: `bus@rooms.localhost/${nick}`, type: 'groupchat' }, [el('body', { text }), ...more]));
   g('foafos', 'app.spawn {"summary":"Notes started"}', { ...el('x', {}), namespaceURI: 'urn:foafos:bus:0' });
   g('dan', 'app.spawn was fun');
@@ -103,4 +113,22 @@ test('an IQ reply counts only from the account the request went to', () => {
   yes(null, 'alice@localhost');
   no(null, 'mallory@localhost/x');
   assert.equal(replyIsFrom({ to: null, from: 'mallory@localhost/x', jid: null, domain: 'localhost' }), false);
+});
+
+test('a command stored while the shell was away shows in Chat and never runs', async () => {
+  const { chat, x } = connected({ commandJids: ['me@localhost'] });
+  await chat.start();
+  const ran = [];
+  chat.onCommand = async (t) => { ran.push(t); return 'done'; };
+  x.onstanza(dm('me@localhost/r', '/tell playlist queue {}'));
+  await new Promise((r) => setTimeout(r));
+  assert.deepEqual(ran, []);
+  assert.equal(chat.conversations.get('me@localhost').messages.at(-1).body, '/tell playlist queue {}');
+  live(x);
+  x.onstanza(el('message', { from: 'me@localhost/r', type: 'chat' }, [el('body', { text: '/old' }), el('delay', {})]));
+  await new Promise((r) => setTimeout(r));
+  assert.deepEqual(ran, []);
+  x.onstanza(dm('me@localhost/r', '/now'));
+  await new Promise((r) => setTimeout(r));
+  assert.deepEqual(ran, ['/now']);
 });

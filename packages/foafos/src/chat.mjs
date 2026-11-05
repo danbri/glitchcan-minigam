@@ -115,6 +115,7 @@ export class FoafChat {
     this._retry = 0;
     this._retryTimer = null;
     this._wanted = false;     // the person wants this connected
+    this._live = false;       // the server has answered our room entry: what comes now is not stored
     this.mayCommand = null;   // (jid) => boolean; null: the commandJids list
     secrets?.grant?.(CHAT_OWNER, ['secrets']);
     this.cfg = { ...DEFAULT_CONFIG };
@@ -237,6 +238,7 @@ export class FoafChat {
       return { ok: false, reason: e.message };
     }
     this._retry = 0;
+    this._live = false;
     const x = this._x;
     x.onstanza = (el) => this._stanza(el);
     x.onclose = () => { if (this._x === x) this._lost(); };
@@ -417,6 +419,8 @@ export class FoafChat {
     const c = this.conversations.get(bare);
     if (!c || c.kind !== 'room' || !nick) return;
     const type = el.getAttribute('type');
+    // A server delivers stored messages before it answers the room entry that follows them.
+    if (type === 'error') this._live = true;
     if (type === 'error') {
       c.error = errorCondition(el);
       this._push(c, { kind: 'notice', body: `Could not join this room: ${c.error}.` });
@@ -428,7 +432,7 @@ export class FoafChat {
     else {
       const role = x ? [...x.children].find((k) => k.localName === 'item')?.getAttribute('role') : null;
       c.occupants.set(nick, { nick, role: role || 'participant', self });
-      if (self) { c.joined = true; c.nick = nick; c.error = ''; }
+      if (self) { c.joined = true; c.nick = nick; c.error = ''; this._live = true; }
     }
     this._changed('members');
   }
@@ -447,7 +451,10 @@ export class FoafChat {
     if (!body) return;
     if (type === 'groupchat') this._roomMessage(bare, resource, body, marked);
     else if (marked) return;   // mirrored traffic is never a command
-    else if (!resource || !this.conversations.get(bare) || this.conversations.get(bare).kind === 'direct') this._directMessage(bare, body);
+    else if (!resource || !this.conversations.get(bare) || this.conversations.get(bare).kind === 'direct') {
+      const stored = !this._live || [...el.children].some((c) => c.localName === 'delay');
+      this._directMessage(bare, body, stored);
+    }
     else this._push(this.conversations.get(bare), { kind: 'message', nick: resource, body, private: true });
   }
 
@@ -468,10 +475,12 @@ export class FoafChat {
     if (!self) this.bus.publish('net.xmpp.message', { summary: `${nick}: ${body.slice(0, 80)}`, room: jid, nick, body }, { source: 'net.xmpp' });
   }
 
-  async _directMessage(jid, body) {
+  /** `stored`: sent while this shell was away. It shows in Chat, and it never runs. */
+  async _directMessage(jid, body, stored = false) {
     const c = this._conversation(jid, 'direct');
     this._push(c, { kind: 'message', nick: jid.split('@')[0], body: body.slice(0, MAX_BODY), self: false });
     if (!body.startsWith('/') || !this.onCommand) return;
+    if (stored) { this._refused(jid, 'stored'); return; }
     const may = this.mayCommand ? this.mayCommand(jid) : this.cfg.commandJids.includes(jid);
     if (!may) { this._refused(jid, 'no-grant'); return; }
     if (!this._allow(`command ${jid}`, COMMAND_RATE, COMMAND_WINDOW)) { this._refused(jid, 'too-fast'); return; }
