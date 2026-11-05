@@ -10,4 +10,4 @@ RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund --save-exact "@
 COPY pod.mjs ./
 COPY fly/Caddyfile fly/entrypoint.sh ./
 ENV PATH=/opt/foafos/node_modules/.bin:$PATH
-ENTRYPOINT ["/usr/bin/tini", "--", "bash", "/opt/foafos/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "-s", "--", "bash", "/opt/foafos/entrypoint.sh"]

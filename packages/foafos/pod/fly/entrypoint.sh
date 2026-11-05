@@ -5,6 +5,9 @@ set -euo pipefail
 D=/data
 DOMAIN=${XMPP_DOMAIN:?}
 mkdir -p "$D/xmpp" "$D/pod-https" "$D/pod-xmpp"
+# A lock from before a reboot names a process id that may now belong to something
+# else, and the storage then refuses to open. Nothing of ours is running yet.
+rm -f "$D"/pod-https/lws.lock "$D"/pod-xmpp/lws.lock "$D"/xmpp/state/lws.lock
 printf '%s' "${XMPP_ACCOUNTS_B64:?}" | base64 -d > "$D/xmpp/accounts"
 chmod 600 "$D/xmpp/accounts"
 [ -f "$D/xmpp.key" ] || { openssl rand -hex 32 > "$D/xmpp.key"; chmod 600 "$D/xmpp.key"; }
