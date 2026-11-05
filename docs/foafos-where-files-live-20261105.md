@@ -17,13 +17,13 @@ To keep something you can always find, add a folder.
 
 | Location | Encrypted? |
 |---|---|
-| A folder you added | Not by Foafos: only if your disk is, by FileVault or BitLocker |
-| This device | Not by Foafos: only if your disk is |
+| A folder you added | Not by Foafos: only if your disk is encrypted |
+| This device | Not by Foafos: only if your disk is encrypted |
 | This browser, with a sealed session | Yes, in the browser's storage, with a key sealed by your passphrase |
 | This browser, without one | No, but nothing is kept once the tab closes |
-| A pod on this computer | Traffic stays on the computer. The local server does not encrypt files unless given a storage key |
+| A pod on this computer | Traffic stays on the computer, unencrypted. Storage depends on the server |
 | A pod elsewhere | In transit by HTTPS. Storage is up to the server |
-| A pod through a relay | To the relay by TLS. The relay can read what passes through it |
+| A pod through a relay | To the relay by TLS, or unencrypted if the relay is on this computer. The relay can read what passes through it |
 
 ## For developers
 
