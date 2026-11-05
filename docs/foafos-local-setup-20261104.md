@@ -1,5 +1,7 @@
 # Foafos on this laptop: local servers, XMPP and debugging
 
+Where everything else lives: [foafos-where-things-are.md](foafos-where-things-are.md).
+
 Written 2026-11-04. Covers running the Foafos shell locally, the Factoidal
 servers, joining the bus room from an XMPP client, what went wrong getting
 there, and what is still open.
@@ -12,26 +14,70 @@ all. Do not expose any of this to a network.
 
 ## Quick start
 
-One script runs everything, detached from any terminal, so closing a tab can't
-kill the servers:
+One command runs everything:
 
 ```sh
-foafos-stack start            # xmpp, lws, sparql, shell; or name some
-foafos-stack status
-foafos-stack logs             # all logs, labelled, Ctrl-C to leave; or: logs xmpp -n 100
-foafos-stack restart shell
-foafos-stack stop
-foafos-stack urls             # foafos-stack open opens the shell
+foafos-stack start     # xmpp, lws, sparql and shell, then a full status
+foafos-stack stop      # everything this tool started
 ```
 
-The script is `inklet/tools/foafos-stack`, with `serve-foafos.py` beside it; link it into your PATH. Logs
-and pid files are in `~/.foafos-stack`. It serves the shell from
-`~/working/foafos-chat`; set `FOAFOS_SHELL_ROOT=~/working/solid` for the full
-checkout. It won't touch a server it didn't start; it tells you the pid instead.
+Then open <http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=office>.
 
-The commands it runs, for reference:
+The servers run detached from any terminal, so closing a tab cannot stop them. They do not come back after a reboot: run `foafos-stack start` again.
 
-Each server runs in its own terminal tab.
+| Command | What it does |
+|---|---|
+| `foafos-stack start [service...]` | Starts everything, or those named, and waits until each passes its checks |
+| `foafos-stack stop [service...]` | Stops them, and confirms their ports are free |
+| `foafos-stack restart [service...]` | Stops, then starts. Restarting `xmpp` restarts `foafbot` too |
+| `foafos-stack status [-v] [--json]` | What is really running. Exits 0 only if everything needed is healthy |
+| `foafos-stack logs [service...] [-n N] [--no-follow]` | All logs, labelled. Ctrl-C to leave |
+| `foafos-stack doctor` | Checks what the servers need, before or after starting |
+| `foafos-stack urls`, `foafos-stack open` | The addresses, or opens Foafos |
+
+Services are `xmpp`, `lws`, `sparql`, `shell`, and the optional `foafbot`, which starts only when named: `foafos-stack start foafbot`.
+
+### What status means
+
+Status asks each server to do its job. It does not rely on a pid file or an open port.
+
+| State | Meaning | What to do |
+|---|---|---|
+| `healthy` | Running, on its own ports, on this computer only, and passing every check | Nothing |
+| `starting` | Started in the last 20 seconds and not yet passing | Wait |
+| `degraded` | Running, but a check fails. It may be frozen, or refusing the browser | Status names the check. Read the log, then restart |
+| `crashed` | It stopped, and nobody asked it to. Status shows the log's last error | Read the log, then restart |
+| `blocked` | Something this tool did not start holds its port. Status names the pid | Stop that program, then start |
+| `stopped` | Not running, because it was stopped or never started | Start it |
+
+The checks:
+
+| Service | Checks |
+|---|---|
+| `xmpp` | Opens a real XMPP stream. Opens a WebSocket as the shell's origin, so a browser refusal shows here |
+| `lws` | Storage answers, and sends the CORS header the shell needs |
+| `sparql` | Runs a real `ASK` query |
+| `shell` | The page and `foafos-shell.js` load, and the CORS header sandboxed apps need is there |
+| `foafbot` | Holds a connection to the XMPP server. This does not prove it can reach Claude |
+
+Status also says which folder, branch and commit the shell is serving, read from the running process. Under "Worth knowing" it lists anything running with older settings, or an older Factoidal than the one installed.
+
+### Files and settings
+
+| Path | What it is |
+|---|---|
+| `inklet/tools/foafos-stack.mjs` | This tool. Node 20 or later, no packages. Link it into your PATH as `foafos-stack` |
+| `inklet/tools/test-foafos-stack.mjs` | Its tests, on spare ports: `node inklet/tools/test-foafos-stack.mjs` |
+| `~/.foafos-stack/run/` | One record per server: pid, start time, command. A record with no live process is what `crashed` means |
+| `~/.foafos-stack/logs/` | One log per server. A log over 20 MB moves to `.log.1` at the next start |
+
+All settings are optional environment variables: `FOAFOS_STACK_HOME`, `FOAFOS_SHELL_ROOT` (the folder holding `glitchcan-minigam`; default `~/working/solid`, a full checkout of the default branch), `FOAFOS_SHELL_PORT`, `FOAFOS_XMPP_PORT`, `FOAFOS_XMPP_WS_PORT`, `FOAFOS_LWS_PORT`, `FOAFOS_SPARQL_PORT`, `FOAFOS_SPARQL_FILE`, `FOAFOS_XMPP_DIR`, `FOAFOS_XMPP_KEY`, `FOAFOS_LWS_DIR`, `FOAFOS_LWS_AUTH`, `FOAFOS_BOT_ACCOUNT` and `FOAFOS_START_WAIT`. Keep the same settings for `status` and `stop` as for `start`.
+
+It never touches a server it did not start. It tells you the pid instead.
+
+### Running one by hand
+
+These are the commands the tool runs, for debugging one server in a terminal. Stop it in the tool first.
 
 ```sh
 # Once: upgrade the CLI (0.29.0 has no --muc or --ws-port)

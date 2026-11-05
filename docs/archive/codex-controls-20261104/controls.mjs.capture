@@ -1,0 +1,289 @@
+// Typed local application controls. Possession of an actor token is not enough:
+// the AppTree node and its current capability are checked on every invocation.
+const enc = new TextEncoder();
+const failure = (code) => ({ ok: false, error: { code } });
+const json = (value, limit) => {
+  const text = JSON.stringify(value);
+  if (text === undefined || enc.encode(text).length > limit) throw Error('size');
+  return JSON.parse(text);
+};
+export class FoafControls {
+  #actors = new WeakMap();
+  #targets = new Map();
+  #records = new Set();
+  constructor({ apps, bus, timeoutMs = 10000 } = {}) {
+    this.apps = apps; this.bus = bus; this.timeoutMs = timeoutMs;
+    const refreshActors = () => {
+      for (const actor of this.#records) if (!this.apps.can(actor.instanceId, actor.capability) || (actor.scope && this.apps.nodes.get(actor.instanceId)?.scopes?.controls !== actor.scope)) {
+        actor.active = false; actor.abort.abort(); actor.cache.clear(); this.#records.delete(actor);
+      }
+    };
+    bus?.subscribe('app.scope', refreshActors);
+    this.unsub = bus?.subscribe('app.close', () => {
+      refreshActors();
+      for (const [id, target] of this.#targets) if (!apps.nodes.has(id)) {
+        target.abort.abort(); target.close?.(); this.#targets.delete(id);
+      }
+    });
+  }
+  actor(instanceId, grants, capability = 'shell', scope = null) {
+    if (!this.apps.can(instanceId, capability)) throw Error('actor capability refused');
+    if (!Array.isArray(grants) || grants.some(g => !g || typeof g.target !== 'string' || !Array.isArray(g.verbs) || g.verbs.some(v => typeof v !== 'string'))) throw Error('bad actor scope');
+    const token = Object.freeze({});
+    const actor = { instanceId, capability, grants: json(grants, 16384), scope, cache: new Map(), active: true, abort: new AbortController() };
+    this.#actors.set(token, actor); this.#records.add(actor);
+    return token;
+  }
+  register({ instanceId, verbs, close }) {
+    if (!this.apps.nodes.has(instanceId) || this.#targets.has(instanceId)) throw Error('invalid target');
+    const table = new Map();
+    for (const verb of verbs) {
+      if (!/^[a-z][a-z0-9_.-]{0,63}$/.test(verb.name) || typeof verb.invoke !== 'function' || typeof verb.validate !== 'function' || table.has(verb.name)) throw Error('invalid verb');
+      table.set(verb.name, { ...verb });
+    }
+    const target = { verbs: table, abort: new AbortController(), busy: false, close };
+    this.#targets.set(instanceId, target);
+    return () => { if (this.#targets.get(instanceId) === target) { target.abort.abort(); close?.(); this.#targets.delete(instanceId); } };
+  }
+  #allowed(actor, target, verb) {
+    return actor && actor.active && (!actor.scope || this.apps.nodes.get(actor.instanceId)?.scopes?.controls === actor.scope) && this.apps.can(actor.instanceId, actor.capability) && this.apps.nodes.has(target)
+      && actor.grants.some(g => g.target === target && g.verbs.includes(verb));
+  }
+  list(token) {
+    const actor = this.#actors.get(token); const out = [];
+    for (const [target, entry] of this.#targets) {
+      const verbs = [...entry.verbs.values()].filter(v => this.#allowed(actor, target, v.name))
+        .map(v => ({ name: v.name, inputSchema: v.inputSchema, readOnly: v.readOnly === true }));
+      if (verbs.length) out.push({ target, label: this.apps.nodes.get(target).label, verbs });
+    }
+    return out;
+  }
+  invoke(token, request, { signal } = {}) {
+    const actor = this.#actors.get(token);
+    if (!actor) return Promise.resolve(failure('forbidden'));
+    let r, signature;
+    try { r = json(request, 16384); signature = JSON.stringify(r); } catch { return Promise.resolve(failure('bad-request')); }
+    if (r.v !== 1 || typeof r.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(r.id)) return Promise.resolve(failure('bad-request'));
+    if (!this.#allowed(actor, r.target, r.verb)) return Promise.resolve(failure('forbidden'));
+    const previous = actor.cache.get(r.id);
+    if (previous) return previous.signature === signature ? previous.promise : Promise.resolve(failure('id-conflict'));
+    if (!this.#allowed(actor, r.target, r.verb)) return Promise.resolve(failure('forbidden'));
+    if (actor.cache.size >= 128) {
+      const old = [...actor.cache].find(([, c]) => c.done);
+      if (!old) return Promise.resolve(failure('busy'));
+      actor.cache.delete(old[0]);
+    }
+    const record = { signature, done: false };
+    record.promise = Promise.resolve().then(async () => {
+      const target = this.#targets.get(r.target), verb = target?.verbs.get(r.verb);
+      if (!target || !verb) return failure('closed');
+      if (target.busy && !verb.readOnly) return failure('busy');
+      if (!this.#allowed(actor, r.target, r.verb)) return failure('forbidden');
+      try { if (r.args === null || typeof r.args !== 'object' || Array.isArray(r.args) || !verb.validate(r.args)) return failure('bad-args'); } catch { return failure('bad-args'); }
+      const abort = new AbortController();
+      const cancel = () => abort.abort();
+      signal?.addEventListener('abort', cancel, { once: true });
+      target.abort.signal.addEventListener('abort', cancel, { once: true });
+      actor.abort.signal.addEventListener('abort', cancel, { once: true });
+      if (signal?.aborted || target.abort.signal.aborted || actor.abort.signal.aborted) abort.abort();
+      const timer = setTimeout(cancel, this.timeoutMs);
+      this.bus?.publish('control.request', { rid: r.id, actor: actor.instanceId, target: r.target, verb: r.verb });
+      this.bus?.publish('control.summary', { summary: `${r.id} ${r.target} ${r.verb}: requested` });
+      let result;
+      try {
+        abort.signal.throwIfAborted();
+        if (!verb.readOnly) target.busy = true;
+        const work = Promise.resolve().then(() => { abort.signal.throwIfAborted(); return verb.invoke(r.args, { signal: abort.signal }); });
+        const cancelled = new Promise((_, reject) => abort.signal.addEventListener('abort', () => reject(Error('cancelled')), { once: true }));
+        // A non-cooperative target stays busy until its actual work ends.
+        work.finally(() => { if (!verb.readOnly) target.busy = false; }).catch(() => {});
+        const value = await Promise.race([work, cancelled]);
+        abort.signal.throwIfAborted();
+        if (!this.#allowed(actor, r.target, r.verb)) result = failure('closed');
+        else result = { ok: true, value: json(value, 65536) };
+      } catch (error) { result = failure(abort.signal.aborted ? (target.abort.signal.aborted ? 'closed' : actor.abort.signal.aborted ? 'revoked' : 'cancelled') : error?.code === 'busy' ? 'busy' : 'failed'); }
+      finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); target.abort.signal.removeEventListener('abort', cancel); actor.abort.signal.removeEventListener('abort', cancel); }
+      this.bus?.publish('control.result', { rid: r.id, target: r.target, verb: r.verb, ok: result.ok, code: result.error?.code });
+      this.bus?.publish('control.summary', { summary: `${r.id} ${r.target} ${r.verb}: ${result.ok ? 'ok' : result.error.code}` });
+      return result;
+    }).finally(() => { record.done = true; });
+    actor.cache.set(r.id, record);
+    return record.promise;
+  }
+}
+
+export function createControlCommands(controls, actor, { id = () => crypto.randomUUID() } = {}) {
+  const history = new Map();
+  return async text => {
+    if (enc.encode(String(text)).length > 16384) return { handled: true, result: failure('too-large') };
+    if (!String(text).startsWith('/')) return { handled: false };
+    if (text === '/apps') return { handled: true, result: { ok: true, value: controls.list(actor) } };
+    const tools = /^\/tools\s+(\S+)$/.exec(text);
+    if (tools) return { handled: true, result: { ok: true, value: controls.list(actor).filter(t => t.target === tools[1]) } };
+    const inspect = /^\/inspect\s+(\S+)$/.exec(text);
+    if (inspect) return { handled: true, id: inspect[1], result: history.get(inspect[1]) ?? failure('unknown-id') };
+    const match = /^\/msg\s+(\S+)\s+(\S+)(?:\s+([\s\S]+))?$/.exec(text);
+    if (!match) return { handled: true, result: failure('command-syntax') };
+    let args;
+    try { args = JSON.parse(match[3] ?? '{}'); } catch { return { handled: true, result: failure('bad-json') }; }
+    const rid = id();
+    const result = await controls.invoke(actor, { v: 1, id: rid, target: match[1], verb: match[2], args });
+    if (history.size >= 128) history.delete(history.keys().next().value);
+    history.set(rid, result);
+    return { handled: true, id: rid, result };
+  };
+}
+import { FoafControls, createControlCommands } from '../../../packages/foafos/src/controls.mjs';
+import { createCompositorApp } from './compositor-app.mjs';
+import { registerControlTools } from '../../../packages/foafos/src/control-webmcp.mjs';
+
+// The worker owns data, not a view. The shell owns actors and grants; neither
+// the worker nor an opaque guest is given the raw bus, engine or actor token.
+export function createControlConsole({ apps, bus, rootNode, engineURL, timeoutMs = 10000, makeWorker = url => new Worker(url, { type: 'module' }) }) {
+  const controls = new FoafControls({ apps, bus, timeoutMs });
+  if (!apps.can(rootNode.id, 'shell')) return null;
+  let worker, serial = 0;
+  const pending = new Map();
+  const closeWorker = () => {
+    worker?.terminate(); worker = null;
+    for (const p of pending.values()) { p.cleanup(); p.reject(Error('closed')); }
+    pending.clear();
+  };
+  const invokeWorker = (verb, args, { signal }) => new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(Error('cancelled')); return; }
+    if (pending.size) { const error = Error('busy'); error.code = 'busy'; reject(error); return; }
+    if (!worker) {
+      const url = new URL('./compositor-worker.mjs', import.meta.url); url.searchParams.set('engine', engineURL);
+      worker = makeWorker(url); const current = worker;
+      worker.onmessage = ({ data }) => {
+        if (current !== worker) return;
+        const p = pending.get(data?.rid); if (!p) return;
+        pending.delete(data.rid); p.cleanup(); data.ok ? p.resolve(data.value) : p.reject(Error('app refused'));
+      };
+      worker.onerror = () => { if (current === worker) closeWorker(); };
+    }
+    const rid = `w${++serial}`;
+    const abort = () => closeWorker();
+    signal.addEventListener('abort', abort, { once: true });
+    pending.set(rid, { resolve, reject, cleanup: () => signal.removeEventListener('abort', abort) });
+    try { worker.postMessage({ type: 'control.call', rid, verb, args }); }
+    catch { closeWorker(); }
+  });
+  const target = apps.spawn({ appId: 'compositor-service', parentId: rootNode.id, capabilities: [], surface: 'service', label: 'Headless compositor', onClose: closeWorker });
+  const specs = createCompositorApp(() => { throw Error('worker only'); });
+  controls.register({ instanceId: target.id, close: closeWorker, verbs: specs.verbs.map(v => ({ ...v, invoke: (args, context) => invokeWorker(v.name, args, context) })) });
+  let last = null;
+  const inspector = apps.spawn({ appId: 'control-inspector', parentId: rootNode.id, capabilities: [], surface: 'service', label: 'Headless inspector' });
+  const observe = bus.subscribe('control.result', e => { if (e.source === 'local' && e.data.target === target.id) last = { ...e.data }; });
+  controls.register({ instanceId: inspector.id, close: observe, verbs: [{ name: 'inspector.last', readOnly: true,
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, validate: x => Object.keys(x).length === 0,
+    invoke: async () => ({ last }) }] });
+  const grants = [{ target: target.id, verbs: specs.verbs.map(v => v.name) }, { target: inspector.id, verbs: ['inspector.last'] }];
+  const actor = controls.actor(rootNode.id, grants);
+  const submit = createControlCommands(controls, actor);
+  const guestActors = new Map();
+  const lifetime = new AbortController();
+  bus.subscribe('app.close', () => { for (const id of guestActors.keys()) if (!apps.nodes.has(id)) guestActors.delete(id); if (!apps.nodes.has(target.id) || !apps.nodes.has(inspector.id)) lifetime.abort(); });
+  return {
+    controls, submit, target: target.id, inspector: inspector.id,
+    // Callers cannot choose the actor. This first slice does not grant app-to-app
+    // invocation by default; an explicit live capability + host-recorded scope
+    // is required, even if the guest can publish arbitrary data in its namespace.
+    async guest(nodeId, request) {
+      if (!apps.can(nodeId, 'control:invoke')) return { ok: false, error: { code: 'forbidden' } };
+      const scope = apps.nodes.get(nodeId)?.scopes?.controls;
+      if (!Array.isArray(scope)) return { ok: false, error: { code: 'forbidden' } };
+      let binding = guestActors.get(nodeId);
+      try { if (!binding || binding.scope !== scope) { binding = { scope, actor: controls.actor(nodeId, scope, 'control:invoke', scope) }; guestActors.set(nodeId, binding); } }
+      catch { return { ok: false, error: { code: 'bad-scope' } }; }
+      return controls.invoke(binding.actor, { v: 1, id: request.rid, target: request.target, verb: request.verb, args: request.args });
+    },
+    webmcp: document => registerControlTools({ document, controls, actor, signal: lifetime.signal }),
+  };
+}
+diff --git a/inklet/apps/app-sdk.js b/inklet/apps/app-sdk.js
+index e131707c..20a1eb03 100644
+--- a/inklet/apps/app-sdk.js
++++ b/inklet/apps/app-sdk.js
+@@ -180,11 +180,14 @@
+   // side, not a lookup.
+   let verbSeq = 0;
+   const verbWaiters = new Map();
++  const controlRids = new Set();
+   const reqVerb = (msg, ms = 30000) => new Promise((resolve) => {
+     if (window.parent === window) { resolve({ ok: false, reason: 'no-shell' }); return; }
+     const rid = `v${++verbSeq}`;
+     verbWaiters.set(rid, resolve);
++    if (msg.type === 'control.call') controlRids.add(rid);
+     setTimeout(() => {
++      controlRids.delete(rid);
+       if (verbWaiters.delete(rid)) resolve({ ok: false, reason: 'timeout' });
+     }, ms);
+     post({ ...msg, rid });
+@@ -292,6 +295,9 @@
+      */
+     invoke: (verb, detail) => reqVerb({ type: 'verb', verb, detail }),
+ 
++    // Explicit control:invoke capability and a host-recorded target scope required.
++    control: (target, verb, args = {}) => reqVerb({ type: 'control.call', target, verb, args }),
++
+     /** Which verbs may this app actually call, and what each one needs. */
+     verbs: () => reqVerb({ type: 'verbs.list' }, 4000).then(r => r.verbs || []),
+ 
+@@ -396,9 +402,11 @@
+       if (resolve) { secretWaiters.delete(d.rid); resolve(d); }
+       return;
+     }
+-    if (d.type === 'verb.result' || d.type === 'verbs.result' || d.type === 'pod.result') {
++    if (controlRids.has(d.rid) && (e.source !== window.parent || d.type !== 'control.result')) return;
++    if (d.type === 'control.result' && (!controlRids.has(d.rid) || e.source !== window.parent)) return;
++    if (d.type === 'verb.result' || d.type === 'verbs.result' || d.type === 'pod.result' || d.type === 'control.result') {
+       const resolve = verbWaiters.get(d.rid);
+-      if (resolve) { verbWaiters.delete(d.rid); resolve(d); }
++      if (resolve) { verbWaiters.delete(d.rid); controlRids.delete(d.rid); resolve(d); }
+       return;
+     }
+     if (d.type === 'story.result') {
+  assert.equal((await controls.invoke(actor, req)).error.code, 'cancelled');
+  assert.equal((await controls.invoke(actor, { ...req, id: 'slow2' })).error.code, 'busy');
+  release({ done: true });await new Promise(resolve => setImmediate(resolve));
+  const pending = controls.invoke(actor, { ...req, id: 'slow3' });
+  await Promise.resolve();await Promise.resolve();apps.close(target.id);
+  assert.equal((await pending).error.code, 'closed');release?.({ done: true });
+});
+
+
+test('live controls scope revocation cancels the cooperative handler before its side effect', async () => {
+  const bus = new FoafBus(), apps = new AppTree({ bus });
+  const root = apps.spawn({ appId: 'root', capabilities: ['control:invoke'] });
+  const target = apps.spawn({ appId: 'target', parentId: root.id, capabilities: [] });
+  const broker = new FoafControls({ apps, bus }); let release, effect = false, observed;
+  broker.register({ instanceId: target.id, verbs: [{ name: 'write.test', inputSchema: {}, validate: () => true,
+    invoke: async (_, { signal }) => { observed = signal; await new Promise(r => { release = r; }); signal.throwIfAborted(); effect = true; return {}; } }] });
+  const scope = apps.setScope(root.id, 'controls', [{ target: target.id, verbs: ['write.test'] }]);
+  const actor = broker.actor(root.id, scope, 'control:invoke', scope);
+  const pending = broker.invoke(actor, { v: 1, id: 'revoke', target: target.id, verb: 'write.test', args: {} });
+  await Promise.resolve(); await Promise.resolve();
+  apps.setScope(root.id, 'controls', []);
+  assert.equal(observed.aborted, true); release();
+  assert.equal((await pending).error.code, 'revoked'); assert.equal(effect, false);
+});
+  } finally { apps.close(root.id);await Promise.all(workers.map(worker => worker.terminate())); }
+});
+
+
+test('nonresponsive worker is bounded, terminated on timeout, and replaced for the next call', async () => {
+  const bus = new FoafBus(), apps = new AppTree({ bus });
+  const root = apps.spawn({ appId: 'root', capabilities: ['shell'] });
+  let created = 0, terminated = 0, posted = 0;
+  const console = createControlConsole({ apps, bus, rootNode: root, engineURL: 'https://example.invalid/core.js', timeoutMs: 10,
+    makeWorker: () => { created++; return { postMessage() { posted++; }, terminate() { terminated++; } }; } });
+  const first = console.submit(`/msg ${console.target} compositor.status`);
+  await Promise.resolve(); await Promise.resolve();
+  const concurrent = await console.submit(`/msg ${console.target} compositor.status`);
+  assert.equal(concurrent.result.error.code, 'busy');
+  assert.equal((await first).result.error.code, 'cancelled'); assert.equal(terminated, 1); assert.equal(posted, 1);
+  for (let n = 0; n < 3; n++) assert.equal((await console.submit(`/msg ${console.target} compositor.status`)).result.error.code, 'cancelled');
+  assert.equal(created, 4); assert.equal(terminated, 4); assert.equal(posted, 4);
+  apps.close(root.id);
+});
