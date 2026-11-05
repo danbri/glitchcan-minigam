@@ -25,7 +25,7 @@ writeFileSync(join(T, 'key'), 'ab'.repeat(32), { mode: 0o600 });
 writeFileSync(join(T, 'data.ttl'), '<urn:a> <urn:b> <urn:c> .\n');
 
 const ENV = { ...process.env, NO_COLOR: '1', FOAFOS_STACK_HOME: join(T, 'state'), FOAFOS_SHELL_ROOT: join(T, 'root'), FOAFOS_SHELL_PORT: String(P),
-  FOAFOS_XMPP_PORT: String(P + 1), FOAFOS_XMPP_WS_PORT: String(P + 2), FOAFOS_LWS_PORT: String(P + 3), FOAFOS_SPARQL_PORT: String(P + 4),
+  FOAFOS_XMPP_PORT: String(P + 1), FOAFOS_XMPP_WS_PORT: String(P + 2), FOAFOS_LWS_PORT: String(P + 3), FOAFOS_SPARQL_PORT: String(P + 4), FOAFOS_WEBDAV_PORT: String(P + 5),
   FOAFOS_SPARQL_FILE: join(T, 'data.ttl'), FOAFOS_XMPP_DIR: join(T, 'xmpp'), FOAFOS_XMPP_KEY: join(T, 'key'), FOAFOS_LWS_DIR: join(T, 'lws'),
   FOAFOS_LWS_AUTH: `--authz ${join(T, 'authz')} --allow-http`, FOAFOS_START_WAIT: '12' };
 const stack = (args, env = {}) => {
@@ -41,16 +41,16 @@ after(() => { stack(['stop']); rmSync(T, { recursive: true, force: true }); });
 test('nothing running: every service says stopped, and status exits 1', () => {
   const r = stack(['status']);
   assert.equal(r.code, 1);
-  assert.match(r.out, /4 of 4 not healthy/);
+  assert.match(r.out, /5 of 5 not healthy/);
   assert.match(r.out, /xmpp: stopped\. Run: foafos-stack start xmpp/);
 });
 
 test('one command starts everything, and each server passes its real check', () => {
   const r = stack(['start']);
   assert.equal(r.code, 0, r.out);
-  assert.match(r.out, /all 4 healthy/);
+  assert.match(r.out, /all 5 healthy/);
   const s = state();
-  for (const n of ['xmpp', 'lws', 'sparql', 'shell']) {
+  for (const n of ['xmpp', 'lws', 'webdav', 'sparql', 'shell']) {
     assert.equal(s[n].state, 'healthy', JSON.stringify(s[n]));
     assert.ok(s[n].checks.length > 0, n);
     assert.ok(s[n].checks.every((c) => c.ok), JSON.stringify(s[n].checks));
@@ -156,7 +156,7 @@ test('stop, in order, leaves no port open and no crash behind', () => {
   const r = stack(['stop']);
   assert.equal(r.code, 0, r.out);
   const s = state();
-  for (const n of ['xmpp', 'lws', 'sparql', 'shell']) assert.equal(s[n].state, 'stopped', n);
+  for (const n of ['xmpp', 'lws', 'webdav', 'sparql', 'shell']) assert.equal(s[n].state, 'stopped', n);
   assert.match(stack(['stop']).out, /not running/);
 });
 
