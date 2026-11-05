@@ -29,6 +29,7 @@
 
 import { cleanPath } from './ops.mjs';
 import { SECRETS_CAP } from './secrets.mjs';
+import { deviceFetch } from './device-fetch.mjs';
 
 export const POD_OWNER = 'foafos.pods';
 export const POD_VERBS = {
@@ -73,7 +74,9 @@ export function checkPod(rec) {
   }
   if (!base.pathname.endsWith('/') || base.search || base.hash) throw new Error('base: must end with "/" and have no query or fragment');
   r.base = base.href;
-  if (!['https', 'xmpp', 'builtin'].includes(r.carriage)) throw new Error('carriage: "https", "xmpp" or "builtin"');
+  if (!['https', 'xmpp', 'builtin', 'device'].includes(r.carriage)) throw new Error('carriage: "https", "xmpp", "builtin" or "device"');
+  if (r.carriage === 'device' && !['opfs', 'folder'].includes(r.device)) throw new Error('device: "opfs" or "folder"');
+  if (r.carriage !== 'device') delete r.device;
   if (r.carriage === 'xmpp') {
     const relay = r.relay || {};
     let url;
@@ -103,7 +106,7 @@ export class FoafPods {
    * @param snapshots    async { get(id), put(id, snapshot) }: where a built-in pod is kept
    */
   constructor({ secrets, bus = null, storage = null, key = 'foafos.pods', connectXmpp = null,
-    fetchImpl = null, now = () => Date.now(), perMinute = 120, openBuiltin = null, snapshots = null } = {}) {
+    fetchImpl = null, now = () => Date.now(), perMinute = 120, openBuiltin = null, snapshots = null, openDevice = null } = {}) {
     if (!secrets) throw new Error('foafos pods: a FoafSecrets is required');
     this.secrets = secrets;
     this.bus = bus;
@@ -111,6 +114,8 @@ export class FoafPods {
     this.key = key;
     this.connectXmpp = connectXmpp;
     this.openBuiltin = openBuiltin;
+    this._opening = new Map();      // pod id -> the connect() under way
+    this.openDevice = openDevice;   // async (rec, {ask}) => {ok, root} | {ok:false, status, detail}, for carriage 'device'
     this.snapshots = snapshots;
     this.fetch = fetchImpl || ((...a) => globalThis.fetch(...a));
     this.now = now;
@@ -235,7 +240,23 @@ export class FoafPods {
 
   status(id) { return this.live.get(id)?.status || 'offline'; }
 
-  async connect(id) {
+  /**
+   * `ask`: the person has just acted, so a browser permission prompt may be shown.
+   * Calls that overlap share one opening, so a second caller waits rather than
+   * finding the pod half open.
+   */
+  async connect(id, opts = {}) {
+    const busy = this._opening.get(id);
+    if (busy) {
+      await busy.catch(() => {});
+      if (!opts.ask || this.status(id) === 'online') return this.get(id);
+    }
+    const run = this._connect(id, opts);
+    this._opening.set(id, run);
+    try { return await run; } finally { if (this._opening.get(id) === run) this._opening.delete(id); }
+  }
+
+  async _connect(id, { ask = false } = {}) {
     const rec = this.pods.get(id);
     if (!rec) throw new Error(`no pod "${id}"`);
     await this.disconnect(id, { quiet: true });
@@ -247,6 +268,11 @@ export class FoafPods {
       if (!opened) return this.get(id);
       conn = opened;
       podFetch = opened.fetch;
+    } else if (rec.carriage === 'device') {
+      if (!this.openDevice) { this._setStatus(id, 'error', 'this shell cannot reach device storage'); return this.get(id); }
+      const opened = await this.openDevice(rec, { ask });
+      if (!opened.ok) { this._setStatus(id, opened.status || 'error', opened.detail || ''); return this.get(id); }
+      podFetch = deviceFetch(opened.root, rec.base);
     } else if (rec.carriage === 'xmpp') {
       if (!this.connectXmpp) { this._setStatus(id, 'error', 'no XMPP client in this shell'); return this.get(id); }
       const used = await this.secrets.use(POD_OWNER, secretName(id), (password) =>
@@ -411,12 +437,13 @@ export class FoafPods {
     }
     if (this._throttled(appId, verb)) return this._refuse(appId, verb, 'throttled', `${appId} called "${verb}" more than ${this.perMinute} times in a minute`);
     let podFetch = this.fetchFor(scope.pod);
-    // The built-in pod opens on first use: its engine is a large download.
-    if (!podFetch && this.pods.get(scope.pod)?.carriage === 'builtin' && this.status(scope.pod) === 'offline') {
+    // The built-in pod opens on first use: its engine is a large download. Device storage opens then too.
+    if (!podFetch && ['builtin', 'device'].includes(this.pods.get(scope.pod)?.carriage) && ['offline', 'connecting'].includes(this.status(scope.pod))) {
       await this.connect(scope.pod);
       podFetch = this.fetchFor(scope.pod);
     }
     if (!podFetch && this.status(scope.pod) === 'locked') return this._refuse(appId, verb, 'locked', `${appId}'s "${verb}": pod ${scope.pod} is locked`, { pod: scope.pod });
+    if (!podFetch && this.status(scope.pod) === 'needs-ok') return this._refuse(appId, verb, 'needs-ok', `${appId}'s "${verb}": pod ${scope.pod} needs the person's OK`, { pod: scope.pod });
     if (!podFetch) return this._refuse(appId, verb, 'offline', `${appId}'s "${verb}": pod ${scope.pod} is not connected`, { pod: scope.pod });
 
     const base = this.pods.get(scope.pod).base;

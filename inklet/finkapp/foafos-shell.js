@@ -15,7 +15,7 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
-  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, CHAT_OWNER,
+  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, describeLocation, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { FoafTools } from '../../packages/foafos/src/tools.mjs';
 import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
@@ -280,8 +280,39 @@ const podSnapshots = (() => {
     put: (id, snapshot) => run('readwrite', (st) => st.put(snapshot, id)),
   };
 })();
+// Device storage: a real folder the person chose, or the browser's private
+// storage. A folder's handle lives in IndexedDB, and the browser asks again for
+// permission on each visit. Design: docs/foafos-where-files-live-20261105.md.
+const deviceFolders = (() => {
+  const run = (mode, fn) => new Promise((resolve, reject) => {
+    const req = indexedDB.open('foafos-device', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('folders');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const r = fn(req.result.transaction('folders', mode).objectStore('folders'));
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    };
+  });
+  return { get: (id) => run('readonly', (s) => s.get(id)), put: (id, handle) => run('readwrite', (s) => s.put(handle, id)) };
+})();
+
+async function openDevice(rec, { ask = false } = {}) {
+  if (rec.device === 'opfs') {
+    if (!navigator.storage?.getDirectory) return { ok: false, detail: 'this browser has no private storage' };
+    const top = await navigator.storage.getDirectory();
+    return { ok: true, root: await top.getDirectoryHandle('foafos', { create: true }) };
+  }
+  const root = await deviceFolders.get(rec.id).catch(() => null);
+  if (!root) return { ok: false, detail: 'this browser no longer has that folder: add it again' };
+  const mode = { mode: 'readwrite' };
+  let state = await root.queryPermission(mode);
+  if (state !== 'granted' && ask) state = await root.requestPermission(mode).catch(() => 'prompt');
+  return state === 'granted' ? { ok: true, root } : { ok: false, status: 'needs-ok', detail: 'allow access to this folder' };
+}
+
 const pods = new FoafPods({
-  secrets, bus, storage: audioStore || null,
+  secrets, bus, storage: audioStore || null, openDevice,
   connectXmpp: (opts) => XmppWs.connect(opts),
   snapshots: podSnapshots,
   openBuiltin: async ({ storageKey, snapshot, onSnapshot }) => {
@@ -291,6 +322,47 @@ const pods = new FoafPods({
       rootAcl: BUILTIN_ACL, storageKey, snapshot, onSnapshot });
   },
 });
+
+// A location is any pod. Only an app that manages the whole pod, such as Files,
+// may list them, because this names addresses. The choice is per app, and kept.
+if (typeof navigator.storage?.getDirectory === 'function' && !pods.get('device')) {
+  try { pods.add({ id: 'device', label: 'This device', base: 'https://device.foafos.local/opfs/', carriage: 'device', device: 'opfs' }); }
+  catch (e) { bus.publish('pods.refused', { summary: `no device location: ${e.message}`, reason: 'bad-record' }); }
+}
+const LOCATION_VERBS = new Set(['pod.locations', 'pod.use', 'pod.addFolder']);
+const locationKey = (appId) => `foafos.location.${appId}`;
+function chosenLocation(appId, fallback) {
+  try { const id = audioStore?.getItem(locationKey(appId)); if (id && pods.get(id)) return id; } catch { /* blocked */ }
+  return fallback;
+}
+const locationsFor = (appId) => ({
+  ok: true, current: pods.scopeFor(appId, 'pod:read')?.pod ?? null,
+  locations: pods.list().map(describeLocation), canAddFolder: typeof window.showDirectoryPicker === 'function',
+});
+async function useLocation(appId, id) {
+  if (!pods.get(id)) return { ok: false, reason: 'no-such-pod' };
+  const caps = [...(pods.grants.get(appId)?.keys() || [])];
+  if (!caps.length) return { ok: false, reason: 'no-pod' };
+  pods.grant(appId, Object.fromEntries(caps.map((c) => [c, { pod: id, prefix: '' }])));
+  try { audioStore?.setItem(locationKey(appId), id); } catch { /* blocked */ }
+  bus.publish('pods.updated', { summary: `${appId} now uses ${pods.get(id).label}`, id });
+  if (pods.status(id) !== 'online') await pods.connect(id, { ask: true });   // the person just asked, so the browser may prompt
+  const status = pods.status(id);
+  return { ...locationsFor(appId), ok: status === 'online', reason: status === 'online' ? undefined : status };
+}
+async function locationVerb(appId, verb, { id }) {
+  if (verb === 'pod.locations') return locationsFor(appId);
+  if (verb === 'pod.use') return useLocation(appId, String(id));
+  let handle;
+  try { handle = await window.showDirectoryPicker({ id: 'foafos-files', mode: 'readwrite' }); }
+  catch (e) { return { ok: false, reason: e?.name === 'AbortError' ? 'cancelled' : 'no-folder' }; }
+  const slug = handle.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20) || 'folder';
+  let folderId = `folder-${slug}`;
+  for (let n = 2; pods.get(folderId); n++) folderId = `folder-${slug}-${n}`;
+  await deviceFolders.put(folderId, handle);
+  pods.add({ id: folderId, label: handle.name, base: `https://device.foafos.local/folder/${folderId}/`, carriage: 'device', device: 'folder' });
+  return useLocation(appId, folderId);
+}
 FoafOS.pods = pods;
 
 // ── chat: the shell's XMPP connection and the bus room (MUC) ────────────
@@ -576,7 +648,8 @@ function syncPodGrants() {
   for (const [appId, caps] of live) {
     // An app reaches its own container unless its manifest says it manages the whole pod.
     const whole = APPS.find((a) => a.id === appId)?.wholePod === true;
-    try { pods.grant(appId, Object.fromEntries([...caps].map((c) => [c, whole ? { pod: target, prefix: '' } : { pod: target }]))); }
+    const pod = whole ? chosenLocation(appId, target) : target;
+    try { pods.grant(appId, Object.fromEntries([...caps].map((c) => [c, whole ? { pod, prefix: '' } : { pod }]))); }
     catch (e) { bus.publish('pods.refused', { summary: `${appId}'s pod grant failed: ${e.message}`, appId, reason: 'bad-scope' }); }
   }
 }
@@ -3898,6 +3971,11 @@ function buildUI() {
           try { frame.contentWindow?.postMessage({ type: 'pod.result', rid: d.rid, verb: d.verb, ...r }, '*'); }
           catch (err) { /* closed */ }
         };
+        if (LOCATION_VERBS.has(d.verb)) {
+          if (APPS.find((a) => a.id === app.id)?.wholePod !== true || !holds('pod:read')) { refuseAtNode('pods', 'pod:read', d.verb); reply({ ok: false, reason: 'denied' }); return; }
+          locationVerb(app.id, d.verb, d.params || {}).then(reply, () => reply({ ok: false, reason: 'failed' }));
+          return;
+        }
         const need = POD_VERBS[d.verb];
         if (!need) { reply({ ok: false, reason: 'unknown-verb' }); return; }
         tallyCap(app.id, need);

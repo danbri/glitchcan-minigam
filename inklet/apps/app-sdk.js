@@ -316,6 +316,10 @@
       list: (path = '') => reqVerb({ type: 'pod', verb: 'pod.list', params: { path } }),
       put: (path, body, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.put', params: { ...opts, path, body } }),
       delete: (path, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.delete', params: { ...opts, path } }),
+      // For an app that manages the whole pod, such as Files. Others are refused.
+      locations: () => reqVerb({ type: 'pod', verb: 'pod.locations' }),
+      use: (id) => reqVerb({ type: 'pod', verb: 'pod.use', params: { id } }, 120000),
+      addFolder: () => reqVerb({ type: 'pod', verb: 'pod.addFolder' }, 120000),
     },
 
     /**
