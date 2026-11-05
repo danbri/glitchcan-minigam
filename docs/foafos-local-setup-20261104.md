@@ -32,10 +32,13 @@ The servers run detached from any terminal, so closing a tab cannot stop them. T
 | `foafos-stack restart [service...]` | Stops, then starts. Restarting `xmpp` restarts `foafbot` too |
 | `foafos-stack status [-v] [--json]` | What is really running. Exits 0 only if everything needed is healthy |
 | `foafos-stack logs [service...] [-n N] [--no-follow]` | All logs, labelled. Ctrl-C to leave |
+| `foafos-stack chat [local\|proto\|shared]` | A plain text XMPP client, already set up. Our own code: for daily use, not for showing interoperability |
 | `foafos-stack doctor` | Checks what the servers need, before or after starting |
 | `foafos-stack urls`, `foafos-stack open` | The addresses, or opens Foafos |
 
-Services are `xmpp`, `lws`, `sparql`, `shell`, and the optional `foafbot`, which starts only when named: `foafos-stack start foafbot`. Its `/tell` is off until `~/foafos-xmpp/foafbot-tell.json` exists: [foafos-foafbot-tell-20261105.md](foafos-foafbot-tell-20261105.md).
+Services are `xmpp`, `lws`, `webdav`, `sparql` and `shell`. Optional ones start only when named: `foafbot`, `proto` (both tunnels to `foafos-proto` on Fly) and `pod-laptop` (this laptop's pod, on the Fly XMPP server).
+
+WebDAV is read only. In Finder: Go, Connect to Server, `http://127.0.0.1:8090/`, then Connect as Guest.
 
 ### What status means
 
