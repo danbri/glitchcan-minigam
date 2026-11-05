@@ -53,8 +53,10 @@ Apps are in the `contextris` Fly organisation: `fly apps list`.
 |---|---|
 | `danbri-foafpod` | Public read-only LWS replica. It also runs a private XMPP test, reachable only through `flyctl proxy` |
 | `factoidal` | Factoidal SPARQL service |
+| `foafos-xmpp` | Public, unannounced test XMPP server, by invitation. Test data only. See [foafos-shared-xmpp-20261105.md](foafos-shared-xmpp-20261105.md) |
 
-There is no public Foafos XMPP server yet. One needs security work in Factoidal first.
+Accounts for `foafos-xmpp` are in `~/.config/foafos-xmpp-fly/accounts`. Rebuild it from
+<https://github.com/danbri/factoidal-core/tree/main/deploy/foafos-xmpp>.
 
 ## Design documents
 
@@ -63,6 +65,7 @@ There is no public Foafos XMPP server yet. One needs security work in Factoidal 
 | Who may use app tools | [foafos-caller-grants-20261105.md](foafos-caller-grants-20261105.md) |
 | Chat | [foafos-chat-window-20261104.md](foafos-chat-window-20261104.md) |
 | The app bus over XMPP | [foafos-bus-xmpp-20261105.md](foafos-bus-xmpp-20261105.md) |
+| The shared test server | [foafos-shared-xmpp-20261105.md](foafos-shared-xmpp-20261105.md) |
 | World tools for Moglob and Drift | [foafos-world-tools-20261104.md](foafos-world-tools-20261104.md) |
 | Pods | [foafos-pods-20261103.md](foafos-pods-20261103.md) |
 | Where a person's files live | [foafos-where-files-live-20261105.md](foafos-where-files-live-20261105.md) |

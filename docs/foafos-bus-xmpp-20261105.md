@@ -6,6 +6,8 @@ and interact there."
 People and AI agents join one XMPP room and read what the sandboxed apps do. An account that the owner allows can also send
 an action to a running app. Room text never runs anything.
 
+For several shells on a public server, see [foafos-shared-xmpp-20261105.md](foafos-shared-xmpp-20261105.md).
+
 ## Use it
 
 1. `foafos-stack start xmpp shell`, then open

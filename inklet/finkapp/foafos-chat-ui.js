@@ -20,6 +20,9 @@ const h = (tag, props = {}, ...kids) => {
 };
 
 const LOCAL_URL = 'ws://127.0.0.1:5280/xmpp-websocket';
+// A public test server, by invitation. No password here: the person enters one.
+const SHARED_URL = 'wss://foafos-xmpp.fly.dev/xmpp-websocket';
+const SHARED_DOMAIN = 'foafos-xmpp.fly.dev';
 const time = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 // Errors say what happened and what to do about it.
@@ -70,6 +73,7 @@ export function mountChat(root, { chat, tools, grants, run }) {
   const place = () => {
     const c = chat.config();
     if (c.mode !== 'server') return 'builtin';
+    if (c.url === SHARED_URL && c.domain === SHARED_DOMAIN) return 'shared';
     return c.url === LOCAL_URL && c.domain === 'localhost' ? 'computer' : 'other';
   };
   const radio = (value, title, text) => h('label', { class: 'fc-place' },
@@ -140,6 +144,7 @@ export function mountChat(root, { chat, tools, grants, run }) {
     h('div', { class: 'fc-places', role: 'radiogroup', 'aria-label': 'Where to connect' },
       radio('builtin', 'In this page', 'Private to this tab. Nothing to set up.'),
       radio('computer', 'This computer', 'Use a server on this machine, so other chat apps can join.'),
+      radio('shared', 'Shared test server', 'Join other shells and chat apps, with an invited account. Everyone there can read the room. Test data only.'),
       radio('other', 'Another server', 'Use any XMPP server that offers a WebSocket.')),
     serverRows, userRow, passRow,
     h('details', { class: 'fc-advanced' }, h('summary', {}, 'Advanced'),
@@ -170,6 +175,7 @@ export function mountChat(root, { chat, tools, grants, run }) {
     userRow.hidden = passRow.hidden = p === 'builtin';
     fPass.placeholder = chat.hasPassword() ? 'Saved until you reload this page' : '';
     if (p === 'computer') { fUrl.value = LOCAL_URL; fDomain.value = 'localhost'; }
+    if (p === 'shared') { fUrl.value = SHARED_URL; fDomain.value = SHARED_DOMAIN; }
     connectBtn.textContent = chat.state === 'online' ? 'Reconnect' : 'Connect';
     backBtn.hidden = chat.state !== 'online';
     offBtn.hidden = !['online', 'reconnecting'].includes(chat.state);
@@ -180,6 +186,8 @@ export function mountChat(root, { chat, tools, grants, run }) {
     const p = places().find((r) => r.checked)?.value || 'builtin';
     const password = fPass.value;
     fPass.value = '';
+    // Each shell in a shared room needs a nickname of its own, or the room refuses it.
+    if (p === 'shared' && fNick.value.trim() === 'foafos') fNick.value = `foafos-${Math.random().toString(16).slice(2, 6)}`;
     const r = chat.configure({
       mode: p === 'builtin' ? 'builtin' : 'server', url: fUrl.value.trim(), domain: fDomain.value.trim(),
       username: fUser.value.trim(), nick: fNick.value.trim(), room: fRoom.value.trim(),
