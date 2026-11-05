@@ -142,6 +142,8 @@ test('room text onto the bus is bounded', async () => {
 
 test('commands are limited by rate and size, and refusals are announced', async () => {
   const { chat, x, bus } = await connected();
+  x.onstanza(el('presence', { from: `${room}/foafos` }, [
+    el('x', {}, [el('status', { code: '110' })], 'http://jabber.org/protocol/muc#user')]));
   chat.mayCommand = (j) => j === 'me@localhost';
   const ran = [];
   chat.onCommand = async (t) => { ran.push(t); return null; };

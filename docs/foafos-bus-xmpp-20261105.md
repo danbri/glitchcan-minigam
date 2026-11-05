@@ -66,10 +66,9 @@ Each comes before the next, and a failure stops the message:
 Nothing from XMPP is published on a bus topic that an app or the shell reads as fact. An outside account cannot make
 `app.close` or `story.state`, because raw bus publishing from XMPP does not exist.
 
-A stored direct message is a known gap. The server keeps a message for an offline account and delivers it later with no
-`<delay>` stamp, so a `/tell` sent while no shell is connected can probably run at the next connect. This was found at the bot,
-which now refuses such messages. It was not tested at the shell. See
-[foafos-foafbot-tell-20261105.md](foafos-foafbot-tell-20261105.md).
+A stored direct message never runs. The server keeps a message for an offline account and delivers it later with no
+`<delay>` stamp, before it answers the room entry that follows. So the shell treats a direct message as live only after that
+answer. Before it, or with a `<delay>`, the message shows in Chat and `chat.refused` gives the reason `stored`.
 
 ## Bounds and redaction
 
