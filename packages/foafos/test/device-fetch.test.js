@@ -193,6 +193,13 @@ test('every location says where it is, what it needs, and what could lose it', (
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[2] }).encrypted, /^Yes/);
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[0] }).encrypted, /^Not by Foafos/);
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[6] }).encrypted, /relay can read/);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[6] }).encrypted, /by TLS/);
+  const loopback = { ...kinds[6], relay: { url: 'ws://127.0.0.1:5280/x' } };
+  assert.match(describeLocation({ id: 'x', status: 'online', ...loopback }).encrypted, /^Not on the way/);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[4] }).encrypted, /not encrypted/);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[5] }).encrypted, /by HTTPS/);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[3] }).encrypted, /^No/);
+  assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[4], base: 'https://localhost:8443/' }).encrypted, /by HTTPS/);
   assert.equal(describeLocation({ id: 'x', status: 'online', ...kinds[1] }).finder, false);
   assert.match(describeLocation({ id: 'x', status: 'online', ...kinds[3] }).risk, /loses them/);
   assert.equal(describeLocation({ id: 'x', status: 'needs-ok', ...kinds[0] }).statusText, 'Needs your OK');
