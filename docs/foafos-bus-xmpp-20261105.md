@@ -125,7 +125,7 @@ Chat window.
 ## Not built
 
 - **Commands in a room.** Room members are nicknames here. This needs a room that shows real JIDs to the shell, and that
-  is a Factoidal change (members-only rooms are not built either).
+  is a Factoidal change. Members-only rooms are now on Factoidal main (`--muc-members`), not yet in a release.
 - **XEP-0050 ad-hoc commands**, so that Gajim shows buttons.
 - **foafbot and `/tell`.** `inklet/tools/chat-ai.py` acts only on `/go` and `/where`, and a change there is a decision about
   what an AI may do.

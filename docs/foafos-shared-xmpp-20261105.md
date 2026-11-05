@@ -23,6 +23,12 @@ form makes it `foafos-` and four hex digits, because a room refuses a nickname i
 
 ## Connect a person
 
+**Profanity 0.19.0 crashes after login today.** The server's disco results have no `from`, and Profanity has a NULL
+dereference on that. The login itself works. The fix is on main of Factoidal
+(<https://github.com/danbri/factoidal-core/commit/681e16da66aeb151c633387144fc6e2fd2ed85fc>) and needs a new engine build on
+this machine. Until then use a shell or another client. A local test with a proxy that added `from` ran Profanity to the
+end: it joined, sent and received in a room.
+
 Profanity:
 
 ```
@@ -38,8 +44,10 @@ Clients find no SRV record for this domain, so they use STARTTLS on 5222. For di
 
 ## Limits that are real
 
-- Every account can join every room until the machine runs an engine with members-only rooms. The account list is the
-  only gate. See the Factoidal README in `deploy/foafos-xmpp`.
+- Every account can join every room. The account list is the only gate. Members-only rooms are on main of Factoidal
+  (`--muc-members`), and the machine does not run that engine yet.
+- The machine runs the npm 0.31.1 engine with the host JavaScript of a later commit. So the limits on connections, login
+  time and queued bytes are on, and the RFC 6120 restricted XML check (0.32.0) is not.
 - The room gets nicknames, so a room member cannot send a command. `/tell` needs a direct message and a grant.
 - Rooms are temporary and have no history. A restart ends them. Clients must join again.
 - Factoidal's XMPP server is experimental and has had no independent review.
@@ -48,3 +56,9 @@ Clients find no SRV record for this domain, so they use STARTTLS on 5222. For di
 
 `node inklet/finkapp/test/e2e-chat-shared.mjs` with `foafos-stack start shell`. Two Chrome shells and one outside client
 use the public server. With `SHELL_URL` it tests another copy of the shell.
+
+## When a new engine is out
+
+When npm has a version with commit `681e16da6` (or a later one), in `deploy/foafos-xmpp`: set `FACTOIDAL_VERSION`, remove
+the `FACTOIDAL_HOST_COMMIT` lines from `Dockerfile` and `fly.toml`, add `--muc-members` to `entrypoint.sh` with
+`bus: me@foafos-xmpp.fly.dev foafos@foafos-xmpp.fly.dev foafbot@foafos-xmpp.fly.dev`, deploy, and run `smoke.mjs`.
