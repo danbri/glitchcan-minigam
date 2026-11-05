@@ -5484,8 +5484,8 @@ function buildUI() {
               ? 'In this browser (the Factoidal LWS engine in the page), sealed with your session passphrase and kept on this device.'
               : 'In this browser (the Factoidal LWS engine in the page), held for this run only. Set a passphrase and SAVE in the session bar to keep it on this device, sealed.')
             : `${p.base} over HTTPS`, 'margin:0;color:#ccc;word-break:break-all;'));
-        if (p.carriage === 'xmpp') {
-          const pw = field(card, 'password', `pod-${p.id}-password`, { type: 'password', placeholder: p.hasPassword ? '•••• held' : 'relay password' });
+        if (p.carriage === 'xmpp' || p.auth === 'bearer') {
+          const pw = field(card, p.auth === 'bearer' ? 'access token' : 'password', `pod-${p.id}-password`, { type: 'password', placeholder: p.hasPassword ? '•••• held' : 'relay password' });
           const row = el('div', null, 'display:flex;gap:6px;flex-wrap:wrap;');
           button(row, 'HOLD PASSWORD', () => {
             if (!pw.value) return;
@@ -5554,7 +5554,8 @@ function buildUI() {
         const password = v('password');
         f.password.value = '';
         delete draft.password;
-        try { pods.add(rec, xmpp && password ? { password } : {}); for (const k of Object.keys(draft)) delete draft[k]; draw(); }
+        if (!xmpp && password) rec.auth = 'bearer';
+        try { pods.add(rec, password ? { password } : {}); for (const k of Object.keys(draft)) delete draft[k]; draw(); }
         catch (e) { err.textContent = `refused: ${e.message}`; }
       }, 'Add this pod');
       add.appendChild(row);

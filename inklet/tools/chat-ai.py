@@ -15,9 +15,9 @@ server, then in Chat allow it what it may do:
 
   python3 inklet/tools/chat-ai.py [--account foafbot] [--port 5222] [--dir ~/foafos-xmpp]
 
-Loopback only: it signs in with SASL PLAIN and no TLS.
+Loopback only: it signs in with SASL PLAIN, with no TLS unless --tls.
 """
-import argparse, base64, html, os, re, socket, subprocess, sys, threading
+import argparse, base64, html, os, re, socket, ssl, subprocess, sys, threading
 import xml.etree.ElementTree as ET
 
 SYSTEM = """You are foafbot, an AI member of a chat room in Foafos, a small web desktop. Reply in one to three plain sentences.
@@ -32,7 +32,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--account', default='foafbot'); ap.add_argument('--shell', default='foafos')
 ap.add_argument('--domain', default='localhost'); ap.add_argument('--room', default='bus@rooms.localhost')
 ap.add_argument('--nick', default='foafbot'); ap.add_argument('--port', type=int, default=5222)
-ap.add_argument('--dir', default='~/foafos-xmpp'); ap.add_argument('--model', default='claude-haiku-5-5')
+ap.add_argument('--tls', action='store_true', help='direct TLS, for a tunnel to a server whose certificate is its own'); ap.add_argument('--dir', default='~/foafos-xmpp'); ap.add_argument('--model', default='claude-haiku-5-5')
 o = ap.parse_args()
 accounts = dict(l.rstrip('\n').split(':', 1) for l in open(os.path.join(os.path.expanduser(o.dir), 'accounts')) if ':' in l)
 
@@ -40,6 +40,11 @@ if o.account not in accounts:
     raise SystemExit(f"No {o.account} account in {o.dir}/accounts. The top of this file says how to add one.")
 
 s = socket.create_connection(('127.0.0.1', o.port))
+if o.tls:
+    tls = ssl.create_default_context()
+    tls.check_hostname = False
+    tls.verify_mode = ssl.CERT_NONE        # loopback to a tunnel, whose far end has a self-signed certificate
+    s = tls.wrap_socket(s, server_hostname=o.domain)
 lock = threading.Lock()
 def send(x):
     with lock: s.sendall(x.encode())

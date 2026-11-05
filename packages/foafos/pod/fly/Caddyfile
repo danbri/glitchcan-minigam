@@ -1,0 +1,34 @@
+{
+	admin off
+	auto_https off
+}
+
+# Public, through Fly's HTTPS: an LWS pod behind a bearer token.
+:8080 {
+	handle /healthz {
+		respond "ok" 200
+	}
+	@open not header Authorization "Bearer {$POD_TOKEN}"
+	@preflight method OPTIONS
+	handle @preflight {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle @open {
+		header Access-Control-Allow-Origin "{header.Origin}"
+		respond "token required" 401
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up -Authorization
+		}
+	}
+}
+
+# Private: no Fly service points here, so it is reached only through `fly proxy`.
+:8081 {
+	reverse_proxy /xmpp-websocket https://127.0.0.1:5280 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}

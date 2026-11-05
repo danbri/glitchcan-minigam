@@ -53,8 +53,9 @@ Apps are in the `contextris` Fly organisation: `fly apps list`.
 |---|---|
 | `danbri-foafpod` | Public read-only LWS replica. It also runs a private XMPP test, reachable only through `flyctl proxy` |
 | `factoidal` | Factoidal SPARQL service |
+| `foafos-proto` | Prototype: XMPP with no public port, and LWS pods over HTTPS and over XMPP. See `packages/foafos/pod/fly/README.md` |
 
-There is no public Foafos XMPP server yet. One needs security work in Factoidal first.
+There is no public Foafos XMPP server yet: `foafos-proto` is reached through `fly proxy`. A public one needs security work in Factoidal first.
 
 ## Design documents
 
