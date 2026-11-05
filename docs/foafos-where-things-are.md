@@ -71,4 +71,5 @@ Accounts for `foafos-xmpp` are in `~/.config/foafos-xmpp-fly/accounts`. Rebuild 
 | Pods | [foafos-pods-20261103.md](foafos-pods-20261103.md) |
 | Where a person's files live | [foafos-where-files-live-20261105.md](foafos-where-files-live-20261105.md) |
 | Opening a file with another app (exploring) | [foafos-open-with-20261105.md](foafos-open-with-20261105.md) |
+| The demo: every kind of pod, and the room | [foafos-demo-20261106.md](foafos-demo-20261106.md) |
 | Lost Codex controls work | [archive/codex-controls-20261104/](archive/codex-controls-20261104/README.md) |
