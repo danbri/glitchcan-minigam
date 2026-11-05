@@ -49,7 +49,7 @@ Drift has tools too: docs/foafos-world-tools-20261104.md.
 ## Files
 
 `inklet/apps/files/`, three panes from `inklet/apps/ui/panes.css`: folders, contents, preview and edit. It replaces the edot
-component as the app called Files. That component reached the device (OPFS) mount, and this one does not. The pod verbs carry
+component as the app called Files. Device storage came back on 2026-11-05 as locations: see [foafos-where-files-live-20261105.md](foafos-where-files-live-20261105.md). The pod verbs carry
 text, so images and audio have no preview, and upload is not built.
 
 ## Side by side

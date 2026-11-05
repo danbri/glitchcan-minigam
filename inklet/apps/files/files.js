@@ -1,8 +1,9 @@
-// Files: the person's pod as folders and files, through foaf.pod.* only.
+// Files: the person's locations as folders and files, through foaf.pod.* only.
+// Each location says where it is, what it needs, and what could lose it.
 //
 // Three panes (../ui/panes.css): folders, what is in this folder, and the file
 // you picked, which you can read and edit. Paths are relative to this app's
-// own pod container, and the app never learns the pod's address or password.
+// own pod container. As the file manager, it may see a location's address; never a password.
 //
 // The pod verbs carry text, so anything else shows its details but no preview.
 (function () {
@@ -12,7 +13,13 @@
     denied: 'Files may not use your pod. Check its permissions.',
     'no-pod': 'No pod is chosen for apps yet. Choose one in PodStore.',
     conflict: 'This file changed elsewhere since you opened it. Open it again, then save.',
-    offline: 'The pod is not connected.',
+    offline: 'That location is not connected.',
+    'needs-ok': 'This folder needs your OK. Use Allow access.',
+    locked: 'This location is locked. Unlock your session first.',
+    error: 'That location cannot be reached.',
+    cancelled: 'No folder was chosen.',
+    'no-folder': 'That folder could not be added.',
+    'too-large': 'This file is too large to open here.',
   };
   const say = (text, bad = false) => { statusEl.textContent = text; statusEl.classList.toggle('bad', bad); };
   const explain = (r) => REASONS[r.reason] || `That did not work: ${r.reason}${r.status ? ` (${r.status})` : ''}.`;
@@ -42,6 +49,8 @@
   const cleanName = (s) => String(s).trim().replace(/[^\p{L}\p{N} ._-]+/gu, '-').replace(/^\.+/, '').slice(0, 100);
   const hiddenName = (n) => n.startsWith('.');
 
+  let locations = [];            // what the shell says about each pod
+  let current = null;            // the location in use
   let folder = '';               // current folder: '' or 'a/b/'
   let items = [];
   let picked = null;             // { path, body, etag, contentType, dirty }
@@ -59,8 +68,12 @@
     return r;
   }
 
+  let listing = 0;               // only the newest listing may draw: an old one may be from another location
   async function go(path, { remember = true } = {}) {
+    const mine = ++listing;
     const r = await list(path);
+    if (mine !== listing) return;
+    if (r.reason === 'needs-ok') takeLocations(await foaf.pod.locations());
     if (!r.ok) { say(explain(r), true); return; }
     if (remember && path !== folder) trail.push(folder);
     folder = path;
@@ -85,7 +98,7 @@
     $('back').disabled = !trail.length;
     $('up').disabled = !folder;
     const parts = folder.split('/').filter(Boolean);
-    $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => go('') } }, 'My files')),
+    $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => go('') } }, here()?.label || 'My files')),
       ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', on: { click: () => go(parts.slice(0, i + 1).join('/') + '/') } }, p))));
     drawTree();
     drawItems();
@@ -101,7 +114,51 @@
     return li;
   }
   const shortcut = (label, path) => h('li', {}, h('button', { type: 'button', on: { click: () => { $('panes').dataset.places = 'closed'; go(path); } } }, label));
-  const drawTree = () => $('tree').replaceChildren(treeNode('', 'My files'), shortcut('🗒️ Notes', 'apps/podnotes/notes/'));
+  const here = () => locations.find((l) => l.id === current);
+  const drawTree = () => $('tree').replaceChildren(treeNode('', here()?.label || 'My files'), shortcut('🗒️ Notes', 'apps/podnotes/notes/'));
+
+  function drawLocations() {
+    $('locations').replaceChildren(...locations.map((l) => h('li', {}, h('button', { type: 'button', 'aria-current': String(l.id === current), on: { click: () => useLocation(l.id) } },
+      h('span', {}, l.icon), h('span', {}, l.label), l.status === 'online' ? null : h('span', { class: 'location-state' }, l.statusText)))));
+    const l = here(), box = $('where');
+    box.dataset.risky = String(!!l && l.dev.kept === 'run');
+    if (!l) { box.replaceChildren(h('p', {}, 'No location is chosen yet.')); return; }
+    const row = (k, v) => [h('dt', {}, k), h('dd', {}, v)];
+    box.replaceChildren(h('div', { class: 'where-head' }, h('h2', {}, `${l.icon} ${l.label}: ${l.statusText}`),
+        h('button', { id: 'change-location', class: 'tool', type: 'button', on: { click: () => { $('panes').dataset.places = 'open'; } } }, 'Change')),
+      h('dl', {}, row('Where', l.where), row('Needs', l.needs), row('Could lose it', l.risk), l.detail ? row('Now', l.detail) : null),
+      ...(l.status === 'needs-ok' ? [h('button', { class: 'tool tool-main', type: 'button', on: { click: () => useLocation(l.id) } }, 'Allow access')] : []),
+      h('details', {}, h('summary', {}, 'For developers'), h('dl', {},
+        row('Pod id', l.id), row('Carriage', l.dev.carriage), row('Base', l.dev.base),
+        l.dev.device ? row('Device', l.dev.device) : null, l.dev.kept ? row('Kept', l.dev.kept) : null)));
+  }
+
+  function takeLocations(r) {
+    if (!Array.isArray(r.locations)) return;
+    locations = r.locations; current = r.current;
+    $('add-folder').hidden = !r.canAddFolder;
+    drawLocations();
+    draw();
+  }
+
+  async function useLocation(id) { await showLocation(await foaf.pod.use(id)); }
+
+  async function showLocation(r) {
+    takeLocations(r);
+    folder = ''; items = []; trail.length = 0; children.clear(); expanded.clear(); expanded.add(''); pick(null);
+    drawItems(); drawTree();
+    if (!r.ok) { say(explain(r), true); return; }
+    say('');
+    $('panes').dataset.places = 'closed';
+    await go('', { remember: false });
+    takeLocations(await foaf.pod.locations());
+  }
+
+  async function addFolder() {
+    const r = await foaf.pod.addFolder();
+    if (!r.ok && !r.locations) { say(explain(r), true); return; }
+    await showLocation(r);
+  }
 
   function activate(it) { if (it.container) go(it.path); else pick(it); }
 
@@ -250,6 +307,7 @@
   $('up').addEventListener('click', () => go(parentOf(folder)));
   $('filter').addEventListener('input', drawItems);
   $('new-file').addEventListener('click', askNewFile);
+  $('add-folder').addEventListener('click', addFolder);
   $('new-folder').addEventListener('click', askNewFolder);
   $('places').addEventListener('click', () => { const p = $('panes'); p.dataset.places = p.dataset.places === 'open' ? 'closed' : 'open'; });
   $('view').addEventListener('click', (e) => {
@@ -261,6 +319,10 @@
   });
 
   pick(null);
-  window.__files = { go, state: () => ({ folder, items, picked, status: statusEl.textContent }) };
-  foaf.onInit(() => go('', { remember: false }));
+  window.__files = { go, useLocation, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+  foaf.onInit(async () => {
+    takeLocations(await foaf.pod.locations());
+    await go('', { remember: false });
+    takeLocations(await foaf.pod.locations());   // a location opens on first use, so its status may have changed
+  });
 })();

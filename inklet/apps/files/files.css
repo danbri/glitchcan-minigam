@@ -38,3 +38,21 @@
 .ask input { flex: 1; min-width: 8rem; min-height: 34px; padding: 0 8px; background: var(--p-bg); border: 1px solid var(--p-line); border-radius: var(--p-corner); }
 .panes-back { display: none; }
 @container (max-width: 520px) { .panes-back { display: inline-block; } }
+
+.side-title { margin: 10px 6px 4px; font-size: 12px; font-weight: 600; color: var(--p-dim); }
+.side-title:first-child { margin-top: 2px; }
+.add-folder { width: 100%; margin: 4px 0; }
+.location-state { margin-left: auto; font-size: 12px; color: var(--p-dim); }
+#locations button { display: flex; gap: 6px; align-items: center; }
+.where { padding: 8px 12px; border-bottom: 1px solid var(--p-line); font-size: 13px; line-height: 1.4; }
+.where-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.where h2 { margin: 0; font-size: 14px; }
+#change-location { min-height: 30px; }
+@container (min-width: 621px) { #change-location { display: none; } }
+.where dl { display: grid; grid-template-columns: max-content 1fr; gap: 1px 10px; margin: 0; }
+.where dt { color: var(--p-dim); }
+.where dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.where details { margin-top: 3px; }
+.where summary { cursor: pointer; color: var(--p-dim); }
+.where .tool { margin-top: 5px; }
+.where[data-risky=true] { box-shadow: inset 3px 0 0 var(--p-bad); }

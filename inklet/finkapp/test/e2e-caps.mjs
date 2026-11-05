@@ -259,57 +259,21 @@ try {
       : fail(`nothing reached the broker: ${JSON.stringify(persisted)}`);
   }
 
-  // 10. Files: the second migration, and a different flavour of refusal.
-  // Files stores nothing of its own — its escape hatch was bought for OPFS,
-  // which needs an origin to hang a storage bucket on and is therefore
-  // refused outright in a sandboxed frame. So the fallback here is a whole
-  // ResourceSource, not a key/value store.
-  //
-  // Fixing this also uncovered that the app had NEVER loaded inside the
-  // shell: the registry pointed at the directory, which has no index.html,
-  // so the frame showed a directory listing locally and would 404 on Pages.
-  // Hence the assertion that the custom element is actually there.
-  await page.evaluate(() => window.FoafOS.store.clear('files'));
+  // 10. Files: de-privileged, and it reaches storage only through the pod verbs.
+  // inklet/finkapp/test/e2e-files-locations.mjs covers its locations.
   await page.evaluate(() => window.FoafOS.launchApp('files'));
   await page.waitForTimeout(4000);
-  const filesFrame = page.frames().find(f => /edot\/files\//.test(f.url()));
+  const filesFrame = page.frames().find(f => /apps\/files\//.test(f.url()));
   if (!filesFrame) {
     fail('files app frame never appeared');
   } else {
-    const st = await filesFrame.evaluate(async () => {
-      const r = { element: false, boundary: null, brokered: null, wrote: null, listed: null };
-      for (let i = 0; i < 40; i++) {
-        const el = document.querySelector('edot-files');
-        if (el?.mount) { r.element = true; r.brokered = !!el.mount.brokered; break; }
-        await new Promise(z => setTimeout(z, 250));
-      }
-      try { parent.document; r.boundary = 'reachable'; } catch (e) { r.boundary = e.name; }
-      const el = document.querySelector('edot-files');
-      if (el?.mount) {
-        await el.mount.write('/notes/todo.txt', new TextEncoder().encode('brokered bytes'));
-        r.wrote = true;
-        r.listed = (await el.mount.list('/', { offset: 0, limit: 10 })).map(e => e.name);
-      }
-      return r;
-    }).catch(e => ({ err: String(e).slice(0, 110) }));
-
-    st.element === true
-      ? pass('files actually loads inside the shell (it never did before)')
-      : fail(`no <edot-files> in the frame: ${JSON.stringify(st)}`);
-    st.boundary === 'SecurityError'
-      ? pass('files runs de-privileged: parent.document refuses')
-      : fail(`files still has ambient authority: ${JSON.stringify(st)}`);
-    st.brokered === true
-      ? pass('OPFS is refused here, so it mounted the brokered ResourceSource')
-      : fail(`files did not fall back: brokered=${JSON.stringify(st.brokered)}`);
-    Array.isArray(st.listed) && st.listed.includes('notes')
-      ? pass(`a write shows up in the listing (${st.listed.join(', ')})`)
-      : fail(`write did not land: ${JSON.stringify(st)}`);
-
-    const held = await page.evaluate(() => window.FoafOS.store.snapshot('files'));
-    held && Object.keys(held).length
-      ? pass(`the shell holds files' bytes (${Object.keys(held).join(', ')})`)
-      : fail(`nothing reached the broker: ${JSON.stringify(held)}`);
+    const st = await filesFrame.evaluate(() => {
+      let reach = 'refused';
+      try { reach = parent.document ? 'reached' : 'refused'; } catch { /* the sandbox held */ }
+      return { reach, loaded: !!window.__files };
+    });
+    st.loaded ? pass('files loads inside the shell') : fail(`files did not load: ${JSON.stringify(st)}`);
+    st.reach === 'refused' ? pass('files runs de-privileged: parent.document refuses') : fail(`files still has ambient authority: ${JSON.stringify(st)}`);
   }
 
   // 11. edot itself. Its `same-origin` was cargo cult: no iframes to reach
@@ -733,7 +697,8 @@ try {
         const r = await S.unseal('hunter2');
         const wrong = await S.unseal('not-it');
         return {
-          r, wrong: wrong.reason, count: S.count(),
+          // The built-in pod's storage key is held as well, under its own owner.
+          r, wrong: wrong.reason, count: S.count(), podKeys: S.names('foafos.pods'),
           // NOT a bug: grants are made when an app LAUNCHES, and nothing has
           // launched in this freshly reloaded page. So the value is back but
           // the app is still not entitled to name it, which is attenuation
@@ -741,7 +706,7 @@ try {
           beforeLaunch: S.names('edot'),
         };
       });
-      unsealed.r?.ok === true && unsealed.count === 2 && unsealed.wrong === 'wrong-passphrase'
+      unsealed.r?.ok === true && unsealed.count - unsealed.podKeys.length === 2 && unsealed.wrong === 'wrong-passphrase'
         ? pass('the passphrase brings both keys back, and the wrong one is refused by name')
         : fail(`unsealing failed: ${JSON.stringify(unsealed)}`);
       unsealed.beforeLaunch === null
@@ -772,7 +737,7 @@ try {
         return { ...r, hasSealed: window.FoafOS.secrets.hasSealed(),
                  anywhere: Object.keys(localStorage).some(k => (localStorage.getItem(k) || '').includes('ghp_TYPED_INTO_THE_SHELL')) };
       });
-      forgotten.forgotten === 2 && !forgotten.hasSealed && !forgotten.anywhere
+      forgotten.forgotten - unsealed.podKeys.length === 2 && !forgotten.hasSealed && !forgotten.anywhere
         ? pass('FORGET means forget: the blob and everything held go, and nothing is left on disk')
         : fail(`clearing left something behind: ${JSON.stringify(forgotten)}`);
     }
