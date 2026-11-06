@@ -13,7 +13,10 @@
 //
 //   node pod.mjs --base https://pod.example/ --dir ./data \
 //     --xmpp xmpp://127.0.0.1:15222 --domain localhost --jid pod --password ... \
-//     --allow user@localhost [--http 8787] [--insecure-no-auth]
+//     --allow user@localhost --route 'GET,HEAD /public/' [--http 8787 [--cors-origin ORIGIN]] [--insecure-no-auth]
+//
+// HTTP over XMPP is deny by default: --allow says who, --route says what. A request
+// must match both. With no --route, the pod answers nothing over XMPP.
 
 import { createServer } from 'node:http';
 import { parseArgs } from 'node:util';
@@ -71,8 +74,26 @@ const problem = (status, detail) => ({
   body: new TextEncoder().encode(JSON.stringify({ type: 'about:blank', status, detail })),
 });
 
-/** Bind a storage to an XMPP account. `allow` is a set of bare JIDs; empty means nobody. */
-export async function startXmpp(storage, { service, domain, username, password, resource = 'lws', allow, log = () => {} }) {
+/** 'GET,HEAD /public/' -> a route. A prefix ending in / covers what is under it. */
+export function parseRoute(text) {
+  const m = /^([A-Z]+(?:,[A-Z]+)*)\s+(\/\S*)$/.exec(String(text).trim());
+  if (!m) throw new Error(`bad --route ${JSON.stringify(text)}: want 'GET,PUT /path/'`);
+  return { methods: new Set(m[1].split(',')), prefix: m[2] };
+}
+
+/** Does a route allow this request? Anything odd about the target is a refusal. */
+export function routed(routes, { method, target }) {
+  if (!target.startsWith('/') || target.startsWith('//')) return false;   // only paths: never a URL to go to
+  let path;
+  try { path = decodeURIComponent(target.split(/[?#]/, 1)[0]); } catch { return false; }
+  if (/[\\\0]/.test(path) || path.startsWith('//') || path.split('/').some((s) => s === '.' || s === '..')) return false;
+  return routes.some((r) => r.methods.has(method)
+    && (r.prefix.endsWith('/') ? path.startsWith(r.prefix) : path === r.prefix || path.startsWith(`${r.prefix}/`)));
+}
+
+/** Bind a storage to an XMPP account. `allow` is a set of bare JIDs and `routes` what
+ *  they may do; either one empty means nothing is answered. */
+export async function startXmpp(storage, { service, domain, username, password, resource = 'lws', allow, routes = [], log = () => {} }) {
   const xmpp = client({ service, domain, username, password, resource });
   xmpp.on('error', (e) => log(`xmpp error: ${e.message}`));
   xmpp.iqCallee.set(NS_HTTP, 'req', async (ctx) => {
@@ -80,6 +101,10 @@ export async function startXmpp(storage, { service, domain, username, password, 
     if (!allow.has(from)) return respOf(problem(403, `${from} is not on this pod's allow list`));
     let request;
     try { request = requestOf(ctx.element); } catch (e) { return respOf(problem(e.status || 400, e.message)); }
+    if (!routed(routes, request)) {
+      log(`xmpp ${from} ${request.method} ${request.target} -> refused, no route`);
+      return respOf(problem(403, `no route on this pod for ${request.method} ${request.target}`));
+    }
     if (request.body.length > MAX_BODY) return respOf(problem(413, `body over ${MAX_BODY} bytes; chunking is not implemented`));
     const answer = await storage.step(request);
     if (answer.body.length > MAX_BODY) return respOf(problem(507, `response over ${MAX_BODY} bytes; chunking is not implemented`));
@@ -91,15 +116,33 @@ export async function startXmpp(storage, { service, domain, username, password, 
   return xmpp;
 }
 
-/** A plain HTTP listener over the same storage. */
-export function startHttp(storage, { port, host = '127.0.0.1', log = () => {} }) {
+// The same CORS answers as `factoidal lws-serve --cors-origin`.
+const CORS_ALLOW_HEADERS = 'Accept, Authorization, Content-Type, DPoP, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, Link, Prefer, Range, Slug';
+const CORS_ALLOW_METHODS = 'GET, HEAD, OPTIONS, POST, PUT, PATCH, DELETE, QUERY';
+const CORS_EXPOSE_HEADERS = 'Accept-Patch, Accept-Post, Accept-Put, Accept-Query, Accept-Ranges, Allow, Content-Location, Content-Range, ETag, Factoidal-Merkle-Root, Last-Modified, Link, Location, Preference-Applied, Repr-Digest, WWW-Authenticate';
+
+/** A plain HTTP listener over the same storage. `corsOrigins` are exact origins; empty means none. */
+export function startHttp(storage, { port, host = '127.0.0.1', corsOrigins = [], log = () => {} }) {
   const server = createServer(async (req, res) => {
+    const origin = req.headers.origin;
+    const cors = origin !== undefined && corsOrigins.includes(origin);
+    res.setHeader('Vary', 'Origin');
+    if (cors) res.setHeader('Access-Control-Allow-Origin', origin);
+    if (cors && req.method === 'OPTIONS' && req.headers['access-control-request-method']) {
+      res.setHeader('Access-Control-Allow-Headers', CORS_ALLOW_HEADERS);
+      res.setHeader('Access-Control-Allow-Methods', CORS_ALLOW_METHODS);
+      res.setHeader('Access-Control-Max-Age', '7200');
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+    if (cors) res.setHeader('Access-Control-Expose-Headers', CORS_EXPOSE_HEADERS);
     const chunks = [];
     for await (const c of req) chunks.push(c);
     const headers = [];
     for (let i = 0; i + 1 < req.rawHeaders.length; i += 2) headers.push([req.rawHeaders[i], req.rawHeaders[i + 1]]);
     const answer = await storage.step({ method: req.method, target: req.url, headers, body: new Uint8Array(Buffer.concat(chunks)) });
-    for (const [k, v] of answer.headers) res.appendHeader(k, String(v));
+    for (const [k, v] of answer.headers) res.appendHeader(k, String(v));   // Vary from the storage adds to Origin
     res.statusCode = answer.status;
     res.end(answer.body);
     log(`http ${req.method} ${req.url} -> ${answer.status}`);
@@ -111,19 +154,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const { values } = parseArgs({ options: {
     base: { type: 'string' }, dir: { type: 'string' }, http: { type: 'string' },
     xmpp: { type: 'string' }, domain: { type: 'string' }, jid: { type: 'string' }, password: { type: 'string' },
-    allow: { type: 'string', default: '' }, 'insecure-no-auth': { type: 'boolean', default: false },
+    allow: { type: 'string', default: '' }, 'cors-origin': { type: 'string', multiple: true, default: [] }, route: { type: 'string', multiple: true, default: [] }, 'insecure-no-auth': { type: 'boolean', default: false },
     quiet: { type: 'boolean', default: false },
   } });
   const log = values.quiet ? () => {} : (s) => console.log(s);
   const storage = await openLwsStorage({ baseIri: values.base, dir: values.dir, realClock: true,
     insecureNoAuth: values['insecure-no-auth'] });
   if (values.http) {
-    await startHttp(storage, { port: Number(values.http), log });
+    await startHttp(storage, { port: Number(values.http), corsOrigins: values['cors-origin'], log });
     log(`http on 127.0.0.1:${values.http}`);
   }
   if (values.xmpp) {
     await startXmpp(storage, { service: values.xmpp, domain: values.domain, username: values.jid,
-      password: values.password ?? process.env.POD_PASSWORD, allow: new Set(values.allow.split(',').filter(Boolean)), log });
+      password: values.password ?? process.env.POD_PASSWORD, allow: new Set(values.allow.split(',').filter(Boolean)),
+      routes: values.route.map(parseRoute), log });
     log(`xmpp as ${values.jid}@${values.domain}/lws`);
   }
   log('ready');
