@@ -196,16 +196,19 @@ for (const t of ['http://evil.example/public/a', '//evil.example/public/a', '/pu
 let badRoute = false; try { parseRoute('everything'); } catch { badRoute = true; }
 check(badRoute, 'a route that does not parse stops the pod');
 
-// CORS: only the named origin, and a preflight that answers without the storage.
-const corsServer = await startHttp(storage, { port: 0, corsOrigins: ['http://allowed.example'] });
-const corsUrl = `http://127.0.0.1:${corsServer.address().port}/`;
+// CORS and the write guard are the engine's. A named origin may write, as a browser
+// does; another gets no CORS fields and cannot change anything.
+const corsStorage = await openLwsStorage({ baseIri: 'http://127.0.0.1:18766/', dir: mkdtempSync(join(tmpdir(), 'pod-cors-')),
+  realClock: true, insecureNoAuth: true, cors: ['http://allowed.example'], allowOrigins: ['http://allowed.example'] });
+const corsServer = await startHttp(corsStorage, { port: 18766 });
+const corsUrl = 'http://127.0.0.1:18766/';
 const preflight = await fetch(corsUrl, { method: 'OPTIONS', headers: { Origin: 'http://allowed.example', 'Access-Control-Request-Method': 'PUT' } });
 check(preflight.status === 204 && preflight.headers.get('access-control-allow-origin') === 'http://allowed.example'
   && /PUT/.test(preflight.headers.get('access-control-allow-methods')), 'a preflight from a named origin is answered');
-const plain = await fetch(corsUrl, { headers: { Origin: 'http://allowed.example' } });
-check(plain.headers.get('access-control-allow-origin') === 'http://allowed.example' && /ETag/.test(plain.headers.get('access-control-expose-headers')), 'a named origin may read the answer');
-const elsewhere = await fetch(corsUrl, { headers: { Origin: 'http://other.example' } });
-check(elsewhere.headers.get('access-control-allow-origin') === null, 'another origin gets no CORS headers');
+const namedPut = await fetch(`${corsUrl}cors.txt`, { method: 'PUT', body: 'x', headers: { Origin: 'http://allowed.example', 'Content-Type': 'text/plain' } });
+check(namedPut.ok && namedPut.headers.get('access-control-allow-origin') === 'http://allowed.example', `a named origin may write, as a browser does (${namedPut.status})`);
+const otherPut = await fetch(`${corsUrl}other.txt`, { method: 'PUT', body: 'x', headers: { Origin: 'http://other.example', 'Content-Type': 'text/plain' } });
+check(otherPut.status === 403 && otherPut.headers.get('access-control-allow-origin') === null, `another origin cannot write (${otherPut.status})`);
 corsServer.close();
 
 // A JID not on the allow list.

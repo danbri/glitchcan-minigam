@@ -116,33 +116,15 @@ export async function startXmpp(storage, { service, domain, username, password, 
   return xmpp;
 }
 
-// The same CORS answers as `factoidal lws-serve --cors-origin`.
-const CORS_ALLOW_HEADERS = 'Accept, Authorization, Content-Type, DPoP, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, Link, Prefer, Range, Slug';
-const CORS_ALLOW_METHODS = 'GET, HEAD, OPTIONS, POST, PUT, PATCH, DELETE, QUERY';
-const CORS_EXPOSE_HEADERS = 'Accept-Patch, Accept-Post, Accept-Put, Accept-Query, Accept-Ranges, Allow, Content-Location, Content-Range, ETag, Factoidal-Merkle-Root, Last-Modified, Link, Location, Preference-Applied, Repr-Digest, WWW-Authenticate';
-
-/** A plain HTTP listener over the same storage. `corsOrigins` are exact origins; empty means none. */
-export function startHttp(storage, { port, host = '127.0.0.1', corsOrigins = [], log = () => {} }) {
+/** A plain HTTP listener over the same storage. CORS is the engine's: see --cors-origin. */
+export function startHttp(storage, { port, host = '127.0.0.1', log = () => {} }) {
   const server = createServer(async (req, res) => {
-    const origin = req.headers.origin;
-    const cors = origin !== undefined && corsOrigins.includes(origin);
-    res.setHeader('Vary', 'Origin');
-    if (cors) res.setHeader('Access-Control-Allow-Origin', origin);
-    if (cors && req.method === 'OPTIONS' && req.headers['access-control-request-method']) {
-      res.setHeader('Access-Control-Allow-Headers', CORS_ALLOW_HEADERS);
-      res.setHeader('Access-Control-Allow-Methods', CORS_ALLOW_METHODS);
-      res.setHeader('Access-Control-Max-Age', '7200');
-      res.statusCode = 204;
-      res.end();
-      return;
-    }
-    if (cors) res.setHeader('Access-Control-Expose-Headers', CORS_EXPOSE_HEADERS);
     const chunks = [];
     for await (const c of req) chunks.push(c);
     const headers = [];
     for (let i = 0; i + 1 < req.rawHeaders.length; i += 2) headers.push([req.rawHeaders[i], req.rawHeaders[i + 1]]);
     const answer = await storage.step({ method: req.method, target: req.url, headers, body: new Uint8Array(Buffer.concat(chunks)) });
-    for (const [k, v] of answer.headers) res.appendHeader(k, String(v));   // Vary from the storage adds to Origin
+    for (const [k, v] of answer.headers) res.appendHeader(k, String(v));
     res.statusCode = answer.status;
     res.end(answer.body);
     log(`http ${req.method} ${req.url} -> ${answer.status}`);
@@ -158,10 +140,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     quiet: { type: 'boolean', default: false },
   } });
   const log = values.quiet ? () => {} : (s) => console.log(s);
+  // The engine answers CORS and guards writes: a page may use this pod only if named here.
+  const origins = values['cors-origin'];
   const storage = await openLwsStorage({ baseIri: values.base, dir: values.dir, realClock: true,
-    insecureNoAuth: values['insecure-no-auth'] });
+    insecureNoAuth: values['insecure-no-auth'], ...(origins.length ? { cors: origins, allowOrigins: origins } : {}) });
   if (values.http) {
-    await startHttp(storage, { port: Number(values.http), corsOrigins: values['cors-origin'], log });
+    await startHttp(storage, { port: Number(values.http), log });
     log(`http on 127.0.0.1:${values.http}`);
   }
   if (values.xmpp) {
