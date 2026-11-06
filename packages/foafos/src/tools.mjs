@@ -67,7 +67,7 @@ export class FoafTools {
       p.tools = m.tools.filter((t) => t && typeof t.name === 'string').map((t) => ({
         name: t.name, description: String(t.description || ''), inputSchema: t.inputSchema || null, readOnly: t.readOnly === true,
       }));
-      this.bus?.publish('app.tools', { summary: `${p.label} offers ${p.tools.length} tools`, app: p.id, count: p.tools.length });
+      this.bus?.publish('app.tools', { summary: `${p.label} offers ${p.tools.length} tools`, app: p.id, count: p.tools.length, tools: p.tools.map((t) => t.name) });
       this._publishToWebMCP(p);
       this._changed();
     } else if (m.type === 'webmcp.result') {
