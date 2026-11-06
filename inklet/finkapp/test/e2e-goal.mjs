@@ -112,7 +112,7 @@ try {
     c.configure({ mode: 'server', url: WS, domain: DOMAIN, username: 'foafos', room: ROOM, roomDomain: `rooms.${DOMAIN}`, nick: `foafos-${Math.random().toString(16).slice(2, 6)}` }, { password: foafos });
     await c.stop?.(true);
     const r = await c.start();
-    FoafOS.grants.grant(`me@${DOMAIN}`, 'docklands', { tools: ['go_to'] });
+    FoafOS.grants.grant(`test2@${DOMAIN}`, 'docklands', { tools: ['go_to'] });
     FoafOS.grants.grant(`foafbot@${DOMAIN}`, 'docklands', { tools: ['go_to'] });
     return { r, state: c.state, detail: c.detail };
   }, { foafos: account('foafos'), DOMAIN, WS, ROOM });
@@ -121,7 +121,7 @@ try {
 
   const camera = () => page.evaluate(async () => { const r = await FoafOS.chatCommand('/call moglob get_view'); return r.value?.target ? [r.value.target.lon, r.value.target.lat].map((n) => +n.toFixed(3)) : null; });
   const before = await camera();
-  const human = outside([`me@${DOMAIN}`, account('me'), `${ROOM}@rooms.${DOMAIN}`, `person-${Date.now() % 100000}`, '12', `dm:foafos@${DOMAIN}:/go Tower Bridge`]);
+  const human = outside([`test2@${DOMAIN}`, account('test2'), `${ROOM}@rooms.${DOMAIN}`, `person-${Date.now() % 100000}`, '12', `dm:foafos@${DOMAIN}:/go Tower Bridge`]);
   // Activity over several seconds, so a client that joins slowly still sees some.
   for (let i = 0; i < 6; i++) {
     await page.waitForTimeout(1500);
@@ -138,7 +138,7 @@ try {
   if (process.env.NO_AI !== '1') {
     bot = spawn('python3', [join(here, '../../tools/chat-ai.py'), '--tls', '--host', DOMAIN, '--port', '5223', '--domain', DOMAIN, '--room', `${ROOM}@rooms.${DOMAIN}`, '--dir', CONF], { stdio: ['ignore', 'pipe', 'inherit'] });
     await new Promise((r) => bot.stdout.once('data', r));
-    const said = await outside([`me@${DOMAIN}`, account('me'), `${ROOM}@rooms.${DOMAIN}`, `asker-${Date.now() % 100000}`, '22', 'say:@foafbot please go to Canary Wharf'], 60000);
+    const said = await outside([`test2@${DOMAIN}`, account('test2'), `${ROOM}@rooms.${DOMAIN}`, `asker-${Date.now() % 100000}`, '22', 'say:@foafbot please go to Canary Wharf'], 60000);
     await page.waitForTimeout(2000);
     const after = await camera();
     console.log(said.split('\n').filter((l) => /^ROOM foafbot/.test(l)).map((l) => `     ${l.slice(0, 120)}`).join('\n'));
