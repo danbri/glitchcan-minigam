@@ -2,7 +2,9 @@
 //
 // A sandboxed app reads and writes through every kind of pod. Then a client that is
 // not ours joins the XMPP room, watches, and drives Moglob's WebMCP tools, and so does
-// an AI. Windowed Chrome, because Moglob needs a GPU.
+// an AI. Windowed Chrome, because Moglob needs a GPU, so a window opens on the desktop.
+// The room is its own, but the account is foafos: a person's shell signed in as foafos
+// also gets its direct messages, and refuses them.
 //
 //   foafos-stack start
 //   python3 -m venv /tmp/slix && /tmp/slix/bin/pip install slixmpp
@@ -23,6 +25,8 @@ const { FACTOIDAL, SLIX_PYTHON, CHROMIUM_PATH } = process.env;
 const DOMAIN = 'foafos-xmpp.fly.dev';
 const WS = `wss://${DOMAIN}/xmpp-websocket`;
 const POD = `https://${DOMAIN}:8443/`;
+// A room of its own, so a test run never shows up in a room people are using.
+const ROOM = `goal-${Date.now() % 1000000}`;
 const CONF = join(homedir(), '.config/foafos-xmpp-fly');
 const account = (n) => readFileSync(join(CONF, 'accounts'), 'utf8').split('\n').find((l) => l.startsWith(`${n}:`)).slice(n.length + 1);
 const TOKEN = readFileSync(join(CONF, 'token'), 'utf8').trim();
@@ -103,21 +107,21 @@ try {
   }
 
   // The room.
-  const started = await page.evaluate(async ({ foafos, DOMAIN, WS }) => {
+  const started = await page.evaluate(async ({ foafos, DOMAIN, WS, ROOM }) => {
     const c = FoafOS.chat;
-    c.configure({ mode: 'server', url: WS, domain: DOMAIN, username: 'foafos', room: 'bus', roomDomain: `rooms.${DOMAIN}`, nick: `foafos-${Math.random().toString(16).slice(2, 6)}` }, { password: foafos });
+    c.configure({ mode: 'server', url: WS, domain: DOMAIN, username: 'foafos', room: ROOM, roomDomain: `rooms.${DOMAIN}`, nick: `foafos-${Math.random().toString(16).slice(2, 6)}` }, { password: foafos });
     await c.stop?.(true);
     const r = await c.start();
     FoafOS.grants.grant(`me@${DOMAIN}`, 'docklands', { tools: ['go_to'] });
     FoafOS.grants.grant(`foafbot@${DOMAIN}`, 'docklands', { tools: ['go_to'] });
     return { r, state: c.state, detail: c.detail };
-  }, { foafos: account('foafos'), DOMAIN, WS });
-  await page.waitForFunction(() => /in bus@/.test(FoafOS.chat.detail || ''), null, { timeout: 20000 }).catch(() => {});
+  }, { foafos: account('foafos'), DOMAIN, WS, ROOM });
+  await page.waitForFunction((room) => (FoafOS.chat.detail || '').includes(`in ${room}@`), ROOM, { timeout: 20000 }).catch(() => {});
   check(await page.evaluate(() => FoafOS.chat.state === 'online'), `the shell is in the Fly room (${JSON.stringify(started).slice(0, 100)})`);
 
   const camera = () => page.evaluate(async () => { const r = await FoafOS.chatCommand('/call moglob get_view'); return r.value?.target ? [r.value.target.lon, r.value.target.lat].map((n) => +n.toFixed(3)) : null; });
   const before = await camera();
-  const human = outside([`me@${DOMAIN}`, account('me'), `bus@rooms.${DOMAIN}`, `person-${Date.now() % 100000}`, '12', `dm:foafos@${DOMAIN}:/go Tower Bridge`]);
+  const human = outside([`me@${DOMAIN}`, account('me'), `${ROOM}@rooms.${DOMAIN}`, `person-${Date.now() % 100000}`, '12', `dm:foafos@${DOMAIN}:/go Tower Bridge`]);
   // Activity over several seconds, so a client that joins slowly still sees some.
   for (let i = 0; i < 6; i++) {
     await page.waitForTimeout(1500);
@@ -132,9 +136,9 @@ try {
   check(/^DM foafos.*Going to/m.test(seen) && String(before) !== String(moved) && Math.abs(moved[0] + 0.075) < 0.02, `and it drives WebMCP: Moglob went from ${before} to ${moved}, Tower Bridge`);
 
   if (process.env.NO_AI !== '1') {
-    bot = spawn('python3', [join(here, '../../tools/chat-ai.py'), '--tls', '--host', DOMAIN, '--port', '5223', '--domain', DOMAIN, '--room', `bus@rooms.${DOMAIN}`, '--dir', CONF], { stdio: ['ignore', 'pipe', 'inherit'] });
+    bot = spawn('python3', [join(here, '../../tools/chat-ai.py'), '--tls', '--host', DOMAIN, '--port', '5223', '--domain', DOMAIN, '--room', `${ROOM}@rooms.${DOMAIN}`, '--dir', CONF], { stdio: ['ignore', 'pipe', 'inherit'] });
     await new Promise((r) => bot.stdout.once('data', r));
-    const said = await outside([`me@${DOMAIN}`, account('me'), `bus@rooms.${DOMAIN}`, `asker-${Date.now() % 100000}`, '22', 'say:@foafbot please go to Canary Wharf'], 60000);
+    const said = await outside([`me@${DOMAIN}`, account('me'), `${ROOM}@rooms.${DOMAIN}`, `asker-${Date.now() % 100000}`, '22', 'say:@foafbot please go to Canary Wharf'], 60000);
     await page.waitForTimeout(2000);
     const after = await camera();
     console.log(said.split('\n').filter((l) => /^ROOM foafbot/.test(l)).map((l) => `     ${l.slice(0, 120)}`).join('\n'));
