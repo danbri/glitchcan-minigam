@@ -39,6 +39,7 @@ const REFUSED = {
   'bad-url': 'The server address must start with ws:// or wss://.',
   'bad-name': 'The room or nickname has a character it cannot contain.',
   'bad-mirror': 'Check the list of shared activity.',
+  'bad-resource': 'A browser name uses letters, digits, dots, dashes and underscores.',
   'bad-jid': 'Allowed accounts must look like name@server, separated by spaces.',
 };
 
@@ -84,6 +85,7 @@ export function mountChat(root, { chat, tools, grants, run }) {
   const fUser = h('input', { id: 'chat-username', type: 'text', spellcheck: false, autocomplete: 'off' });
   const fPass = h('input', { id: 'chat-password', type: 'password', autocomplete: 'new-password' });
   const fNick = h('input', { id: 'chat-nick', type: 'text', spellcheck: false, autocomplete: 'off' });
+  const fResource = h('input', { id: 'chat-resource', type: 'text', spellcheck: false, autocomplete: 'off', placeholder: 'chrome' });
   const fRoom = h('input', { id: 'chat-room', type: 'text', spellcheck: false, autocomplete: 'off' });
   const fRoomDomain = h('input', { id: 'chat-room-domain', type: 'text', spellcheck: false, autocomplete: 'off' });
   const fMirror = h('textarea', { id: 'chat-mirror', rows: 3, spellcheck: false });
@@ -148,7 +150,7 @@ export function mountChat(root, { chat, tools, grants, run }) {
       radio('other', 'Another server', 'Use any XMPP server that offers a WebSocket.')),
     serverRows, userRow, passRow,
     h('details', { class: 'fc-advanced' }, h('summary', {}, 'Advanced'),
-      row('Your nickname', fNick), row('Activity room', fRoom), row('Rooms service', fRoomDomain, 'Leave empty to use rooms.DOMAIN'),
+      row('Your nickname', fNick), row('Name for this browser', fResource, 'Optional. Lets others reach this browser alone, as account/name. Use a different name in each browser.'), row('Activity room', fRoom), row('Rooms service', fRoomDomain, 'Leave empty to use rooms.DOMAIN'),
       row('Activity to share', fMirror, 'Topics sent to the activity room, separated by spaces'),
       row('What apps say on the bus', fMirrorApps, 'Everyone in the activity room can read this'),
       h('label', { class: 'fc-field' }, h('span', {}, 'Let allowed accounts send actions to apps'), fInbound,
@@ -163,7 +165,7 @@ export function mountChat(root, { chat, tools, grants, run }) {
     const p = place();
     for (const r of places()) r.checked = r.value === p;
     fUrl.value = c.url; fDomain.value = c.domain; fUser.value = c.username || 'foafos';
-    fNick.value = c.nick; fRoom.value = c.room; fRoomDomain.value = c.roomDomain;
+    fNick.value = c.nick; fResource.value = c.resource || ''; fRoom.value = c.room; fRoomDomain.value = c.roomDomain;
     fMirror.value = c.mirror.join(' ');
     fMirrorApps.value = c.mirrorApps;
     fInbound.checked = c.inbound;
@@ -187,10 +189,10 @@ export function mountChat(root, { chat, tools, grants, run }) {
     const password = fPass.value;
     fPass.value = '';
     // Each shell in a shared room needs a nickname of its own, or the room refuses it.
-    if (p === 'shared' && fNick.value.trim() === 'foafos') fNick.value = `foafos-${Math.random().toString(16).slice(2, 6)}`;
+    if (p === 'shared' && fNick.value.trim() === 'foafos') fNick.value = `foafos-${fResource.value.trim() || Math.random().toString(16).slice(2, 6)}`;
     const r = chat.configure({
       mode: p === 'builtin' ? 'builtin' : 'server', url: fUrl.value.trim(), domain: fDomain.value.trim(),
-      username: fUser.value.trim(), nick: fNick.value.trim(), room: fRoom.value.trim(),
+      username: fUser.value.trim(), nick: fNick.value.trim(), resource: fResource.value.trim(), room: fRoom.value.trim(),
       roomDomain: fRoomDomain.value.trim(), mirror: fMirror.value.split(/\s+/).filter(Boolean),
     }, { password });
     if (!r.ok) { connectError.textContent = REFUSED[r.reason] || `Refused: ${r.reason}`; return; }
@@ -209,12 +211,21 @@ export function mountChat(root, { chat, tools, grants, run }) {
   const newBox = h('input', { type: 'text', 'aria-label': 'Room name or account', placeholder: 'Room or name@server', spellcheck: false, autocomplete: 'off' });
   const newForm = h('form', { class: 'fc-new', on: { submit: startNew } }, newBox);
   const side = h('aside', { class: 'fc-side' }, list, newForm);
+  // Wide, each side panel is shown until hidden, and that is remembered. Narrow, each slides over the chat.
+  for (const name of ['side', 'info']) {
+    try { if (localStorage.getItem(`foafos.chat.hide.${name}`)) root.classList.add(`fc-hide-${name}`); } catch { /* shown */ }
+  }
+  function togglePanel(name) {
+    if (root.getBoundingClientRect().width <= 760) { root.classList.toggle(`fc-show-${name}`); return; }
+    const hidden = root.classList.toggle(`fc-hide-${name}`);
+    try { localStorage.setItem(`foafos.chat.hide.${name}`, hidden ? '1' : ''); } catch { /* for this visit only */ }
+  }
   const title = h('h2', { class: 'fc-title' });
   const status = h('button', { type: 'button', class: 'fc-status', title: 'Connection settings', on: { click: () => { settingsByHand = true; setView('connect'); } } });
-  const sideBtn = h('button', { type: 'button', class: 'fc-icon fc-side-toggle', 'aria-label': 'Show conversations', on: { click: () => root.classList.toggle('fc-show-side') } }, '☰');
+  const sideBtn = h('button', { type: 'button', class: 'fc-icon fc-side-toggle', 'aria-label': 'Show conversations', on: { click: () => togglePanel('side') } }, '☰');
   const actToggle = h('label', { class: 'fc-toggle' },
     h('input', { type: 'checkbox', checked: true, on: { change: (e) => { showActivity = e.target.checked; drawLog(true); } } }), 'App activity');
-  const infoBtn = h('button', { type: 'button', class: 'fc-icon fc-info-toggle', 'aria-label': 'Show details', on: { click: () => root.classList.toggle('fc-show-info') } }, 'ⓘ');
+  const infoBtn = h('button', { type: 'button', class: 'fc-icon fc-info-toggle', 'aria-label': 'Show details', on: { click: () => togglePanel('info') } }, 'ⓘ');
   const head = h('header', { class: 'fc-head' }, sideBtn, title, actToggle, status, infoBtn);
   const log = h('ol', { class: 'fc-log', role: 'log', 'aria-label': 'Messages', 'aria-live': 'polite', tabIndex: 0, on: { scroll: onScroll } });
   const jump = h('button', { type: 'button', class: 'fc-jump', hidden: true, on: { click: () => stick(true) } }, 'Jump to latest');
@@ -223,7 +234,7 @@ export function mountChat(root, { chat, tools, grants, run }) {
   const hints = h('ul', { class: 'fc-hints', hidden: true });
   const composer = h('form', { class: 'fc-composer', on: { submit: (e) => { e.preventDefault(); submit(); } } }, hints, input, send);
   const main = h('section', { class: 'fc-main' }, head, h('div', { class: 'fc-logwrap' }, log, jump), composer);
-  const tabM = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'members'; drawInfo(); } } }, 'Users');
+  const tabM = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'members'; drawInfo(); } } }, 'Accounts');
   const tabT = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'tools'; drawInfo(); } } }, 'App tools');
   const infoBody = h('div', { class: 'fc-info-body' });
   const info = h('aside', { class: 'fc-info' }, h('div', { class: 'fc-tabs', role: 'tablist' }, tabM, tabT), infoBody);
@@ -267,11 +278,11 @@ export function mountChat(root, { chat, tools, grants, run }) {
         on: { click: () => select(c.jid) },
       }, h('span', { class: 'fc-conv-name' }, c.title), c.unread && c.jid !== current ? h('span', { class: 'fc-badge', 'aria-label': `${c.unread} unread` }, String(c.unread)) : null)));
     };
-    // Users, not people: some of them are bots and AIs.
+    // Accounts, not people: some of them are bots and AIs.
     list.replaceChildren(...[
       group('System Rooms', (c) => c.kind === 'room' && c.bus),
       group('User Rooms', (c) => c.kind === 'room' && !c.bus),
-      group('Users', (c) => c.kind === 'direct'),
+      group('Accounts', (c) => c.kind === 'direct'),
     ].filter(Boolean));
   }
 

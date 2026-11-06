@@ -191,3 +191,14 @@ test('/open says so when an app did not open', async () => {
 test('the person is always allowed, whatever the grants say', () => {
   assert.equal(new ToolGrants().allows(PERSON, { id: 'x', slug: 'x' }, { name: 'y' }), true);
 });
+
+test('an owner account may use everything with no grant, and nobody else gains anything', () => {
+  const g = new ToolGrants({});
+  g.isOwner = (id) => id === 'me@example.org';
+  const app = { id: 'docklands', slug: 'moglob' };
+  assert.equal(g.holds('me@example.org'), true);
+  assert.equal(g.allows(accountCaller('me@example.org'), app, { name: 'go_to' }), true);
+  assert.equal(g.allowsAction(accountCaller('me@example.org'), app, 'pause'), true);
+  assert.equal(g.holds('other@example.org'), false);
+  assert.equal(g.allows(accountCaller('other@example.org'), app, { name: 'go_to' }), false);
+});

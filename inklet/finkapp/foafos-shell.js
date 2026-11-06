@@ -434,6 +434,11 @@ const appTools = new FoafTools({ bus, document, grants: toolGrants });
 FoafOS.tools = appTools;
 FoafOS.grants = toolGrants;
 chat.mayCommand = (jid) => toolGrants.holds(jid);
+// On a real server, the shell's own account and `me`, the senior human owner, need no grants.
+toolGrants.isOwner = (jid) => {
+  const c = chat.config();
+  return c.mode === 'server' && !!c.domain && (jid === `me@${c.domain}` || jid === `${c.username}@${c.domain}`);
+};
 // The old list of accounts could call anything. Each keeps what is safe, looking,
 // and the rest is asked for again with /grant.
 if (chat.config().commandJids.length) {

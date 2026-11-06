@@ -132,3 +132,24 @@ test('a command stored while the shell was away shows in Chat and never runs', a
   await new Promise((r) => setTimeout(r));
   assert.deepEqual(ran, ['/now']);
 });
+
+test('a reply can never read as a command, even sent to our own account', async () => {
+  const { chat, x, sent } = connected({ commandJids: ['me@localhost'] });
+  await chat.start();
+  live(x);
+  chat.onCommand = async () => '/apps List the apps\n/help Help';
+  x.onstanza(dm('me@localhost/r', '/help'));
+  await new Promise((r) => setTimeout(r));
+  const reply = sent.find((s) => s.includes('type="chat"') && s.includes('List the apps'));
+  assert.ok(reply && !/<body>\//.test(reply), reply);
+});
+
+test('a browser name is used as the resource, and a bad one is refused', async () => {
+  const used = [];
+  const x = { jid: 'foafos@localhost/chrm', send() {}, close() {} };
+  const chat = new FoafChat({ bus, secrets: secrets('pw'), connect: async (o) => { used.push(o.resource); return x; } });
+  assert.equal(chat.configure({ mode: 'server', url: 'ws://127.0.0.1:1/x', domain: 'localhost', username: 'foafos', resource: 'a b' }).ok, false);
+  assert.equal(chat.configure({ mode: 'server', url: 'ws://127.0.0.1:1/x', domain: 'localhost', username: 'foafos', resource: 'chrm' }).ok, true);
+  await chat.start();
+  assert.deepEqual(used, ['chrm']);
+});

@@ -65,13 +65,17 @@ export class ToolGrants {
 
   list() { return this._grants.map((g) => ({ ...g, tools: [...g.tools] })); }
 
+  /** Accounts that may use everything with no grant. Set by the shell: (id) => boolean. */
+  isOwner = () => false;
+
   /** Has this account been given anything at all? */
-  holds(id) { return this._grants.some((g) => g.caller === id); }
+  holds(id) { return this.isOwner(id) || this._grants.some((g) => g.caller === id); }
 
   /** May this caller use this tool of this app? `app` is {id, slug}; `tool` is {name, readOnly}. */
   allows(caller, app, tool) {
     if (caller === PERSON) return true;
     if (!caller || !['account', 'agent'].includes(caller.kind)) return false;
+    if (caller.kind === 'account' && this.isOwner(caller.id)) return true;
     return this._grants.some((g) => g.caller === caller.id
       && (g.app === '*' || g.app === app.id || g.app === app.slug)
       && (g.level === 'all' || tool.readOnly === true || g.tools.includes(tool.name)));
@@ -84,6 +88,7 @@ export class ToolGrants {
   allowsAction(caller, app, action) {
     if (caller === PERSON) return true;
     if (caller?.kind !== 'account') return false;
+    if (this.isOwner(caller.id)) return true;
     return this._grants.some((g) => g.caller === caller.id && (g.app === app.id || g.app === app.slug) && g.tools.includes(action));
   }
 

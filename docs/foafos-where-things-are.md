@@ -53,7 +53,7 @@ Apps are in the `contextris` Fly organisation: `fly apps list`.
 |---|---|
 | `danbri-foafpod` | Public read-only LWS replica. It also runs a private XMPP test, reachable only through `flyctl proxy` |
 | `factoidal` | Factoidal SPARQL service |
-| `foafos-proto` | Prototype: XMPP with no public port, and LWS pods over HTTPS and over XMPP. See `packages/foafos/pod/fly/README.md` |
+| `foafos-xmpp` | The one XMPP server and pod on Fly: rooms `bus` and `coord`, and the pod at `https://foafos-xmpp.fly.dev:8443/`. See `deploy/foafos-xmpp` in danbri/factoidal-core. |
 | `foafos-xmpp` | Public, unannounced test XMPP server, by invitation. Test data only. See [foafos-shared-xmpp-20261105.md](foafos-shared-xmpp-20261105.md) |
 
 Accounts for `foafos-xmpp` are in `~/.config/foafos-xmpp-fly/accounts`. Rebuild it from
