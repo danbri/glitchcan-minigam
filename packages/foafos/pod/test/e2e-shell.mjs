@@ -71,10 +71,11 @@ try {
 
   // Add the pod through the form.
   const fill = async (id, v) => page.fill(`#${id}`, v);
+  await page.click('#pod-add-details summary');
+  await page.selectOption('#pod-add-carriage', 'xmpp');
   await fill('pod-add-id', 'home');
   await fill('pod-add-label', 'Home pod');
   await fill('pod-add-base', BASE);
-  await page.selectOption('#pod-add-carriage', 'xmpp');
   await fill('pod-add-relay', relay.ws);
   await fill('pod-add-domain', 'localhost');
   await fill('pod-add-username', 'user');
@@ -89,7 +90,7 @@ try {
   check(added?.carriage === 'xmpp' && added.hasPassword === true, `pod added from the form, password held (${JSON.stringify(added && { status: added.status, hasPassword: added.hasPassword })})`);
 
   // Connect.
-  await page.click('#foafos-pods section[data-pod="home"] button:text-is("CONNECT")');
+  await page.click('#foafos-pods section[data-pod="home"] button:text-is("Connect")');
   await page.waitForFunction(() => FoafOS.pods.status('home') !== 'connecting' && FoafOS.pods.status('home') !== 'offline', null, { timeout: 20000 });
   const status = await page.evaluate(() => FoafOS.pods.get('home'));
   check(status.status === 'online', `connect through the relay: ${status.status}${status.detail ? ` (${status.detail})` : ''}`);
@@ -97,12 +98,12 @@ try {
   check(true, 'the panel shows the pod online');
 
   // Browse the storage root.
-  await page.click('#foafos-pods section[data-pod="home"] button:text-is("BROWSE")');
+  await page.click('#foafos-pods section[data-pod="home"] button:text-is("Browse")');
   await page.waitForFunction(() => /\/ {2}\(200\)/.test(document.querySelector('#foafos-pods section[data-pod="home"]')?.textContent || ''));
   check(true, 'BROWSE lists the storage root (200)');
 
   // Apps use this pod; launch Pod Notes.
-  await page.click('#foafos-pods section[data-pod="home"] button:text-is("USE FOR APPS")');
+  await page.click('#foafos-pods section[data-pod="home"] button:text-is("Use for apps")');
   check(await page.evaluate(() => FoafOS.pods.appsPod()) === 'home', 'the pod is marked "apps use this"');
   await page.evaluate(() => FoafOS.launchApp('podnotes'));
   let notes = null;

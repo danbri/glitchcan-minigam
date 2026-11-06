@@ -80,7 +80,7 @@ try {
   // The Pods window says where it is and how it is kept.
   await page.evaluate(() => FoafOS.openPods());
   const card = await page.textContent('#foafos-pods section[data-pod="browser"]');
-  check(/In this browser/.test(card) && /this run only/.test(card), 'PodStore shows the built-in pod, held for this run only');
+  check(/In this browser/.test(card) && /lost when this tab closes/.test(card), 'PodStore shows the built-in pod, held for this run only');
 
   // ── 3. seal with a passphrase, reload, UNLOCK: the note is still there ──
   await page.evaluate(() => { document.getElementById('foafos-pass').value = 'correct horse battery'; document.getElementById('foafos-save').click(); });
