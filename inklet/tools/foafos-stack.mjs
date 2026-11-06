@@ -197,7 +197,8 @@ const SERVICES = {
   'pod-laptop': {
     title: 'laptop pod on Fly XMPP (optional)', always: false, ports: () => [], sign: 'pod.mjs', probe: probeBotLike, cwd: () => join(C.shellRoot, 'glitchcan-minigam/packages/foafos/pod'),
     argv: () => ['node', 'pod.mjs', '--base', `https://pod-laptop.${C.flyHost}/`, '--dir', join(HOME, 'foafos-lws-xmpp'), '--xmpp', `xmpps://${C.flyHost}:5223`,
-      '--domain', C.flyHost, '--jid', 'podlaptop', '--allow', `foafos@${C.flyHost}`, '--insecure-no-auth'],
+      '--domain', C.flyHost, '--jid', 'podlaptop', '--allow', `foafos@${C.flyHost}`,
+      '--route', 'GET,HEAD,PUT,POST,PATCH,DELETE /', '--insecure-no-auth'],
     env: () => ({ POD_PASSWORD: flyAccount('podlaptop') ?? '' }),
     needs: () => {
       mkdirSync(join(HOME, 'foafos-lws-xmpp'), { recursive: true });
