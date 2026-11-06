@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A plain text XMPP client for Foafos: no setup, no terminal library, standard library only.
 
-  foafos-stack chat [local|proto|shared] [--as ACCOUNT] [--room NAME]
+  foafos-stack chat [local|shared] [--as ACCOUNT] [--room NAME]
 
 Type a line to say it in the room. A line starting with "/" goes to the shell as a
 direct message, so /where, /go PLACE and /call work, if this account holds a grant.
@@ -12,14 +12,14 @@ direct message, so /where, /go PLACE and /call work, if this account holds a gra
 
 For scripts and agents:
 
-  foafos-stack chat proto --say "hello" --wait 5
-  foafos-stack chat proto --say "/go Tower Bridge" --wait 8
+  foafos-stack chat shared --say "hello" --wait 5
+  foafos-stack chat shared --say "/go Tower Bridge" --wait 8
 
 It prints what happens, one line each, and exits after --wait seconds.
 With --jsonl each line is one JSON object instead (foafos-stack backstage reads it).
 
-Servers: local is this laptop; proto is foafos-proto on Fly, through `foafos-stack
-start proto`; shared is the public test server foafos-xmpp.fly.dev.
+Servers: local is this laptop; shared is the test server foafos-xmpp.fly.dev, the one
+XMPP server on Fly. proto is the old name for shared.
 """
 import argparse, base64, json, os, re, select, socket, ssl, sys, time
 import xml.etree.ElementTree as ET
@@ -27,12 +27,11 @@ import xml.etree.ElementTree as ET
 HOME = os.path.expanduser('~')
 SERVERS = {
     'local': dict(host='127.0.0.1', port=5222, tls=False, verify=False, domain='localhost', accounts=f'{HOME}/foafos-xmpp/accounts'),
-    # The tunnel ends on this computer, and the far end's certificate is its own.
-    'proto': dict(host='127.0.0.1', port=15223, tls=True, verify=False, domain='foafos-proto.fly.dev', accounts=f'{HOME}/.config/foafos-proto/accounts'),
     'shared': dict(host='foafos-xmpp.fly.dev', port=5223, tls=True, verify=True, domain='foafos-xmpp.fly.dev', accounts=f'{HOME}/.config/foafos-xmpp-fly/accounts'),
 }
 
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+SERVERS['proto'] = SERVERS['shared']
 ap.add_argument('server', nargs='?', default='local', choices=SERVERS)
 ap.add_argument('--as', dest='account', default='me')
 ap.add_argument('--room', default='bus')
@@ -71,7 +70,7 @@ if o.account not in accounts:
 try:
     s = socket.create_connection((srv['host'], srv['port']), 10)
 except OSError as e:
-    sys.exit(f"Cannot reach {srv['host']}:{srv['port']}: {e}." + (' Run: foafos-stack start proto' if o.server == 'proto' else ''))
+    sys.exit(f"Cannot reach {srv['host']}:{srv['port']}: {e}." + (''))
 if srv['tls']:
     ctx = ssl.create_default_context()
     if not srv['verify']:

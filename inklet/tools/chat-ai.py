@@ -43,7 +43,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--account', default='foafbot'); ap.add_argument('--shell', default='foafos')
 ap.add_argument('--domain', default='localhost'); ap.add_argument('--room', default='bus@rooms.localhost')
 ap.add_argument('--nick', default='foafbot'); ap.add_argument('--port', type=int, default=5222)
-ap.add_argument('--tls', action='store_true', help='direct TLS, for a tunnel to a server whose certificate is its own')
+ap.add_argument('--host', default='127.0.0.1')
+ap.add_argument('--tls', action='store_true', help='direct TLS')
 ap.add_argument('--dir', default='~/foafos-xmpp'); ap.add_argument('--model', default='claude-haiku-5-5')
 ap.add_argument('--tell-config', help="the owner's /tell file. Default: foafbot-tell.json in --dir")
 o = ap.parse_args()
@@ -52,11 +53,12 @@ accounts = dict(l.rstrip('\n').split(':', 1) for l in open(os.path.join(os.path.
 if o.account not in accounts:
     raise SystemExit(f"No {o.account} account in {o.dir}/accounts. The top of this file says how to add one.")
 
-s = socket.create_connection(('127.0.0.1', o.port))
+s = socket.create_connection((o.host, o.port))
 if o.tls:
     tls = ssl.create_default_context()
-    tls.check_hostname = False
-    tls.verify_mode = ssl.CERT_NONE        # loopback to a tunnel, whose far end has a self-signed certificate
+    if o.host in ('127.0.0.1', 'localhost'):   # a loopback tunnel, whose far end has its own certificate
+        tls.check_hostname = False
+        tls.verify_mode = ssl.CERT_NONE
     s = tls.wrap_socket(s, server_hostname=o.domain)
 lock = threading.Lock()
 def send(x):

@@ -4,7 +4,7 @@
 // not ours joins the XMPP room, watches, and drives Moglob's WebMCP tools, and so does
 // an AI. Windowed Chrome, because Moglob needs a GPU.
 //
-//   foafos-stack start && foafos-stack start proto
+//   foafos-stack start
 //   python3 -m venv /tmp/slix && /tmp/slix/bin/pip install slixmpp
 //   SLIX_PYTHON=/tmp/slix/bin/python CHROMIUM_PATH=... FACTOIDAL=... node e2e-goal.mjs
 //
@@ -20,8 +20,10 @@ import { chromium } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const { FACTOIDAL, SLIX_PYTHON, CHROMIUM_PATH } = process.env;
-const DOMAIN = 'foafos-proto.fly.dev';
-const CONF = join(homedir(), '.config/foafos-proto');
+const DOMAIN = 'foafos-xmpp.fly.dev';
+const WS = `wss://${DOMAIN}/xmpp-websocket`;
+const POD = `https://${DOMAIN}:8443/`;
+const CONF = join(homedir(), '.config/foafos-xmpp-fly');
 const account = (n) => readFileSync(join(CONF, 'accounts'), 'utf8').split('\n').find((l) => l.startsWith(`${n}:`)).slice(n.length + 1);
 const TOKEN = readFileSync(join(CONF, 'token'), 'utf8').trim();
 const ORIGIN = 'http://localhost:8080';
@@ -55,13 +57,13 @@ try {
   await page.waitForFunction(() => FoafOS.tools.list().some((a) => a.tools.some((t) => t.name === 'go_to')), null, { timeout: 60000 });
   check(true, 'Moglob offers its WebMCP tools');
 
-  await page.evaluate(({ token, foafos, DOMAIN }) => {
+  await page.evaluate(({ token, foafos, DOMAIN, WS, POD }) => {
     const add = (rec, o) => { if (!FoafOS.pods.get(rec.id)) FoafOS.pods.add(rec, o); };
     add({ id: 'laptop-lws', label: 'This computer', base: 'http://127.0.0.1:3000/', carriage: 'https' });
-    add({ id: 'fly-https', label: 'Fly, over HTTPS', base: `https://${DOMAIN}/`, carriage: 'https', auth: 'bearer' }, { password: token });
+    add({ id: 'fly-https', label: 'Fly, over HTTPS', base: POD, carriage: 'https', auth: 'bearer' }, { password: token });
     add({ id: 'fly-xmpp', label: 'Fly, over XMPP', base: `https://pod.${DOMAIN}/`, carriage: 'xmpp', podJid: `pod@${DOMAIN}/lws`,
-      relay: { url: 'ws://127.0.0.1:15280/xmpp-websocket', domain: DOMAIN, username: 'foafos' } }, { password: foafos });
-  }, { token: TOKEN, foafos: account('foafos'), DOMAIN });
+      relay: { url: WS, domain: DOMAIN, username: 'foafos' } }, { password: foafos });
+  }, { token: TOKEN, foafos: account('foafos'), DOMAIN, WS, POD });
   await page.evaluate(() => FoafOS.launchApp('files'));
   let f = null;
   for (let i = 0; i < 80 && !f; i++) {
@@ -75,8 +77,8 @@ try {
 
   const kinds = [['browser', 'ephemeral, in the browser'], ['device', 'device storage in the browser'], ['laptop-lws', 'laptop, over HTTP'], ['fly-https', 'remote, over HTTPS, on Fly'], ['fly-xmpp', 'remote, over HTTP-over-XMPP, on Fly']];
   if (process.env.POD_LAPTOP) {
-    await page.evaluate(({ DOMAIN, foafos }) => FoafOS.pods.add({ id: 'laptop-xmpp', label: 'Laptop, over XMPP', base: `https://pod-laptop.${DOMAIN}/`, carriage: 'xmpp', podJid: `podlaptop@${DOMAIN}/lws`,
-      relay: { url: 'ws://127.0.0.1:15280/xmpp-websocket', domain: DOMAIN, username: 'foafos' } }, { password: foafos }), { DOMAIN, foafos: account('foafos') });
+    await page.evaluate(({ DOMAIN, foafos, WS }) => FoafOS.pods.add({ id: 'laptop-xmpp', label: 'Laptop, over XMPP', base: `https://pod-laptop.${DOMAIN}/`, carriage: 'xmpp', podJid: `podlaptop@${DOMAIN}/lws`,
+      relay: { url: WS, domain: DOMAIN, username: 'foafos' } }, { password: foafos }), { DOMAIN, foafos: account('foafos'), WS });
     kinds.push(['laptop-xmpp', 'laptop, over HTTP-over-XMPP through Fly']);
   }
   for (const [id, words] of kinds) {
@@ -91,7 +93,7 @@ try {
     }, { id, text });
     let outsideView = '';
     if (id === 'fly-https') {
-      const seen = await fetch(`https://${DOMAIN}/goal/hello.txt`, { headers: { Authorization: `Bearer ${TOKEN}` } });
+      const seen = await fetch(`${POD}goal/hello.txt`, { headers: { Authorization: `Bearer ${TOKEN}` } });
       outsideView = (await seen.text()) === text ? ', and seen on Fly from outside the browser' : ', NOT seen from outside';
     }
     const del = await f.evaluate(() => foaf.pod.delete('goal/hello.txt'));
@@ -100,15 +102,15 @@ try {
   }
 
   // The room.
-  const started = await page.evaluate(async ({ foafos, DOMAIN }) => {
+  const started = await page.evaluate(async ({ foafos, DOMAIN, WS }) => {
     const c = FoafOS.chat;
-    c.configure({ mode: 'server', url: 'ws://127.0.0.1:15280/xmpp-websocket', domain: DOMAIN, username: 'foafos', room: 'bus', roomDomain: `rooms.${DOMAIN}`, nick: `foafos-${Math.random().toString(16).slice(2, 6)}` }, { password: foafos });
+    c.configure({ mode: 'server', url: WS, domain: DOMAIN, username: 'foafos', room: 'bus', roomDomain: `rooms.${DOMAIN}`, nick: `foafos-${Math.random().toString(16).slice(2, 6)}` }, { password: foafos });
     await c.stop?.(true);
     const r = await c.start();
     FoafOS.grants.grant(`me@${DOMAIN}`, 'docklands', { tools: ['go_to'] });
     FoafOS.grants.grant(`foafbot@${DOMAIN}`, 'docklands', { tools: ['go_to'] });
     return { r, state: c.state, detail: c.detail };
-  }, { foafos: account('foafos'), DOMAIN });
+  }, { foafos: account('foafos'), DOMAIN, WS });
   await page.waitForFunction(() => /in bus@/.test(FoafOS.chat.detail || ''), null, { timeout: 20000 }).catch(() => {});
   check(await page.evaluate(() => FoafOS.chat.state === 'online'), `the shell is in the Fly room (${JSON.stringify(started).slice(0, 100)})`);
 
@@ -129,7 +131,7 @@ try {
   check(/^DM foafos.*Going to/m.test(seen) && String(before) !== String(moved) && Math.abs(moved[0] + 0.075) < 0.02, `and it drives WebMCP: Moglob went from ${before} to ${moved}, Tower Bridge`);
 
   if (process.env.NO_AI !== '1') {
-    bot = spawn('python3', [join(here, '../../tools/chat-ai.py'), '--tls', '--port', '15223', '--domain', DOMAIN, '--room', `bus@rooms.${DOMAIN}`, '--dir', CONF], { stdio: ['ignore', 'pipe', 'inherit'] });
+    bot = spawn('python3', [join(here, '../../tools/chat-ai.py'), '--tls', '--host', DOMAIN, '--port', '5223', '--domain', DOMAIN, '--room', `bus@rooms.${DOMAIN}`, '--dir', CONF], { stdio: ['ignore', 'pipe', 'inherit'] });
     await new Promise((r) => bot.stdout.once('data', r));
     const said = await outside([`me@${DOMAIN}`, account('me'), `bus@rooms.${DOMAIN}`, `asker-${Date.now() % 100000}`, '22', 'say:@foafbot please go to Canary Wharf'], 60000);
     await page.waitForTimeout(2000);

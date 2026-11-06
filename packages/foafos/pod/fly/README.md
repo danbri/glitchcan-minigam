@@ -1,5 +1,7 @@
 # foafos-proto: a prototype on Fly
 
+**RETIRED on 2026-11-06. Do not deploy this.** The pods moved to `foafos-xmpp`, the one XMPP server and box on Fly: see `deploy/foafos-xmpp` in danbri/factoidal-core. The `bus` room is `bus@rooms.foafos-xmpp.fly.dev`, and the HTTPS pod is `https://foafos-xmpp.fly.dev:8443/`.
+
 **A prototype, not a public service.** Everything here may change or be wiped. It runs our own code: Factoidal XMPP, Factoidal LWS, and `pod.mjs`.
 
 | Part | Reached by | Notes |
