@@ -388,6 +388,17 @@ body.foaf-pad-on #foafos-dock {
 body.foafos-stage-game[data-stage-mode="full"] #minigame-view.state-full { z-index: 2635; }
 /* ...except in "All windows", which must show every window, so the stage goes under them */
 body.foafos-overview-on.foafos-stage-game[data-stage-mode="full"] #minigame-view.state-full { z-index: 2600; }
+/* Asked once at start, when saved logins are locked */
+#foafos-unlock-ask {
+    position: fixed; top: 12vh; left: 50%; transform: translateX(-50%); z-index: 2720;
+    width: min(24rem, calc(100vw - 32px)); box-sizing: border-box; padding: 1.1rem 1.2rem;
+    background: var(--sk-bg, #0a0a12); color: var(--sk-ink, #fff);
+    border: 1px solid var(--sk-accent, #00e5ff); border-radius: 10px; box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
+}
+#foafos-unlock-ask h2 { margin: 0 0 .4rem; font-size: 1.1rem; }
+#foafos-unlock-ask p { margin: 0 0 .7rem; line-height: 1.4; }
+#foafos-unlock-ask input { width: 100%; box-sizing: border-box; padding: .5rem; font-size: 1rem; margin-bottom: .5rem; }
+#foafos-unlock-ask .foafos-unlock-note:empty { display: none; }
 /* ...where it is a card with the others, over the dimmed backdrop */
 body.foafos-overview-on #minigame-view.foafos-ov { z-index: 2625 !important; border-radius: 8px; overflow: hidden; }
 .foafos-ov-hit.foafos-ov-named {

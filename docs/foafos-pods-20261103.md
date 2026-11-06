@@ -183,8 +183,8 @@ servers are tested:
     not a live app node, the shell's own pod owner included;
   - the announcer speaks `pods.status`.
 - The **Pods** panel (`openPods`, app `pods`, `surface: 'panel'`, `?app=pods`): the pod list with
-  status, HOLD PASSWORD, CONNECT and DISCONNECT, BROWSE (container listings and text resources),
-  APPS USE THIS, REMOVE, the apps that may reach a pod now, and an Add form. The password field is
+  status, ENTER PASSWORD, CONNECT and DISCONNECT, BROWSE (container listings and text resources),
+  USE FOR APPS, REMOVE, the apps that may reach a pod now, and an Add form. The password field is
   cleared after use; the value goes only to `pods.setPassword`.
 - App API (`inklet/apps/app-sdk.js`): `foaf.pod.get / list / put / delete`, on the same bounded
   round trip as `foaf.invoke` (result type `pod.result`).
@@ -247,7 +247,7 @@ side of this note's gaps:
 ### Step 5, 2026-11-04: the built-in pod, so Pod Notes works with no setup (built)
 
 Owner, 2026-11-04, about the Pod Notes window: "all Apps lists a Pod Notes app but "Pod Notes / No
-pod is chosen for apps. Open Pods in the shell, connect one, and press "APPS USE THIS"."" A new shell
+pod is chosen for apps. Open Pods in the shell, connect one, and press "USE FOR APPS"."" A new shell
 had no pod, so the one pod app was a dead end. The fix follows the built-in chat server
 (`docs/foafos-chat-20261103.md`): the Factoidal Lean LWS engine runs in the page.
 

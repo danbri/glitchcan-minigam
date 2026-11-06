@@ -48,8 +48,8 @@ body[data-wm-mode="full"] #wm-chrome { top: 84px; }
 #wm-chrome.menu-up #wm-buttons { top: auto; bottom: calc(100% + 6px); }
 
 #wm-handle {
-    width: 44px;
-    height: 44px;
+    width: 64px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -75,10 +75,14 @@ body[data-wm-mode="full"] #wm-chrome { top: 84px; }
 #wm-chrome.edge-left { --peek-x: calc(-50% - 8px); }
 #wm-chrome.edge-top { --peek-y: calc(-50% - 8px); }
 #wm-chrome.edge-bottom { --peek-y: calc(50% + 8px); }
-#wm-handle { transition: transform 160ms ease-out, opacity 160ms ease-out; }
+#wm-handle { transition: transform 160ms ease-out, opacity 160ms ease-out, width 160ms ease-out, height 160ms ease-out; }
 #wm-chrome.collapsed:not(:hover):not(:focus-within):not(.wm-dragging):not(.wm-revealed) #wm-handle {
     transform: translate(var(--peek-x, 0), var(--peek-y, 0));
     opacity: 0.4;
+    width: 44px;
+    height: 44px;
+    /* It settles slowly, so it can be found first; pointing at it brings it straight back */
+    transition: transform 10s ease-in, opacity 10s ease-in, width 10s ease-in, height 10s ease-in;
 }
 #wm-chrome.wm-revealed #wm-handle { opacity: 1; box-shadow: 0 0 0 3px var(--zx-yellow); }
 @media (prefers-reduced-motion: reduce) { #wm-handle { transition: none; } }
