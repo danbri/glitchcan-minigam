@@ -386,6 +386,8 @@ body.foaf-pad-on #foafos-dock {
 /* full, with a game: the game has the glass (a story's game already yields
    its story; a game from the launcher goes over the open windows) */
 body.foafos-stage-game[data-stage-mode="full"] #minigame-view.state-full { z-index: 2635; }
+/* ...except in "All windows", which must show every window, so the stage goes under them */
+body.foafos-overview-on.foafos-stage-game[data-stage-mode="full"] #minigame-view.state-full { z-index: 2600; }
 /* the pad is the game's controller: above the stage (windows 2620/2630,
    the stage 2635, panels 2640, the dock 2650) */
 body.foafos-stage-game[data-stage-mode="full"] #foaf-pad { z-index: 2636; }
