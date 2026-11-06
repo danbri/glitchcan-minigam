@@ -252,7 +252,7 @@ const FACTOIDAL_BASE = (() => {
     const v = new URLSearchParams(location.search).get('factoidal');
     if (v && v.startsWith('/') && !v.startsWith('//') && new URL(v, location.href).origin === location.origin) return v.endsWith('/') ? v : v + '/';
   } catch { /* no location */ }
-  return 'https://cdn.jsdelivr.net/npm/@factoidal/core@0.30.0/';
+  return 'https://cdn.jsdelivr.net/npm/@factoidal/core@0.32.0/';
 })();
 let factoidalEngine = null;
 const loadFactoidal = () => (factoidalEngine ??= import(FACTOIDAL_BASE + 'browser.js').then((core) => core.loadEngine())
