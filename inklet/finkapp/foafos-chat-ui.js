@@ -223,7 +223,7 @@ export function mountChat(root, { chat, tools, grants, run }) {
   const hints = h('ul', { class: 'fc-hints', hidden: true });
   const composer = h('form', { class: 'fc-composer', on: { submit: (e) => { e.preventDefault(); submit(); } } }, hints, input, send);
   const main = h('section', { class: 'fc-main' }, head, h('div', { class: 'fc-logwrap' }, log, jump), composer);
-  const tabM = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'members'; drawInfo(); } } }, 'People');
+  const tabM = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'members'; drawInfo(); } } }, 'Users');
   const tabT = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'tools'; drawInfo(); } } }, 'App tools');
   const infoBody = h('div', { class: 'fc-info-body' });
   const info = h('aside', { class: 'fc-info' }, h('div', { class: 'fc-tabs', role: 'tablist' }, tabM, tabT), infoBody);
@@ -259,20 +259,25 @@ export function mountChat(root, { chat, tools, grants, run }) {
 
   function drawList() {
     const items = [...chat.conversations.values()];
-    const group = (name, kind) => {
-      const rows = items.filter((c) => c.kind === kind);
+    const group = (name, wanted) => {
+      const rows = items.filter(wanted);
       if (!rows.length) return null;
       return h('section', {}, h('h3', {}, name), rows.map((c) => h('button', {
         type: 'button', class: 'fc-conv', 'aria-current': c.jid === current ? 'true' : 'false', title: c.jid,
         on: { click: () => select(c.jid) },
-      }, h('span', { class: 'fc-conv-name' }, c.bus ? 'Activity' : c.title), c.unread && c.jid !== current ? h('span', { class: 'fc-badge', 'aria-label': `${c.unread} unread` }, String(c.unread)) : null)));
+      }, h('span', { class: 'fc-conv-name' }, c.title), c.unread && c.jid !== current ? h('span', { class: 'fc-badge', 'aria-label': `${c.unread} unread` }, String(c.unread)) : null)));
     };
-    list.replaceChildren(...[group('Rooms', 'room'), group('People', 'direct')].filter(Boolean));
+    // Users, not people: some of them are bots and AIs.
+    list.replaceChildren(...[
+      group('System Rooms', (c) => c.kind === 'room' && c.bus),
+      group('User Rooms', (c) => c.kind === 'room' && !c.bus),
+      group('Users', (c) => c.kind === 'direct'),
+    ].filter(Boolean));
   }
 
   function drawHead() {
     const c = chat.conversations.get(current);
-    title.textContent = c ? (c.bus ? 'Activity' : c.title) : 'Chat';
+    title.textContent = c ? c.title : 'Chat';
     title.title = c?.jid || '';
     actToggle.hidden = !c?.bus;
     status.textContent = STATE[chat.state] || chat.state;
