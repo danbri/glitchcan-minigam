@@ -622,5 +622,17 @@ export const APPS = [
       "shell"
     ],
     "silent": true
+  },
+  {
+    "id": "foafnaut",
+    "family": "media",
+    "icon": "🧭",
+    "name": "foafnaut",
+    "surface": "window",
+    "url": "https://danbri.github.io/factoidal/web/hub/foafnaut/",
+    "desc": "The foafnaut web browser, in a window",
+    "capabilities": [],
+    "external": true,
+    "persists": false
   }
 ];

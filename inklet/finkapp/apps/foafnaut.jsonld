@@ -1,0 +1,24 @@
+{
+  "@context": {
+    "@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"
+  },
+  "@id": "foafnaut",
+  "@type": "App",
+  "position": 36,
+  "id": "foafnaut",
+  "family": "media",
+  "icon": "🧭",
+  "name": "foafnaut",
+  "surface": "window",
+  "url": "https://danbri.github.io/factoidal/web/hub/foafnaut/",
+  "desc": "The foafnaut web browser, in a window",
+  "capabilities": [],
+  "external": true,
+  "persists": false,
+  "notes": [
+    "The foafnaut browser from danbri/factoidal-core, at its deployed Hub page. It stays in the Factoidal repo; this row only points at it.",
+    "It runs in the ordinary sandbox, with no same-origin capability. A worker cannot start from an opaque origin, so its browser loop runs on the page thread, and heavy pages can hold up its window.",
+    "Links meant for the system browser show as text, because the sandbox has no allow-popups.",
+    "Pages provides Access-Control-Allow-Origin: *, which the opaque-origin frame needs for its modules and data."
+  ]
+}
