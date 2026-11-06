@@ -2694,6 +2694,9 @@ function buildUI() {
     if (focusWin) {
       document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
       focusWin.style.zIndex = 2630;
+      // A full-screen game sits above every window, so the one just picked would vanish
+      // behind it. Float the game instead: tapping it brings it back.
+      if (document.body.classList.contains('foafos-stage-game') && window.FinkWM?.mode === 'full') window.FinkWM.setMode('pip');
     }
     bus.publish('wm.overview', { summary: 'overview closed', on: false });
   }
