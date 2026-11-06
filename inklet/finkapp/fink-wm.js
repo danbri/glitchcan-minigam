@@ -70,6 +70,7 @@ window.FinkWM = {
 
         this._initChromeDrag();
         this._initKeys();
+        this._reveal();          // start in plain sight, then settle
         this._initPipGestures();
         this.split = { ...this.split, ...(this._loadSplit() || {}) };
         this._initSplitGrip();
@@ -982,7 +983,7 @@ window.FinkWM = {
     // Bring the handle back into plain sight for a moment.
     _reveal() {
         const { chrome } = this.elements;
-        chrome.classList.add('wm-revealed');
+        chrome?.classList.add('wm-revealed');
         clearTimeout(this._revealTimer);
         this._revealTimer = setTimeout(() => chrome.classList.remove('wm-revealed'), 6000);
     },

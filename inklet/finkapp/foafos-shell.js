@@ -472,6 +472,8 @@ chat.onCommand = async (text, { from }) => {
 {
   const begin = () => { if (chat.config().mode !== 'off') chat.start(); };
   if ('requestIdleCallback' in window) requestIdleCallback(begin, { timeout: 5000 }); else setTimeout(begin, 2000);
+  // Unlocking brings Chat's password back, so try again without being asked.
+  bus.subscribe('secrets.unsealed', () => { if (chat.state !== 'online') begin(); });
 }
 
 // Scopes are configuration, not code: which repo, which bucket, which pod.
@@ -2192,6 +2194,37 @@ function buildUI() {
       if (sec.ok) status(`unlocked — ${secrets.count()} secret(s) available again`);
     } catch (e) { status(String(e.message || e), true); }
   });
+  // Saved logins are of no use locked, and the apps only say a password is missing. So ask
+  // first, once, when the shell starts. "Not now" leaves the 👤 panel as the way back.
+  const askToUnlock = () => {
+    if (!secrets.hasSealed() || secrets.sealed || document.getElementById('foafos-unlock-ask')) return;
+    const box = document.createElement('form');
+    box.id = 'foafos-unlock-ask';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-label', 'Unlock your saved logins');
+    box.innerHTML = `<h2>Unlock your saved logins</h2>
+      <p>Chat and your pods need them. Enter the passphrase you saved them with.</p>
+      <input type="password" aria-label="Passphrase" autocomplete="off">
+      <p class="foafos-unlock-note" role="status"></p>
+      <div><button type="submit">Unlock</button> <button type="button">Not now</button></div>`;
+    const pass = box.querySelector('input'), note = box.querySelector('.foafos-unlock-note');
+    box.querySelector('button[type=button]').addEventListener('click', () => box.remove());
+    box.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      note.textContent = 'Unlocking';
+      $('#foafos-pass').value = pass.value;
+      $('#foafos-unlock').click();
+      for (let i = 0; i < 40 && !secrets.sealed; i++) await new Promise((r) => setTimeout(r, 100));
+      if (secrets.sealed) { box.remove(); return; }
+      pass.value = '';
+      $('#foafos-pass').value = '';
+      note.textContent = 'That passphrase did not unlock them. Try again.';
+      pass.focus();
+    });
+    document.body.appendChild(box);
+    pass.focus();
+  };
+  setTimeout(askToUnlock, 500);
   $('#foafos-forget').addEventListener('click', () => {
     FoafOS.session.forget();
     // Forgetting the session MUST take the credentials with it. Leaving a
@@ -5520,7 +5553,7 @@ function buildUI() {
           const tokenPod = p.carriage === 'https';
           const pw = field(card, tokenPod ? 'access token' : 'password', `pod-${p.id}-password`, { type: 'password', placeholder: p.hasPassword ? '•••• held' : tokenPod ? 'access token' : 'relay password' });
           const row = el('div', null, 'display:flex;gap:6px;flex-wrap:wrap;');
-          button(row, tokenPod ? 'HOLD TOKEN' : 'HOLD PASSWORD', () => {
+          button(row, tokenPod ? 'ENTER TOKEN' : 'ENTER PASSWORD', () => {
             if (!pw.value) return;
             // Straight into the broker; never stored here, never echoed.
             const r = pods.setPassword(p.id, pw.value);
@@ -5534,8 +5567,8 @@ function buildUI() {
         if (p.status === 'online' || p.status === 'connecting') button(buttons, 'DISCONNECT', () => pods.disconnect(p.id).then(draw));
         else button(buttons, 'CONNECT', () => { pods.connect(p.id).then(draw); draw(); });
         if (p.status === 'online') button(buttons, 'BROWSE', () => { browsing = browsing?.id === p.id ? null : { id: p.id, path: '' }; draw(); });
-        if (p.forApps) button(buttons, 'APPS: STOP', () => { pods.setAppsPod(null); draw(); });
-        else button(buttons, 'APPS USE THIS', () => { pods.setAppsPod(p.id); draw(); });
+        if (p.forApps) button(buttons, 'STOP USING FOR APPS', () => { pods.setAppsPod(null); draw(); });
+        else button(buttons, 'USE FOR APPS', () => { pods.setAppsPod(p.id); draw(); });
         button(buttons, 'REMOVE', () => { if (browsing?.id === p.id) browsing = null; pods.remove(p.id).then(draw); });
         card.appendChild(buttons);
         if (browsing?.id === p.id && p.status === 'online') drawBrowse(card, p.id, browsing.path);
