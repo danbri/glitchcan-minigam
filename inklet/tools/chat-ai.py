@@ -86,7 +86,7 @@ token = base64.b64encode(f'\0{o.account}\0{accounts[o.account]}'.encode()).decod
 send(f"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>{token}</auth>")
 if '<success' not in read_until('>'): raise SystemExit('The server refused that account.')
 send(OPEN); read_until('</stream:features>')
-send("<iq type='set' id='b'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>ai</resource></bind></iq>"); read_until('</iq>')
+send(f"<iq type='set' id='b'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>ai-{os.getpid()}</resource></bind></iq>"); read_until('</iq>')
 send("<presence/>")
 send(f"<presence to='{o.room}/{o.nick}'><x xmlns='http://jabber.org/protocol/muc'/></presence>")
 print(f'{o.nick} is in {o.room}. Ask with @foafbot.', flush=True)
