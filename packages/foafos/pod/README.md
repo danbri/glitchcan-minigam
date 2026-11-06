@@ -14,6 +14,12 @@ browser (foafos, any origin)                 home machine (behind NAT)
                                                                 Factoidal LWS engine (Lean -> wasm)
 ```
 
+## Who, and what
+
+HTTP over XMPP is deny by default. `--allow` says who may ask, and `--route` says what they may ask for. A request must match both, so with no `--route` the pod answers nothing over XMPP. Example: `--route 'GET,HEAD /public/'`. A target that is not a plain path, or that climbs with `..`, is refused whatever the routes say.
+
+`--http PORT` listens on 127.0.0.1 only, and `--cors-origin ORIGIN` names a page that may read it. Both carriages serve one store.
+
 ## The binding
 
 - One LWS storage (`openLwsStorage` from `@factoidal/core/lws` 0.32.0) has two carriages:

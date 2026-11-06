@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import { openLwsStorage } from '@factoidal/core/lws';
 import { chromium } from 'playwright';
-import { startXmpp, startHttp } from '../pod.mjs';
+import { startXmpp, startHttp, parseRoute } from '../pod.mjs';
 import { startRelay } from './relay.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -35,7 +35,7 @@ console.log(`relay: ${relay.name}`);
 const storage = await openLwsStorage({ baseIri: BASE, insecureNoAuth: true, realClock: true });
 const http = await startHttp(storage, { port: 18788 });
 const podXmpp = await startXmpp(storage, { service: relay.xmpp, domain: 'localhost', username: 'pod', password: 'podpass',
-  allow: new Set(['user@localhost']) });
+  allow: new Set(['user@localhost']), routes: [parseRoute('GET,HEAD,OPTIONS,PUT,POST,PATCH,DELETE /')] });
 const viaHttp = (path, init) => fetch(`http://127.0.0.1:18788/${path}`, init);
 
 // 2. The site, with CORS (sandboxed frames have an opaque origin; their module

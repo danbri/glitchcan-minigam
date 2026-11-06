@@ -17,7 +17,7 @@ import { join, extname, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openLwsStorage } from '@factoidal/core/lws';
 import { chromium } from 'playwright';
-import { startXmpp, startHttp } from '../pod.mjs';
+import { startXmpp, startHttp, parseRoute, routed } from '../pod.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../../../..');
@@ -87,7 +87,7 @@ for (let i = 0; i < 80; i++) {
 const storage = await openLwsStorage({ baseIri: BASE, insecureNoAuth: true, realClock: true });
 const httpServer = await startHttp(storage, { port: 18787 });
 const podXmpp = await startXmpp(storage, { service: XMPP, domain: 'localhost', username: 'pod', password: 'podpass',
-  allow: new Set(['user@localhost']) });
+  allow: new Set(['user@localhost']), routes: [parseRoute('GET,HEAD,OPTIONS,PUT,POST,PATCH,DELETE /')] });
 
 // 3. A static server for the repo (the page and its modules).
 const MIME = { '.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/javascript', '.json': 'application/json' };
@@ -183,6 +183,30 @@ const cors = await page.evaluate(async () => {
   try { const r = await fetch('http://127.0.0.1:18787/'); return `status ${r.status}`; } catch (e) { return `blocked: ${e.message}`; }
 });
 check(cors.startsWith('blocked'), `browser fetch straight to the pod's HTTP listener is ${cors} (no Access-Control-Allow-Origin)`);
+
+// Deny by default: a route says what, and anything odd about the target is refused.
+const only = [parseRoute('GET,HEAD /public/'), parseRoute('PUT /drop')];
+const r = (method, target) => routed(only, { method, target });
+check(r('GET', '/public/a.txt') && r('HEAD', '/public/') && r('PUT', '/drop') && r('PUT', '/drop/x'), 'a route allows what it names');
+check(!routed([], { method: 'GET', target: '/' }), 'no routes means nothing is answered');
+check(!r('DELETE', '/public/a.txt') && !r('PUT', '/public/a.txt'), 'a route refuses other methods');
+check(!r('GET', '/private/a') && !r('PUT', '/dropper'), 'a route refuses other paths, and a look-alike prefix');
+for (const t of ['http://evil.example/public/a', '//evil.example/public/a', '/public/../private', '/public/%2e%2e/private', '/public/%2E%2E%2Fprivate', '/public/a%5Cb', '/public/%00', '/public/%zz', 'public/a'])
+  check(!r('GET', t), `a route refuses the target ${t}`);
+let badRoute = false; try { parseRoute('everything'); } catch { badRoute = true; }
+check(badRoute, 'a route that does not parse stops the pod');
+
+// CORS: only the named origin, and a preflight that answers without the storage.
+const corsServer = await startHttp(storage, { port: 0, corsOrigins: ['http://allowed.example'] });
+const corsUrl = `http://127.0.0.1:${corsServer.address().port}/`;
+const preflight = await fetch(corsUrl, { method: 'OPTIONS', headers: { Origin: 'http://allowed.example', 'Access-Control-Request-Method': 'PUT' } });
+check(preflight.status === 204 && preflight.headers.get('access-control-allow-origin') === 'http://allowed.example'
+  && /PUT/.test(preflight.headers.get('access-control-allow-methods')), 'a preflight from a named origin is answered');
+const plain = await fetch(corsUrl, { headers: { Origin: 'http://allowed.example' } });
+check(plain.headers.get('access-control-allow-origin') === 'http://allowed.example' && /ETag/.test(plain.headers.get('access-control-expose-headers')), 'a named origin may read the answer');
+const elsewhere = await fetch(corsUrl, { headers: { Origin: 'http://other.example' } });
+check(elsewhere.headers.get('access-control-allow-origin') === null, 'another origin gets no CORS headers');
+corsServer.close();
 
 // A JID not on the allow list.
 const stranger = await page.evaluate(async () => {

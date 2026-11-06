@@ -61,7 +61,7 @@ try {
     const add = (rec, o) => { if (!FoafOS.pods.get(rec.id)) FoafOS.pods.add(rec, o); };
     add({ id: 'laptop-lws', label: 'This computer', base: 'http://127.0.0.1:3000/', carriage: 'https' });
     add({ id: 'fly-https', label: 'Fly, over HTTPS', base: POD, carriage: 'https', auth: 'bearer' }, { password: token });
-    add({ id: 'fly-xmpp', label: 'Fly, over XMPP', base: `https://pod.${DOMAIN}/`, carriage: 'xmpp', podJid: `pod@${DOMAIN}/lws`,
+    add({ id: 'fly-xmpp', label: 'Fly, over XMPP', base: POD, carriage: 'xmpp', podJid: `pod@${DOMAIN}/lws`,
       relay: { url: WS, domain: DOMAIN, username: 'foafos' } }, { password: foafos });
   }, { token: TOKEN, foafos: account('foafos'), DOMAIN, WS, POD });
   await page.evaluate(() => FoafOS.launchApp('files'));
@@ -92,7 +92,8 @@ try {
       return { current: s.current, status: s.locations.find((l) => l.id === id)?.status, put: put.ok || put.reason, body: get.body, listed: list.items?.map((i) => i.path) };
     }, { id, text });
     let outsideView = '';
-    if (id === 'fly-https') {
+    // Both carriages reach one store, so a file written over XMPP is there over HTTPS too.
+    if (id === 'fly-https' || id === 'fly-xmpp') {
       const seen = await fetch(`${POD}goal/hello.txt`, { headers: { Authorization: `Bearer ${TOKEN}` } });
       outsideView = (await seen.text()) === text ? ', and seen on Fly from outside the browser' : ', NOT seen from outside';
     }
