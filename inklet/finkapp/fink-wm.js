@@ -989,8 +989,10 @@ window.FinkWM = {
 
     // Key sequences, heard in the capture phase, before the page's own handlers. A page cannot
     // hear keys typed into an app's frame: there the half-hidden handle is the way back.
-    // Each sequence can be changed: localStorage 'foafos.keys', e.g. {"menu":"ctrl g o g o"}.
-    KEYS: { menu: 'ctrl g o g o', apps: 'ctrl g o a', windows: 'ctrl g o w' },
+    // Each sequence can be changed: localStorage 'foafos.keys', e.g. {"menu":"ctrl ; f o a f"}.
+    // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
+    // Not w, t or n, which browsers keep for themselves on Windows and Linux.
+    KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s' },
     _initKeys() {
         let saved = {};
         try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
@@ -1008,7 +1010,8 @@ window.FinkWM = {
         window.addEventListener('keydown', (e) => {
             if (e.repeat || e.key === 'Control') return;
             // The physical key, so Option or a layout cannot change the letter.
-            const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase();
+            const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase()
+                : e.code === 'Semicolon' ? ';' : e.key.toLowerCase();
             if (performance.now() - at > 1500) typed = [];
             at = performance.now();
             typed.push(key);
