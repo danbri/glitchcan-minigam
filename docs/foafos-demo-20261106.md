@@ -6,7 +6,7 @@ What works, and how to show it. It uses a prototype on Fly, which is not a publi
 
 ```sh
 foafos-stack start
-foafos-stack start proto
+foafos-stack start
 python3 -m venv ~/.slix && ~/.slix/bin/pip install slixmpp
 cd inklet/finkapp/test
 SLIX_PYTHON=~/.slix/bin/python CHROMIUM_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' \
@@ -37,6 +37,6 @@ Then, in the XMPP room `bus@rooms.foafos-xmpp.fly.dev`:
 
 ## Limits to say out loud
 
-- The Fly XMPP server has no public port. It is reached through `fly proxy`.
+- The Fly XMPP server is public but unannounced: `foafos-xmpp.fly.dev`. It holds test data only.
 - Factoidal's XMPP server has had no independent review.
 - Rooms keep ghosts: a client that left can hold its nickname until the server restarts, so demos should use fresh nicknames.

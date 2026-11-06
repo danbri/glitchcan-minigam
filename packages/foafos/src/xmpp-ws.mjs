@@ -38,6 +38,10 @@ async function scram(hash, password, saltB64, iterations, authMessage) {
   return { proof: b64(proof), serverSignature: b64(serverSig) };
 }
 
+// Each connection needs a resource of its own. Two sessions on one resource get each
+// other's messages, and when one closes the server forgets the other's room seat.
+const newResource = () => `foafos-${Math.random().toString(36).slice(2, 10)}`;
+
 export class XmppError extends Error {}
 
 // Lower case because a server normalises the `from` it stamps, and someone may have typed Pod@Localhost.
@@ -59,7 +63,7 @@ export class XmppWs {
   onstanza = null;   // (element) => void, for presence and messages after login
   onclose = null;    // (event) => void, when the connection ends after login
 
-  static async connect({ url, domain, username, password, resource = 'foafos', timeoutMs = 10000, onwire = null, WebSocket: Ws = globalThis.WebSocket }) {
+  static async connect({ url, domain, username, password, resource = newResource(), timeoutMs = 10000, onwire = null, WebSocket: Ws = globalThis.WebSocket }) {
     const x = new XmppWs();
     x.onwire = onwire;   // (direction, text) => void, for debugging
     try {
