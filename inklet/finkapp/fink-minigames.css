@@ -68,6 +68,21 @@ body[data-wm-mode="full"] #wm-chrome { top: 84px; }
 #wm-chrome.collapsed #wm-handle:focus-visible { opacity: 1; }
 #wm-handle:focus-visible { outline: 2px solid var(--zx-yellow); outline-offset: 2px; }
 
+/* Docked: closed and unattended, the handle tucks half behind its edge or corner and fades.
+   Pointing at it, focusing it, dragging it or the recall keys bring it out. */
+#wm-chrome.dock-left { --peek-x: 0px; }
+#wm-chrome.edge-right { --peek-x: calc(50% + 8px); }
+#wm-chrome.edge-left { --peek-x: calc(-50% - 8px); }
+#wm-chrome.edge-top { --peek-y: calc(-50% - 8px); }
+#wm-chrome.edge-bottom { --peek-y: calc(50% + 8px); }
+#wm-handle { transition: transform 160ms ease-out, opacity 160ms ease-out; }
+#wm-chrome.collapsed:not(:hover):not(:focus-within):not(.wm-dragging):not(.wm-revealed) #wm-handle {
+    transform: translate(var(--peek-x, 0), var(--peek-y, 0));
+    opacity: 0.4;
+}
+#wm-chrome.wm-revealed #wm-handle { opacity: 1; box-shadow: 0 0 0 3px var(--zx-yellow); }
+@media (prefers-reduced-motion: reduce) { #wm-handle { transition: none; } }
+
 /* The panel. Out of the flow, so ☰ never moves when it opens. */
 #wm-buttons {
     position: absolute;

@@ -2628,9 +2628,17 @@ function buildUI() {
   // otherwise reach the guest instead of picking the card.
   let overviewOn = false;
   function overviewWindows() {
-    return [...document.querySelectorAll('.foafos-window')]
+    const wins = [...document.querySelectorAll('.foafos-window')]
       .filter(w => !w.classList.contains('minimized'));
+    // A full-screen or floating app is a window too.
+    const stage = document.getElementById('minigame-view');
+    if (window.FinkWM?.active && stage) wins.push(stage);
+    return wins;
   }
+  const stageName = () => {
+    const type = window.FinkMinigames?.currentType || window.FinkMinigames?.activeMinigame?.type;
+    return (type && (APPS.find((a) => (a.game || a.id) === type)?.name)) || 'Open app';
+  };
   function enterOverview() {
     if (overviewOn) return;
     const wins = overviewWindows();
@@ -2663,8 +2671,9 @@ function buildUI() {
       const hit = document.createElement('button');
       hit.type = 'button';
       hit.className = 'foafos-ov-hit';
-      hit.setAttribute('aria-label',
-        `Show ${win.querySelector('.foafos-window-bar span')?.textContent || 'window'}`);
+      const title = win.id === 'minigame-view' ? stageName() : win.querySelector('.foafos-window-bar span')?.textContent;
+      hit.setAttribute('aria-label', `Show ${title || 'window'}`);
+      if (win.id === 'minigame-view') { hit.textContent = title; hit.classList.add('foafos-ov-named'); }
       hit.addEventListener('click', (e) => { e.stopPropagation(); exitOverview(win); });
       win.appendChild(hit);
     });
@@ -2675,7 +2684,15 @@ function buildUI() {
       <button type="button" id="foafos-ov-done" aria-label="Leave overview">✕</button>`;
     document.body.appendChild(strip);
     strip.querySelector('#foafos-ov-done').addEventListener('click', () => exitOverview(null));
-    strip.querySelector('#foafos-ov-done').focus();
+    document.querySelector('.foafos-ov-hit')?.focus();
+    // Arrow keys move between cards, Enter picks one, Escape leaves.
+    strip._keys = (e) => {
+      const hits = [...document.querySelectorAll('.foafos-ov-hit')];
+      const at = hits.indexOf(document.activeElement);
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (step) { e.preventDefault(); hits[(at + step + hits.length) % hits.length]?.focus(); }
+    };
+    document.addEventListener('keydown', strip._keys);
 
     bus.publish('wm.overview', { summary: `overview: ${wins.length} windows`, count: wins.length, on: true });
   }
@@ -2683,15 +2700,19 @@ function buildUI() {
     if (!overviewOn) return;
     overviewOn = false;
     document.body.classList.remove('foafos-overview-on');
-    document.getElementById('foafos-ov-strip')?.remove();
-    for (const win of document.querySelectorAll('.foafos-window.foafos-ov')) {
+    const ovStrip = document.getElementById('foafos-ov-strip');
+    if (ovStrip?._keys) document.removeEventListener('keydown', ovStrip._keys);
+    ovStrip?.remove();
+    for (const win of document.querySelectorAll('.foafos-ov')) {
       win.querySelector('.foafos-ov-hit')?.remove();
       win.style.transform = '';                 // interpolates back home
       // Drop the class only after the return trip, or the transition it
       // rides is removed mid-flight and the card teleports.
       setTimeout(() => win.classList.remove('foafos-ov'), 420);
     }
-    if (focusWin) {
+    if (focusWin?.id === 'minigame-view') {
+      if (window.FinkWM?.mode !== 'full') window.FinkWM?.setMode('full');
+    } else if (focusWin) {
       document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
       focusWin.style.zIndex = 2630;
       // A full-screen game sits above every window, so the one just picked would vanish
@@ -2862,7 +2883,12 @@ function buildUI() {
     // app in the registry regardless of root, so an office installation
     // showed games it would then refuse to launch — an icon you can
     // press that does nothing is worse than no icon.
-    for (const fam of appsByFamily()) {
+    // What Foafos itself runs on comes first, in one place, and is not repeated below.
+    const ESSENTIALS = ['chat', 'files', 'pods', 'backstage', 'activity'];
+    const essentials = ESSENTIALS.map(appById).filter((a) => a && rootOffers(ROOT, a.id));
+    const groups = [{ id: 'essentials', label: 'Essentials', icon: '⭐', apps: essentials },
+      ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) }))];
+    for (const fam of groups) {
       const offered = fam.apps.filter(a => rootOffers(ROOT, a.id));
       if (!offered.length) continue;
       const sec = document.createElement('section');

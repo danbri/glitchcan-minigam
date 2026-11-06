@@ -69,6 +69,7 @@ window.FinkWM = {
         this._initMenuDismiss();
 
         this._initChromeDrag();
+        this._initKeys();
         this._initPipGestures();
         this.split = { ...this.split, ...(this._loadSplit() || {}) };
         this._initSplitGrip();
@@ -876,6 +877,7 @@ window.FinkWM = {
             handle.setPointerCapture(e.pointerId);
             const rect = chrome.getBoundingClientRect();
             this._drag = { x: e.clientX, y: e.clientY, left: rect.left, top: rect.top, moved: false };
+            chrome.classList.add('wm-dragging');
             this._framesAside(true);
         });
         handle.addEventListener('pointermove', (e) => {
@@ -892,19 +894,21 @@ window.FinkWM = {
             if (!this._drag) return;
             const wasDrag = this._drag.moved;
             this._drag = null;
+            chrome.classList.remove('wm-dragging');
             this._framesAside(false);
             if (wasDrag) {
                 // Dock: snap to the nearer screen edge, clamp vertically.
-                const rect = chrome.getBoundingClientRect();
-                const side = rect.left + rect.width / 2 < window.innerWidth / 2 ? 'left' : 'right';
-                const top = Math.max(8, Math.min(window.innerHeight - rect.height - 8, rect.top));
-                const dock = { side, top: Math.round(top) };
+                const dock = this._dockFor(handle.getBoundingClientRect());
                 this._applyDock(dock);
                 this._saveDock(dock);
+                this._setCollapsed(true);
                 this._haptic();
             } else {
-                // A tap on ☰ opens or closes the menu.
-                this._pointerToggledAt = performance.now();
+                // A tap on ☰ opens or closes the menu; a double tap goes straight to the apps.
+                const now = performance.now(), again = now - (this._lastTapAt || 0) < 350;
+                this._lastTapAt = again ? 0 : now;
+                this._pointerToggledAt = now;
+                if (again) { this._setCollapsed(true); window.FoafOS?.openHome?.(); return; }
                 this._setCollapsed(!chrome.classList.contains('collapsed'));
                 if (!chrome.classList.contains('collapsed')) this._scheduleCollapse();
             }
@@ -933,6 +937,10 @@ window.FinkWM = {
     _applyDock(dock) {
         const { chrome } = this.elements;
         if (!chrome) return;
+        for (const c of ['edge-left', 'edge-right', 'edge-top', 'edge-bottom']) chrome.classList.remove(c);
+        chrome.classList.remove('menu-up');
+        chrome.classList.add(`edge-${dock?.side || 'right'}`);
+        if (dock?.corner) chrome.classList.add(`edge-${dock.corner}`);
         if (!dock) {
             // Never dragged: the STYLESHEET owns the geometry. Writing the
             // default as inline pixels froze the grip at top:8px for every
@@ -946,16 +954,71 @@ window.FinkWM = {
         }
         const d = dock;
         const maxTop = Math.max(8, window.innerHeight - 56);
-        chrome.style.top = `${Math.min(d.top, maxTop)}px`;
-        chrome.style.bottom = 'auto';
-        if (d.side === 'left') {
-            chrome.style.left = '8px';
-            chrome.style.right = 'auto';
-        } else {
-            chrome.style.left = 'auto';
-            chrome.style.right = '8px';
-        }
-        chrome.classList.toggle('dock-left', d.side === 'left');
+        const maxLeft = Math.max(8, window.innerWidth - 56);
+        const low = d.side === 'bottom' || d.corner === 'bottom';
+        chrome.style.right = chrome.style.left = 'auto';
+        chrome.style.bottom = low ? '8px' : 'auto';
+        chrome.style.top = low ? 'auto' : `${d.side === 'top' || d.corner === 'top' ? 8 : Math.min(d.top ?? 84, maxTop)}px`;
+        if (d.side === 'left') chrome.style.left = '8px';
+        else if (d.side === 'right') chrome.style.right = '8px';
+        else chrome.style.left = `${Math.min(d.left ?? 8, maxLeft)}px`;
+        const leftHalf = d.side === 'left' || (d.side !== 'right' && (d.left ?? 0) < window.innerWidth / 2);
+        chrome.classList.toggle('dock-left', leftHalf);
+        chrome.classList.toggle('menu-up', low);
+    },
+
+    // Where a dropped handle docks: a corner if it is near one, else the nearest edge.
+    _dockFor(rect) {
+        const W = window.innerWidth, H = window.innerHeight, NEAR = 96;
+        const gaps = { left: rect.left, right: W - rect.right, top: rect.top, bottom: H - rect.bottom };
+        const x = gaps.left < gaps.right ? 'left' : 'right', y = gaps.top < gaps.bottom ? 'top' : 'bottom';
+        if (gaps[x] < NEAR && gaps[y] < NEAR) return { side: x, corner: y };
+        const side = Object.keys(gaps).reduce((a, b) => (gaps[b] < gaps[a] ? b : a));
+        return side === 'left' || side === 'right'
+            ? { side, top: Math.round(Math.max(8, Math.min(H - rect.height - 8, rect.top))) }
+            : { side, left: Math.round(Math.max(8, Math.min(W - rect.width - 8, rect.left))) };
+    },
+
+    // Bring the handle back into plain sight for a moment.
+    _reveal() {
+        const { chrome } = this.elements;
+        chrome.classList.add('wm-revealed');
+        clearTimeout(this._revealTimer);
+        this._revealTimer = setTimeout(() => chrome.classList.remove('wm-revealed'), 6000);
+    },
+
+    // Key sequences, heard in the capture phase, before the page's own handlers. A page cannot
+    // hear keys typed into an app's frame: there the half-hidden handle is the way back.
+    // Each sequence can be changed: localStorage 'foafos.keys', e.g. {"menu":"ctrl g o g o"}.
+    KEYS: { menu: 'ctrl g o g o', apps: 'ctrl g o a', windows: 'ctrl g o w' },
+    _initKeys() {
+        let saved = {};
+        try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
+        const seqs = Object.entries({ ...this.KEYS, ...saved }).map(([name, text]) => {
+            const words = String(text).toLowerCase().trim().split(/\s+/);
+            const ctrl = words[0] === 'ctrl';
+            return { name, ctrl, keys: ctrl ? words.slice(1) : words };
+        }).filter((s) => s.keys.length);
+        const go = {
+            menu: () => { this._reveal(); this._setCollapsed(false); this.elements.handle?.focus(); },
+            apps: () => window.FoafOS?.openHome?.(),
+            windows: () => window.FoafOS?.enterOverview?.(),
+        };
+        let typed = [], at = 0;
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat || e.key === 'Control') return;
+            // The physical key, so Option or a layout cannot change the letter.
+            const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase();
+            if (performance.now() - at > 1500) typed = [];
+            at = performance.now();
+            typed.push(key);
+            const live = seqs.filter((s) => s.ctrl === e.ctrlKey && typed.every((k, i) => s.keys[i] === k));
+            if (!live.length) { typed = []; return; }
+            e.preventDefault();
+            e.stopPropagation();
+            const done = live.find((s) => s.keys.length === typed.length);
+            if (done) { typed = []; go[done.name]?.(); }
+        }, true);
     },
 
     _loadDock() {

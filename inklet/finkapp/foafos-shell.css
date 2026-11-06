@@ -388,6 +388,12 @@ body.foaf-pad-on #foafos-dock {
 body.foafos-stage-game[data-stage-mode="full"] #minigame-view.state-full { z-index: 2635; }
 /* ...except in "All windows", which must show every window, so the stage goes under them */
 body.foafos-overview-on.foafos-stage-game[data-stage-mode="full"] #minigame-view.state-full { z-index: 2600; }
+/* ...where it is a card with the others, over the dimmed backdrop */
+body.foafos-overview-on #minigame-view.foafos-ov { z-index: 2625 !important; border-radius: 8px; overflow: hidden; }
+.foafos-ov-hit.foafos-ov-named {
+    display: flex; align-items: flex-start; padding: .6rem .8rem;
+    font: bold 1.6rem system-ui, sans-serif; color: #fff; text-shadow: 0 1px 4px #000;
+}
 /* the pad is the game's controller: above the stage (windows 2620/2630,
    the stage 2635, panels 2640, the dock 2650) */
 body.foafos-stage-game[data-stage-mode="full"] #foaf-pad { z-index: 2636; }
