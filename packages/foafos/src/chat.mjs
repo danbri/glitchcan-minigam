@@ -222,7 +222,7 @@ export class FoafChat {
         // holds the secret. An XmppError is ours and never does, so keep that one.
         const used = await this.secrets.use(CHAT_OWNER, PASSWORD, async (password) => {
           try {
-            return await this.connect({ url: this.cfg.url, domain: this.cfg.domain, username: this.cfg.username, password, resource: 'foafos' });
+            return await this.connect({ url: this.cfg.url, domain: this.cfg.domain, username: this.cfg.username, password });
           } catch (e) {
             if (e?.constructor?.name === 'XmppError') failure = e.message;
             throw e;
