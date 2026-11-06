@@ -51,6 +51,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   room: 'bus',
   roomDomain: '',          // '' = 'rooms.' + domain
   nick: 'foafos',
+  resource: '',            // a name for this browser, to reach it alone; '' = a random one
   mirror: DEFAULT_MIRROR,
   mirrorApps: 'topics',    // what apps publish: 'off', 'topics' (no content), 'data' (redacted)
   inbound: false,          // may granted accounts send actions to apps (/tell)?
@@ -182,6 +183,7 @@ export class FoafChat {
     if (!Array.isArray(next.mirror) || next.mirror.some((t) => typeof t !== 'string')) return { ok: false, reason: 'bad-mirror' };
     if (!['off', 'topics', 'data'].includes(next.mirrorApps)) return { ok: false, reason: 'bad-mirror' };
     next.inbound = next.inbound === true;
+    if (typeof next.resource !== 'string' || !/^([a-z0-9][a-z0-9._-]{0,31})?$/i.test(next.resource)) return { ok: false, reason: 'bad-resource' };
     if (!Array.isArray(next.commandJids) || next.commandJids.some((j) => !/^[^\s@/]+@[^\s@/]+$/.test(j))) return { ok: false, reason: 'bad-jid' };
     this.cfg = next;
     this._save();
@@ -222,7 +224,7 @@ export class FoafChat {
         // holds the secret. An XmppError is ours and never does, so keep that one.
         const used = await this.secrets.use(CHAT_OWNER, PASSWORD, async (password) => {
           try {
-            return await this.connect({ url: this.cfg.url, domain: this.cfg.domain, username: this.cfg.username, password });
+            return await this.connect({ url: this.cfg.url, domain: this.cfg.domain, username: this.cfg.username, password, ...(this.cfg.resource ? { resource: this.cfg.resource } : {}) });
           } catch (e) {
             if (e?.constructor?.name === 'XmppError') failure = e.message;
             throw e;
@@ -488,7 +490,8 @@ export class FoafChat {
     let reply;
     try { reply = await this.onCommand(body, { from: jid }); } catch (e) { reply = `That failed: ${e.message}`; }
     if (!reply || !this._x) return;
-    const out = String(reply).slice(0, 8000);
+    // Replies can go to our own account, so one must never read as a command, such as /help's list.
+    const out = String(reply).slice(0, 8000).replace(/^\s*\//, ' /');
     this._direct(jid, out);
     this._push(c, { kind: 'message', nick: this.cfg.username || 'foafos', body: out, self: true });
   }

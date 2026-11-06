@@ -60,7 +60,11 @@
 .fc-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 /* conversation */
-.fc-chat { flex: 1; min-height: 0; display: grid; grid-template-columns: 11rem minmax(0, 1fr) 13rem; }
+.fc-chat { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--fc-side-w, 11rem) minmax(0, 1fr) var(--fc-info-w, 13rem); }
+/* wide: a hidden panel gives its column back */
+.fc.fc-hide-side { --fc-side-w: 0; }
+.fc.fc-hide-info { --fc-info-w: 0; }
+.fc.fc-hide-side .fc-side, .fc.fc-hide-info .fc-info { visibility: hidden; overflow: hidden; }
 .fc-side, .fc-info { min-height: 0; display: flex; flex-direction: column; background: var(--fc-tint); }
 .fc-side { border-right: 1px solid var(--fc-line); }
 .fc-info { border-left: 1px solid var(--fc-line); }
@@ -84,7 +88,7 @@
 .fc-status[data-state=online]::before { background: #2e9e5b; }
 .fc-status[data-state=connecting]::before, .fc-status[data-state=reconnecting]::before { background: #d39a18; }
 .fc-status[data-state=error]::before { background: #d0433a; }
-.fc-icon { display: none; width: 36px; height: 36px; cursor: pointer; background: none; border: 0; }
+.fc-icon { display: block; width: 36px; height: 36px; cursor: pointer; background: none; border: 0; }
 
 .fc-logwrap { position: relative; flex: 1; min-height: 0; display: flex; }
 .fc-log { flex: 1; min-width: 0; overflow-y: auto; padding: 14px 18px 14px 16px; display: flex; flex-direction: column; gap: 2px; }
@@ -138,7 +142,7 @@
 /* narrow windows and phones: one column, the rest slide over it */
 @container (max-width: 760px) {
   .fc-chat { grid-template-columns: minmax(0, 1fr); position: relative; }
-  .fc-icon { display: block; }
+  .fc.fc-hide-side .fc-side, .fc.fc-hide-info .fc-info { visibility: visible; overflow: visible; }
   .fc-side, .fc-info { position: absolute; top: 0; bottom: 0; z-index: 2; width: min(16rem, 85%); background: var(--sk-bg); }
   .fc-side { left: 0; transform: translateX(-102%); }
   .fc-info { right: 0; transform: translateX(102%); }

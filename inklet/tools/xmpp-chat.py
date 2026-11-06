@@ -145,6 +145,7 @@ def on_stanza(el):
                 emit(t='groupchat', nick=frm.split('/', 1)[1], body=body, marked=any(c.tag == '{urn:foafos:bus:0}x' for c in el))
             out(f"{frm.split('/', 1)[1] if '/' in frm else 'room'}: {body}")
         else:
+            emit(t='dm', frm=frm.split('/')[0], body=body)
             out(f"[dm {frm.split('/')[0]}] {body}")
 
 
