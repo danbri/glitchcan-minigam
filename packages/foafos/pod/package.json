@@ -8,7 +8,7 @@
     "test:shell": "node test/e2e-shell.mjs"
   },
   "dependencies": {
-    "@factoidal/core": "0.30.0",
+    "@factoidal/core": "0.32.0",
     "@xmpp/client": "0.14.0"
   },
   "devDependencies": {
