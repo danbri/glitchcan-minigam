@@ -24,11 +24,11 @@ A sandboxed app, Files, whose origin is opaque, writes, reads, lists and deletes
 | Ephemeral | The LWS engine in the page |
 | Device | The browser's private storage (OPFS) |
 | Laptop | HTTP to `lws-serve` on this computer |
-| Fly, HTTPS | `https://foafos-proto.fly.dev/`, with a bearer token the app never sees |
+| Fly, HTTPS | `https://foafos-xmpp.fly.dev:8443/`, with a bearer token the app never sees |
 | Fly, XMPP | HTTP over XMPP (XEP-0332) to a pod on Fly |
 | Laptop, XMPP | The same to a pod here: `packages/foafos/pod/test/e2e-shell.mjs`, or `foafos-stack start pod-laptop` and `POD_LAPTOP=1` for the pod on the Fly server |
 
-Then, in the XMPP room `bus@rooms.foafos-proto.fly.dev`:
+Then, in the XMPP room `bus@rooms.foafos-xmpp.fly.dev`:
 
 - **A client that is not ours.** `slixmpp` logs in with SCRAM-SHA-256, joins, sees app activity, and sends `/go Tower Bridge`. Moglob's camera moves, through its WebMCP tools, after the shell checks that account's grant.
 - **An AI.** `foafbot` answers `@foafbot please go to Canary Wharf` and asks the shell, under its own grant.
