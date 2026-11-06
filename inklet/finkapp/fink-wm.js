@@ -1010,9 +1010,12 @@ window.FinkWM = {
         let typed = [], at = 0;
         window.addEventListener('keydown', (e) => {
             if (e.repeat || e.key === 'Control') return;
-            // The physical key, so Option or a layout cannot change the letter.
-            const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase()
-                : e.code === 'Semicolon' ? ';' : e.key.toLowerCase();
+            // Letters are what the key types, so a word works on any Latin layout; other
+            // scripts fall back to the key's position. The first key is a position, the key
+            // right of L, because ; itself needs Shift on many layouts.
+            const typed1 = e.key.toLowerCase();
+            const key = e.code === 'Semicolon' ? ';' : /^[a-z0-9]$/.test(typed1) ? typed1
+                : /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : typed1;
             if (performance.now() - at > 1500) typed = [];
             at = performance.now();
             typed.push(key);
