@@ -1,0 +1,35 @@
+/* Backstage: the bus room's members, its bots and who acted. In the shell the
+   colours come from the reader's skin (fink-skins.css); backstage.html sets the
+   same variables for itself. */
+
+.bs-root {
+  --bs-line: color-mix(in srgb, var(--sk-ink, #222) 16%, transparent);
+  flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow: auto;
+  background: var(--sk-bg, #fff); color: var(--sk-ink, #222);
+  font: 14px/1.45 var(--sk-font-ui, system-ui, sans-serif);
+}
+.bs-root [hidden] { display: none !important; }
+.bs-root :focus-visible { outline: 2px solid var(--sk-accent, #06c); outline-offset: 1px; }
+.bs-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bs-view { display: flex; flex-direction: column; gap: 12px; }
+.bs-summary { margin: 0; font-weight: 600; }
+.bs-dim { color: var(--sk-ink-dim, #666); }
+.bs-table { border-collapse: collapse; width: 100%; }
+.bs-table caption { text-align: left; font-weight: 600; padding-bottom: 4px; }
+.bs-table th, .bs-table td { text-align: left; padding: 3px 8px 3px 0; border-bottom: 1px solid var(--bs-line); vertical-align: top; overflow-wrap: anywhere; }
+.bs-table th { font-weight: 500; color: var(--sk-ink-dim, #666); }
+.bs-gone td { opacity: 0.55; }
+.bs-bot td:nth-child(3) { font-weight: 600; }
+.bs-root h3 { margin: 4px 0 0; font-size: 1em; }
+.bs-acts, .bs-grants { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 2px; }
+.bs-acts time { font-variant-numeric: tabular-nums; color: var(--sk-ink-dim, #666); }
+.bs-no strong { color: #b3261e; }
+.bs-ok strong { color: #1b7f3a; }
+.bs-help dt { font-weight: 600; margin-top: 8px; }
+.bs-help dd { margin: 2px 0 0; }
+.bs-form { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 10px; align-items: center; max-width: 36rem; }
+.bs-form input, .bs-form select { font: inherit; padding: 4px 6px; min-width: 0; }
+@media (max-width: 480px) {
+  .bs-form { grid-template-columns: minmax(0, 1fr); }
+  .bs-members th:nth-child(4), .bs-members td:nth-child(4) { display: none; }
+}

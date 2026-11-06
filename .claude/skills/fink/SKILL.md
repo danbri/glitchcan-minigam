@@ -1680,6 +1680,10 @@ root, manifest `apps/chat.jsonld`). Design and localhost setup: `docs/foafos-cha
 - Control: `/tell APP ACTION` by direct message, through `deliverAction`, never raw bus events. It needs
   the owner's `inbound` switch and a grant that names the action. `docs/foafos-bus-xmpp-20261105.md`.
 - `e2e-bus-xmpp.mjs` runs against the live `foafos-stack` xmpp and shell, in a new room.
+- Backstage, read only, three views over one model (`packages/foafos/src/backstage.mjs`, which also holds the `/help` text
+  for all three): the shell panel (`foafos-backstage-ui.js`, `?app=backstage`), the outside-client page `backstage.html`, and
+  `foafos-stack backstage`. Only a stanza with the bus marker is an event; member kinds are guesses from nicknames.
+  Test: `e2e-backstage.mjs`. Design: `docs/foafos-backstage-20261106.md`.
 - foafbot's `/tell` has its own gate before the shell's checks, off by default: `inklet/tools/foafbot_tell.py`, the owner's
   `foafbot-tell.json`, `docs/foafos-foafbot-tell-20261105.md`. **Room text must never reach it.** The `Gate` is a local of
   `direct_path()` in `chat-ai.py`; `on_room` and `answer` hold no reference, and `test-foafbot-tell.py` reads the code to keep

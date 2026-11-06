@@ -505,7 +505,7 @@ function errorCondition(el) {
 }
 
 /** `<topic> <JSON>`, as _mirror writes it, or null. */
-function parseEvent(body) {
+export function parseEvent(body) {
   const m = /^([a-z][a-z0-9_-]*(?:\.[a-zA-Z0-9_*-]+)+) ([\s\S]*)$/.exec(body);
   if (!m) return null;
   try { const data = JSON.parse(m[2]); return { topic: m[1], data, body }; } catch { return null; }

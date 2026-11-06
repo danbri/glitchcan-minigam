@@ -33,6 +33,7 @@ The servers run detached from any terminal, so closing a tab cannot stop them. T
 | `foafos-stack status [-v] [--json]` | What is really running. Exits 0 only if everything needed is healthy |
 | `foafos-stack logs [service...] [-n N] [--no-follow]` | All logs, labelled. Ctrl-C to leave |
 | `foafos-stack chat [local\|proto\|shared]` | A plain text XMPP client, already set up. Our own code: for daily use, not for showing interoperability |
+| `foafos-stack backstage [local\|proto\|shared] [--watch] [--json]` | The bots: foafbot's process, model, `/tell` file and refusals on this laptop, then who is in the room and what each caller did. Read only. `foafos-stack backstage help` says what it cannot see. Design: [foafos-backstage-20261106.md](foafos-backstage-20261106.md) |
 | `foafos-stack doctor` | Checks what the servers need, before or after starting |
 | `foafos-stack urls`, `foafos-stack open` | The addresses, or opens Foafos |
 

@@ -200,3 +200,10 @@ test('logs are labelled, doctor reports, and bad input is refused', () => {
   assert.equal(stack(['frob']).code, 2);
   assert.equal(stack(['logs', 'nope']).code, 2);
 });
+
+test('backstage help needs no server, and the main help lists backstage', () => {
+  const r = stack(['backstage', 'help']);
+  assert.equal(r.code, 0);
+  for (const t of ['What it is:', 'Who acted:', 'What it cannot see:', 'On the laptop:']) assert.ok(r.out.includes(t), t);
+  assert.match(stack(['help']).out, /foafos-stack backstage \[local\|proto\|shared\]/);
+});

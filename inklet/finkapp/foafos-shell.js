@@ -21,6 +21,7 @@ import { FoafTools } from '../../packages/foafos/src/tools.mjs';
 import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { mountChat } from './foafos-chat-ui.js';
+import { mountBackstage } from './foafos-backstage-ui.js';
 import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
 window.__foafAppRegistry = APPS;   // the service inventory counts holders from this
 
@@ -3120,6 +3121,7 @@ function buildUI() {
         if (app.panel === 'publishing') return openPublishing();
         if (app.panel === 'pods') return openPods();
         if (app.panel === 'chat') return openChat();
+        if (app.panel === 'backstage') return openBackstage();
         return null;
       case 'window':
       default: {
@@ -5620,6 +5622,26 @@ function buildUI() {
     return win;
   }
   FoafOS.openChat = openChat;
+
+  // ── Backstage: the bus room's members, bots and actions, read only ─────
+  // Reads the shell's own FoafChat and ToolGrants; joins nothing.
+  // The window is foafos-backstage-ui.js; docs/foafos-backstage-20261106.md.
+  function openBackstage() {
+    const existing = document.getElementById('foafos-backstage');
+    if (existing) return existing;
+    const win = makeWindow('🎭 Backstage', 760, 560);
+    win.id = 'foafos-backstage';
+    win.classList.add('foafos-panel');
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;';
+    win.appendChild(body);
+    const unmount = mountBackstage(body, { chat, grants: toolGrants });
+    new MutationObserver((_, o) => { if (!win.isConnected) { unmount(); o.disconnect(); } })
+      .observe(document.body, { childList: true });
+    document.body.appendChild(win);
+    return win;
+  }
+  FoafOS.openBackstage = openBackstage;
 }
 
 if (document.readyState === 'loading') {

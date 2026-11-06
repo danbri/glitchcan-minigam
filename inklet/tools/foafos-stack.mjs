@@ -13,6 +13,7 @@ import { connect as tlsConnect } from 'node:tls';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Backstage, describe, helpText } from '../../packages/foafos/src/backstage.mjs';
 
 const env = process.env;
 const HOME = homedir();
@@ -555,6 +556,87 @@ function doctor() {
   return rows.some((r) => r.ok === false) ? 1 : 0;
 }
 
+// ── backstage: the bots, read only ──────────────────────────────────────
+// The laptop side (the bot process, its model, its /tell file, its refusals),
+// then the room through xmpp-chat.py --jsonl. Model and help text:
+// packages/foafos/src/backstage.mjs. Design: docs/foafos-backstage-20261106.md.
+
+function botSide() {
+  const rec = record('foafbot');
+  const proc = processOf('foafbot', rec);
+  let model = '';
+  const flag = proc && /--model\s+(\S+)/.exec(proc.command);
+  if (flag) model = flag[1];
+  else { try { model = /'--model', default='([^']+)'/.exec(readFileSync(existsSync(chatAi()) ? chatAi() : join(HERE, 'chat-ai.py'), 'utf8'))?.[1] || ''; } catch { /* no chat-ai.py */ } }
+  const tellFile = join(C.xmppDir, 'foafbot-tell.json');
+  let tell;
+  try {
+    const t = JSON.parse(readFileSync(tellFile, 'utf8'));
+    tell = { file: short(tellFile), owners: Array.isArray(t.owners) ? t.owners.map(String) : [],
+      allow: Object.fromEntries(Object.entries(t.allow || {}).map(([k, v]) => [k, Array.isArray(v) ? v.map(String) : []])) };
+  } catch (e) { tell = { file: short(tellFile), off: existsSync(tellFile) ? 'unreadable' : 'no file' }; }
+  let refusals = [];
+  try { refusals = readFileSync(join(LOGS, 'foafbot.log'), 'utf8').split('\n').filter((l) => l.includes('tell refused')).slice(-5); } catch { /* no log */ }
+  return { account: C.bot, running: !!proc, pid: proc?.pid ?? null, model, modelFrom: flag ? 'command line' : 'chat-ai.py default', tell, refusals };
+}
+
+async function backstage(args) {
+  if (args[0] === 'help' || args.includes('--help') || args.includes('-h')) { say(helpText('cli')); return 0; }
+  const opt = (name, fallback) => { const i = args.indexOf(name); return i >= 0 && args[i + 1] ? args[i + 1] : fallback; };
+  const server = ['local', 'proto', 'shared'].find((s) => args.includes(s)) || 'local';
+  const watch = args.includes('--watch');
+  const json = args.includes('--json');
+  const wait = Number(opt('--wait', 8));
+  const bot = botSide();
+  if (!json) {
+    say(bold('This laptop'));
+    say(`  ${bot.running ? green('●') : dim('○')} ${bot.account}: ${bot.running ? `running (pid ${bot.pid})` : 'not running (foafos-stack start foafbot)'}`);
+    say(`    model ${bot.model || '(unknown)'}, from the ${bot.modelFrom}`);
+    say(bot.tell.off ? `    /tell off: ${bot.tell.off} at ${bot.tell.file}`
+      : `    /tell on: owners ${bot.tell.owners.join(', ') || 'none'}; allow ${Object.entries(bot.tell.allow).map(([a, l]) => `${a} ${l.join(' ')}`).join('; ') || 'nothing'}`);
+    say(`    last /tell refusals: ${bot.refusals.length ? '' : 'none in the log'}`);
+    for (const l of bot.refusals) say(`      ${dim(l)}`);
+    say('');
+  }
+  const nick = `backstage-${Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0')}`;
+  const model = new Backstage({ self: nick });
+  const argv = [join(HERE, 'xmpp-chat.py'), server, '--as', opt('--as', 'me'), '--room', opt('--room', 'bus'), '--nick', nick, '--jsonl', '--wait', String(watch ? 7 * 24 * 3600 : wait)];
+  let room = '', failed = '';
+  if (!json) say(bold(`The room on ${server}`) + dim(watch ? '  (Ctrl-C to stop)' : `  (listening ${wait} seconds)`));
+  const kid = spawn('python3', argv, { stdio: ['ignore', 'pipe', 'pipe'] });
+  let rest = '', err = '';
+  kid.stderr.on('data', (d) => { err += d; });
+  kid.stdout.on('data', (d) => {
+    const part = (rest + d).split('\n');
+    rest = part.pop();
+    for (const l of part) {
+      let e; try { e = JSON.parse(l); } catch { continue; }
+      if (e.t === 'connected') room = e.room;
+      else if (e.t === 'presence') model.presence(e.nick, { present: e.type !== 'unavailable' && e.type !== 'error', role: e.role });
+      else if (e.t === 'error') failed = `the room refused ${e.nick}: ${e.cond}`;
+      else if (e.t === 'groupchat') {
+        const before = model.acts.length;
+        model.message(e.nick, e.body, { marked: !!e.marked, ts: e.ts });
+        if (watch && model.acts.length > before) {
+          const a = model.acts[model.acts.length - 1];
+          say(`${new Date(a.ts).toISOString().slice(11, 19)} ${a.ok ? green('ok     ') : red('refused')} ${a.who || '?'} ${a.what}${a.ok ? '' : ` (${a.reason})`}  ${dim(`${a.topic} via ${a.by}`)}`);
+        }
+      }
+    }
+  });
+  const stop = () => kid.kill('SIGINT');
+  process.on('SIGINT', stop);
+  const code = await new Promise((r) => kid.on('close', r));
+  process.off('SIGINT', stop);
+  if (!room) { say(red(`could not join: ${err.trim() || `xmpp-chat.py exited ${code}`}`)); return 1; }
+  const snap = model.snapshot();
+  if (json) { say(JSON.stringify({ laptop: bot, room, nick, ...snap }, null, 2)); return failed ? 1 : 0; }
+  for (const l of describe(snap, { room })) say(`  ${l}`);
+  if (failed) say(red(`  ${failed}`));
+  say(dim('  Kinds are guesses from the room. foafos-stack backstage help says what this can and cannot see.'));
+  return failed ? 1 : 0;
+}
+
 function urls() {
   say(`Moglob   ${SHELL_ORIGIN}${SHELL_PAGE}?app=docklands`);
   say(`All apps ${SHELL_ORIGIN}${SHELL_PAGE}?root=all`);
@@ -563,6 +645,7 @@ function urls() {
   say(`LWS      http://127.0.0.1:${C.lwsPort}/`);
   say(`WebDAV   http://127.0.0.1:${C.webdavPort}/  (Finder: Go, Connect to Server, then Connect as Guest; read only)`);
   say(`SPARQL   http://127.0.0.1:${C.sparqlPort}/ds/sparql`);
+  say(`Backstage ${SHELL_ORIGIN}${SHELL_PAGE}?app=backstage  (and ${SHELL_ORIGIN}${SHELL_PAGE}backstage.html)`);
 }
 
 const HELP = `foafos-stack: the local Foafos servers, with one command.
@@ -574,6 +657,9 @@ const HELP = `foafos-stack: the local Foafos servers, with one command.
   foafos-stack logs    [service...] [-n LINES] [--no-follow]
   foafos-stack chat [local|proto|shared] [--as ACCOUNT] [--say TEXT] [--wait SECONDS]
                                       a plain text XMPP client, already set up
+  foafos-stack backstage [local|proto|shared] [--as ACCOUNT] [--room NAME] [--wait SECONDS] [--watch] [--json]
+                                      the bots: who is in the room, what each did; read only
+  foafos-stack backstage help         what Backstage shows, and what it cannot see
   foafos-stack doctor                 check what the servers need
   foafos-stack urls                   the addresses
   foafos-stack open                   open Foafos in your browser (macOS)
@@ -594,6 +680,7 @@ const order = (list) => NAMES.filter((n) => list.includes(n));
 async function main([cmd = 'status', ...args]) {
   if (['help', '-h', '--help'].includes(cmd)) { say(HELP); return 0; }
   if (cmd === 'urls') { urls(); return 0; }
+  if (cmd === 'backstage') { mkdirSync(LOGS, { recursive: true, mode: 0o700 }); mkdirSync(RUN, { recursive: true, mode: 0o700 }); return backstage(args); }
   if (!run('which', ['lsof'])) { say(red('this tool needs lsof to see what is listening')); return 1; }
   mkdirSync(STATE, { recursive: true, mode: 0o700 });
   mkdirSync(LOGS, { recursive: true, mode: 0o700 });

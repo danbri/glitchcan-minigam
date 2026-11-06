@@ -16,11 +16,12 @@ For scripts and agents:
   foafos-stack chat proto --say "/go Tower Bridge" --wait 8
 
 It prints what happens, one line each, and exits after --wait seconds.
+With --jsonl each line is one JSON object instead (foafos-stack backstage reads it).
 
 Servers: local is this laptop; proto is foafos-proto on Fly, through `foafos-stack
 start proto`; shared is the public test server foafos-xmpp.fly.dev.
 """
-import argparse, base64, os, re, select, socket, ssl, sys, time
+import argparse, base64, json, os, re, select, socket, ssl, sys, time
 import xml.etree.ElementTree as ET
 
 HOME = os.path.expanduser('~')
@@ -39,6 +40,7 @@ ap.add_argument('--nick')
 ap.add_argument('--shell', default='foafos', help='the account that answers / commands')
 ap.add_argument('--say', action='append', default=[], help='say this, then stop after --wait seconds')
 ap.add_argument('--wait', type=float, default=None, help='stop after this many seconds')
+ap.add_argument('--jsonl', action='store_true', help='print one JSON object for each room stanza')
 o = ap.parse_args()
 srv = SERVERS[o.server]
 domain = srv['domain']
@@ -49,7 +51,14 @@ attr = lambda s: esc(s).replace('"', '&quot;').replace("'", '&apos;')
 
 
 def out(line):
+    if o.jsonl:
+        return
     print(f"{time.strftime('%H:%M:%S')} {line}", flush=True)
+
+
+def emit(**fields):
+    if o.jsonl:
+        print(json.dumps({'ts': int(time.time() * 1000), **fields}), flush=True)
 
 
 try:
@@ -102,6 +111,7 @@ until('</iq>')
 send('<presence/>')
 send(f"<presence to='{room}/{attr(nick)}'><x xmlns='http://jabber.org/protocol/muc'/></presence>")
 out(f"connected to {domain} as {o.account}, in {room} as {nick}")
+emit(t='connected', domain=domain, account=o.account, room=room, nick=nick)
 
 people = set()
 parser = ET.XMLPullParser(events=('start', 'end'))
@@ -115,8 +125,11 @@ def on_stanza(el):
     kind, frm = local(el), el.get('from', '')
     if kind == 'presence' and frm.startswith(room + '/'):
         who = frm.split('/', 1)[1]
+        item = next((c for x in el if x.tag == '{http://jabber.org/protocol/muc#user}x' for c in x if local(c) == 'item'), None)
+        emit(t='presence', nick=who, type=el.get('type') or '', role=item.get('role', '') if item is not None else '')
         if el.get('type') == 'error':
             cond = next((local(c) for e in el if local(e) == 'error' for c in e), 'error')
+            emit(t='error', nick=who, cond=cond)
             out(f"* could not join as {who}: {cond}. Try --nick")
         elif el.get('type') == 'unavailable':
             people.discard(who)
@@ -129,6 +142,8 @@ def on_stanza(el):
         if body is None:
             return
         if el.get('type') == 'groupchat':
+            if '/' in frm:
+                emit(t='groupchat', nick=frm.split('/', 1)[1], body=body, marked=any(c.tag == '{urn:foafos:bus:0}x' for c in el))
             out(f"{frm.split('/', 1)[1] if '/' in frm else 'room'}: {body}")
         else:
             out(f"[dm {frm.split('/')[0]}] {body}")

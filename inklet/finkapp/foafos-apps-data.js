@@ -609,5 +609,18 @@ export const APPS = [
       "shell"
     ],
     "silent": true
+  },
+  {
+    "id": "backstage",
+    "family": "make",
+    "icon": "🎭",
+    "name": "Backstage",
+    "surface": "panel",
+    "panel": "backstage",
+    "desc": "Who is in the bus room, which are bots, and what each did",
+    "capabilities": [
+      "shell"
+    ],
+    "silent": true
   }
 ];

@@ -1,0 +1,22 @@
+{
+  "@context": {
+    "@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"
+  },
+  "@id": "backstage",
+  "@type": "App",
+  "position": 35,
+  "id": "backstage",
+  "family": "make",
+  "icon": "🎭",
+  "name": "Backstage",
+  "surface": "panel",
+  "panel": "backstage",
+  "desc": "Who is in the bus room, which are bots, and what each did",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true,
+  "notes": [
+    "Reads the shell's own Chat connection (FoafChat) and the grants in this browser (ToolGrants), and shows the bus room's members, its bots and its shells, and each caller's allowed and refused actions. It only reads. Shell chrome for the Chat window's reason: it reads the shell's connection, which no framed app may hold. The same view runs as the page backstage.html and as foafos-stack backstage. Model and help: packages/foafos/src/backstage.mjs. Design: docs/foafos-backstage-20261106.md."
+  ]
+}
