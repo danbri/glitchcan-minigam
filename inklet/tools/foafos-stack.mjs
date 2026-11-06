@@ -9,7 +9,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, statfsSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
-import { connect as tlsConnect } from 'node:tls';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,10 +35,8 @@ const C = {
   lwsDir: env.FOAFOS_LWS_DIR || join(HOME, 'foafos-lws'),
   lwsAuth: (env.FOAFOS_LWS_AUTH || '--insecure-no-auth').split(/\s+/),
   webdavPort: num('FOAFOS_WEBDAV_PORT', 8090),
-  protoApp: env.FOAFOS_PROTO_APP || 'foafos-proto',
-  protoDir: env.FOAFOS_PROTO_DIR || join(HOME, '.config/foafos-proto'),
-  protoWsPort: num('FOAFOS_PROTO_WS_PORT', 15280),
-  protoTlsPort: num('FOAFOS_PROTO_TLS_PORT', 15223),
+  flyHost: env.FOAFOS_FLY_HOST || 'foafos-xmpp.fly.dev',
+  flyDir: env.FOAFOS_FLY_DIR || join(HOME, '.config/foafos-xmpp-fly'),
   bot: env.FOAFOS_BOT_ACCOUNT || 'foafbot',
 };
 const START_WAIT = num('FOAFOS_START_WAIT', 20) * 1000;
@@ -125,21 +122,6 @@ async function probeWebdav() {
   ];
 }
 
-async function probeTunnelWs() {
-  const r = await talk(C.protoWsPort, ['GET /xmpp-websocket HTTP/1.1', `Host: 127.0.0.1:${C.protoWsPort}`, `Origin: ${SHELL_ORIGIN}`, 'Upgrade: websocket', 'Connection: Upgrade',
-    'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==', 'Sec-WebSocket-Version: 13', 'Sec-WebSocket-Protocol: xmpp', '', ''].join('\r\n'), (g) => g.includes('\r\n'));
-  return [check('reaches Fly XMPP', / 101 /.test(r.split('\r\n')[0]), r ? r.split('\r\n')[0] : 'no answer: is the machine up?')];
-}
-
-async function probeTunnelTls() {
-  const s = await new Promise((resolve) => {
-    const t = tlsConnect({ host: '127.0.0.1', port: C.protoTlsPort, rejectUnauthorized: false, timeout: PROBE_WAIT }, () => { t.destroy(); resolve(true); });
-    t.on('error', () => resolve(false));
-    t.on('timeout', () => { t.destroy(); resolve(false); });
-  });
-  return [check('reaches Fly XMPP', s, s ? 'TLS handshake' : 'no TLS answer')];
-}
-
 async function probeSparql() {
   const r = await web(`http://127.0.0.1:${C.sparqlPort}/ds/sparql?query=${encodeURIComponent('ASK {}')}`, { headers: { Accept: 'application/sparql-results+json' } });
   let body = null;
@@ -160,7 +142,7 @@ async function probeShell() {
 
 async function probeBotLike(pid) {
   const link = run('lsof', ['-nP', '-a', '-p', String(pid), '-iTCP', '-sTCP:ESTABLISHED', '-Fn']);
-  return [check('connected to XMPP', new RegExp(`:${C.protoTlsPort}\\b`).test(link), link ? '' : 'no connection')];
+  return [check('connected to XMPP', /:5223\b/.test(link), link ? '' : 'no connection')];
 }
 
 async function probeBot(pid) {
@@ -172,8 +154,8 @@ async function probeBot(pid) {
 
 const chatAi = () => join(C.shellRoot, 'glitchcan-minigam/inklet/tools/chat-ai.py');
 const webdavDir = () => join(STATE, 'webdav');
-const protoAccount = (name) => {
-  try { return readFileSync(join(C.protoDir, 'accounts'), 'utf8').split('\n').find((l) => l.startsWith(`${name}:`))?.slice(name.length + 1) ?? null; } catch { return null; }
+const flyAccount = (name) => {
+  try { return readFileSync(join(C.flyDir, 'accounts'), 'utf8').split('\n').find((l) => l.startsWith(`${name}:`))?.slice(name.length + 1) ?? null; } catch { return null; }
 };
 const ORIGINS = (flag) => [flag, 'https://danbri.github.io', flag, SHELL_ORIGIN];
 const SERVICES = {
@@ -210,27 +192,17 @@ const SERVICES = {
     argv: () => ['python3', join(HERE, 'serve-foafos.py'), String(C.shellPort)],
     needs: () => [existsSync(join(C.shellRoot, 'glitchcan-minigam')) ? null : `no glitchcan-minigam in ${short(C.shellRoot)}: set FOAFOS_SHELL_ROOT`],
   },
-  'proto-ws': {
-    title: 'tunnel to Fly XMPP, for browsers (optional)', always: false, ports: () => [C.protoWsPort], sign: `proxy ${C.protoWsPort}:8081`, probe: probeTunnelWs, cwd: () => HOME,
-    argv: () => ['fly', 'proxy', `${C.protoWsPort}:8081`, '-a', C.protoApp],
-    needs: () => [run('which', ['fly']) ? null : 'the fly command is not on PATH'],
-  },
-  'proto-tls': {
-    title: 'tunnel to Fly XMPP, for clients (optional)', always: false, ports: () => [C.protoTlsPort], sign: `proxy ${C.protoTlsPort}:5223`, probe: probeTunnelTls, cwd: () => HOME,
-    argv: () => ['fly', 'proxy', `${C.protoTlsPort}:5223`, '-a', C.protoApp],
-    needs: () => [run('which', ['fly']) ? null : 'the fly command is not on PATH'],
-  },
-  // This laptop's pod, dialling out to the XMPP server on Fly through the tunnel.
+  // This laptop's pod, dialling out to the XMPP server on Fly. It is off unless named: see the security
+  // review before leaving it on, because the server is public.
   'pod-laptop': {
-    title: 'laptop pod on Fly XMPP (optional)', always: false, after: 'proto-tls', ports: () => [], sign: 'pod.mjs', probe: probeBotLike, cwd: () => join(C.shellRoot, 'glitchcan-minigam/packages/foafos/pod'),
-    argv: () => ['node', 'pod.mjs', '--base', `https://pod-laptop.${C.protoApp}.fly.dev/`, '--dir', join(HOME, 'foafos-lws-xmpp'), '--xmpp', `xmpps://127.0.0.1:${C.protoTlsPort}`,
-      '--domain', `${C.protoApp}.fly.dev`, '--jid', 'podlaptop', '--allow', `foafos@${C.protoApp}.fly.dev`, '--insecure-no-auth'],
-    env: () => ({ POD_PASSWORD: protoAccount('podlaptop') ?? '', NODE_EXTRA_CA_CERTS: join(C.protoDir, 'tls.crt') }),
+    title: 'laptop pod on Fly XMPP (optional)', always: false, ports: () => [], sign: 'pod.mjs', probe: probeBotLike, cwd: () => join(C.shellRoot, 'glitchcan-minigam/packages/foafos/pod'),
+    argv: () => ['node', 'pod.mjs', '--base', `https://pod-laptop.${C.flyHost}/`, '--dir', join(HOME, 'foafos-lws-xmpp'), '--xmpp', `xmpps://${C.flyHost}:5223`,
+      '--domain', C.flyHost, '--jid', 'podlaptop', '--allow', `foafos@${C.flyHost}`, '--insecure-no-auth'],
+    env: () => ({ POD_PASSWORD: flyAccount('podlaptop') ?? '' }),
     needs: () => {
       mkdirSync(join(HOME, 'foafos-lws-xmpp'), { recursive: true });
       return [
-        protoAccount('podlaptop') ? null : `no podlaptop account in ${short(join(C.protoDir, 'accounts'))}`,
-        existsSync(join(C.protoDir, 'tls.crt')) ? null : `no ${short(join(C.protoDir, 'tls.crt'))}: see packages/foafos/pod/fly/README.md`,
+        flyAccount('podlaptop') ? null : `no podlaptop account in ${short(join(C.flyDir, 'accounts'))}`,
         existsSync(join(C.shellRoot, 'glitchcan-minigam/packages/foafos/pod/node_modules')) ? null : 'run npm install in packages/foafos/pod'];
     },
   },
@@ -655,22 +627,22 @@ const HELP = `foafos-stack: the local Foafos servers, with one command.
   foafos-stack restart [service...]
   foafos-stack status  [-v] [--json]  what is really running; exits 1 unless all healthy
   foafos-stack logs    [service...] [-n LINES] [--no-follow]
-  foafos-stack chat [local|proto|shared] [--as ACCOUNT] [--say TEXT] [--wait SECONDS]
+  foafos-stack chat [local|shared] [--as ACCOUNT] [--say TEXT] [--wait SECONDS]
                                       a plain text XMPP client, already set up
-  foafos-stack backstage [local|proto|shared] [--as ACCOUNT] [--room NAME] [--wait SECONDS] [--watch] [--json]
+  foafos-stack backstage [local|shared] [--as ACCOUNT] [--room NAME] [--wait SECONDS] [--watch] [--json]
                                       the bots: who is in the room, what each did; read only
   foafos-stack backstage help         what Backstage shows, and what it cannot see
   foafos-stack doctor                 check what the servers need
   foafos-stack urls                   the addresses
   foafos-stack open                   open Foafos in your browser (macOS)
 
-Services: ${NAMES.join(' ')}. Those marked optional start only when named; proto means both tunnels.
+Services: ${NAMES.join(' ')}. Those marked optional start only when named.
 Guide: docs/foafos-local-setup-20261104.md`;
 
 // ── the command ─────────────────────────────────────────────────────────
 
 function services(given, fallback) {
-  const args = given.flatMap((a) => (a === 'proto' ? ['proto-ws', 'proto-tls'] : [a]));   // one word for both tunnels
+  const args = given.filter((a) => a !== 'proto');   // the old word for the tunnels, which are gone
   const bad = args.filter((a) => !SERVICES[a]);
   if (bad.length) { say(red(`unknown service: ${bad.join(' ')} (have: ${NAMES.join(' ')})`)); process.exit(2); }
   return args.length ? args : fallback;

@@ -32,5 +32,5 @@ class C(slixmpp.ClientXMPP):
             elif a.startswith('dm:'):
                 _, to, text = a.split(':', 2); s.send_message(mto=to, mbody=text, mtype='chat'); print('SENT DM', to, text, flush=True)
         await asyncio.sleep(seconds); s.disconnect()
-c = C(); c.connect(host='127.0.0.1', port=15223)
+c = C(); c.connect(host='foafos-xmpp.fly.dev', port=5223)
 asyncio.get_event_loop().run_until_complete(asyncio.wait_for(c.disconnected, seconds + 30))
