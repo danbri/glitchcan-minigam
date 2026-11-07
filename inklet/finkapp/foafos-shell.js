@@ -5701,7 +5701,16 @@ function buildUI() {
           });
           parent.appendChild(row);
         };
-        if (secretPod && !p.hasPassword) secretRow(card);
+        if (secretPod && !p.hasPassword) {
+          // Say what is being asked for and where to find it, not only that it is missing.
+          const help = p.carriage === 'xmpp'
+            ? `The password for ${p.relay.username}@${p.relay.domain}.`
+            : /(^|\.)foafos-xmpp\.fly\.dev$/.test((() => { try { return new URL(p.base).hostname; } catch { return ''; } })())
+              ? "The pod's own access token, not a Fly login. On the laptop that set it up, copy it with: tr -d '\\n' < ~/.config/foafos-xmpp-fly/token | pbcopy"
+              : "The pod's own access token, not an account password. Whoever runs this pod has it.";
+          card.appendChild(el('p', help)).className = 'fp-note';
+          secretRow(card);
+        }
 
         const buttons = el('div'); buttons.className = 'fp-actions';
         if (p.status === 'online' || p.status === 'connecting') {
