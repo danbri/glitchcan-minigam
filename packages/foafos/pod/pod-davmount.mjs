@@ -1,126 +1,87 @@
 #!/usr/bin/env node
-// Show a Foafos home pod as a WebDAV server, so that Finder can mount it.
+// Show a running LWS pod as a WebDAV server, so that Finder can mount it. Every request
+// goes through the pod's own LWS access control.
 //
-//   node pod-davmount.mjs DIR [--port N]
+//   node pod-davmount.mjs POD_URL --key-file FILE --users FILE --user NAME [--port N]
 //
-// Stage 1: a local pod directory, read-only, on 127.0.0.1 only. It prints the mount line
-// (http://127.0.0.1:PORT/) on standard output: in Finder, Go > Connect to Server.
+// This is a thin wrapper around `factoidal webdav-serve` (the verified, LWS-mediated
+// WebDAV path in @factoidal/core). It writes one mount file:
 //
-// It takes no lock and writes nothing, so it runs beside a running pod, and it reads the
-// index again when the index or the journal changes. It reads the files directly, so the
-// pod's access control does not apply: any process on this machine that reaches the port
-// reads the whole pod. Stop it with Ctrl-C.
+//   kind: lws, url: POD_URL, auth: did-key, key-file: FILE, users: NAME
 //
-// This file holds the source (the backend). The WebDAV side is pod-dav.mjs, which has the
-// backend interface. README "pod-davmount" lists the later stages (remote LWS over HTTPS,
-// LWS over XMPP): each is a new backend here, with no change to pod-dav.mjs.
+// so the WebDAV server reaches the pod only through the LWS client, as the key's did:key
+// agent, and the pod decides each request with its own ACL. It never reads a pod
+// directory. A path (not an http/https URL) is refused.
 //
-// Exit: 2 a usage fault, a directory it cannot read, or a port it cannot bind.
+// Login: HTTP Basic from --users (made with `factoidal webdav-user FILE NAME`); no guest,
+// so a request with no credentials gets 401. Bound to 127.0.0.1. Read only (Factoidal
+// issue 1147). The did:key is printed at start: the pod's ACL must grant it acl:Read
+// where the reader may read, and nothing else.
+//
+// Exit: 2 a usage fault; otherwise the exit code of webdav-serve.
 
-import { constants, realpathSync, statSync } from 'node:fs';
-import { open } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { spawn } from 'node:child_process';
+import { chmodSync, existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { canonical, listenDav } from './pod-dav.mjs';
-import { INDEX_FILE, JOURNAL_FILE, PodReadError, bodyName, childrenOf, readPod } from './pod-read.mjs';
 
-const COLLECTION_KINDS = new Set(['container', 'storageRoot']);
+const USAGE = 'usage: pod-davmount POD_URL --key-file FILE --users FILE --user NAME [--port N]';
 
-/** The state of a pod as backend records. Auxiliary resources (metadata, linksets) are not shown. */
-function viewOf(state) {
-  const infos = new Map();
-  for (const e of state.entries.values()) {
-    const collection = COLLECTION_KINDS.has(e.kind);
-    if (!collection && e.kind !== 'dataResource') continue;
-    const path = canonical(e.path);
-    if (path === null) continue;
-    infos.set(path, {
-      path, collection, size: collection ? 0 : e.size,
-      contentType: /^[\x20-\x7e]+$/.test(e.contentType) ? e.contentType : 'application/octet-stream',
-      mtime: e.mtime ? e.mtime * 1000 : null, etag: collection ? null : `"${e.body ?? 'empty'}-${e.size}-${e.fnv}"`, body: e.body,
-    });
-  }
-  const tree = childrenOf(infos.keys());
-  for (const path of tree.keys()) {
-    if (!infos.has(path)) infos.set(path, { path, collection: true, size: 0, contentType: '', mtime: null, etag: null, body: null });
-  }
-  return { infos, tree };
-}
-
-/** The backend of a local pod directory. Paths never reach the file system: a path finds
- *  an index entry, and an entry's body number names the file. */
-export function localPodBackend(dir) {
-  const root = resolve(dir);
-  let view = null;
-  let seen = '';
-  const signature = () => [INDEX_FILE, JOURNAL_FILE].map((name) => {
-    try {
-      const s = statSync(join(root, name));
-      return `${s.ino}:${s.size}:${s.mtimeMs}`;
-    } catch { return '-'; }
-  }).join('|');
-  const current = () => {
-    const now = signature();
-    if (view === null || now !== seen) {
-      const state = readPod(root);
-      if (state.sealed) throw new PodReadError(`${root} is sealed under a storage key: stage 1 reads clear storages only`);
-      view = viewOf(state);
-      seen = now;
-    }
-    return view;
-  };
-  const find = (path) => {
-    const { infos } = current();
-    return infos.get(path) ?? (path.endsWith('/') ? null : infos.get(`${path}/`) ?? null);
-  };
-  return {
-    async stat(path) { return find(path); },
-    async list(path) {
-      const { infos, tree } = current();
-      return (tree.get(path) ?? []).map((child) => infos.get(child));
-    },
-    async read(path, { start, end, etag } = {}) {
-      const info = find(path);
-      if (info === null || (etag && info.etag !== etag)) throw new Error('the resource changed');
-      if (info.body === null) return [];
-      const handle = await open(join(root, bodyName(info.body)), constants.O_RDONLY | constants.O_NOFOLLOW);
-      try {
-        if ((await handle.stat()).size !== info.size) throw new Error('the body file differs from the index');
-      } catch (e) {
-        await handle.close();
-        throw e;
-      }
-      return handle.createReadStream({ start, end });
-    },
-  };
-}
-
-async function main() {
+/** The checked arguments, or a reason to refuse. Exported for the tests. */
+export function plan(argv) {
   let values;
   let positionals;
   try {
-    ({ values, positionals } = parseArgs({ allowPositionals: true, options: { port: { type: 'string', default: '0' } } }));
-  } catch { positionals = []; }
-  const port = Number(values?.port);
-  if (positionals.length !== 1 || !Number.isInteger(port) || port < 0 || port > 65535) {
-    console.error('usage: pod-davmount DIR [--port N]');
+    ({ values, positionals } = parseArgs({ args: argv, allowPositionals: true, options: {
+      port: { type: 'string', default: '0' }, 'key-file': { type: 'string' }, users: { type: 'string' }, user: { type: 'string' },
+    } }));
+  } catch (e) { return { error: e.message }; }
+  if (positionals.length !== 1) return { error: 'give one POD_URL' };
+  let url;
+  try { url = new URL(positionals[0]); } catch { url = null; }
+  if (url === null || !['http:', 'https:'].includes(url.protocol)) {
+    return { error: `${positionals[0]} is not an http or https URL: pod-davmount reaches a pod only over LWS, never by reading its directory` };
+  }
+  if (url.username || url.password || url.search || url.hash) return { error: 'the POD_URL may not hold credentials, a query or a fragment' };
+  const port = Number(values.port);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) return { error: `bad --port ${values.port}` };
+  for (const k of ['key-file', 'users', 'user']) if (!values[k]) return { error: `--${k} is required` };
+  if (!/^[A-Za-z0-9_.-]{1,64}$/.test(values.user)) return { error: 'a --user name is 1 to 64 of A-Z a-z 0-9 _ . -' };
+  if (!existsSync(values.users)) return { error: `no users file ${values.users}: make one with "factoidal webdav-user ${values.users} ${values.user}"` };
+  return { url: url.href.endsWith('/') ? url.href : `${url.href}/`, port, keyFile: resolve(values['key-file']), users: resolve(values.users), user: values.user };
+}
+
+/** The mount file text: kind lws with a did:key agent, never kind local. */
+export function mountFile({ url, keyFile, user }) {
+  return `# Pod ${url}\n- kind: lws\n- url: ${url}\n- auth: did-key\n- key-file: ${keyFile}\n- users: ${user}\n`;
+}
+
+/** The webdav-serve command line: no --guest, loopback only. */
+export function serveArgs(configDir, { port, users }) {
+  return ['webdav-serve', configDir, '--host', '127.0.0.1', '--port', String(port), '--users', users];
+}
+
+function factoidalCli() {
+  const require = createRequire(import.meta.url);
+  return join(dirname(require.resolve('@factoidal/core/package.json')), 'bin', 'factoidal.mjs');
+}
+
+async function main() {
+  const p = plan(process.argv.slice(2));
+  if (p.error) {
+    console.error(`pod-davmount: ${p.error}\n${USAGE}`);
     process.exit(2);
   }
-  const backend = localPodBackend(positionals[0]);
-  let running;
-  try {
-    await backend.stat('/');
-    running = await listenDav(backend, { port });
-  } catch (e) {
-    console.error(`pod-davmount: ${e instanceof PodReadError ? e.message : e.code === 'EADDRINUSE' ? `port ${port} is in use` : `unexpected fault (${e.name})`}`);
-    process.exit(2);
-  }
-  console.log(running.url);
-  console.error('read-only; any process on this machine can read this pod through the port; Ctrl-C stops it');
-  const stop = () => running.close().then(() => process.exit(0));
-  process.on('SIGINT', stop);
-  process.on('SIGTERM', stop);
+  const configDir = mkdtempSync(join(tmpdir(), 'pod-davmount-'));
+  chmodSync(configDir, 0o700);
+  writeFileSync(join(configDir, 'pod.md'), mountFile(p), { mode: 0o600 });
+  const child = spawn(process.execPath, [factoidalCli(), ...serveArgs(configDir, p)], { stdio: 'inherit' });
+  const clean = () => rmSync(configDir, { recursive: true, force: true });
+  for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => child.kill(sig));
+  child.on('exit', (code, signal) => { clean(); process.exit(code ?? (signal ? 0 : 1)); });
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

@@ -1,5 +1,5 @@
 // Read a Foafos home pod's storage directory without opening it: no lock, no write.
-// Shared by pod-summary.mjs and pod-davmount.mjs. No dependencies, so it runs before `npm install`.
+// Used by pod-summary.mjs (a local, read-only CLI). Never used to serve a pod: see README "pod-davmount". No dependencies, so it runs before `npm install`.
 //
 // Why not the Factoidal API: openLwsStorage (@factoidal/core/lws 0.33.0) has no read-only
 // mode. It takes lws.lock, refuses a directory that a running pod holds, and its start

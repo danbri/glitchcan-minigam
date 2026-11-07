@@ -1,18 +1,20 @@
 // Tests of pod-summary.mjs and pod-davmount.mjs, against fixture pods in a temp directory.
+// pod-davmount is tested only through a real lws-serve with an ACL: it never reads a pod directory.
 // No relay and no browser. A fixture is made by the real Factoidal engine; the "running
 // pod" is the real pod.mjs on a fixture. Exit 0 when every check passes.
 //
 //   cd packages/foafos/pod && npm run test:tools
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { appendFileSync, chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
-import { connect } from 'node:net';
+import { connect, createServer } from 'node:net';
+import { createRequire } from 'node:module';
 import { networkInterfaces, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openLwsStorage } from '@factoidal/core/lws';
-import { canonical, listenDav, parsePropfind } from '../pod-dav.mjs';
+import { mountFile as davMountFile, plan as davPlan, serveArgs as davServeArgs } from '../pod-davmount.mjs';
 import { readPod } from '../pod-read.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -268,234 +270,104 @@ const livePut = (path, body) => fetch(new URL(path, liveBase), { method: 'PUT', 
 }
 
 // ---------------------------------------------------------------------------
-// pod-davmount: the real CLI and a real HTTP client.
-const transcript = [];
-
-/** A raw request: the target and the Host go out as given. */
-function http(port, method, target, { headers = {}, body, host } = {}) {
-  return new Promise((done, fail) => {
-    const req = request({ host: '127.0.0.1', port, method, path: target, setHost: false,
-      headers: { Host: host ?? `127.0.0.1:${port}`, ...headers } }, (res) => {
-      const chunks = [];
-      res.on('data', (c) => chunks.push(c));
-      res.on('end', () => {
-        const buffer = Buffer.concat(chunks);
-        transcript.push(JSON.stringify(res.headers), buffer.toString('latin1'));
-        done({ status: res.statusCode, headers: res.headers, buffer, text: buffer.toString('utf8') });
-      });
-    });
-    req.on('error', fail);
-    req.end(body);
+// pod-davmount: only through LWS. A real lws-serve with a root ACL and three did:key
+// agents (owner: Read, Write, Control; reader: Read; stranger: nothing); each agent gets
+// its own pod-davmount (factoidal webdav-serve, kind: lws, auth: did-key). The pod's ACL
+// decides every WebDAV read.
+{
+  const FACTOIDAL = join(dirname(createRequire(import.meta.url).resolve('@factoidal/core/package.json')), 'bin', 'factoidal.mjs');
+  const work = join(tmp, 'dav');
+  mkdirSync(work);
+  const users = join(work, 'users.txt');
+  const AGENTS = ['owner', 'reader', 'stranger'];
+  for (const a of AGENTS) {
+    const r = spawnSync(process.execPath, [FACTOIDAL, 'webdav-user', users, a, '--iterations', '100000'], { input: `pw-${a}\n`, encoding: 'utf8' });
+    if (r.status !== 0) throw new Error(`webdav-user ${a}: ${r.stderr}`);
+  }
+  const freePort = () => new Promise((done) => {
+    const s = createServer();
+    s.listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => done(port)); });
   });
-}
+  const podPort = await freePort();
+  const podUrl = `http://127.0.0.1:${podPort}/`;
 
-function startMount(dir, ...args) {
-  return new Promise((done, fail) => {
-    const c = spawn(process.execPath, [DAVMOUNT, dir, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+  /** Start a child; resolve with its http origin from stdout and its did:key from stderr. */
+  const startChild = (argv, { wantDid = false } = {}) => new Promise((done, fail) => {
+    const c = spawn(process.execPath, argv, { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, FACTOIDAL_LWS_KEY: '' } });
     children.push(c);
     let out = '';
-    c.stdout.on('data', (d) => {
-      out += d;
-      const line = out.split('\n')[0];
-      if (out.includes('\n')) done({ child: c, line, port: Number(/:(\d+)\/$/.exec(line)?.[1]) });
-    });
-    c.on('close', (code) => fail(new Error(`pod-davmount exited ${code}`)));
+    let err = '';
+    const timer = setTimeout(() => fail(new Error(`no start: ${out} ${err}`)), 120000);
+    const ready = () => {
+      const m = /^(http:\/\/127\.0\.0\.1:\d+)$/m.exec(out);
+      const d = /as (did:key:z[1-9A-HJ-NP-Za-km-z]+)/.exec(err);
+      if (m && (!wantDid || d)) { clearTimeout(timer); done({ c, origin: m[1], did: d?.[1], log: () => out + err }); }
+    };
+    c.stdout.on('data', (b) => { out += b; ready(); });
+    c.stderr.on('data', (b) => { err += b; ready(); });
+    c.on('exit', (code) => { clearTimeout(timer); fail(new Error(`exited ${code}: ${err}`)); });
   });
-}
-
-const APPLE_PROPFIND = `<?xml version="1.0" encoding="utf-8"?>
-<D:propfind xmlns:D="DAV:"><D:prop xmlns:A="http://www.apple.com/webdav_fs/props/">
-<D:getlastmodified/><D:getcontentlength/><D:creationdate/><D:resourcetype/><D:quota-available-bytes/><A:appledoubleheader/>
-</D:prop></D:propfind>`;
-const hrefs = (xml) => [...xml.matchAll(/<D:href>([^<]*)<\/D:href>/g)].map((m) => m[1]);
-
-{
-  const before = hashTree(podA);
-  const mount = await startMount(podA);
-  const { port } = mount;
-  const url = `http://127.0.0.1:${port}/`;
-  check(mount.line === url, `the mount line is the URL (${mount.line})`);
-
-  const opt = await http(port, 'OPTIONS', '/');
-  check(opt.status === 200 && opt.headers.dav === '1' && opt.headers.allow === 'OPTIONS, GET, HEAD, PROPFIND', 'OPTIONS: class 1, and only the read methods');
-
-  const root = await http(port, 'PROPFIND', '/', { headers: { Depth: '1' } });
-  const rootHrefs = hrefs(root.text);
-  check(root.status === 207 && root.headers['content-type'].startsWith('application/xml'), 'PROPFIND / gives 207 XML');
-  check(['/', '/empty.txt', '/my%20notes/', '/notes/', '/photo.bin'].every((h) => rootHrefs.includes(h)) && rootHrefs.length === 5, `PROPFIND / Depth 1 lists the root and its members (${rootHrefs.length})`);
-  check(root.text.includes('<D:collection/>') && root.text.includes('<D:getcontentlength>4096</D:getcontentlength>') && root.text.includes('<D:getcontenttype>application/octet-stream</D:getcontenttype>'), 'PROPFIND gives type, size and collection facts');
-
-  const zero = await http(port, 'PROPFIND', '/notes', { headers: { Depth: '0' } });
-  check(zero.status === 207 && JSON.stringify(hrefs(zero.text)) === '["/notes/"]', 'PROPFIND /notes Depth 0 answers for /notes/ only');
-
-  const spaced = await http(port, 'PROPFIND', '/my%20notes/', { headers: { Depth: '1' } });
-  check(spaced.text.includes('/my%20notes/a%20b%C3%A9%26%3C.txt') && spaced.text.includes('<D:displayname>a bé&amp;&lt;.txt</D:displayname>'), 'names are percent-encoded in href and XML-escaped in displayname');
-
-  const apple = await http(port, 'PROPFIND', '/notes/a.txt', { headers: { Depth: '0', 'Content-Type': 'text/xml' }, body: APPLE_PROPFIND });
-  const [ok200, ko404] = apple.text.split('</D:propstat>');
-  check(apple.status === 207 && ok200.includes('getcontentlength') && ok200.includes('200 OK'), 'the PROPFIND that Finder sends: known properties in a 200 propstat');
-  check(ko404.includes('404 Not Found') && ko404.includes('<appledoubleheader xmlns="http://www.apple.com/webdav_fs/props/"/>') && ko404.includes('<quota-available-bytes xmlns="DAV:"/>'), 'unknown properties in a 404 propstat, with their namespaces');
-
-  const names = await http(port, 'PROPFIND', '/notes/a.txt', { headers: { Depth: '0' }, body: '<propfind xmlns="DAV:"><propname/></propfind>' });
-  check(names.text.includes('<D:getetag/>') && !names.text.includes(BODY_MARKER), 'propname gives names with no values');
-
-  check((await http(port, 'PROPFIND', '/._notes', { headers: { Depth: '0' } })).status === 404 && (await http(port, 'PROPFIND', '/.DS_Store', { headers: { Depth: '0' } })).status === 404, 'the AppleDouble and .DS_Store probes of Finder get 404');
-  const infinity = await http(port, 'PROPFIND', '/');
-  check(infinity.status === 403 && infinity.text.includes('propfind-finite-depth'), 'PROPFIND with no Depth is refused with 403 propfind-finite-depth');
-  check((await http(port, 'PROPFIND', '/', { headers: { Depth: '0' }, body: '<nope' })).status === 400, 'a malformed PROPFIND body gets 400');
-  check((await http(port, 'PROPFIND', '/', { headers: { Depth: '0' }, body: '<!DOCTYPE a [<!ENTITY x "y">]><D:propfind xmlns:D="DAV:"><D:allprop/></D:propfind>' })).status === 400, 'a DTD gets 400');
-  check((await http(port, 'PROPFIND', '/', { headers: { Depth: '0' }, body: `<a>${'x'.repeat(70000)}</a>` })).status === 413, 'an oversize PROPFIND body gets 413');
-
-  const get = await http(port, 'GET', '/notes/a.txt');
-  check(get.status === 200 && get.text === `hello ${BODY_MARKER}` && get.headers['content-type'] === 'text/plain', 'GET gives the current bytes and the content type');
-  transcript.pop();   // this body is the fixture's own content, asked for by name
-  check(get.headers['x-content-type-options'] === 'nosniff' && get.headers['content-security-policy'] === 'sandbox', 'GET sets nosniff and a sandbox policy');
-  const bin = await http(port, 'GET', '/photo.bin');
-  check(bin.buffer.equals(Buffer.from(Uint8Array.from({ length: 4096 }, (_, i) => i % 251))), '4096 binary bytes are identical');
-  const empty = await http(port, 'GET', '/empty.txt');
-  check(empty.status === 200 && empty.buffer.length === 0, 'an empty resource gives 200 and no bytes');
-  const spacedGet = await http(port, 'GET', '/my%20notes/a%20b%C3%A9%26%3C.txt');
-  check(spacedGet.text === 'spaced', 'GET finds a percent-encoded name');
-  const listing = await http(port, 'GET', '/notes/');
-  check(listing.status === 200 && listing.text === 'a.txt\ndeep/\n', 'GET on a collection gives a plain listing');
-
-  const head = await http(port, 'HEAD', '/photo.bin');
-  check(head.status === 200 && head.headers['content-length'] === '4096' && head.buffer.length === 0 && Boolean(head.headers.etag), 'HEAD gives the headers and no body');
-  const range = await http(port, 'GET', '/photo.bin', { headers: { Range: 'bytes=10-19' } });
-  check(range.status === 206 && range.headers['content-range'] === 'bytes 10-19/4096' && range.buffer.equals(bin.buffer.subarray(10, 20)), 'a Range GET gives 206 and the right bytes');
-  const tail = await http(port, 'GET', '/photo.bin', { headers: { Range: 'bytes=-5' } });
-  check(tail.status === 206 && tail.buffer.equals(bin.buffer.subarray(4091)), 'a suffix Range works');
-  check((await http(port, 'GET', '/photo.bin', { headers: { Range: 'bytes=5000-' } })).status === 416, 'a Range past the end gets 416');
-  check((await http(port, 'GET', '/photo.bin', { headers: { 'If-None-Match': head.headers.etag } })).status === 304, 'If-None-Match gives 304');
-  check((await http(port, 'GET', '/photo.bin', { headers: { 'If-Modified-Since': head.headers['last-modified'] } })).status === 304, 'If-Modified-Since gives 304');
-  check((await http(port, 'GET', '/nothing.txt')).status === 404, 'GET of nothing gets 404');
-  check((await http(port, 'GET', '/notes/a.txt/')).status === 404, 'a file with a trailing slash gets 404');
-
-  for (const method of ['PUT', 'DELETE', 'MKCOL', 'COPY', 'MOVE', 'PROPPATCH', 'LOCK', 'UNLOCK', 'POST', 'PATCH']) {
-    const r = await http(port, method, '/notes/a.txt', { body: method === 'PUT' ? 'overwritten' : undefined, headers: { Destination: `${url}x` } });
-    check(r.status === 405 && r.headers.allow === 'OPTIONS, GET, HEAD, PROPFIND', `${method} is refused with 405`);
+  const mounts = {};
+  for (const a of AGENTS) {
+    mounts[a] = await startChild([DAVMOUNT, podUrl, '--key-file', join(work, `${a}.jwk`), '--users', users, '--user', a], { wantDid: true });
   }
-  const expect = await new Promise((done, fail) => {
-    const req = request({ host: '127.0.0.1', port, method: 'PUT', path: '/x.txt', headers: { Expect: '100-continue', 'Content-Length': 5 } }, (res) => { res.resume(); res.on('end', () => done({ status: res.statusCode, continued: req.continued === true })); });
-    req.on('continue', () => { req.continued = true; });
-    req.on('error', fail);
-    req.flushHeaders();
-    setTimeout(() => req.destroy(), 2000).unref();
-  });
-  check(expect.status === 405 && !expect.continued, 'a PUT with Expect: 100-continue gets 405, not 100');
+  check(AGENTS.every((a) => (statSync(join(work, `${a}.jwk`)).mode & 0o777) === 0o600), 'each agent key file is owner-only (0600)');
+  check(AGENTS.every((a) => /kind: lws|\(lws, read-only, as did:key:/.test(mounts[a].log())), 'each mount is kind lws, read only, as a did:key agent');
 
-  for (const target of ['/lws-files.json', '/lws-journal', '/lws.lock', '/bodies/', '/bodies/00/0000000000000000',
-    '/../lws-files.json', '/%2e%2e/lws-files.json', '/notes/../../lws-files.json', '/..%2flws-files.json', '/notes//a.txt', '/a%00b', '/%ff']) {
-    check((await http(port, 'GET', target)).status === 404, `GET ${target} gets 404`);
-  }
-  const absolute = await http(port, 'GET', 'http://evil.example/lws-files.json');
-  check(absolute.status === 404, 'an absolute-form target gets 404');
+  const R = podUrl;
+  const auth = (frag, agent, modes) => `<${R}.acl#${frag}> a acl:Authorization ;\n  acl:agent <${mounts[agent].did}> ;\n  acl:accessTo <${R}> ; acl:default <${R}> ;\n  acl:mode ${modes} .\n`;
+  writeFileSync(join(work, 'root.acl'), '@prefix acl: <http://www.w3.org/ns/auth/acl#> .\n\n' +
+    auth('owner', 'owner', 'acl:Read, acl:Write, acl:Control') + auth('reader', 'reader', 'acl:Read'));
+  await startChild([FACTOIDAL, 'lws-serve', join(work, 'pod'), '--port', String(podPort), '--authz', join(work, 'as'), '--storage', 'files', '--root-acl', join(work, 'root.acl')]);
 
-  check((await http(port, 'GET', '/', { host: 'evil.example' })).status === 421, 'a foreign Host gets 421');
-  check((await http(port, 'PROPFIND', '/', { host: `evil.example:${port}`, headers: { Depth: '1' } })).status === 421, 'PROPFIND with a foreign Host gets 421');
-  check((await http(port, 'GET', '/', { host: `localhost:${port}` })).status === 200, 'localhost:PORT is a good Host');
-  check((await http(port, 'GET', '/notes/a.txt', { headers: { Origin: 'https://evil.example' } })).status === 403, 'a foreign Origin gets 403');
-  check((await http(port, 'GET', '/photo.bin', { headers: { 'Sec-Fetch-Site': 'cross-site' } })).status === 403, 'a cross-site browser fetch gets 403');
-  check(!('access-control-allow-origin' in get.headers), 'no CORS header');
+  const { createLwsClient } = await import('@factoidal/core/lws/client');
+  const jwk = JSON.parse(readFileSync(join(work, 'owner.jwk'), 'utf8'));
+  const did = mounts.owner.did;
+  const owner = await createLwsClient({ selfIssued: { subject: did, keyId: `${did}#${did.slice(8)}`, jwk } });
+  const put = await owner.update(`${podUrl}hello.txt`, { body: BODY_MARKER, mediaType: 'text/plain', precondition: 'none' });
+  check(put.status === 201, 'the owner writes hello.txt over LWS');
 
-  // Standard clients.
-  const viaFetch = await fetch(`${url}notes/deep/b.json`);
-  check(viaFetch.status === 200 && await viaFetch.text() === '{"x":1}', 'fetch reads a resource');
-  const viaFetchDav = await fetch(url, { method: 'PROPFIND', headers: { Depth: '1' } });
-  check(viaFetchDav.status === 207, 'fetch PROPFIND gives 207');
-  const hasCurl = spawnSync('curl', ['--version']).status === 0;
-  if (hasCurl) {
-    const curl = (...args) => execFileSync('curl', ['-sS', ...args], { encoding: 'utf8' });
-    check(curl('-X', 'PROPFIND', '-H', 'Depth: 1', `${url}notes/`).includes('<D:href>/notes/deep/</D:href>'), 'curl PROPFIND lists a collection');
-    check(curl('-r', '0-4', `${url}notes/a.txt`) === 'hello', 'curl reads a byte range');
-    check(curl('-o', '/dev/null', '-w', '%{http_code}', '-T', SUMMARY, `${url}x.mjs`) === '405', 'curl upload of a real file gets 405');
-    const big = `<?xml version="1.0"?><D:propfind xmlns:D="DAV:"><D:prop>${'<D:displayname/>'.repeat(200)}</D:prop></D:propfind>`;
-    check(curl('-X', 'PROPFIND', '-H', 'Depth: 0', '-H', 'Expect: 100-continue', '--data-binary', big, '-o', '/dev/null', '-w', '%{http_code}', url) === '207', 'PROPFIND with Expect: 100-continue gets its body and gives 207');
-  } else console.log('NOTE curl is not on PATH: the curl checks did not run');
+  const basic = (u, p) => ({ authorization: `Basic ${Buffer.from(`${u}:${p}`).toString('base64')}` });
+  const login = (a) => basic(a, `pw-${a}`);
+  const dav = async (a, method, path, headers = {}) => {
+    const r = await fetch(`${mounts[a].origin}${path}`, { method, headers });
+    return { status: r.status, text: await r.text() };
+  };
 
-  // Loopback only: the machine's other addresses refuse.
-  const lan = Object.values(networkInterfaces()).flat().find((i) => i.family === 'IPv4' && !i.internal);
-  if (lan) {
-    const reached = await new Promise((done) => {
-      const s = connect({ host: lan.address, port, timeout: 1000 });
-      s.on('connect', () => { s.destroy(); done(true); });
-      s.on('error', () => done(false));
-      s.on('timeout', () => { s.destroy(); done(false); });
-    });
-    check(!reached, 'the port does not answer on the LAN address');
-  } else console.log('NOTE no LAN address: the bind check did not run');
+  const ok = await dav('reader', 'GET', '/pod/hello.txt', login('reader'));
+  check(ok.status === 200 && ok.text === BODY_MARKER, 'reader (acl:Read) reads hello.txt through WebDAV');
+  const list = await dav('reader', 'PROPFIND', '/pod/', { depth: '1', ...login('reader') });
+  check(list.status === 207 && list.text.includes('hello.txt'), 'reader lists the pod root');
+  const acl = await dav('reader', 'GET', '/pod/.acl', login('reader'));
+  check(acl.status !== 200 && !acl.text.includes('acl:Authorization'), `reader (no acl:Control) cannot read .acl (${acl.status})`);
+  const ownerAcl = await dav('owner', 'GET', '/pod/.acl', login('owner'));
+  check(ownerAcl.status === 200, 'owner (acl:Control) reads .acl: the pod decides, not the WebDAV side');
+  const stranger = await dav('stranger', 'GET', '/pod/hello.txt', login('stranger'));
+  check(stranger.status !== 200 && !stranger.text.includes(BODY_MARKER), `stranger (no grant) is refused by the pod (${stranger.status})`);
+  const strangerList = await dav('stranger', 'PROPFIND', '/pod/', { depth: '1', ...login('stranger') });
+  check(!strangerList.text.includes('hello.txt'), 'stranger cannot list the pod');
+  check((await dav('reader', 'GET', '/pod/hello.txt')).status === 401, 'no credentials: 401 (no guest)');
+  check((await dav('reader', 'GET', '/pod/hello.txt', basic('reader', 'wrong'))).status === 401, 'a wrong password: 401');
+  check((await dav('reader', 'GET', '/pod/hello.txt', login('stranger'))).status === 404, 'another login does not reach this mount');
+  check((await dav('owner', 'PUT', '/pod/new.txt', login('owner'))).status === 403, 'read only: PUT is 403, even for the owner');
+  check((await fetch(`${podUrl}hello.txt`)).status === 401, 'the pod itself: no token, 401');
 
-  const all = transcript.join('\n');
-  check(![SIGNING_KEY, INBOX_TOKEN].some((s) => all.includes(s)) && !/signingKey/i.test(all), 'no DAV response holds the signing key or the inbox token');
-  check(hashTree(podA) === before, 'pod directory hash is the same after the whole WebDAV session');
+  // Refusals of the CLI: a pod directory is never read.
+  const refuse = (...args) => spawnSync(process.execPath, [DAVMOUNT, ...args], { encoding: 'utf8' });
+  const dir = refuse(podA, '--key-file', join(work, 'reader.jwk'), '--users', users, '--user', 'reader');
+  check(dir.status === 2 && dir.stderr.includes('never by reading its directory'), 'a pod directory is refused, exit 2');
+  check(refuse(podUrl, '--users', users, '--user', 'reader').status === 2, 'no --key-file: exit 2');
+  check(refuse(podUrl, '--key-file', join(work, 'reader.jwk'), '--user', 'reader').status === 2, 'no --users: exit 2');
+  check(refuse(podUrl, '--key-file', join(work, 'reader.jwk'), '--users', users, '--user', 'reader', '--port', 'x').status === 2, 'a bad --port: exit 2');
+  const p = davPlan([podUrl, '--key-file', 'k.jwk', '--users', users, '--user', 'reader']);
+  const text = davMountFile(p);
+  check(/- kind: lws\n/.test(text) && /- auth: did-key\n/.test(text) && !/kind: local/.test(text), 'the mount file is kind lws with auth did-key');
+  check(!davServeArgs('/x', p).includes('--guest') && davServeArgs('/x', p).includes('--users'), 'webdav-serve runs with --users and no --guest');
+  const src = readFileSync(DAVMOUNT, 'utf8');
+  check(!/pod-read|lws-files|openLwsStorage|bodies\//.test(src), 'pod-davmount.mjs has no code that reads a pod directory');
+  check(!existsSync(resolve(here, '../pod-dav.mjs')), 'the direct WebDAV server pod-dav.mjs is gone');
 
-  mount.child.removeAllListeners('close');
-  const exited = new Promise((done) => { mount.child.on('close', done); });
-  mount.child.kill('SIGTERM');
-  check(await exited === 0, 'SIGTERM stops the server with exit 0');
-}
-
-// Beside the running pod: no lock needed, and new writes show with no restart.
-{
-  const before = hashTree(podLive);
-  const mount = await startMount(podLive);
-  check((await http(mount.port, 'GET', '/live-1.txt')).text === 'from the running pod', 'the mount reads a pod whose lock is held');
-  check(hashTree(podLive) === before, 'the mount changes nothing in a running pod directory');
-  await livePut('/live-2.txt', 'second');
-  const seen = await http(mount.port, 'PROPFIND', '/live-2.txt', { headers: { Depth: '0' } });
-  check(seen.status === 207, 'a new write to the running pod shows with no restart');
-  await livePut('/live-2.txt', 'second, longer');
-  check((await http(mount.port, 'GET', '/live-2.txt')).text === 'second, longer', 'an overwrite shows the new bytes');
-  mount.child.removeAllListeners('close');
-  mount.child.kill('SIGKILL');
-}
-
-// A body that vanished: a 503 with no detail, not a hang.
-{
-  const pod2 = join(tmp, 'a-lost');
-  cpSync(podA, pod2, { recursive: true });
-  const r = summaryJson(pod2);
-  unlinkSync(join(pod2, r.entries.find((e) => e.path === '/notes/deep/b.json').body));
-  const mount = await startMount(pod2);
-  const lost = await http(mount.port, 'GET', '/notes/deep/b.json');
-  check(lost.status === 503 && !lost.text.includes(pod2), 'a lost body gets 503 and the message names no path');
-  mount.child.removeAllListeners('close');
-  mount.child.kill('SIGKILL');
-}
-
-// Refusals at start.
-{
-  const refuse = (dir) => spawnSync(process.execPath, [DAVMOUNT, dir], { encoding: 'utf8', timeout: 10000 });
-  const sealed = refuse(sealedPod);
-  check(sealed.status === 2 && sealed.stderr.includes('sealed') && sealed.stdout === '', 'a sealed pod is refused at start, exit 2');
-  check(![STORAGE_KEY].some((s) => sealed.stderr.includes(s)), 'the refusal prints no key');
-  check(refuse(join(tmp, 'empty')).status === 2, 'a directory that is not a pod is refused at start');
-  check(spawnSync(process.execPath, [DAVMOUNT, podA, '--port', 'x'], { encoding: 'utf8' }).status === 2, 'a bad --port is exit 2');
-}
-
-// The backend seam: pod-dav.mjs works with a source that has no pod behind it.
-{
-  const files = new Map([['/', { path: '/', collection: true, size: 0, contentType: '', mtime: null, etag: null }],
-    ['/x%20y.txt', { path: '/x%20y.txt', collection: false, size: 3, contentType: 'text/plain', mtime: 1e12, etag: '"v1"' }]]);
-  const running = await listenDav({
-    async stat(path) { return files.get(path) ?? null; },
-    async list(path) { return path === '/' ? [files.get('/x%20y.txt')] : []; },
-    async read(_path, { start = 0, end = 2 } = {}) { return [Buffer.from('abc').subarray(start, end + 1)]; },
-  });
-  check(running.server.address().address === '127.0.0.1', 'listenDav binds 127.0.0.1');
-  const dav = await http(running.port, 'PROPFIND', '/', { headers: { Depth: '1' } });
-  check(hrefs(dav.text).includes('/x%20y.txt'), 'a memory backend lists through the same WebDAV side');
-  check((await http(running.port, 'GET', '/x%20y.txt', { headers: { Range: 'bytes=1-1' } })).text === 'b', 'a memory backend reads a range');
-  await running.close();
-  const failing = await listenDav({ async stat() { throw new Error('SECRET DETAIL'); }, async list() { return []; }, async read() { return []; } });
-  const down = await http(failing.port, 'GET', '/');
-  check(down.status === 503 && !down.text.includes('SECRET'), 'a backend fault is a 503 with no detail');
-  await failing.close();
-  const imports = [...readFileSync(resolve(here, '../pod-dav.mjs'), 'utf8').matchAll(/^import .* from '([^']+)'/gm)].map((m) => m[1]);
-  check(imports.every((name) => name.startsWith('node:')), `pod-dav.mjs imports only node: modules (${imports.join(', ')})`);
-
-  check(canonical('/a%20b/c') === '/a%20b/c' && canonical('/a b') === '/a%20b' && canonical('/a/../b') === null && canonical('x') === null, 'canonical() normalises and refuses');
-  check(parsePropfind('').mode === 'allprop' && parsePropfind("<?xml version='1.0'?><!-- c --><a:propfind xmlns:a='DAV:'><a:prop><b:x xmlns:b='urn:b'/></a:prop></a:propfind>").props[0].ns === 'urn:b', 'parsePropfind reads prefixes and namespaces');
+  for (const a of AGENTS) mounts[a].c.kill('SIGTERM');
 }
 
 pod.kill('SIGKILL');
