@@ -1,6 +1,6 @@
 // foaf.tools in app-sdk.js: an app offers tools to the shell over postMessage.
 // No browser: the SDK runs in a vm context with a fake window and parent.
-//   node --test inklet/apps/test/
+//   node --test inklet/apps/test/app-sdk-tools.test.mjs   (or npm run test:app-sdk)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -10,17 +10,21 @@ import vm from 'node:vm';
 const SDK = readFileSync(fileURLToPath(new URL('../app-sdk.js', import.meta.url)), 'utf8');
 
 // A page inside a frame: `sent` is what reached the parent; `deliver` is a message
-// arriving at the page, from the parent unless another source is given.
-function framedPage() {
+// arriving at the page, from the parent unless another source is given. As in a
+// foafos frame, the page's origin is opaque unless `origin` says otherwise; with
+// `standalone`, the page is its own parent.
+function framedPage({ origin = 'null', standalone = false } = {}) {
   const sent = [];
   const handlers = [];
   const parent = { postMessage: (m) => sent.push(JSON.parse(JSON.stringify(m))) };
   const window = {
     parent,
+    origin,
     location: { pathname: '/apps/test/' },
     addEventListener: (type, fn) => { if (type === 'message') handlers.push(fn); },
   };
   const ctx = vm.createContext({ window, location: window.location, setTimeout, console, JSON, Promise, Error, Map, Set, Object, Array, String });
+  if (standalone) { window.parent = window; window.postMessage = parent.postMessage; }
   vm.runInContext(SDK, ctx);
   const deliver = (data, source = parent) => { for (const fn of handlers) fn({ data, source }); };
   const tick = () => new Promise((r) => setTimeout(r, 5));
@@ -132,4 +136,57 @@ test('a handler that returns nothing answers null; the answer is plain JSON', as
   foaf.tools.register({ name: 'dated', handler: () => ({ when: new Date(0), fn() {} }) });
   assert.deepEqual(await call('quiet', {}), { ok: true, value: null });
   assert.deepEqual(await call('dated', {}), { ok: true, value: { when: '1970-01-01T00:00:00.000Z' } });
+});
+
+test('a page with a real origin offers no tools and answers no call', async () => {
+  for (const opts of [{ origin: 'https://danbri.github.io' }, { standalone: true }]) {
+    const { foaf, sent, deliver, tick, call } = framedPage(opts);
+    foaf.tools.register(listTool);
+    await tick();
+    deliver({ type: 'webmcp.list' });
+    deliver({ type: 'webmcp.call', id: 'x', name: 'list_notes', args: {} });
+    await tick();
+    assert.deepEqual(sent.filter((m) => m.type.startsWith('webmcp.')), [], JSON.stringify(opts));
+    // The app itself may still run its tools.
+    assert.deepEqual(await call('list_notes', {}), { ok: true, value: ['a', 'b'] });
+  }
+});
+
+test('app.init sends the list again, and the tools contract is declared', async () => {
+  const { foaf, sent, deliver, tick } = framedPage();
+  foaf.tools.register(listTool);
+  await tick();
+  sent.length = 0;
+  deliver({ type: 'app.init', appId: 'podnotes', capabilities: [] });
+  await tick();
+  assert.ok(sent.some((m) => m.type === 'conformance' && m.contracts.includes('tools')));
+  assert.equal(sent.filter((m) => m.type === 'webmcp.tools').length, 1);
+});
+
+test('names must be strings; a second tool of one name replaces the first, whose way back then does nothing', async () => {
+  const { foaf, call } = framedPage();
+  assert.throws(() => foaf.tools.register({ name: 5, handler() {} }), /tool name/);
+  const offFirst = foaf.tools.register({ name: 'dup', handler: () => 1 });
+  foaf.tools.register({ name: 'dup', handler: () => 2 });
+  offFirst();
+  assert.deepEqual(await call('dup', {}), { ok: true, value: 2 });
+});
+
+test('arguments that are not an object count as none; required means present and not null', async () => {
+  const { foaf, call } = framedPage();
+  foaf.tools.register(addTool);
+  assert.deepEqual(await call('add_note', ['x']), { ok: false, error: 'missing name' });
+  assert.deepEqual(await call('add_note', 'x'), { ok: false, error: 'missing name' });
+  assert.deepEqual(await call('add_note', { name: null }), { ok: false, error: 'missing name' });
+  assert.deepEqual(await call('add_note', Object.create({ name: 'inherited' })), { ok: false, error: 'missing name' });
+});
+
+test('a handler that returns a function answers null; the api string can be set', async () => {
+  const { foaf, sent, tick, call } = framedPage();
+  foaf.tools.api = 'notes/2';
+  foaf.tools.register({ name: 'fn', handler: () => () => 1 });
+  await tick();
+  assert.equal(foaf.tools.api, 'notes/2');
+  assert.equal(sent.find((m) => m.type === 'webmcp.tools').api, 'notes/2');
+  assert.deepEqual(await call('fn', {}), { ok: true, value: null });
 });
