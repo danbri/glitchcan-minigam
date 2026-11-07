@@ -43,10 +43,17 @@ HTTP over XMPP is deny by default. `--allow` says who may ask, and `--route` say
 | `pod.mjs` | the home pod: storage, HTTP listener, XMPP binding (`@xmpp/client` 0.14.0, ISC) |
 | `../src/xmpp-ws.mjs` | browser XMPP client: RFC 7395 framing, SCRAM-SHA-256/-1 with WebCrypto (server signature checked), bind, IQ; `httpFetch()` returns real `Response` objects |
 | `../src/lws-store.mjs` | `lwsStore`: one JSON resource per FoafStore namespace, `If-Match`/`If-None-Match: *`; `cachedBackend`: the synchronous `{read, write}` that FoafStore takes, writes sent behind, 412 merged key by key (three-way) and retried |
+| `pod-read.mjs` | reads a pod directory with no lock and no write: index, journal replay, body scan. Shared by the two tools below |
+| `pod-summary.mjs` | CLI: the tree, sizes, content types, dates, grant count and orphan bodies of a pod directory |
+| `pod-davmount.mjs` | CLI: shows a pod as a read-only WebDAV server on 127.0.0.1, for Finder. Holds the pod backend |
+| `pod-dav.mjs` | the WebDAV side of `pod-davmount`: knows the backend interface, and nothing about pods |
+| `test/tools.mjs` | tests of the two CLIs on fixture pods in a temp directory (`npm run test:tools`; no relay, no browser) |
 | `test/run.mjs` | end-to-end test: Prosody, the pod, a static server, Chromium |
 | `test/prosody.cfg.lua` | the local relay (plain `ws://` on 127.0.0.1, test only) |
 | `test/relay.mjs` | starts the test relay: Prosody, or Factoidal's Lean server with TLS (`RELAY`, `FACTOIDAL_BIN`) |
 | `test/e2e-shell.mjs` | the whole path through the real foafos shell: the Pods tab of System, the relay, this pod, and the sandboxed Pod Notes app (`npm run test:shell`) |
+
+`npm test` runs `test/tools.mjs` and then `test/run.mjs`, which needs a relay. `npm run test:tools` runs only the tools tests: 131 pass, 0 fail (2026-11-07, macOS, Factoidal 0.33.0; also on 0.30.0).
 
 Run it (moved here from `magpie/miniapps/lws/` on 2026-11-03):
 
@@ -80,6 +87,56 @@ POD_PASSWORD=... node pod.mjs --base https://pod.example/ --dir ./data \
   --xmpp xmpps://xmpp.example:5223 --domain xmpp.example --jid mypod --allow me@xmpp.example \
   [--http 8787] [--insecure-no-auth]
 ```
+
+## pod-summary
+
+```
+node pod-summary.mjs ~/foafos-lws-xmpp [--json]
+```
+
+A home pod is one directory, and names do not show on disk (`bodies/` holds numbered files). This tool prints what is in it: the tree, sizes, content types, dates, the grant count, and orphan bodies. It works offline.
+
+- **Read-only.** It opens files for reading, takes no lock, and runs while a pod holds `lws.lock`. `test/tools.mjs` compares a hash of the directory (paths, modes, sizes, mtimes, ctimes, bytes) before and after, on a closed pod and on a running `pod.mjs`. A read can change a file's access time, depending on the volume; the hash leaves access time out.
+- **Why not the Factoidal API.** `openLwsStorage` has no read-only mode in 0.33.0: it takes the lock, refuses a directory that a pod holds, and its start compacts the journal. So `pod-read.mjs` reads the files, in the format of Factoidal's `L4Factoidal/LWS/FileLayout.lean`. A test compares its journal replay with a real compaction by the engine, so a format change in Factoidal shows as a test failure.
+- **The index alone is out of date.** A running pod adds records to `lws-journal`, and folds them into `lws-files.json` only at a start or when the journal is large. The tool replays the journal. It also reads the index twice around the journal, and reads again if a compaction came between.
+- **No secrets.** The index and the journal hold the notification signing key, subscription inbox URLs (which can hold tokens) and grants. `pod-read.mjs` keeps only the counts. The lock's process token is dropped, a bad index gives a message that quotes no text (Node's `JSON.parse` error does quote it), and no body file is read. Paths are printed: a pod owner who puts a secret in a resource name sees it here.
+- **Sealed pods** (`FACTOIDAL_LWS_KEY`): the tool holds no key, so it says that the pod is sealed and gives only the body file count and size. It cannot show the tree, the grant count or orphans.
+- A snapshot storage (`lws-state.json`) is refused with exit 2.
+
+Each orphan has a reason: `unused`, `pending-remove` (a journal record marked it dead), `not-yet-recorded` (a number at or past `nextBody`) or `temporary` (a `.tmp` file). With a running pod, a body file exists for a moment before its journal record, so read `not-yet-recorded` as transient while the lock line says `running`. The report also lists body problems: an entry whose body file is missing, or differs in size. `lock` shows the pid and whether that process is alive, so a stale lock shows too.
+
+Exit: 0 a summary, 2 a usage fault or a directory it cannot read.
+
+## pod-davmount
+
+```
+node pod-davmount.mjs ~/foafos-lws-xmpp [--port N]
+http://127.0.0.1:PORT/          <- standard output: the mount line
+```
+
+In Finder: Go > Connect to Server, then that line, as Guest. From a shell: `mkdir /tmp/pod && mount_webdav -S http://127.0.0.1:PORT/ /tmp/pod`, then `umount /tmp/pod`.
+
+Stage 1 is a local directory, read-only, on 127.0.0.1 only: WebDAV class 1 with `PROPFIND` (Depth 0 and 1), `GET` (with `Range` and conditional requests), `HEAD` and `OPTIONS`. Every other method gets 405. It takes no lock, writes nothing, runs beside a running pod, and reads the index again when the index or the journal changes.
+
+**Not yet proved in Finder.** The tests use real HTTP clients (Node `http`, `fetch`, curl), and send the `PROPFIND` that Finder sends. No test has mounted a volume, because a mount shows on the owner's desktop.
+
+**What it exposes.** It reads files directly, so the pod's access control does not apply. Any process on this machine that reaches the port reads the whole pod, `.acl` files too. Pages in a browser cannot: a foreign `Host` gets 421 (DNS rebinding), a foreign `Origin` or a `Sec-Fetch-Site: cross-site` request gets 403, there are no CORS headers, and stored content is served with `Content-Security-Policy: sandbox` and `nosniff`. A request path never becomes a file name: it finds an index entry, and the entry's body number names the file. The pod's own files (`lws-files.json`, `bodies/...`) have no URL. A sealed pod is refused at start. Metadata and linkset resources are not shown.
+
+**Why not `factoidal webdav-serve`.** In 0.33.0 it has no way to add a backend: `openWebdav` (`webdav/server.mjs`) holds the mount kinds in the engine and in one `storages` map. It cannot do stage 1: every `kind: local` mount is refused at start (issue 1147, "emergency mode"), and a local mount would take `lws.lock` anyway. So `pod-dav.mjs` is a small read-only server here. It has no dependencies.
+
+### The backend interface
+
+`pod-dav.mjs` calls three functions, and says so at the top of the file: `stat(path)`, `list(path)`, `read(path, {start, end, etag})`. A path is a percent-encoded URL path, which is also what an LWS target is. `test/tools.mjs` runs the WebDAV side over an in-memory backend, and checks that `pod-dav.mjs` imports only `node:` modules.
+
+### Later stages (not built)
+
+Each one is a new backend in `pod-davmount.mjs`, with no change to `pod-dav.mjs`.
+
+| Stage | Source | Backend | Open points |
+|---|---|---|---|
+| 2 | remote LWS over HTTPS | `stat` = `HEAD`, `list` = `GET` of the container (`application/lws+json`, following `next` pages), `read` = `GET` with `Range` and `If-Match` | Access: a token or a did-key, kept out of logs. Check first whether a `webdav-serve` `kind: lws` mount with `--guest` does this job: it is read-only in 0.33.0, and needs a key, not a server here. |
+| 3 | LWS over XMPP | the stage 2 backend on a different `fetch`: XEP-0332 through `@factoidal/core/xmpp`, or `factoidal xmpp-http-proxy` on 127.0.0.1 in front of stage 2 | `pod.mjs` refuses bodies over 160 KB (no chunking), so a large `read` needs `Range` requests, or chunking. Not checked: that the proxy speaks to `pod.mjs`'s binding. The pod's `--allow` and `--route` must admit the reader. |
+| Later | writes; sealed pods | a write needs the engine, through the pod's HTTP or XMPP carriage, never the files; a sealed pod needs the key and the engine | Both change the read-only promise, so each needs the owner's agreement. |
 
 ## Measured (2026-10-21, this container, local relay)
 

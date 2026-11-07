@@ -3,8 +3,13 @@
   "private": true,
   "type": "module",
   "description": "Home LWS pod for foafos: the Factoidal LWS engine behind HTTP and an XMPP (XEP-0332) binding",
+  "bin": {
+    "pod-summary": "pod-summary.mjs",
+    "pod-davmount": "pod-davmount.mjs"
+  },
   "scripts": {
-    "test": "node test/run.mjs",
+    "test": "node test/tools.mjs && node test/run.mjs",
+    "test:tools": "node test/tools.mjs",
     "test:shell": "node test/e2e-shell.mjs"
   },
   "dependencies": {
