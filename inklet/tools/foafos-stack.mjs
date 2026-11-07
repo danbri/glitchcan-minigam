@@ -3,15 +3,25 @@
 // Guide: docs/foafos-local-setup-20261104.md.
 //
 // Status does not trust a pid file or an open port. It asks each server to do
-// its job, and says what it found. Laptop only: everything binds to 127.0.0.1,
-// and LWS runs with no authorization. Never expose any of this to a network.
+// its job, and says what it found. Laptop only: everything binds to 127.0.0.1.
+// Never expose any of this to a network.
+//
+// The file storage (LWS) runs with its own authorization server and a root ACL:
+// every request needs a token for a did:key agent that the ACL names. Its owner
+// key, the read-only key of the Finder folders and the ACL that this tool last
+// wrote are in ~/.foafos-stack/lws/ (0700; keys 0600). `foafos-stack lws-setup`
+// makes them once (and gives an existing storage its ACL through LWS);
+// `lws-allow` and `lws-revoke` change who else may use it. Design and limits:
+// docs/foafos-local-lws-auth-20261107.md. The @factoidal/core behind the
+// `factoidal` command does the LWS client work (FOAFOS_FACTOIDAL_PKG overrides).
 
 import { spawn, spawnSync } from 'node:child_process';
+import { createECDH } from 'node:crypto';
 import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, statfsSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Backstage, describe, helpText } from '../../packages/foafos/src/backstage.mjs';
 
 const env = process.env;
@@ -33,8 +43,11 @@ const C = {
   xmppDir: env.FOAFOS_XMPP_DIR || join(HOME, 'foafos-xmpp'),
   xmppKey: env.FOAFOS_XMPP_KEY || join(HOME, 'foafos-xmpp.key'),
   lwsDir: env.FOAFOS_LWS_DIR || join(HOME, 'foafos-lws'),
-  lwsAuth: (env.FOAFOS_LWS_AUTH || '--insecure-no-auth').split(/\s+/),
+  // Only by this exact opt-in: any program on this computer could then read and write the storage.
+  lwsInsecure: env.FOAFOS_LWS_INSECURE_NO_AUTH === 'yes-anyone-on-this-computer-may-write',
   webdavPort: num('FOAFOS_WEBDAV_PORT', 8090),
+  webdavUsers: env.FOAFOS_WEBDAV_USERS || join(STATE, 'webdav-users'),
+  webdavUser: env.FOAFOS_WEBDAV_USER || 'me',
   flyHost: env.FOAFOS_FLY_HOST || 'foafos-xmpp.fly.dev',
   flyDir: env.FOAFOS_FLY_DIR || join(HOME, '.config/foafos-xmpp-fly'),
   bot: env.FOAFOS_BOT_ACCOUNT || 'foafbot',
@@ -59,6 +72,64 @@ const run = (cmd, args, opts = {}) => {
 const accountNames = () => {
   try { return readFileSync(join(C.xmppDir, 'accounts'), 'utf8').split('\n').map((l) => l.split(':')[0]).filter(Boolean); } catch { return []; }
 };
+
+// ── the storage's agents and its ACL ────────────────────────────────────
+// Keys are P-256 private JWKs (mode 0600), never printed. A did:key is public: it is
+// the agent's name. agents.json holds the names; root.acl is the ACL this tool last
+// wrote to the storage, so a change made elsewhere is noticed, not overwritten.
+
+const LWSK = join(STATE, 'lws');
+const K = {
+  owner: join(LWSK, 'owner.jwk'), webdav: join(LWSK, 'webdav.jwk'), agents: join(LWSK, 'agents.json'),
+  acl: join(LWSK, 'root.acl'), authz: join(LWSK, 'authz'), setup: join(LWSK, 'setup.json'),
+};
+const DID_KEY = /^did:key:z[1-9A-HJ-NP-Za-km-z]{20,128}$/;
+const MODES = { rw: ['Read', 'Write'], r: ['Read'] };
+const readJson = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
+const lwsBase = () => `http://127.0.0.1:${C.lwsPort}/`;
+const setupDone = () => readJson(K.setup)?.dir === C.lwsDir && existsSync(K.acl) && !!readJson(K.agents)?.owner;
+
+let pkgCache;
+/** The @factoidal/core that the `factoidal` command runs. */
+const factoidalPkg = () => (pkgCache ??= env.FOAFOS_FACTOIDAL_PKG || (() => {
+  const bin = run('which', ['factoidal']).trim();
+  try { return bin ? dirname(dirname(realpathSync(bin))) : ''; } catch { return ''; }
+})());
+const lwsClientModule = () => import(pathToFileURL(join(factoidalPkg(), 'lws/client.mjs')).href);
+
+/** A new did:key agent; its private JWK goes to `file` (0600, never over an existing one). */
+async function makeAgent(file) {
+  const { createDidKey } = await lwsClientModule();
+  const made = await createDidKey();
+  const d = made.selfIssued.jwk.d;
+  const ecdh = createECDH('prime256v1');
+  ecdh.setPrivateKey(Buffer.from(d, 'base64url'));
+  const pub = ecdh.getPublicKey();   // 0x04, x, y: webdav-serve reads a JWK with x and y
+  const jwk = { kty: 'EC', crv: 'P-256', x: pub.subarray(1, 33).toString('base64url'), y: pub.subarray(33).toString('base64url'), d };
+  writeFileSync(file, `${JSON.stringify(jwk)}\n`, { mode: 0o600, flag: 'wx' });
+  return made.agent;
+}
+
+/** An LWS client acting as the agent whose key is in `file`. */
+async function agentClient(did, file) {
+  const { createLwsClient } = await lwsClientModule();
+  const jwk = JSON.parse(readFileSync(file, 'utf8'));
+  return createLwsClient({ selfIssued: { subject: did, keyId: `${did}#${did.slice('did:key:'.length)}`, jwk } });
+}
+
+/** The root ACL: the owner (this tool) Read, Write and Control; the Finder folders Read; then each allowed agent. */
+function aclText(a) {
+  const one = (frag, did, modes, note) => `# ${note}\n<#${frag}> a acl:Authorization ;\n  acl:agent <${did}> ;\n` +
+    `  acl:accessTo <./> ; acl:default <./> ;\n  acl:mode ${modes.map((m) => `acl:${m}`).join(', ')} .\n\n`;
+  return '@prefix acl: <http://www.w3.org/ns/auth/acl#> .\n' +
+    '# Written by foafos-stack (lws-setup, lws-allow, lws-revoke). If it is changed elsewhere, they refuse to write it.\n\n' +
+    one('owner', a.owner, ['Read', 'Write', 'Control'], 'the owner: foafos-stack itself') +
+    one('webdav', a.webdav, ['Read'], 'the Finder folders (webdav-serve): read only') +
+    a.agents.map((x, i) => one(`agent-${i + 1}`, x.did, x.modes, x.label)).join('');
+}
+const cleanLabel = (s) => String(s || 'an agent').replace(/[^\w .@:-]/g, '').slice(0, 60) || 'an agent';
+const bodyText = (r) => (typeof r?.body === 'string' ? r.body : typeof r?.bodyBase64 === 'string' ? Buffer.from(r.bodyBase64, 'base64').toString('utf8') : '');
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout')), ms))]);
 
 // ── probes: ask the server, not the operating system ────────────────────
 
@@ -104,20 +175,37 @@ async function probeLws() {
   const otherAllow = other?.headers.get('access-control-allow-origin');
   const sandbox = await web(`http://127.0.0.1:${C.lwsPort}/`, { headers: { Origin: 'null', Accept: 'application/lws+json' } });
   const sandboxAllow = sandbox?.headers.get('access-control-allow-origin');
-  return [
+  const checks = [
     check('storage answers', r && r.status < 500, r ? `HTTP ${r.status}` : 'no answer'),
     check('browser may use it', allow === '*' || allow === SHELL_ORIGIN, allow ? `allows ${allow}` : `no CORS header for ${SHELL_ORIGIN}`),
-    // With no authorization, a site the server allows can read and write this storage from your browser.
     check('other sites refused', other && !(otherAllow === '*' || otherAllow === FOREIGN), otherAllow ? `allows ${otherAllow}` : 'no CORS header for another site'),
     check('sandboxed pages refused', sandbox && !(sandboxAllow === '*' || sandboxAllow === 'null'), sandboxAllow ? `allows ${sandboxAllow}` : 'no CORS header for Origin: null'),
   ];
+  if (C.lwsInsecure) return checks;
+  // Real authorization: no token, no data; and the owner's agent signs in and is let in.
+  checks.push(check('needs a token', r?.status === 401, r ? `a request with no token gets HTTP ${r.status}` : 'no answer'));
+  const a = readJson(K.agents);
+  let owner = 'no owner key: foafos-stack lws-setup';
+  if (a?.owner && existsSync(K.owner)) {
+    try {
+      const client = await agentClient(a.owner, K.owner);
+      const h = await withTimeout(client.head(lwsBase()), PROBE_WAIT * 2);
+      owner = h?.status ? `HTTP ${h.status}` : 'ok';
+    } catch (e) {
+      const st = e?.detail?.status;
+      owner = st === 403 ? 'refused (403): the storage has no ACL for it; foafos-stack lws-setup' : `failed: ${st ? `HTTP ${st}` : e?.reason || e?.message || 'error'}`;
+    }
+  }
+  checks.push(check('owner signs in', /^(ok|HTTP 2\d\d)$/.test(owner), owner));
+  return checks;
 }
 
 async function probeWebdav() {
+  // This tool has no WebDAV password, so it checks only what a stranger gets.
   const list = await web(`http://127.0.0.1:${C.webdavPort}/`, { method: 'PROPFIND', headers: { Depth: '0' } });
   const put = await web(`http://127.0.0.1:${C.webdavPort}/foafos/stack-check.txt`, { method: 'PUT', body: 'x' });
   return [
-    check('folders listed', list?.status === 207, list ? `HTTP ${list.status}` : 'no answer'),
+    check('login required', list?.status === 401, list ? `no login gets HTTP ${list.status}` : 'no answer'),
     check('read only', put && put.status >= 400, put ? `a write gets HTTP ${put.status}` : 'no answer'),
   ];
 }
@@ -154,6 +242,10 @@ async function probeBot(pid) {
 
 const chatAi = () => join(C.shellRoot, 'glitchcan-minigam/inklet/tools/chat-ai.py');
 const webdavDir = () => join(STATE, 'webdav');
+/** The login names in the WebDAV users file (NAME:pbkdf2-sha256:...); the hashes are not read. */
+const webdavLogins = () => { try { return readFileSync(C.webdavUsers, 'utf8').split('\n').map((l) => l.split(':')[0]).filter((n) => /^[A-Za-z0-9_.-]{1,64}$/.test(n)); } catch { return []; } };
+const lwsAuthArgs = () => (C.lwsInsecure ? ['--insecure-no-auth'] : ['--authz', K.authz, '--allow-http', '--root-acl', K.acl]);
+const INSECURE_WORDS = 'THE FILE STORAGE RUNS WITH NO AUTHORIZATION (FOAFOS_LWS_INSECURE_NO_AUTH): any program on this computer can read and write it';
 const flyAccount = (name) => {
   try { return readFileSync(join(C.flyDir, 'accounts'), 'utf8').split('\n').find((l) => l.startsWith(`${name}:`))?.slice(name.length + 1) ?? null; } catch { return null; }
 };
@@ -169,16 +261,23 @@ const SERVICES = {
   },
   lws: {
     title: 'file storage', always: true, ports: () => [C.lwsPort], sign: 'lws-serve', factoidal: true, probe: probeLws, cwd: () => HOME,
-    argv: () => ['factoidal', 'lws-serve', C.lwsDir, ...C.lwsAuth, '--host', '127.0.0.1', '--port', String(C.lwsPort), '--storage', 'files',
+    argv: () => ['factoidal', 'lws-serve', C.lwsDir, ...lwsAuthArgs(), '--host', '127.0.0.1', '--port', String(C.lwsPort), '--storage', 'files',
       '--cors-origin', SHELL_ORIGIN, '--cors-origin', 'https://danbri.github.io'],
-    needs: () => [],
+    needs: () => [
+      env.FOAFOS_LWS_AUTH ? 'FOAFOS_LWS_AUTH is no longer read: the storage always runs with authorization. Unset it (see docs/foafos-local-lws-auth-20261107.md)' : null,
+      C.lwsInsecure || setupDone() ? null : `the storage has no owner and no ACL yet: run foafos-stack lws-setup once (it leaves the data in ${short(C.lwsDir)} as it is)`],
   },
   webdav: {
     title: 'read-only folders for Finder', always: true, after: 'lws', ports: () => [C.webdavPort], sign: 'webdav-serve', factoidal: true, probe: probeWebdav, cwd: () => HOME,
-    argv: () => ['factoidal', 'webdav-serve', webdavDir(), '--host', '127.0.0.1', '--port', String(C.webdavPort), '--guest', 'guest'],
+    // No --guest: a request with no login gets 401. The mount reaches LWS only as its own did:key agent.
+    argv: () => ['factoidal', 'webdav-serve', webdavDir(), '--host', '127.0.0.1', '--port', String(C.webdavPort), '--users', C.webdavUsers],
     needs: () => {
-      mkdirSync(webdavDir(), { recursive: true });
-      writeFileSync(join(webdavDir(), 'foafos.md'), `# Foafos\n\n- kind: lws\n- users: guest\n- url: http://127.0.0.1:${C.lwsPort}/\n- auth: none\n`);
+      const users = webdavLogins();
+      if (!existsSync(K.webdav)) return ['no key for the Finder folders: run foafos-stack lws-setup'];
+      if (!users.length) return [`no WebDAV login in ${short(C.webdavUsers)}: run foafos-stack lws-setup, or factoidal webdav-user ${short(C.webdavUsers)} ${C.webdavUser}`];
+      mkdirSync(webdavDir(), { recursive: true, mode: 0o700 });
+      chmodSync(webdavDir(), 0o700);
+      writeFileSync(join(webdavDir(), 'foafos.md'), `# Foafos\n\n- kind: lws\n- url: ${lwsBase()}\n- auth: did-key\n- key-file: ${K.webdav}\n- users: ${users.join(', ')}\n`, { mode: 0o600 });
       return [];
     },
   },
@@ -343,6 +442,7 @@ async function inspect(n) {
   if (s.factoidal) {
     if (rec.version && installedVersion() && rec.version !== installedVersion()) out.notes.push(`running ${rec.version}, but ${installedVersion()} is installed: foafos-stack restart ${n}`);
   }
+  if (n === 'lws' && proc.command.includes('--insecure-no-auth')) out.notes.push(red(INSECURE_WORDS));
   return out;
 }
 const realOr = (p) => { try { return realpathSync(p); } catch { return p; } };
@@ -382,6 +482,7 @@ async function startOne(n) {
   const missing = s.needs().filter(Boolean);
   if (missing.length) { for (const m of missing) say(red(`${n}: ${m}`)); return false; }
   if (s.after && (await inspect(s.after)).state !== 'healthy') { say(red(`${n}: needs ${s.after} running first: foafos-stack start ${s.after}`)); return false; }
+  if (n === 'lws' && C.lwsInsecure) say(red(bold(`lws: WARNING: ${INSECURE_WORDS}. Unset FOAFOS_LWS_INSECURE_NO_AUTH to stop this.`)));
   forget(n);
   const rec = launch(n);
   if (!rec) { say(red(`${n}: could not start ${s.argv()[0]}`)); return false; }
@@ -521,6 +622,11 @@ function doctor() {
   add(existsSync(join(C.shellRoot, 'glitchcan-minigam')), `shell code in ${short(C.shellRoot)}`, 'set FOAFOS_SHELL_ROOT');
   add(existsSync(join(HERE, 'serve-foafos.py')), 'serve-foafos.py beside this script');
   add(existsSync(C.sparqlFile), `RDF file ${short(C.sparqlFile)}`, 'set FOAFOS_SPARQL_FILE');
+  add(C.lwsInsecure || setupDone(), `storage owner and ACL for ${short(C.lwsDir)}`, 'foafos-stack lws-setup');
+  for (const f of [K.owner, K.webdav, C.webdavUsers]) {
+    try { add(!(statSync(f).mode & 0o077), `${short(f)} is private`, `chmod 600 ${short(f)}`); } catch { /* not made yet: reported above */ }
+  }
+  if (C.lwsInsecure) rows.push({ ok: false, what: INSECURE_WORDS, fix: 'unset FOAFOS_LWS_INSECURE_NO_AUTH' });
   if (existsSync(C.sparqlFile) && !statSync(C.sparqlFile).size) rows.push({ ok: null, what: 'that RDF file is empty, so SPARQL has no data', fix: '' });
   rows.push({ ok: accounts.includes(C.bot) ? true : null, what: `${C.bot} account, for the optional room bot`, fix: 'see the top of chat-ai.py' });
   rows.push({ ok: run('which', ['claude']) ? true : null, what: 'claude command, for the optional room bot', fix: '' });
@@ -616,9 +722,154 @@ function urls() {
   say(`Drift    ${SHELL_ORIGIN}${SHELL_PAGE}?app=drift`);
   say(`XMPP     ws://127.0.0.1:${C.wsPort}/xmpp-websocket  (TCP 127.0.0.1:${C.xmppPort}, room bus@rooms.localhost)`);
   say(`LWS      http://127.0.0.1:${C.lwsPort}/`);
-  say(`WebDAV   http://127.0.0.1:${C.webdavPort}/  (Finder: Go, Connect to Server, then Connect as Guest; read only)`);
+  say(`WebDAV   http://127.0.0.1:${C.webdavPort}/  (Finder: Go, Connect to Server, then Registered User, with your WebDAV login; read only)`);
   say(`SPARQL   http://127.0.0.1:${C.sparqlPort}/ds/sparql`);
   say(`Backstage ${SHELL_ORIGIN}${SHELL_PAGE}?app=backstage  (and ${SHELL_ORIGIN}${SHELL_PAGE}backstage.html)`);
+}
+
+// ── the storage's owner, ACL and agents ─────────────────────────────────
+
+/** Once: the keys, the ACL, and for a storage that already holds data, that ACL written through LWS. */
+async function lwsSetup() {
+  mkdirSync(LWSK, { recursive: true, mode: 0o700 });
+  chmodSync(LWSK, 0o700);
+  if (!factoidalPkg() || !existsSync(join(factoidalPkg(), 'lws/client.mjs'))) { say(red('no @factoidal/core with lws/client.mjs behind the factoidal command: npm i -g @factoidal/core')); return 1; }
+  let a = readJson(K.agents);
+  if (!a) {
+    if (existsSync(K.owner) || existsSync(K.webdav)) { say(red(`key files in ${short(LWSK)} but no agents.json: move them away, then run lws-setup again`)); return 1; }
+    a = { owner: await makeAgent(K.owner), webdav: await makeAgent(K.webdav), agents: [] };
+    writeFileSync(K.agents, `${JSON.stringify(a, null, 2)}\n`, { mode: 0o600 });
+    say(`made the storage owner ${a.owner}`);
+    say(`made the Finder folders' agent ${a.webdav} (read only)`);
+  }
+  const acl = aclText(a);
+  if (readJson(K.setup)?.dir !== C.lwsDir) {
+    if (processOf('lws', record('lws'))) { say(red('lws is running: foafos-stack stop webdav lws, then lws-setup, then start')); return 1; }
+    const existing = ['lws-files.json', 'lws-journal', 'lws-state.json'].some((f) => existsSync(join(C.lwsDir, f)));
+    let how = 'new';
+    let backup = null;
+    if (existing) {
+      // An existing storage ignores --root-acl, and with no ACL it refuses every agent. So its root
+      // ACL is written once through LWS, with authorization off, on a private port, and nothing else.
+      backup = `${C.lwsDir}.before-acl-${new Date().toISOString().replace(/[-:]/g, '').slice(0, 13)}`;
+      if (existsSync(backup)) { say(red(`${short(backup)} exists already: move it away`)); return 1; }
+      if (spawnSync('cp', ['-Rp', C.lwsDir, backup]).status !== 0) { say(red(`could not copy ${short(C.lwsDir)} to ${short(backup)}`)); return 1; }
+      say(`copied the storage to ${short(backup)} first (nothing is deleted)`);
+      const r = await writeFirstAcl(acl);
+      if (!r.ok) { say(red(r.why)); return 1; }
+      how = r.how;
+    }
+    writeFileSync(K.acl, acl, { mode: 0o600 });
+    writeFileSync(K.setup, `${JSON.stringify({ dir: C.lwsDir, at: new Date().toISOString(), how, backup }, null, 2)}\n`, { mode: 0o600 });
+    say(how === 'new' ? `${short(C.lwsDir)}: a new storage gets this ACL at its first start` : `${short(C.lwsDir)}: ${how}`);
+  } else say(`${short(C.lwsDir)}: has its owner and ACL already`);
+  if (!webdavLogins().length) {
+    if (process.stdin.isTTY) {
+      say(`a WebDAV login for Finder, user "${C.webdavUser}":`);
+      spawnSync('factoidal', ['webdav-user', C.webdavUsers, C.webdavUser], { stdio: 'inherit' });
+    } else say(yellow(`no WebDAV login yet: factoidal webdav-user ${short(C.webdavUsers)} ${C.webdavUser}`));
+  }
+  say('');
+  say('Next: foafos-stack start. Then in Foafos, System, Pods, "This computer": it shows this browser\'s did:key.');
+  say('Let it in with: foafos-stack lws-allow did:key:...');
+  return 0;
+}
+
+/** Start the storage with no authorization on a private port, write its first ACL, stop it. */
+async function writeFirstAcl(acl) {
+  const child = spawn('factoidal', ['lws-serve', C.lwsDir, '--insecure-no-auth', '--host', '127.0.0.1', '--port', '0', '--storage', 'files', '--no-cors'],
+    { cwd: HOME, stdio: ['ignore', 'pipe', 'pipe'] });
+  let out = '';
+  const origin = await new Promise((resolve) => {
+    const t = setTimeout(() => resolve(null), START_WAIT);
+    child.stdout.on('data', (b) => { out += b; const m = /^(http:\/\/127\.0\.0\.1:\d+)$/m.exec(out); if (m) { clearTimeout(t); resolve(m[1]); } });
+    child.stderr.on('data', (b) => { out += b; });
+    child.on('exit', () => { clearTimeout(t); resolve(null); });
+  });
+  const stop = () => new Promise((r) => { if (child.exitCode !== null) return r(); child.on('exit', r); child.kill('SIGTERM'); });
+  if (!origin) { await stop(); return { ok: false, why: `the storage did not open:\n${out.split('\n').filter((l) => l && !/EXPERIMENTAL/.test(l)).slice(-4).join('\n')}` }; }
+  try {
+    const url = `${origin}/.acl`;
+    const now = await fetch(url, { signal: AbortSignal.timeout(PROBE_WAIT * 3) });
+    const text = await now.text();
+    if (now.status === 200) {
+      if (text === acl) return { ok: true, how: 'it had this ACL already' };
+      return { ok: false, why: `this storage has a root ACL that foafos-stack did not write. It is left as it is.\nOptions: add the owner ${readJson(K.agents).owner} to it with Control yourself, then copy it to ${short(K.acl)}; or point FOAFOS_LWS_DIR at a new storage. See docs/foafos-local-lws-auth-20261107.md.` };
+    }
+    if (now.status !== 404) return { ok: false, why: `reading its ACL gave HTTP ${now.status}: nothing was written` };
+    const put = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'text/turtle', 'If-None-Match': '*' }, body: acl, signal: AbortSignal.timeout(PROBE_WAIT * 3) });
+    if (put.status !== 201) return { ok: false, why: `writing its ACL gave HTTP ${put.status}: see docs/foafos-local-lws-auth-20261107.md` };
+    return { ok: true, how: 'an existing storage: its data is as it was, and it now has a root ACL' };
+  } finally { await stop(); }
+}
+
+/** Write the ACL for `next` through LWS as the owner, if the storage still holds what this tool last wrote. */
+async function writeAcl(next) {
+  if (C.lwsInsecure) { say(red('the storage runs with no authorization, so an ACL changes nothing: unset FOAFOS_LWS_INSECURE_NO_AUTH')); return false; }
+  if (!setupDone()) { say(red('no owner yet: foafos-stack lws-setup')); return false; }
+  const a = readJson(K.agents);
+  const url = `${lwsBase()}.acl`;
+  let client;
+  let now;
+  try {
+    client = await agentClient(a.owner, K.owner);
+    now = await withTimeout(client.read(url), PROBE_WAIT * 3);
+  } catch (e) {
+    say(red(`could not read the storage's ACL as its owner (${e?.detail?.status ? `HTTP ${e.detail.status}` : e?.reason || e?.message}): is lws running? foafos-stack status`));
+    return false;
+  }
+  if (bodyText(now) !== readFileSync(K.acl, 'utf8')) {
+    say(red(`the storage's ACL is not the one this tool last wrote (${short(K.acl)}): it was changed elsewhere, so it is left as it is`));
+    return false;
+  }
+  const text = aclText(next);
+  try { await withTimeout(client.update(url, { body: text, mediaType: 'text/turtle' }), PROBE_WAIT * 3); } catch (e) {
+    say(red(`the storage did not take the new ACL (${e?.detail?.status ? `HTTP ${e.detail.status}` : e?.reason || e?.message})`));
+    return false;
+  }
+  writeFileSync(K.acl, text, { mode: 0o600 });
+  writeFileSync(K.agents, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
+  return true;
+}
+
+function didArg(args) {
+  const did = args.find((x) => x.startsWith('did:'));
+  if (!did || !DID_KEY.test(did)) { say(red('give a did:key, as the Pods window of Foafos shows it')); return null; }
+  return did;
+}
+
+async function lwsAllow(args) {
+  const did = didArg(args);
+  if (!did) return 2;
+  const i = args.indexOf('--label');
+  const label = cleanLabel(i >= 0 ? args[i + 1] : 'a Foafos browser');
+  const modes = args.includes('--read-only') ? MODES.r : MODES.rw;
+  const a = readJson(K.agents);
+  if (!a) { say(red('no owner yet: foafos-stack lws-setup')); return 1; }
+  if ([a.owner, a.webdav].includes(did)) { say(red('that is one of this tool\'s own agents')); return 2; }
+  const next = { ...a, agents: [...a.agents.filter((x) => x.did !== did), { did, label, modes }] };
+  if (!(await writeAcl(next))) return 1;
+  say(green(`${did} may now ${modes.join(' and ').toLowerCase()} the storage`));
+  return 0;
+}
+
+async function lwsRevoke(args) {
+  const did = didArg(args);
+  if (!did) return 2;
+  const a = readJson(K.agents);
+  if (!a?.agents.some((x) => x.did === did)) { say(`${did} is not in the ACL`); return 0; }
+  if (!(await writeAcl({ ...a, agents: a.agents.filter((x) => x.did !== did) }))) return 1;
+  say(green(`${did} may no longer use the storage`));
+  return 0;
+}
+
+function lwsAgents() {
+  const a = readJson(K.agents);
+  if (!a) { say('no owner yet: foafos-stack lws-setup'); return 1; }
+  say(`owner   ${a.owner}  read, write, control`);
+  say(`webdav  ${a.webdav}  read`);
+  for (const x of a.agents) say(`agent   ${x.did}  ${x.modes.join(', ').toLowerCase()}  (${x.label})`);
+  return 0;
 }
 
 const HELP = `foafos-stack: the local Foafos servers, with one command.
@@ -633,6 +884,11 @@ const HELP = `foafos-stack: the local Foafos servers, with one command.
   foafos-stack backstage [local|shared] [--as ACCOUNT] [--room NAME] [--wait SECONDS] [--watch] [--json]
                                       the bots: who is in the room, what each did; read only
   foafos-stack backstage help         what Backstage shows, and what it cannot see
+  foafos-stack lws-setup              once: the storage's owner key, its ACL, the Finder key and login
+  foafos-stack lws-allow DID [--read-only] [--label TEXT]
+                                      let a did:key agent (a browser's) use the storage
+  foafos-stack lws-revoke DID         take that away again
+  foafos-stack lws-agents             who the storage's ACL lets in (names only, no keys)
   foafos-stack doctor                 check what the servers need
   foafos-stack urls                   the addresses
   foafos-stack open                   open Foafos in your browser (macOS)
@@ -692,6 +948,10 @@ async function main([cmd = 'status', ...args]) {
     case 'logs': return logs(args);
     case 'chat': return spawnSync('python3', [join(HERE, 'xmpp-chat.py'), ...args], { stdio: 'inherit' }).status ?? 1;
     case 'doctor': return doctor();
+    case 'lws-setup': return lwsSetup();
+    case 'lws-allow': return lwsAllow(args);
+    case 'lws-revoke': return lwsRevoke(args);
+    case 'lws-agents': return lwsAgents();
     case 'open': spawnSync('open', [`${SHELL_ORIGIN}${SHELL_PAGE}?root=all`]); return 0;
     default: say(red(`unknown command: ${cmd}`)); say(HELP); return 2;
   }

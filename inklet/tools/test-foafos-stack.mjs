@@ -1,17 +1,22 @@
 // Tests for foafos-stack, on spare ports with a private state folder: nothing here
 // touches the real servers. Run: node inklet/tools/test-foafos-stack.mjs
 //
-// Storage is tested with real authorization (--authz), so the tests never need
-// the no-authorization flag that the laptop setup uses.
+// Storage runs as the stack runs it: its own authorization server, a root ACL,
+// did:key agents (docs/foafos-local-lws-auth-20261107.md). The tests make the
+// keys with lws-setup, then check who gets what: no token 401, a browser agent
+// only after lws-allow, the Finder agent read only and no ACL, a stranger 403,
+// WebDAV with no login 401. Migration of a storage made with no authorization
+// is tested on its own storage. The LWS client is the @factoidal/core behind
+// the `factoidal` command, as in foafos-stack.
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync, spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const TOOL = join(dirname(fileURLToPath(import.meta.url)), 'foafos-stack.mjs');
 const T = mkdtempSync(join(tmpdir(), 'foafos-stack-'));
@@ -27,7 +32,23 @@ writeFileSync(join(T, 'data.ttl'), '<urn:a> <urn:b> <urn:c> .\n');
 const ENV = { ...process.env, NO_COLOR: '1', FOAFOS_STACK_HOME: join(T, 'state'), FOAFOS_SHELL_ROOT: join(T, 'root'), FOAFOS_SHELL_PORT: String(P),
   FOAFOS_XMPP_PORT: String(P + 1), FOAFOS_XMPP_WS_PORT: String(P + 2), FOAFOS_LWS_PORT: String(P + 3), FOAFOS_SPARQL_PORT: String(P + 4), FOAFOS_WEBDAV_PORT: String(P + 5),
   FOAFOS_SPARQL_FILE: join(T, 'data.ttl'), FOAFOS_XMPP_DIR: join(T, 'xmpp'), FOAFOS_XMPP_KEY: join(T, 'key'), FOAFOS_LWS_DIR: join(T, 'lws'),
-  FOAFOS_LWS_AUTH: `--authz ${join(T, 'authz')} --allow-http`, FOAFOS_START_WAIT: '12' };
+  FOAFOS_START_WAIT: '12' };
+delete ENV.FOAFOS_LWS_AUTH;
+delete ENV.FOAFOS_LWS_INSECURE_NO_AUTH;
+const LWS = `http://127.0.0.1:${P + 3}/`;
+const DAV = `http://127.0.0.1:${P + 5}/`;
+const DAV_PASSWORD = `dav-pw-${Math.random().toString(36).slice(2)}`;
+const PKG = (() => { const b = spawnSync('which', ['factoidal'], { encoding: 'utf8' }).stdout.trim(); return b ? dirname(dirname(realpathSync(b))) : ''; })();
+const lwsClient = () => import(pathToFileURL(join(PKG, 'lws/client.mjs')).href);
+const keyOf = (name) => JSON.parse(readFileSync(join(T, `state/lws/${name}.jwk`), 'utf8'));
+const agents = () => JSON.parse(readFileSync(join(T, 'state/lws/agents.json'), 'utf8'));
+const asAgent = async (did, jwk) => (await lwsClient()).createLwsClient({ selfIssued: { subject: did, keyId: `${did}#${did.slice(8)}`, jwk } });
+const statusOf = async (p) => { try { const r = await p; return r?.status ?? 200; } catch (e) { return e?.detail?.status ?? e?.reason; } };
+const dav = (path, init = {}, login = true) => fetch(DAV + path, { ...init, headers: { ...(init.headers || {}), ...(login ? { Authorization: `Basic ${Buffer.from(`me:${DAV_PASSWORD}`).toString('base64')}` } : {}) } });
+/** Every private key value under the state folder: none may appear in any output. */
+const secretsOut = () => ['owner', 'webdav'].map((n) => keyOf(n).d);
+mkdirSync(join(T, 'state'), { mode: 0o700 });
+spawnSync('factoidal', ['webdav-user', join(T, 'state/webdav-users'), 'me', '--iterations', '100000'], { input: DAV_PASSWORD });
 const stack = (args, env = {}) => {
   const r = spawnSync('node', [TOOL, ...args], { env: { ...ENV, ...env }, encoding: 'utf8', timeout: 60000 });
   return { code: r.status, out: r.stdout + r.stderr };
@@ -43,6 +64,28 @@ test('nothing running: every service says stopped, and status exits 1', () => {
   assert.equal(r.code, 1);
   assert.match(r.out, /5 of 5 not healthy/);
   assert.match(r.out, /xmpp: stopped\. Run: foafos-stack start xmpp/);
+});
+
+test('the storage will not start before lws-setup, and says what to run', () => {
+  const r = stack(['start', 'lws']);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /run foafos-stack lws-setup once/);
+});
+
+test('lws-setup makes private keys and the ACL, and prints no key', () => {
+  const r = stack(['lws-setup']);
+  assert.equal(r.code, 0, r.out);
+  const mode = (f) => (statSync(join(T, 'state/lws', f)).mode & 0o777).toString(8);
+  assert.equal(mode('.'), '700');
+  for (const f of ['owner.jwk', 'webdav.jwk', 'root.acl', 'agents.json']) assert.equal(mode(f), '600', f);
+  const a = agents();
+  assert.match(a.owner, /^did:key:z/);
+  assert.match(r.out, new RegExp(a.owner));
+  for (const d of secretsOut()) assert.ok(!r.out.includes(d), 'a private key was printed');
+  const acl = readFileSync(join(T, 'state/lws/root.acl'), 'utf8');
+  assert.ok(acl.includes(`acl:agent <${a.owner}> ;\n  acl:accessTo <./> ; acl:default <./> ;\n  acl:mode acl:Read, acl:Write, acl:Control .`), acl);
+  assert.ok(acl.includes(`acl:agent <${a.webdav}> ;\n  acl:accessTo <./> ; acl:default <./> ;\n  acl:mode acl:Read .`), acl);
+  assert.match(stack(['lws-setup']).out, /has its owner and ACL already/);
 });
 
 test('one command starts everything, and each server passes its real check', () => {
@@ -106,6 +149,64 @@ test('a server open to other sites is not healthy', () => {
   const s = state();
   for (const n of ['xmpp', 'lws']) assert.ok(s[n].checks.find((c) => c.name === 'other sites refused')?.ok, JSON.stringify(s[n].checks));
   assert.ok(s.lws.checks.find((c) => c.name === 'sandboxed pages refused')?.ok, JSON.stringify(s.lws.checks));
+});
+
+test('the storage: no token gets 401, and a browser agent gets in only after lws-allow', async () => {
+  assert.equal((await fetch(`${LWS}`)).status, 401);
+  assert.equal((await fetch(`${LWS}x.txt`, { method: 'PUT', body: 'x' })).status, 401);
+  const { createDidKey } = await lwsClient();
+  const browser = await createDidKey();
+  const shell = await asAgent(browser.agent, browser.selfIssued.jwk);
+  assert.equal(await statusOf(shell.update(`${LWS}notes/a.txt`, { body: 'from the shell', mediaType: 'text/plain', precondition: 'none' })), 403);
+  const allow = stack(['lws-allow', browser.agent, '--label', 'test browser']);
+  assert.equal(allow.code, 0, allow.out);
+  // stack() blocks this event loop for seconds, so a kept-alive socket the server closed meanwhile
+  // is seen only now: let it go before the next request.
+  await wait(300);
+  assert.equal(await statusOf(shell.update(`${LWS}notes/a.txt`, { body: 'from the shell', mediaType: 'text/plain', precondition: 'none' })), 201);
+  const read = await shell.read(`${LWS}notes/a.txt`);
+  assert.equal(read.status, 200);
+  const listed = await shell.list(`${LWS}notes/`);
+  assert.match(JSON.stringify(listed), /notes\/a\.txt/);
+  assert.equal(await statusOf(shell.read(`${LWS}.acl`)), 403, 'a browser agent has no Control');
+  const out = stack(['lws-agents']).out;
+  assert.match(out, new RegExp(`${browser.agent}  read, write  \\(test browser\\)`));
+  for (const d of [...secretsOut(), browser.selfIssued.jwk.d]) assert.ok(!(out + allow.out).includes(d), 'a private key was printed');
+
+  // The Finder agent reads, but cannot write or read the ACL; a stranger gets nothing.
+  const a = agents();
+  const finder = await asAgent(a.webdav, keyOf('webdav'));
+  assert.equal(await statusOf(finder.read(`${LWS}notes/a.txt`)), 200);
+  assert.equal(await statusOf(finder.update(`${LWS}notes/b.txt`, { body: 'x', mediaType: 'text/plain', precondition: 'none' })), 403);
+  assert.equal(await statusOf(finder.read(`${LWS}.acl`)), 403);
+  const stranger = await createDidKey();
+  assert.equal(await statusOf((await asAgent(stranger.agent, stranger.selfIssued.jwk)).read(`${LWS}notes/a.txt`)), 403);
+
+  // WebDAV: no login 401; the login reads as the Finder agent; no write, no ACL.
+  assert.equal((await dav('', { method: 'PROPFIND', headers: { Depth: '1' } }, false)).status, 401);
+  assert.equal((await dav('foafos/notes/a.txt', {}, false)).status, 401);
+  const got = await dav('foafos/notes/a.txt');
+  assert.equal(got.status, 200);
+  assert.equal(await got.text(), 'from the shell');
+  assert.equal((await dav('foafos/notes/c.txt', { method: 'PUT', body: 'x' })).status, 403);
+  assert.notEqual((await dav('foafos/.acl')).status, 200);
+  const mount = readFileSync(join(T, 'state/webdav/foafos.md'), 'utf8');
+  assert.match(mount, /- auth: did-key/);
+  assert.doesNotMatch(mount, /kind: local|guest/);
+  assert.equal((statSync(join(T, 'state/webdav')).mode & 0o777).toString(8), '700');
+
+  // Revoked: refused again. An ACL changed elsewhere is not overwritten.
+  assert.equal(stack(['lws-revoke', browser.agent]).code, 0);
+  await wait(300);
+  assert.equal(await statusOf((await asAgent(browser.agent, browser.selfIssued.jwk)).read(`${LWS}notes/a.txt`)), 403);
+  const copy = join(T, 'state/lws/root.acl');
+  const saved = readFileSync(copy, 'utf8');
+  writeFileSync(copy, `${saved}# changed\n`);
+  const refused = stack(['lws-allow', stranger.agent]);
+  writeFileSync(copy, saved);
+  assert.equal(refused.code, 1);
+  assert.match(refused.out, /changed elsewhere/);
+  assert.equal(stack(['lws-allow', 'did:key:nonsense']).code, 2);
 });
 
 test('state is private to you', () => {
@@ -184,6 +285,62 @@ test('a server that dies on start shows its own error', () => {
   stack(['stop', 'sparql']);
 });
 
+test('a storage made with no authorization gets its ACL through LWS, and keeps its data', async () => {
+  const home = join(T, 'state2');
+  const dir = join(T, 'old-lws');
+  const env = { FOAFOS_STACK_HOME: home, FOAFOS_LWS_DIR: dir, FOAFOS_LWS_PORT: String(P + 6) };
+  // The owner's case: a storage written with --insecure-no-auth.
+  const old = spawn('factoidal', ['lws-serve', dir, '--insecure-no-auth', '--host', '127.0.0.1', '--port', String(P + 6), '--storage', 'files'], { stdio: 'ignore' });
+  for (let i = 0; i < 60 && !(await fetch(`http://127.0.0.1:${P + 6}/`).catch(() => null)); i++) await wait(250);
+  assert.equal((await fetch(`http://127.0.0.1:${P + 6}/kept/old.txt`, { method: 'PUT', headers: { 'Content-Type': 'text/plain' }, body: 'old data' })).status, 201);
+  await new Promise((r) => { old.on('exit', r); old.kill('SIGTERM'); });
+  const before = readdirSync(dir).sort();
+
+  const r = stack(['lws-setup'], env);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /its data is as it was/);
+  const backup = readdirSync(T).find((f) => f.startsWith('old-lws.before-acl-'));
+  assert.ok(backup, 'a copy is made first');
+  assert.deepEqual(readdirSync(join(T, backup)).sort(), before);
+  assert.equal(stack(['start', 'lws'], env).code, 0);
+  try {
+    assert.equal((await fetch(`http://127.0.0.1:${P + 6}/kept/old.txt`)).status, 401);
+    const a = JSON.parse(readFileSync(join(home, 'lws/agents.json'), 'utf8'));
+    const owner = await asAgent(a.owner, JSON.parse(readFileSync(join(home, 'lws/owner.jwk'), 'utf8')));
+    const got = await owner.read(`http://127.0.0.1:${P + 6}/kept/old.txt`);
+    assert.equal(got.status, 200);
+    assert.match(JSON.stringify(got), /old data|b2xkIGRhdGE/);
+  } finally { stack(['stop', 'lws'], env); }
+
+  // A storage with an ACL of its own is left as it is.
+  const dir3 = join(T, 'own-acl');
+  const own = spawn('factoidal', ['lws-serve', dir3, '--insecure-no-auth', '--host', '127.0.0.1', '--port', String(P + 7), '--storage', 'files'], { stdio: 'ignore' });
+  for (let i = 0; i < 60 && !(await fetch(`http://127.0.0.1:${P + 7}/`).catch(() => null)); i++) await wait(250);
+  const theirs = '@prefix acl: <http://www.w3.org/ns/auth/acl#> .\n<#x> a acl:Authorization ; acl:agentClass acl:AuthenticatedAgent ; acl:accessTo <./> ; acl:mode acl:Read .\n';
+  assert.equal((await fetch(`http://127.0.0.1:${P + 7}/.acl`, { method: 'PUT', headers: { 'Content-Type': 'text/turtle' }, body: theirs })).status, 201);
+  await new Promise((res) => { own.on('exit', res); own.kill('SIGTERM'); });
+  const r3 = stack(['lws-setup'], { ...env, FOAFOS_LWS_DIR: dir3 });
+  assert.equal(r3.code, 1);
+  assert.match(r3.out, /did not write\. It is left as it is/);
+  const check = spawn('factoidal', ['lws-serve', dir3, '--insecure-no-auth', '--host', '127.0.0.1', '--port', String(P + 7), '--storage', 'files'], { stdio: 'ignore' });
+  try {
+    let acl = null;
+    for (let i = 0; i < 60 && !acl; i++) { acl = await fetch(`http://127.0.0.1:${P + 7}/.acl`).catch(() => null); if (!acl) await wait(250); }
+    assert.equal(await acl.text(), theirs);
+  } finally { await new Promise((res) => { check.on('exit', res); check.kill('SIGTERM'); }); }
+});
+
+test('no authorization only by the exact opt-in, and loudly; the old setting is refused', () => {
+  const words = /NO AUTHORIZATION/;
+  assert.doesNotMatch(stack(['doctor'], { FOAFOS_LWS_INSECURE_NO_AUTH: '1' }).out, words);
+  const d = stack(['doctor'], { FOAFOS_LWS_INSECURE_NO_AUTH: 'yes-anyone-on-this-computer-may-write' });
+  assert.match(d.out, words);
+  assert.equal(d.code, 1);
+  const r = stack(['start', 'lws'], { FOAFOS_LWS_AUTH: '--insecure-no-auth' });
+  assert.equal(r.code, 1);
+  assert.match(r.out, /FOAFOS_LWS_AUTH is no longer read/);
+});
+
 test('a missing need is said before anything starts', () => {
   const r = stack(['start', 'sparql'], { FOAFOS_SPARQL_FILE: '/nonexistent.ttl' });
   assert.equal(r.code, 1);
@@ -205,5 +362,5 @@ test('backstage help needs no server, and the main help lists backstage', () => 
   const r = stack(['backstage', 'help']);
   assert.equal(r.code, 0);
   for (const t of ['What it is:', 'Who acted:', 'What it cannot see:', 'On the laptop:']) assert.ok(r.out.includes(t), t);
-  assert.match(stack(['help']).out, /foafos-stack backstage \[local\|proto\|shared\]/);
+  assert.match(stack(['help']).out, /foafos-stack backstage \[local\|shared\]/);
 });

@@ -135,7 +135,7 @@ In Finder: Go > Connect to Server, the mount line, then the user name and passwo
 **Tests** (`npm run test:tools`): a real `lws-serve --authz --root-acl` with three `did:key` agents (owner: Read, Write, Control; reader: Read; stranger: none), one `pod-davmount` each. Reader reads and lists, but gets 403 on `.acl`; the owner reads `.acl`; stranger gets 403; no login and a wrong password get 401; PUT gets 403. The tests also check that `pod-davmount.mjs` holds no code that reads a pod directory, and that `pod-dav.mjs` is gone.
 
 **Which pods it can mount today.** A pod that accepts `did:key` agents with an ACL: `factoidal lws-serve DIR --authz DIR --root-acl FILE`. Not yet:
-- the `foafos-stack` file storage, which runs `lws-serve --insecure-no-auth` by default (`FOAFOS_LWS_AUTH`): there the pod has no access control to apply. The owner decides how it changes.
+- (done 2026-11-07) the `foafos-stack` file storage now runs `lws-serve --authz --root-acl`, and its `webdav` service mounts it this way (`auth: did-key`, read only): docs/foafos-local-lws-auth-20261107.md. Before, it ran `--insecure-no-auth`.
 - `pod.mjs` (pod-laptop): it opens the storage with no authorization server, so it cannot accept a `did:key` agent over HTTP. LWS over XMPP: `factoidal webdav-serve --xmpp` and `factoidal xmpp-http-proxy` exist; not tried with `pod.mjs`.
 
 ## Measured (2026-10-21, this container, local relay)

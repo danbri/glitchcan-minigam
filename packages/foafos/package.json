@@ -20,7 +20,8 @@
     "./tools": "./src/tools.mjs",
     "./places": "./src/places.mjs",
     "./chat-commands": "./src/chat-commands.mjs",
-    "./lws-store": "./src/lws-store.mjs"
+    "./lws-store": "./src/lws-store.mjs",
+    "./lws-agent": "./src/lws-agent.mjs"
   },
   "files": [
     "src",

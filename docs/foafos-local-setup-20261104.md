@@ -9,8 +9,13 @@ there, and what is still open.
 No passwords are stored here. They live in `~/foafos-xmpp/accounts`.
 
 **Laptop only.** Everything binds to `127.0.0.1`. The Factoidal code is marked
-experimental and unreviewed, and `--insecure-no-auth` means no authorization at
-all. Do not expose any of this to a network.
+experimental and unreviewed. Do not expose any of this to a network.
+
+**The file storage asks who you are (since 2026-11-07).** `lws` runs with its own
+authorization server and a root ACL; the shell signs in as its own `did:key`
+agent, and the Finder folders need a login. Once: `foafos-stack lws-setup`, then
+`foafos-stack lws-allow DID` for each browser. Design, migration of
+`~/foafos-lws` and limits: [foafos-local-lws-auth-20261107.md](foafos-local-lws-auth-20261107.md).
 
 ## Quick start
 
@@ -39,7 +44,7 @@ The servers run detached from any terminal, so closing a tab cannot stop them. T
 
 Services are `xmpp`, `lws`, `webdav`, `sparql` and `shell`. Optional ones start only when named: `foafbot`, `proto` (both tunnels to `foafos-proto` on Fly) and `pod-laptop` (this laptop's pod, on the Fly XMPP server).
 
-WebDAV is read only. In Finder: Go, Connect to Server, `http://127.0.0.1:8090/`, then Connect as Guest.
+WebDAV is read only. In Finder: Go, Connect to Server, `http://127.0.0.1:8090/`, then Registered User, with the WebDAV login that `foafos-stack lws-setup` made (user `me`). There is no Guest.
 
 ### What status means
 
@@ -59,7 +64,8 @@ The checks:
 | Service | Checks |
 |---|---|
 | `xmpp` | Opens a real XMPP stream. Opens a WebSocket as the shell's origin, so a browser refusal shows here. Confirms another site is refused |
-| `lws` | Storage answers, sends the CORS header the shell needs, and does not allow other sites or sandboxed pages |
+| `lws` | Storage answers, sends the CORS header the shell needs, and does not allow other sites or sandboxed pages. A request with no token gets 401, and the owner's `did:key` agent signs in |
+| `webdav` | A request with no login gets 401, and a write is refused |
 | `sparql` | Runs a real `ASK` query |
 | `shell` | The page and `foafos-shell.js` load, and the CORS header sandboxed apps need is there |
 | `foafbot` | Holds a connection to the XMPP server. This does not prove it can reach Claude |
@@ -75,7 +81,7 @@ Status also says which folder, branch and commit the shell is serving, read from
 | `~/.foafos-stack/run/` | One record per server: pid, start time, command. A record with no live process is what `crashed` means |
 | `~/.foafos-stack/logs/` | One log per server. A log over 20 MB moves to `.log.1` at the next start |
 
-All settings are optional environment variables: `FOAFOS_STACK_HOME`, `FOAFOS_SHELL_ROOT` (the folder holding `glitchcan-minigam`; default `~/working/solid`, a full checkout of the default branch), `FOAFOS_SHELL_PORT`, `FOAFOS_XMPP_PORT`, `FOAFOS_XMPP_WS_PORT`, `FOAFOS_LWS_PORT`, `FOAFOS_SPARQL_PORT`, `FOAFOS_SPARQL_FILE`, `FOAFOS_XMPP_DIR`, `FOAFOS_XMPP_KEY`, `FOAFOS_LWS_DIR`, `FOAFOS_LWS_AUTH`, `FOAFOS_BOT_ACCOUNT` and `FOAFOS_START_WAIT`. Keep the same settings for `status` and `stop` as for `start`. `FOAFOS_LWS_AUTH` is split on spaces, and shows in `status`, so keep paths simple and put no secret in it.
+All settings are optional environment variables: `FOAFOS_STACK_HOME`, `FOAFOS_SHELL_ROOT` (the folder holding `glitchcan-minigam`; default `~/working/solid`, a full checkout of the default branch), `FOAFOS_SHELL_PORT`, `FOAFOS_XMPP_PORT`, `FOAFOS_XMPP_WS_PORT`, `FOAFOS_LWS_PORT`, `FOAFOS_SPARQL_PORT`, `FOAFOS_SPARQL_FILE`, `FOAFOS_XMPP_DIR`, `FOAFOS_XMPP_KEY`, `FOAFOS_LWS_DIR`, `FOAFOS_WEBDAV_USERS`, `FOAFOS_WEBDAV_USER`, `FOAFOS_FACTOIDAL_PKG`, `FOAFOS_BOT_ACCOUNT` and `FOAFOS_START_WAIT`. Keep the same settings for `status` and `stop` as for `start`. `FOAFOS_LWS_AUTH` is no longer read (`start lws` refuses while it is set); `FOAFOS_LWS_INSECURE_NO_AUTH=yes-anyone-on-this-computer-may-write` turns authorization off, loudly (see foafos-local-lws-auth-20261107.md).
 
 It never touches a server it did not start. It tells you the pid instead.
 
@@ -92,8 +98,9 @@ factoidal xmpp-serve ~/foafos-xmpp --domain localhost --muc rooms.localhost \
   --ws-port 5280 --ws-origin https://danbri.github.io \
   --ws-origin http://localhost:8080 --state-key ~/foafos-xmpp.key
 
-# LWS storage on 3000
-factoidal lws-serve ~/foafos-lws --insecure-no-auth --port 3000 --storage files \
+# LWS storage on 3000, with its own authorization server and root ACL (after foafos-stack lws-setup)
+factoidal lws-serve ~/foafos-lws --authz ~/.foafos-stack/lws/authz --allow-http \
+  --root-acl ~/.foafos-stack/lws/root.acl --port 3000 --storage files \
   --cors-origin http://localhost:8080 --cors-origin https://danbri.github.io
 
 # SPARQL on 3030 (data.ttl is your own RDF file; updates are lost on exit)

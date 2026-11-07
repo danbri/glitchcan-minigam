@@ -12,6 +12,12 @@
 //                     the session passphrase; without one it lasts for this run, and says so.
 //                     A shell with no pods starts with one, "browser", chosen for apps.
 //
+// An https pod signs in one of two ways: `auth: 'bearer'` (a token the person pastes), or
+// `auth: 'did-key'` (the shell's own did:key agent for that pod: a P-256 key made in this browser,
+// kept in FoafSecrets, never shown; its did:key is public, kept in the record as `agent`, and the
+// pod's owner grants it in the pod's ACL). The shell supplies `newAgent` and `openAgent`
+// (lws-agent.mjs over the Factoidal LWS client). Design: docs/foafos-local-lws-auth-20261107.md.
+//
 // The shell holds the pod list, the connections and the XMPP password (in FoafSecrets, under
 // POD_OWNER). Apps never see a pod address, a JID or a credential: they get four verbs, aimed
 // by their grant, on the same rule as ops.mjs —
@@ -53,6 +59,11 @@ const HANDLE = /^extra-[0-9a-f]{16}$/;
 
 const secretName = (id) => `pod.${id}.password`;
 const keyName = (id) => `pod.${id}.key`;
+const agentName = (id) => `pod.${id}.agent`;
+const DID_KEY = /^did:key:z[1-9A-HJ-NP-Za-km-z]{20,128}$/;
+/** The secret that signs this pod in: a did:key pod's agent key, else its password or token. */
+const loginName = (r) => (r.auth === 'did-key' ? agentName(r.id) : secretName(r.id));
+const hasLogin = (r) => r.carriage === 'xmpp' || r.auth === 'bearer' || r.auth === 'did-key';
 /** The built-in pod's IRI: never fetched; the in-page engine answers it. */
 export const BUILTIN_BASE = 'https://pod.foafos.local/';
 export const BUILTIN_PRINCIPAL = 'urn:foafos:shell';
@@ -85,8 +96,11 @@ export function checkPod(rec) {
   if (!['https', 'xmpp', 'builtin', 'device'].includes(r.carriage)) throw new Error('carriage: "https", "xmpp", "builtin" or "device"');
   if (r.carriage === 'device' && !['opfs', 'folder'].includes(r.device)) throw new Error('device: "opfs" or "folder"');
   if (r.carriage !== 'device') delete r.device;
-  // An https pod may need a bearer token, kept as the pod's secret. Apps never see it.
-  if (r.auth !== undefined && !(r.auth === 'bearer' && r.carriage === 'https')) throw new Error('auth: only "bearer", for carriage "https"');
+  // An https pod may need a bearer token, kept as the pod's secret, or the shell's did:key agent,
+  // whose key is a secret too. Apps never see either.
+  if (r.auth !== undefined && !(['bearer', 'did-key'].includes(r.auth) && r.carriage === 'https')) throw new Error('auth: "bearer" or "did-key", for carriage "https"');
+  if (r.auth === 'did-key' && r.agent !== undefined && !DID_KEY.test(String(r.agent))) throw new Error('agent: a did:key');
+  if (r.auth !== 'did-key') delete r.agent;
   if (r.carriage === 'xmpp') {
     const relay = r.relay || {};
     let url;
@@ -116,9 +130,12 @@ export class FoafPods {
    * @param openBuiltin  async ({ storageKey, snapshot, onSnapshot }) => { fetch, close }, for
    *                     carriage 'builtin' (the shell loads the engine); null: no built-in pod
    * @param snapshots    async { get(id), put(id, snapshot) }: where a built-in pod is kept
+   * @param newAgent     async () => { subject, keyId, jwk }: a new did:key agent (the engine makes it)
+   * @param openAgent    async ({ base, selfIssued }) => fetch: requests as that agent (lws-agent.mjs)
    */
   constructor({ secrets, bus = null, storage = null, key = 'foafos.pods', connectXmpp = null,
-    fetchImpl = null, now = () => Date.now(), perMinute = 120, openBuiltin = null, snapshots = null, openDevice = null } = {}) {
+    fetchImpl = null, now = () => Date.now(), perMinute = 120, openBuiltin = null, snapshots = null, openDevice = null,
+    newAgent = null, openAgent = null } = {}) {
     if (!secrets) throw new Error('foafos pods: a FoafSecrets is required');
     this.secrets = secrets;
     this.bus = bus;
@@ -130,6 +147,8 @@ export class FoafPods {
     this.shares = new Map();        // token -> one file, held by one window
     this.offers = [];               // shares waiting for their window to open
     this.openDevice = openDevice;   // async (rec, {ask}) => {ok, root} | {ok:false, status, detail}, for carriage 'device'
+    this.newAgent = newAgent;
+    this.openAgent = openAgent;
     this.snapshots = snapshots;
     this.fetch = fetchImpl || ((...a) => globalThis.fetch(...a));
     this.now = now;
@@ -208,9 +227,9 @@ export class FoafPods {
       ...r,
       status: this.live.get(r.id)?.status || 'offline',
       detail: this.live.get(r.id)?.detail || '',
-      hasPassword: r.carriage === 'xmpp' || r.auth === 'bearer' ? this.secrets.has(POD_OWNER, secretName(r.id)) : null,
+      hasPassword: hasLogin(r) ? this.secrets.has(POD_OWNER, loginName(r)) : null,
       // Its login may be on this device, sealed: the person must unlock, not sign in again.
-      locked: (r.carriage === 'xmpp' || r.auth === 'bearer') && !this.secrets.has(POD_OWNER, secretName(r.id)) && this._locked(),
+      locked: hasLogin(r) && !this.secrets.has(POD_OWNER, loginName(r)) && this._locked(),
       // 'builtin': is it written out (sealed), or held for this run only?
       kept: r.carriage === 'builtin' ? (this.secrets.sealed ? 'sealed' : 'run') : null,
     }));
@@ -245,6 +264,7 @@ export class FoafPods {
     await this.disconnect(id);
     this.pods.delete(id);
     this.secrets.forget(POD_OWNER, secretName(id));
+    this.secrets.forget(POD_OWNER, agentName(id));
     for (const box of this.grants.values()) {
       for (const [cap, scope] of box) if (scope.pod === id) box.delete(cap);
     }
@@ -274,7 +294,7 @@ export class FoafPods {
     if (r.ok) this.secrets.flush?.();
     // For an https pod this is its access token, so it may gain one after it was added.
     const rec = this.pods.get(id);
-    if (r.ok && rec.carriage === 'https' && rec.auth !== 'bearer') { rec.auth = 'bearer'; this._save(); }
+    if (r.ok && rec.carriage === 'https' && rec.auth !== 'bearer') { rec.auth = 'bearer'; delete rec.agent; this._save(); }
     return r;
   }
 
@@ -289,10 +309,11 @@ export class FoafPods {
     const old = this.pods.get(id);
     if (!old) throw new Error(`no pod "${id}"`);
     if (way) {
-      const r = checkPod({ ...old, auth: undefined, relay: undefined, podJid: undefined, ...way, id });
+      const r = checkPod({ ...old, auth: undefined, agent: undefined, relay: undefined, podJid: undefined, ...way, id });
       await this.disconnect(id, { quiet: true });
       this.pods.set(id, r);
       if (r.carriage !== old.carriage) this.secrets.forget(POD_OWNER, secretName(id));
+      if (r.auth !== 'did-key') this.secrets.forget(POD_OWNER, agentName(id));
       this._save();
       this._say('pods.updated', { summary: `pod ${id} updated`, id });
     }
@@ -366,6 +387,10 @@ export class FoafPods {
       }
       conn = used.result;
       podFetch = conn.httpFetch({ jid: rec.podJid, base: rec.base });
+    } else if (rec.auth === 'did-key') {
+      const opened = await this._openAgent(rec);
+      if (!opened) return this.get(id);
+      podFetch = opened;
     } else if (rec.auth === 'bearer') {
       if (!this.secrets.has(POD_OWNER, secretName(id))) return this._noSecret(id, 'Enter your token, then press Sign in.');
       podFetch = async (url, init = {}) => {
@@ -386,6 +411,7 @@ export class FoafPods {
     else if (probe.status >= 500) this._setStatus(id, 'error', `The storage has a fault (it answered ${probe.status}). Try again later.`);
     else if (denied && rec.carriage === 'xmpp') return this._askLogin(id, "The server accepted this account, but the pod does not let it in. Sign in with an account on the pod's list, or ask the pod's owner to add this one.");
     else if (denied && rec.auth === 'bearer') return this._askLogin(id, 'The server did not accept this token. Check it, then sign in again.');
+    else if (denied && rec.auth === 'did-key') return this._askGrant(id);
     else if (denied) return this._askLogin(id, 'This storage asks for a token. Enter it, then press Sign in.');
     else this._setStatus(id, 'online', probe.status === 200 ? '' : `HEAD ${probe.status}`);
     return this.get(id);
@@ -399,6 +425,37 @@ export class FoafPods {
     if (this.secrets.has(POD_OWNER, secretName(id))) { this.secrets.forget(POD_OWNER, secretName(id)); this.secrets.flush?.(); }
     this._setStatus(id, 'needs-login', detail);
     return this.get(id);
+  }
+
+  /** The pod does not let this browser's agent in yet. The key is kept: the owner grants its
+   *  did:key (public), then the person connects again. */
+  _askGrant(id) {
+    this.live.delete(id);
+    const did = this.pods.get(id)?.agent || '';
+    this._setStatus(id, 'needs-ok', `This storage does not let this browser in yet. On the computer that runs it, run: foafos-stack lws-allow ${did} — then connect again.`);
+    return this.get(id);
+  }
+
+  /** This browser's agent for a did:key pod: its key from the secrets (made on first use), and a
+   *  fetch that signs in as it. The key never leaves the secrets except into `openAgent`. */
+  async _openAgent(rec) {
+    const id = rec.id;
+    if (!this.openAgent || !this.newAgent) { this._setStatus(id, 'error', 'this shell cannot sign in with a did:key'); return null; }
+    if (!this.secrets.has(POD_OWNER, agentName(id))) {
+      if (this._locked()) { this._setStatus(id, 'locked', 'Unlock your saved logins to connect.'); return null; }
+      let made;
+      try { made = await this.newAgent(); } catch { made = null; }
+      if (!made || !DID_KEY.test(String(made.subject))) { this._setStatus(id, 'error', 'no did:key could be made in this browser'); return null; }
+      const put = this.secrets.put(POD_OWNER, agentName(id), JSON.stringify(made));
+      if (!put.ok) { this._setStatus(id, 'error', `the key could not be held (${put.reason})`); return null; }
+      this.secrets.flush?.();
+      this.pods.get(id).agent = made.subject;
+      this._save();
+      this._say('pods.updated', { summary: `pod ${id}: this browser has a new did:key agent`, id, agent: made.subject });
+    }
+    const used = await this.secrets.use(POD_OWNER, agentName(id), (json) => this.openAgent({ base: rec.base, selfIssued: JSON.parse(json) }));
+    if (!used.ok) { this._setStatus(id, 'error', 'could not sign in as this browser\'s agent'); return null; }
+    return used.result;
   }
 
   /** No login held: it is on this device, locked, or the person has yet to give it. */
@@ -450,7 +507,7 @@ export class FoafPods {
   // A pod waiting for its login, and one the person was signed in to, open again by themselves.
   _afterUnlock() {
     for (const r of this.pods.values()) {
-      const held = this.secrets.has(POD_OWNER, secretName(r.id));
+      const held = this.secrets.has(POD_OWNER, loginName(r));
       if ((r.carriage === 'builtin' && this.status(r.id) === 'locked') || (held && (r.auto || this.status(r.id) === 'locked'))) {
         this.connect(r.id).catch(() => {});
       }

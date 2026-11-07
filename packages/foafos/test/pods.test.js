@@ -392,6 +392,65 @@ test('an https pod can gain a token after it was added', async () => {
   assert.equal(seen.pop(), 'Bearer later-token');
 });
 
+const AGENT_KEY_D = 'agent-private-d-THIS_MUST_NEVER_APPEAR_7f3e';
+const AGENT = 'did:key:zDnaeTestAgent1111111111111111111111111111111';
+
+/** A did:key pod: the storage lets in the agents in `granted`; the shell's agent fetch is faked. */
+function didRig({ granted = new Set(), locked = false } = {}) {
+  const events = [];
+  const bus = { publish: (t, d) => events.push(JSON.stringify(d)), subscribe: () => {} };
+  const secrets = new FoafSecrets({ bus });
+  if (locked) secrets.hasSealed = () => true;
+  const made = [];
+  const opened = [];
+  const store = fakeStorage('http://127.0.0.1:3000/');
+  const pods = new FoafPods({ secrets, bus, storage: null,
+    newAgent: async () => { made.push(1); return { subject: AGENT, keyId: `${AGENT}#x`, jwk: { kty: 'EC', crv: 'P-256', d: AGENT_KEY_D } }; },
+    openAgent: async ({ base, selfIssued }) => {
+      opened.push({ base, subject: selfIssued.subject, d: selfIssued.jwk.d === AGENT_KEY_D });
+      return async (url, init) => (granted.has(selfIssued.subject) ? store.fetch(url, init) : new Response(null, { status: 403 }));
+    } });
+  return { pods, events, made, opened, store, secrets };
+}
+
+test('a did:key pod makes this browser an agent once, asks for a grant by its did:key, then works', async () => {
+  const granted = new Set();
+  const r = didRig({ granted });
+  r.pods.add({ id: 'laptop', label: 'L', base: 'http://127.0.0.1:3000/', carriage: 'https', auth: 'did-key' });
+  await r.pods.connect('laptop');
+  assert.equal(r.pods.status('laptop'), 'needs-ok');
+  assert.equal(r.pods.get('laptop').agent, AGENT);
+  assert.match(r.pods.get('laptop').detail, new RegExp(`foafos-stack lws-allow ${AGENT}`));
+  assert.equal(r.pods.get('laptop').hasPassword, true);
+  granted.add(AGENT);
+  await r.pods.connect('laptop');
+  assert.equal(r.pods.status('laptop'), 'online');
+  assert.equal(r.made.length, 1, 'the key is made once and kept');
+  assert.ok(r.opened.every((o) => o.d && o.base === 'http://127.0.0.1:3000/'), JSON.stringify(r.opened));
+  r.pods.grant('app', { 'pod:read': { pod: 'laptop' }, 'pod:write': { pod: 'laptop' } });
+  assert.equal((await r.pods.invoke('app', 'pod.put', { path: 'a.txt', body: 'hi', contentType: 'text/plain' })).ok, true);
+  assert.equal((await r.pods.invoke('app', 'pod.get', { path: 'a.txt' })).body, 'hi');
+  assert.equal((await r.pods.invoke('app', 'pod.list', { path: '' })).ok, true);
+  assert.doesNotMatch(r.events.join() + JSON.stringify(r.pods.list()), /THIS_MUST_NEVER_APPEAR/);
+});
+
+test('a did:key pod: a bad record is refused, a locked key waits, and REMOVE forgets the key', async () => {
+  assert.throws(() => checkPod({ id: 'x', base: 'http://127.0.0.1:3000/', carriage: 'https', auth: 'did-key', agent: 'not-a-did' }), /agent/);
+  assert.throws(() => checkPod({ id: 'x', base: 'https://r.example/', carriage: 'xmpp', auth: 'did-key', relay: { url: 'wss://r.example/', domain: 'r' }, podJid: 'p@r/l' }), /auth/);
+  assert.equal(checkPod({ id: 'x', base: 'https://a.example/', carriage: 'https', auth: 'bearer', agent: AGENT }).agent, undefined);
+  const r = didRig({ locked: true });
+  r.pods.add({ id: 'laptop', label: 'L', base: 'http://127.0.0.1:3000/', carriage: 'https', auth: 'did-key' });
+  await r.pods.connect('laptop');
+  assert.equal(r.pods.status('laptop'), 'locked');
+  assert.equal(r.made.length, 0, 'no new key while the saved one is locked');
+  const r2 = didRig();
+  r2.pods.add({ id: 'laptop', label: 'L', base: 'http://127.0.0.1:3000/', carriage: 'https', auth: 'did-key' });
+  await r2.pods.connect('laptop');
+  assert.equal(r2.secrets.has(POD_OWNER, 'pod.laptop.agent'), true);
+  await r2.pods.remove('laptop');
+  assert.equal(r2.secrets.has(POD_OWNER, 'pod.laptop.agent'), false);
+});
+
 // ── signing in (System, Pods tab) ────────────────────────────────────────
 
 const WAY_XMPP = { carriage: 'xmpp', relay: { url: 'wss://relay.example/xmpp-websocket', domain: 'relay.example', username: 'me' }, podJid: 'pod@relay.example/lws' };

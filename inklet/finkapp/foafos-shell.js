@@ -18,6 +18,7 @@ import {
   defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, PERSON, describeLocation, handlersFor, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { FoafTools } from '../../packages/foafos/src/tools.mjs';
+import { lwsAgentFetch } from '../../packages/foafos/src/lws-agent.mjs';
 import { FoafPlaces, placesTools } from '../../packages/foafos/src/places.mjs';
 import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
@@ -333,7 +334,27 @@ const pods = new FoafPods({
     return openInPageLwsStorage({ engine, baseIri: BUILTIN_BASE, principal: BUILTIN_PRINCIPAL,
       rootAcl: BUILTIN_ACL, storageKey, snapshot, onSnapshot });
   },
+  // A pod with auth 'did-key' (the local storage of foafos-stack): this browser is a did:key agent
+  // of its own. The engine makes the key; FoafPods keeps it in the secrets. The Factoidal LWS client
+  // signs in with it. Design: docs/foafos-local-lws-auth-20261107.md.
+  newAgent: async () => {
+    const engine = await loadFactoidal();
+    const { createDidKey } = await import(FACTOIDAL_BASE + 'lws/client.mjs');
+    return (await createDidKey({ engine })).selfIssued;
+  },
+  openAgent: async ({ base, selfIssued }) => {
+    const engine = await loadFactoidal();
+    const { createLwsClient } = await import(FACTOIDAL_BASE + 'lws/client.mjs');
+    const wire = (...a) => fetch(...a);
+    return lwsAgentFetch({ client: await createLwsClient({ engine, fetch: wire, selfIssued }), base, fetch: wire });
+  },
 });
+// The local storage asks for a did:key agent since 2026-11-07, so a pod saved for it with no
+// sign-in gets one.
+const LOCAL_LWS = /^http:\/\/(127\.0\.0\.1|localhost):3000\/$/;
+for (const p of pods.list()) {
+  if (p.carriage === 'https' && !p.auth && LOCAL_LWS.test(p.base)) { try { pods.update(p.id, { auth: 'did-key' }); } catch { /* left as it was */ } }
+}
 
 // A location is any pod. Only an app that manages the whole pod, such as Files,
 // may list them, because this names addresses. The choice is per app, and kept.
@@ -5753,6 +5774,7 @@ function buildUI() {
       if (p.carriage === 'builtin') return p.kept === 'sealed' ? 'In this browser, kept on this device.' : 'In this browser, lost when this tab closes. Save your session to keep it.';
       if (p.carriage === 'device') return "On this device, in the browser's private storage.";
       if (p.carriage === 'xmpp') return p.relay.username ? `On ${hostName(p.base)}, over XMPP, as ${p.relay.username}@${p.relay.domain}` : `On ${hostName(p.base)}, over XMPP`;
+      if (p.auth === 'did-key') return `On ${hostName(p.base)}, over HTTP, as this browser's own did:key agent`;
       return `On ${hostName(p.base)}, over HTTPS${p.auth === 'bearer' ? ', with a token' : ''}`;
     };
     const STATUS_WORDS = { online: 'Connected', connecting: 'Connecting', offline: 'Not connected', error: 'Could not connect', locked: 'Locked', 'needs-login': 'Sign in to connect', 'needs-ok': 'Needs your OK' };
@@ -5770,10 +5792,13 @@ function buildUI() {
     const useLocal = async (note) => {
       note.textContent = 'Connecting';
       try {
-        if (!pods.get('laptop')) pods.add({ id: 'laptop', label: 'This computer', carriage: 'https', base: 'http://127.0.0.1:3000/' });
-        const r = await pods.connect('laptop');
+        const LOCAL = { id: 'laptop', label: 'This computer', carriage: 'https', base: 'http://127.0.0.1:3000/', auth: 'did-key' };
+        if (!pods.get('laptop')) pods.add(LOCAL);
+        else if (pods.get('laptop').base === LOCAL.base && pods.get('laptop').auth !== 'did-key') pods.update('laptop', { auth: 'did-key' });
+        const r = await pods.connect('laptop', { ask: true });
         if (r?.ok === false) throw new Error(r.reason);
         pods.setAppsPod('laptop');
+        if (r?.status === 'needs-ok') { note.textContent = r.detail; return; }
       } catch (e) {
         note.textContent = `Nothing answered on port 3000, or it does not allow this page (${location.origin}). Start the storage server, then try again.`;
       }
@@ -5881,6 +5906,12 @@ function buildUI() {
       st.className = 'pod-status fp-status';
       card.appendChild(st);
       card.appendChild(el('p', whereIs(p))).className = 'fp-where';
+      // The grant it waits for, as a command to copy. A did:key is public: it names the agent.
+      if (p.auth === 'did-key' && p.agent && p.status === 'needs-ok') {
+        const cmd = el('code', `foafos-stack lws-allow ${p.agent}`);
+        cmd.className = 'fp-command'; cmd.dataset.agent = p.agent;
+        card.appendChild(cmd);
+      }
 
       const remote = p.carriage === 'xmpp' || p.carriage === 'https';
       const wantsLogin = p.carriage === 'xmpp' || p.auth === 'bearer';
@@ -5903,7 +5934,8 @@ function buildUI() {
       more.appendChild(el('summary', 'More'));
       more.appendChild(el('p', p.carriage === 'xmpp' ? `${p.base} through ${p.podJid}, relay ${p.relay.url}` : p.base || '')).className = 'fp-address';
       const more2 = el('div'); more2.className = 'fp-actions';
-      if (remote && !asking && !p.locked) act(more2, open ? 'Cancel' : 'Change how you sign in', () => { formFor(p.id).open = !open; draw(true); });
+      if (p.auth === 'did-key' && p.agent) more.appendChild(el('p', `This browser's agent: ${p.agent}`)).className = 'fp-address';
+      if (remote && p.auth !== 'did-key' && !asking && !p.locked) act(more2, open ? 'Cancel' : 'Change how you sign in', () => { formFor(p.id).open = !open; draw(true); });
       act(more2, 'Remove', () => { if (browsing?.id === p.id) browsing = null; forms.delete(p.id); pods.remove(p.id).then(() => draw(true)); });
       more.appendChild(more2);
       card.appendChild(more);
