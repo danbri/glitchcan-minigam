@@ -549,6 +549,12 @@ window.FinkWM = {
                     pressed: b.getAttribute('aria-pressed') === 'true' });
             }
         }
+        if (branch === 'foafos') {
+            // There must always be a way back: the ring's own switch is otherwise several levels down.
+            const back = document.createElement('button');
+            back.addEventListener('click', () => { this._setRadial(false); this._closeRadial(); this._setCollapsed(false); });
+            out.unshift({ btn: back, icon: '☰', label: 'Use the list menu' });
+        }
         if (branch === 'project') {
             out.push({ go: 'project/win', icon: '▣', label: 'Window', stay: true });
             const pad = document.getElementById('wm-pad-sect');
