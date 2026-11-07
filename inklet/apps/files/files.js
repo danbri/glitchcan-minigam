@@ -126,11 +126,13 @@
     const row = (k, v) => [h('dt', {}, k), h('dd', {}, v)];
     box.replaceChildren(h('div', { class: 'where-head' }, h('h2', {}, `${l.icon} ${l.label}: ${l.statusText}`),
         h('button', { id: 'change-location', class: 'tool', type: 'button', on: { click: () => { $('panes').dataset.places = 'open'; } } }, 'Change')),
-      h('dl', {}, row('Where', l.where), row('Needs', l.needs), row('Encrypted', l.encrypted), row('Could lose it', l.risk), l.detail ? row('Now', l.detail) : null),
+      ...(l.dev.kept === 'run' ? [h('p', { class: 'where-warn' }, l.risk)] : []),
       ...(l.status === 'needs-ok' ? [h('button', { class: 'tool tool-main', type: 'button', on: { click: () => useLocation(l.id) } }, 'Allow access')] : []),
-      h('details', {}, h('summary', {}, 'For developers'), h('dl', {},
-        row('Pod id', l.id), row('Carriage', l.dev.carriage), row('Base', l.dev.base),
-        l.dev.device ? row('Device', l.dev.device) : null, l.dev.kept ? row('Kept', l.dev.kept) : null)));
+      // The files come first: the rest of what is known is one click away.
+      h('details', { class: 'where-more' }, h('summary', {}, 'About this location'), h('dl', {}, row('Where', l.where), row('Needs', l.needs), row('Encrypted', l.encrypted), row('Could lose it', l.risk), l.detail ? row('Now', l.detail) : null),
+        h('details', {}, h('summary', {}, 'For developers'), h('dl', {},
+          row('Pod id', l.id), row('Carriage', l.dev.carriage), row('Base', l.dev.base),
+          l.dev.device ? row('Device', l.dev.device) : null, l.dev.kept ? row('Kept', l.dev.kept) : null))));
   }
 
   function takeLocations(r) {
