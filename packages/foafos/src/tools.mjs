@@ -49,6 +49,7 @@ export class FoafTools {
   attach({ id, label, source, post, alive = () => true }) {
     const old = this.providers.get(id);
     if (old && old.source === source) return old;
+    if (old?.source?.shell && !source?.shell) return null;
     if (old) this._drop(old, 'replaced');
     const p = { id, label, slug: slug(label || id), source, post, alive, tools: [], api: null, pending: new Map(), abort: null };
     this.providers.set(id, p);
@@ -65,7 +66,9 @@ export class FoafTools {
    * {name, description, inputSchema, readOnly, handler(args, {caller})}. They
    * are listed, granted, called and published to WebMCP as a frame's are. The
    * handler hears who called, so a tool that calls another app's tool can call
-   * it as the same caller, and that app's grants apply too.
+   * it as the same caller, and that app's grants apply too. As with a frame, a
+   * grant taken back stops the caller waiting, not a handler already running.
+   * A frame cannot take over a shell tool's id (see attach).
    */
   offer({ id, label, api = null, tools }) {
     const handlers = new Map(tools.map((t) => [t.name, t.handler]));
