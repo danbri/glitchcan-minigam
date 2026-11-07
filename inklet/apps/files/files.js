@@ -87,6 +87,33 @@
     say(n ? `${n} item${n === 1 ? '' : 's'}` : 'This folder is empty.');
   }
 
+  // Walks every folder for a name, with a limit, so a very large pod cannot hang the window.
+  async function searchAll() {
+    const q = $('filter').value.trim().toLowerCase();
+    if (!q) return;
+    const mine = ++listing, found = [], queue = [''];
+    say('Searching all folders');
+    let seen = 0;
+    while (queue.length && seen < 300 && found.length < 200) {
+      const base = queue.shift();
+      seen++;
+      const r = await list(base);
+      if (mine !== listing) return;
+      if (!r.ok) continue;
+      for (const it of r.items) {
+        const path = base + it.path.replace(/^\/+/, '');
+        if (hiddenName(nameOf(path))) continue;
+        if (it.container) queue.push(path);
+        if (nameOf(path).toLowerCase().includes(q)) found.push({ ...it, path });
+      }
+    }
+    items = found;
+    pick(null);
+    draw();
+    const cut = queue.length ? `, after ${seen} folders` : '';
+    say(`${found.length} found in all folders${cut}`);
+  }
+
   function shown() {
     const q = $('filter').value.trim().toLowerCase();
     const rows = items.filter((i) => !q || nameOf(i.path).toLowerCase().includes(q));
@@ -170,9 +197,10 @@
     if (!rows.length) {
       const filtering = !!$('filter').value;
       const newFolder = () => $('new-folder').click();
-      const clearFilter = () => { $('filter').value = ''; drawItems(); };
+      const clearFilter = () => { $('filter').value = ''; go(folder, { remember: false }); };
       box.replaceChildren(h('div', { class: 'empty' }, h('p', {}, filtering ? 'Nothing here matches that filter.' : 'This folder is empty.'),
-        ...(filtering ? [h('button', { class: 'tool', type: 'button', on: { click: clearFilter } }, 'Clear filter')]
+        ...(filtering ? [h('button', { class: 'tool tool-main', type: 'button', on: { click: searchAll } }, 'Search all folders'),
+          h('button', { class: 'tool', type: 'button', on: { click: clearFilter } }, 'Clear filter')]
           : [h('button', { class: 'tool tool-main', type: 'button', on: { click: askNewFile } }, 'New file'),
             h('button', { class: 'tool', type: 'button', on: { click: newFolder } }, 'New folder')])));
       return;
