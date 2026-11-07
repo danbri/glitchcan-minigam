@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Foafos XMPP mini-client</title>
+<style>
+:root{color-scheme:dark;--bg:#101522;--panel:#1a2232;--line:#344256;--text:#f0f4fa;--muted:#aebbd1;--accent:#86b5ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,sans-serif}
+main{max-width:760px;margin:auto;padding:22px 14px 60px}h1{font-size:23px;margin:0 0 5px}h2{font-size:17px;margin:0 0 12px}
+p{line-height:1.5}.hint,.muted,small{color:var(--muted)}.hint{font-size:13px;margin:6px 0 18px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin:13px 0}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label{display:grid;gap:6px;font-size:13px;color:var(--muted)}input,textarea,select{width:100%;background:#0d1523;color:var(--text);border:1px solid #4b5b71;border-radius:7px;padding:11px;font:inherit}textarea{min-height:72px}
+button{background:#2d5ea2;color:white;border:1px solid #537fc0;border-radius:7px;padding:10px 13px;font:inherit;cursor:pointer}button.secondary{background:#263246;border-color:#556174}button:disabled{opacity:.45;cursor:default}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}.status{font-size:13px;margin-left:8px}.status.good{color:#9ce7b0}.status.bad{color:#ffb3a6}
+.log{max-height:350px;overflow:auto;display:flex;flex-direction:column;gap:7px}
+.entry{padding:9px 10px;background:#101827;border:1px solid #2f4058;border-radius:7px;overflow-wrap:anywhere}
+.meta{color:#a6c9f7;font-size:12px;margin-bottom:5px}.body{white-space:pre-wrap;font-size:13px}
+ul{padding-left:20px;overflow-wrap:anywhere}li{margin:5px 0}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#b6c5d8}
+</style>
+</head>
+<body><main>
+<h1>Foafos XMPP mini-client</h1>
+<p class="hint">iOS Safari proof-of-concept. XMPP credentials stay in this page's memory (not localStorage). No OpenAI API key, no model calls. Remote tool commands require the shell's existing grants.</p>
+<section>
+<h2>Connection <span id="status" class="status">Offline</span></h2>
+<div class="fields">
+<label>WebSocket URL<input id="url" value="wss://foafos-xmpp.fly.dev/xmpp-websocket" spellcheck="false"></label>
+<label>Domain<input id="domain" value="foafos-xmpp.fly.dev" spellcheck="false"></label>
+<label>Account localpart<input id="user" placeholder="foafos" autocapitalize="none" spellcheck="false"></label>
+<label>Password<input id="password" type="password" autocomplete="off"></label>
+<label>Resource<input id="resource" value="gpt" spellcheck="false"></label>
+<label>Nickname<input id="nick" value="gpt" spellcheck="false"></label>
+</div>
+<div class="actions"><button id="connect">Connect and join bus</button><button class="secondary" id="disconnect" disabled>Disconnect</button></div>
+<p id="identity" class="hint" aria-live="polite">Room: bus@rooms.foafos-xmpp.fly.dev</p>
+</section>
+<section>
+<h2>Participants <small id="count"></small></h2><ul id="occupants"><li class="muted">No presence received</li></ul>
+</section>
+<section>
+<h2>Tool announcements</h2>
+<p class="hint">Only room announcements carrying the Foafos bus marker are shown as events. They are not authenticated tool declarations and cannot authorize invocation.</p>
+<ul id="tools"><li class="muted">Awaiting app.tools announcements</li></ul>
+</section>
+<section>
+<h2>Send direct command</h2>
+<div class="fields">
+<label>Shell JID (explicit, not inferred from nickname)<input id="target" value="foafos@foafos-xmpp.fly.dev" autocapitalize="none" spellcheck="false"></label>
+<label>Command<textarea id="command" spellcheck="false">/tools moglob</textarea></label>
+</div>
+<div class="actions">
+<button class="secondary" id="listtools" disabled>/tools moglob</button>
+<button class="secondary" id="view" disabled>/call moglob describe_view</button>
+<button id="send" disabled>Send to shell</button>
+</div>
+<p class="hint">The shell may refuse commands until its ToolGrants allow the authenticated sender JID. Commands go via 1:1 XMPP, never as privileged MUC messages.</p>
+</section>
+<section><h2>Traffic <button class="secondary" id="clear" style="float:right;padding:5px 9px;font-size:12px">Clear</button></h2>
+<div id="log" class="log" role="log" aria-live="polite"></div>
+<div class="actions"><button class="secondary" id="copy">Copy observations (without credentials)</button></div>
+</section>
+</main>
+<script type="module">
+import { XmppWs } from '../../../packages/foafos/src/xmpp-ws.mjs';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+const validJid=s=>/^[^\s@/<>]+@[^\s@/<>]+(?:\/[\w.-]+)?$/.test(s);
+let client=null,room='',nick='',rows=[],occupants=new Map(),announcements=new Map(),joining=false;
+function status(s,kind=''){ $('status').textContent=s; $('status').className='status '+kind; }
+function note(type,from,body){
+ const r={at:new Date().toISOString(),type,from,body:String(body).slice(0,10000)};
+ rows.push(r);if(rows.length>250)rows.shift();
+ const e=document.createElement('div');e.className='entry';
+ const m=document.createElement('div');m.className='meta';m.textContent=`${new Date(r.at).toLocaleTimeString()} · ${type} · ${from}`;
+ const b=document.createElement('div');b.className='body';b.textContent=r.body;
+ e.append(m,b);$('log').prepend(e);while($('log').children.length>250)$('log').lastElementChild.remove();
+}
+function drawOccupants(){ $('count').textContent=occupants.size+' in room';$('occupants').replaceChildren();for(const [name,info] of occupants){const li=document.createElement('li');li.textContent=name+(info?' · '+info:'');$('occupants').append(li);}if(!occupants.size)$('occupants').textContent='No presence received';}
+function drawTools(){ $('tools').replaceChildren();for(const [name,data] of announcements){const li=document.createElement('li');li.textContent=`${name}: ${data.count||data.tools?.length||'?'} tools · ${(data.tools||[]).join(', ')}`; $('tools').append(li);}if(!announcements.size)$('tools').textContent='No announcements yet';}
+function stanza(el){
+ const from=el.getAttribute('from')||'',type=el.getAttribute('type')||'',tag=el.localName;
+ if(tag==='presence'&&from.startsWith(room+'/')){
+   const who=from.slice(room.length+1);
+   if(type==='unavailable')occupants.delete(who);
+   else if(type==='error')note('room error',from,el.textContent);
+   else occupants.set(who,type||'online');
+   drawOccupants();
+   if(who===nick&&type!=='error'&&type!=='unavailable'&&joining){joining=false;status('Connected · in bus','good');}
+   return;
+ }
+ if(tag!=='message')return;
+ const body=[...el.children].find(n=>n.localName==='body')?.textContent;
+ if(body==null)return;
+ if(type==='groupchat'&&from.startsWith(room+'/')){
+   const marker=[...el.children].find(n=>n.localName==='x'&&n.namespaceURI==='urn:foafos:bus:0');
+   if(marker){
+     const match=/^app\.tools\s+([\s\S]+)$/.exec(body);
+     if(match){try{const payload=JSON.parse(match[1]);if(typeof payload.app==='string'&&Array.isArray(payload.tools)){announcements.set(payload.app,{...payload,source:from});drawTools();}}catch{}}
+     note('room event',from,body);
+   }else note('room chat',from,body);
+ }else note('direct message',from,body);
+}
+async function disconnect(){
+ const c=client;client=null;joining=false;
+ if(c){try{c.close();}catch{}}
+ $('connect').disabled=false;$('disconnect').disabled=true;
+ for(const id of ['listtools','view','send'])$(id).disabled=true;
+ occupants.clear();drawOccupants();status('Offline');
+}
+$('connect').onclick=async()=>{
+ if(client)return;
+ const url=$('url').value.trim(),domain=$('domain').value.trim(),username=$('user').value.trim(),password=$('password').value,resource=$('resource').value.trim(),requestedNick=$('nick').value.trim();
+ if(!url.startsWith('wss://')){status('TLS WebSocket (wss://) required','bad');return;}
+ if(!username||!password||!domain||!resource||!/^[a-zA-Z0-9_.-]{1,64}$/.test(requestedNick)){status('Enter valid account, password, resource and nick','bad');return;}
+ $('connect').disabled=true;status('Authenticating…');
+ try{
+   const x=await XmppWs.connect({url,domain,username,password,resource});
+   $('password').value=''; // never keep the password in an input or any persistent store
+   client=x;room='bus@rooms.'+domain;nick=requestedNick;
+   x.onstanza=stanza;
+   x.onclose=()=>{note('connection','server','Connection closed');disconnect();};
+   $('identity').textContent=`Bound JID: ${x.jid} · Room: ${room}`;
+   $('disconnect').disabled=false;for(const id of ['listtools','view','send'])$(id).disabled=false;
+   status('Joining bus…');joining=true;
+   x.send(`<presence xmlns="jabber:client" to="${esc(room+'/'+nick)}"><x xmlns="http://jabber.org/protocol/muc"/></presence>`);
+   note('session',x.jid,'Authenticated; MUC join requested');
+ }catch(e){$('password').value='';$('connect').disabled=false;status('Connection failed','bad');note('error','connection',e.message);}
+};
+$('disconnect').onclick=disconnect;
+function sendCommand(command){
+ if(!client)return;
+ const to=$('target').value.trim();
+ if(!validJid(to)){note('error','client','Invalid destination JID');return;}
+ if(!command.startsWith('/')||command.length>4096){note('error','client','Use a slash command of at most 4096 characters');return;}
+ client.send(`<message xmlns="jabber:client" type="chat" to="${esc(to)}"><body>${esc(command)}</body></message>`);
+ note('outgoing command',to,command);
+}
+$('send').onclick=()=>sendCommand($('command').value.trim());
+$('listtools').onclick=()=>sendCommand('/tools moglob');
+$('view').onclick=()=>sendCommand('/call moglob describe_view');
+$('clear').onclick=()=>{$('log').replaceChildren();rows=[];};
+$('copy').onclick=async()=>{
+ const report={room,connected:!!client,occupants:[...occupants.keys()],announcements:[...announcements.entries()],traffic:rows};
+ try{await navigator.clipboard.writeText(JSON.stringify(report,null,2));note('local','clipboard','Observations copied');}
+ catch(e){note('error','clipboard',e.message);}
+};
+window.addEventListener('pagehide',()=>{if(client)client.close();});
+</script>
+</body></html>
