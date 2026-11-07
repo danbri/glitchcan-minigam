@@ -1476,3 +1476,10 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 #foafos-snap-preview { position: fixed; z-index: 2615; box-sizing: border-box; pointer-events: none; border-radius: 8px; border: 2px solid var(--sk-accent, #2e6fd1); background: color-mix(in srgb, var(--sk-accent, #2e6fd1) 18%, transparent); }
 
 @media (max-width: 520px) { #foafos-nudge { bottom: auto; top: 8px; } }
+
+/* Fingers, not pointers: touch screens get targets near 44px; desktops stay compact */
+@media (pointer: coarse) {
+  .foafos-window-btn { min-width: 40px; min-height: 40px; }
+  .fs-tabs button, .fs-body button, .fp-btn { min-height: 44px; }
+  .foafos-home-body summary { min-height: 44px; }
+}
