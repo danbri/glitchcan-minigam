@@ -5644,6 +5644,10 @@ function buildUI() {
       if (p.carriage === 'xmpp') return `Through XMPP, as ${p.relay.username}@${p.relay.domain}`;
       try { return `On ${new URL(p.base).host}, over HTTPS`; } catch { return 'Over HTTPS'; }
     };
+    // The Foafos server's pod, signed in with an XMPP account, so no token is needed.
+    const FLY = 'foafos-xmpp.fly.dev';
+    const flyByXmpp = (id, label) => ({ id, label, base: `https://${FLY}:8443/`, carriage: 'xmpp', podJid: `pod@${FLY}/lws`,
+      relay: { url: `wss://${FLY}/xmpp-websocket`, domain: FLY, username: 'foafos' } });
     const act = (parent, label, fn, primary) => {
       const b = button(parent, label, fn);
       b.className = primary ? 'fp-btn fp-primary' : 'fp-btn';
@@ -5704,10 +5708,19 @@ function buildUI() {
         if (secretPod && !p.hasPassword) {
           // Say what is being asked for and where to find it, not only that it is missing.
           const help = p.carriage === 'xmpp'
-            ? `The password for ${p.relay.username}@${p.relay.domain}.`
+            ? `Sign in with the password for ${p.relay.username}@${p.relay.domain}, as in Chat.`
             : /(^|\.)foafos-xmpp\.fly\.dev$/.test((() => { try { return new URL(p.base).hostname; } catch { return ''; } })())
-              ? "The pod's own access token, not a Fly login. On the laptop that set it up, copy it with: tr -d '\\n' < ~/.config/foafos-xmpp-fly/token | pbcopy"
+              ? "Or use the pod's own access token, not a Fly login. On the laptop that set it up, copy it with: tr -d '\\n' < ~/.config/foafos-xmpp-fly/token | pbcopy"
               : "The pod's own access token, not an account password. Whoever runs this pod has it.";
+          if (p.carriage === 'https' && p.base.includes(FLY)) {
+            act(card, 'Sign in with XMPP instead', async () => {
+              const wasForApps = p.forApps;
+              await pods.remove(p.id);
+              pods.add(flyByXmpp(p.id, p.label));
+              if (wasForApps) pods.setAppsPod(p.id);
+              draw();
+            }, true);
+          }
           card.appendChild(el('p', help)).className = 'fp-note';
           secretRow(card);
         }
@@ -5749,6 +5762,7 @@ function buildUI() {
         });
       }
       act(quick, 'This computer', () => useLocal(quickNote));
+      if (!list.some((p) => (p.base || '').includes(FLY))) act(quick, 'Foafos server', () => { pods.add(flyByXmpp('fly', 'Foafos server')); draw(); });
       add.append(quick, quickNote);
       const f = {
         label: field(add, 'Name', 'pod-add-label', { placeholder: 'My pod at home' }),
