@@ -58,6 +58,16 @@ test('list_events expands repeats, sorts by start and filters by text', async ()
   await assert.rejects(run('list_events', { from: '2026-11-10', to: '2026-11-01' }), /to is before from/);
 });
 
+test('list_events includes an event already under way at the start of the range', async () => {
+  const { run } = setup();
+  await run('add_event', { title: 'Conference', start: '2026-11-08T09:00:00Z', end: '2026-11-11T17:00:00Z' });
+  const r = await run('list_events', { from: '2026-11-10T00:00:00Z', to: '2026-11-10T08:00:00Z' });
+  assert.deepEqual(r.events.map((e) => e.title), ['Conference']);
+  // An event that ends as the range starts does not overlap it.
+  const after = await run('list_events', { from: '2026-11-11T17:00:00Z', to: '2026-11-11T18:00:00Z' });
+  assert.deepEqual(after.events.map((e) => e.title), []);
+});
+
 test('add_event writes to your own calendar and redraws; never to a subscribed one', async () => {
   const { run, cal, drawn } = setup();
   const r = await run('add_event', { title: 'Lunch', start: '2026-11-12T12:00:00Z' });
@@ -69,5 +79,8 @@ test('add_event writes to your own calendar and redraws; never to a subscribed o
   await assert.rejects(run('add_event', { title: 'x', start: '2026-11-12T10:00Z', end: '2026-11-12T09:00Z' }), /end is before start/);
   const day = await run('add_event', { title: 'Away', start: '2026-11-20', all_day: true, calendar: 'my calendar' });
   assert.equal(day.added.allDay, true);
-  assert.equal(day.added.end, '2026-11-21T00:00:00.000Z');
+  // A date alone is local midnight, as the Calendar form makes it, in any time zone.
+  assert.equal(day.added.start, new Date(2026, 10, 20).toISOString());
+  assert.equal(day.added.end, new Date(2026, 10, 21).toISOString());
+  await assert.rejects(run('add_event', { title: 'x'.repeat(501), start: '2026-11-12' }), /title: up to 500/);
 });

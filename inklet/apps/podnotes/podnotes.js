@@ -148,9 +148,11 @@
     inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'The note name' } }, required: ['name'] },
     readOnly: true,
     handler: async ({ name }) => {
-      const r = await foaf.pod.get(`notes/${cleanName(name)}.txt`);
+      // A note made elsewhere may have a name the form would change: the listed name comes first.
+      const exact = (await noteNames()).includes(String(name)) ? String(name) : cleanName(name);
+      const r = await foaf.pod.get(`notes/${exact}.txt`);
       if (!r.ok) { if (r.status === 404) throw new Error(`No note called ${name}.`); fail(r); }
-      return { name: cleanName(name), text: r.body };
+      return { name: exact, text: r.body };
     },
   });
   foaf.tools.register({
@@ -164,6 +166,7 @@
     handler: async ({ name, text }) => {
       const clean = cleanName(name);
       if (!clean) throw new Error('Give the note a name.');
+      if (String(text).length > 500000) throw new Error('A note may have up to 500,000 characters.');
       const r = await foaf.pod.put(`notes/${clean}.txt`, String(text), { contentType: 'text/plain; charset=utf-8', ifNoneMatch: true });
       if (!r.ok) { if (r.reason === 'conflict') throw new Error(`A note called ${clean} exists already.`); fail(r); }
       if (!shared) refresh();

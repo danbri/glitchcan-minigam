@@ -13,10 +13,15 @@ import { cryptoUid } from './ics.js';
 
 const DAY = 86400000;
 const MAX_EVENTS = 200;
+const MAX_TITLE = 500;
+const MAX_TEXT = 20000;
 
+// A date alone (2026-11-07) is local midnight, as Calendar's own form makes it; a date-time
+// with no offset is local time too. Replies are in UTC.
 function when(value, name) {
   if (value == null || value === '') return null;
-  const d = new Date(value);
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+  const d = day ? new Date(+day[1], +day[2] - 1, +day[3]) : new Date(value);
   if (Number.isNaN(d.getTime())) throw new Error(`${name}: not a date or date-time, such as 2026-11-07 or 2026-11-07T15:00`);
   return d;
 }
@@ -37,12 +42,12 @@ export function offerCalendarTools(cal, foaf) {
 
   foaf.tools.register({
     name: 'list_events',
-    description: `Events from one date to another, in start order, with repeating events expanded. With no dates: today and the next 30 days. At most ${MAX_EVENTS}.`,
+    description: `Events that overlap a range of dates, in start order, with repeating events expanded. With no dates: today and the next 30 days. Times in the reply are UTC. At most ${MAX_EVENTS}.`,
     inputSchema: {
       type: 'object',
       properties: {
-        from: { type: 'string', description: 'Start of the range, an ISO date or date-time' },
-        to: { type: 'string', description: 'End of the range, an ISO date or date-time' },
+        from: { type: 'string', description: 'Start of the range, an ISO date or date-time; with no offset (Z or +01:00), local time' },
+        to: { type: 'string', description: 'End of the range, an ISO date or date-time; with no offset, local time' },
         query: { type: 'string', description: 'Only events whose title, location or description contains this text' },
       },
     },
@@ -56,8 +61,10 @@ export function offerCalendarTools(cal, foaf) {
       const out = [];
       for (const ev of await cal.store.getEvents()) {
         if (q && ![ev.summary, ev.location, ev.description].some((s) => String(s || '').toLowerCase().includes(q))) continue;
-        const len = ev.end && ev.start ? new Date(ev.end) - new Date(ev.start) : 0;
-        for (const at of expandRecurrence(ev, start, end)) {
+        const len = ev.end && ev.start ? Math.max(0, new Date(ev.end) - new Date(ev.start)) : 0;
+        // An event already under way at `from` counts: look back by its length, keep what overlaps.
+        for (const at of expandRecurrence(ev, new Date(start.getTime() - len), end)) {
+          if (at.getTime() + len < start.getTime() || (len && at.getTime() + len === start.getTime())) continue;
           out.push({
             id: ev.id, title: ev.summary || '', start: at.toISOString(),
             end: len ? new Date(at.getTime() + len).toISOString() : null,
@@ -78,8 +85,8 @@ export function offerCalendarTools(cal, foaf) {
       type: 'object',
       properties: {
         title: { type: 'string', description: 'What the event is' },
-        start: { type: 'string', description: 'When it starts, an ISO date-time such as 2026-11-07T15:00, or a date for an all-day event' },
-        end: { type: 'string', description: 'When it ends, an ISO date or date-time' },
+        start: { type: 'string', description: 'When it starts: an ISO date-time such as 2026-11-07T15:00Z, or a date for an all-day event. With no offset, local time' },
+        end: { type: 'string', description: 'When it ends, an ISO date or date-time; with no offset, local time' },
         all_day: { type: 'boolean', description: 'True for an all-day event' },
         location: { type: 'string', description: 'Where it is' },
         description: { type: 'string', description: 'More about it' },
@@ -95,7 +102,9 @@ export function offerCalendarTools(cal, foaf) {
         ? own.find((c) => c.id === calendar || String(c.name).toLowerCase() === String(calendar).toLowerCase())
         : own[0];
       if (!target) throw new Error(calendar ? `No calendar of your own called ${calendar}.` : 'There is no calendar of your own to add to.');
-      const e = when(end, 'end') || new Date(s.getTime() + (allDay ? DAY : 3600000));
+      if (String(title).length > MAX_TITLE) throw new Error(`title: up to ${MAX_TITLE} characters.`);
+      if (String(description).length > MAX_TEXT || String(location).length > MAX_TITLE) throw new Error(`description: up to ${MAX_TEXT} characters; location: up to ${MAX_TITLE}.`);
+      const e = when(end, 'end') || (allDay ? new Date(s.getFullYear(), s.getMonth(), s.getDate() + 1) : new Date(s.getTime() + 3600000));
       if (e < s) throw new Error('end is before start.');
       const id = cryptoUid();
       const ev = {
