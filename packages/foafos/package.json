@@ -18,6 +18,7 @@
     "./pods": "./src/pods.mjs",
     "./xmpp-ws": "./src/xmpp-ws.mjs",
     "./tools": "./src/tools.mjs",
+    "./places": "./src/places.mjs",
     "./chat-commands": "./src/chat-commands.mjs",
     "./lws-store": "./src/lws-store.mjs"
   },
