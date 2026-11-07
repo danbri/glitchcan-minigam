@@ -168,8 +168,13 @@
     const rows = shown();
     const box = $('items');
     if (!rows.length) {
-      box.replaceChildren(h('div', { class: 'empty' }, h('p', {}, $('filter').value ? 'Nothing here matches that filter.' : 'This folder is empty.'),
-        $('filter').value ? null : h('button', { class: 'tool tool-main', type: 'button', on: { click: askNewFile } }, 'New file')));
+      const filtering = !!$('filter').value;
+      const newFolder = () => $('new-folder').click();
+      const clearFilter = () => { $('filter').value = ''; drawItems(); };
+      box.replaceChildren(h('div', { class: 'empty' }, h('p', {}, filtering ? 'Nothing here matches that filter.' : 'This folder is empty.'),
+        ...(filtering ? [h('button', { class: 'tool', type: 'button', on: { click: clearFilter } }, 'Clear filter')]
+          : [h('button', { class: 'tool tool-main', type: 'button', on: { click: askNewFile } }, 'New file'),
+            h('button', { class: 'tool', type: 'button', on: { click: newFolder } }, 'New folder')])));
       return;
     }
     if (icons) {
