@@ -3023,9 +3023,13 @@ function buildUI() {
     try { recent = (JSON.parse(localStorage.getItem(RECENT_KEY)) || []).map(appById).filter((a) => a && rootOffers(ROOT, a.id) && a.surface !== 'chrome'); } catch { /* none yet */ }
     const groups = [...(recent.length ? [{ id: 'recent', label: 'Recent', icon: '🕘', apps: recent }] : []),
       { id: 'essentials', label: 'Essentials', icon: '⭐', apps: essentials },
-      ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) }))];
+      ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) })),
+      { id: 'widgets', label: 'Widgets', icon: '🧩', apps: WIDGET_CATALOG.map((w) => {
+        const [icon, ...name] = w.title.split(' ');
+        return { id: `widget-${w.key}`, icon, name: name.join(' '), desc: 'A small sandboxed widget', run: () => openWidgetWindow(w) };
+      }) }];
     for (const fam of groups) {
-      const offered = fam.apps.filter(a => rootOffers(ROOT, a.id));
+      const offered = fam.apps.filter(a => a.run || rootOffers(ROOT, a.id));
       if (!offered.length) continue;
       const sec = document.createElement('section');
       const folder = document.createElement('details');
@@ -3064,6 +3068,7 @@ function buildUI() {
         b.setAttribute('aria-label',
           `${app.name}${app.desc ? ` — ${app.desc}` : ''}${isChrome ? (chromeOn ? ', on' : ', off') : ''}`);
         b.addEventListener('click', () => {
+          if (app.run) { app.run(); home.remove(); return; }
           noteRecent(app.id);
           launchApp(app.id);
           // A toggle that closes the panel it lives in cannot be pressed
