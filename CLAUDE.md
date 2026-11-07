@@ -190,6 +190,9 @@ skills, in danbri/londat since 2026-10-07, where they were cut to 1,024 characte
 | `nocliches-fink-authoring` | `.claude/skills/` | the PROSE of `.fink.js` stories and choice labels: the owner-adopted ban list of clichéd constructions and AI-default words, fixes, the interactive-fiction additions, scoring, the word scanner (`scan.mjs`); not structure or tags |
 | `photo-novel` | `cozyverse/skills/` | the photographic graphic-novel chapters (Steeple Wyke): tap-safe ink patterns, the village memory, pictures, loops, sound and voices, costs, and what failed |
 | `story-game-sync` | `inklet/minigames/skills/` | a story depends on an attached game: pause/play/resume `# APP:` guests vs Drift city's live in-page sync, what each cannot do yet, and the text route every world-only clue needs (no GPU, screen readers) |
+| `moglob-tools` | `packages/foafos/skills/` | calling Moglob (app id `docklands`): all 25 tools with arguments, grants, refusals, limits, smooth flight in place of `go_to` jumps |
+| `moglob-guide` | `packages/foafos/skills/` | serving a person in Moglob: requests to tool calls, tours, pace and motion rules (WCAG 2.3.3), stopping, changing only what was asked |
+| `moglob-describe` | `packages/foafos/skills/` | turning `describe_view` and `/where` output into text fitted to a task and a reader; what the tools do not report; screen reader rules |
 | `drift-city` | `drift-city/skills/` | `drift-city/` — the Titan city: build, seeing WGSL changes headless (Dawn on lavapipe, `tests/walkers.html`), the walker frame rule, the Titan design brief, the dorms |
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
 | `tanks-for-the-trees` | `trees/skills/` | `trees/` — the Bristol data pipeline, BNG↔world coordinates, `host.api`/`__tftt`. **Read its data-ethics section first** |
