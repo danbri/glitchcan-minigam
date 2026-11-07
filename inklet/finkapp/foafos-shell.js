@@ -2949,12 +2949,51 @@ function buildUI() {
       document.querySelectorAll('.foafos-window').forEach(x => { x.style.zIndex = 2620; });
       win.style.zIndex = 2630;
     });
+    // Drag to a side to fill half the screen, or to the top to fill it, as on a desktop.
+    // Dragging a snapped window away gives it back its size.
+    const snapZone = (e) => {
+      if (window.innerWidth < 700) return null;
+      if (e.clientY < 6) return 'top';
+      if (e.clientX < 16) return 'left';
+      if (e.clientX > window.innerWidth - 16) return 'right';
+      return null;
+    };
+    const snapBox = (zone) => {
+      const W = window.innerWidth, H = window.innerHeight;
+      return zone === 'left' ? [0, 0, W / 2, H] : zone === 'right' ? [W / 2, 0, W / 2, H] : [0, 0, W, H];
+    };
+    const preview = (zone) => {
+      let p = document.getElementById('foafos-snap-preview');
+      if (!zone) { p?.remove(); return; }
+      if (!p) { p = document.createElement('div'); p.id = 'foafos-snap-preview'; document.body.appendChild(p); }
+      const [l, t, w, h] = snapBox(zone);
+      Object.assign(p.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px` });
+    };
     bar.addEventListener('pointermove', (e) => {
       if (!drag) return;
+      if (win._unsnap && Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 8) {
+        win.style.width = win._unsnap.w; win.style.height = win._unsnap.h;
+        win.style.maxWidth = win.style.maxHeight = '';
+        win._unsnap = null;
+        drag.left = e.clientX - Math.min(win.getBoundingClientRect().width / 2, 120);
+        drag.x = e.clientX;
+      }
       win.style.left = `${Math.max(0, Math.min(window.innerWidth - 80, drag.left + e.clientX - drag.x))}px`;
       win.style.top = `${Math.max(0, Math.min(window.innerHeight - 40, drag.top + e.clientY - drag.y))}px`;
+      drag.zone = snapZone(e);
+      preview(drag.zone);
     });
-    bar.addEventListener('pointerup', () => { drag = null; });
+    const endDrag = () => {
+      const zone = drag?.zone;
+      drag = null;
+      preview(null);
+      if (!zone) return;
+      if (!win._unsnap) win._unsnap = { w: win.style.width, h: win.style.height };
+      const [l, t, w, h] = snapBox(zone);
+      Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
+    };
+    bar.addEventListener('pointerup', endDrag);
+    bar.addEventListener('pointercancel', endDrag);
     return win;
   }
 
