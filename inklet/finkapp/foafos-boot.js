@@ -33,10 +33,13 @@ window.addEventListener('DOMContentLoaded', () => {
         // `layout: 'tile'` grids the windows on a wide screen, again each time
         // an app opens a window (the Playlist, when a story first asks for it).
         setTimeout(() => {
+            // Background furniture: it must not land on top of what a ?app= link asked for.
+            window.FoafOS.noRaise = true;
             for (const e of (rootBoot.apps || [])) {
                 if (typeof e === 'string') window.FoafOS.launchApp(e);
                 else window.FoafOS.launchApp(e.id, { doc: e.doc, story: e.story });
             }
+            window.FoafOS.noRaise = false;
             if (rootBoot.layout === 'tile') {
                 window.FoafOS.tileWindows?.();
                 window.FoafOS.bus?.subscribe('app.launch', () => setTimeout(() => window.FoafOS.tileWindows?.(), 50));

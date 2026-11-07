@@ -2856,6 +2856,7 @@ function buildUI() {
     front?._snap?.(zone);
   };
   FoafOS.raiseWindow = (win) => {
+    if (FoafOS.noRaise) return;
     document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; });
     win.style.zIndex = 2640;
   };
@@ -2864,8 +2865,10 @@ function buildUI() {
     const win = document.createElement('div');
     win.className = 'foafos-window';
     win.dataset.wid = `w${widgetSeq}`;
-    // What you open comes to the front, over panels and a full-screen app alike.
+    // What you open comes to the front, over panels and a full-screen app alike,
+    // and so does a window you click in. A click inside an app's frame stays in the frame.
     FoafOS.raiseWindow?.(win);
+    win.addEventListener('pointerdown', () => { if (win.style.zIndex !== '2640') FoafOS.raiseWindow(win); }, true);
     win.setAttribute('role', 'group');
     win.setAttribute('aria-label', title);
     // Fit the screen, then cascade inside it. A fixed 380px window with a
