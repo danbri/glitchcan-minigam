@@ -2988,6 +2988,7 @@ function buildUI() {
       drag = null;
       preview(null);
       if (!zone) return;
+      if (zone === 'top') { maxBtn.click(); return; }   // the real Maximize, so its button stays true
       if (!win._unsnap) win._unsnap = { w: win.style.width, h: win.style.height };
       const [l, t, w, h] = snapBox(zone);
       Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
