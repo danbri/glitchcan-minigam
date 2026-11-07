@@ -60,6 +60,26 @@ export class FoafTools {
     return null;
   }
 
+  /**
+   * Tools the shell itself offers, with no frame: each is
+   * {name, description, inputSchema, readOnly, handler(args, {caller})}. They
+   * are listed, granted, called and published to WebMCP as a frame's are. The
+   * handler hears who called, so a tool that calls another app's tool can call
+   * it as the same caller, and that app's grants apply too.
+   */
+  offer({ id, label, api = null, tools }) {
+    const handlers = new Map(tools.map((t) => [t.name, t.handler]));
+    const p = this.attach({ id, label, source: { shell: id }, post: (m) => {
+      const w = p.pending.get(m.id);
+      const run = handlers.get(m.name);
+      Promise.resolve().then(() => run(m.args, { caller: w?.caller ?? null }))
+        .then((value) => this.receive(p, { type: 'webmcp.result', id: m.id, ok: true, value: value ?? null }),
+          (e) => this.receive(p, { type: 'webmcp.result', id: m.id, ok: false, error: String(e?.message || e) }));
+    } });
+    this.receive(p, { type: 'webmcp.tools', api, tools: tools.map(({ handler, ...t }) => t) });
+    return p;
+  }
+
   /** A `webmcp.*` message from a provider's frame. */
   receive(p, m) {
     if (m.type === 'webmcp.tools' && Array.isArray(m.tools)) {

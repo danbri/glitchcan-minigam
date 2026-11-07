@@ -50,4 +50,6 @@ export { FoafChat, CHAT_OWNER, DEFAULT_MIRROR, BUILTIN_DOMAIN } from './chat.mjs
 export { FoafTools } from './tools.mjs';
 export { ToolGrants, PERSON, BROWSER_AGENT, SHELL_APP, accountCaller, describeGrant } from './tool-grants.mjs';
 export { createChatCommands, explainToolFailure } from './chat-commands.mjs';
+// Named places (waypoints) in the pod, and the tools to use them. See places.mjs.
+export { FoafPlaces, placesTools, placeDoc, parsePlace, placeFromView, PLACES_VOCAB } from './places.mjs';
 export { lwsStore, cachedBackend, mergeKeys, LwsConflict } from './lws-store.mjs';

@@ -15,9 +15,10 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
-  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, describeLocation, handlersFor, CHAT_OWNER,
+  defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, PERSON, describeLocation, handlersFor, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { FoafTools } from '../../packages/foafos/src/tools.mjs';
+import { FoafPlaces, placesTools } from '../../packages/foafos/src/places.mjs';
 import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { KNOWN_PODS } from './foafos-known-pods.js';
@@ -461,6 +462,19 @@ window.addEventListener('message', (e) => {
   appTools.receive(p, d);
 });
 for (const t of ['app.close', 'minigame.instance']) bus.subscribe(t, () => setTimeout(() => appTools.prune(), 0));
+
+// ── places: named waypoints in the person's pod (FoafPlaces, places.mjs) ─────
+// Each is a schema.org Place in `places/` of the shared pod, reached through pods.invoke like
+// an app's files, so it is audited and refused the same way. The shell offers the tools, as
+// `places.list`, `places.save`, `places.delete` and `places.fly_to`: Moglob's frame cannot
+// reach the pod. A caller other than the person needs a grant, as for any app's tools, and
+// fly_to calls Moglob as that same caller. The Places tab of System shows them.
+const places = new FoafPlaces({ bus, pod: (verb, params) => pods.invoke(PLACES_OWNER, verb, params) });
+FoafOS.places = places;
+appTools.offer({ id: 'places', label: 'Places', api: 'places/1', tools: placesTools({
+  places, tools: appTools,
+  openApp: (id) => { if (rootOffers(ROOT, id)) FoafOS.launchApp?.(id); },
+}) });
 bus.subscribe('app.close', (e) => pods.endShares(e.data?.closed || []));
 
 const runChatCommand = createChatCommands({
@@ -681,6 +695,8 @@ bus.subscribe('app.close', syncBrokerGrants);
 // only its own container. No pod chosen means no grant (the verb answers
 // `no-pod`, so the app can say what the person must do).
 const POD_CAPS = ['pod:read', 'pod:write'];
+// The shell's own places (FoafPlaces): the `places/` container of the shared pod, not an app's.
+const PLACES_OWNER = 'foafos.places';
 function syncPodGrants() {
   for (const appId of [...pods.grants.keys()]) pods.revoke(appId);
   const target = pods.appsPod();
@@ -700,9 +716,11 @@ function syncPodGrants() {
     try { pods.grant(appId, Object.fromEntries([...caps].map((c) => [c, whole ? { pod, prefix: '' } : { pod }]))); }
     catch (e) { bus.publish('pods.refused', { summary: `${appId}'s pod grant failed: ${e.message}`, appId, reason: 'bad-scope' }); }
   }
+  pods.grant(PLACES_OWNER, Object.fromEntries(POD_CAPS.map((c) => [c, { pod: target, prefix: 'places/' }])));
 }
 FoafOS.syncPodGrants = syncPodGrants;
 for (const t of ['app.spawn', 'app.close', 'pods.added', 'pods.updated', 'pods.removed']) bus.subscribe(t, syncPodGrants);
+syncPodGrants();   // places need no app open
 // An installation with no stories should not wear story chrome. The flag
 // stays because it is a true statement about the installation and skins
 // may want it — but it is no longer what REMOVES the narrative
@@ -1769,7 +1787,7 @@ bus.subscribe('activity.*', (ev) => { activityHist.push(ev); if (activityHist.le
 // System: one window for the shell's own settings, instead of an app for each. The parts
 // are the drawer's own sections, moved here and kept, so they outlive the window.
 const SYSTEM_TABS = [['session', 'Session', 'foafos-session'], ['pods', 'Pods', 'foafos-pods'], ['sound', 'Sound', 'foafos-audio-wrap'],
-  ['look', 'Look', 'foafos-skin-wrap'], ['capabilities', 'Capabilities', 'foafos-caps-wrap']];
+  ['places', 'Places', 'foafos-places'], ['look', 'Look', 'foafos-skin-wrap'], ['capabilities', 'Capabilities', 'foafos-caps-wrap']];
 const systemParts = new Map();
 FoafOS.openSystem = (tab = 'session') => {
   let win = document.getElementById('foafos-session-win');
@@ -1782,7 +1800,7 @@ FoafOS.openSystem = (tab = 'session') => {
     const body = document.createElement('div');
     body.className = 'act-body fs-body';
     for (const [id, label, part] of SYSTEM_TABS) {
-      if (!systemParts.has(part)) systemParts.set(part, document.getElementById(part) ?? (id === 'pods' ? FoafOS._mountPods?.() : null));
+      if (!systemParts.has(part)) systemParts.set(part, document.getElementById(part) ?? (id === 'pods' ? FoafOS._mountPods?.() : id === 'places' ? FoafOS._mountPlaces?.() : null));
       const node = systemParts.get(part);
       const b = document.createElement('button');
       b.type = 'button'; b.textContent = label; b.dataset.tab = id; b.setAttribute('role', 'tab');
@@ -1798,11 +1816,13 @@ FoafOS.openSystem = (tab = 'session') => {
   for (const b of win.querySelectorAll('.fs-tabs [data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
   for (const n of win.querySelectorAll('[data-system-tab]')) n.hidden = n.dataset.systemTab !== tab;
   if (tab === 'pods') FoafOS._drawPods?.();
+  if (tab === 'places') FoafOS._drawPlaces?.();
   FoafOS.raiseWindow?.(win);
   return win;
 };
 FoafOS.openSession = () => FoafOS.openSystem('session');
 FoafOS.openPods = () => FoafOS.openSystem('pods');
+FoafOS.openPlaces = () => FoafOS.openSystem('places');
 // the Activity window (a shell panel, foafos-apps.js row 'activity'): the live cards on top, the history below
 function activityLive() { return document.querySelector('#foafos-activity-win .act-live'); }
 FoafOS.openActivity = (opts = {}) => {
@@ -6057,6 +6077,109 @@ function buildUI() {
     return body;
   }
   FoafOS._mountPods = mountPods;
+
+  // ── Places: the Places tab of System, named places in the pod (FoafPlaces) ─────
+  // The same tools an agent gets (places.*), called as the person, so the bus shows each one.
+  function mountPlaces() {
+    const body = document.createElement('div');
+    body.id = 'foafos-places';
+    body.className = 'fp';
+    const el = (tag, text, cls) => {
+      const e = document.createElement(tag);
+      if (text != null) e.textContent = text;
+      if (cls) e.className = cls;
+      return e;
+    };
+    const button = (parent, label, fn, cls = 'fp-btn') => {
+      const b = el('button', label, cls);
+      b.type = 'button';
+      b.addEventListener('click', fn);
+      parent.appendChild(b);
+      return b;
+    };
+    const field = (parent, label, opts = {}) => {
+      const wrap = el('label', label, 'fp-field');
+      const input = document.createElement('input');
+      input.type = opts.type || 'text';
+      if (opts.step) input.step = opts.step;
+      input.placeholder = opts.placeholder || '';
+      input.autocomplete = 'off';
+      wrap.appendChild(input);
+      parent.appendChild(wrap);
+      return input;
+    };
+    const status = el('p', '', 'fp-status');
+    status.setAttribute('role', 'status');
+    const call = async (tool, args) => {
+      const r = await appTools.call('places', tool, args, { caller: PERSON });
+      status.textContent = r.ok ? '' : (r.error || r.reason);
+      return r;
+    };
+    const intro = el('p', 'Places you name are kept in your pod, in places/, one small file each. Fly to one in Moglob, or let an agent use them with the places tools.', 'fp-intro');
+
+    const save = el('div', null, 'fp-pod');
+    save.appendChild(el('h3', 'Save where Moglob is looking'));
+    const saveRow = el('div', null, 'fp-secret');
+    const viewName = field(saveRow, 'Name', { placeholder: 'Greenland Dock' });
+    button(saveRow, 'Save', async () => {
+      if (!viewName.value.trim()) { status.textContent = 'Give the place a name.'; viewName.focus(); return; }
+      const r = await call('save', { name: viewName.value });
+      if (r.ok) { viewName.value = ''; status.textContent = `Saved ${r.value.saved.name}.`; draw(); }
+    }, 'fp-btn fp-primary');
+    save.appendChild(saveRow);
+
+    const add = el('details', null, 'fp-add');
+    add.appendChild(el('summary', 'Add a place by coordinates'));
+    const name = field(add, 'Name');
+    const lat = field(add, 'Latitude', { type: 'number', step: 'any', placeholder: '51.5055' });
+    const lon = field(add, 'Longitude', { type: 'number', step: 'any', placeholder: '-0.0235' });
+    const note = field(add, 'Note (optional)');
+    const addRow = el('div', null, 'fp-actions');
+    button(addRow, 'Add', async () => {
+      const r = await call('save', { name: name.value, lat: lat.value === '' ? null : Number(lat.value), lon: lon.value === '' ? null : Number(lon.value), description: note.value });
+      if (r.ok) { for (const i of [name, lat, lon, note]) i.value = ''; status.textContent = `Saved ${r.value.saved.name}.`; draw(); }
+    }, 'fp-btn fp-primary');
+    add.appendChild(addRow);
+
+    const list = el('div', null, 'fp-places');
+    body.append(intro, list, status, save, add);
+
+    let drawing = 0;
+    async function draw() {
+      const mine = ++drawing;
+      const r = await appTools.call('places', 'list', {}, { caller: PERSON });
+      if (mine !== drawing) return;
+      list.textContent = '';
+      if (!r.ok) { list.appendChild(el('p', r.error || r.reason, 'fp-warn')); return; }
+      if (!r.value.places.length) { list.appendChild(el('p', 'No places yet.', 'fp-note')); return; }
+      for (const p of r.value.places) {
+        const card = el('div', null, 'fp-pod fp-place');
+        card.dataset.place = p.id;
+        card.appendChild(el('div', null, 'fp-head')).appendChild(el('h3', p.name));
+        const where = `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}${p.view?.altitude != null ? `, seen from ${Math.round(p.view.altitude)} m up` : ''}`;
+        card.appendChild(el('p', where, 'fp-address'));
+        if (p.description) card.appendChild(el('p', p.description, 'fp-note'));
+        const actions = el('div', null, 'fp-actions');
+        button(actions, 'Fly to', async () => {
+          status.textContent = `Flying to ${p.name}…`;
+          const f = await call('fly_to', { place: p.id });
+          if (f.ok) status.textContent = `Flying to ${p.name}.`;
+        }, 'fp-btn fp-primary').setAttribute('aria-label', `Fly to ${p.name}`);
+        button(actions, 'Delete', async () => {
+          if (!confirm(`Delete the place ${p.name}?`)) return;
+          const d = await call('delete', { place: p.id });
+          if (d.ok) { status.textContent = `Deleted ${p.name}.`; draw(); }
+        }).setAttribute('aria-label', `Delete ${p.name}`);
+        card.appendChild(actions);
+        list.appendChild(card);
+      }
+    }
+    // Saved or deleted elsewhere (by an agent, say): show it while the tab is open.
+    places.subscribe(() => { if (body.isConnected && !body.hidden) draw(); });
+    FoafOS._drawPlaces = draw;
+    return body;
+  }
+  FoafOS._mountPlaces = mountPlaces;
 
   // ── Chat: rooms, direct messages and the apps' activity (FoafChat) ─────
   // Shell chrome for the Pods tab's reason: a server password typed here

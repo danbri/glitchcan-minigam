@@ -1417,6 +1417,7 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .fp { display: flex; flex-direction: column; gap: 10px; color: var(--sk-ink, #eee); font: 14px/1.45 var(--sk-font-ui, system-ui, sans-serif); }
 .fp p { margin: 0; }
 .fp-intro { font-size: 15px; }
+.fp-places { display: flex; flex-direction: column; gap: 8px; }
 .fp-pod { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--sk-ink, #eee) 16%, transparent); }
 .fp-head { display: flex; align-items: center; gap: 8px; }
 .fp-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
