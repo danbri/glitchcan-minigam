@@ -1798,7 +1798,7 @@ FoafOS.openSystem = (tab = 'session') => {
   }
   for (const b of win.querySelectorAll('.fs-tabs [data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
   for (const n of win.querySelectorAll('[data-system-tab]')) n.hidden = n.dataset.systemTab !== tab;
-  win.style.zIndex = 2630;
+  FoafOS.raiseWindow?.(win);
   return win;
 };
 FoafOS.openSession = () => FoafOS.openSystem('session');
@@ -1809,7 +1809,7 @@ FoafOS.openActivity = (opts = {}) => {
   window.FinkWM?.setUnread?.(0);
   if (!opts.compact) FoafOS._activityClosed = false;     // opened by the reader: it may open itself again
   const open = document.getElementById('foafos-activity-win');
-  if (open) { document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; }); open.style.zIndex = 2630; return open; }
+  if (open) { document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; }); open.style.zIndex = 2640; return open; }
   const win = FoafOS._makeWindow('💬 Activity', 360, opts.compact ? 190 : 520, { float: !!opts.compact });
   // opened by a face that speaks: a short strip across the top, over the older story text, not the choices
   if (opts.compact) { win.style.left = '8px'; win.style.top = '8px'; win.style.width = `${Math.min(420, window.innerWidth - 16)}px`; }
@@ -2431,7 +2431,7 @@ function buildUI() {
       const win = winById(id);
       if (win) {
         document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
-        win.style.zIndex = 2630;
+        win.style.zIndex = 2640;
         setDrawer(false);
       }
     } else if (id.startsWith('inst:')) {
@@ -2832,8 +2832,7 @@ function buildUI() {
     if (focusWin?.id === 'minigame-view') {
       if (window.FinkWM?.mode !== 'full') window.FinkWM?.setMode('full');
     } else if (focusWin) {
-      document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
-      focusWin.style.zIndex = 2630;
+      FoafOS.raiseWindow(focusWin);
       // A full-screen game sits above every window, so the one just picked would vanish
       // behind it. Float the game instead: tapping it brings it back.
       if (document.body.classList.contains('foafos-stage-game') && window.FinkWM?.mode === 'full') window.FinkWM.setMode('pip');
@@ -2847,11 +2846,17 @@ function buildUI() {
     if (e.key === 'Escape' && overviewOn) { e.preventDefault(); exitOverview(null); }
   });
 
+  FoafOS.raiseWindow = (win) => {
+    document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; });
+    win.style.zIndex = 2640;
+  };
   function makeWindow(title, w, h, opts = {}) {
     widgetSeq++;
     const win = document.createElement('div');
     win.className = 'foafos-window';
     win.dataset.wid = `w${widgetSeq}`;
+    // What you open comes to the front, over panels and a full-screen app alike.
+    FoafOS.raiseWindow?.(win);
     win.setAttribute('role', 'group');
     win.setAttribute('aria-label', title);
     // Fit the screen, then cascade inside it. A fixed 380px window with a
@@ -2946,8 +2951,7 @@ function buildUI() {
       bar.setPointerCapture(e.pointerId);
       const r = win.getBoundingClientRect();
       drag = { x: e.clientX, y: e.clientY, left: r.left, top: r.top };
-      document.querySelectorAll('.foafos-window').forEach(x => { x.style.zIndex = 2620; });
-      win.style.zIndex = 2630;
+      FoafOS.raiseWindow(win);
     });
     // Drag to a side to fill half the screen, or to the top to fill it, as on a desktop.
     // Dragging a snapped window away gives it back its size.
@@ -5100,7 +5104,7 @@ function buildUI() {
       if (runnerWin) {
         restoreYieldedScreen();
         document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
-        runnerWin.style.zIndex = 2630;
+        runnerWin.style.zIndex = 2640;
         return;
       }
       if (window.FinkWM?.active && window.FinkWM.mode === 'full') window.FinkWM.setMode('split');
@@ -5109,7 +5113,7 @@ function buildUI() {
     const win = document.querySelector(`.foafos-window[data-instance="${node.id}"]`);
     if (win) {
       document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
-      win.style.zIndex = 2630;
+      win.style.zIndex = 2640;
       win.scrollIntoView({ block: 'nearest' });
     }
   }
