@@ -703,6 +703,36 @@ window.FinkWM = {
 
     // ── chrome: collapse + drag-dock ─────────────────────────────────────
 
+    // What is open, at the top of the menu: switching takes two taps from anywhere.
+    _drawOpenList() {
+        const sys = document.getElementById('wm-sys-sect');
+        if (!sys) return;
+        let sect = document.getElementById('wm-open-sect');
+        if (!sect) {
+            sect = document.createElement('div');
+            sect.id = 'wm-open-sect'; sect.className = 'wm-sect';
+            sect.setAttribute('role', 'group'); sect.setAttribute('aria-label', 'Open windows');
+            sys.before(sect);
+        }
+        sect.textContent = '';
+        const wins = [...document.querySelectorAll('.foafos-window')];
+        sect.hidden = !wins.length;
+        for (const win of wins) {
+            const name = win.querySelector('.foafos-window-bar span')?.textContent?.trim() || win.getAttribute('aria-label') || 'Window';
+            const b = document.createElement('button');
+            b.type = 'button';
+            const lab = document.createElement('span');
+            lab.className = 'wm-label'; lab.textContent = name;
+            b.appendChild(lab);
+            b.addEventListener('click', () => {
+                win.classList.remove('minimized');
+                window.FoafOS?.raiseWindow?.(win);
+                this._setCollapsed(true);
+            });
+            sect.appendChild(b);
+        }
+    },
+
     _setCollapsed(collapsed) {
         const { chrome, handle } = this.elements;
         // the menu as a ring (a setting, ☰ › Look): the list's rows are built as usual, unshown, and the ring
@@ -721,6 +751,7 @@ window.FinkWM = {
             && document.activeElement !== handle) {
             handle.focus();
         }
+        if (!collapsed) this._drawOpenList();
         chrome.classList.toggle('collapsed', collapsed);
         handle.setAttribute('aria-expanded', String(!collapsed));
         if (collapsed) clearTimeout(this._collapseTimer);
