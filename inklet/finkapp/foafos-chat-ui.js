@@ -210,7 +210,8 @@ export function mountChat(root, { chat, tools, grants, run }) {
   const list = h('nav', { class: 'fc-list', 'aria-label': 'Conversations' });
   const newBox = h('input', { type: 'text', 'aria-label': 'Room name or account', placeholder: 'Room or name@server', spellcheck: false, autocomplete: 'off' });
   const newForm = h('form', { class: 'fc-new', on: { submit: startNew } }, newBox);
-  const side = h('aside', { class: 'fc-side' }, list, newForm);
+  const sideClose = h('button', { type: 'button', class: 'fc-icon fc-close fc-side-close', 'aria-label': 'Close conversations', on: { click: () => togglePanel('side') } }, '×');
+  const side = h('aside', { class: 'fc-side' }, sideClose, list, newForm);
   // Wide, each side panel is shown until hidden, and that is remembered. Narrow, each slides over the chat.
   for (const name of ['side', 'info']) {
     try { if (localStorage.getItem(`foafos.chat.hide.${name}`)) root.classList.add(`fc-hide-${name}`); } catch { /* shown */ }
@@ -237,7 +238,13 @@ export function mountChat(root, { chat, tools, grants, run }) {
   const tabM = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'members'; drawInfo(); } } }, 'Accounts');
   const tabT = h('button', { type: 'button', role: 'tab', on: { click: () => { infoTab = 'tools'; drawInfo(); } } }, 'App tools');
   const infoBody = h('div', { class: 'fc-info-body' });
-  const info = h('aside', { class: 'fc-info' }, h('div', { class: 'fc-tabs', role: 'tablist' }, tabM, tabT), infoBody);
+  const infoClose = h('button', { type: 'button', class: 'fc-icon fc-close', 'aria-label': 'Close details', on: { click: () => togglePanel('info') } }, '×');
+  const info = h('aside', { class: 'fc-info' }, h('div', { class: 'fc-info-head' }, h('div', { class: 'fc-tabs', role: 'tablist' }, tabM, tabT), infoClose), infoBody);
+  // In a narrow window a panel covers the button that opened it, so a tap beside
+  // it or Escape closes it too.
+  const closeOverlays = () => root.classList.remove('fc-show-side', 'fc-show-info');
+  main.addEventListener('click', (e) => { if (!e.target.closest('.fc-icon')) closeOverlays(); });
+  root.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOverlays(); });
   const chatView = h('div', { class: 'fc-chat' }, side, main, info);
   root.append(form, chatView);
 

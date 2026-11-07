@@ -125,7 +125,10 @@
 .fc-hints { position: absolute; left: 14px; bottom: calc(100% - 4px); display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; background: var(--sk-bg); border: 1px solid var(--fc-line); border-radius: var(--fc-corner); }
 .fc-hints button { min-height: 30px; padding: 0 8px; cursor: pointer; background: var(--fc-tint); border: 0; border-radius: var(--fc-corner); }
 
-.fc-tabs { display: flex; border-bottom: 1px solid var(--fc-line); }
+.fc-info-head { display: flex; align-items: center; border-bottom: 1px solid var(--fc-line); }
+.fc-tabs { display: flex; flex: 1; min-width: 0; }
+.fc-close { flex: none; width: 44px; height: 44px; font-size: 20px; color: var(--sk-ink-dim); }
+.fc-side-close { display: none; }
 .fc-tabs button { flex: 1; min-height: 52px; cursor: pointer; font-size: 14px; color: var(--sk-ink-dim); background: none; border: 0; border-bottom: 2px solid transparent; }
 .fc-tabs button[aria-selected=true] { color: var(--sk-ink); font-weight: 600; border-bottom-color: var(--sk-accent); }
 .fc-info-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; }
@@ -147,6 +150,7 @@
   .fc-side { left: 0; transform: translateX(-102%); }
   .fc-info { right: 0; transform: translateX(102%); }
   .fc.fc-show-side .fc-side, .fc.fc-show-info .fc-info { transform: none; box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--sk-ink) 25%, transparent); }
+  .fc-side-close { display: block; align-self: flex-end; }
   .fc-toggle { display: none; }
 }
 @media (prefers-reduced-motion: no-preference) {

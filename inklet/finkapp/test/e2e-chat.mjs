@@ -72,6 +72,36 @@ try {
   await page.waitForTimeout(300);
   check(!(await page.evaluate(() => FoafOS.chat.log.some((m) => m.body.startsWith('secrets.')))), 'a topic not on the mirror list stays out of the room');
 
+  // The details panel can always be closed, wide or narrow. In a narrow window it covers the ⓘ that opened it.
+  const hiddenInfo = () => page.evaluate(() => { const f = document.querySelector('.fc'); return f.classList.contains('fc-hide-info'); });
+  if (await hiddenInfo()) await page.click('.fc-info-toggle');
+  await page.click('.fc-info .fc-close');
+  check(await hiddenInfo(), 'wide: the close button in the details panel closes it');
+  if (await hiddenInfo()) await page.click('.fc-info-toggle');
+  await page.setViewportSize({ width: 560, height: 800 });
+  await page.waitForTimeout(400);
+  const narrow = await page.evaluate(() => document.querySelector('.fc').getBoundingClientRect().width);
+  check(narrow <= 760, `narrow: the Chat window is ${Math.round(narrow)}px wide`);
+  const shown = () => page.evaluate(() => document.querySelector('.fc').classList.contains('fc-show-info'));
+  await page.click('.fc-info-toggle');
+  check(await shown(), 'narrow: ⓘ opens the details panel');
+  await page.waitForTimeout(300);
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await page.click('.fc-info .fc-close');
+  check(!(await shown()), 'narrow: the close button closes it');
+  await page.click('.fc-info-toggle');
+  await page.keyboard.press('Escape');
+  check(!(await shown()), 'narrow: Escape closes it');
+  await page.click('.fc-info-toggle');
+  await page.waitForTimeout(300);
+  await page.click('.fc-log', { position: { x: 20, y: 20 } });
+  check(!(await shown()), 'narrow: a tap beside it closes it');
+  await page.click('.fc-side-toggle');
+  await page.waitForTimeout(300);
+  await page.click('.fc-side-close');
+  check(!(await page.evaluate(() => document.querySelector('.fc').classList.contains('fc-show-side'))), 'narrow: the conversations panel closes too');
+  await page.setViewportSize({ width: 1200, height: 900 });
+
   // ── 2. localhost server ──
   await page.click('#foafos-chat .fc-status');
   await page.check('input[name=fc-place][value=other]');
