@@ -217,8 +217,106 @@
     pattern === '*' || pattern === topic
     || (pattern.endsWith('.*') && topic.startsWith(pattern.slice(0, -1)));
 
+  // ── tools: what this app offers to the shell, and through it to agents ──
+  // The same postMessage protocol as Moglob's frame-bridge.js and Drift's
+  // worldtools.js, which the shell's FoafTools (packages/foafos/src/tools.mjs)
+  // speaks:
+  //
+  //   page -> parent  {type:'webmcp.tools', api, tools:[{name,description,inputSchema,readOnly}]}
+  //   parent -> page  {type:'webmcp.list'}
+  //   parent -> page  {type:'webmcp.call', id, name, args}
+  //   page -> parent  {type:'webmcp.result', id, ok, value|error}
+  //
+  // Only the parent frame is answered, and only while this page has an
+  // opaque origin, as every foafos app frame has (a sandbox without
+  // allow-same-origin). There the app's data comes from the parent anyway,
+  // through the brokers, so a parent that calls a tool learns nothing it could
+  // not reach. A page with a real origin, standalone or framed by any other
+  // site, offers no tools: its own storage is not the parent's to read.
+  // The shell decides who may call what (tool-grants.mjs); the app only says
+  // which tools change nothing (`readOnly: true`). The shell listens only to
+  // apps whose manifest says `"tools": true`. Handlers check their own
+  // arguments: only `required` is checked here, not types.
+  const TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/;
+  const opaqueOrigin = () => { try { return String(window.origin) === 'null'; } catch { return false; } };
+  const servesTools = () => window.parent !== window && opaqueOrigin();
+  const toolDefs = new Map();      // name -> { name, description, inputSchema, readOnly, handler }
+  let toolsApi = 'app-sdk/1';
+  let announceQueued = false;
+  const toolList = () => [...toolDefs.values()].map(({ name, description, inputSchema, readOnly }) =>
+    ({ name, description, inputSchema, readOnly }));
+  const announceTools = () => { if (servesTools()) post({ type: 'webmcp.tools', api: toolsApi, tools: toolList() }); };
+  // Many registrations in one turn send one list.
+  const queueAnnounce = () => {
+    if (announceQueued) return;
+    announceQueued = true;
+    setTimeout(() => { announceQueued = false; announceTools(); }, 0);
+  };
+  // Run a tool here. Resolves { ok: true, value } or { ok: false, error }; never rejects.
+  const runTool = async (name, args) => {
+    const t = toolDefs.get(String(name));
+    if (!t) return { ok: false, error: `no tool called "${name}"` };
+    const a = args && typeof args === 'object' && !Array.isArray(args) ? args : {};
+    const missing = (t.inputSchema?.required || []).filter((k) => !Object.prototype.hasOwnProperty.call(a, k) || a[k] == null);
+    if (missing.length) return { ok: false, error: `missing ${missing.join(', ')}` };
+    try {
+      // JSON keeps the answer cloneable: no functions or class objects cross the frame.
+      const value = await t.handler(a);
+      return { ok: true, value: JSON.parse(JSON.stringify(value) ?? 'null') };
+    } catch (err) {
+      return { ok: false, error: String((err && err.message) || err) };
+    }
+  };
+  const onToolMessage = async (d) => {
+    if (!servesTools()) return;
+    if (d.type === 'webmcp.list') { announceTools(); return; }
+    if (d.type !== 'webmcp.call') return;
+    const r = await runTool(d.name, d.args);
+    post({ type: 'webmcp.result', id: d.id, ...r });
+  };
+  const tools = {
+    /**
+     * Offer a tool. `handler(args)` may be async; what it returns is the
+     * result, and what it throws is the error. Returns a function that takes
+     * the tool back.
+     *
+     *   foaf.tools.register({
+     *     name: 'list_notes',
+     *     description: 'The names of your notes.',
+     *     inputSchema: { type: 'object', properties: {} },
+     *     readOnly: true,
+     *     handler: async () => names,
+     *   })
+     *
+     * `readOnly: true` only for a tool that changes nothing. A tool that writes
+     * leaves it out, and the shell then asks a caller for a grant to use it.
+     */
+    register({ name, description = '', inputSchema = null, readOnly = false, handler } = {}) {
+      if (typeof name !== 'string' || !TOOL_NAME.test(name)) throw new Error(`foafos: tool name "${name}": a string of 1 to 64 of A-Z, a-z, 0-9, _ and -`);
+      if (typeof handler !== 'function') throw new Error(`foafos: tool "${name}" needs a handler function`);
+      // The same name again replaces the tool; the first one's way back then does nothing.
+      const def = {
+        name, description: String(description), readOnly: readOnly === true, handler,
+        inputSchema: inputSchema || { type: 'object', properties: {} },
+      };
+      toolDefs.set(name, def);
+      declareContract('tools');
+      queueAnnounce();
+      return () => { if (toolDefs.get(name) === def) tools.unregister(name); };
+    },
+    unregister(name) { if (toolDefs.delete(String(name))) queueAnnounce(); },
+    /** The tools offered now, without their handlers. */
+    list: toolList,
+    /** Run a tool in this page, as the shell would. For tests and for the app itself. */
+    call: runTool,
+    /** The `api` string sent with the list; set it before registering. */
+    get api() { return toolsApi; },
+    set api(v) { toolsApi = String(v); },
+  };
+
   // ── the public surface ──────────────────────────────────────────────
   const foaf = {
+    tools,
     get id() { return appId; },
     get ready() { return ready; },
     can: (cap) => capabilities.has(cap),
@@ -405,6 +503,11 @@
   window.addEventListener('message', (e) => {
     const d = e.data;
     if (!d || typeof d.type !== 'string') return;
+    if (d.type.startsWith('webmcp.')) {
+      // From the parent only: another frame on the page may not call this app's tools.
+      if (e.source === window.parent) onToolMessage(d);
+      return;
+    }
     if (d.type === 'secrets.result' || d.type === 'secrets.names.result'
         || d.type === 'secrets.refused') {
       const resolve = secretWaiters.get(d.rid);
@@ -474,6 +577,8 @@
         // (the conformance rule, spec §5.1.2).
         for (const c of (d.capabilities || [])) contracts.add(c);
         post({ type: 'conformance', contracts: [...contracts] });
+        // Tools registered before the shell said hello: say them again.
+        if (toolDefs.size) queueAnnounce();
         listeners.init.forEach(fn => { try { fn(d.config || {}, foaf); } catch (err) { console.error(err); } });
         break;
       }
