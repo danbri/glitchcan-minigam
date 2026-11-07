@@ -107,4 +107,8 @@ work; depmap-33 reported on 2026-11-07 that the token works against the pod.
 
 **Open item:** since "what you open comes to the front", an app that boots under a root (edot under `?root=office`) can cover a
 window that `?app=` opened. So `?root=office&app=pods` can show System behind edot. Both pod tests press System first. This
-is not new to pods: it applies to any `?app=` link under a root that boots an app.
+is not new to pods: it applies to any `?app=` link under a root that boots an app. Commit 896e98eb ("boot windows stay back")
+came after this work and is meant to fix it; this work did not test that.
+
+After the deploy, `live-fly.mjs` passed 8 of 8 on https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?root=office&app=pods
+with no local files.
