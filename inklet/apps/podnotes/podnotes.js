@@ -127,6 +127,53 @@
   // For tests and agents: the same calls the buttons make.
   window.__podnotes = { refresh, open, save, remove, state: () => ({ current, shared, status: statusEl.textContent }) };
 
+  // Tools for the shell and agents (foaf.tools in app-sdk.js). Each answers from the pod,
+  // not from what the window shows, and a refusal throws with the reason a person would read.
+  const fail = (r) => { throw new Error(explain(r)); };
+  const noteNames = async () => {
+    const r = await foaf.pod.list('notes/');
+    if (!r.ok) { if (r.reason === 'http' && r.status === 404) return []; fail(r); }
+    return r.items.filter((it) => !it.container && it.path.endsWith('.txt')).map((it) => it.path.slice(0, -4)).sort();
+  };
+  foaf.tools.register({
+    name: 'list_notes',
+    description: 'The names of your notes, in name order.',
+    inputSchema: { type: 'object', properties: {} },
+    readOnly: true,
+    handler: async () => ({ notes: await noteNames() }),
+  });
+  foaf.tools.register({
+    name: 'read_note',
+    description: 'The text of one note, by its name (from list_notes).',
+    inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'The note name' } }, required: ['name'] },
+    readOnly: true,
+    handler: async ({ name }) => {
+      // A note made elsewhere may have a name the form would change: the listed name comes first.
+      const exact = (await noteNames()).includes(String(name)) ? String(name) : cleanName(name);
+      const r = await foaf.pod.get(`notes/${exact}.txt`);
+      if (!r.ok) { if (r.status === 404) throw new Error(`No note called ${name}.`); fail(r); }
+      return { name: exact, text: r.body };
+    },
+  });
+  foaf.tools.register({
+    name: 'add_note',
+    description: 'Write a new note to your pod. Refused if a note with that name exists already.',
+    inputSchema: {
+      type: 'object',
+      properties: { name: { type: 'string', description: 'The note name, up to 80 characters' }, text: { type: 'string', description: 'The note text' } },
+      required: ['name', 'text'],
+    },
+    handler: async ({ name, text }) => {
+      const clean = cleanName(name);
+      if (!clean) throw new Error('Give the note a name.');
+      if (String(text).length > 500000) throw new Error('A note may have up to 500,000 characters.');
+      const r = await foaf.pod.put(`notes/${clean}.txt`, String(text), { contentType: 'text/plain; charset=utf-8', ifNoneMatch: true });
+      if (!r.ok) { if (r.reason === 'conflict') throw new Error(`A note called ${clean} exists already.`); fail(r); }
+      if (!shared) refresh();
+      return { saved: clean };
+    },
+  });
+
   foaf.onInit(async () => {
     await refresh();
     const r = await foaf.pod.shared();

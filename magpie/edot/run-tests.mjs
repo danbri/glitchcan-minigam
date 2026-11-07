@@ -52,6 +52,7 @@ const SUITES = [
   ['slides (edit)', 'slides/test-slides-edit.mjs'],
   ['mail', 'mail/test-mail.mjs'],
   ['calendar', 'calendar/test-calendar.mjs'],
+  ['calendar (tools)', 'calendar/test-calendar-tools.mjs'],
   ['maps', 'maps/test-maps.mjs'],
   ['maps-3d', 'maps/test-maps3d.mjs'],
   ['maps-xr', 'maps/test-maps-xr.mjs'],

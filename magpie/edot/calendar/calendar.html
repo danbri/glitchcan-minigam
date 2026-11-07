@@ -41,8 +41,11 @@
     // Boot the component and expose a headless-test hook (mirrors window.__edot
     // / window.__cal conventions): the live instance plus a couple of helpers.
     import { EdotCalendar } from './js/calendar-app.js';
+    import { offerCalendarTools } from './js/calendar-tools.js';
     const cal = document.querySelector('edot-calendar');
     await cal.init();
+    // Under foafos: list_calendars, list_events and add_event for the shell and agents.
+    if (window.foaf?.tools) offerCalendarTools(cal, window.foaf);
     window.__cal = {
       app: cal,
       store: cal.store,
