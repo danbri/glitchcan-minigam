@@ -2,7 +2,8 @@
 // in the wrong way and the right way, by account over XMPP and by token over HTTPS, keep the
 // login, reload, unlock, still set up. Local relay and pod; the known-server list is replaced with
 // one that points at them, and nothing else is stubbed. One store, two carriages, as on Fly:
-// XMPP has an allow list, HTTPS has a bearer token in front.
+// XMPP has an allow list, HTTPS has a bearer token in front. Then one app gets an extra pod (a
+// second local storage), and Pod Notes' real frame tries what an app must not be able to do.
 //
 //   cd packages/foafos/pod && RELAY=factoidal FACTOIDAL_BIN=... node test/e2e-system.mjs [--shots DIR]
 import { spawn } from 'node:child_process';
@@ -17,10 +18,11 @@ import { startRelay } from './relay.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../../../..');
-const PORT = 18767, POD_PORT = 18789;
+const PORT = 18767, POD_PORT = 18789, EXTRA_PORT = 18790;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const SHELL = `${ORIGIN}/${basename(repo)}/inklet/finkapp/`;
 const BASE = `http://127.0.0.1:${POD_PORT}/`;
+const EXTRA_BASE = `http://127.0.0.1:${EXTRA_PORT}/`;
 const PASSWORD = 'userpass-NOT-FOR-ANY-APP-91c3';
 const OTHER = 'otherpass-NOT-FOR-ANY-APP-55d0';
 const TOKEN = 'token-NOT-FOR-ANY-APP-7e2f';
@@ -37,14 +39,14 @@ const storage = await openLwsStorage({ baseIri: BASE, insecureNoAuth: true, real
 const podXmpp = await startXmpp(storage, { service: relay.xmpp, domain: 'localhost', username: 'pod', password: 'podpass',
   allow: new Set(['user@localhost']), routes: [parseRoute('GET,HEAD,PUT,POST,PATCH,DELETE /')] });
 
-// What Caddy does on Fly: the token, or 401.
-const https = createServer(async (req, res) => {
+// What Caddy does on Fly: the token, or 401. With no token set, an open pod.
+const serve = (storage, token) => createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Headers', 'authorization, content-type, if-match, if-none-match, link, accept');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Expose-Headers', 'etag, content-type');
   if (req.method === 'OPTIONS') { res.statusCode = 204; return res.end(); }
-  if (req.headers.authorization !== `Bearer ${TOKEN}`) { res.statusCode = 401; return res.end('token required'); }
+  if (token && req.headers.authorization !== `Bearer ${token}`) { res.statusCode = 401; return res.end('token required'); }
   const chunks = [];
   for await (const c of req) chunks.push(c);
   const headers = [];
@@ -54,7 +56,12 @@ const https = createServer(async (req, res) => {
   res.statusCode = a.status;
   res.end(a.body);
 });
+const https = serve(storage, TOKEN);
 await new Promise((r) => https.listen(POD_PORT, '127.0.0.1', r));
+// A second pod, for the extra-pod checks.
+const extraStorage = await openLwsStorage({ baseIri: EXTRA_BASE, insecureNoAuth: true, realClock: true });
+const extraHttp = serve(extraStorage, null);
+await new Promise((r) => extraHttp.listen(EXTRA_PORT, '127.0.0.1', r));
 
 const CORS_SERVER = `
 import http.server, functools
@@ -150,7 +157,7 @@ try {
   await statusIs('fly', 'online');
   await until((c) => /^Connected/.test(document.querySelector(`${c} .pod-status`)?.textContent), card('fly'));
   check(/as user@localhost/.test(await text(card('fly'))), 'signed in over XMPP; a full JID is taken as the username');
-  await page.click(`${card('fly')} button:text-is("Use for apps")`);
+  await page.click(`${card('fly')} button:text-is("Make this the shared pod")`);
   check(await page.evaluate(() => FoafOS.pods.appsPod()) === 'fly', 'the pod is for apps');
   await shot('5-connected');
 
@@ -218,6 +225,108 @@ try {
   await shot('10-connected-again');
   check(await exposure() === 0, 'no secret reached storage or the audit after unlock');
 
+  // One app, one extra pod. The grant is the person's, in System; the app sees only a handle.
+  await page.evaluate((base) => FoafOS.pods.add({ id: 'vault', label: 'My private vault', base, carriage: 'https' }), EXTRA_BASE);
+  await page.evaluate(() => FoafOS.pods.connect('vault'));
+  await statusIs('vault', 'online');
+  await page.waitForSelector('#foafos-pod-extras #pod-extra-app');
+  check(/Shared pod/.test(await text(`${card('fly')} .fp-head`)), 'the common pod is called the shared pod');
+  const offered = await page.evaluate(() => ({
+    apps: [...document.querySelectorAll('#pod-extra-app option')].map((o) => o.value),
+    pods: [...document.querySelectorAll('#pod-extra-pod option')].map((o) => o.value) }));
+  check(offered.apps.includes('podnotes') && !offered.apps.includes('files') && !offered.pods.includes('fly') && offered.pods.includes('vault'),
+    `the grant place offers pod apps and pods that are not the shared pod (${JSON.stringify(offered)})`);
+  check(/An app with two pods can copy data between them/.test(await text('#foafos-pod-extras')), 'the grant screen says that an app with two pods can copy between them');
+  await page.selectOption('#pod-extra-app', 'podnotes');
+  await page.selectOption('#pod-extra-pod', 'vault');
+  await shot('12-extra-grant');
+  await page.click('#foafos-pod-extras button:text-is("Give access")');
+  await page.waitForSelector('#foafos-pod-extras .fp-extra[data-app="podnotes"][data-pod="vault"]');
+  check(true, 'a person gives one app an extra pod in the Pods tab');
+  await shot('13-extra-granted');
+
+  await page.evaluate(() => FoafOS.launchApp('podnotes'));
+  let notes = null;
+  for (let i = 0; i < 80 && !notes; i++) {
+    notes = page.frames().find((f) => f.url().includes('/apps/podnotes/'));
+    if (!notes) await page.waitForTimeout(250);
+  }
+  await notes.waitForFunction(() => window.foaf?.pod?.extras, null, { timeout: 15000 });
+  // A raw message, as a hostile app would send it: the SDK offers less than this.
+  const raw = (verb, params) => notes.evaluate(([v, p]) => new Promise((resolve) => {
+    const rid = `raw-${Math.random()}`;
+    const on = (e) => { if (e.data?.rid === rid) { removeEventListener('message', on); resolve(e.data); } };
+    addEventListener('message', on);
+    parent.postMessage({ type: 'pod', rid, verb: v, params: p }, '*');
+  }), [verb, params]);
+  const seenByApp = [];
+  const extras = await raw('pod.extras', {});
+  seenByApp.push(extras);
+  const handle = extras.extras?.[0]?.handle;
+  check(extras.ok && extras.extras.length === 1 && /^extra-[0-9a-f]{16}$/.test(handle) && extras.extras[0].write === true, 'the app sees one neutral handle');
+  const putExtra = await notes.evaluate((pod) => foaf.pod.put('a.txt', 'in the extra pod', { pod }), handle);
+  const putShared = await notes.evaluate(() => foaf.pod.put('b.txt', 'in the shared pod'));
+  const listExtra = await notes.evaluate((pod) => foaf.pod.list('', { pod }), handle);
+  seenByApp.push(putExtra, putShared, listExtra);
+  const onExtra = await fetch(`${EXTRA_BASE}apps/podnotes/a.txt`);
+  check(putExtra.ok && onExtra.status === 200 && (await onExtra.text()) === 'in the extra pod', `a file goes to the extra pod, in the app's own folder (${putExtra.status ?? putExtra.reason})`);
+  check((await fetch(`${EXTRA_BASE}apps/podnotes/b.txt`)).status === 404 && putShared.ok, 'with no handle a file goes to the shared pod');
+  check(listExtra.items?.some((i) => i.path === 'a.txt') && !listExtra.items.some((i) => i.path === 'b.txt'), 'a list with the handle shows the extra pod');
+
+  // What an app must not do. Each answer comes back from the real shell, through the frame.
+  for (const pod of ['vault', 'fly', 'browser', EXTRA_BASE, 'My private vault', 'extra-0000000000000000']) {
+    const r = await raw('pod.get', { path: 'a.txt', pod });
+    seenByApp.push(r);
+    check(r.reason === 'denied' && r.body === undefined, `pod "${pod}" as a target is refused the same way (${r.reason})`);
+  }
+  for (const verb of ['pod.locations', 'pod.use', 'pod.addFolder', 'pod.handlers', 'pod.openWith']) {
+    const r = await raw(verb, { id: 'vault', app: 'podnotes', path: 'a.txt' });
+    seenByApp.push(r);
+    check(r.reason === 'denied', `${verb} is refused to an ordinary app (${r.reason})`);
+  }
+  for (const verb of ['pod.grantExtra', 'pod.ask', 'pods.list', 'pod.add']) {
+    const r = await raw(verb, { id: 'vault', pod: 'vault' });
+    seenByApp.push(r);
+    check(r.reason === 'unknown-verb', `there is no ${verb} verb (${r.reason})`);
+  }
+  check((await raw('pod.put', { pod: handle, path: '../edot/x.txt', body: 'x' })).reason === 'bad-params', 'a handle does not leave the app\'s folder');
+  check((await fetch(`${EXTRA_BASE}apps/edot/x.txt`)).status === 404, 'nothing was written outside the app\'s folder');
+  await page.evaluate(() => FoafOS.pods.disconnect('vault'));
+  const offlineSays = await raw('pod.get', { path: 'a.txt', pod: handle });
+  seenByApp.push(offlineSays);
+  check(offlineSays.reason === 'offline', `an extra pod that is offline says so (${offlineSays.reason})`);
+  await page.evaluate(() => FoafOS.pods.connect('vault'));
+  await statusIs('vault', 'online');
+  const toldApp = JSON.stringify(seenByApp);
+  check(!['vault', '"fly"', '127.0.0.1', 'localhost', 'My private'].some((w) => toldApp.includes(w)), `no answer to the app names a pod or an address (${toldApp.length} bytes read)`);
+
+  // No shared pod: apps have no pod, and the extra pod is not picked in its place.
+  await openTab();   // Notes opened on top of it
+  await page.click(`${card('fly')} button:text-is("Stop sharing with apps")`);
+  await until((c) => !/Shared pod/.test(document.querySelector(`${c} .fp-head`)?.textContent), card('fly'));
+  const none = await notes.evaluate(async (pod) => ({ plain: (await foaf.pod.get('a.txt')).reason, aimed: (await foaf.pod.get('a.txt', { pod })).reason, extras: (await foaf.pod.extras()).extras }), handle);
+  check(none.plain === 'no-pod' && none.aimed === 'denied' && none.extras.length === 0, `with no shared pod the app has no pod (${JSON.stringify(none)})`);
+  check(await page.evaluate(() => FoafOS.pods.appsPod()) === null, 'no extra pod was made the shared pod');
+  check(/no app can use an extra pod/.test(await text('#foafos-pod-extras')), 'the tab says so');
+  await page.click(`${card('fly')} button:text-is("Make this the shared pod")`);
+  await page.waitForFunction(() => document.querySelector('#foafos-pod-extras') && !/no app can use an extra pod/.test(document.querySelector('#foafos-pod-extras').textContent));
+  check((await notes.evaluate((pod) => foaf.pod.get('a.txt', { pod }), handle)).body === 'in the extra pod', 'with a shared pod again the grant works');
+
+  // Remove access, in the tab; give it again; a reload keeps it; removing the pod ends it.
+  await page.click('#foafos-pod-extras .fp-extra button');
+  await page.waitForFunction(() => !document.querySelector('#foafos-pod-extras .fp-extra'));
+  check((await notes.evaluate((pod) => foaf.pod.get('a.txt', { pod }), handle)).reason === 'denied', 'Remove access ends it at once, in a running app');
+  await page.click('#foafos-pod-extras button:text-is("Give access")');
+  await page.waitForSelector('#foafos-pod-extras .fp-extra');
+  const grantsKept = await page.evaluate(() => FoafOS.pods.extraGrants());
+  await page.reload();
+  await page.waitForSelector('#foafos-unlock-ask');
+  await page.evaluate(() => document.querySelector('#foafos-unlock-ask button[type=button]').click());
+  await until(() => window.FoafOS?.openSystem);
+  check(JSON.stringify(await page.evaluate(() => FoafOS.pods.extraGrants())) === JSON.stringify(grantsKept) && grantsKept.length === 1, 'a reload keeps the grant, with its handle');
+  await page.evaluate(() => FoafOS.pods.remove('vault'));
+  check(await page.evaluate(() => FoafOS.pods.extraGrants().length === 0 && localStorage.getItem('foafos.pods.extras') === '[]' && FoafOS.pods.appsPod() === 'fly'), 'removing the pod removes its grant, and the shared pod stays');
+
   // The owner's state: an old "fly" record with a token that a reload lost, no saved logins.
   const fresh = await browser.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
   await fresh.route('**/foafos-known-pods.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: KNOWN }));
@@ -261,7 +370,9 @@ try {
   await browser.close();
   await podXmpp.stop().catch(() => {});
   https.close();
+  extraHttp.close();
   storage.close();
+  extraStorage.close();
   cleanup();
 }
 console.log(failed ? `${failed} FAILED, ${passed} passed` : `all ${passed} passed`);

@@ -24,6 +24,13 @@
 //
 // The prefix defaults to `apps/<appId>/`, so an app reaches only its own container. A path with
 // `..` is refused (cleanPath). Listings come back as paths relative to the prefix, not as IRIs.
+//
+// One pod is the common SHARED pod (`appsPod()`, the record's `forApps`): the default for every
+// app. A person may also give one app an EXTRA pod in System (`grantExtra`). The app gets a
+// random handle for it, never the pod's id or address, and sends `pod: handle` with a verb. An
+// app has no verb to list, name, add or ask for a pod. An extra pod rides on the app's grant for
+// the shared pod, so with no shared pod it is asleep. Design: docs/foafos-pods-per-app-20261107.md.
+//
 // Every call is audited on the bus (`pods.*`) with the verb, the path and the status — never a
 // credential, never a body. Design: docs/foafos-pods-20261103.md.
 
@@ -42,6 +49,7 @@ export const MAX_POD_BODY = 1024 * 1024;   // what one call may carry either way
 const CONTAINER_LINK = '<https://www.w3.org/ns/lws#Container>; rel="type"';
 const TEXTUAL = /^(text\/|application\/([a-z0-9.+-]*\+)?(json|xml|turtle|n-triples|n-quads|trig))/i;
 const ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
+const HANDLE = /^extra-[0-9a-f]{16}$/;
 
 const secretName = (id) => `pod.${id}.password`;
 const keyName = (id) => `pod.${id}.key`;
@@ -129,6 +137,8 @@ export class FoafPods {
     this.pods = new Map();     // id -> record
     this.live = new Map();     // id -> { status, detail, fetch, conn }
     this.grants = new Map();   // appId -> Map(capability -> { pod, prefix })
+    this.extras = new Map();   // appId -> Map(handle -> pod id): the person's choices, kept
+    this.extrasKey = `${key}.extras`;   // apart from the pod list, so a saved list is read as before
     this.calls = new Map();
     this.audit = [];
     if (!secrets.can(POD_OWNER)) secrets.grant(POD_OWNER, [SECRETS_CAP]);
@@ -140,6 +150,7 @@ export class FoafPods {
       this.pods.set('browser', checkPod({ id: 'browser', label: 'This browser', base: BUILTIN_BASE, carriage: 'builtin', forApps: true }));
       this._save();
     }
+    this._loadExtras();
     // A built-in pod is written out only while secrets are sealed. When they become sealed
     // (a passphrase is set or unlocked), write what is held now, and open a locked pod.
     bus?.subscribe?.('secrets.sealed', () => this._keepBuiltins());
@@ -166,6 +177,21 @@ export class FoafPods {
 
   _save() {
     try { this.storage?.setItem(this.key, JSON.stringify([...this.pods.values()])); } catch { /* full or blocked */ }
+  }
+
+  _loadExtras() {
+    let saved = [];
+    try { saved = JSON.parse(this.storage?.getItem(this.extrasKey) || '[]'); } catch { /* unreadable: none */ }
+    for (const g of Array.isArray(saved) ? saved : []) {
+      if (!g || typeof g.app !== 'string' || !HANDLE.test(String(g.handle)) || !this.pods.has(g.pod)) continue;
+      if (!this.extras.has(g.app)) this.extras.set(g.app, new Map());
+      this.extras.get(g.app).set(g.handle, g.pod);
+    }
+  }
+
+  _saveExtras() {
+    const out = this.extraGrants().map(({ appId, handle, pod }) => ({ app: appId, handle, pod }));
+    try { this.storage?.setItem(this.extrasKey, JSON.stringify(out)); } catch { /* full or blocked */ }
   }
 
   _setStatus(id, status, detail = '') {
@@ -222,14 +248,19 @@ export class FoafPods {
     for (const box of this.grants.values()) {
       for (const [cap, scope] of box) if (scope.pod === id) box.delete(cap);
     }
+    for (const [appId, box] of this.extras) {
+      for (const [handle, pod] of box) if (pod === id) box.delete(handle);
+      if (!box.size) this.extras.delete(appId);
+    }
     this._save();
+    this._saveExtras();
     this._say('pods.removed', { summary: `pod ${id} removed`, id });
   }
 
-  /** The pod that apps' grants point at (at most one), or null. */
+  /** The common shared pod: what apps' grants point at (at most one), or null. */
   appsPod() { return [...this.pods.values()].find((r) => r.forApps)?.id || null; }
 
-  /** Make `id` the pod for apps (null: none). Each app still reaches only its own prefix. */
+  /** Make `id` the shared pod (null: none). Each app still reaches only its own prefix. */
   setAppsPod(id) {
     if (id !== null && !this.pods.has(id)) throw new Error(`no pod "${id}"`);
     for (const r of this.pods.values()) r.forApps = r.id === id;
@@ -469,7 +500,61 @@ export class FoafPods {
   }
 
   revoke(appId) { this.grants.delete(appId); return this; }
-  scopeFor(appId, cap) { return this.grants.get(appId)?.get(cap) || null; }
+
+  /**
+   * With a handle: an extra pod of this app, at the app's own prefix. It needs the same
+   * capability on the shared pod, so an extra pod never gives an app more verbs, and no shared
+   * pod means no pod at all.
+   */
+  scopeFor(appId, cap, handle = null) {
+    const common = this.grants.get(appId)?.get(cap) || null;
+    if (handle === null) return common;
+    const pod = common && this.extras.get(appId)?.get(handle);
+    return pod ? Object.freeze({ pod, prefix: `apps/${appId}/` }) : null;
+  }
+
+  // ── extra pods: one app, one more pod, chosen by the person ───────────
+  // Called only from the System app. No app verb reaches grantExtra or revokeExtra, and none must.
+
+  /** Give one app an extra pod. Returns its handle (the same one if it has this pod already). */
+  grantExtra(appId, pod) {
+    if (!this.pods.has(pod)) throw new Error(`no pod "${pod}"`);
+    if (pod === this.appsPod()) throw new Error('that is the shared pod: every app has it already');
+    if (typeof appId !== 'string' || appId.includes('/') || cleanPath(appId) !== appId) throw new Error('pods: not an app id');
+    const box = this.extras.get(appId) || new Map();
+    for (const [handle, id] of box) if (id === pod) return handle;
+    // Random, and per app: two apps with one extra pod cannot tell that it is the same pod.
+    const handle = `extra-${randomKeyHex().slice(0, 16)}`;
+    box.set(handle, pod);
+    this.extras.set(appId, box);
+    this._saveExtras();
+    this._say('pods.updated', { summary: `${appId} may now use pod ${pod}`, id: pod, appId });
+    return handle;
+  }
+
+  revokeExtra(appId, handle) {
+    const box = this.extras.get(appId);
+    const pod = box?.get(handle);
+    if (!pod) return;
+    box.delete(handle);
+    if (!box.size) this.extras.delete(appId);
+    this._saveExtras();
+    this._say('pods.updated', { summary: `${appId} may no longer use pod ${pod}`, id: pod, appId });
+  }
+
+  /** Every extra grant, with pod ids. For the System app; never for an app. */
+  extraGrants() {
+    const out = [];
+    for (const [appId, box] of this.extras) for (const [handle, pod] of box) out.push({ appId, handle, pod });
+    return out;
+  }
+
+  /** All that an app may know of its extra pods: a handle, and what it may do. */
+  extrasFor(appId) {
+    const box = this.grants.get(appId);
+    if (!box?.size) return [];
+    return [...(this.extras.get(appId)?.keys() || [])].map((handle) => ({ handle, read: box.has('pod:read'), write: box.has('pod:write') }));
+  }
 
   // ── one file, shared with one window ──────────────────────────────────
   // Exploring: docs/foafos-open-with-20261105.md. A share is apart from an app's
@@ -530,7 +615,8 @@ export class FoafPods {
 
   _refuse(appId, verb, reason, summary, extra = {}) {
     this._say('pods.refused', { summary, appId, verb, reason, ...extra });
-    return { ok: false, reason, ...extra };
+    const { pod, ...forApp } = extra;   // the shell's log names the pod; the app's answer does not
+    return { ok: false, reason, ...forApp };
   }
 
   /** The target path inside the scope, or null. `container` keeps a trailing "/". */
@@ -560,7 +646,8 @@ export class FoafPods {
       if (verb !== 'pod.get' && verb !== 'pod.put') return this._refuse(appId, verb, 'denied', `${appId} may only read or write a shared file`);
       if (verb === 'pod.put' && !shared.write) return this._refuse(appId, verb, 'read-only', `${shared.name} was shared with ${appId} to read`);
     }
-    const scope = shared ? { pod: shared.pod, prefix: '' } : this.scopeFor(appId, cap);
+    // `params.pod` is a handle. A pod's real id, another app's handle and nonsense all miss alike.
+    const scope = shared ? { pod: shared.pod, prefix: '' } : this.scopeFor(appId, cap, params.pod ?? null);
     if (!scope) return this._refuse(appId, verb, 'denied', `${appId} may not "${verb}": no ${cap} grant`, { capability: cap });
     const path = shared ? shared.path : FoafPods.target(scope, params.path, { container: verb === 'pod.list' });
     if (path === null) {

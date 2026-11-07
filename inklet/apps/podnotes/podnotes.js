@@ -10,7 +10,7 @@
   let shared = null;    // a file the shell gave this window: { token, name, write }, or null
 
   const REASONS = {
-    'no-pod': 'No pod is chosen for apps. Open System, then Pods. Connect one, and press "Use for apps".',
+    'no-pod': 'There is no shared pod. Open System, then Pods. Connect one, and press "Make this the shared pod".',
     offline: 'The pod is not connected. Connect it in System, under Pods.',
     locked: 'Your notes are on this device, sealed. UNLOCK the session (passphrase) to open them.',
     denied: 'This app holds no pod capability here.',

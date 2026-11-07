@@ -500,3 +500,202 @@ test('the known servers load, and every way in them makes a valid pod with no ac
   }
 });
 
+
+// ── the shared pod and extra pods ─────────────────────────────────────────
+// Design: docs/foafos-pods-per-app-20261107.md. As above, most of this is refusals.
+
+const VAULT = 'https://vault.example/';
+
+/** A shared pod, "home", and a second pod, "vault", each with its own storage. */
+async function twoPods({ storage = new Map() } = {}) {
+  const common = fakeStorage();
+  const other = fakeStorage(VAULT);
+  const bus = busSpy();
+  const secrets = new FoafSecrets({ bus });
+  const local = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v) };
+  const fetchImpl = (url, init) => (String(url).startsWith(VAULT) ? other : common).fetch(url, init);
+  const pods = new FoafPods({ secrets, bus, storage: local, fetchImpl });
+  const open = async () => {
+    await pods.connect('home');
+    await pods.connect('vault');
+    pods.grant('notes', { 'pod:read': { pod: 'home' }, 'pod:write': { pod: 'home' } });
+    pods.grant('reader', { 'pod:read': { pod: 'home' } });
+  };
+  if (!storage.has('foafos.pods')) {
+    pods.add({ id: 'home', base: BASE, carriage: 'https', forApps: true });
+    pods.add({ id: 'vault', label: 'My private vault', base: VAULT, carriage: 'https' });
+  }
+  await open();
+  return { pods, common, other, bus, storage, open };
+}
+
+test('the shared pod stays the default, and a saved list with no extras is read as it was', async () => {
+  const before = JSON.stringify([{ id: 'home', label: 'home', base: BASE, carriage: 'https', forApps: true, auto: false }]);
+  const r = await (async () => {
+    const storage = new Map([['foafos.pods', before]]);
+    const secrets = new FoafSecrets({});
+    const pods = new FoafPods({ secrets, storage: { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v) } });
+    return { pods, storage };
+  })();
+  assert.equal(r.pods.appsPod(), 'home');
+  assert.deepEqual(r.pods.extraGrants(), []);
+  assert.equal(r.storage.get('foafos.pods'), before, 'nothing is rewritten');
+  assert.equal(r.storage.has('foafos.pods.extras'), false, 'and nothing is added until a person gives a grant');
+
+  const t = await twoPods();
+  t.pods.grantExtra('notes', 'vault');
+  assert.equal(t.pods.appsPod(), 'home', 'an extra pod does not change the shared pod');
+  assert.equal((await t.pods.invoke('notes', 'pod.put', { path: 'a.txt', body: 'x' })).ok, true);
+  assert.ok(t.common.res.has('/apps/notes/a.txt'), 'with no handle a call goes to the shared pod');
+  assert.equal(t.other.res.has('/apps/notes/a.txt'), false);
+  assert.ok(!('extras' in JSON.parse(t.storage.get('foafos.pods'))[1]), 'a grant is not put in the pod record');
+});
+
+test('an extra pod names the pod and the app, and the app reaches only its own prefix there', async () => {
+  const r = await twoPods();
+  const handle = r.pods.grantExtra('notes', 'vault');
+  assert.deepEqual(r.pods.extraGrants(), [{ appId: 'notes', handle, pod: 'vault' }]);
+  assert.deepEqual(r.pods.scopeFor('notes', 'pod:write', handle), { pod: 'vault', prefix: 'apps/notes/' });
+  assert.equal((await r.pods.invoke('notes', 'pod.put', { pod: handle, path: 'b.txt', body: 'second' })).ok, true);
+  assert.ok(r.other.res.has('/apps/notes/b.txt'));
+  assert.equal(r.common.res.has('/apps/notes/b.txt'), false);
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { pod: handle, path: 'b.txt' })).body, 'second');
+  assert.deepEqual((await r.pods.invoke('notes', 'pod.list', { pod: handle })).items, [{ path: 'b.txt', container: false }]);
+  assert.equal((await r.pods.invoke('notes', 'pod.delete', { pod: handle, path: 'b.txt' })).ok, true);
+
+  const before = r.other.calls.length;
+  for (const path of ['../other/x', '../../x', 'a/../../x']) {
+    assert.equal((await r.pods.invoke('notes', 'pod.put', { pod: handle, path, body: 'x' })).reason, 'bad-params', path);
+  }
+  assert.equal(r.other.calls.length, before, 'refused before any fetch');
+});
+
+test('a grant is the person\'s to give: an unknown pod, the shared pod and a bad app id are refused', async () => {
+  const r = await twoPods();
+  assert.throws(() => r.pods.grantExtra('notes', 'nope'), /no pod/);
+  assert.throws(() => r.pods.grantExtra('notes', 'home'), /shared pod/);
+  for (const bad of ['../edot', 'a/b', '', null]) assert.throws(() => r.pods.grantExtra(bad, 'vault'), /app id/);
+  assert.equal(r.pods.grantExtra('notes', 'vault'), r.pods.grantExtra('notes', 'vault'), 'given twice, it is one grant');
+  assert.equal(r.pods.extraGrants().length, 1);
+});
+
+test('NEGATIVE: an app cannot aim at a pod it was not given, and every miss looks the same', async () => {
+  const r = await twoPods();
+  const theirs = r.pods.grantExtra('reader', 'vault');
+  const calls = () => r.common.calls.length + r.other.calls.length;
+  const before = calls();
+  const answers = [];
+  for (const pod of ['vault', 'home', VAULT, BASE, 'My private vault', theirs, 'extra-0000000000000000', 'nope', '', 0, false, {}, ['vault'], '__proto__']) {
+    answers.push(await r.pods.invoke('notes', 'pod.get', { pod, path: 'x' }));
+  }
+  for (const a of answers) assert.deepEqual(a, answers[0]);
+  assert.equal(answers[0].reason, 'denied');
+  assert.equal(calls(), before, 'no miss reached a storage');
+});
+
+test('NEGATIVE: an app cannot list, add or choose a pod; there is no such verb', async () => {
+  const r = await twoPods();
+  for (const verb of ['pod.locations', 'pod.use', 'pod.addFolder', 'pod.extras', 'pod.grantExtra', 'pod.ask', 'pods.list', 'pod.add']) {
+    assert.equal((await r.pods.invoke('notes', verb, { id: 'vault', pod: 'vault' })).reason, 'unknown-verb', verb);
+  }
+  assert.deepEqual(r.pods.extraGrants(), [], 'and nothing was granted');
+  assert.deepEqual(r.pods.extrasFor('notes'), []);
+});
+
+test('NEGATIVE: what an app is told names no pod', async () => {
+  const r = await twoPods();
+  const handle = r.pods.grantExtra('notes', 'vault');
+  assert.match(handle, /^extra-[0-9a-f]{16}$/);
+  const words = ['vault', 'home', 'pod.example', 'My private vault'];
+  const told = [r.pods.extrasFor('notes')];
+  assert.deepEqual(told[0], [{ handle, read: true, write: true }]);
+  told.push(await r.pods.invoke('notes', 'pod.put', { pod: handle, path: 'a/b.txt', body: 'x', contentType: 'text/plain' }));
+  told.push(await r.pods.invoke('notes', 'pod.get', { pod: handle, path: 'a/b.txt' }));
+  told.push(await r.pods.invoke('notes', 'pod.list', { pod: handle, path: 'a/' }));
+  told.push(await r.pods.invoke('notes', 'pod.get', { pod: handle, path: 'gone' }));
+  await r.pods.disconnect('vault');
+  await r.pods.disconnect('home');
+  told.push(await r.pods.invoke('notes', 'pod.get', { pod: handle, path: 'a/b.txt' }));
+  told.push(await r.pods.invoke('notes', 'pod.get', { path: 'a/b.txt' }));
+  assert.equal(told.at(-1).reason, 'offline');
+  const seen = JSON.stringify(told);
+  for (const w of words) assert.ok(!seen.includes(w), `an answer carries "${w}": ${seen}`);
+  assert.ok(r.pods.audit.some((a) => a.topic === 'pods.refused' && a.pod === 'vault'), 'the shell\'s own log still names it');
+});
+
+test('NEGATIVE: an extra pod gives no new verb, and two apps cannot tell they share a pod', async () => {
+  const r = await twoPods();
+  const a = r.pods.grantExtra('notes', 'vault');
+  const b = r.pods.grantExtra('reader', 'vault');
+  assert.notEqual(a, b);
+  assert.deepEqual(r.pods.extrasFor('reader'), [{ handle: b, read: true, write: false }]);
+  assert.equal((await r.pods.invoke('reader', 'pod.put', { pod: b, path: 'x', body: 'x' })).reason, 'denied', 'a reader stays a reader');
+  await r.pods.invoke('notes', 'pod.put', { pod: a, path: 'mine.txt', body: 'x' });
+  assert.equal((await r.pods.invoke('reader', 'pod.list', { pod: b })).status, 404, 'each app sees only its own prefix');
+  assert.equal(r.other.calls.at(-1).url, `${VAULT}apps/reader/`);
+  assert.deepEqual(r.pods.extrasFor('stranger'), [], 'an app with no pod grant is told nothing');
+  r.pods.extras.set('stranger', new Map([[a, 'vault']]));
+  assert.equal((await r.pods.invoke('stranger', 'pod.get', { pod: a, path: 'x' })).reason, 'denied', 'a grant alone is not a capability');
+});
+
+test('a share stays one file, whatever handle comes with it', async () => {
+  const r = await twoPods();
+  await r.pods.invoke('notes', 'pod.put', { path: 'one.txt', body: 'one' });
+  const token = r.pods.offerShare('reader', { pod: 'home', path: 'apps/notes/one.txt' });
+  assert.equal(r.pods.claimShare('reader', 'w1').token, token);
+  const got = await r.pods.invoke('reader', 'pod.get', { share: token, pod: 'vault', path: 'other' }, { holder: 'w1' });
+  assert.equal(got.body, 'one');
+  assert.equal(r.other.calls.filter((c) => c.method === 'GET').length, 0);
+});
+
+test('a grant survives a reload with the same handle; bad saved rows are dropped', async () => {
+  const r = await twoPods();
+  const handle = r.pods.grantExtra('notes', 'vault');
+  const again = await twoPods({ storage: r.storage });
+  assert.deepEqual(again.pods.extraGrants(), [{ appId: 'notes', handle, pod: 'vault' }]);
+
+  const good = JSON.parse(r.storage.get('foafos.pods.extras'))[0];
+  for (const bad of ['not json', '{}', 'null']) {
+    r.storage.set('foafos.pods.extras', bad);
+    assert.deepEqual((await twoPods({ storage: r.storage })).pods.extraGrants(), [], bad);
+  }
+  r.storage.set('foafos.pods.extras', JSON.stringify([null, 7, { ...good, pod: 'gone' }, { ...good, handle: 'vault' }, { ...good, app: 3 }]));
+  assert.deepEqual((await twoPods({ storage: r.storage })).pods.extraGrants(), []);
+});
+
+test('revoking and removing: the handle goes dead, and removing a pod removes its grants', async () => {
+  const r = await twoPods();
+  const a = r.pods.grantExtra('notes', 'vault');
+  r.pods.revokeExtra('notes', a);
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { pod: a, path: 'x' })).reason, 'denied');
+  r.pods.revokeExtra('notes', a);   // again: nothing to do
+  const b = r.pods.grantExtra('notes', 'vault');
+  assert.notEqual(a, b, 'a new grant is a new handle, so an old one cannot come back');
+  r.pods.grantExtra('reader', 'vault');
+  await r.pods.remove('vault');
+  assert.deepEqual(r.pods.extraGrants(), []);
+  assert.equal(r.storage.get('foafos.pods.extras'), '[]');
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { pod: b, path: 'x' })).reason, 'denied');
+  assert.equal(r.pods.appsPod(), 'home', 'the shared pod is not touched');
+});
+
+test('removing the shared pod leaves apps with no pod, and picks no extra pod', async () => {
+  const r = await twoPods();
+  const handle = r.pods.grantExtra('notes', 'vault');
+  await r.pods.remove('home');
+  assert.equal(r.pods.appsPod(), null);
+  assert.equal(r.pods.get('vault').forApps, false, 'the extra pod is not promoted');
+  assert.equal(r.pods.scopeFor('notes', 'pod:read'), null);
+  const before = r.other.calls.length;
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'x' })).reason, 'denied', 'no default');
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { pod: handle, path: 'x' })).reason, 'denied', 'and the handle sleeps');
+  assert.deepEqual(r.pods.extrasFor('notes'), []);
+  assert.equal(r.other.calls.length, before);
+  assert.deepEqual(r.pods.extraGrants().map((g) => g.pod), ['vault'], 'the person\'s grant is kept');
+
+  // The person makes a new shared pod: the grant wakes, with the same handle.
+  r.pods.add({ id: 'next', base: 'https://pod.example/next/', carriage: 'https', forApps: true });
+  await r.pods.connect('next');
+  r.pods.grant('notes', { 'pod:read': { pod: 'next' } });
+  assert.equal(r.pods.scopeFor('notes', 'pod:read', handle).pod, 'vault');
+});

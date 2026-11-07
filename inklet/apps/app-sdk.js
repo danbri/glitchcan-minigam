@@ -305,17 +305,23 @@
      *   const { body, etag } = await foaf.pod.get('notes/today.txt')
      *   const { items } = await foaf.pod.list('notes/')   // [{ path, container }]
      *
+     * Every call goes to the person's shared pod. If the person gave this app
+     * an extra pod in System, `foaf.pod.extras()` gives its handle, and
+     * `{ pod: handle }` aims a call there, as `foaf.pod.list('', { pod: handle })`.
+     * A handle says nothing about the pod. An app cannot list, name, add or ask
+     * for a pod.
+     *
      * Resolves `{ ok: true, status, … }` or `{ ok: false, reason }`, where
-     * reason is `denied`, `no-pod` (the person has not chosen a pod for
-     * apps), `offline`, `bad-params`, `conflict` (412: pass the newer etag),
+     * reason is `denied`, `no-pod` (the person has no shared pod), `offline`, `bad-params`, `conflict` (412: pass the newer etag),
      * `http` (with a `status`), `not-text`, `too-large`, `throttled`,
      * `unreachable`, or `no-shell` standalone.
      */
     pod: {
       get: (path, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.get', params: { ...opts, path } }),
-      list: (path = '') => reqVerb({ type: 'pod', verb: 'pod.list', params: { path } }),
+      list: (path = '', opts = {}) => reqVerb({ type: 'pod', verb: 'pod.list', params: { ...opts, path } }),
       put: (path, body, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.put', params: { ...opts, path, body } }),
       delete: (path, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.delete', params: { ...opts, path } }),
+      extras: () => reqVerb({ type: 'pod', verb: 'pod.extras' }),
       // For an app that manages the whole pod, such as Files. Others are refused.
       locations: () => reqVerb({ type: 'pod', verb: 'pod.locations' }),
       use: (id) => reqVerb({ type: 'pod', verb: 'pod.use', params: { id } }, 120000),

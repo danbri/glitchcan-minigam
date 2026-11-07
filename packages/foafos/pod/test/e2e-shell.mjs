@@ -108,7 +108,7 @@ try {
   check(true, 'BROWSE lists the storage root (200)');
 
   // Apps use this pod; launch Pod Notes.
-  await page.click('#foafos-pods section[data-pod="home"] button:text-is("Use for apps")');
+  await page.click('#foafos-pods section[data-pod="home"] button:text-is("Make this the shared pod")');
   check(await page.evaluate(() => FoafOS.pods.appsPod()) === 'home', 'the pod is marked "apps use this"');
   await page.evaluate(() => FoafOS.launchApp('podnotes'));
   let notes = null;

@@ -1636,6 +1636,12 @@ Storage reached over HTTPS or, for a pod at home, over XEP-0332 through an XMPP 
 - **Pod grants follow the tree** (`syncPodGrants`): `pod:read`/`pod:write` on a live node, AND a pod
   marked "apps use this". No pod chosen is the named reason `no-pod`, so an app can tell the person
   what to do.
+- **Extra pods** (2026-11-07): the UI calls `appsPod()` the shared pod. A person gives one app another
+  pod in System (`grantExtra`, key `foafos.pods.extras`). The app sees a random handle
+  (`foaf.pod.extras()`, then `{ pod: handle }`), never the id or address, and only `apps/<appId>/`.
+  The extra scope needs the same capability on the shared-pod grant, so it adds no verb, and with no
+  shared pod it sleeps. Never add an app verb that lists, names, adds or asks for a pod, and never put
+  a pod id in an answer to an app (`_refuse` strips it). Design: `docs/foafos-pods-per-app-20261107.md`.
 - **The built-in pod** (carriage `builtin`, 2026-11-04): the Factoidal LWS engine in the page
   (`@factoidal/core/lws/inpage`, shared engine with chat via `loadFactoidal()`).
   - A new shell starts with pod `browser`, chosen for apps, so Pod Notes works with no setup. It

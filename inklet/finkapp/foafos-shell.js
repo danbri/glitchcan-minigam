@@ -241,7 +241,8 @@ FoafOS.ops = ops;
 // The same rule as ops, for storage: the shell holds the pod list, the
 // connections and the relay password (in FoafSecrets, never in an app); an
 // app holding `pod:read` / `pod:write` gets four verbs aimed by its grant at
-// `apps/<appId>/` in the pod chosen for apps. Design and log:
+// `apps/<appId>/` in the shared pod, and in any extra pod the person gave that app
+// (docs/foafos-pods-per-app-20261107.md). Design and log:
 // docs/foafos-pods-20261103.md. The person's side is the Pods tab of System (mountPods() below).
 //
 // The Factoidal Lean engine (@factoidal/core) runs the built-in pod and the built-in chat
@@ -4273,11 +4274,17 @@ function buildUI() {
           return;
         }
         if (d.verb === 'pod.shared') { reply({ ok: true, share: pods.claimShare(app.id, nodeId) }); return; }
+        // Its own handles only. There is no verb to list, name, add or ask for a pod.
+        if (d.verb === 'pod.extras') {
+          if (!holds('pod:read') && !holds('pod:write')) { refuseAtNode('pods', 'pod:read', d.verb); reply({ ok: false, reason: 'denied' }); return; }
+          reply({ ok: true, extras: pods.extrasFor(app.id).map((x) => ({ ...x, read: x.read && holds('pod:read'), write: x.write && holds('pod:write') })) });
+          return;
+        }
         const need = POD_VERBS[d.verb];
         if (!need) { reply({ ok: false, reason: 'unknown-verb' }); return; }
         tallyCap(app.id, need);
         if (!holds(need)) { refuseAtNode('pods', need, d.verb); reply({ ok: false, reason: 'denied' }); return; }
-        if (!pods.scopeFor(app.id, need)) { reply({ ok: false, reason: 'no-pod' }); return; }
+        if ((d.params?.pod ?? null) === null && !pods.scopeFor(app.id, need)) { reply({ ok: false, reason: 'no-pod' }); return; }
         pods.invoke(app.id, d.verb, d.params || {}, { holder: nodeId }).then(reply);
         return;
       }
@@ -5632,7 +5639,8 @@ function buildUI() {
   // Shell chrome, not a sandboxed app, for the Publishing panel's reason: a password or token
   // is typed here, goes straight into FoafSecrets (pods.signIn) and the field is cleared. Apps
   // never see a pod's address, JID or password; they get pod.* verbs aimed at their own
-  // container in the pod marked for apps. docs/foafos-system-pods-20261107.md.
+  // container in the shared pod. docs/foafos-system-pods-20261107.md. Only this tab gives one
+  // app an extra pod (drawExtras). docs/foafos-pods-per-app-20261107.md.
   function mountPods() {
     const body = document.createElement('div');
     body.id = 'foafos-pods';
@@ -5846,7 +5854,7 @@ function buildUI() {
       const dot = el('span'); dot.className = 'fp-dot'; dot.setAttribute('aria-hidden', 'true');
       head.appendChild(dot);
       head.appendChild(el('h3', p.label));
-      if (p.forApps) head.appendChild(el('span', 'Apps save here')).className = 'fp-chip';
+      if (p.forApps) head.appendChild(el('span', 'Shared pod')).className = 'fp-chip';
       card.appendChild(head);
       const st = el('p', statusOf(p));
       st.className = 'pod-status fp-status';
@@ -5865,8 +5873,8 @@ function buildUI() {
         if (p.status === 'online') act(buttons, 'Browse', () => { browsing = browsing?.id === p.id ? null : { id: p.id, path: '' }; draw(true); }, true);
         act(buttons, 'Disconnect', () => pods.disconnect(p.id).then(() => draw(true)));
       } else if (!asking && !p.locked) act(buttons, 'Connect', () => { pods.connect(p.id, { ask: true }).then(() => draw(true)); draw(true); }, true);
-      if (p.forApps) act(buttons, 'Stop using for apps', () => { pods.setAppsPod(null); draw(true); });
-      else act(buttons, 'Use for apps', () => { pods.setAppsPod(p.id); draw(true); });
+      if (p.forApps) act(buttons, 'Stop sharing with apps', () => { pods.setAppsPod(null); draw(true); });
+      else act(buttons, 'Make this the shared pod', () => { pods.setAppsPod(p.id); draw(true); });
       card.appendChild(buttons);
 
       const more = document.createElement('details');
@@ -5903,6 +5911,44 @@ function buildUI() {
       body.appendChild(card);
     };
 
+    // One app, one more pod. Apps have no way to ask, so this is the only way in.
+    const extraPick = {};
+    const drawExtras = (list) => {
+      const grants = pods.extraGrants();
+      const others = list.filter((p) => !p.forApps);
+      const offered = APPS.filter((a) => rootOffers(ROOT, a.id) && a.wholePod !== true && (a.capabilities || []).some((c) => POD_CAPS.includes(c)));
+      if (!grants.length && (!others.length || !offered.length || list.length < 2)) return;
+      const sec = el('section');
+      sec.id = 'foafos-pod-extras';
+      sec.className = 'fp-pod';
+      sec.appendChild(el('h3', 'Extra pods for one app'));
+      sec.appendChild(el('p', 'Every app uses the shared pod. An app cannot see your other pods or ask for one. Only you can give an app an extra pod, here. The app gets its own folder there.')).className = 'fp-note';
+      if (!pods.appsPod()) sec.appendChild(el('p', 'There is no shared pod now, so no app can use an extra pod. Make a pod the shared pod to start them again.')).className = 'fp-warn';
+      const nameOf = (id) => APPS.find((a) => a.id === id)?.name || id;
+      for (const g of grants) {
+        const row = el('div'); row.className = 'fp-extra'; row.dataset.app = g.appId; row.dataset.pod = g.pod;
+        row.appendChild(el('span', `${nameOf(g.appId)} can use ${pods.get(g.pod)?.label || g.pod}`));
+        act(row, 'Remove access', () => { pods.revokeExtra(g.appId, g.handle); draw(true); }).setAttribute('aria-label', `Remove access for ${nameOf(g.appId)} to ${pods.get(g.pod)?.label || g.pod}`);
+        sec.appendChild(row);
+      }
+      if (others.length && offered.length) {
+        const app = field(sec, 'App', 'pod-extra-app', { select: offered.map((a) => [a.id, a.name]) });
+        const pod = field(sec, 'Extra pod', 'pod-extra-pod', { select: others.map((p) => [p.id, p.label]) });
+        for (const [k, input] of Object.entries({ app, pod })) {
+          if ([...input.options].some((o) => o.value === extraPick[k])) input.value = extraPick[k];
+          input.addEventListener('change', () => { extraPick[k] = input.value; });
+        }
+        sec.appendChild(el('p', 'An app with two pods can copy data between them. Give an extra pod only to an app you trust with both pods.')).className = 'fp-warn';
+        const note = el('p'); note.className = 'fp-error'; note.setAttribute('role', 'status');
+        const row = el('div'); row.className = 'fp-actions';
+        act(row, 'Give access', () => {
+          try { pods.grantExtra(app.value, pod.value); draw(true); } catch (e) { note.textContent = `Refused: ${e.message}`; }
+        }, true);
+        sec.append(row, note);
+      }
+      body.appendChild(sec);
+    };
+
     let moreOpen = new Set();
     let stale = false;
     const typing = () => {
@@ -5918,13 +5964,14 @@ function buildUI() {
       const open = body.querySelector('#pod-add-details')?.open;
       moreOpen = new Set([...body.querySelectorAll('details.fp-more[open]')].map((d) => d.dataset.for));
       body.textContent = '';
-      body.appendChild(el('p', 'Pods are where your apps keep their files. Pick one for apps to use.', null)).className = 'fp-intro';
+      body.appendChild(el('p', 'Pods are where your apps keep their files. All apps use the shared pod, and each app has its own folder there.', null)).className = 'fp-intro';
 
       const list = pods.list();
       if (!list.length) body.appendChild(el('p', 'No pods yet. Add one below.'));
       for (const k of KNOWN_PODS) if (!list.some((p) => p.base === k.base)) drawOffer(k);
       list.forEach(drawCard);
       keepLogins(list);
+      drawExtras(list);
 
       const holders = pods.holders();
       if (holders.length) body.appendChild(el('p', 'Using a pod now: ' + holders.map((h) => `${h.appId} ${h.capability} ${h.pod}:/${h.prefix}`).join('; '))).className = 'fp-note';
