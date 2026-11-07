@@ -479,7 +479,7 @@ window.FinkWM = {
                 { label: 'Menu as a ring (radial, first version)', checked: this._radialOn(), run: () => this._setRadial(!this._radialOn()), closes: true }] },
             { id: 'widgets', icon: '🧩', label: 'Widgets', items: () => q('#foafos-launcher button').map((b) => ({
                 label: b.textContent.trim(), run: () => b.click(), closes: true })) },
-            { id: 'session', icon: '👤', label: 'Session and capabilities', run: () => window.FoafOS?.openSession?.(), closes: true },
+            { id: 'session', icon: '⚙️', label: 'System', run: () => window.FoafOS?.openSystem?.(), closes: true },
         ];
     },
     _renderShellSection() {

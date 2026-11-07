@@ -1457,3 +1457,15 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 /* A quiet notice, and the mark it leaves on the menu handle */
 #foafos-nudge { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 2715; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 8px 12px; border-radius: 10px; background: var(--sk-bg, #0a0a12); color: var(--sk-ink, #fff); border: 1px solid color-mix(in srgb, var(--sk-ink, #fff) 25%, transparent); box-shadow: 0 6px 20px rgba(0, 0, 0, .35); font: 14px/1.4 var(--sk-font-ui, system-ui, sans-serif); }
 #wm-chrome.wm-attention #wm-handle { box-shadow: 0 0 0 3px #e08a2e; opacity: 1 !important; }
+
+/* System: the shell's settings in one window */
+.fs-tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+.fs-tabs button { padding: 6px 10px; border: 0; background: none; color: inherit; font: 14px var(--sk-font-ui, system-ui, sans-serif); cursor: pointer; border-bottom: 2px solid transparent; }
+.fs-tabs button[aria-selected="true"] { border-bottom-color: var(--sk-accent, #2e6fd1); font-weight: 600; }
+.fs-body [hidden] { display: none !important; }
+#foafos-session-win.foafos-window.foafos-panel { background: var(--sk-bg); color: var(--sk-ink); }
+.fs-body { padding: 12px; overflow-y: auto; font: 14px/1.45 var(--sk-font-ui, system-ui, sans-serif); }
+.fs-body, .fs-body summary, .fs-body p, .fs-body span, .fs-body label, .fs-body h4 { color: var(--sk-ink); }
+.fs-body h4 { margin: 0 0 8px; font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.fs-body summary { cursor: pointer; line-height: 1.4; }
+.fs-body .foafos-row { margin-top: 8px; }

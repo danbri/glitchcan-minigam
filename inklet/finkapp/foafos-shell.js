@@ -1764,21 +1764,44 @@ const activityHist = [];
 bus.subscribe('activity.*', (ev) => { activityHist.push(ev); if (activityHist.length > 100) activityHist.shift(); });
 // Session and capabilities: what the side drawer showed at its top, in a window of its own (☰ › Session and
 // capabilities). The drawer's own nodes move in, so their code is unchanged.
-FoafOS.openSession = () => {
-  const open = document.getElementById('foafos-session-win');
-  if (open) { open.style.zIndex = 2630; return open; }
-  const win = FoafOS._makeWindow('👤 Session and capabilities', 360, 380);
-  win.id = 'foafos-session-win';
-  win.classList.add('foafos-panel');
-  const body = document.createElement('div');
-  body.className = 'act-body';
-  for (const id of ['foafos-session', 'foafos-caps-wrap']) { const n = document.getElementById(id); if (n) body.appendChild(n); }
-  const det = body.querySelector('#foafos-session-details');
-  if (det) det.open = true;
-  win.appendChild(body);
-  document.body.appendChild(win);
+// System: one window for the shell's own settings, instead of an app for each. The parts
+// are the drawer's own sections, moved here and kept, so they outlive the window.
+const SYSTEM_TABS = [['session', 'Session', 'foafos-session'], ['sound', 'Sound', 'foafos-audio-wrap'],
+  ['look', 'Look', 'foafos-skin-wrap'], ['capabilities', 'Capabilities', 'foafos-caps-wrap']];
+const systemParts = new Map();
+FoafOS.openSystem = (tab = 'session') => {
+  let win = document.getElementById('foafos-session-win');
+  if (!win) {
+    win = FoafOS._makeWindow('⚙️ System', 420, 460);
+    win.id = 'foafos-session-win';
+    win.classList.add('foafos-panel');
+    const bar = document.createElement('div');
+    bar.className = 'fs-tabs'; bar.setAttribute('role', 'tablist');
+    const body = document.createElement('div');
+    body.className = 'act-body fs-body';
+    for (const [id, label, part] of SYSTEM_TABS) {
+      if (!systemParts.has(part)) systemParts.set(part, document.getElementById(part));
+      const node = systemParts.get(part);
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = label; b.dataset.tab = id; b.setAttribute('role', 'tab');
+      b.addEventListener('click', () => FoafOS.openSystem(id));
+      bar.appendChild(b);
+      if (node) { node.dataset.systemTab = id; body.appendChild(node); }
+    }
+    const pods = document.createElement('button');
+    pods.type = 'button'; pods.textContent = 'Pods'; pods.addEventListener('click', () => FoafOS.openPods?.());
+    bar.appendChild(pods);
+    win.append(bar, body);
+    document.body.appendChild(win);
+    const det = body.querySelector('#foafos-session-details');
+    if (det) det.open = true;
+  }
+  for (const b of win.querySelectorAll('.fs-tabs [data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+  for (const n of win.querySelectorAll('[data-system-tab]')) n.hidden = n.dataset.systemTab !== tab;
+  win.style.zIndex = 2630;
   return win;
 };
+FoafOS.openSession = () => FoafOS.openSystem('session');
 // the Activity window (a shell panel, foafos-apps.js row 'activity'): the live cards on top, the history below
 function activityLive() { return document.querySelector('#foafos-activity-win .act-live'); }
 FoafOS.openActivity = (opts = {}) => {
@@ -2043,9 +2066,9 @@ function buildUI() {
         <input id="foafos-name" type="text" placeholder="name (optional)" aria-label="Session name" autocomplete="off">
         <input id="foafos-pass" type="password" placeholder="passphrase" aria-label="Session passphrase" autocomplete="off">
         <div class="foafos-row">
-          <button type="button" id="foafos-save" title="Encrypt this session to this browser">SAVE</button>
-          <button type="button" id="foafos-unlock" title="Decrypt the saved session">UNLOCK</button>
-          <button type="button" id="foafos-forget" title="Delete the saved session">FORGET</button>
+          <button type="button" id="foafos-save" title="Encrypt this session to this browser">Save</button>
+          <button type="button" id="foafos-unlock" title="Decrypt the saved session">Unlock</button>
+          <button type="button" id="foafos-forget" title="Delete the saved session">Forget</button>
         </div>
       </details>
     </section>
@@ -2131,6 +2154,7 @@ function buildUI() {
   const $ = (id) => document.querySelector(id);
   const status = (msg, isError = false) => {
     const el = $('#foafos-session-status');
+    if (!el) return;                       // the System window is closed
     el.textContent = msg;
     el.classList.toggle('error', isError);
   };
@@ -2969,7 +2993,7 @@ function buildUI() {
     // showed games it would then refuse to launch — an icon you can
     // press that does nothing is worse than no icon.
     // What Foafos itself runs on comes first, in one place, and is not repeated below.
-    const ESSENTIALS = ['chat', 'files', 'pods', 'backstage', 'activity'];
+    const ESSENTIALS = ['system', 'chat', 'files', 'pods', 'backstage', 'activity'];
     const essentials = ESSENTIALS.map(appById).filter((a) => a && rootOffers(ROOT, a.id));
     const groups = [{ id: 'essentials', label: 'Essentials', icon: '⭐', apps: essentials },
       ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) }))];
@@ -3259,6 +3283,7 @@ function buildUI() {
         if (app.panel === 'activity') return FoafOS.openActivity();
         if (app.panel === 'publishing') return openPublishing();
         if (app.panel === 'pods') return openPods();
+        if (app.panel === 'system') return FoafOS.openSystem();
         if (app.panel === 'chat') return openChat();
         if (app.panel === 'backstage') return openBackstage();
         return null;

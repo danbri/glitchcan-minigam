@@ -1,0 +1,22 @@
+{
+  "@context": {
+    "@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"
+  },
+  "@id": "system",
+  "@type": "App",
+  "position": 37,
+  "id": "system",
+  "family": "make",
+  "icon": "⚙️",
+  "name": "System",
+  "surface": "panel",
+  "panel": "system",
+  "desc": "Session, sound, look and capabilities, in one place",
+  "capabilities": [
+    "shell"
+  ],
+  "silent": true,
+  "notes": [
+    "The shell's own settings as one app with tabs, so they do not each take a place among the apps. It holds the drawer's sections, which move into its window."
+  ]
+}

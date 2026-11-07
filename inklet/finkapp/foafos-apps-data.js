@@ -634,5 +634,18 @@ export const APPS = [
     "capabilities": [],
     "external": true,
     "persists": false
+  },
+  {
+    "id": "system",
+    "family": "make",
+    "icon": "⚙️",
+    "name": "System",
+    "surface": "panel",
+    "panel": "system",
+    "desc": "Session, sound, look and capabilities, in one place",
+    "capabilities": [
+      "shell"
+    ],
+    "silent": true
   }
 ];
