@@ -1469,3 +1469,5 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .fs-body h4 { margin: 0 0 8px; font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .fs-body summary { cursor: pointer; line-height: 1.4; }
 .fs-body .foafos-row { margin-top: 8px; }
+
+.foafos-ov-close { position: absolute; top: 6px; right: 6px; z-index: 6; width: 36px; height: 36px; transform-origin: top right; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .5); background: rgba(0, 0, 0, .65); color: #fff; font-size: 16px; cursor: pointer; }
