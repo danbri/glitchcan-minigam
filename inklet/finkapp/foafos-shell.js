@@ -2750,7 +2750,8 @@ function buildUI() {
 
     const pad = 14, top = 54;                  // room for the hint strip
     const vw = window.innerWidth, vh = window.innerHeight;
-    const cols = Math.ceil(Math.sqrt(wins.length));
+    // A phone gets one column of cards big enough to recognise, as in a task switcher.
+    const cols = vw < 520 ? (wins.length > 3 ? 2 : 1) : Math.ceil(Math.sqrt(wins.length));
     const rows = Math.ceil(wins.length / cols);
     const cellW = (vw - pad * (cols + 1)) / cols;
     const cellH = (vh - top - pad * (rows + 1)) / rows;
@@ -2778,6 +2779,21 @@ function buildUI() {
       if (win.id === 'minigame-view') { hit.textContent = title; hit.classList.add('foafos-ov-named'); }
       hit.addEventListener('click', (e) => { e.stopPropagation(); exitOverview(win); });
       win.appendChild(hit);
+      // Close from here, as a task switcher does. Sized against the card's own scale.
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'foafos-ov-close';
+      x.textContent = '✕';
+      x.setAttribute('aria-label', `Close ${title || 'window'}`);
+      x.style.transform = `scale(${1 / s})`;
+      x.addEventListener('click', (e) => {
+        e.stopPropagation();
+        exitOverview(null);
+        if (win.id === 'minigame-view') document.getElementById('returnToStory')?.click();
+        else win.querySelector('.foafos-window-close')?.click();
+        setTimeout(enterOverview, 450);
+      });
+      win.appendChild(x);
     });
 
     const strip = document.createElement('div');
@@ -2807,6 +2823,7 @@ function buildUI() {
     ovStrip?.remove();
     for (const win of document.querySelectorAll('.foafos-ov')) {
       win.querySelector('.foafos-ov-hit')?.remove();
+      win.querySelector('.foafos-ov-close')?.remove();
       win.style.transform = '';                 // interpolates back home
       // Drop the class only after the return trip, or the transition it
       // rides is removed mid-flight and the card teleports.
