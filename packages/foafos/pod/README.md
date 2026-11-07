@@ -22,7 +22,7 @@ HTTP over XMPP is deny by default. `--allow` says who may ask, and `--route` say
 
 ## The binding
 
-- One LWS storage (`openLwsStorage` from `@factoidal/core/lws` 0.32.0) has two carriages:
+- One LWS storage (`openLwsStorage` from `@factoidal/core/lws` 0.33.0) has two carriages:
   HTTP and XMPP. Both call the same `storage.step({method, target, headers, body})`.
 - On XMPP, a request is an IQ `set` holding `<req xmlns="urn:xmpp:http" method resource version>`
   (XEP-0332). Headers go in a SHIM `<headers>` element; the body is base64. The answer is
