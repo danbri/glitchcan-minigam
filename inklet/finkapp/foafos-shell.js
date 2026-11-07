@@ -2966,6 +2966,13 @@ function buildUI() {
   // labelled icons, grouped, that opens things. Office, games and media
   // in ONE grid, opened the same way, because the shell does not know
   // which is which — that is the whole claim being tested.
+  const RECENT_KEY = 'foafos.apps.recent';
+  function noteRecent(id) {
+    try {
+      const was = JSON.parse(localStorage.getItem(RECENT_KEY)) || [];
+      localStorage.setItem(RECENT_KEY, JSON.stringify([id, ...was.filter((x) => x !== id)].slice(0, 6)));
+    } catch { /* not kept */ }
+  }
   function openHome() {
     const existing = document.getElementById('foafos-home');
     if (existing) { existing.remove(); return null; }
@@ -2985,7 +2992,7 @@ function buildUI() {
     const find = home.querySelector('.foafos-home-search input');
     // Folders, as in a Start menu: which are open is kept, so it scales past one screen.
     const OPEN_KEY = 'foafos.apps.open';
-    let openFolders = ['essentials'];
+    let openFolders = ['recent', 'essentials'];
     try { openFolders = JSON.parse(localStorage.getItem(OPEN_KEY)) || openFolders; } catch { /* the default */ }
 
     // Only what this INSTALLATION offers. The picker used to list every
@@ -2995,7 +3002,10 @@ function buildUI() {
     // What Foafos itself runs on comes first, in one place, and is not repeated below.
     const ESSENTIALS = ['system', 'chat', 'files', 'pods', 'backstage', 'activity'];
     const essentials = ESSENTIALS.map(appById).filter((a) => a && rootOffers(ROOT, a.id));
-    const groups = [{ id: 'essentials', label: 'Essentials', icon: '⭐', apps: essentials },
+    let recent = [];
+    try { recent = (JSON.parse(localStorage.getItem(RECENT_KEY)) || []).map(appById).filter((a) => a && rootOffers(ROOT, a.id) && a.surface !== 'chrome'); } catch { /* none yet */ }
+    const groups = [...(recent.length ? [{ id: 'recent', label: 'Recent', icon: '🕘', apps: recent }] : []),
+      { id: 'essentials', label: 'Essentials', icon: '⭐', apps: essentials },
       ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) }))];
     for (const fam of groups) {
       const offered = fam.apps.filter(a => rootOffers(ROOT, a.id));
@@ -3037,6 +3047,7 @@ function buildUI() {
         b.setAttribute('aria-label',
           `${app.name}${app.desc ? ` — ${app.desc}` : ''}${isChrome ? (chromeOn ? ', on' : ', off') : ''}`);
         b.addEventListener('click', () => {
+          noteRecent(app.id);
           launchApp(app.id);
           // A toggle that closes the panel it lives in cannot be pressed
           // twice; a launcher that leaves it open buries the thing it
@@ -3130,7 +3141,7 @@ function buildUI() {
     el.textContent = ambient.length
       ? `${ambient.length} app(s) run with ambient authority: ${ambient.map(a => a.name).join(', ')} — ` +
         `they reach the shell's own origin, so the brokers are advisory for them.`
-      : 'every app is sandboxed to an opaque origin; nothing has ambient authority.';
+      : 'Every app is sandboxed to an opaque origin; nothing has ambient authority.';
     // and be straight about the vocabulary that is only a vocabulary
     if (unimplemented.length) {
       el.textContent += ` No Foafos service yet for: ${unimplemented.join(', ')}. Apps get no camera, microphone or location: the sandbox blocks them unless a manifest declares location. GPU is open to every app.`;
