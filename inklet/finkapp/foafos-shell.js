@@ -458,6 +458,7 @@ window.addEventListener('message', (e) => {
     if (!app) return;
     p = appTools.attach({ id: app.id, label: app.name, source: e.source,
       post: (m) => e.source.postMessage(m, '*'), alive: () => frame.isConnected });
+    if (!p) return;   // an id the shell's own tools hold
   }
   appTools.receive(p, d);
 });
@@ -473,7 +474,7 @@ const places = new FoafPlaces({ bus, pod: (verb, params) => pods.invoke(PLACES_O
 FoafOS.places = places;
 appTools.offer({ id: 'places', label: 'Places', api: 'places/1', tools: placesTools({
   places, tools: appTools,
-  openApp: (id) => { if (rootOffers(ROOT, id)) FoafOS.launchApp?.(id); },
+  openApp: (id) => { if (!rootOffers(ROOT, id) || !FoafOS.launchApp) return false; FoafOS.launchApp(id); return true; },
 }) });
 bus.subscribe('app.close', (e) => pods.endShares(e.data?.closed || []));
 
@@ -6124,7 +6125,7 @@ function buildUI() {
     button(saveRow, 'Save', async () => {
       if (!viewName.value.trim()) { status.textContent = 'Give the place a name.'; viewName.focus(); return; }
       const r = await call('save', { name: viewName.value });
-      if (r.ok) { viewName.value = ''; status.textContent = `Saved ${r.value.saved.name}.`; draw(); }
+      if (r.ok) { viewName.value = ''; status.textContent = `Saved ${r.value.saved.name}.`; }
     }, 'fp-btn fp-primary');
     save.appendChild(saveRow);
 
@@ -6136,8 +6137,10 @@ function buildUI() {
     const note = field(add, 'Note (optional)');
     const addRow = el('div', null, 'fp-actions');
     button(addRow, 'Add', async () => {
+      // Empty coordinates would mean "where Moglob is looking" to the tool: not what this form asks.
+      if (lat.value === '' || lon.value === '') { status.textContent = 'Give a latitude and a longitude.'; (lat.value === '' ? lat : lon).focus(); return; }
       const r = await call('save', { name: name.value, lat: lat.value === '' ? null : Number(lat.value), lon: lon.value === '' ? null : Number(lon.value), description: note.value });
-      if (r.ok) { for (const i of [name, lat, lon, note]) i.value = ''; status.textContent = `Saved ${r.value.saved.name}.`; draw(); }
+      if (r.ok) { for (const i of [name, lat, lon, note]) i.value = ''; status.textContent = `Saved ${r.value.saved.name}.`; }
     }, 'fp-btn fp-primary');
     add.appendChild(addRow);
 
@@ -6145,9 +6148,9 @@ function buildUI() {
     body.append(intro, list, status, save, add);
 
     let drawing = 0;
-    async function draw() {
+    async function draw(fresh = false) {
       const mine = ++drawing;
-      const r = await appTools.call('places', 'list', {}, { caller: PERSON });
+      const r = await appTools.call('places', 'list', { fresh }, { caller: PERSON });
       if (mine !== drawing) return;
       list.textContent = '';
       if (!r.ok) { list.appendChild(el('p', r.error || r.reason, 'fp-warn')); return; }
@@ -6168,7 +6171,7 @@ function buildUI() {
         button(actions, 'Delete', async () => {
           if (!confirm(`Delete the place ${p.name}?`)) return;
           const d = await call('delete', { place: p.id });
-          if (d.ok) { status.textContent = `Deleted ${p.name}.`; draw(); }
+          if (d.ok) status.textContent = `Deleted ${p.name}.`;
         }).setAttribute('aria-label', `Delete ${p.name}`);
         card.appendChild(actions);
         list.appendChild(card);
@@ -6176,7 +6179,7 @@ function buildUI() {
     }
     // Saved or deleted elsewhere (by an agent, say): show it while the tab is open.
     places.subscribe(() => { if (body.isConnected && !body.hidden) draw(); });
-    FoafOS._drawPlaces = draw;
+    FoafOS._drawPlaces = () => draw(true);   // opening the tab reads the pod again
     return body;
   }
   FoafOS._mountPlaces = mountPlaces;

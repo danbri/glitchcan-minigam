@@ -5,12 +5,14 @@ import { FoafTools } from '../src/tools.mjs';
 import { PERSON, BROWSER_AGENT, accountCaller } from '../src/tool-grants.mjs';
 
 // The pod as pods.invoke answers it, for one container: paths are relative to places/.
-function fakePod({ refuse = null } = {}) {
+function fakePod({ refuse = null, getsBeforeThrottle = Infinity } = {}) {
   const files = new Map();
   const calls = [];
+  let gets = 0;
   const pod = async (verb, params) => {
     calls.push({ verb, ...params });
     if (refuse) return { ok: false, reason: refuse };
+    if (verb === 'pod.get' && ++gets > getsBeforeThrottle) return { ok: false, reason: 'throttled' };
     if (verb === 'pod.list') return files.size ? { ok: true, status: 200, items: [...files.keys()].map((path) => ({ path, container: false })) } : { ok: false, reason: 'http', status: 404 };
     if (verb === 'pod.get') return files.has(params.path) ? { ok: true, status: 200, body: files.get(params.path), contentType: 'application/ld+json' } : { ok: false, reason: 'http', status: 404 };
     if (verb === 'pod.put') {
@@ -61,7 +63,7 @@ test('a place is checked, and its document is a schema.org Place', () => {
 test('a place from Moglob\'s view: where it looks, how high the eye is, and the look-down angle', () => {
   const model = placeFromView({ eye: { height_m: 610 }, target: { lon: -0.03, lat: 51.5, height_m: 10, ground_m: 2 }, heading_deg: 12.3, pitch_deg: -45 }, { name: 'Here' });
   assert.deepEqual([model.lat, model.lon, model.elevation], [51.5, -0.03, 2]);
-  assert.deepEqual(model.view, { altitude: 600, heading: 12.3, pitch: 45 });
+  assert.deepEqual(model.view, { altitude: 608, heading: 12.3, pitch: 45 });   // above the ground, as Moglob's alt_m
   const globe = placeFromView({ eye: { height_m: 9000, above_ground_m: 8800 }, target: { lon: 139.7, lat: 35.7 }, range_m: 10000, heading_deg: 0, pitch_deg: -30 }, { name: 'Tokyo' });
   assert.equal(globe.elevation, null);
   assert.equal(globe.view.altitude, 5000);
@@ -115,7 +117,7 @@ test('save from coordinates or from Moglob\'s view; list; delete', async () => {
   const seen = moglob(tools);
   const fromView = await me('save', { name: 'Docks view', description: 'from above' });
   assert.equal(fromView.ok, true, JSON.stringify(fromView));
-  assert.deepEqual(fromView.value.saved.view, { altitude: 600, heading: 0, pitch: 45 });
+  assert.deepEqual(fromView.value.saved.view, { altitude: 608, heading: 0, pitch: 45 });
   assert.equal(seen[0].name, 'get_view');
   const given = await me('save', { name: 'Tokyo', lat: 35.68, lon: 139.76, altitude: 2000 });
   assert.equal(given.value.saved.lat, 35.68);
@@ -175,4 +177,53 @@ test('grants: an agent may list but not save; an account flies only with Moglob\
   assert.match(r.error, /Moglob fly_to: not-granted/);
   tools.grants.grant('test2@localhost', 'docklands', { tools: ['fly_to'] });
   assert.equal((await tools.call('places', 'fly_to', { place: 'Dock' }, { caller: test2 })).ok, true);
+});
+
+test('a place that cannot be read is an error, never left out; a file that is not a place is', async () => {
+  const fp = fakePod({ getsBeforeThrottle: 2 });
+  const places = new FoafPlaces({ pod: fp.pod, now: NOW });
+  for (const n of ['a', 'b', 'c']) fp.files.set(`${n}.jsonld`, JSON.stringify(placeDoc(checkPlace({ name: n, lat: 0, lon: 0 }))));
+  await assert.rejects(places.list(), /Too many pod calls/);
+  const ok = fakePod();
+  ok.files.set('junk.jsonld', '{"name":"no geo"}');
+  ok.files.set('a.jsonld', JSON.stringify(placeDoc(checkPlace({ name: 'a', lat: 0, lon: 0 }))));
+  assert.deepEqual((await new FoafPlaces({ pod: ok.pod }).list()).map((p) => p.id), ['a']);
+});
+
+test('the pod is read once; the store\'s own writes keep the list; fresh reads it again', async () => {
+  const fp = fakePod();
+  const places = new FoafPlaces({ pod: fp.pod, now: NOW });
+  await places.save({ name: 'One', lat: 0, lon: 0 });
+  await places.list();
+  const reads = () => fp.calls.filter((c) => c.verb !== 'pod.put' && c.verb !== 'pod.delete').length;
+  const before = reads();
+  await places.save({ name: 'Two', lat: 1, lon: 1 });
+  await places.find('two');
+  await places.delete('one');
+  assert.deepEqual((await places.list()).map((p) => p.id), ['two']);
+  assert.equal(reads(), before);
+  fp.files.set('elsewhere.jsonld', JSON.stringify(placeDoc(checkPlace({ name: 'Elsewhere', lat: 2, lon: 2 }))));
+  assert.deepEqual((await places.list({ fresh: true })).map((p) => p.id), ['elsewhere', 'two']);
+});
+
+test('a name two places share must be said by id', async () => {
+  const places = new FoafPlaces({ pod: fakePod().pod, now: NOW });
+  await places.save({ name: 'Dock', lat: 0, lon: 0 });
+  await places.save({ name: 'Dock', lat: 1, lon: 1 });
+  // An id is exact; a name in another case may be either.
+  await assert.rejects(places.delete('DOCK'), /2 places are called DOCK\. Say which by id: dock, dock-2/);
+  assert.equal((await places.delete('dock-2')).lat, 1);
+  assert.equal((await places.delete('Dock')).lat, 0);
+});
+
+test('fly_to fails at once when Moglob cannot be opened; a frame cannot take the shell tools\' id', async () => {
+  const tools = new FoafTools();
+  const places = new FoafPlaces({ pod: fakePod().pod, now: NOW });
+  await places.save({ name: 'Dock', lat: 0, lon: 0 });
+  tools.offer({ id: 'places', label: 'Places', tools: placesTools({ places, tools, waitMs: 60000, openApp: () => false }) });
+  const t0 = Date.now();
+  assert.match((await tools.call('places', 'fly_to', { place: 'Dock' }, { caller: PERSON })).error, /Moglob is not open/);
+  assert.ok(Date.now() - t0 < 1000);
+  assert.equal(tools.attach({ id: 'places', label: 'Impostor', source: {}, post() {} }), null);
+  assert.equal(tools.find('places').label, 'Places');
 });
