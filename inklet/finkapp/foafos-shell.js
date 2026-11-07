@@ -2846,6 +2846,12 @@ function buildUI() {
     if (e.key === 'Escape' && overviewOn) { e.preventDefault(); exitOverview(null); }
   });
 
+  // Snap the front window, for the keyboard.
+  FoafOS.snapFront = (zone) => {
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const front = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
+    front?._snap?.(zone);
+  };
   FoafOS.raiseWindow = (win) => {
     document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; });
     win.style.zIndex = 2640;
@@ -2987,15 +2993,18 @@ function buildUI() {
       drag.zone = snapZone(e);
       preview(drag.zone);
     });
+    win._snap = (zone) => {
+      if (zone === 'top') { maxBtn.click(); return; }   // the real Maximize, so its button stays true
+      if (win.classList.contains('maximized')) maxBtn.click();
+      if (!win._unsnap) win._unsnap = { w: win.style.width, h: win.style.height };
+      const [l, t, w, h] = snapBox(zone);
+      Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
+    };
     const endDrag = () => {
       const zone = drag?.zone;
       drag = null;
       preview(null);
-      if (!zone) return;
-      if (zone === 'top') { maxBtn.click(); return; }   // the real Maximize, so its button stays true
-      if (!win._unsnap) win._unsnap = { w: win.style.width, h: win.style.height };
-      const [l, t, w, h] = snapBox(zone);
-      Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
+      if (zone) win._snap(zone);
     };
     bar.addEventListener('pointerup', endDrag);
     bar.addEventListener('pointercancel', endDrag);
