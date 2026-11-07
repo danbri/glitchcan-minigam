@@ -2214,7 +2214,7 @@ function buildUI() {
       <p class="foafos-unlock-note" role="status"></p>
       <div><button type="submit">Unlock</button> <button type="button">Not now</button></div>`;
     const pass = box.querySelector('input'), note = box.querySelector('.foafos-unlock-note');
-    box.querySelector('button[type=button]').addEventListener('click', () => box.remove());
+    box.querySelector('button[type=button]').addEventListener('click', () => { box.remove(); FoafOS.showNudge?.(); });
     box.addEventListener('submit', async (e) => {
       e.preventDefault();
       note.textContent = 'Unlocking';
@@ -2231,6 +2231,45 @@ function buildUI() {
     pass.focus();
   };
   setTimeout(askToUnlock, 500);
+
+  // One quiet notice for what needs the person, so nobody has to discover it from a failure.
+  // It also marks the menu handle, which stays visible when the notice is dismissed.
+  const seen = (key) => { try { return !!sessionStorage.getItem(`foafos.nudge.${key}`); } catch { return false; } };
+  const nudges = () => {
+    if (secrets.hasSealed() && !secrets.sealed) return [{ key: 'unlock', text: 'Your saved logins are locked.', action: 'Unlock', run: askToUnlock }];
+    const out = [];
+    const pod = pods.list().find((p) => p.forApps && !p.hasPassword && (p.carriage === 'xmpp' || p.auth === 'bearer'));
+    if (pod) out.push({ key: `pod-${pod.id}`, text: `Your apps save to ${pod.label}, which needs its ${pod.carriage === 'xmpp' ? 'password' : 'token'}.`, action: 'Open PodStore', run: () => FoafOS.openPods?.() });
+    if (secrets.count() > 0 && !secrets.sealed) out.push({ key: 'save', text: 'Keep your logins? They last until you reload.', action: 'Save them', run: () => FoafOS.openSession?.() });
+    return out;
+  };
+  const showNudge = () => {
+    const all = nudges();
+    document.getElementById('wm-chrome')?.classList.toggle('wm-attention', all.length > 0);
+    const next = document.getElementById('foafos-unlock-ask') ? null : all.find((n) => !seen(n.key));
+    let box = document.getElementById('foafos-nudge');
+    if (!next) { box?.remove(); return; }
+    if (box?.dataset.key === next.key) return;
+    box?.remove();
+    box = document.createElement('div');
+    box.id = 'foafos-nudge';
+    box.dataset.key = next.key;
+    box.setAttribute('role', 'status');
+    const text = document.createElement('span');
+    text.textContent = next.text;
+    const go = document.createElement('button');
+    go.type = 'button'; go.className = 'fp-btn fp-primary'; go.textContent = next.action;
+    const later = document.createElement('button');
+    later.type = 'button'; later.className = 'fp-btn'; later.textContent = 'Not now';
+    const dismiss = () => { try { sessionStorage.setItem(`foafos.nudge.${next.key}`, '1'); } catch { /* until reload */ } box.remove(); showNudge(); };
+    go.addEventListener('click', () => { dismiss(); next.run(); });
+    later.addEventListener('click', dismiss);
+    box.append(text, go, later);
+    document.body.appendChild(box);
+  };
+  FoafOS.showNudge = showNudge;
+  for (const t of ['secrets.*', 'pods.*', 'chat.status']) bus.subscribe(t, () => setTimeout(showNudge, 50));
+  setTimeout(showNudge, 1500);
   $('#foafos-forget').addEventListener('click', () => {
     FoafOS.session.forget();
     // Forgetting the session MUST take the credentials with it. Leaving a
