@@ -1453,3 +1453,7 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .foafos-home-body summary h3 { margin: 0; flex: 1; }
 .foafos-folder-count { font-size: .8em; opacity: .65; }
 .foafos-app[hidden], .foafos-home-body section[hidden] { display: none; }
+
+/* A quiet notice, and the mark it leaves on the menu handle */
+#foafos-nudge { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 2715; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 8px 12px; border-radius: 10px; background: var(--sk-bg, #0a0a12); color: var(--sk-ink, #fff); border: 1px solid color-mix(in srgb, var(--sk-ink, #fff) 25%, transparent); box-shadow: 0 6px 20px rgba(0, 0, 0, .35); font: 14px/1.4 var(--sk-font-ui, system-ui, sans-serif); }
+#wm-chrome.wm-attention #wm-handle { box-shadow: 0 0 0 3px #e08a2e; opacity: 1 !important; }
