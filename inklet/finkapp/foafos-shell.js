@@ -2127,7 +2127,8 @@ function buildUI() {
   drawer.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setDrawer(false); dock.focus(); } });
 
   // session controls
-  const $ = (id) => drawer.querySelector(id);
+  // Not drawer.querySelector: these controls move into the Session window.
+  const $ = (id) => document.querySelector(id);
   const status = (msg, isError = false) => {
     const el = $('#foafos-session-status');
     el.textContent = msg;
