@@ -382,6 +382,70 @@
 
   pick(null);
   window.__files = { go, pick, useLocation, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+
+  // Tools for the shell and agents (foaf.tools in app-sdk.js). All three only read, from the
+  // location Files has open, and none changes what the window shows.
+  const fail = (r) => { throw new Error(explain(r)); };
+  const folderPath = (p) => { const s = String(p ?? '').replace(/^\/+/, ''); return s && !s.endsWith('/') ? s + '/' : s; };
+  const MAX_TEXT = 100000;
+  foaf.tools.register({
+    name: 'list_folder',
+    description: 'What is in one folder of the location Files has open: each item\'s path and whether it is a folder. Hidden names (starting with ".") are left out.',
+    inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'A folder path such as "apps/podnotes/notes/"; empty for the top' } } },
+    readOnly: true,
+    handler: async ({ path = '' }) => {
+      const base = folderPath(path);
+      const r = await list(base);
+      if (!r.ok) fail(r);
+      return {
+        location: here()?.label || null,
+        folder: base,
+        items: r.items.map((it) => ({ path: base + it.path.replace(/^\/+/, ''), folder: !!it.container }))
+          .filter((it) => !hiddenName(nameOf(it.path))),
+      };
+    },
+  });
+  foaf.tools.register({
+    name: 'search',
+    description: 'Find files and folders whose name contains some text, in every folder of the location Files has open. Looks in up to 300 folders and returns up to 100 matches.',
+    inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Text to find in names, in any case' } }, required: ['query'] },
+    readOnly: true,
+    handler: async ({ query }) => {
+      const q = String(query).trim().toLowerCase();
+      if (!q) throw new Error('Give some text to search for.');
+      const found = [], queue = [''];
+      let seen = 0;
+      while (queue.length && seen < 300 && found.length < 100) {
+        const base = queue.shift();
+        seen++;
+        const r = await list(base);
+        if (!r.ok) continue;
+        for (const it of r.items) {
+          const p = base + it.path.replace(/^\/+/, '');
+          if (hiddenName(nameOf(p))) continue;
+          if (it.container) queue.push(p);
+          if (nameOf(p).toLowerCase().includes(q) && found.length < 100) found.push({ path: p, folder: !!it.container });
+        }
+      }
+      return { query: q, found, complete: !queue.length };
+    },
+  });
+  foaf.tools.register({
+    name: 'read_file',
+    description: `The text of one file in the location Files has open, with its content type. Text files only; at most ${MAX_TEXT.toLocaleString('en')} characters are returned.`,
+    inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'A file path from list_folder or search' } }, required: ['path'] },
+    readOnly: true,
+    handler: async ({ path }) => {
+      const r = await foaf.pod.get(String(path).replace(/^\/+/, ''));
+      if (!r.ok) {
+        if (r.reason === 'not-text') throw new Error(`${path} is not a text file (${r.contentType || 'unknown type'}).`);
+        if (r.status === 404) throw new Error(`No file at ${path}.`);
+        fail(r);
+      }
+      const truncated = r.body.length > MAX_TEXT;
+      return { path, contentType: r.contentType || null, length: r.body.length, truncated, text: truncated ? r.body.slice(0, MAX_TEXT) : r.body };
+    },
+  });
   foaf.onInit(async () => {
     takeLocations(await foaf.pod.locations());
     await go('', { remember: false });

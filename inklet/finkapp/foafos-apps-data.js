@@ -40,7 +40,8 @@ export const APPS = [
     "capabilities": [
       "storage"
     ],
-    "silent": true
+    "silent": true,
+    "tools": true
   },
   {
     "id": "files",
@@ -55,7 +56,8 @@ export const APPS = [
       "pod:read",
       "pod:write"
     ],
-    "silent": true
+    "silent": true,
+    "tools": true
   },
   {
     "id": "robbin",
@@ -550,6 +552,7 @@ export const APPS = [
       "pod:write"
     ],
     "silent": true,
+    "tools": true,
     "handles": [
       {
         "types": [
