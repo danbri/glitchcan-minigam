@@ -1619,8 +1619,8 @@ goes to the granted repo — `page.route()` intercepts, so the shell's own
 
 ## Pods: the user's LWS storages (November 2026)
 
-`packages/foafos/src/pods.mjs` (`FoafPods`), `FoafOS.pods`, the **Pods** panel (`openPods`,
-`?app=pods`), app verbs `foaf.pod.get/list/put/delete`, first caller **Pod Notes**
+`packages/foafos/src/pods.mjs` (`FoafPods`), `FoafOS.pods`, the **Pods tab of System** (`mountPods`;
+`FoafOS.openPods()` and an old `?app=pods` link open it; there is no pods app since 2026-11-07), app verbs `foaf.pod.get/list/put/delete`, first caller **Pod Notes**
 (`inklet/apps/podnotes/`). Design and log: `docs/foafos-pods-20261103.md`. A pod is a Linked Web
 Storage reached over HTTPS or, for a pod at home, over XEP-0332 through an XMPP relay
 (`packages/foafos/src/xmpp-ws.mjs`; the Node pod is `packages/foafos/pod/pod.mjs`).
@@ -1644,8 +1644,14 @@ Storage reached over HTTPS or, for a pod at home, over XEP-0332 through an XMPP 
     while secrets are sealed: with no passphrase it is for this run; after a reload it is `locked`
     until UNLOCK.
   - Test: `inklet/finkapp/test/e2e-builtin-pod.mjs` (`FACTOIDAL=`).
-- **The Pods window redraws on every pods.* and app event.** Anything typed in it must survive
-  (`draft` in `openPods`), and a test click can land on a button that a redraw has just removed.
+- **The Pods tab redraws on every pods.* and app event.** Anything typed in it must survive
+  (`draft`, `forms` in `mountPods`), a redraw waits while a field has focus, and a test click can land
+  on a button that a redraw has just removed.
+- **Sign-in (2026-11-07):** `pods.signIn(id, { way, secret })`, status `needs-login`, known servers in
+  `inklet/finkapp/foafos-known-pods.js` (addresses and what each accepts, never an account). On the Fly
+  server HTTPS takes only a bearer token, and XMPP takes an account that must also be on the pod's
+  `--allow` list. A pod answering 401 or 403 is not online. `docs/foafos-system-pods-20261107.md`,
+  test `packages/foafos/pod/test/e2e-system.mjs`.
 - **A relay that holds IQs makes a request hang.** Factoidal's `xmpp-serve` holds an IQ for an
   offline account instead of answering `service-unavailable`
   (https://github.com/danbri/factoidal/issues/1234); `httpFetch` maps an IQ timeout to HTTP 504.

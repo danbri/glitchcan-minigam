@@ -46,7 +46,7 @@ HTTP over XMPP is deny by default. `--allow` says who may ask, and `--route` say
 | `test/run.mjs` | end-to-end test: Prosody, the pod, a static server, Chromium |
 | `test/prosody.cfg.lua` | the local relay (plain `ws://` on 127.0.0.1, test only) |
 | `test/relay.mjs` | starts the test relay: Prosody, or Factoidal's Lean server with TLS (`RELAY`, `FACTOIDAL_BIN`) |
-| `test/e2e-shell.mjs` | the whole path through the real foafos shell: the Pods panel, the relay, this pod, and the sandboxed Pod Notes app (`npm run test:shell`) |
+| `test/e2e-shell.mjs` | the whole path through the real foafos shell: the Pods tab of System, the relay, this pod, and the sandboxed Pod Notes app (`npm run test:shell`) |
 
 Run it (moved here from `magpie/miniapps/lws/` on 2026-11-03):
 

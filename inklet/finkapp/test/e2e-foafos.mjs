@@ -94,7 +94,7 @@ try {
   // stays as an API for its feed and shelf, off screen
   await page.evaluate(() => FinkWM._setCollapsed(false));
   const pages = await page.evaluate(() => [...document.querySelectorAll('#wm-shell-sect button')].map((b) => b.textContent.trim()));
-  ['Sound', 'Look', 'Widgets', 'Session and capabilities'].every((l) => pages.some((p) => p.endsWith(l)))
+  ['Sound', 'Look', 'Widgets', 'System'].every((l) => pages.some((p) => p.endsWith(l)))
     ? pass(`the ☰ holds what the side drawer held: ${pages.join(' · ')}`)
     : fail(`☰ foafos pages: ${JSON.stringify(pages)}`);
   const lookRows = await page.evaluate(async () => { [...document.querySelectorAll('#wm-shell-sect button')].find((b) => /Look$/.test(b.textContent.trim())).click();

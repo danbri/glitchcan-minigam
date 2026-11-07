@@ -1413,7 +1413,7 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
     }
 }
 
-/* PodStore: where your files are, then one clear thing to do */
+/* Pods (System): where your files are, then one clear thing to do */
 .fp { display: flex; flex-direction: column; gap: 10px; color: var(--sk-ink, #eee); font: 14px/1.45 var(--sk-font-ui, system-ui, sans-serif); }
 .fp p { margin: 0; }
 .fp-intro { font-size: 15px; }
@@ -1440,7 +1440,16 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .fp-add > summary { font-size: 14px; font-weight: 600; }
 .fp-add[open] > * + * { margin-top: 8px; }
 .fp-xmpp { display: flex; flex-direction: column; gap: 8px; }
-.fp-xmpp[hidden] { display: none; }
+.fp-field { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.fp-field input, .fp-field select { min-width: 0; min-height: 34px; padding: 5px 8px; border-radius: 6px; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); background: var(--sk-bg, #111); color: inherit; font: inherit; font-size: 14px; }
+.fp-signin { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 2px; }
+.fp-signin fieldset { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px; }
+.fp-signin legend { padding: 0 0 4px; font-size: 13px; font-weight: 600; }
+.fp-way { display: flex; align-items: center; gap: 8px; min-height: 30px; cursor: pointer; }
+.fp-way small { margin-left: 6px; font-size: 12.5px; color: var(--sk-ink-dim, inherit); }
+.fp-keep { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--sk-accent, #2e6fd1) 50%, transparent); }
+.fp-keep .fp-secret { align-items: flex-end; }
+.fp-offer h3 { margin: 0; font-size: 15px; font-weight: 600; }
 .fp-error { color: #d14b4b; font-size: 13px; }
 .fp-error:empty, .fp-note:empty { display: none; }
 

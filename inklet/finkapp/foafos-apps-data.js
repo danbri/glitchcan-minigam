@@ -538,26 +538,13 @@ export const APPS = [
     }
   },
   {
-    "id": "pods",
-    "family": "make",
-    "icon": "🗄️",
-    "name": "PodStore",
-    "surface": "panel",
-    "panel": "pods",
-    "desc": "Your Linked Web Storages, over HTTPS or XMPP",
-    "capabilities": [
-      "shell"
-    ],
-    "silent": true
-  },
-  {
     "id": "podnotes",
     "family": "office",
     "icon": "🗒️",
     "name": "Notes",
     "surface": "window",
     "url": "../apps/podnotes/index.html",
-    "desc": "Plain notes, kept in your PodStore",
+    "desc": "Plain notes, kept in your pod",
     "capabilities": [
       "pod:read",
       "pod:write"
@@ -642,7 +629,7 @@ export const APPS = [
     "name": "System",
     "surface": "panel",
     "panel": "system",
-    "desc": "Session, sound, look and capabilities, in one place",
+    "desc": "Session, pods, sound, look and capabilities, in one place",
     "capabilities": [
       "shell"
     ],

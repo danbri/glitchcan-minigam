@@ -11,12 +11,12 @@
   "name": "System",
   "surface": "panel",
   "panel": "system",
-  "desc": "Session, sound, look and capabilities, in one place",
+  "desc": "Session, pods, sound, look and capabilities, in one place",
   "capabilities": [
     "shell"
   ],
   "silent": true,
   "notes": [
-    "The shell's own settings as one app with tabs, so they do not each take a place among the apps. It holds the drawer's sections, which move into its window."
+    "The shell's own settings as one app with tabs, so they do not each take a place among the apps. It holds the drawer's sections, which move into its window. Its Pods tab is where a person adds a pod, signs in and chooses the pod for apps (FoafPods, packages/foafos/src/pods.mjs); it is shell chrome because a password or token typed there goes straight into FoafSecrets. Design: docs/foafos-system-pods-20261107.md."
   ]
 }

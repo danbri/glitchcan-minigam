@@ -44,7 +44,7 @@ function words(p) {
     return {
       icon: '🌐', kind: 'pod', finder: false,
       where: `On a pod at ${p.podJid}, reached through ${hostOf(p.relay?.url)}.`,
-      needs: 'That relay and pod running, and the pod’s password in PodStore.',
+      needs: 'That relay and pod running, and your sign-in in System, under Pods.',
       encrypted: `${/^wss:/i.test(String(p.relay?.url)) ? 'On the way to the relay, by TLS' : 'Not on the way to the relay, which is on this computer'}. The relay can read what passes through it. How the pod stores files is up to that pod.`,
       risk: 'As safe as that pod and whoever runs it.',
     };
@@ -53,7 +53,7 @@ function words(p) {
   return {
     icon: local ? '🖥' : '🌐', kind: 'pod', finder: false,
     where: local ? `On a storage server on this computer, at ${hostOf(p.base)}.` : `On the server ${hostOf(p.base)}.`,
-    needs: `${local ? 'That server running. For the local one: foafos-stack start lws.' : 'A connection to that server.'}${p.auth === 'bearer' ? ' Its access token, set in PodStore.' : ''}`,
+    needs: `${local ? 'That server running. For the local one: foafos-stack start lws.' : 'A connection to that server.'}${p.auth === 'bearer' ? ' Its token, set in System, under Pods.' : ''}`,
     encrypted: /^https:/i.test(String(p.base)) ? 'On the way, by HTTPS. How the server stores files is up to the server.'
       : 'Traffic does not leave this computer, so it is not encrypted. How the server stores files depends on the server.',
     risk: local ? 'As safe as that server’s folder on this computer.' : 'As safe as that server and whoever runs it.',
@@ -61,7 +61,7 @@ function words(p) {
 }
 
 const STATUS = {
-  online: 'Ready', offline: 'Not connected yet', connecting: 'Connecting', locked: 'Locked', error: 'Cannot reach it', 'needs-ok': 'Needs your OK',
+  online: 'Ready', offline: 'Not connected yet', connecting: 'Connecting', locked: 'Locked', 'needs-login': 'Needs you to sign in', error: 'Cannot reach it', 'needs-ok': 'Needs your OK',
 };
 
 /**

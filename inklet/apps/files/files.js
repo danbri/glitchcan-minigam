@@ -11,7 +11,7 @@
   const statusEl = $('status');
   const REASONS = {
     denied: 'Files may not use your pod. Check its permissions.',
-    'no-pod': 'No pod is chosen for apps yet. Choose one in PodStore.',
+    'no-pod': 'No pod is chosen for apps yet. Choose one in System, under Pods.',
     conflict: 'This file changed elsewhere since you opened it. Open it again, then save.',
     offline: 'That location is not connected.',
     'needs-ok': 'This folder needs your OK. Use Allow access.',

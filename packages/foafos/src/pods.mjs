@@ -86,14 +86,16 @@ export function checkPod(rec) {
     if (url.protocol !== 'wss:' && !(url.protocol === 'ws:' && isLoopback(url))) {
       throw new Error('relay.url: must be wss: (or ws: on loopback, for tests)');
     }
-    if (!relay.domain || !relay.username) throw new Error('relay.domain and relay.username are required');
+    if (!relay.domain) throw new Error('relay.domain is required');
     if (!/^[^@/\s]+@[^@/\s]+(\/\S+)?$/.test(String(r.podJid || ''))) throw new Error('podJid: a JID such as pod@example.org/lws');
-    r.relay = { url: url.href, domain: String(relay.domain), username: String(relay.username) };
+    // The account may come later: a saved server can wait for the person to sign in.
+    r.relay = { url: url.href, domain: String(relay.domain), username: String(relay.username ?? '') };
     r.podJid = String(r.podJid);
   } else {
     delete r.relay; delete r.podJid;
   }
   r.forApps = !!r.forApps;
+  r.auto = !!r.auto;     // signed in and not disconnected: connect again when the logins unlock
   return r;
 }
 
@@ -141,7 +143,7 @@ export class FoafPods {
     // A built-in pod is written out only while secrets are sealed. When they become sealed
     // (a passphrase is set or unlocked), write what is held now, and open a locked pod.
     bus?.subscribe?.('secrets.sealed', () => this._keepBuiltins());
-    bus?.subscribe?.('secrets.unsealed', () => this._unlockBuiltins());
+    bus?.subscribe?.('secrets.unsealed', () => this._afterUnlock());
   }
 
   _say(topic, data) {
@@ -181,6 +183,8 @@ export class FoafPods {
       status: this.live.get(r.id)?.status || 'offline',
       detail: this.live.get(r.id)?.detail || '',
       hasPassword: r.carriage === 'xmpp' || r.auth === 'bearer' ? this.secrets.has(POD_OWNER, secretName(r.id)) : null,
+      // Its login may be on this device, sealed: the person must unlock, not sign in again.
+      locked: (r.carriage === 'xmpp' || r.auth === 'bearer') && !this.secrets.has(POD_OWNER, secretName(r.id)) && this._locked(),
       // 'builtin': is it written out (sealed), or held for this run only?
       kept: r.carriage === 'builtin' ? (this.secrets.sealed ? 'sealed' : 'run') : null,
     }));
@@ -243,6 +247,36 @@ export class FoafPods {
     return r;
   }
 
+  _locked() { return this.secrets.hasSealed() && !this.secrets.sealed; }
+
+  /**
+   * Sign in, and connect. `way` changes how the pod is reached and how the person signs in:
+   * { carriage: 'xmpp', relay, podJid } or { carriage: 'https', auth: 'bearer' }. `secret` is the
+   * password or token: it goes to FoafSecrets, and the old one goes when the carriage changes.
+   */
+  async signIn(id, { way = null, secret = null } = {}) {
+    const old = this.pods.get(id);
+    if (!old) throw new Error(`no pod "${id}"`);
+    if (way) {
+      const r = checkPod({ ...old, auth: undefined, relay: undefined, podJid: undefined, ...way, id });
+      await this.disconnect(id, { quiet: true });
+      this.pods.set(id, r);
+      if (r.carriage !== old.carriage) this.secrets.forget(POD_OWNER, secretName(id));
+      this._save();
+      this._say('pods.updated', { summary: `pod ${id} updated`, id });
+    }
+    if (secret) {
+      const held = this.setPassword(id, secret);
+      if (!held.ok) {
+        this._setStatus(id, 'error', `Your login could not be held (${held.reason}).`);
+        return this.get(id);
+      }
+    }
+    const p = await this.connect(id, { ask: true });
+    if (p.status === 'online') { this.pods.get(id).auto = true; this._save(); }
+    return this.get(id);
+  }
+
   // ── connections ───────────────────────────────────────────────────────
 
   status(id) { return this.live.get(id)?.status || 'offline'; }
@@ -282,16 +316,27 @@ export class FoafPods {
       podFetch = deviceFetch(opened.root, rec.base);
     } else if (rec.carriage === 'xmpp') {
       if (!this.connectXmpp) { this._setStatus(id, 'error', 'no XMPP client in this shell'); return this.get(id); }
-      const used = await this.secrets.use(POD_OWNER, secretName(id), (password) =>
-        this.connectXmpp({ url: rec.relay.url, domain: rec.relay.domain, username: rec.relay.username, password, resource: `pod-${id}-${crypto.randomUUID().slice(0, 8)}` }));
+      if (!rec.relay.username) return this._askLogin(id, 'Enter your username and password, then press Sign in.');
+      if (!this.secrets.has(POD_OWNER, secretName(id))) return this._noSecret(id, 'Enter your password, then press Sign in.');
+      let refused = false;
+      const used = await this.secrets.use(POD_OWNER, secretName(id), async (password) => {
+        try {
+          return await this.connectXmpp({ url: rec.relay.url, domain: rec.relay.domain, username: rec.relay.username, password, resource: `pod-${id}-${crypto.randomUUID().slice(0, 8)}` });
+        } catch (e) {
+          // Read here, because the message goes no further than this line: only what kind of failure it is.
+          refused = /not-authorized|not-allowed|account-disabled/.test(String(e?.message));
+          throw e;
+        }
+      });
       if (!used.ok) {
-        this._setStatus(id, 'error', used.reason === 'missing' ? 'no password set' : 'could not log in to the relay');
+        if (refused) return this._askLogin(id, 'The server did not accept this username and password. Check them, then sign in again.');
+        this._setStatus(id, 'error', 'The XMPP server did not answer. Try again in a moment.');
         return this.get(id);
       }
       conn = used.result;
       podFetch = conn.httpFetch({ jid: rec.podJid, base: rec.base });
     } else if (rec.auth === 'bearer') {
-      if (!this.secrets.has(POD_OWNER, secretName(id))) { this._setStatus(id, 'error', 'no access token set'); return this.get(id); }
+      if (!this.secrets.has(POD_OWNER, secretName(id))) return this._noSecret(id, 'Enter your token, then press Sign in.');
       podFetch = async (url, init = {}) => {
         const used = await this.secrets.use(POD_OWNER, secretName(id), (token) =>
           this.fetch(url, { ...init, headers: { ...init.headers, Authorization: `Bearer ${token}` } }));
@@ -304,11 +349,31 @@ export class FoafPods {
     this.live.set(id, { status: 'connecting', detail: '', fetch: podFetch, conn });
     let probe;
     try { probe = await podFetch(rec.base, { method: 'HEAD' }); } catch { probe = null; }
-    if (!probe) this._setStatus(id, 'error', 'the storage did not answer');
-    else if (probe.status === 504) this._setStatus(id, 'error', 'the pod is offline');
-    else if (probe.status >= 500) this._setStatus(id, 'error', `the storage answered ${probe.status}`);
-    else if (rec.auth === 'bearer' && (probe.status === 401 || probe.status === 403)) this._setStatus(id, 'error', 'the storage refused the access token');
+    const denied = probe?.status === 401 || probe?.status === 403;
+    if (!probe) this._setStatus(id, 'error', 'The storage did not answer. It may be down, or it may not allow this page.');
+    else if (probe.status === 504) this._setStatus(id, 'error', 'The pod is offline. Try again when it is running.');
+    else if (probe.status >= 500) this._setStatus(id, 'error', `The storage has a fault (it answered ${probe.status}). Try again later.`);
+    else if (denied && rec.carriage === 'xmpp') return this._askLogin(id, "The server accepted this account, but the pod does not let it in. Sign in with an account on the pod's list, or ask the pod's owner to add this one.");
+    else if (denied && rec.auth === 'bearer') return this._askLogin(id, 'The server did not accept this token. Check it, then sign in again.');
+    else if (denied) return this._askLogin(id, 'This storage asks for a token. Enter it, then press Sign in.');
     else this._setStatus(id, 'online', probe.status === 200 ? '' : `HEAD ${probe.status}`);
+    return this.get(id);
+  }
+
+  /** The person must act before this pod can open. What is open now is closed, and a login
+   *  that was refused is not kept: it would only be sealed and refused again. */
+  _askLogin(id, detail) {
+    try { this.live.get(id)?.conn?.close(); } catch { /* gone */ }
+    this.live.delete(id);
+    if (this.secrets.has(POD_OWNER, secretName(id))) { this.secrets.forget(POD_OWNER, secretName(id)); this.secrets.flush?.(); }
+    this._setStatus(id, 'needs-login', detail);
+    return this.get(id);
+  }
+
+  /** No login held: it is on this device, locked, or the person has yet to give it. */
+  _noSecret(id, detail) {
+    if (!this._locked()) return this._askLogin(id, detail);
+    this._setStatus(id, 'locked', 'Unlock your saved logins to connect.');
     return this.get(id);
   }
 
@@ -351,16 +416,27 @@ export class FoafPods {
     }
   }
 
-  _unlockBuiltins() {
-    for (const r of this.pods.values()) if (r.carriage === 'builtin' && this.status(r.id) === 'locked') this.connect(r.id);
+  // A pod waiting for its login, and one the person was signed in to, open again by themselves.
+  _afterUnlock() {
+    for (const r of this.pods.values()) {
+      const held = this.secrets.has(POD_OWNER, secretName(r.id));
+      if ((r.carriage === 'builtin' && this.status(r.id) === 'locked') || (held && (r.auto || this.status(r.id) === 'locked'))) {
+        this.connect(r.id).catch(() => {});
+      }
+    }
   }
 
   async disconnect(id, { quiet = false } = {}) {
     const l = this.live.get(id);
-    if (!l) return;
-    try { l.conn?.close(); } catch { /* gone */ }
-    this.live.delete(id);
-    if (!quiet) this._setStatus(id, 'offline');
+    if (l) {
+      try { l.conn?.close(); } catch { /* gone */ }
+      this.live.delete(id);
+    }
+    if (quiet) return;
+    // The person chose this, so unlocking must not connect it again.
+    const rec = this.pods.get(id);
+    if (rec?.auto) { rec.auto = false; this._save(); }
+    if (l) this._setStatus(id, 'offline');
   }
 
   /**

@@ -17,6 +17,6 @@
   ],
   "silent": true,
   "notes": [
-    "The shell's XMPP connection and its MUC room (FoafChat, packages/foafos/src/chat.mjs). By default the Factoidal Lean XMPP server runs in the page; it can point at factoidal xmpp-serve on localhost instead, so an ordinary XMPP client can join and watch. Shell chrome for the Pods panel's reason: a server password typed here goes straight into FoafSecrets. Design: docs/foafos-chat-20261103.md."
+    "The shell's XMPP connection and its MUC room (FoafChat, packages/foafos/src/chat.mjs). By default the Factoidal Lean XMPP server runs in the page; it can point at factoidal xmpp-serve on localhost instead, so an ordinary XMPP client can join and watch. Shell chrome for the Pods tab's reason: a server password typed here goes straight into FoafSecrets. Design: docs/foafos-chat-20261103.md."
   ]
 }

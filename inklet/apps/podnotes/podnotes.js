@@ -1,4 +1,4 @@
-// Notes (id podnotes): plain notes kept in the user's PodStore, through foaf.pod.* only.
+// Notes (id podnotes): plain notes kept in the user's pod, through foaf.pod.* only.
 // Every path is relative to this app's own container (apps/podnotes/ in the
 // pod the person chose for apps); the app never sees where that is.
 // Each note is `notes/<name>.txt`. A save sends the ETag read with the note,
@@ -10,8 +10,8 @@
   let shared = null;    // a file the shell gave this window: { token, name, write }, or null
 
   const REASONS = {
-    'no-pod': 'No pod is chosen for apps. Open PodStore in the shell, connect one, and press "USE FOR APPS".',
-    offline: 'The pod is not connected. Connect it in PodStore.',
+    'no-pod': 'No pod is chosen for apps. Open System, then Pods. Connect one, and press "Use for apps".',
+    offline: 'The pod is not connected. Connect it in System, under Pods.',
     locked: 'Your notes are on this device, sealed. UNLOCK the session (passphrase) to open them.',
     denied: 'This app holds no pod capability here.',
     conflict: 'The note changed elsewhere since you opened it. Reload it, then save again.',

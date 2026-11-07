@@ -1,6 +1,6 @@
 // End to end through the real foafos shell (inklet/finkapp, ?root=office):
 //
-//   the Pods panel adds a home pod over XMPP, holds its password, connects
+//   System's Pods tab adds a home pod over XMPP, holds its password, connects
 //   through the relay (RFC 7395), browses it, and marks it "apps use this";
 //   Pod Notes, a sandboxed app (opaque origin), saves and reads a note through
 //   foaf.pod.* and never sees the pod's address or the password;
@@ -67,12 +67,18 @@ page.on('pageerror', (e) => errors.push(e.message));
 try {
   await page.goto(SHELL);
   await page.waitForSelector('#foafos-pods', { timeout: 20000 });
-  check(true, 'PodStore opens from ?app=pods under ?root=office');
+  check(await page.evaluate(() => !!document.querySelector('#foafos-session-win #foafos-pods:not([hidden])')), 'an old ?app=pods link opens the Pods tab of System under ?root=office');
+
+  // edot boots under this root and may come to the front: press System to raise it.
+  await page.waitForTimeout(2500);
+  await page.evaluate(() => FoafOS.openSystem('pods'));
 
   // Add the pod through the form.
   const fill = async (id, v) => page.fill(`#${id}`, v);
   await page.click('#pod-add-details summary');
   await page.selectOption('#pod-add-carriage', 'xmpp');
+  await page.waitForSelector('#pod-add-relay');
+  await page.click('#pod-add-details .fp-more summary');
   await fill('pod-add-id', 'home');
   await fill('pod-add-label', 'Home pod');
   await fill('pod-add-base', BASE);
@@ -89,13 +95,12 @@ try {
   const added = await page.evaluate(() => FoafOS.pods.get('home'));
   check(added?.carriage === 'xmpp' && added.hasPassword === true, `pod added from the form, password held (${JSON.stringify(added && { status: added.status, hasPassword: added.hasPassword })})`);
 
-  // Connect.
-  await page.click('#foafos-pods section[data-pod="home"] button:text-is("Connect")');
+  // Adding connects.
   await page.waitForFunction(() => FoafOS.pods.status('home') !== 'connecting' && FoafOS.pods.status('home') !== 'offline', null, { timeout: 20000 });
   const status = await page.evaluate(() => FoafOS.pods.get('home'));
   check(status.status === 'online', `connect through the relay: ${status.status}${status.detail ? ` (${status.detail})` : ''}`);
-  await page.waitForFunction(() => /^online/.test(document.querySelector('#foafos-pods section[data-pod="home"] .pod-status')?.textContent || ''));
-  check(true, 'the panel shows the pod online');
+  await page.waitForFunction(() => /^Connected/.test(document.querySelector('#foafos-pods section[data-pod="home"] .pod-status')?.textContent || ''));
+  check(true, 'the Pods tab shows the pod connected');
 
   // Browse the storage root.
   await page.click('#foafos-pods section[data-pod="home"] button:text-is("Browse")');
@@ -183,7 +188,7 @@ try {
   const exposure = await page.evaluate((pw) => {
     const all = JSON.stringify([FoafOS.pods.audit, FoafOS.secrets.audit, FoafOS.pods.list(),
       Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)]))]);
-    return { leaked: all.includes(pw), formEmpty: document.getElementById('pod-add-password')?.value === '' };
+    return { leaked: all.includes(pw), formEmpty: !document.getElementById('pod-add-password')?.value };
   }, PASSWORD);
   check(!exposure.leaked, 'the password is in no audit line, pod record or localStorage key');
   check(exposure.formEmpty, 'the password field was cleared after ADD');
@@ -192,7 +197,7 @@ try {
   await podXmpp.stop();
   await page.evaluate(() => FoafOS.pods.connect('home'));
   const off = await page.evaluate(() => FoafOS.pods.get('home'));
-  check(off.status === 'error' && /offline/.test(off.detail), `pod offline: ${off.status} (${off.detail})`);
+  check(off.status === 'error' && /offline/i.test(off.detail), `pod offline: ${off.status} (${off.detail})`);
 
   check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } catch (e) {

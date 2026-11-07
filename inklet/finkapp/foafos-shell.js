@@ -20,6 +20,7 @@ import {
 import { FoafTools } from '../../packages/foafos/src/tools.mjs';
 import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
+import { KNOWN_PODS } from './foafos-known-pods.js';
 import { mountChat } from './foafos-chat-ui.js';
 import { mountBackstage } from './foafos-backstage-ui.js';
 import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
@@ -241,7 +242,7 @@ FoafOS.ops = ops;
 // connections and the relay password (in FoafSecrets, never in an app); an
 // app holding `pod:read` / `pod:write` gets four verbs aimed by its grant at
 // `apps/<appId>/` in the pod chosen for apps. Design and log:
-// docs/foafos-pods-20261103.md. The window is openPods() below.
+// docs/foafos-pods-20261103.md. The person's side is the Pods tab of System (mountPods() below).
 //
 // The Factoidal Lean engine (@factoidal/core) runs the built-in pod and the built-in chat
 // server in this page. It is a 31 MB WebAssembly download, loaded once, on first use.
@@ -334,7 +335,7 @@ const pods = new FoafPods({
 
 // A location is any pod. Only an app that manages the whole pod, such as Files,
 // may list them, because this names addresses. The choice is per app, and kept.
-// Added once, so someone who removes it in PodStore does not get it back.
+// Added once, so someone who removes it in System does not get it back.
 if (typeof navigator.storage?.getDirectory === 'function' && !audioStore?.getItem('foafos.deviceAdded')) {
   try {
     if (!pods.get('device')) pods.add({ id: 'device', label: 'This device', base: 'https://device.foafos.local/opfs/', carriage: 'device', device: 'opfs' });
@@ -1766,13 +1767,13 @@ bus.subscribe('activity.*', (ev) => { activityHist.push(ev); if (activityHist.le
 // capabilities). The drawer's own nodes move in, so their code is unchanged.
 // System: one window for the shell's own settings, instead of an app for each. The parts
 // are the drawer's own sections, moved here and kept, so they outlive the window.
-const SYSTEM_TABS = [['session', 'Session', 'foafos-session'], ['sound', 'Sound', 'foafos-audio-wrap'],
+const SYSTEM_TABS = [['session', 'Session', 'foafos-session'], ['pods', 'Pods', 'foafos-pods'], ['sound', 'Sound', 'foafos-audio-wrap'],
   ['look', 'Look', 'foafos-skin-wrap'], ['capabilities', 'Capabilities', 'foafos-caps-wrap']];
 const systemParts = new Map();
 FoafOS.openSystem = (tab = 'session') => {
   let win = document.getElementById('foafos-session-win');
   if (!win) {
-    win = FoafOS._makeWindow('⚙️ System', 420, 460);
+    win = FoafOS._makeWindow('⚙️ System', 460, 560);
     win.id = 'foafos-session-win';
     win.classList.add('foafos-panel');
     const bar = document.createElement('div');
@@ -1780,7 +1781,7 @@ FoafOS.openSystem = (tab = 'session') => {
     const body = document.createElement('div');
     body.className = 'act-body fs-body';
     for (const [id, label, part] of SYSTEM_TABS) {
-      if (!systemParts.has(part)) systemParts.set(part, document.getElementById(part));
+      if (!systemParts.has(part)) systemParts.set(part, document.getElementById(part) ?? (id === 'pods' ? FoafOS._mountPods?.() : null));
       const node = systemParts.get(part);
       const b = document.createElement('button');
       b.type = 'button'; b.textContent = label; b.dataset.tab = id; b.setAttribute('role', 'tab');
@@ -1788,9 +1789,6 @@ FoafOS.openSystem = (tab = 'session') => {
       bar.appendChild(b);
       if (node) { node.dataset.systemTab = id; body.appendChild(node); }
     }
-    const pods = document.createElement('button');
-    pods.type = 'button'; pods.textContent = 'Pods'; pods.addEventListener('click', () => FoafOS.openPods?.());
-    bar.appendChild(pods);
     win.append(bar, body);
     document.body.appendChild(win);
     const det = body.querySelector('#foafos-session-details');
@@ -1798,10 +1796,12 @@ FoafOS.openSystem = (tab = 'session') => {
   }
   for (const b of win.querySelectorAll('.fs-tabs [data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
   for (const n of win.querySelectorAll('[data-system-tab]')) n.hidden = n.dataset.systemTab !== tab;
+  if (tab === 'pods') FoafOS._drawPods?.();
   FoafOS.raiseWindow?.(win);
   return win;
 };
 FoafOS.openSession = () => FoafOS.openSystem('session');
+FoafOS.openPods = () => FoafOS.openSystem('pods');
 // the Activity window (a shell panel, foafos-apps.js row 'activity'): the live cards on top, the history below
 function activityLive() { return document.querySelector('#foafos-activity-win .act-live'); }
 FoafOS.openActivity = (opts = {}) => {
@@ -2185,10 +2185,9 @@ function buildUI() {
     announceSession('renamed');
     refreshStatus();
   });
-  $('#foafos-save').addEventListener('click', async () => {
+  const saveSession = async (pass) => {
     try {
       FoafOS.session.current.profile.name = $('#foafos-name').value.trim() || undefined;
-      const pass = $('#foafos-pass').value;
       await FoafOS.session.seal(pass);
       // …and the secrets with it, under the same passphrase. One prompt, not
       // two: a user asked to remember a second password for their tokens
@@ -2199,8 +2198,11 @@ function buildUI() {
       status(sec.ok
         ? `saved — session and ${secrets.count()} secret(s) encrypted at rest`
         : 'saved — session encrypted at rest with your passphrase');
-    } catch (e) { status(String(e.message || e), true); }
-  });
+      return sec.ok;
+    } catch (e) { status(String(e.message || e), true); return false; }
+  };
+  $('#foafos-save').addEventListener('click', () => saveSession($('#foafos-pass').value));
+  FoafOS._saveLogins = saveSession;              // the Pods tab keeps a login with the same passphrase
   $('#foafos-unlock').addEventListener('click', async () => {
     try {
       const pass = $('#foafos-pass').value;
@@ -2255,6 +2257,7 @@ function buildUI() {
     pass.focus();
   };
   setTimeout(askToUnlock, 500);
+  FoafOS._askToUnlock = askToUnlock;
 
   // One quiet notice for what needs the person, so nobody has to discover it from a failure.
   // It also marks the menu handle, which stays visible when the notice is dismissed.
@@ -2263,7 +2266,7 @@ function buildUI() {
     if (secrets.hasSealed() && !secrets.sealed) return [{ key: 'unlock', text: 'Your saved logins are locked.', action: 'Unlock', run: askToUnlock }];
     const out = [];
     const pod = pods.list().find((p) => p.forApps && !p.hasPassword && (p.carriage === 'xmpp' || p.auth === 'bearer'));
-    if (pod) out.push({ key: `pod-${pod.id}`, text: `Your apps save to ${pod.label}, which needs its ${pod.carriage === 'xmpp' ? 'password' : 'token'}.`, action: 'Open PodStore', run: () => FoafOS.openPods?.() });
+    if (pod) out.push({ key: `pod-${pod.id}`, text: `Your apps save to ${pod.label}. Sign in to use it.`, action: 'Open Pods', run: () => FoafOS.openPods?.() });
     if (secrets.count() > 0 && !secrets.sealed) out.push({ key: 'save', text: 'Keep your logins? They last until you reload.', action: 'Save them', run: () => FoafOS.openSession?.() });
     return out;
   };
@@ -3070,7 +3073,7 @@ function buildUI() {
     // showed games it would then refuse to launch — an icon you can
     // press that does nothing is worse than no icon.
     // What Foafos itself runs on comes first, in one place, and is not repeated below.
-    const ESSENTIALS = ['system', 'chat', 'files', 'pods', 'backstage', 'activity'];
+    const ESSENTIALS = ['system', 'chat', 'files', 'backstage', 'activity'];
     const essentials = ESSENTIALS.map(appById).filter((a) => a && rootOffers(ROOT, a.id));
     let recent = [];
     try { recent = (JSON.parse(localStorage.getItem(RECENT_KEY)) || []).map(appById).filter((a) => a && rootOffers(ROOT, a.id) && a.surface !== 'chrome'); } catch { /* none yet */ }
@@ -3368,7 +3371,6 @@ function buildUI() {
         if (app.panel === 'logger') return openLogger();
         if (app.panel === 'activity') return FoafOS.openActivity();
         if (app.panel === 'publishing') return openPublishing();
-        if (app.panel === 'pods') return openPods();
         if (app.panel === 'system') return FoafOS.openSystem();
         if (app.panel === 'chat') return openChat();
         if (app.panel === 'backstage') return openBackstage();
@@ -3514,7 +3516,8 @@ function buildUI() {
   // attenuation still gate it — a link cannot open what the root withholds.
   try {
     const wanted = new URLSearchParams(location.search).get('app');
-    if (wanted) setTimeout(() => { try { launchApp(wanted); } catch (e) { /* refused */ } }, 300);
+    // Pods moved into System; an old `?app=pods` link opens that tab.
+    if (wanted) setTimeout(() => { try { if (wanted === 'pods') FoafOS.openSystem('pods'); else launchApp(wanted); } catch (e) { /* refused */ } }, 300);
   } catch (e) { /* no location */ }
 
   // The sandbox an app gets, derived from its declared capabilities.
@@ -5622,22 +5625,15 @@ function buildUI() {
   }
   FoafOS.openPublishing = openPublishing;
 
-  // ── PodStore (app id pods): the user's LWS storages (FoafPods) ───────────────────────────
-  // Shell chrome, not a sandboxed app, for the Publishing panel's reason:
-  // the relay password is typed here, goes straight into FoafSecrets
-  // (pods.setPassword) and the field is cleared. Apps never see a pod's
-  // address, JID or password; they get pod.* verbs aimed at their own
-  // container in the pod marked "apps use this". docs/foafos-pods-20261103.md.
-  function openPods() {
-    const existing = document.getElementById('foafos-pods');
-    if (existing) return existing;
-    const win = makeWindow('🗄️ PodStore', 460, 560);
-    win.id = 'foafos-pods';
-    win.classList.add('foafos-panel');
+  // ── Pods: the Pods tab of System, the user's LWS storages (FoafPods) ──────────────────────
+  // Shell chrome, not a sandboxed app, for the Publishing panel's reason: a password or token
+  // is typed here, goes straight into FoafSecrets (pods.signIn) and the field is cleared. Apps
+  // never see a pod's address, JID or password; they get pod.* verbs aimed at their own
+  // container in the pod marked for apps. docs/foafos-system-pods-20261107.md.
+  function mountPods() {
     const body = document.createElement('div');
-    body.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:10px;display:flex;'
-      + 'flex-direction:column;gap:10px;font:11px monospace;color:#eee;';
-    win.appendChild(body);
+    body.id = 'foafos-pods';
+    body.className = 'fp';
 
     const el = (tag, text, css) => {
       const e = document.createElement(tag);
@@ -5654,23 +5650,23 @@ function buildUI() {
       return b;
     };
     const field = (parent, labelText, id, opts = {}) => {
-      const wrap = el('label', labelText, 'display:flex;gap:6px;align-items:center;');
+      const wrap = el('label', labelText);
+      wrap.className = 'fp-field';
       const input = document.createElement(opts.select ? 'select' : 'input');
-      if (opts.select) for (const v of opts.select) input.appendChild(Object.assign(el('option', v), { value: v }));
+      if (opts.select) for (const [v, text] of opts.select) input.appendChild(Object.assign(el('option', text), { value: v }));
       else { input.type = opts.type || 'text'; input.placeholder = opts.placeholder || ''; }
-      if (opts.type === 'password') input.autocomplete = 'off';
+      input.autocomplete = opts.autocomplete || 'off';
       input.id = id;
-      input.style.cssText = 'flex:1;min-width:0;background:transparent;color:inherit;border:1px solid color-mix(in srgb, currentColor 30%, transparent);border-radius:5px;padding:5px;font:inherit;';
       wrap.appendChild(input);
       parent.appendChild(wrap);
       return input;
     };
-    const COLOURS = { online: '#8f8', connecting: '#ff8', error: '#f88', offline: '#aaa', locked: '#fa6' };
     let browsing = null;   // { id, path }
-    // What is typed in the Add form. The window redraws on every pods.* and app event, and a
-    // redraw must not clear what the person is typing. It lives only in this window, like the
-    // field itself, and ADD empties it (the password goes to FoafSecrets).
+    // What is typed here. The tab redraws on pods.* and app events, and a redraw must not clear
+    // it. It lives only in this closure, like the field itself. Signing in or ADD empties it.
     const draft = {};
+    const forms = new Map();   // pod id -> its sign-in form: { way, username, note, open }; never the secret
+    const formFor = (id) => { if (!forms.has(id)) forms.set(id, {}); return forms.get(id); };
 
     const drawBrowse = async (card, id, path) => {
       const out = el('div', 'loading…', 'border-top:1px solid #345;padding-top:6px;display:flex;flex-direction:column;gap:4px;');
@@ -5712,17 +5708,28 @@ function buildUI() {
       }
     };
 
+    // What a pod's sign-in can be. A known server lists what it accepts; any other pod keeps its own way.
+    const knownFor = (p) => KNOWN_PODS.find((k) => k.base === p.base) || null;
+    const wayOf = (p) => (p.carriage === 'xmpp'
+      ? { id: 'xmpp', title: 'Username and password', sub: 'Over XMPP', carriage: 'xmpp', relay: p.relay, podJid: p.podJid }
+      : { id: 'https', title: 'Token', sub: 'Over HTTPS', carriage: 'https', auth: 'bearer' });
+    const waysOf = (p) => knownFor(p)?.ways || [wayOf(p)];
+    const hostName = (u) => { try { return new URL(u).host; } catch { return u; } };
+
     // Where a pod's files are, in plain words. The address is under More.
     const whereIs = (p) => {
       if (p.carriage === 'builtin') return p.kept === 'sealed' ? 'In this browser, kept on this device.' : 'In this browser, lost when this tab closes. Save your session to keep it.';
       if (p.carriage === 'device') return "On this device, in the browser's private storage.";
-      if (p.carriage === 'xmpp') return `Through XMPP, as ${p.relay.username}@${p.relay.domain}`;
-      try { return `On ${new URL(p.base).host}, over HTTPS`; } catch { return 'Over HTTPS'; }
+      if (p.carriage === 'xmpp') return p.relay.username ? `On ${hostName(p.base)}, over XMPP, as ${p.relay.username}@${p.relay.domain}` : `On ${hostName(p.base)}, over XMPP`;
+      return `On ${hostName(p.base)}, over HTTPS${p.auth === 'bearer' ? ', with a token' : ''}`;
     };
-    // The Foafos server's pod, signed in with an XMPP account, so no token is needed.
-    const FLY = 'foafos-xmpp.fly.dev';
-    const flyByXmpp = (id, label) => ({ id, label, base: `https://${FLY}:8443/`, carriage: 'xmpp', podJid: `pod@${FLY}/lws`,
-      relay: { url: `wss://${FLY}/xmpp-websocket`, domain: FLY, username: 'foafos' } });
+    const STATUS_WORDS = { online: 'Connected', connecting: 'Connecting', offline: 'Not connected', error: 'Could not connect', locked: 'Locked', 'needs-login': 'Sign in to connect', 'needs-ok': 'Needs your OK' };
+    const statusOf = (p) => {
+      if (p.locked && p.status !== 'online') return 'Locked. Unlock your saved logins to connect.';
+      if ((p.carriage === 'xmpp' || p.auth === 'bearer') && !p.hasPassword && p.status === 'offline') return 'Sign in to connect.';
+      if (p.status === 'needs-login') return p.detail || 'Sign in to connect.';
+      return `${STATUS_WORDS[p.status] || p.status}${p.detail ? `. ${p.detail}` : '.'}`;
+    };
     const act = (parent, label, fn, primary) => {
       const b = button(parent, label, fn);
       b.className = primary ? 'fp-btn fp-primary' : 'fp-btn';
@@ -5740,166 +5747,269 @@ function buildUI() {
       }
     };
 
-    const draw = () => {
-      if (!win.isConnected) return;
+
+    // One form: how to sign in, the account, the secret, one button. The secret goes to
+    // pods.signIn and the field is cleared.
+    const signInForm = (parent, p) => {
+      const d = formFor(p.id);
+      const ways = waysOf(p);
+      const way = ways.find((w) => w.id === d.way) || ways.find((w) => w.carriage === p.carriage) || ways[0];
+      const form = el('form');
+      form.className = 'fp-signin';
+      form.noValidate = true;
+      if (ways.length > 1) {
+        const set = el('fieldset');
+        set.appendChild(el('legend', 'How do you sign in?'));
+        for (const w of ways) {
+          const row = el('label');
+          row.className = 'fp-way';
+          const radio = el('input');
+          radio.type = 'radio'; radio.name = `pod-${p.id}-way`; radio.id = `pod-${p.id}-way-${w.id}`; radio.value = w.id; radio.checked = w === way;
+          radio.addEventListener('change', () => { d.way = w.id; draw(true); });
+          const words = el('span', w.title);
+          words.appendChild(el('small', w.sub));
+          row.append(radio, words);
+          set.appendChild(row);
+        }
+        form.appendChild(set);
+      } else form.appendChild(el('p', `${way.title} (${way.sub})`)).className = 'fp-note';
+      const xmpp = way.carriage === 'xmpp';
+      const user = xmpp ? field(form, 'Username', `pod-${p.id}-username`, { autocomplete: 'username' }) : null;
+      if (user) {
+        user.value = d.username ?? p.relay?.username ?? '';
+        user.addEventListener('input', () => { d.username = user.value; });
+      }
+      const secret = field(form, xmpp ? 'Password' : 'Token', `pod-${p.id}-password`, { type: 'password', autocomplete: xmpp ? 'current-password' : 'off', placeholder: p.hasPassword ? 'Held already' : '' });
+      if (way.help) form.appendChild(el('p', way.help)).className = 'fp-note';
+      const note = el('p', d.note || '');
+      note.className = 'fp-error'; note.setAttribute('role', 'status');
+      const row = el('div'); row.className = 'fp-actions';
+      const go = el('button', 'Sign in');
+      go.type = 'submit'; go.className = 'fp-btn fp-primary';
+      row.appendChild(go);
+      form.append(row, note);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        // A full JID is what people remember for an account; the relay wants its local part.
+        const typed = user ? user.value.trim() : null;
+        const username = typed?.endsWith(`@${way.relay?.domain}`) ? typed.slice(0, typed.lastIndexOf('@')) : typed;
+        const value = secret.value;
+        const sameWay = way.carriage === p.carriage && (!xmpp || username === p.relay?.username);
+        d.note = xmpp && !username ? 'Enter your username.'
+          : !value && !(sameWay && p.hasPassword) ? `Enter your ${xmpp ? 'password' : 'token'}.` : '';
+        if (d.note) { draw(true); return; }
+        secret.value = '';
+        forms.delete(p.id);
+        const change = xmpp ? { carriage: 'xmpp', relay: { ...way.relay, username }, podJid: way.podJid } : { carriage: 'https', auth: 'bearer' };
+        const opening = pods.signIn(p.id, { way: change, secret: value || null });
+        draw(true);
+        await opening.catch((err) => bus.publish('pods.refused', { summary: `sign in to ${p.id} refused: ${err.message}`, id: p.id, reason: 'bad-record' }));
+        draw(true);
+      });
+      parent.appendChild(form);
+    };
+
+    // A login lasts for this run until a passphrase seals it. The one form for all of them.
+    const keepLogins = (list) => {
+      const held = list.filter((p) => p.hasPassword);
+      const keep = el('div'); keep.className = 'fp-keep';
+      if (secrets.sealed) {
+        if (held.length) keep.appendChild(el('p', 'Your logins are saved on this device, under your passphrase.')).className = 'fp-note';
+      } else if (held.length && !secrets.hasSealed()) {
+        keep.appendChild(el('p', 'Your login lasts until you reload. To keep it on this device, choose a passphrase. It locks your logins, and you enter it after a reload.'));
+        const form = el('form'); form.className = 'fp-secret';
+        const pass = field(form, 'Passphrase', 'pods-keep-pass', { type: 'password', autocomplete: 'new-password' });
+        const save = el('button', 'Keep my login'); save.type = 'submit'; save.className = 'fp-btn fp-primary';
+        const note = el('p', draft.keepNote || ''); note.className = 'fp-error'; note.setAttribute('role', 'status');
+        form.append(save);
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const value = pass.value;
+          pass.value = '';
+          draft.keepNote = value ? '' : 'Choose a passphrase.';
+          if (value && !(await FoafOS._saveLogins(value))) draft.keepNote = 'Your login was not saved. See Session.';
+          draw(true);
+        });
+        keep.append(form, note);
+      }
+      if (keep.childNodes.length) body.appendChild(keep);
+    };
+
+    const drawCard = (p) => {
+      const card = el('section');
+      card.className = `fp-pod fp-${p.status}`;
+      card.dataset.pod = p.id;
+      const head = el('div'); head.className = 'fp-head';
+      const dot = el('span'); dot.className = 'fp-dot'; dot.setAttribute('aria-hidden', 'true');
+      head.appendChild(dot);
+      head.appendChild(el('h3', p.label));
+      if (p.forApps) head.appendChild(el('span', 'Apps save here')).className = 'fp-chip';
+      card.appendChild(head);
+      const st = el('p', statusOf(p));
+      st.className = 'pod-status fp-status';
+      card.appendChild(st);
+      card.appendChild(el('p', whereIs(p))).className = 'fp-where';
+
+      const remote = p.carriage === 'xmpp' || p.carriage === 'https';
+      const wantsLogin = p.carriage === 'xmpp' || p.auth === 'bearer';
+      const asking = p.status === 'needs-login' || (wantsLogin && !p.hasPassword && !p.locked);
+      const open = formFor(p.id).open;
+      if (asking || (open && !p.locked)) signInForm(card, p);
+
+      const buttons = el('div'); buttons.className = 'fp-actions';
+      if (p.locked && p.status !== 'online') act(buttons, 'Unlock', () => FoafOS._askToUnlock?.(), true);
+      if (p.status === 'online' || p.status === 'connecting') {
+        if (p.status === 'online') act(buttons, 'Browse', () => { browsing = browsing?.id === p.id ? null : { id: p.id, path: '' }; draw(true); }, true);
+        act(buttons, 'Disconnect', () => pods.disconnect(p.id).then(() => draw(true)));
+      } else if (!asking && !p.locked) act(buttons, 'Connect', () => { pods.connect(p.id, { ask: true }).then(() => draw(true)); draw(true); }, true);
+      if (p.forApps) act(buttons, 'Stop using for apps', () => { pods.setAppsPod(null); draw(true); });
+      else act(buttons, 'Use for apps', () => { pods.setAppsPod(p.id); draw(true); });
+      card.appendChild(buttons);
+
+      const more = document.createElement('details');
+      more.className = 'fp-more'; more.dataset.for = p.id; more.open = moreOpen.has(p.id);
+      more.appendChild(el('summary', 'More'));
+      more.appendChild(el('p', p.carriage === 'xmpp' ? `${p.base} through ${p.podJid}, relay ${p.relay.url}` : p.base || '')).className = 'fp-address';
+      const more2 = el('div'); more2.className = 'fp-actions';
+      if (remote && !asking && !p.locked) act(more2, open ? 'Cancel' : 'Change how you sign in', () => { formFor(p.id).open = !open; draw(true); });
+      act(more2, 'Remove', () => { if (browsing?.id === p.id) browsing = null; forms.delete(p.id); pods.remove(p.id).then(() => draw(true)); });
+      more.appendChild(more2);
+      card.appendChild(more);
+      if (browsing?.id === p.id && p.status === 'online') drawBrowse(card, p.id, browsing.path);
+      body.appendChild(card);
+    };
+
+    // A server this site knows and the person has not set up: one press, and it is saved.
+    const drawOffer = (k) => {
+      const card = el('section');
+      card.className = 'fp-pod fp-offer';
+      card.dataset.known = k.id;
+      card.appendChild(el('h3', k.label));
+      card.appendChild(el('p', k.note)).className = 'fp-where';
+      const row = el('div'); row.className = 'fp-actions';
+      act(row, 'Add this server', () => {
+        const w = k.ways[0];
+        let id = k.id;
+        for (let n = 2; pods.get(id); n++) id = `${k.id}-${n}`;
+        const { relay, podJid, carriage, auth } = w;
+        pods.add({ id, label: k.label, base: k.base, carriage, ...(auth ? { auth } : {}), ...(relay ? { relay, podJid } : {}) });
+        draw(true);
+        document.getElementById(`pod-${id}-username`)?.focus();
+      }, true).setAttribute('aria-label', `Add ${k.label}`);
+      card.appendChild(row);
+      body.appendChild(card);
+    };
+
+    let moreOpen = new Set();
+    let stale = false;
+    const typing = () => {
+      const a = document.activeElement;
+      return body.contains(a) && /^(INPUT|SELECT)$/.test(a.tagName) && a.type !== 'radio';
+    };
+    function draw(force) {
+      if (!body.isConnected || body.hidden) return;
+      // A status event must not take the field from under someone typing: it waits for them.
+      if (force !== true && typing()) { stale = true; return; }
+      stale = false;
+      const focused = document.activeElement?.id;
       const open = body.querySelector('#pod-add-details')?.open;
-      const moreOpen = new Set([...body.querySelectorAll('details.fp-more[open]')].map((d) => d.dataset.for));
+      moreOpen = new Set([...body.querySelectorAll('details.fp-more[open]')].map((d) => d.dataset.for));
       body.textContent = '';
-      body.classList.add('fp');
       body.appendChild(el('p', 'Pods are where your apps keep their files. Pick one for apps to use.', null)).className = 'fp-intro';
 
       const list = pods.list();
       if (!list.length) body.appendChild(el('p', 'No pods yet. Add one below.'));
-      for (const p of list) {
-        const card = el('section');
-        card.className = `fp-pod fp-${p.status}`;
-        card.dataset.pod = p.id;
-        const head = el('div'); head.className = 'fp-head';
-        const dot = el('span'); dot.className = 'fp-dot'; dot.setAttribute('aria-hidden', 'true');
-        head.appendChild(dot);
-        head.appendChild(el('h3', p.label));
-        if (p.forApps) head.appendChild(el('span', 'Apps save here')).className = 'fp-chip';
-        card.appendChild(head);
-        const st = el('p', `${p.status}${p.detail ? `: ${p.detail}` : ''}`);
-        st.className = 'pod-status fp-status';
-        card.appendChild(st);
-        card.appendChild(el('p', whereIs(p))).className = 'fp-where';
-
-        const secretPod = p.carriage === 'xmpp' || p.carriage === 'https';
-        const tokenPod = p.carriage === 'https';
-        const secretRow = (parent) => {
-          const row = el('div'); row.className = 'fp-secret';
-          const pw = field(row, tokenPod ? 'Token' : 'Password', `pod-${p.id}-password`, { type: 'password', placeholder: p.hasPassword ? 'Held for now' : '' });
-          act(row, tokenPod ? 'Enter token' : 'Enter password', () => {
-            if (!pw.value) return;
-            // Straight into the broker; never stored here, never echoed.
-            const r = pods.setPassword(p.id, pw.value);
-            pw.value = '';
-            draw();
-            if (!r.ok) bus.publish('pods.refused', { summary: `the ${tokenPod ? 'token' : 'password'} for ${p.id} was not held (${r.reason})`, id: p.id, reason: r.reason });
-          });
-          parent.appendChild(row);
-        };
-        if (secretPod && !p.hasPassword) {
-          // Say what is being asked for and where to find it, not only that it is missing.
-          const help = p.carriage === 'xmpp'
-            ? `Sign in with the password for ${p.relay.username}@${p.relay.domain}, as in Chat.`
-            : /(^|\.)foafos-xmpp\.fly\.dev$/.test((() => { try { return new URL(p.base).hostname; } catch { return ''; } })())
-              ? "Or use the pod's own access token, not a Fly login. On the laptop that set it up, copy it with: tr -d '\\n' < ~/.config/foafos-xmpp-fly/token | pbcopy"
-              : "The pod's own access token, not an account password. Whoever runs this pod has it.";
-          if (p.carriage === 'https' && p.base.includes(FLY)) {
-            act(card, 'Sign in with XMPP instead', async () => {
-              const wasForApps = p.forApps;
-              await pods.remove(p.id);
-              pods.add(flyByXmpp(p.id, p.label));
-              if (wasForApps) pods.setAppsPod(p.id);
-              draw();
-            }, true);
-          }
-          card.appendChild(el('p', help)).className = 'fp-note';
-          secretRow(card);
-        }
-
-        const buttons = el('div'); buttons.className = 'fp-actions';
-        if (p.status === 'online' || p.status === 'connecting') {
-          if (p.status === 'online') act(buttons, 'Browse', () => { browsing = browsing?.id === p.id ? null : { id: p.id, path: '' }; draw(); }, true);
-          act(buttons, 'Disconnect', () => pods.disconnect(p.id).then(draw));
-        } else act(buttons, 'Connect', () => { pods.connect(p.id).then(draw); draw(); }, true);
-        if (p.forApps) act(buttons, 'Stop using for apps', () => { pods.setAppsPod(null); draw(); });
-        else act(buttons, 'Use for apps', () => { pods.setAppsPod(p.id); draw(); });
-        card.appendChild(buttons);
-
-        const more = document.createElement('details');
-        more.className = 'fp-more'; more.dataset.for = p.id; more.open = moreOpen.has(p.id);
-        more.appendChild(el('summary', 'More'));
-        more.appendChild(el('p', p.carriage === 'xmpp' ? `${p.base} through ${p.podJid}, relay ${p.relay.url}` : p.base || '')).className = 'fp-address';
-        if (secretPod && p.hasPassword) secretRow(more);
-        act(more, 'Remove', () => { if (browsing?.id === p.id) browsing = null; pods.remove(p.id).then(draw); });
-        card.appendChild(more);
-        if (browsing?.id === p.id && p.status === 'online') drawBrowse(card, p.id, browsing.path);
-        body.appendChild(card);
-      }
+      for (const k of KNOWN_PODS) if (!list.some((p) => p.base === k.base)) drawOffer(k);
+      list.forEach(drawCard);
+      keepLogins(list);
 
       const holders = pods.holders();
       if (holders.length) body.appendChild(el('p', 'Using a pod now: ' + holders.map((h) => `${h.appId} ${h.capability} ${h.pod}:/${h.prefix}`).join('; '))).className = 'fp-note';
 
       const add = document.createElement('details');
       add.id = 'pod-add-details'; add.className = 'fp-add';
-      add.open = !!open || Object.keys(draft).length > 0;
-      add.appendChild(el('summary', 'Add a pod'));
+      add.open = !!open || Object.keys(draft).some((k) => k !== 'keepNote');
+      add.appendChild(el('summary', 'Add another pod'));
       const quick = el('div'); quick.className = 'fp-actions';
       const quickNote = el('p'); quickNote.setAttribute('role', 'status'); quickNote.className = 'fp-note';
       if (!list.some((p) => p.carriage === 'builtin')) {
         // REMOVE keeps a built-in pod's data and key, so adding "browser" again reopens it.
         act(quick, 'This browser', () => {
-          try { pods.add({ id: 'browser', label: 'This browser', base: BUILTIN_BASE, carriage: 'builtin' }); draw(); }
+          try { pods.add({ id: 'browser', label: 'This browser', base: BUILTIN_BASE, carriage: 'builtin' }); draw(true); }
           catch (e) { err.textContent = `Refused: ${e.message}`; }
         });
       }
       act(quick, 'This computer', () => useLocal(quickNote));
-      if (!list.some((p) => (p.base || '').includes(FLY))) act(quick, 'Foafos server', () => { pods.add(flyByXmpp('fly', 'Foafos server')); draw(); });
       add.append(quick, quickNote);
+      const xmpp = draft.carriage === 'xmpp';
+      const token = !xmpp && draft.auth === 'token';
       const f = {
         label: field(add, 'Name', 'pod-add-label', { placeholder: 'My pod at home' }),
-        base: field(add, 'Address', 'pod-add-base', { placeholder: 'https://pod.example/' }),
-        carriage: field(add, 'Connects by', 'pod-add-carriage', { select: ['https', 'xmpp'] }),
-        password: field(add, draft.carriage === 'xmpp' ? 'Password' : 'Token', 'pod-add-password', { type: 'password' }),
+        carriage: field(add, 'How to reach it', 'pod-add-carriage', { select: [['https', 'HTTPS: a web address'], ['xmpp', 'XMPP: through a chat server']] }),
+        base: field(add, xmpp ? 'Storage address' : 'Address', 'pod-add-base', { placeholder: 'https://pod.example/' }),
       };
-      const xmppRows = el('div'); xmppRows.className = 'fp-xmpp'; xmppRows.hidden = (draft.carriage ?? 'https') !== 'xmpp';
-      Object.assign(f, {
-        url: field(xmppRows, 'Relay', 'pod-add-relay', { placeholder: 'wss://xmpp.example/xmpp-websocket' }),
-        domain: field(xmppRows, 'Domain', 'pod-add-domain', { placeholder: 'xmpp.example' }),
-        username: field(xmppRows, 'Account', 'pod-add-username', { placeholder: 'foafos' }),
-        podJid: field(xmppRows, 'Pod JID', 'pod-add-podjid', { placeholder: 'pod@xmpp.example/lws' }),
-      });
-      add.appendChild(xmppRows);
-      f.id = field(add, 'Short id', 'pod-add-id', { placeholder: 'Made from the name if left empty' });
+      if (!xmpp) f.auth = field(add, 'How do you sign in?', 'pod-add-auth', { select: [['none', 'No sign-in'], ['token', 'Token']] });
+      if (xmpp) {
+        const rows = el('div'); rows.className = 'fp-xmpp';
+        Object.assign(f, {
+          url: field(rows, 'Chat server', 'pod-add-relay', { placeholder: 'wss://xmpp.example/xmpp-websocket' }),
+          domain: field(rows, 'Domain', 'pod-add-domain', { placeholder: 'xmpp.example' }),
+          podJid: field(rows, 'Pod JID', 'pod-add-podjid', { placeholder: 'pod@xmpp.example/lws' }),
+          username: field(rows, 'Username', 'pod-add-username', { placeholder: 'yourname' }),
+        });
+        add.appendChild(rows);
+      }
+      if (xmpp || token) f.password = field(add, xmpp ? 'Password' : 'Token', 'pod-add-password', { type: 'password' });
+      const extra = document.createElement('details');
+      extra.className = 'fp-more'; extra.open = !!draft.id;
+      extra.appendChild(el('summary', 'Short id'));
+      f.id = field(extra, 'Short id', 'pod-add-id', { placeholder: 'Made from the name if left empty' });
+      add.appendChild(extra);
       for (const [k, input] of Object.entries(f)) {
         if (draft[k] !== undefined) input.value = draft[k];
         input.addEventListener('input', () => { draft[k] = input.value; });
-        input.addEventListener('change', () => { draft[k] = input.value; if (k === 'carriage') draw(); });
+        input.addEventListener('change', () => { draft[k] = input.value; if (k === 'carriage' || k === 'auth') draw(true); });
       }
       const err = el('p'); err.className = 'fp-error';
       err.setAttribute('role', 'status');
       const row = el('div'); row.className = 'fp-actions';
       act(row, 'Add pod', () => {
         // From the draft first: a redraw during typing leaves the text in the old field.
-        const v = (k) => String(draft[k] ?? f[k].value);
-        const xmpp = v('carriage') === 'xmpp';
+        const v = (k) => String(draft[k] ?? f[k]?.value ?? '');
+        const isXmpp = v('carriage') === 'xmpp';
         const label = v('label').trim();
         const rec = {
           id: v('id').trim() || label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
           label, base: v('base').trim(), carriage: v('carriage'),
-          ...(xmpp ? { relay: { url: v('url').trim(), domain: v('domain').trim(), username: v('username').trim() },
+          ...(isXmpp ? { relay: { url: v('url').trim(), domain: v('domain').trim(), username: v('username').trim() },
             podJid: v('podJid').trim() } : {}),
+          ...(!isXmpp && v('auth') === 'token' ? { auth: 'bearer' } : {}),
         };
         const password = v('password');
-        f.password.value = '';
+        if (f.password) f.password.value = '';
         delete draft.password;
-        if (!xmpp && password) rec.auth = 'bearer';
-        try { pods.add(rec, password ? { password } : {}); for (const k of Object.keys(draft)) delete draft[k]; draw(); }
-        catch (e) { err.textContent = `Refused: ${e.message}`; }
+        try {
+          pods.add(rec, password ? { password } : {});
+          for (const k of Object.keys(draft)) delete draft[k];
+          pods.signIn(rec.id).then(() => draw(true));
+          draw(true);
+        } catch (e) { err.textContent = `Refused: ${e.message}`; }
       }, true).setAttribute('aria-label', 'Add this pod');
       add.append(row, err);
       body.appendChild(add);
+      if (focused) document.getElementById(focused)?.focus();
+    }
 
-      const keep = el('p', secrets.sealed ? 'Passwords are saved on this device, under your passphrase.' : 'Passwords last until you reload. ');
-      keep.className = 'fp-note';
-      if (!secrets.sealed) { const b = button(keep, 'Save your session', () => FoafOS.openSession?.()); b.className = 'fp-link'; }
-      body.appendChild(keep);
-    };
-
-    const unsubs = ['pods.*', 'app.spawn', 'app.close'].map((t) => bus.subscribe(t, () => draw()));
-    new MutationObserver(() => { if (!win.isConnected) unsubs.forEach((u) => u()); })
-      .observe(document.body, { childList: true });
-    document.body.appendChild(win);
-    draw();
-    return win;
+    // Late enough for a press on a button to end first: a redraw between press and release loses the click.
+    body.addEventListener('focusout', () => setTimeout(() => { if (stale && !typing()) draw(); }, 300));
+    for (const t of ['pods.*', 'app.spawn', 'app.close', 'secrets.sealed', 'secrets.unsealed', 'secrets.cleared']) bus.subscribe(t, () => draw());
+    FoafOS._drawPods = () => draw(true);
+    return body;
   }
-  FoafOS.openPods = openPods;
+  FoafOS._mountPods = mountPods;
 
   // ── Chat: rooms, direct messages and the apps' activity (FoafChat) ─────
-  // Shell chrome for the Pods panel's reason: a server password typed here
+  // Shell chrome for the Pods tab's reason: a server password typed here
   // goes straight into FoafSecrets (chat.configure) and the field is cleared.
   // The window itself is foafos-chat-ui.js; docs/foafos-chat-window-20261104.md.
   function openChat() {

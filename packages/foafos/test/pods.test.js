@@ -123,7 +123,7 @@ test('a failed login is an error status whose text carries no password', async (
   const r = rig({ loginFails: true });
   const p = await r.pods.connect('home');
   assert.equal(p.status, 'error');
-  assert.match(p.detail, /could not log in/);
+  assert.match(p.detail, /did not answer/);
   assert.equal(leaks(r), false);
 });
 
@@ -131,8 +131,8 @@ test('no password set: the pod says so instead of trying', async () => {
   const r = rig();
   r.secrets.forget(POD_OWNER, 'pod.home.password');
   const p = await r.pods.connect('home');
-  assert.equal(p.status, 'error');
-  assert.match(p.detail, /no password/);
+  assert.equal(p.status, 'needs-login');
+  assert.match(p.detail, /Enter your password/);
   assert.equal(r.logins.length, 0);
 });
 
@@ -371,11 +371,11 @@ test('an https pod that refuses its token, or has none, says so', async () => {
   const pods = new FoafPods({ secrets: new FoafSecrets(), storage: null, fetchImpl });
   pods.add({ id: 'a', label: 'A', base: 'https://a.example/', carriage: 'https', auth: 'bearer' }, { password: 'bad' });
   await pods.connect('a');
-  assert.equal(pods.status('a'), 'error');
-  assert.match(pods.get('a').detail, /refused the access token/);
+  assert.equal(pods.status('a'), 'needs-login');
+  assert.match(pods.get('a').detail, /did not accept this token/);
   pods.add({ id: 'b', label: 'B', base: 'https://b.example/', carriage: 'https', auth: 'bearer' });
   await pods.connect('b');
-  assert.match(pods.get('b').detail, /no access token/);
+  assert.match(pods.get('b').detail, /Enter your token/);
   assert.throws(() => pods.add({ id: 'c', base: 'https://c.example/', carriage: 'https', auth: 'basic' }), /auth/);
 });
 
@@ -391,3 +391,112 @@ test('an https pod can gain a token after it was added', async () => {
   await pods.connect('a');
   assert.equal(seen.pop(), 'Bearer later-token');
 });
+
+// ── signing in (System, Pods tab) ────────────────────────────────────────
+
+const WAY_XMPP = { carriage: 'xmpp', relay: { url: 'wss://relay.example/xmpp-websocket', domain: 'relay.example', username: 'me' }, podJid: 'pod@relay.example/lws' };
+
+test('a saved server can wait for its account, and asks in words a person can act on', async () => {
+  const r = rig();
+  r.pods.add({ id: 'saved', base: BASE, carriage: 'xmpp', relay: { url: WAY_XMPP.relay.url, domain: 'relay.example' }, podJid: WAY_XMPP.podJid });
+  const p = await r.pods.connect('saved');
+  assert.equal(p.status, 'needs-login');
+  assert.match(p.detail, /username and password/);
+  assert.equal(r.logins.length, 0);
+});
+
+test('signIn moves a pod from a token to an account, drops the old secret, and remembers', async () => {
+  const r = rig();
+  r.pods.add({ id: 'fly', base: BASE, carriage: 'https', auth: 'bearer' }, { password: 'OLD-TOKEN-0a1b' });
+  const p = await r.pods.signIn('fly', { way: WAY_XMPP, secret: PASSWORD });
+  assert.equal(p.status, 'online');
+  assert.equal(p.carriage, 'xmpp');
+  assert.equal(p.auth, undefined);
+  assert.equal(p.hasPassword, true);
+  assert.equal(r.logins.at(-1).username, 'me');
+  assert.equal(r.logins.at(-1).password, PASSWORD);
+  const saved = r.saved.get('foafos.pods');
+  assert.equal(JSON.parse(saved).find((x) => x.id === 'fly').auto, true);
+  assert.doesNotMatch(saved, /OLD-TOKEN/);
+  assert.equal(leaks(r), false);
+  await r.pods.signIn('fly', { way: { carriage: 'https', auth: 'bearer' } });
+  assert.equal(r.pods.get('fly').hasPassword, false, 'a password is not sent as a token');
+  assert.equal(r.pods.status('fly'), 'needs-login');
+});
+
+test('a wrong password asks again; it is not reported as a server fault', async () => {
+  const r = rig();
+  const bad = new FoafPods({ secrets: r.secrets, storage: null,
+    connectXmpp: async () => { throw new Error('SASL SCRAM-SHA-256 failed: not-authorized'); } });
+  bad.add({ id: 'x', base: BASE, ...WAY_XMPP });
+  const p = await bad.signIn('x', { secret: 'wrong' });
+  assert.equal(p.status, 'needs-login');
+  assert.match(p.detail, /did not accept this username and password/);
+});
+
+test('an account the pod refuses (403 over XMPP) is told so, and the connection closes', async () => {
+  let closed = 0;
+  const r = rig();
+  const pods = new FoafPods({ secrets: r.secrets, storage: null,
+    connectXmpp: async () => ({ httpFetch: () => async () => new Response(null, { status: 403 }), close() { closed++; } }) });
+  pods.add({ id: 'x', base: BASE, ...WAY_XMPP });
+  const p = await pods.signIn('x', { secret: 'pw' });
+  assert.equal(p.status, 'needs-login');
+  assert.match(p.detail, /does not let it in/);
+  assert.equal(closed, 1);
+  assert.equal(pods.fetchFor('x'), null);
+});
+
+test('an https pod that wants a token is not called online', async () => {
+  const pods = new FoafPods({ secrets: new FoafSecrets(), storage: null, fetchImpl: async () => new Response(null, { status: 401 }) });
+  pods.add({ id: 'a', base: 'https://a.example/', carriage: 'https' });
+  assert.equal((await pods.connect('a')).status, 'needs-login');
+  assert.match(pods.get('a').detail, /asks for a token/);
+});
+
+test('after a reload a sealed login is locked, and unlocking connects the pod again', async () => {
+  const blob = new Map();
+  const store = { getItem: (k) => blob.get(k) ?? null, setItem: (k, v) => blob.set(k, v), removeItem: (k) => blob.delete(k) };
+  const open = async () => {
+    const bus = new (await import('../src/bus.mjs')).FoafBus();
+    const secrets = new FoafSecrets({ bus, storage: store });
+    const logins = [];
+    const pods = new FoafPods({ secrets, bus, storage: store, connectXmpp: async (o) => { logins.push(o); return { httpFetch: () => async () => new Response(null, { status: 200 }), close() {} }; } });
+    return { secrets, pods, logins };
+  };
+  const a = await open();
+  a.pods.add({ id: 'x', base: BASE, ...WAY_XMPP });
+  await a.pods.signIn('x', { secret: PASSWORD });
+  await a.secrets.seal('a passphrase');
+  assert.doesNotMatch([...blob.values()].join(), new RegExp(PASSWORD));
+
+  const b = await open();
+  const p = b.pods.get('x');
+  assert.equal(p.locked, true);
+  assert.equal(p.relay.username, 'me');
+  assert.equal((await b.pods.connect('x')).status, 'locked');
+  assert.match(b.pods.get('x').detail, /Unlock/);
+  await b.secrets.unseal('a passphrase');
+  for (let i = 0; i < 50 && b.pods.status('x') !== 'online'; i++) await new Promise((r) => setTimeout(r, 5));
+  assert.equal(b.pods.status('x'), 'online');
+  assert.equal(b.logins.at(-1).password, PASSWORD);
+  await b.pods.disconnect('x');
+
+  const c = await open();
+  await c.secrets.unseal('a passphrase');
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(c.logins.length, 0, 'a pod the person disconnected stays disconnected');
+});
+
+test('the known servers load, and every way in them makes a valid pod with no account or secret', async () => {
+  const { KNOWN_PODS } = await import('../../../inklet/finkapp/foafos-known-pods.js');
+  assert.ok(KNOWN_PODS.length > 0);
+  for (const k of KNOWN_PODS) {
+    assert.ok(k.ways.length > 0);
+    for (const { relay, podJid, carriage, auth } of k.ways) {
+      assert.ok(checkPod({ id: k.id, base: k.base, carriage, ...(auth ? { auth } : {}), ...(relay ? { relay, podJid } : {}) }));
+      assert.equal(relay?.username, undefined, 'a known server names no account');
+    }
+  }
+});
+
