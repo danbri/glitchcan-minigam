@@ -60,3 +60,6 @@
 .open-with { padding: 6px 10px; border-top: 1px solid var(--p-line); }
 .open-with-app { display: grid; gap: 3px; justify-items: start; }
 .open-with-comment { margin: 0; font-size: 12px; color: var(--p-dim); }
+
+.where-warn { margin: 2px 0 0; color: var(--p-warn, #b4530a); }
+.where-more > summary { margin-top: 2px; }
