@@ -2915,8 +2915,15 @@ function buildUI() {
     home.innerHTML = `<div class="foafos-overlay-head">
         <h2>Apps</h2>
         <button type="button" class="foafos-overlay-close" aria-label="Close apps">✕</button>
-      </div><div class="foafos-home-body"></div>`;
+      </div><div class="foafos-home-search"><input type="search" aria-label="Find an app" placeholder="Find an app" autocomplete="off"></div>
+      <p class="foafos-home-none" role="status" hidden>No apps match.</p>
+      <div class="foafos-home-body"></div>`;
     const body = home.querySelector('.foafos-home-body');
+    const find = home.querySelector('.foafos-home-search input');
+    // Folders, as in a Start menu: which are open is kept, so it scales past one screen.
+    const OPEN_KEY = 'foafos.apps.open';
+    let openFolders = ['essentials'];
+    try { openFolders = JSON.parse(localStorage.getItem(OPEN_KEY)) || openFolders; } catch { /* the default */ }
 
     // Only what this INSTALLATION offers. The picker used to list every
     // app in the registry regardless of root, so an office installation
@@ -2931,7 +2938,16 @@ function buildUI() {
       const offered = fam.apps.filter(a => rootOffers(ROOT, a.id));
       if (!offered.length) continue;
       const sec = document.createElement('section');
-      sec.innerHTML = `<h3>${fam.icon} ${fam.label}</h3>`;
+      const folder = document.createElement('details');
+      folder.dataset.folder = fam.id;
+      folder.open = openFolders.includes(fam.id);
+      folder.innerHTML = `<summary><h3>${fam.icon} ${fam.label}</h3><span class="foafos-folder-count">${offered.length}</span></summary>`;
+      folder.addEventListener('toggle', () => {
+        if (find.value) return;                    // a search opens folders; that is not a choice to keep
+        openFolders = [...body.querySelectorAll('details[open]')].map((d) => d.dataset.folder);
+        try { localStorage.setItem(OPEN_KEY, JSON.stringify(openFolders)); } catch { /* for this visit */ }
+      });
+      sec.appendChild(folder);
       const grid = document.createElement('div');
       grid.className = 'foafos-app-grid';
       grid.setAttribute('role', 'list');
@@ -2966,13 +2982,29 @@ function buildUI() {
         });
         grid.appendChild(b);
       }
-      sec.appendChild(grid);
+      folder.appendChild(grid);
       body.appendChild(sec);
     }
+    const matches = () => [...body.querySelectorAll('.foafos-app')].filter((b) => !b.hidden);
+    find.addEventListener('input', () => {
+      const q = find.value.trim().toLowerCase();
+      for (const sec of body.querySelectorAll('section')) {
+        const folder = sec.querySelector('details');
+        let any = false;
+        for (const b of sec.querySelectorAll('.foafos-app')) {
+          b.hidden = !!q && !(b.getAttribute('aria-label') || '').toLowerCase().includes(q);
+          any ||= !b.hidden;
+        }
+        sec.hidden = !any;
+        folder.open = q ? any : openFolders.includes(folder.dataset.folder);
+      }
+      home.querySelector('.foafos-home-none').hidden = matches().length > 0;
+    });
+    find.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); matches()[0]?.click(); } });
     home.querySelector('.foafos-overlay-close').addEventListener('click', () => home.remove());
     home.addEventListener('keydown', (e) => { if (e.key === 'Escape') home.remove(); });
     document.body.appendChild(home);
-    home.querySelector('.foafos-app')?.focus();
+    find.focus();
     bus.publish('ui.home', { summary: 'Apps opened' });
     return home;
   }

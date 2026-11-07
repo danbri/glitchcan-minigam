@@ -1443,3 +1443,13 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .fp-xmpp[hidden] { display: none; }
 .fp-error { color: #d14b4b; font-size: 13px; }
 .fp-error:empty, .fp-note:empty { display: none; }
+
+/* All apps: folders with a count, and search above them */
+.foafos-home-search { padding: 0 1rem .6rem; }
+.foafos-home-search input { width: 100%; box-sizing: border-box; padding: .55rem .7rem; font: inherit; color: inherit; background: transparent; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 8px; }
+.foafos-home-none { padding: 0 1rem; margin: 0; }
+.foafos-home-body section { margin-bottom: .5rem; }
+.foafos-home-body summary { display: flex; align-items: center; gap: .5rem; padding: .35rem .2rem; cursor: pointer; list-style: revert; }
+.foafos-home-body summary h3 { margin: 0; flex: 1; }
+.foafos-folder-count { font-size: .8em; opacity: .65; }
+.foafos-app[hidden], .foafos-home-body section[hidden] { display: none; }
