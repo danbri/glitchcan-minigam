@@ -6200,22 +6200,23 @@ function buildUI() {
           const f = await call('fly_to', { place: p.id });
           if (f.ok) status.textContent = `Flying to ${p.name}.`;
         }, 'fp-btn fp-primary').setAttribute('aria-label', `Fly to ${p.name}`);
-        button(actions, 'Delete', () => {
-          // Asked on the row itself, not in a browser dialog: Delete? / Keep.
-          actions.hidden = true;
-          ask.hidden = false;
-          ask.querySelector('button').focus();
-        }).setAttribute('aria-label', `Delete ${p.name}`);
+        // Delete asks on the row itself, not in a browser dialog: Delete? / Keep. Keep has the focus.
         const ask = el('div', null, 'fp-actions fp-ask');
         ask.hidden = true;
+        const del = button(actions, 'Delete', () => { actions.hidden = true; ask.hidden = false; keep.focus(); });
+        del.setAttribute('aria-label', `Delete ${p.name}`);
+        const back = () => { ask.hidden = true; actions.hidden = false; yes.disabled = false; del.focus(); };
         ask.appendChild(el('span', `Delete ${p.name}?`, 'fp-note'));
-        button(ask, 'Delete', async () => {
+        const yes = button(ask, 'Delete', async () => {
+          yes.disabled = true;
           const d = await call('delete', { place: p.id });
           if (d.ok) status.textContent = `Deleted ${p.name}.`;
-          else { ask.hidden = true; actions.hidden = false; }
-        }, 'fp-btn fp-primary').setAttribute('aria-label', `Yes, delete ${p.name}`);
-        button(ask, 'Keep', () => { ask.hidden = true; actions.hidden = false; })
-          .setAttribute('aria-label', `Keep ${p.name}`);
+          else back();
+        }, 'fp-btn fp-primary');
+        yes.setAttribute('aria-label', `Yes, delete ${p.name}`);
+        const keep = button(ask, 'Keep', back);
+        keep.setAttribute('aria-label', `Keep ${p.name}`);
+        ask.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); back(); } });
         card.append(actions, ask);
         list.appendChild(card);
       }
