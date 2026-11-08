@@ -84,3 +84,20 @@ test('add_event writes to your own calendar and redraws; never to a subscribed o
   assert.equal(day.added.end, new Date(2026, 10, 21).toISOString());
   await assert.rejects(run('add_event', { title: 'x'.repeat(501), start: '2026-11-12' }), /title: up to 500/);
 });
+
+test('add_event with an id adds once; a retry returns the event already added', async () => {
+  const { run, cal } = setup();
+  const first = await run('add_event', { title: 'Lunch', start: '2026-11-12T12:00:00Z', id: 'agent-lunch-1' });
+  assert.equal(first.existed, false);
+  assert.equal(first.added.id, 'agent-lunch-1');
+  const again = await run('add_event', { title: 'Lunch', start: '2026-11-12T12:00:00Z', id: 'agent-lunch-1' });
+  assert.equal(again.existed, true);
+  assert.deepEqual(again.added, first.added);
+  assert.equal(cal.events.filter((e) => e.summary === 'Lunch').length, 1);
+  // Without an id, each call adds.
+  const a = await run('add_event', { title: 'Tea', start: '2026-11-12T16:00:00Z' });
+  const b = await run('add_event', { title: 'Tea', start: '2026-11-12T16:00:00Z' });
+  assert.notEqual(a.added.id, b.added.id);
+  await assert.rejects(run('add_event', { title: 'x', start: '2026-11-12', id: 'has space' }), /id: up to 128/);
+  assert.match(setup().tools.get('add_event').inputSchema.properties.id.description, /same id again/);
+});
