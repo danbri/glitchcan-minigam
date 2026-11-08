@@ -63,7 +63,11 @@ test('a place is checked, and its document is a schema.org Place', () => {
   assert.equal(slugFor('がっこう'), 'がっこう');   // kana voicing marks survive
   assert.equal(slugFor('नई दिल्ली'), 'नई-दिल्ली');   // so do Devanagari vowel signs
   assert.equal(slugFor('Ὀδυσσεύς'), 'οδυσσευς');
-  assert.equal(Array.from(slugFor('東'.repeat(80))).length, 60);
+  assert.equal(Array.from(slugFor('東'.repeat(80))).length, 40);   // 120 bytes of UTF-8
+  assert.equal(slugFor('a'.repeat(80)).length, 60);
+  // Variation selectors and stray marks never make an invisible id.
+  assert.match(slugFor('❤️'), /^place-[0-9a-f]{8}$/);
+  assert.equal(slugFor('🏠️ Home'), 'home');
   // No letters or digits at all: a short hash, the same for the same name.
   assert.match(slugFor('***'), /^place-[0-9a-f]{8}$/);
   assert.equal(slugFor('🏠🌊'), slugFor('🏠🌊'));

@@ -35,13 +35,23 @@ const round = (v, d) => (v === null ? null : Math.round(v * 10 ** d) / 10 ** d);
 
 /**
  * A file name for a place, from its name: letters and digits in any script, lower case where
- * the script has case, joined by "-". Accents on Latin letters are dropped (Café → cafe).
+ * the script has case, joined by "-", up to 60 characters and 120 bytes. Accents on Latin
+ * letters are dropped (Café → cafe).
  * A name with no letters or digits at all (emoji, say) gets a short hash: place-1a2b3c4d.
  */
 export function slugFor(name) {
   const s = String(name).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').normalize('NFC').toLowerCase()
-    .replace(/[^\p{L}\p{N}\p{M}]+/gu, '-').replace(/^-+|-+$/g, '');
-  const cut = Array.from(s).slice(0, 60).join('').replace(/-+$/, '');   // whole characters, never half a pair
+    .replace(/[\ufe00-\ufe0f\u{e0100}-\u{e01ef}]/gu, '')   // variation selectors: invisible
+    .replace(/[^\p{L}\p{N}\p{M}]+/gu, '-').replace(/(^|-)\p{M}+/gu, '$1')   // a mark only after a letter
+    .replace(/^-+|-+$/g, '');
+  // Up to 60 characters and 120 bytes of UTF-8, cut at whole characters.
+  let cut = '', bytes = 0;
+  for (const ch of Array.from(s).slice(0, 60)) {
+    bytes += new TextEncoder().encode(ch).length;
+    if (bytes > 120) break;
+    cut += ch;
+  }
+  cut = cut.replace(/-+$/, '');
   return cut || `place-${hash(String(name))}`;
 }
 
