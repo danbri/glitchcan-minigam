@@ -407,14 +407,14 @@
   });
   foaf.tools.register({
     name: 'search',
-    description: 'Find files and folders whose name contains some text, in every folder of the location Files has open. Looks in up to 300 folders and returns up to 100 matches. "skipped" lists folders that could not be read, with the reason; "complete" is false when the limits stopped the search early. Hidden names (starting with ".") are left out.',
+    description: 'Find files and folders whose name contains some text, in every folder of the location Files has open. Looks in up to 300 folders and returns up to 100 matches. "skipped" lists folders that could not be read, with the reason; "complete" is true only when every folder was read and no match was left out. Hidden names (starting with ".") are left out.',
     inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Text to find in names, in any case' } }, required: ['query'] },
     readOnly: true,
     handler: async ({ query }) => {
       const q = String(query).trim().toLowerCase();
       if (!q) throw new Error('Give some text to search for.');
       const found = [], queue = [''], skipped = [];
-      let seen = 0;
+      let seen = 0, dropped = false;
       while (queue.length && seen < 300 && found.length < 100) {
         const base = queue.shift();
         seen++;
@@ -424,10 +424,13 @@
           const p = base + it.path.replace(/^\/+/, '');
           if (hiddenName(nameOf(p))) continue;
           if (it.container) queue.push(p);
-          if (nameOf(p).toLowerCase().includes(q) && found.length < 100) found.push({ path: p, folder: !!it.container });
+          if (nameOf(p).toLowerCase().includes(q)) {
+            if (found.length < 100) found.push({ path: p, folder: !!it.container });
+            else dropped = true;
+          }
         }
       }
-      return { query: q, found, skipped, searched: seen, notSearched: queue.length, complete: !queue.length };
+      return { query: q, found, skipped, searched: seen, notSearched: queue.length, complete: !queue.length && !skipped.length && !dropped };
     },
   });
   foaf.tools.register({
