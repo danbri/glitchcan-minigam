@@ -432,11 +432,15 @@
   });
   foaf.tools.register({
     name: 'read_file',
-    description: `The text of one file in the location Files has open, with its content type. Text files only; at most ${MAX_TEXT.toLocaleString('en')} characters are returned.`,
+    description: `The text of one file in the location Files has open, with its content type. Text files only; at most ${MAX_TEXT.toLocaleString('en')} characters are returned. Hidden files and anything in a hidden folder (a name starting with ".") are refused.`,
     inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'A file path from list_folder or search' } }, required: ['path'] },
     readOnly: true,
     handler: async ({ path }) => {
-      const r = await foaf.pod.get(String(path).replace(/^\/+/, ''));
+      const clean = String(path ?? '').replace(/^\/+/, '');
+      if (!clean) throw new Error('Give the path of a file.');
+      const hidden = clean.split('/').find((part) => hiddenName(part));
+      if (hidden) throw new Error(`${path} is hidden (${hidden} starts with "."). read_file does not read hidden files or folders.`);
+      const r = await foaf.pod.get(clean);
       if (!r.ok) {
         if (r.reason === 'not-text') throw new Error(`${path} is not a text file (${r.contentType || 'unknown type'}).`);
         if (r.status === 404) throw new Error(`No file at ${path}.`);
