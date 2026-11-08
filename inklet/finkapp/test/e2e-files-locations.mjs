@@ -54,7 +54,9 @@ const filesFrame = async (p) => {
 const state = (f) => f.evaluate(() => { const s = window.__files.state(); return { current: s.current, status: s.status, ids: s.locations.map((l) => l.id), items: s.items.map((i) => i.path), where: document.getElementById('where').textContent }; });
 
 try {
-  await page.goto(SHELL);
+  const first = await page.goto(SHELL);
+  // another server already on PORT answers instead of ours (our python3 then fails to bind, silently)
+  if (!first || first.status() !== 200) throw new Error(`the shell did not load (HTTP ${first?.status()}): is another server on port ${PORT}? Set PORT`);
   let f = await filesFrame(page);
   let s = await state(f);
   check(s.ids.includes('device') && s.ids.includes('browser'), `locations listed: ${s.ids.join(', ')}`);

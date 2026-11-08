@@ -35,6 +35,9 @@ export class FoafTools {
     this.providers = new Map();
     this._seq = 0;
     this._listeners = new Set();
+    // the sources of the shell's own tools (offer). Kept here, not read off the source: an app's
+    // source is its frame's window, and reading a property of a cross-origin window throws.
+    this._shellSources = new WeakSet();
   }
 
   /** Be told when the list of tools changes. Returns the way to stop. */
@@ -49,7 +52,7 @@ export class FoafTools {
   attach({ id, label, source, post, alive = () => true }) {
     const old = this.providers.get(id);
     if (old && old.source === source) return old;
-    if (old?.source?.shell && !source?.shell) return null;
+    if (old && this._shellSources.has(old.source) && !this._shellSources.has(source)) return null;
     if (old) this._drop(old, 'replaced');
     const p = { id, label, slug: slug(label || id), source, post, alive, tools: [], api: null, pending: new Map(), abort: null };
     this.providers.set(id, p);
@@ -72,7 +75,9 @@ export class FoafTools {
    */
   offer({ id, label, api = null, tools }) {
     const handlers = new Map(tools.map((t) => [t.name, t.handler]));
-    const p = this.attach({ id, label, source: { shell: id }, post: (m) => {
+    const source = { shell: id };
+    this._shellSources.add(source);
+    const p = this.attach({ id, label, source, post: (m) => {
       const w = p.pending.get(m.id);
       const run = handlers.get(m.name);
       Promise.resolve().then(() => run(m.args, { caller: w?.caller ?? null }))
