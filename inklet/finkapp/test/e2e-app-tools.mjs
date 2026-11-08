@@ -19,8 +19,8 @@ try {
   const errors = [];
   page.on('pageerror', (e) => { if (!/serviceWorker/.test(e.message)) errors.push(e.message); });
   await page.goto(`${BASE}?root=all&player=none`);
-  const cors = await page.evaluate(async () => (await fetch(new URL('../../magpie/edot/calendar/js/calendar-tools.js', location.href))).headers.get('access-control-allow-origin'));
-  if (!cors) console.log(`NOTE ${BASE} sends no Access-Control-Allow-Origin, so sandboxed Calendar cannot load its modules and its checks will fail with "no-app". Serve with CORS.`);
+  const probe = await page.evaluate(async () => { const r = await fetch(new URL('../../magpie/edot/calendar/js/calendar-tools.js', location.href)); return { ok: r.ok, cors: r.headers.get('access-control-allow-origin') }; });
+  if (probe.ok && !probe.cors) console.log(`NOTE ${BASE} sends no Access-Control-Allow-Origin, so sandboxed Calendar cannot load its modules and its checks will fail with "no-app". Serve with CORS.`);
   await page.waitForFunction(() => window.FoafOS?.launchApp, null, { timeout: 30000 });
   for (const id of ['podnotes', 'files', 'calendar']) await page.evaluate((i) => FoafOS.launchApp(i), id);
   await page.waitForFunction(() => ['podnotes', 'files', 'calendar'].every((id) => FoafOS.tools.find(id)?.tools.length), null, { timeout: 30000 }).catch(() => {});
