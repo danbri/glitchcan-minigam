@@ -106,3 +106,21 @@ test('/where and /go work on whichever world is open, and say so when none is', 
   assert.match((await run('/go')).text, /Where to/);
   assert.match((await run('/where', { remote: { from: 'me@x' } })).text, /Moglob/);
 });
+
+test('a reopened app frame replaces the old one without reading its window (cross-origin)', () => {
+  const t = new FoafTools({ bus: bus() });
+  // a cross-origin window throws on any property read
+  const crossOrigin = () => new Proxy({}, { get() { throw new Error('SecurityError: cross-origin frame'); } });
+  const a = crossOrigin(), b = crossOrigin();
+  const p1 = t.attach({ id: 'files', label: 'Files', source: a, post: () => {} });
+  const p2 = t.attach({ id: 'files', label: 'Files', source: b, post: () => {} });
+  assert.ok(p2 && p2 !== p1);
+  assert.equal(t.bySource(b), p2);
+  assert.equal(t.bySource(a), null);
+});
+
+test('a frame cannot take over a tool the shell offers', () => {
+  const t = new FoafTools({ bus: bus() });
+  t.offer({ id: 'places', label: 'Places', tools: [{ name: 'list', description: 'x', readOnly: true, handler: () => [] }] });
+  assert.equal(t.attach({ id: 'places', label: 'Places', source: {}, post: () => {} }), null);
+});
