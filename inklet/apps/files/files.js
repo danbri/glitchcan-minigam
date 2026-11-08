@@ -407,19 +407,19 @@
   });
   foaf.tools.register({
     name: 'search',
-    description: 'Find files and folders whose name contains some text, in every folder of the location Files has open. Looks in up to 300 folders and returns up to 100 matches.',
+    description: 'Find files and folders whose name contains some text, in every folder of the location Files has open. Looks in up to 300 folders and returns up to 100 matches. "skipped" lists folders that could not be read, with the reason; "complete" is false when the limits stopped the search early. Hidden names (starting with ".") are left out.',
     inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Text to find in names, in any case' } }, required: ['query'] },
     readOnly: true,
     handler: async ({ query }) => {
       const q = String(query).trim().toLowerCase();
       if (!q) throw new Error('Give some text to search for.');
-      const found = [], queue = [''];
+      const found = [], queue = [''], skipped = [];
       let seen = 0;
       while (queue.length && seen < 300 && found.length < 100) {
         const base = queue.shift();
         seen++;
         const r = await list(base);
-        if (!r.ok) continue;
+        if (!r.ok) { skipped.push({ path: base, reason: explain(r) }); continue; }
         for (const it of r.items) {
           const p = base + it.path.replace(/^\/+/, '');
           if (hiddenName(nameOf(p))) continue;
@@ -427,7 +427,7 @@
           if (nameOf(p).toLowerCase().includes(q) && found.length < 100) found.push({ path: p, folder: !!it.container });
         }
       }
-      return { query: q, found, complete: !queue.length };
+      return { query: q, found, skipped, searched: seen, notSearched: queue.length, complete: !queue.length };
     },
   });
   foaf.tools.register({
