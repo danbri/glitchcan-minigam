@@ -86,7 +86,7 @@ export function offerCalendarTools(cal, foaf) {
 
   foaf.tools.register({
     name: 'add_event',
-    description: 'Add an event to one of your own calendars (the first one, unless you name another). With no end, it lasts an hour, or the whole day for an all-day event. Give an id to make a retry safe: if an event with that id exists already, it is returned (with existed: true) and nothing is added.',
+    description: 'Add an event to one of your own calendars (the first one, unless you name another). With no end, it lasts an hour, or the whole day for an all-day event. Give an id to make a retry safe: if an event in your own calendars has that id already, it is returned (with existed: true) and nothing is added. Use a new id for each new event.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -101,11 +101,13 @@ export function offerCalendarTools(cal, foaf) {
       },
       required: ['title', 'start'],
     },
-    handler: async ({ title, start, end, all_day: allDay = false, location = '', description = '', calendar, id: key } = {}) => {
-      if (key != null && key !== '' && !KEY.test(String(key))) throw new Error('id: up to 128 letters, digits and . _ : @ -');
+    handler: async ({ title, start, end, all_day: allDay = false, location = '', description = '', calendar, id } = {}) => {
+      const key = id == null || id === '' ? null : String(id);
+      if (key !== null && !KEY.test(key)) throw new Error('id: up to 128 letters, digits and . _ : @ -');
       const list = await calendars();
-      if (key) {
-        const had = (await cal.store.getEvents()).find((ev) => ev.id === String(key));
+      const mine = new Set(list.filter((c) => !c.subscribed).map((c) => c.id));
+      if (key !== null) {
+        const had = (await cal.store.getEvents()).find((ev) => ev.id === key && mine.has(ev.calendarId));
         if (had) return { added: summary(had, nameOf(list, had.calendarId)), existed: true };
       }
       const s = when(start, 'start');
@@ -119,9 +121,9 @@ export function offerCalendarTools(cal, foaf) {
       if (String(description).length > MAX_TEXT || String(location).length > MAX_TITLE) throw new Error(`description: up to ${MAX_TEXT} characters; location: up to ${MAX_TITLE}.`);
       const e = when(end, 'end') || (allDay ? new Date(s.getFullYear(), s.getMonth(), s.getDate() + 1) : new Date(s.getTime() + 3600000));
       if (e < s) throw new Error('end is before start.');
-      const id = key ? String(key) : cryptoUid();
+      const evId = key ?? cryptoUid();
       const ev = {
-        id, uid: id, calendarId: target.id, summary: String(title), description: String(description), location: String(location),
+        id: evId, uid: evId, calendarId: target.id, summary: String(title), description: String(description), location: String(location),
         allDay: !!allDay, start: s, end: e, rrule: null, exdates: [], status: 'CONFIRMED', organizer: null, attendees: [], alarms: [],
       };
       await cal.store.putEvent(ev);

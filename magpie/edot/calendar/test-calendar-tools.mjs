@@ -99,5 +99,11 @@ test('add_event with an id adds once; a retry returns the event already added', 
   const b = await run('add_event', { title: 'Tea', start: '2026-11-12T16:00:00Z' });
   assert.notEqual(a.added.id, b.added.id);
   await assert.rejects(run('add_event', { title: 'x', start: '2026-11-12', id: 'has space' }), /id: up to 128/);
+  // An id held by an event in a subscribed calendar is not yours: a new event is added.
+  const held = await run('add_event', { title: 'Mine', start: '2026-11-12T09:00:00Z', id: 'e3' });
+  assert.equal(held.existed, false);
+  assert.equal(held.added.calendar, 'My Calendar');
+  // A number is an id too.
+  assert.equal((await run('add_event', { title: 'Zero', start: '2026-11-12T09:00:00Z', id: 0 })).added.id, '0');
   assert.match(setup().tools.get('add_event').inputSchema.properties.id.description, /same id again/);
 });
