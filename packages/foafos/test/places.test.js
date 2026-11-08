@@ -57,7 +57,17 @@ test('a place is checked, and its document is a schema.org Place', () => {
     assert.throws(() => checkPlace(bad));
   }
   assert.equal(slugFor('Café Ünter/../Dock!'), 'cafe-unter-dock');
-  assert.equal(slugFor('***'), 'place');
+  // Letters in any script stay, so the id still says which place it is.
+  assert.equal(slugFor('東京駅'), '東京駅');
+  assert.equal(slugFor('Москва Сити'), 'москва-сити');
+  assert.equal(slugFor('がっこう'), 'がっこう');   // kana voicing marks survive
+  assert.equal(slugFor('नई दिल्ली'), 'नई-दिल्ली');   // so do Devanagari vowel signs
+  assert.equal(slugFor('Ὀδυσσεύς'), 'οδυσσευς');
+  assert.equal(Array.from(slugFor('東'.repeat(80))).length, 60);
+  // No letters or digits at all: a short hash, the same for the same name.
+  assert.match(slugFor('***'), /^place-[0-9a-f]{8}$/);
+  assert.equal(slugFor('🏠🌊'), slugFor('🏠🌊'));
+  assert.notEqual(slugFor('🏠🌊'), slugFor('***'));
 });
 
 test('a place from Moglob\'s view: where it looks, how high the eye is, and the look-down angle', () => {

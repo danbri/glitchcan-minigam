@@ -33,11 +33,23 @@ const MAX_TEXT = 2000;
 const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
 const round = (v, d) => (v === null ? null : Math.round(v * 10 ** d) / 10 ** d);
 
-/** A file name for a place: lower case letters, digits and "-", from its name. */
+/**
+ * A file name for a place, from its name: letters and digits in any script, lower case where
+ * the script has case, joined by "-". Accents on Latin letters are dropped (Café → cafe).
+ * A name with no letters or digits at all (emoji, say) gets a short hash: place-1a2b3c4d.
+ */
 export function slugFor(name) {
-  const s = String(name).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
-  return s || 'place';
+  const s = String(name).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').normalize('NFC').toLowerCase()
+    .replace(/[^\p{L}\p{N}\p{M}]+/gu, '-').replace(/^-+|-+$/g, '');
+  const cut = Array.from(s).slice(0, 60).join('').replace(/-+$/, '');   // whole characters, never half a pair
+  return cut || `place-${hash(String(name))}`;
+}
+
+// FNV-1a, 32 bits, as 8 hex digits: short, stable, not a secret.
+function hash(text) {
+  let h = 0x811c9dc5;
+  for (const b of new TextEncoder().encode(text)) h = Math.imul(h ^ b, 0x01000193) >>> 0;
+  return h.toString(16).padStart(8, '0');
 }
 
 /** A place, checked. Throws with a reason a person can act on. */
