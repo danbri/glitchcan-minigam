@@ -6200,12 +6200,23 @@ function buildUI() {
           const f = await call('fly_to', { place: p.id });
           if (f.ok) status.textContent = `Flying to ${p.name}.`;
         }, 'fp-btn fp-primary').setAttribute('aria-label', `Fly to ${p.name}`);
-        button(actions, 'Delete', async () => {
-          if (!confirm(`Delete the place ${p.name}?`)) return;
+        button(actions, 'Delete', () => {
+          // Asked on the row itself, not in a browser dialog: Delete? / Keep.
+          actions.hidden = true;
+          ask.hidden = false;
+          ask.querySelector('button').focus();
+        }).setAttribute('aria-label', `Delete ${p.name}`);
+        const ask = el('div', null, 'fp-actions fp-ask');
+        ask.hidden = true;
+        ask.appendChild(el('span', `Delete ${p.name}?`, 'fp-note'));
+        button(ask, 'Delete', async () => {
           const d = await call('delete', { place: p.id });
           if (d.ok) status.textContent = `Deleted ${p.name}.`;
-        }).setAttribute('aria-label', `Delete ${p.name}`);
-        card.appendChild(actions);
+          else { ask.hidden = true; actions.hidden = false; }
+        }, 'fp-btn fp-primary').setAttribute('aria-label', `Yes, delete ${p.name}`);
+        button(ask, 'Keep', () => { ask.hidden = true; actions.hidden = false; })
+          .setAttribute('aria-label', `Keep ${p.name}`);
+        card.append(actions, ask);
         list.appendChild(card);
       }
     }

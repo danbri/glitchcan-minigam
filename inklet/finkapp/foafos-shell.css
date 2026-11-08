@@ -1429,6 +1429,8 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .fp-chip { margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: color-mix(in srgb, var(--sk-accent, #2e6fd1) 22%, transparent); }
 .fp-status, .fp-note, .fp-address { font-size: 12.5px; opacity: .78; word-break: break-word; }
 .fp-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.fp-actions[hidden] { display: none; }
+.fp-ask { align-items: center; }
 .fp-warn { font-size: 13px; font-weight: 600; }
 .fp-extra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; font-size: 13px; }
 .fp-btn { padding: 5px 11px; border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer; background: transparent; color: inherit; border: 1px solid color-mix(in srgb, var(--sk-ink, #eee) 30%, transparent); }
