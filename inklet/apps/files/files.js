@@ -407,36 +407,43 @@
   });
   foaf.tools.register({
     name: 'search',
-    description: 'Find files and folders whose name contains some text, in every folder of the location Files has open. Looks in up to 300 folders and returns up to 100 matches.',
+    description: 'Find files and folders whose name contains some text, in every folder of the location Files has open. Looks in up to 300 folders and returns up to 100 matches. "skipped" lists folders that could not be read, with the reason; "complete" is true only when every folder was read and no match was left out. Hidden names (starting with ".") are left out.',
     inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Text to find in names, in any case' } }, required: ['query'] },
     readOnly: true,
     handler: async ({ query }) => {
       const q = String(query).trim().toLowerCase();
       if (!q) throw new Error('Give some text to search for.');
-      const found = [], queue = [''];
-      let seen = 0;
+      const found = [], queue = [''], skipped = [];
+      let seen = 0, dropped = false;
       while (queue.length && seen < 300 && found.length < 100) {
         const base = queue.shift();
         seen++;
         const r = await list(base);
-        if (!r.ok) continue;
+        if (!r.ok) { skipped.push({ path: base, reason: explain(r) }); continue; }
         for (const it of r.items) {
           const p = base + it.path.replace(/^\/+/, '');
           if (hiddenName(nameOf(p))) continue;
           if (it.container) queue.push(p);
-          if (nameOf(p).toLowerCase().includes(q) && found.length < 100) found.push({ path: p, folder: !!it.container });
+          if (nameOf(p).toLowerCase().includes(q)) {
+            if (found.length < 100) found.push({ path: p, folder: !!it.container });
+            else dropped = true;
+          }
         }
       }
-      return { query: q, found, complete: !queue.length };
+      return { query: q, found, skipped, searched: seen, notSearched: queue.length, complete: !queue.length && !skipped.length && !dropped };
     },
   });
   foaf.tools.register({
     name: 'read_file',
-    description: `The text of one file in the location Files has open, with its content type. Text files only; at most ${MAX_TEXT.toLocaleString('en')} characters are returned.`,
+    description: `The text of one file in the location Files has open, with its content type. Text files only; at most ${MAX_TEXT.toLocaleString('en')} characters are returned. Hidden files and anything in a hidden folder (a name starting with ".") are refused.`,
     inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'A file path from list_folder or search' } }, required: ['path'] },
     readOnly: true,
     handler: async ({ path }) => {
-      const r = await foaf.pod.get(String(path).replace(/^\/+/, ''));
+      const clean = String(path ?? '').replace(/^\/+/, '');
+      if (!clean) throw new Error('Give the path of a file.');
+      const hidden = clean.split('/').find((part) => hiddenName(part));
+      if (hidden) throw new Error(`${path} is hidden (${hidden} starts with "."). read_file does not read hidden files or folders.`);
+      const r = await foaf.pod.get(clean);
       if (!r.ok) {
         if (r.reason === 'not-text') throw new Error(`${path} is not a text file (${r.contentType || 'unknown type'}).`);
         if (r.status === 404) throw new Error(`No file at ${path}.`);

@@ -16,7 +16,8 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const errors = [];
   page.on('pageerror', (e) => { if (!/serviceWorker/.test(e.message)) errors.push(e.message); });
-  page.on('dialog', (d) => d.accept());
+  let dialogs = 0;
+  page.on('dialog', (d) => { dialogs++; d.dismiss(); });
   await page.goto(`${BASE}?root=all&player=none`);
   await page.waitForFunction(() => window.FoafOS?.launchApp && FoafOS.tools?.find('places'), null, { timeout: 30000 });
 
@@ -102,8 +103,18 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('#foafos-places .fp-place').length === 2, null, { timeout: 10000 }).catch(() => {});
   check(await page.locator('#foafos-places .fp-place').count() === 2, 'a place deleted by a tool leaves the open tab');
   await page.click('#foafos-places [aria-label="Delete Tokyo Station"]');
+  check(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')) === 'Keep Tokyo Station', 'the row asks Delete? / Keep, with Keep focused');
+  await page.click('#foafos-places [aria-label="Keep Tokyo Station"]');
+  await page.locator('#foafos-places [aria-label="Delete Tokyo Station"]').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  check(await page.locator('#foafos-places .fp-place').count() === 2 && await page.evaluate(() => document.activeElement?.getAttribute('aria-label')) === 'Delete Tokyo Station', 'Keep on the row keeps the place and puts focus back on Delete');
+  await page.click('#foafos-places [aria-label="Delete Tokyo Station"]');
+  await page.keyboard.press('Escape');
+  check(await page.locator('#foafos-places [aria-label="Delete Tokyo Station"]').isVisible(), 'Escape closes the question');
+  await page.click('#foafos-places [aria-label="Delete Tokyo Station"]');
+  await page.click('#foafos-places [aria-label="Yes, delete Tokyo Station"]');
   await page.waitForFunction(() => document.querySelectorAll('#foafos-places .fp-place').length === 1, null, { timeout: 10000 }).catch(() => {});
   check(await page.locator('#foafos-places .fp-place').count() === 1, 'Delete in the tab deletes the place');
+  check(dialogs === 0, 'no browser dialogs', dialogs);
   check(!errors.length, 'no page errors', errors);
 } finally {
   await browser.close();
