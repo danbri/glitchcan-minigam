@@ -4,7 +4,7 @@
 import { chromium } from 'playwright';
 
 const { CHROMIUM_PATH } = process.env;
-const URL_ = 'http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all&player=none';
+const URL_ = process.env.SHELL_URL || 'http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all&player=none';
 let failed = 0;
 const check = (ok, what) => { console.log(`${ok ? 'PASS' : 'FAIL'} ${what}`); if (!ok) failed++; };
 
@@ -39,6 +39,8 @@ try {
   check(await page.evaluate(() => document.querySelector('#foafos-home details[data-folder="essentials"]')?.open === true), 'Essentials starts open');
   await page.fill('.foafos-home-search input', 'zzzz');
   check(await page.isVisible('.foafos-home-none'), 'a search with no match says so');
+  await page.fill('.foafos-home-search input', 'counter');
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="widget-tally"]')].some((b) => !b.hidden)), 'a widget is found by what it does');
   await page.fill('.foafos-home-search input', 'tally');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(800);
