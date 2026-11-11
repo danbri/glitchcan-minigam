@@ -179,6 +179,19 @@ try {
   });
   check(dropped.lit && dropped.body === 'dropped text' && dropped.same && /huge\.bin/.test(dropped.said) && !/photo\.png/.test(dropped.said.split('Not added')[1] || ''),
     `dropping files adds text and a photo, and names the one too large (${JSON.stringify(dropped)})`);
+  // Thumbnails: the photo shows a small picture of itself in the list and in the icon view.
+  const thumb = await f.evaluate(async () => {
+    await window.__files.go('notes/');
+    const wait = () => new Promise((r) => setTimeout(r, 700));
+    await wait();
+    const inList = document.querySelector('#items tbody tr[data-path="notes/photo.png"] .ico img');
+    document.getElementById('view').click();
+    await wait();
+    const inGrid = document.querySelector('#items .grid [data-path="notes/photo.png"] .ico img');
+    document.getElementById('view').click();
+    return { list: !!inList && inList.naturalWidth > 0, grid: !!inGrid && inGrid.naturalWidth > 0, small: !!inGrid && inGrid.naturalWidth <= 160 };
+  });
+  check(thumb.list && thumb.grid && thumb.small, `an image shows a thumbnail in the list and the icon view (${JSON.stringify(thumb)})`);
   check(dropped.shown && dropped.deleteOffered && dropped.noNull, `a photo shows in the side panel and can be deleted (${dropped.shown}, ${dropped.deleteOffered}, no stray null: ${dropped.noNull})`);
   await f.evaluate(() => Promise.all(['notes/dropped.txt', 'notes/photo.png'].map((p) => foaf.pod.delete(p))));
   // Icon view: Down goes to the item below, Up comes back.

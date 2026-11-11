@@ -86,3 +86,8 @@
 #items-pane.dropping { outline: 2px dashed var(--p-accent); outline-offset: -6px; background: var(--p-pick); }
 .detail-image { display: flex; align-items: center; justify-content: center; padding: 8px; }
 .detail-image img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--p-corner); }
+/* Thumbnails: a picture in place of the icon, the same footprint in the list, larger in the grid. */
+.ico.thumb { vertical-align: middle; line-height: 0; }
+.ico.thumb img { display: inline-block; width: 1.15em; height: 1.15em; object-fit: cover; border-radius: 3px; box-shadow: 0 0 0 1px var(--p-line); }
+.grid .ico.thumb { font-size: inherit; line-height: 1; }
+.grid .ico.thumb img { width: 88px; height: 66px; object-fit: cover; border-radius: 6px; box-shadow: 0 0 0 1px var(--p-line); }
