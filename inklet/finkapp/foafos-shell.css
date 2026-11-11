@@ -896,6 +896,12 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
 }
 .foafos-app .ico { font-size: 1.6rem; line-height: 1; }
 .foafos-app .nm { font-size: .78rem; line-height: 1.2; }
+.foafos-app .ds { display: none; }
+/* Searching: one result per line, its description beside its name, as a search panel shows. */
+#foafos-home.searching .foafos-app-grid { grid-template-columns: 1fr; gap: .4rem; }
+#foafos-home.searching .foafos-app { flex-direction: row; align-items: center; gap: .8rem; min-height: 3.2rem; padding: .5rem .8rem; text-align: left; }
+#foafos-home.searching .foafos-app .nm { font-size: .95rem; font-weight: 600; flex: none; }
+#foafos-home.searching .foafos-app .ds { display: block; flex: 1; min-width: 0; font-size: .82rem; color: var(--sk-ink-dim, #8fa3c0); }
 .foafos-app:focus-visible,
 .foafos-switch-card:focus-visible {
     outline: 3px solid var(--sk-accent, #6cf);
