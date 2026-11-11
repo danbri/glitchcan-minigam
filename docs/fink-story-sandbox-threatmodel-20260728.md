@@ -365,7 +365,7 @@ and still ship, because containment contains its mistakes.
   FinkStoryRunner — it compiles (backticks kernel) and plays a real ink
   story entirely inside an opaque-origin app frame, renders prose+choices in
   its own document, and styles ITSELF (`# BG:` colours the frame, not the
-  host). It reaches the shell only through `foaf.storyRequest` →
+  host). It reaches the shell only through `foafos.storyRequest` →
   capability-checked `story:*` verbs and the scoped bus; `# MINIGAME:`
   surfaces as a governed `story.launch` (which opens a separately-boxed
   guest — up AND down). `e2e-storyrunner.mjs` proves the box: from inside,

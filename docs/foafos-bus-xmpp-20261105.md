@@ -60,7 +60,7 @@ Each comes before the next, and a failure stops the message:
    actions: the allow-list is explicit.
 5. The arguments are a flat object of plain values: 2,048 characters in all, 512 for each value.
 6. `deliverAction` in the shell, the existing route that stories use: the action must be in the app's manifest `actions`,
-   and the app must be running. This is not a new route. The app receives it through `foaf.onAction`, in its frame, and
+   and the app must be running. This is not a new route. The app receives it through `foafos.onAction`, in its frame, and
    `from` is `{kind:'account', label:<jid>}`, set by the shell.
 
 Nothing from XMPP is published on a bus topic that an app or the shell reads as fact. An outside account cannot make

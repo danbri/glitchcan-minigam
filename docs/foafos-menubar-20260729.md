@@ -50,7 +50,7 @@ controls, and bounds whom — the border the flat parallel/tabbed view hid.
 
 ## Contributing (any app)
 ```js
-foaf.bus.publish('app.myapp.status', { items: [
+foafos.bus.publish('app.myapp.status', { items: [
   { icon: '⭐', label: 'score', value: 1200 },
   { icon: '⏱', value: '01:04' },
 ]});

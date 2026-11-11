@@ -121,7 +121,7 @@
       names and byte counts, never a value.</li>
   <li><strong>Brokered actions.</strong> An app may hand the shell a
       credential and can never read it back &mdash; so what use is it? It asks
-      for the <em>outcome</em>: <code>foaf.invoke('git.commit', &#123; path,
+      for the <em>outcome</em>: <code>foafos.invoke('git.commit', &#123; path,
       content &#125;)</code>, and the shell makes the request. Where that commit
       lands is not the app's to choose: the grant names the repo, the branch
       and an allowed path prefix, because an app that could name the repo

@@ -464,7 +464,7 @@ try {
     });
     void dive;
     // Drive the real path: the runner asks, the shell decides.
-    const asked = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+    const asked = await frame.evaluate(() => window.foafos.storyRequest('story.link',
       { url: new URL('./dream.fink.js', location.href).href, rel: 'goDeeper' }));
     await page.waitForTimeout(300);
     const deep = await page.evaluate(() => ({
@@ -484,7 +484,7 @@ try {
     // The cap is real, and refusing is a story-visible outcome.
     let capped = null;
     for (let i = 0; i < 9; i++) {
-      capped = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+      capped = await frame.evaluate(() => window.foafos.storyRequest('story.link',
         { url: new URL('./dream.fink.js', location.href).href, rel: 'goDeeper' }));
       if (!capped.ok) break;
     }
@@ -494,7 +494,7 @@ try {
 
     // Surface all the way back so later sections start from the waking world.
     for (let i = 0; i < 12; i++) {
-      const up = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+      const up = await frame.evaluate(() => window.foafos.storyRequest('story.link',
         { url: new URL('./demo.fink.js', location.href).href, rel: 'surface' }));
       if (up.depth === 0) break;
     }
@@ -504,7 +504,7 @@ try {
       : fail(`depth stuck after surfacing: ${JSON.stringify(back)}`);
 
     // The session cache is NOT asserted here, and the reason is worth writing
-    // down: this leg drives `foaf.storyRequest` straight at the shell, so the
+    // down: this leg drives `foafos.storyRequest` straight at the shell, so the
     // depth moves without the runner ever loading a story. Measured that way it
     // read 2 loads / 2 fetches / 0 hits and looked like a cache that did not
     // work. Section 12 asserts it where a story really is re-entered.
@@ -529,7 +529,7 @@ try {
       ww.capabilities = [...ww.capabilities, 'git:write'];   // runner holds no git:write
     });
     const reply = await frame.evaluate(() =>
-      window.foaf.storyRequest('story.launch', { game: 'waterworld' }));
+      window.foafos.storyRequest('story.launch', { game: 'waterworld' }));
     await page.waitForTimeout(1200);
     const outcome = await page.evaluate(() => ({
       node: [...FoafOS.apps.nodes.values()].some((n) => n.appId === 'waterworld'),
@@ -546,18 +546,18 @@ try {
       const { appById } = await import('./foafos-apps.js');
       appById('waterworld').capabilities = window.__attnSaved;
     });
-    await frame.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'waterworld' }));
+    await frame.evaluate(() => window.foafos.storyRequest('story.launch', { game: 'waterworld' }));
     await page.waitForTimeout(2000);
   }
 
   // ── 6. POLICY: a cross-origin link is refused; unknown verbs too ─────
   const xorigin = await frame.evaluate(() =>
-    window.foaf.storyRequest('story.link', { url: 'https://evil.example/x.fink.js' }));
+    window.foafos.storyRequest('story.link', { url: 'https://evil.example/x.fink.js' }));
   if (xorigin && xorigin.ok === false && xorigin.reason === 'cross-origin-blocked') {
     pass('a cross-origin link is refused (policy v0: same-origin only)');
   } else fail('cross-origin link not blocked: ' + JSON.stringify(xorigin));
   const refusal = await frame.evaluate(() =>
-    window.foaf.storyRequest('story.smuggle', { anywhere: 'evil.example' }));
+    window.foafos.storyRequest('story.smuggle', { anywhere: 'evil.example' }));
   if (refusal && refusal.ok === false && refusal.reason === 'unknown-verb') {
     pass('an unknown narrative verb is refused with a named reason');
   } else fail('deny path wrong: ' + JSON.stringify(refusal));

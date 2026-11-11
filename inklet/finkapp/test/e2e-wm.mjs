@@ -419,7 +419,7 @@ try {
   // it the way a story does (the runner's story.launch verb, what
   // `# MINIGAME: mudslider` sends), so the story's window yields the screen
   // to it exactly as in play.
-  const relaunch = await runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'mudslider' }));
+  const relaunch = await runner.evaluate(() => window.foafos.storyRequest('story.launch', { game: 'mudslider' }));
   if (!relaunch?.ok) throw new Error('story.launch mudslider refused: ' + JSON.stringify(relaunch));
   await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
   await page.waitForTimeout(800);

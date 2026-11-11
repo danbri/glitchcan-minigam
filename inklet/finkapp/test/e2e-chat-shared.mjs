@@ -80,12 +80,12 @@ try {
   let playlist;
   for (let i = 0; i < 200 && !playlist; i++) {
     const f = a.frames().find((x) => x.url().includes('/apps/playlist/'));
-    if (f && await f.evaluate(() => !!window.foaf?.bus).catch(() => false)) playlist = f;
+    if (f && await f.evaluate(() => !!window.foafos?.bus).catch(() => false)) playlist = f;
     else await wait(100);
   }
   await wait(1000);
   const tag = `probe${Date.now().toString(36)}`;
-  await playlist.evaluate((t) => foaf.bus.publish(`app.playlist.${t}`, { summary: 'tea is ready' }), tag);
+  await playlist.evaluate((t) => foafos.bus.publish(`app.playlist.${t}`, { summary: 'tea is ready' }), tag);
   const m = await client.until(new RegExp(`<message[^>]*>(?:(?!</message>)[\\s\\S])*app\\.playlist\\.${tag}[\\s\\S]*?</message>`));
   console.log('     outside client saw:', /<body>([\s\S]*?)<\/body>/.exec(m[0])?.[1]);
   check(m[0].includes('guest:playlist#'), 'the Playlist topic reaches the outside client, naming the sandboxed app');

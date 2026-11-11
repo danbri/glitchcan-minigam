@@ -217,7 +217,7 @@ export class BrokeredResourceSource extends MemoryResourceSource {
 // request. That is not a gap in the design, it IS the design: ask the shell
 // for the outcome instead.
 //
-//   this.write(path, bytes)  →  foaf.invoke('git.commit', { path, content })
+//   this.write(path, bytes)  →  foafos.invoke('git.commit', { path, content })
 //
 // Where that commit lands is not ours to choose. The shell's grant names the
 // repo, the branch and the allowed path prefix; we send a relative path and
@@ -230,13 +230,13 @@ export class BrokeredResourceSource extends MemoryResourceSource {
 // semantics are PUBLISH, not sync — edit locally, saving pushes. Said out
 // loud in `locality` and `note` so the UI can say it too.
 export class BrokeredGitSource extends BrokeredResourceSource {
-  constructor({ id = 'git-brokered', key = 'edot.git.mirror', storage = null, foaf = null } = {}) {
+  constructor({ id = 'git-brokered', key = 'edot.git.mirror', storage = null, foafos = null } = {}) {
     super({ id, key, storage });
     this.provider = 'github';
     this.locality = 'remote';
     this.brokered = true;
     this.note = 'publishes through the shell; this app never sees a token';
-    this._foaf = foaf || (typeof window !== 'undefined' ? window.foaf : null);
+    this._foaf = foafos || (typeof window !== 'undefined' ? window.foafos : null);
     this.lastPublish = null;      // { ok, path, reason, status } — for the UI
   }
 

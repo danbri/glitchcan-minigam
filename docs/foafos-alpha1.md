@@ -86,7 +86,7 @@ Adaptation from the guest side.
   *your key is sealed here and nobody has unlocked it*, because sending
   someone off to mint a token they already have is its own kind of bug.
   FORGET takes the credentials with it.
-- **Brokered actions** — what "use a secret" actually means. `foaf.invoke(
+- **Brokered actions** — what "use a secret" actually means. `foafos.invoke(
   'git.commit', { path, content, message })`: the app names an outcome, the
   shell performs it with a credential the app cannot see. Note what the app
   does *not* send — a function (that would be `get` with extra steps) and a

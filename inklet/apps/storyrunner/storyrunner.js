@@ -2,7 +2,7 @@
 //
 // This runs inside a foafos app frame (opaque origin). It compiles and
 // plays a .fink.js entirely in its own document and reaches the shell ONLY
-// through the app protocol (foaf.storyRequest / foaf.bus). It has no
+// through the app protocol (foafos.storyRequest / foafos.bus). It has no
 // `parent.FoafOS` and never writes host DOM. That is the "sandboxed all the
 // way up" containment the live host-side player does not yet have.
 //
@@ -48,7 +48,7 @@ function setStatus(msg) { $('status').textContent = msg; }
 function storyFault(msg) {
   const text = String(msg || 'unknown error');
   setStatus('the story stopped: ' + text);
-  window.foaf?.bus?.publish('app.storyrunner.fault', { summary: `story error: ${text.slice(0, 160)}`, error: text });
+  window.foafos?.bus?.publish('app.storyrunner.fault', { summary: `story error: ${text.slice(0, 160)}`, error: text });
 }
 function armStory(s) {
   if (!s) return s;
@@ -304,7 +304,7 @@ function handleTag(tag) {
 // gesture never comes (all interaction is in this frame), so on a deep link
 // it stayed silent forever. So: play here, and if iOS blocks the first
 // play(), arm a one-shot that starts the bed on the next tap in this frame.
-// Volume still comes from the shell master (foaf.onAudio → our element), so
+// Volume still comes from the shell master (foafos.onAudio → our element), so
 // the dock's mute reaches it — audio-as-a-host-service, where the guest
 // applies the level itself (spec §5.5). Synth audio (`# AUDIO: synth:*`) is
 // the host's FinkFoley, not reachable from the box; named, not silent.
@@ -479,7 +479,7 @@ function renderStatusBar() {
   // Contribute the same readouts to the menubar (grouped under this app in
   // the tree). Small, and in our own namespace — the sandbox allows
   // app.storyrunner.*; the menubar (shell furniture) aggregates it.
-  window.foaf?.bus?.publish('app.storyrunner.status', {
+  window.foafos?.bus?.publish('app.storyrunner.status', {
     items: statusItemsShown().map((i) => ({ id: i.id,
       label: `${i.icon ? i.icon + ' ' : ''}${i.label}: ${statusValue(i) ?? '—'}` })),
   });
@@ -554,11 +554,11 @@ async function storyRequest(verb, detail) {
     detail = { ...detail, session: state.sessionId };
   }
   state.requests.push({ verb, detail });
-  const foaf = window.foaf;
-  if (!foaf?.storyRequest) { setStatus(`(standalone: ${verb} not sent)`); return { ok: false, reason: 'standalone' }; }
-  const res = await foaf.storyRequest(verb, detail);
+  const foafos = window.foafos;
+  if (!foafos?.storyRequest) { setStatus(`(standalone: ${verb} not sent)`); return { ok: false, reason: 'standalone' }; }
+  const res = await foafos.storyRequest(verb, detail);
   if (!res.ok) setStatus(`${verb} refused: ${res.reason}`);
-  foaf.bus?.publish(`app.storyrunner.${verb.replace(/^story\./, '')}`, { verb, detail, ok: res.ok });
+  foafos.bus?.publish(`app.storyrunner.${verb.replace(/^story\./, '')}`, { verb, detail, ok: res.ok });
   return res;
 }
 
@@ -630,7 +630,7 @@ async function restartStory() {
   state.ended = false;
   setStatus('');
   renderMedia(null);
-  window.foaf?.bus?.publish('app.storyrunner.restart', { summary: 'story restarted' });
+  window.foafos?.bus?.publish('app.storyrunner.restart', { summary: 'story restarted' });
   await seedEconomy();
   advance();
   return true;
@@ -714,7 +714,7 @@ function stepStory() {
     // nested story a dream rather than a dead end. Only the outermost END
     // is really the end.
     if (_frames.length) {
-      window.foaf?.bus?.publish('app.storyrunner.surfacing', {
+      window.foafos?.bus?.publish('app.storyrunner.surfacing', {
         summary: `inner story ended — surfacing to depth ${_frames.length - 1}`,
         depth: _frames.length - 1,
       });
@@ -733,7 +733,7 @@ function stepStory() {
     }
     setStatus('— THE END —');
     offerRestart();
-    window.foaf?.bus?.publish('app.storyrunner.ended', { summary: 'story ended' });
+    window.foafos?.bus?.publish('app.storyrunner.ended', { summary: 'story ended' });
   }
   return true;
 }
@@ -864,10 +864,10 @@ $('world-open')?.addEventListener('click', reopenWorld);
 // Quiet on purpose: a beat goes every step, so it is not logged in
 // state.requests or on the bus, and a world the reader closed is not an error.
 function worldRequest(detail) {
-  const foaf = window.foaf;
-  if (!foaf?.storyRequest) return Promise.resolve({ ok: false, reason: 'standalone' });
+  const foafos = window.foafos;
+  if (!foafos?.storyRequest) return Promise.resolve({ ok: false, reason: 'standalone' });
   if (state.sessionId && detail.session === undefined) detail = { ...detail, session: state.sessionId };
-  return foaf.storyRequest('story.world', detail).catch(() => ({ ok: false, reason: 'failed' }));
+  return foafos.storyRequest('story.world', detail).catch(() => ({ ok: false, reason: 'failed' }));
 }
 
 function openWorld(tag, replay = null) {
@@ -886,7 +886,7 @@ function openWorld(tag, replay = null) {
       return null;
     }
     w.reads = Array.isArray(res.reads) ? res.reads : [];
-    window.foaf?.bus?.publish('app.storyrunner.world', {
+    window.foafos?.bus?.publish('app.storyrunner.world', {
       summary: `${name} is the world beside this story${res.reused ? ' (already open)' : ''}`, world: name,
     });
     watchWorldReads();
@@ -917,7 +917,7 @@ function worldReenter(scene) {
   if (ok) {
     try { story.ChoosePathString(scene); entered = true; } catch { /* not a knot in this story */ }
   }
-  window.foaf?.bus?.publish('app.storyrunner.world', {
+  window.foafos?.bus?.publish('app.storyrunner.world', {
     summary: entered ? `the world re-entered the scene ${scene}` : `refused a re-entry into ${scene || '(no scene)'}`,
     reenter: scene, ok: entered,
   });
@@ -977,7 +977,7 @@ async function launchAndWait(tag) {
   state.pausedFor = game;
   setStatus(`playing ${game}…`);
   renderChoices();                      // clears them: paused means paused
-  window.foaf?.bus?.publish('app.storyrunner.paused', {
+  window.foafos?.bus?.publish('app.storyrunner.paused', {
     summary: `story paused for ${game}`, game,
   });
 }
@@ -1007,7 +1007,7 @@ function resumeAfterGame(detail) {
   }
   state.lastGame = { game, success: detail?.success ?? null,
                      score: detail?.score ?? null, applied, missed };
-  window.foaf?.bus?.publish('app.storyrunner.resumed', {
+  window.foafos?.bus?.publish('app.storyrunner.resumed', {
     summary: `${game} finished — story resumes` +
       (applied.length ? ` (${applied.join(', ')})` : ''),
     game, applied, missed,
@@ -1054,11 +1054,11 @@ let _econWatched = null;
 function econWrite(name, value) {
   if (_econSeen[name] === value) return;
   _econSeen[name] = value;
-  const foaf = window.foaf;
-  if (!foaf?.storyRequest) return;
+  const foafos = window.foafos;
+  if (!foafos?.storyRequest) return;
   const detail = { op: 'write', name, value };
   if (state.sessionId) detail.session = state.sessionId;
-  foaf.storyRequest('story.vars', detail).catch(() => {});
+  foafos.storyRequest('story.vars', detail).catch(() => {});
 }
 function watchEconomy() {
   if (!story || _econWatched === story) return;
@@ -1201,7 +1201,7 @@ function gotoKnotHash(hash) {
   const name = _knotHashes.get(hash);
   if (!name) {
     setStatus('that link points somewhere this story does not have');
-    window.foaf?.bus?.publish('app.storyrunner.link-miss', {
+    window.foafos?.bus?.publish('app.storyrunner.link-miss', {
       summary: `unknown knot hash ${hash}`, hash,
     });
     return false;
@@ -1361,7 +1361,7 @@ async function mergeStory(absUrl, entry = '') {
       : String(e.message || 'compile error')).split('\n')[0];
     setStatus(`this chunk does not fit: ${why}`);
     state.merges.push({ url, ok: false, reason: why });
-    window.foaf?.bus?.publish('app.storyrunner.merge', {
+    window.foafos?.bus?.publish('app.storyrunner.merge', {
       summary: `merge refused — ${why}`, phase: 'fault', url,
     });
     advance();                     // the reader's own story is untouched
@@ -1383,7 +1383,7 @@ async function mergeStory(absUrl, entry = '') {
   state.merges.push({ url, ok: true });
   state.mergedInk = sources.reduce((n, s) => n + s.ink.length, 0);
   await buildKnotHashes();         // the union has knots the old hashes lack
-  window.foaf?.bus?.publish('app.storyrunner.merge', {
+  window.foafos?.bus?.publish('app.storyrunner.merge', {
     summary: `merged ${url.split('/').pop()} — ${sources.length} sources in this session`,
     phase: 'loading', url, sources: sources.length,
   });
@@ -1693,7 +1693,7 @@ async function loadStory(url, restore = null, rel = 'replace') {
   $('choices').textContent = '';
   renderMedia(null);
   stopAudio();
-  if (rel !== 'merge') window.foaf?.storyRequest?.('story.audio', { action: 'stop-foley' }).catch?.(() => {});
+  if (rel !== 'merge') window.foafos?.storyRequest?.('story.audio', { action: 'stop-foley' }).catch?.(() => {});
   state.prose = []; state.choices = []; story = null;
   state.loads += 1;
   // THE SESSION'S CACHE (the layer model's "inkjs reality" note). A dream
@@ -1964,7 +1964,7 @@ function snapshotPlaythrough() {
 function keepPlace() {
   if (_resumeOffer) return;             // the saved reading on offer stands
   if (!story || !state.ready) return;   // mid-load: the last place sent stands
-  window.foaf?.keepSnapshot?.(snapshotPlaythrough());
+  window.foafos?.keepSnapshot?.(snapshotPlaythrough());
 }
 
 async function restorePlaythrough(snap) {
@@ -1994,7 +1994,7 @@ async function restorePlaythrough(snap) {
     renderStatusBar();
   }
   state.resumedFromSave = true;
-  window.foaf?.bus?.publish('app.storyrunner.resumed-save', {
+  window.foafos?.bus?.publish('app.storyrunner.resumed-save', {
     summary: `resumed ${snap.storyUrl.split('/').pop()} at depth ${_frames.length}`,
     depth: _frames.length,
   });
@@ -2023,7 +2023,7 @@ $('resume-offer')?.addEventListener('click', () => {
 });
 
 // Live inside foafos if present; run standalone otherwise (dev).
-if (window.foaf?.onInit) {
+if (window.foafos?.onInit) {
   let booted = false;
   let savedSnap;
   // Hold the save; do not act on it yet. PRECEDENCE, and the ordering the
@@ -2031,9 +2031,9 @@ if (window.foaf?.onInit) {
   // for a particular story and must beat a save of a different one —
   // "asking for a specific thing should beat a default". A save only wins
   // the DEFAULT boot, where it is the most recent thing the reader did.
-  window.foaf.onRestore?.((snap) => { savedSnap = snap || undefined; });
-  window.foaf.onSnapshot?.(snapshotPlaythrough);
-  window.foaf.onInit((config) => {
+  window.foafos.onRestore?.((snap) => { savedSnap = snap || undefined; });
+  window.foafos.onSnapshot?.(snapshotPlaythrough);
+  window.foafos.onInit((config) => {
     state.mediaBase = config?.mediaBase || null;
     applySkinTokens(config?.skinTokens, config?.skin);
     // Ask to watch our own subtree BEFORE the story starts, so the first
@@ -2055,12 +2055,12 @@ if (window.foaf?.onInit) {
       boot(config).then(() => honourDeepLink());
     }, 140);
   });
-  window.foaf.onAudio?.(applyAudioLevel);   // the dock's volume reaches our bed
+  window.foafos.onAudio?.(applyAudioLevel);   // the dock's volume reaches our bed
   // SKINS PARITY: the shell hands over its resolved token values (it cannot
   // hand over a stylesheet across an opaque origin, and a second copy of
   // fink-skins.css would drift). Applied to our own root, so the box reads
   // as part of the same installation instead of a foreign panel.
-  window.foaf.bus?.subscribe('wm.panes', (e) => {
+  window.foafos.bus?.subscribe('wm.panes', (e) => {
     document.documentElement.classList.toggle('panes', !!e.data?.on);
     const prose = document.getElementById('prose');
     if (prose) prose.scrollTop = prose.scrollHeight;
@@ -2070,7 +2070,7 @@ if (window.foaf?.onInit) {
     const prose = document.getElementById('prose');
     prose.scrollTop = prose.scrollHeight;
   }).observe(document.getElementById('prose'), { childList: true });
-  window.foaf.bus?.subscribe('ui.skin', (e) =>
+  window.foafos.bus?.subscribe('ui.skin', (e) =>
     applySkinTokens(e?.data?.tokens, e?.data?.skin));
 } else {
   boot({});

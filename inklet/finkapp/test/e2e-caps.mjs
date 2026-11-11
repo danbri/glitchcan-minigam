@@ -143,10 +143,10 @@ try {
     fail('channels app frame never appeared');
   } else {
     const inside = await tv.evaluate(() => ({
-      sdkThere: !!window.foaf,
-      id: window.foaf?.id,
-      caps: window.foaf?.capabilities?.(),
-      shimmed: !!window.foaf?._installed?.localStorage,
+      sdkThere: !!window.foafos,
+      id: window.foafos?.id,
+      caps: window.foafos?.capabilities?.(),
+      shimmed: !!window.foafos?._installed?.localStorage,
       // the native API would throw here; the shim must not
       write: (() => { try { localStorage.setItem('tv.station', '3'); return 'ok'; } catch (e) { return e.name; } })(),
       read: (() => { try { return localStorage.getItem('tv.station'); } catch (e) { return e.name; } })(),
@@ -338,7 +338,7 @@ try {
       // NB: hasOwnProperty('localStorage') is true on an ordinary page in
       // this browser, so it does not discriminate. What matters is whether
       // app-sdk installed anything, and whether the real API still works.
-      r.installed = window.foaf?._installed?.localStorage;
+      r.installed = window.foafos?._installed?.localStorage;
       try { localStorage.setItem('__caps_probe__', 'still-native'); r.write = localStorage.getItem('__caps_probe__'); }
       catch (e) { r.write = e.name; }
       localStorage.removeItem('__caps_probe__');
@@ -428,11 +428,11 @@ try {
     } else {
       const r = await app.evaluate(async () => {
         const out = {};
-        out.hasApi = typeof window.foaf?.secrets?.put === 'function';
-        out.put = await window.foaf.secrets.put('gh.token', 'gho_E2E_SECRET_TOKEN');
-        out.names = await window.foaf.secrets.names();
+        out.hasApi = typeof window.foafos?.secrets?.put === 'function';
+        out.put = await window.foafos.secrets.put('gh.token', 'gho_E2E_SECRET_TOKEN');
+        out.names = await window.foafos.secrets.names();
         // the whole point: there is no way back
-        try { window.foaf.secrets.get('gh.token'); out.get = 'returned'; }
+        try { window.foafos.secrets.get('gh.token'); out.get = 'returned'; }
         catch (e) { out.get = e.name; }
         // and asking the shell directly is refused too
         out.askedShell = await new Promise((res) => {
@@ -518,10 +518,10 @@ try {
       fail('edot frame never appeared for the verb probe');
     } else {
       const unaimed = await app2.evaluate(async () => {
-        await window.foaf.secrets.put('git.token', 'gho_E2E_VERB_TOKEN');
+        await window.foafos.secrets.put('git.token', 'gho_E2E_VERB_TOKEN');
         return {
-          verbs: await window.foaf.verbs(),
-          tried: await window.foaf.invoke('git.commit', { path: 'edot/a.md', content: 'hi' }),
+          verbs: await window.foafos.verbs(),
+          tried: await window.foafos.invoke('git.commit', { path: 'edot/a.md', content: 'hi' }),
         };
       }).catch(e => ({ err: String(e).slice(0, 150) }));
       unaimed.tried?.reason === 'denied' && (unaimed.verbs || []).length === 0
@@ -536,15 +536,15 @@ try {
         : fail(`aimOp refused a valid scope: ${JSON.stringify(aimed)}`);
 
       const r = await app2.evaluate(async () => ({
-        verbs: (await window.foaf.verbs()).map(v => v.verb),
-        done: await window.foaf.invoke('git.commit', { path: 'edot/a.md', content: 'hello from a sandbox', message: 'e2e' }),
+        verbs: (await window.foafos.verbs()).map(v => v.verb),
+        done: await window.foafos.invoke('git.commit', { path: 'edot/a.md', content: 'hello from a sandbox', message: 'e2e' }),
         // every attempt to choose the destination itself
-        elsewhere: await window.foaf.invoke('git.commit', {
+        elsewhere: await window.foafos.invoke('git.commit', {
           path: 'edot/b.md', content: 'x', repo: 'attacker/loot', owner: 'attacker', branch: 'gh-pages',
         }),
-        outside: await window.foaf.invoke('git.commit', { path: '.github/workflows/evil.yml', content: 'x' }),
-        traversal: await window.foaf.invoke('git.commit', { path: 'edot/../.github/evil.yml', content: 'x' }),
-        unknown: await window.foaf.invoke('rm.rf', {}),
+        outside: await window.foafos.invoke('git.commit', { path: '.github/workflows/evil.yml', content: 'x' }),
+        traversal: await window.foafos.invoke('git.commit', { path: 'edot/../.github/evil.yml', content: 'x' }),
+        unknown: await window.foafos.invoke('rm.rf', {}),
       })).catch(e => ({ err: String(e).slice(0, 150) }));
 
       r.done?.ok === true && r.done.sha === 'blob1' && r.verbs?.includes('git.commit')
@@ -656,9 +656,9 @@ try {
 
       const shellTyped = await app2.evaluate(async () => ({
         // the app never saw it go in, and still cannot get it out
-        names: await window.foaf.secrets.names(),
-        get: (() => { try { window.foaf.secrets.get('git.token'); return 'returned'; } catch (e) { return e.name; } })(),
-        commit: await window.foaf.invoke('git.commit', { path: 'edot/panel.md', content: 'via the panel' }),
+        names: await window.foafos.secrets.names(),
+        get: (() => { try { window.foafos.secrets.get('git.token'); return 'returned'; } catch (e) { return e.name; } })(),
+        commit: await window.foafos.invoke('git.commit', { path: 'edot/panel.md', content: 'via the panel' }),
       }));
       shellTyped.commit?.ok === true && shellTyped.get === 'FoafSecretsNotReadable'
         ? pass('and the app can then commit with a credential it never handled at all')
@@ -725,7 +725,7 @@ try {
           aimed: window.FoafOS.ops.scopeFor('edot', 'git:write'),
         }));
         const commit = await app3.evaluate(() =>
-          window.foaf.invoke('git.commit', { path: 'edot/after-reload.md', content: 'still works' }));
+          window.foafos.invoke('git.commit', { path: 'edot/after-reload.md', content: 'still works' }));
         revived.names?.includes('git.token') && revived.aimed?.repo === 'danbri/e2e-notes'
           && commit?.ok === true
           ? pass('a sealed key and its destination both survive a reload — the app publishes again')

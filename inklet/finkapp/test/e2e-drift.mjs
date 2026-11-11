@@ -85,7 +85,7 @@ try {
   await runner.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0, null, { timeout: 30000 });
   // The hub now opens the stories as a world (sections 15 on). The city as a GAME with its own story is still a path:
   // the verb that "# MINIGAME: drift tale=peraspera" sends.
-  const launchDrift = () => runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'drift', args: { tale: 'peraspera' } }));
+  const launchDrift = () => runner.evaluate(() => window.foafos.storyRequest('story.launch', { game: 'drift', args: { tale: 'peraspera' } }));
   await launchDrift();
   const city = await frameMatching(page, /drift-city\/dist\/city\.html\?tale=peraspera$/);
   if (!city) throw new Error('the city frame never opened with ?tale=peraspera');
@@ -332,7 +332,7 @@ try {
     // 18. variables both ways, through the shell
     await wr.waitForFunction(() => !!window.__storyrunner.varOf('hour'), null, { timeout: 30000 }).catch(() => {});
     const h0 = await wr.evaluate(() => window.__storyrunner.varOf('hour'));
-    const sent = await wr.evaluate(() => window.foaf.storyRequest('story.world', { op: 'vars', values: { want_time: 'dusk', heard_mags: true } }));
+    const sent = await wr.evaluate(() => window.foafos.storyRequest('story.world', { op: 'vars', values: { want_time: 'dusk', heard_mags: true } }));
     const h1 = await wr.waitForFunction(() => window.__storyrunner.varOf('hour') === 'dusk', null, { timeout: 30000 })
       .then(() => 'dusk', () => wr.evaluate(() => window.__storyrunner.varOf('hour')));
     h0 && sent?.sent === 1 && h1 === 'dusk'

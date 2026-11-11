@@ -32,11 +32,11 @@ In a manifest (`inklet/finkapp/apps/*.jsonld`):
 
 ## How a file is shared
 
-1. Files calls `foaf.pod.handlers(path, type)`, and shows each app with its comment.
-2. The person chooses. Files calls `foaf.pod.openWith(app, path, type)`.
+1. Files calls `foafos.pod.handlers(path, type)`, and shows each app with its comment.
+2. The person chooses. Files calls `foafos.pod.openWith(app, path, type)`.
 3. The shell checks that the app handles that file, makes a share, and opens a new window.
-4. That window calls `foaf.pod.shared()`, and receives `{ token, name, write }`.
-5. It uses `foaf.pod.get('', { share })` and `foaf.pod.put('', body, { share })`.
+4. That window calls `foafos.pod.shared()`, and receives `{ token, name, write }`.
+5. It uses `foafos.pod.get('', { share })` and `foafos.pod.put('', body, { share })`.
 
 Rules of a share:
 

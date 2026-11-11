@@ -62,7 +62,7 @@ try {
 
   // Launch boidwars the way the story does: the runner's story.launch
   // verb, which is what `# MINIGAME: battleboids` sends
-  const launched = await runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'battleboids' }));
+  const launched = await runner.evaluate(() => window.foafos.storyRequest('story.launch', { game: 'battleboids' }));
   if (!launched?.ok) throw new Error('story.launch battleboids refused: ' + JSON.stringify(launched));
   await page.waitForSelector('#minigame-iframe-battleboids', { timeout: 15000 });
   await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 6000 });

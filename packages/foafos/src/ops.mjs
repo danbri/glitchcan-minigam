@@ -8,7 +8,7 @@
 // extra steps. So the transport carries a VERB NAME and some data, and the
 // shell decides what that verb does.
 //
-//   app:    foaf.invoke('git.commit', { path, content, message })
+//   app:    foafos.invoke('git.commit', { path, content, message })
 //   shell:  ops.invoke('edot', 'git.commit', params)
 //             → secrets.use('edot', 'git.token', (t) => fetch(…))
 //

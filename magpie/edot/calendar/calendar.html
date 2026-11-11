@@ -45,7 +45,7 @@
     const cal = document.querySelector('edot-calendar');
     await cal.init();
     // Under foafos: list_calendars, list_events and add_event for the shell and agents.
-    if (window.foaf?.tools) offerCalendarTools(cal, window.foaf);
+    if (window.foafos?.tools) offerCalendarTools(cal, window.foafos);
     window.__cal = {
       app: cal,
       store: cal.store,

@@ -86,7 +86,7 @@ try {
     for (const el of await page.$$('.foafos-window[data-app-id="sheets"]')) {
       const f = await (await el.$('iframe'))?.contentFrame();
       const doc = await el.getAttribute('data-doc');
-      if (!f || !(await f.evaluate(() => !!window.foaf?.ready).catch(() => false))) return null;
+      if (!f || !(await f.evaluate(() => !!window.foafos?.ready).catch(() => false))) return null;
       out.push({ f, doc });
     }
     return out.length === 3 && out;
@@ -157,7 +157,7 @@ try {
     ? pass('a launch from the app list shows the same Playlist (one node, one frame)')
     : fail(`second launch: ${JSON.stringify({ n3, frames })}`);
 
-  const refused = await second.evaluate(() => window.foaf.storyRequest('story.app',
+  const refused = await second.evaluate(() => window.foafos.storyRequest('story.app',
     { app: 'playlist', action: 'erase', args: {} }));
   refused?.ok === false && refused.reason === 'unknown-action'
     ? pass('an action the manifest does not list is refused ("unknown-action")')

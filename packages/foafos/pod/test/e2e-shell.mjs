@@ -3,7 +3,7 @@
 //   System's Pods tab adds a home pod over XMPP, holds its password, connects
 //   through the relay (RFC 7395), browses it, and marks it "apps use this";
 //   Pod Notes, a sandboxed app (opaque origin), saves and reads a note through
-//   foaf.pod.* and never sees the pod's address or the password;
+//   foafos.pod.* and never sees the pod's address or the password;
 //   attacks posted from INSIDE app frames are refused.
 //
 //   cd packages/foafos/pod && npm install && node test/e2e-shell.mjs
@@ -149,15 +149,15 @@ try {
   // Attacks from inside the frame.
   const attacks = await notes.evaluate(async () => {
     const out = {};
-    out.traversal = (await foaf.pod.put('../edot/evil.txt', 'x')).reason;
-    out.deep = (await foaf.pod.get('notes/../../../x')).reason;
+    out.traversal = (await foafos.pod.put('../edot/evil.txt', 'x')).reason;
+    out.deep = (await foafos.pod.get('notes/../../../x')).reason;
     out.unknown = await new Promise((resolve) => {
       const rid = 'raw1';
       const on = (e) => { if (e.data?.rid === rid) { removeEventListener('message', on); resolve(e.data.reason); } };
       addEventListener('message', on);
       parent.postMessage({ type: 'pod', rid, verb: 'pod.chmod', params: { path: 'x' } }, '*');
     });
-    const ls = await foaf.pod.list('');
+    const ls = await foafos.pod.list('');
     out.listing = JSON.stringify(ls);
     return out;
   });
@@ -175,13 +175,13 @@ try {
     cal = page.frames().find((f) => f.url().includes('/calendar'));
     if (!cal) await page.waitForTimeout(250);
   }
-  await cal.waitForFunction(() => window.foaf, null, { timeout: 15000 });
-  const calTry = await cal.evaluate(async () => (await foaf.pod.list('')).reason);
+  await cal.waitForFunction(() => window.foafos, null, { timeout: 15000 });
+  const calTry = await cal.evaluate(async () => (await foafos.pod.list('')).reason);
   check(calTry === 'denied', `an app without pod:read is refused (${calTry})`);
 
   // No pod for apps: the app is told what to do, not given a silent failure.
   await page.evaluate(() => FoafOS.pods.setAppsPod(null));
-  const noPod = await notes.evaluate(async () => (await foaf.pod.list('notes/')).reason);
+  const noPod = await notes.evaluate(async () => (await foafos.pod.list('notes/')).reason);
   check(noPod === 'no-pod', `with no pod chosen for apps the verb answers ${noPod}`);
 
   // The password is nowhere an app or the page's storage could read it.

@@ -2,7 +2,7 @@
 //
 // A single-instance app (manifest `instances: "single"`): stories and other
 // apps do not open their own players, they add tracks here by an ACTION.
-// The shell delivers actions through app-sdk's `foaf.onAction(action, args,
+// The shell delivers actions through app-sdk's `foafos.onAction(action, args,
 // from)`; `from.label` is who asked (a story name, say), shown beside the
 // track. Actions: queue (args.track = a CHANNELS id), play, pause, next,
 // open. Design: docs/foafos-apps-20261022.md, section 5 (singletons).
@@ -26,7 +26,7 @@ const nextBtn = $('#next');
 const trackSel = $('#track');
 
 const a11y = window.__mgA11y;
-const foaf = window.foaf;
+const foafos = window.foafos;
 const KEY = 'playlist.queue';
 const byId = new Map(CHANNELS.map((ch) => [ch.id, ch]));
 
@@ -174,7 +174,7 @@ audio.addEventListener('playing', () => {
   nowEl.textContent = `▶ ${it.name}`;
   render();
   a11y?.announce(`Now playing ${it.name}`);
-  foaf?.bus?.publish('app.playlist.now', {
+  foafos?.bus?.publish('app.playlist.now', {
     summary: `Playlist: ${it.name}`, track: it.id, name: it.name, from: it.from,
   });
 });
@@ -219,15 +219,15 @@ function applySkin(tokens) {
     try { document.documentElement.style.setProperty(k, v); } catch (e) { /* bad token */ }
   }
 }
-foaf?.onInit?.((config) => applySkin(config?.skinTokens));
-foaf?.bus?.subscribe?.('ui.skin', (e) => applySkin(e?.data?.tokens));
+foafos?.onInit?.((config) => applySkin(config?.skinTokens));
+foafos?.bus?.subscribe?.('ui.skin', (e) => applySkin(e?.data?.tokens));
 
 // Restore BEFORE taking actions. An action held by app-sdk is replayed the
 // moment onAction is registered; if that ran first, its save() put the item in
 // the store and the restore read it back as a second copy.
-if (foaf && window.parent !== window) foaf.onInit(() => restore());
+if (foafos && window.parent !== window) foafos.onInit(() => restore());
 else restore();
-foaf?.onAction?.(handler);
+foafos?.onAction?.(handler);
 
 // ── the controls ───────────────────────────────────────────────────────
 for (const ch of CHANNELS) {
@@ -247,7 +247,7 @@ nextBtn.addEventListener('click', next);
 
 // ── the shell's services ───────────────────────────────────────────────
 // Answering the audio probe is what lets the shell's mute reach us.
-foaf?.onAudio?.(({ level }) => {
+foafos?.onAudio?.(({ level }) => {
   hostVolume = level;
   audio.volume = level;
 });

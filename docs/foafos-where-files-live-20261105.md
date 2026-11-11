@@ -38,8 +38,8 @@ A location is a pod. Each has a `carriage`, which says how it is reached:
 | `xmpp` | XEP-0332 through a relay | The pod |
 
 - `packages/foafos/src/device-fetch.mjs` answers in the HTTP that `FoafPods` already speaks, so the pod verbs, grants and `If-Match` conflict checks are the same everywhere. It refuses any path that leaves its root.
-- Sandboxed apps have no origin, so they cannot use OPFS or a folder themselves. The shell holds the handles, and apps use `foaf.pod.*`.
-- `foaf.pod.locations()`, `use(id)` and `addFolder()` are for apps with `wholePod: true` in their manifest. Others are refused, because a location names addresses. The choice is kept per app, under `foafos.location.APP`.
+- Sandboxed apps have no origin, so they cannot use OPFS or a folder themselves. The shell holds the handles, and apps use `foafos.pod.*`.
+- `foafos.pod.locations()`, `use(id)` and `addFolder()` are for apps with `wholePod: true` in their manifest. Others are refused, because a location names addresses. The choice is kept per app, under `foafos.location.APP`.
 - Permission for a folder lasts a visit. The status is then `needs-ok`, and `pod.use` asks, because the person has just clicked. The click is in a sandboxed frame; browsers count activation in a child frame for its parents.
 
 Tests: `packages/foafos/test/device-fetch.test.js`, and `inklet/finkapp/test/e2e-files-locations.mjs` in real Chrome with real OPFS. The browser's folder dialog cannot be automated, so that test stubs that one call. The native dialog and the permission prompt need trying by hand.

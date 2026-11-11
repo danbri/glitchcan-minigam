@@ -251,7 +251,7 @@ try {
     notes = page.frames().find((f) => f.url().includes('/apps/podnotes/'));
     if (!notes) await page.waitForTimeout(250);
   }
-  await notes.waitForFunction(() => window.foaf?.pod?.extras, null, { timeout: 15000 });
+  await notes.waitForFunction(() => window.foafos?.pod?.extras, null, { timeout: 15000 });
   // A raw message, as a hostile app would send it: the SDK offers less than this.
   const raw = (verb, params) => notes.evaluate(([v, p]) => new Promise((resolve) => {
     const rid = `raw-${Math.random()}`;
@@ -264,9 +264,9 @@ try {
   seenByApp.push(extras);
   const handle = extras.extras?.[0]?.handle;
   check(extras.ok && extras.extras.length === 1 && /^extra-[0-9a-f]{16}$/.test(handle) && extras.extras[0].write === true, 'the app sees one neutral handle');
-  const putExtra = await notes.evaluate((pod) => foaf.pod.put('a.txt', 'in the extra pod', { pod }), handle);
-  const putShared = await notes.evaluate(() => foaf.pod.put('b.txt', 'in the shared pod'));
-  const listExtra = await notes.evaluate((pod) => foaf.pod.list('', { pod }), handle);
+  const putExtra = await notes.evaluate((pod) => foafos.pod.put('a.txt', 'in the extra pod', { pod }), handle);
+  const putShared = await notes.evaluate(() => foafos.pod.put('b.txt', 'in the shared pod'));
+  const listExtra = await notes.evaluate((pod) => foafos.pod.list('', { pod }), handle);
   seenByApp.push(putExtra, putShared, listExtra);
   const onExtra = await fetch(`${EXTRA_BASE}apps/podnotes/a.txt`);
   check(putExtra.ok && onExtra.status === 200 && (await onExtra.text()) === 'in the extra pod', `a file goes to the extra pod, in the app's own folder (${putExtra.status ?? putExtra.reason})`);
@@ -304,18 +304,18 @@ try {
   await openTab();   // Notes opened on top of it
   await page.click(`${card('fly')} button:text-is("Stop sharing with apps")`);
   await until((c) => !/Shared pod/.test(document.querySelector(`${c} .fp-head`)?.textContent), card('fly'));
-  const none = await notes.evaluate(async (pod) => ({ plain: (await foaf.pod.get('a.txt')).reason, aimed: (await foaf.pod.get('a.txt', { pod })).reason, extras: (await foaf.pod.extras()).extras }), handle);
+  const none = await notes.evaluate(async (pod) => ({ plain: (await foafos.pod.get('a.txt')).reason, aimed: (await foafos.pod.get('a.txt', { pod })).reason, extras: (await foafos.pod.extras()).extras }), handle);
   check(none.plain === 'no-pod' && none.aimed === 'denied' && none.extras.length === 0, `with no shared pod the app has no pod (${JSON.stringify(none)})`);
   check(await page.evaluate(() => FoafOS.pods.appsPod()) === null, 'no extra pod was made the shared pod');
   check(/no app can use an extra pod/.test(await text('#foafos-pod-extras')), 'the tab says so');
   await page.click(`${card('fly')} button:text-is("Make this the shared pod")`);
   await page.waitForFunction(() => document.querySelector('#foafos-pod-extras') && !/no app can use an extra pod/.test(document.querySelector('#foafos-pod-extras').textContent));
-  check((await notes.evaluate((pod) => foaf.pod.get('a.txt', { pod }), handle)).body === 'in the extra pod', 'with a shared pod again the grant works');
+  check((await notes.evaluate((pod) => foafos.pod.get('a.txt', { pod }), handle)).body === 'in the extra pod', 'with a shared pod again the grant works');
 
   // Remove access, in the tab; give it again; a reload keeps it; removing the pod ends it.
   await page.click('#foafos-pod-extras .fp-extra button');
   await page.waitForFunction(() => !document.querySelector('#foafos-pod-extras .fp-extra'));
-  check((await notes.evaluate((pod) => foaf.pod.get('a.txt', { pod }), handle)).reason === 'denied', 'Remove access ends it at once, in a running app');
+  check((await notes.evaluate((pod) => foafos.pod.get('a.txt', { pod }), handle)).reason === 'denied', 'Remove access ends it at once, in a running app');
   await page.click('#foafos-pod-extras button:text-is("Give access")');
   await page.waitForSelector('#foafos-pod-extras .fp-extra');
   const grantsKept = await page.evaluate(() => FoafOS.pods.extraGrants());

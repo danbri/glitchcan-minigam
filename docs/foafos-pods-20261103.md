@@ -94,8 +94,8 @@ only the verbs in section 3.2.
 - In the shell: `FoafOS.pods`, the `FoafPods` instance (for tests and the developer console):
   `list()`, `add(rec)`, `remove(id)`, `connect(id)`, `disconnect(id)`, `status(id)`,
   `invoke(appId, verb, params)`.
-- In an app: `foaf.pod.get(path)`, `foaf.pod.list(path)`, `foaf.pod.put(path, body, { etag,
-  contentType })`, `foaf.pod.delete(path)`, through `inklet/apps/app-sdk.js`. Each one is a
+- In an app: `foafos.pod.get(path)`, `foafos.pod.list(path)`, `foafos.pod.put(path, body, { etag,
+  contentType })`, `foafos.pod.delete(path)`, through `inklet/apps/app-sdk.js`. Each one is a
   `postMessage` verb that the shell checks against the app's capabilities.
 
 ### 3.6 The relay
@@ -126,7 +126,7 @@ servers are tested:
    (scope, `..`, prefix, throttle, audit, and that no verb ever returns a credential).
 3. The shell: `FoafOS.pods`, the Pods window, `?app=pods`, and the app verbs in `app-sdk.js`.
 4. An end-to-end test: Chromium opens the finkapp shell, adds an XMPP pod, connects through the
-   relay, and a sandboxed app writes and reads its container through `foaf.pod.*`.
+   relay, and a sandboxed app writes and reads its container through `foafos.pod.*`.
 
 ## 5. Log
 
@@ -186,8 +186,8 @@ servers are tested:
   status, ENTER PASSWORD, CONNECT and DISCONNECT, BROWSE (container listings and text resources),
   USE FOR APPS, REMOVE, the apps that may reach a pod now, and an Add form. The password field is
   cleared after use; the value goes only to `pods.setPassword`.
-- App API (`inklet/apps/app-sdk.js`): `foaf.pod.get / list / put / delete`, on the same bounded
-  round trip as `foaf.invoke` (result type `pod.result`).
+- App API (`inklet/apps/app-sdk.js`): `foafos.pod.get / list / put / delete`, on the same bounded
+  round trip as `foafos.invoke` (result type `pod.result`).
 - **Pod Notes** (`inklet/apps/podnotes/`, app `podnotes`, `pod:read` + `pod:write`): the first
   caller. Notes are `notes/<name>.txt` in its own container; a save sends the ETag it read, so a
   note changed elsewhere is refused (412), not overwritten.

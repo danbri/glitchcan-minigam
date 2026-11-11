@@ -251,7 +251,7 @@ State, 2026-10-22 (owner: "Step 1 then 2"):
     a child of the root, never of the app that asked, so closing one story does not close
     the Playlist for the other.
   - Actions: a manifest's `actions` lists the names an app takes. The shell delivers an
-    action as `app.action`; an app reads it with `foaf.onAction(action, args, from)`
+    action as `app.action`; an app reads it with `foafos.onAction(action, args, from)`
     (`inklet/apps/app-sdk.js`). A story sends one with
     `# APP: <app> then=go action=<name> [key=value ...]` (shell verb `story.app`, capability
     `story:launch`). The shell refuses an app that is not single-instance (`not-single`)
