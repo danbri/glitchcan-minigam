@@ -46,7 +46,7 @@ const asAgent = async (did, jwk) => (await lwsClient()).createLwsClient({ selfIs
 const statusOf = async (p) => { try { const r = await p; return r?.status ?? 200; } catch (e) { return e?.detail?.status ?? e?.reason; } };
 const dav = (path, init = {}, login = true) => fetch(DAV + path, { ...init, headers: { ...(init.headers || {}), ...(login ? { Authorization: `Basic ${Buffer.from(`me:${DAV_PASSWORD}`).toString('base64')}` } : {}) } });
 /** Every private key value under the state folder: none may appear in any output. */
-const secretsOut = () => ['owner', 'webdav'].map((n) => keyOf(n).d);
+const secretsOut = () => ['owner', 'webdav', 'recovery'].map((n) => keyOf(n).d);
 mkdirSync(join(T, 'state'), { mode: 0o700 });
 spawnSync('factoidal', ['webdav-user', join(T, 'state/webdav-users'), 'me', '--iterations', '100000'], { input: DAV_PASSWORD });
 const stack = (args, env = {}) => {
@@ -77,14 +77,20 @@ test('lws-setup makes private keys and the ACL, and prints no key', () => {
   assert.equal(r.code, 0, r.out);
   const mode = (f) => (statSync(join(T, 'state/lws', f)).mode & 0o777).toString(8);
   assert.equal(mode('.'), '700');
-  for (const f of ['owner.jwk', 'webdav.jwk', 'root.acl', 'agents.json']) assert.equal(mode(f), '600', f);
+  for (const f of ['owner.jwk', 'webdav.jwk', 'recovery.jwk', 'root.acl', 'agents.json']) assert.equal(mode(f), '600', f);
   const a = agents();
   assert.match(a.owner, /^did:key:z/);
   assert.match(r.out, new RegExp(a.owner));
+  // The recovery agent: named, its key file named with the advice to move it offline, never printed.
+  assert.match(a.recovery, /^did:key:z/);
+  assert.match(r.out, new RegExp(`made the recovery agent ${a.recovery}`));
+  assert.match(r.out, /recovery\.jwk: move it offline now/);
   for (const d of secretsOut()) assert.ok(!r.out.includes(d), 'a private key was printed');
   const acl = readFileSync(join(T, 'state/lws/root.acl'), 'utf8');
   assert.ok(acl.includes(`acl:agent <${a.owner}> ;\n  acl:accessTo <./> ; acl:default <./> ;\n  acl:mode acl:Read, acl:Write, acl:Control .`), acl);
   assert.ok(acl.includes(`acl:agent <${a.webdav}> ;\n  acl:accessTo <./> ; acl:default <./> ;\n  acl:mode acl:Read .`), acl);
+  // Control of the root only: no acl:default, no Read, no Write.
+  assert.ok(acl.includes(`<#recovery> a acl:Authorization ;\n  acl:agent <${a.recovery}> ;\n  acl:accessTo <./> ;\n  acl:mode acl:Control .`), acl);
   assert.match(stack(['lws-setup']).out, /has its owner and ACL already/);
 });
 
@@ -207,6 +213,46 @@ test('the storage: no token gets 401, and a browser agent gets in only after lws
   assert.equal(refused.code, 1);
   assert.match(refused.out, /changed elsewhere/);
   assert.equal(stack(['lws-allow', 'did:key:nonsense']).code, 2);
+});
+
+test('the recovery agent may rewrite the root ACL, and may read or write no data', async () => {
+  await wait(300);   // the previous test ended with stack(): let a kept-alive socket the server closed go
+  const a = agents();
+  const rec = await asAgent(a.recovery, keyOf('recovery'));
+  assert.equal(await statusOf(rec.read(`${LWS}notes/a.txt`)), 403, 'no Read of data');
+  assert.equal(await statusOf(rec.read(LWS)), 403, 'no Read of the root container');
+  assert.equal(await statusOf(rec.update(`${LWS}notes/r.txt`, { body: 'x', mediaType: 'text/plain', precondition: 'none' })), 403, 'no Write');
+  const now = await rec.read(`${LWS}.acl`);
+  assert.equal(now.status, 200, 'Control: it reads the ACL');
+  const text = typeof now.body === 'string' ? now.body : Buffer.from(now.bodyBase64 ?? '', 'base64').toString('utf8');
+  assert.equal(text, readFileSync(join(T, 'state/lws/root.acl'), 'utf8'));
+  // It rewrites the ACL (lws-recover, with the key file the owner would bring back from offline).
+  const r = stack(['lws-recover', join(T, 'state/lws/recovery.jwk')]);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /written by the recovery agent/);
+  for (const d of secretsOut()) assert.ok(!r.out.includes(d), 'a private key was printed');
+  await wait(300);
+  const owner = await asAgent(a.owner, keyOf('owner'));
+  assert.equal(await statusOf(owner.read(`${LWS}notes/a.txt`)), 200, 'the owner keeps its access');
+  assert.equal(await statusOf(rec.read(`${LWS}notes/a.txt`)), 403, 'still no Read of data');
+  // A key that is not the recovery agent's is refused by the storage.
+  const wrong = stack(['lws-recover', join(T, 'state/lws/webdav.jwk')]);
+  assert.equal(wrong.code, 1, wrong.out);
+  assert.match(wrong.out, /lws-acl-reset/);
+});
+
+test('lws-setup --recovery-did names a recovery agent and makes no key for it', async () => {
+  const home = join(T, 'state-rd');
+  const { createDidKey } = await lwsClient();
+  const given = (await createDidKey()).agent;
+  const env = { FOAFOS_STACK_HOME: home, FOAFOS_LWS_DIR: join(T, 'lws-rd') };
+  assert.equal(stack(['lws-setup', '--recovery-did', 'did:key:nonsense'], env).code, 2);
+  assert.ok(!existsSync(join(home, 'lws/agents.json')), 'nothing made after a bad did');
+  const r = stack(['lws-setup', '--recovery-did', given], env);
+  assert.equal(r.code, 0, r.out);
+  assert.equal(JSON.parse(readFileSync(join(home, 'lws/agents.json'), 'utf8')).recovery, given);
+  assert.ok(!existsSync(join(home, 'lws/recovery.jwk')));
+  assert.match(readFileSync(join(home, 'lws/root.acl'), 'utf8'), new RegExp(`acl:agent <${given}> ;\n  acl:accessTo <./> ;\n  acl:mode acl:Control \\.`));
 });
 
 test('state is private to you', () => {
