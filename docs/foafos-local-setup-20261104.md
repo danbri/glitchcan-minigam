@@ -17,6 +17,13 @@ agent, and the Finder folders need a login. Once: `foafos-stack lws-setup`, then
 `foafos-stack lws-allow DID` for each browser. Design, migration of
 `~/foafos-lws` and limits: [foafos-local-lws-auth-20261107.md](foafos-local-lws-auth-20261107.md).
 
+**No lockout, and a recovery key (since 2026-11-11).** `lws-setup` also puts a recovery agent in the
+root ACL (acl:Control of the root only) and writes its key to `~/.foafos-stack/lws/recovery.jwk`: move
+that file offline. `foafos-stack lws-recover KEYFILE [--new-owner]` uses it. The storage refuses (409) any
+change that leaves `/.acl` with no Control agent; `factoidal lws-acl-reset DIR FILE --operator` is the
+offline last resort. These need a Factoidal release after 0.35.1 (commits 495ef4a3c and 2ae53ba2e). Record:
+[foafos-lws-acl-safety-20261111.md](foafos-lws-acl-safety-20261111.md).
+
 ## Quick start
 
 One command runs everything:

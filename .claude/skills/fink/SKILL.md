@@ -1692,6 +1692,14 @@ root, manifest `apps/chat.jsonld`). Design and localhost setup: `docs/foafos-cha
 - Control: `/tell APP ACTION` by direct message, through `deliverAction`, never raw bus events. It needs
   the owner's `inbound` switch and a grant that names the action. `docs/foafos-bus-xmpp-20261105.md`.
 - `e2e-bus-xmpp.mjs` runs against the live `foafos-stack` xmpp and shell, in a new room.
+- **Local file storage (LWS) access control.** Pod data is reached only through LWS as a named did:key agent
+  under the pod's ACL; WebDAV only through `webdav-serve` with a `kind: lws`, `auth: did-key` mount; never read
+  a pod directory, never `kind: local`. `foafos-stack lws-setup` installs the first root ACL with authorization
+  ON (Factoidal installs it at open; an older Factoidal is refused unless `--open-acl-window`), adds a
+  Control-only recovery agent (`recovery.jwk`, moved offline; `lws-recover`), and the storage refuses (409)
+  a change that removes the last root Control agent. Offline last resort: `factoidal lws-acl-reset --operator`.
+  HTTP-over-XMPP stays off (it exists only as `webdav-serve --xmpp --xmpp-allow`). Record and theorems:
+  `docs/foafos-lws-acl-safety-20261111.md`; steps: `docs/foafos-local-lws-auth-20261107.md`.
 - Backstage, read only, three views over one model (`packages/foafos/src/backstage.mjs`, which also holds the `/help` text
   for all three): the shell panel (`foafos-backstage-ui.js`, `?app=backstage`), the outside-client page `backstage.html`, and
   `foafos-stack backstage`. Only a stanza with the bus marker is an event; member kinds are guesses from nicknames.
