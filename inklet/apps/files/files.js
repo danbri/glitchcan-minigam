@@ -80,6 +80,7 @@
     if (mine !== listing) return;
     if (r.reason === 'needs-ok') takeLocations(await foaf.pod.locations());
     if (!r.ok) { say(explain(r), true); return; }
+    if (path !== folder) dropThumbs();
     if (remember && path !== folder) trail.push(folder);
     folder = path;
     items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
@@ -215,7 +216,7 @@
         const k = kindOf(it);
         const btn = h('button', { type: 'button', role: 'option', 'aria-selected': String(picked?.path === it.path),
           on: { click: () => (it.container ? pick(it) : activate(it)), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
-        h('span', { class: 'ico', 'aria-hidden': 'true' }, k.icon), nameOf(it.path));
+        icoFor(it, k), nameOf(it.path));
         btn.dataset.path = it.path;
         return btn;
       })));
@@ -234,7 +235,7 @@
             if (e.key === 'ArrowDown') tr.nextElementSibling?.focus();
             if (e.key === 'ArrowUp') tr.previousElementSibling?.focus();
           } } },
-        h('td', {}, h('span', { class: 'ico', 'aria-hidden': 'true' }, k.icon), nameOf(it.path)), h('td', {}, k.name));
+        h('td', {}, icoFor(it, k), nameOf(it.path)), h('td', {}, k.name));
         tr.dataset.path = it.path;
         tr.setAttribute('aria-selected', String(picked?.path === it.path));
         return tr;
@@ -244,6 +245,68 @@
   // ── the third pane ─────────────────────────────────────────────────────
   // A part that is not there (no app offers to open the file) is left out, not written as "null".
   const drawDetail = (...kids) => $('detail').replaceChildren(...kids.filter((k) => k != null));
+
+  // ── thumbnails ───────────────────────────────────────────────────────
+  // An image in the list shows a small picture of itself. Only what scrolls into view is
+  // fetched, at most three at a time; each is shrunk to 160px and the full bytes dropped, so a
+  // folder of photos costs little. Kept per path and ETag; released on leaving the folder.
+  const IMAGE_NAME = /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i;
+  const thumbs = new Map();      // path → { url, etag }
+  const thumbWait = [];          // [el, path]
+  let thumbBusy = 0;
+  const thumbSeen = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      thumbSeen.unobserve(e.target);
+      thumbWait.push([e.target, e.target.dataset.thumb]);
+    }
+    pumpThumbs();
+  }, { rootMargin: '200px' });
+  async function shrink(bytes, type) {
+    const blob = new Blob([bytes], { type });
+    if (/svg/.test(type) || typeof createImageBitmap !== 'function') return URL.createObjectURL(blob);
+    const bmp = await createImageBitmap(blob);
+    const s = Math.min(1, 160 / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * s)), h2 = Math.max(1, Math.round(bmp.height * s));
+    const canvas = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h2) : Object.assign(document.createElement('canvas'), { width: w, height: h2 });
+    canvas.getContext('2d').drawImage(bmp, 0, 0, w, h2);
+    bmp.close?.();
+    const out = canvas.convertToBlob ? await canvas.convertToBlob({ type: 'image/webp', quality: 0.8 })
+      : await new Promise((r) => canvas.toBlob(r, 'image/webp', 0.8));
+    return URL.createObjectURL(out);
+  }
+  async function pumpThumbs() {
+    while (thumbBusy < 3 && thumbWait.length) {
+      const [el, path] = thumbWait.shift();
+      if (!el.isConnected || thumbs.has(path)) { if (thumbs.has(path)) showThumb(el, path); continue; }
+      thumbBusy++;
+      (async () => {
+        try {
+          const r = await foaf.pod.get(path, { as: 'bytes' });
+          if (r.ok) thumbs.set(path, { url: await shrink(r.body, r.contentType || 'image/png'), etag: r.etag });
+        } catch { /* no thumbnail: the icon stays */ }
+        thumbBusy--;
+        for (const x of document.querySelectorAll(`[data-thumb="${CSS.escape(path)}"]`)) showThumb(x, path);
+        pumpThumbs();
+      })();
+    }
+  }
+  function showThumb(el, path) {
+    const t = thumbs.get(path);
+    if (!t || el.querySelector('img')) return;
+    el.replaceChildren(h('img', { src: t.url, alt: '', decoding: 'async' }));
+    el.classList.add('thumb');
+  }
+  const icoFor = (it, k) => {
+    const el = h('span', { class: 'ico', 'aria-hidden': 'true' }, k.icon);
+    if (!it.container && IMAGE_NAME.test(it.path)) {
+      el.dataset.thumb = it.path;
+      if (thumbs.has(it.path)) showThumb(el, it.path); else thumbSeen.observe(el);
+    }
+    return el;
+  };
+  const forgetThumb = (path) => { const t = thumbs.get(path); if (t) { URL.revokeObjectURL(t.url); thumbs.delete(path); } };
+  const dropThumbs = () => { for (const t of thumbs.values()) URL.revokeObjectURL(t.url); thumbs.clear(); thumbWait.length = 0; };
 
   let picking = 0;               // only the newest pick may draw
   let previewUrl = null;         // the image on show, released when another is picked
@@ -370,6 +433,7 @@
   const askRename = () => ask('New name', 'Rename', { value: nameOf(picked.path) }, async (name) => {
     const to = parentOf(picked.path) + name;
     if (to === picked.path) return;
+    forgetThumb(to); forgetThumb(picked.path);
     const put = await foaf.pod.put(to, picked.body, { contentType: picked.contentType || 'text/plain' });
     if (!put.ok) { say(explain(put), true); return; }
     const del = await foaf.pod.delete(picked.path, picked.etag ? { etag: picked.etag } : {});
@@ -387,6 +451,7 @@
       if (rest.length) { say('Empty this folder before deleting it.', true); return; }
       await foaf.pod.delete(`${path}.folder`);
     }
+    forgetThumb(path);
     const r = await foaf.pod.delete(path, picked.etag ? { etag: picked.etag } : {});
     if (!r.ok) { say(explain(r), true); return; }
     await go(folder, { remember: false });
@@ -488,6 +553,7 @@
       // Text up to 1 MiB goes as text; anything else up to 8 MiB as bytes.
       if (f.size > (texty ? 1024 * 1024 : 8 * 1024 * 1024)) { left.push(f.name); continue; }
       const name = cleanName(f.name);
+      forgetThumb(folder + name);
       const r = await foaf.pod.put(folder + name, texty ? await f.text() : await f.arrayBuffer(),
         { contentType: f.type || (texty ? 'text/plain' : 'application/octet-stream') });
       (r.ok ? added : left).push(name);
