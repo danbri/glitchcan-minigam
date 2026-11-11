@@ -333,10 +333,14 @@ export function placesTools({ places, tools, moglob = 'docklands', openApp = nul
       description: 'Fly Moglob\'s 3D view to one of your saved places, opening Moglob if it is closed. Uses the place\'s saved view when it has one.',
       inputSchema: {
         type: 'object',
-        properties: { place: PLACE, duration_s: { type: 'number', description: 'Length of the journey, seconds (2 to 600)' } },
+        properties: {
+          place: PLACE,
+          duration_s: { type: 'number', description: 'Length of the journey, seconds (2 to 600)' },
+          sound: { type: 'boolean', description: 'Play Moglob\'s flight tone: pitch rises with height (needs one click in Moglob first)' },
+        },
         required: ['place'],
       },
-      handler: async ({ place, duration_s: duration } = {}, { caller } = {}) => {
+      handler: async ({ place, duration_s: duration, sound } = {}, { caller } = {}) => {
         const p = await places.find(place);
         if (!p) throw new Error(`No place called ${place}.`);
         if (!await ready()) throw new Error('Moglob is not open, and did not open.');
@@ -347,7 +351,11 @@ export function placesTools({ places, tools, moglob = 'docklands', openApp = nul
         // Moglob's go_to wants a look-down angle of at least 2 degrees.
         const hasFly = moglobTools().some((t) => t.name === 'fly_to');
         const value = hasFly
-          ? await callMoglob('fly_to', { ...at, ...(duration != null ? { duration_s: Number(duration) } : {}) }, caller)
+          ? await callMoglob('fly_to', {
+            ...at,
+            ...(duration != null ? { duration_s: Number(duration) } : {}),
+            ...(sound != null ? { sound: sound === true } : {}),
+          }, caller)
           : await callMoglob('go_to', { ...at, ...(at.pitch_deg != null ? { pitch_deg: Math.max(2, at.pitch_deg) } : {}), animate: true }, caller);
         return { place: p, used: hasFly ? 'fly_to' : 'go_to', moglob: value };
       },
