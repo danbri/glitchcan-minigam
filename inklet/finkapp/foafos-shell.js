@@ -2957,6 +2957,18 @@ function buildUI() {
     return next;
   };
 
+  // Minimise the front window, for the keyboard (Ctrl ; h, as a Mac's hide), and bring the next
+  // one forward so the keys keep acting on something you can see.
+  FoafOS.minimizeFront = () => {
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const front = wins.find((w) => w.style.zIndex === '2640') || wins.at(-1);
+    if (!front) return null;
+    front.querySelector('.foafos-window-min')?.click();
+    const next = wins.filter((w) => w !== front).at(-1);
+    if (next) FoafOS.raiseWindow(next);
+    return front;
+  };
+
   // Snap the front window, for the keyboard.
   FoafOS.snapFront = (zone) => {
     const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
