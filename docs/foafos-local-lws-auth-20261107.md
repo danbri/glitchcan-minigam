@@ -24,6 +24,7 @@ mounts the storage by reading its directory. There is no `kind: local` mount.
 | owner | `~/.foafos-stack/lws/owner.jwk` (0600) | Read, Write, Control | `foafos-stack` only: `lws-allow`, `lws-revoke`, and the `owner signs in` check of `status` |
 | webdav | `~/.foafos-stack/lws/webdav.jwk` (0600) | Read | `webdav-serve` (the Finder folders). It cannot write and cannot read `.acl` (that needs Control) |
 | a browser | in that browser's FoafSecrets, never shown | Read, Write (or Read with `--read-only`) | the Foafos shell, after `foafos-stack lws-allow DID` |
+| recovery | `~/.foafos-stack/lws/recovery.jwk` (0600) when `lws-setup` made it: **move it offline**; or none here, with `--recovery-did DID` | Control of the root only (`acl:accessTo <./>`, no `acl:default`, no Read, no Write) | `foafos-stack lws-recover KEYFILE`: it may rewrite `/.acl` and read or write nothing else |
 
 A `did:key` is public: it is the agent's name, made from its public key. A `.jwk` file is a
 private key: never share it, never print it. `~/.foafos-stack/lws/agents.json` holds the names (no
@@ -129,6 +130,83 @@ with the installed 0.35.1, the migration test passes through the refusal and `--
 Until a release carries the change, `lws-setup` on the owner's machine refuses for an existing
 storage with no ACL (or needs `--open-acl-window`).
 
+## Lockout and recovery (2026-11-11)
+
+Owner request, 2026-11-11: LWS pods must never be lost by an ACL lockout. Three parts, the owner said
+yes to all three.
+
+### 1. The storage refuses a lockout (factoidal-core)
+
+With authorization on, `lws-serve` refuses with **409 Conflict** every request that changes the root
+ACL resource `/.acl` and leaves it with no agent that has `acl:Control` on the storage root: a PUT
+or PATCH of `/.acl` that drops the last Control agent, a DELETE of `/.acl`, and anything else that
+would change it (a move, an access grant). A refused request changes nothing. A write that keeps a
+Control agent, or swaps the owner for another Control agent, is accepted as before. With
+`--insecure-no-auth` the guard does not apply.
+
+The decision is Lean (`formal/lean4/L4Factoidal/LWS/NoLockout.lean` and `NoLockoutTheorems.lean` in
+danbri/factoidal-core). "Some agent has acl:Control on the root" means what Web Access Control's
+`allowed` decides for every request; the theorem `step_keeps_root_control` says: for every request
+handled with authorization on, if before it some agent has acl:Control on the root, then after it
+some agent has. Commit: https://github.com/danbri/factoidal-core/commit/2ae53ba2eb937ead59955ff3a5798570f9ac7b67 (not yet in a release: 0.35.1 does not have it).
+
+409 and not 403: the requester was allowed the request (it has Control); the request is refused for
+the state it would leave. A 403 from this storage carries `error="insufficient_scope"`, which tells a
+client to get another token, and that is the wrong advice here.
+
+### 2. The recovery agent (foafos-stack)
+
+`foafos-stack lws-setup` names a second agent in the root ACL, the recovery agent:
+
+```turtle
+<#recovery> a acl:Authorization ;
+  acl:agent <did:key:z…> ;
+  acl:accessTo <./> ;
+  acl:mode acl:Control .
+```
+
+Control of the root only: it may read and rewrite `/.acl`, and nothing else (no `acl:default`, so it
+inherits nothing below the root; no Read, no Write: data and the root listing give it 403). Its key is
+made once, as `~/.foafos-stack/lws/recovery.jwk` (0600), and never printed. **Move that file offline**
+(a USB stick, a password manager) and delete it here. To use a recovery agent that you have already,
+give `foafos-stack lws-setup --recovery-did did:key:…`: then no key file is made.
+
+A storage set up before 2026-11-11 gets its recovery agent from `foafos-stack lws-setup` run again,
+with `lws` running: the tool writes the new ACL through LWS as the owner.
+
+How to recover, in order:
+
+1. **With the recovery key** (the storage running): bring the key file back, then
+   `foafos-stack lws-recover /path/to/recovery.jwk`. It writes the ACL this tool keeps for
+   `agents.json` (`~/.foafos-stack/lws/root.acl`) to `/.acl`, as the recovery agent. After a lost
+   owner key: move `~/.foafos-stack/lws/owner.jwk` away (if it is there), then
+   `foafos-stack lws-recover /path/to/recovery.jwk --new-owner`: a new owner key is made and the ACL
+   names it. For a recovery agent given with `--recovery-did`, add `--did DID` and use that agent's key.
+   Then put the recovery key offline again.
+2. **The last resort, offline** (no key works any more): stop the storage
+   (`foafos-stack stop webdav lws`), write a root ACL that gives your owner `did:key` acl:Control
+   (`foafos-stack lws-agents` shows the names; `~/.foafos-stack/lws/root.acl` is the last one this
+   tool wrote), then
+
+   ```sh
+   factoidal lws-acl-reset ~/foafos-lws ~/.foafos-stack/lws/root.acl --operator
+   ```
+
+   It takes the storage directory lock (it refuses while a server holds it), opens the storage through
+   the storage library (the same engine code as `lws-serve`; no other reader of the storage files),
+   replaces only `/.acl` through the storage journal, and prints a notice. It refuses a root ACL that
+   gives no agent acl:Control on the root, and a directory with no storage. The ACL of foafos-stack
+   uses relative IRIs (`<./>`), so no `--base` is needed. Then `foafos-stack start`.
+
+### Tests
+
+`inklet/tools/test-foafos-stack.mjs`: `lws-setup` makes `recovery.jwk` (0600), names the agent and
+the file, never prints the key, and the ACL gives it Control of the root only; the recovery agent
+reads `/.acl` (200), cannot read data or the root (403) or write (403); `lws-recover` with its key
+rewrites the ACL and the owner keeps its access; another key is refused and the command names
+`lws-acl-reset`; `--recovery-did` names the agent and makes no key. Part 1 and the operator command
+are tested in factoidal-core (`npm/factoidal/test/lws-no-lockout.test.mjs`).
+
 ## No authorization: only on purpose, and loudly
 
 `FOAFOS_LWS_INSECURE_NO_AUTH=yes-anyone-on-this-computer-may-write` runs the storage with
@@ -175,6 +253,8 @@ Tests:
   rest (`factoidal lws-keygen`, `FACTOIDAL_LWS_KEY`) is still off.
 - **`lws-setup` runs the storage with no authorization for about one second**, on a random loopback
   port with no CORS, to write the first ACL of an existing storage. It does this once.
+- **The recovery key is on disk until you move it.** `lws-setup` makes it in `~/.foafos-stack/lws/`
+  and says to move it offline; the tool cannot check that you did.
 - **One agent per browser profile and pod.** Several browsers each get their own `did:key` and
   their own `lws-allow`.
 - **WebDAV is read only** (Factoidal issue 1147), whatever the ACL says.

@@ -2776,8 +2776,9 @@ function buildUI() {
   // otherwise reach the guest instead of picking the card.
   let overviewOn = false;
   function overviewWindows() {
-    const wins = [...document.querySelectorAll('.foafos-window')]
-      .filter(w => !w.classList.contains('minimized'));
+    // Minimised windows are cards too: in a dimmed overview their title bars would
+    // otherwise be stranded behind the backdrop, and picking one restores it.
+    const wins = [...document.querySelectorAll('.foafos-window')];
     // A full-screen or floating app is a window too.
     const stage = document.getElementById('minigame-view');
     if (window.FinkWM?.active && stage) wins.push(stage);
@@ -2823,6 +2824,7 @@ function buildUI() {
       const title = win.id === 'minigame-view' ? stageName() : win.querySelector('.foafos-window-bar span')?.textContent;
       hit.setAttribute('aria-label', `Show ${title || 'window'}`);
       if (win.id === 'minigame-view') { hit.textContent = title; hit.classList.add('foafos-ov-named'); }
+      if (win.classList.contains('minimized')) hit.setAttribute('aria-label', `Restore ${title || 'window'} (minimised)`);
       hit.addEventListener('click', (e) => { e.stopPropagation(); exitOverview(win); });
       win.appendChild(hit);
       // Close from here, as a task switcher does. Sized against the card's own scale.
@@ -2878,6 +2880,7 @@ function buildUI() {
     if (focusWin?.id === 'minigame-view') {
       if (window.FinkWM?.mode !== 'full') window.FinkWM?.setMode('full');
     } else if (focusWin) {
+      if (focusWin.classList.contains('minimized')) focusWin.querySelector('.foafos-window-min')?.click();
       FoafOS.raiseWindow(focusWin);
       // A full-screen game sits above every window, so the one just picked would vanish
       // behind it. Float the game instead: tapping it brings it back.
@@ -3057,6 +3060,13 @@ function buildUI() {
     };
     bar.addEventListener('pointerup', endDrag);
     bar.addEventListener('pointercancel', endDrag);
+    // Double-click the title bar to maximise or restore, as on a desktop.
+    // A minimised window comes back instead.
+    bar.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button')) return;
+      if (win.classList.contains('minimized')) minBtn.click();
+      else maxBtn.click();
+    });
     return win;
   }
 
@@ -3186,11 +3196,16 @@ function buildUI() {
     const matches = () => [...body.querySelectorAll('.foafos-app')].filter((b) => !b.hidden);
     find.addEventListener('input', () => {
       const q = find.value.trim().toLowerCase();
+      // Every word must appear, in any order. An app that is also in Recent is listed once.
+      const words = q.split(/\s+/).filter(Boolean);
+      const seen = new Set();
       for (const sec of body.querySelectorAll('section')) {
         const folder = sec.querySelector('details');
         let any = false;
         for (const b of sec.querySelectorAll('.foafos-app')) {
-          b.hidden = !!q && !(b.getAttribute('aria-label') || '').toLowerCase().includes(q);
+          const label = (b.getAttribute('aria-label') || '').toLowerCase();
+          b.hidden = !!q && (!words.every((w) => label.includes(w)) || seen.has(b.dataset.app));
+          if (q && !b.hidden) seen.add(b.dataset.app);
           any ||= !b.hidden;
         }
         sec.hidden = !any;
