@@ -3060,6 +3060,13 @@ function buildUI() {
     };
     bar.addEventListener('pointerup', endDrag);
     bar.addEventListener('pointercancel', endDrag);
+    // Double-click the title bar to maximise or restore, as on a desktop.
+    // A minimised window comes back instead.
+    bar.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button')) return;
+      if (win.classList.contains('minimized')) minBtn.click();
+      else maxBtn.click();
+    });
     return win;
   }
 
