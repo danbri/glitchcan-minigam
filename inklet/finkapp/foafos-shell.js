@@ -3183,8 +3183,18 @@ function buildUI() {
     const find = home.querySelector('.foafos-home-search input');
     // Folders, as in a Start menu: which are open is kept, so it scales past one screen.
     const OPEN_KEY = 'foafos.apps.open';
+    let restoredAt = -1e9;
     let openFolders = ['recent', 'essentials'];
-    try { openFolders = JSON.parse(localStorage.getItem(OPEN_KEY)) || openFolders; } catch { /* the default */ }
+    // Kept as { open, known }: a folder that did not exist when the choice was kept (Recent, at
+    // first) takes the default rather than counting as closed. An older plain list still reads.
+    const DEFAULT_OPEN = openFolders;
+    let knownFolders = null;
+    try {
+      const kept = JSON.parse(localStorage.getItem(OPEN_KEY));
+      if (Array.isArray(kept)) openFolders = kept;
+      else if (kept?.open) { openFolders = kept.open; knownFolders = kept.known || null; }
+    } catch { /* the default */ }
+    const startsOpen = (id) => (knownFolders && !knownFolders.includes(id) ? DEFAULT_OPEN.includes(id) : openFolders.includes(id));
 
     // Only what this INSTALLATION offers. The picker used to list every
     // app in the registry regardless of root, so an office installation
@@ -3208,12 +3218,15 @@ function buildUI() {
       const sec = document.createElement('section');
       const folder = document.createElement('details');
       folder.dataset.folder = fam.id;
-      folder.open = openFolders.includes(fam.id);
+      folder.open = startsOpen(fam.id);
+      if (folder.open && !openFolders.includes(fam.id)) openFolders.push(fam.id);
       folder.innerHTML = `<summary><h3>${fam.icon} ${fam.label}</h3><span class="foafos-folder-count">${offered.length}</span></summary>`;
       folder.addEventListener('toggle', () => {
-        if (find.value) return;                    // a search opens folders; that is not a choice to keep
+        // A search opens folders, and clearing it puts them back; neither is a choice to keep.
+        if (find.value || performance.now() - restoredAt < 100) return;
         openFolders = [...body.querySelectorAll('details[open]')].map((d) => d.dataset.folder);
-        try { localStorage.setItem(OPEN_KEY, JSON.stringify(openFolders)); } catch { /* for this visit */ }
+        const known = [...body.querySelectorAll('details')].map((d) => d.dataset.folder);
+        try { localStorage.setItem(OPEN_KEY, JSON.stringify({ open: openFolders, known })); } catch { /* for this visit */ }
       });
       sec.appendChild(folder);
       const grid = document.createElement('div');
@@ -3259,6 +3272,7 @@ function buildUI() {
     const matches = () => [...body.querySelectorAll('.foafos-app')].filter((b) => !b.hidden);
     find.addEventListener('input', () => {
       const q = find.value.trim().toLowerCase();
+      restoredAt = performance.now();
       // Every word must appear, in any order. An app that is also in Recent is listed once.
       const words = q.split(/\s+/).filter(Boolean);
       const seen = new Set();
@@ -3281,7 +3295,27 @@ function buildUI() {
       // While searching, results are a list that says what each one does (hover never comes on a phone).
       home.classList.toggle('searching', !!q);
     });
-    find.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); matches()[0]?.click(); } });
+    find.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); matches()[0]?.click(); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); matches().find((b) => b.closest('details')?.open !== false)?.focus(); }
+    });
+    // Arrow keys move between apps by where they sit on screen; Up from the top row goes back to search.
+    body.addEventListener('keydown', (e) => {
+      const at = e.target.closest?.('.foafos-app');
+      if (!at || !/^Arrow/.test(e.key)) return;
+      const shown = matches().filter((b) => b.closest('details')?.open !== false);   // a closed folder's apps are out of reach
+      const i = shown.indexOf(at);
+      if (i < 0) return;
+      e.preventDefault();
+      if (e.key === 'ArrowRight') { (shown[i + 1] || at).focus(); return; }
+      if (e.key === 'ArrowLeft') { (shown[i - 1] || at).focus(); return; }
+      const r0 = at.getBoundingClientRect(), dir = e.key === 'ArrowDown' ? 1 : -1;
+      const rows = shown.map((b) => [b, b.getBoundingClientRect()]).filter(([, r]) => (dir > 0 ? r.top > r0.top + 2 : r.top < r0.top - 2));
+      if (!rows.length) { if (dir < 0) find.focus(); return; }
+      const rowTop = dir > 0 ? Math.min(...rows.map(([, r]) => r.top)) : Math.max(...rows.map(([, r]) => r.top));
+      rows.filter(([, r]) => Math.abs(r.top - rowTop) < 2)
+        .sort(([, a], [, b]) => Math.abs(a.left - r0.left) - Math.abs(b.left - r0.left))[0][0].focus();
+    });
     home.querySelector('.foafos-overlay-close').addEventListener('click', () => home.remove());
     home.addEventListener('keydown', (e) => { if (e.key === 'Escape') home.remove(); });
     document.body.appendChild(home);
