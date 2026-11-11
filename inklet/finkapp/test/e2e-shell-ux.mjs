@@ -75,6 +75,18 @@ try {
   await page.waitForTimeout(500);
   check(await onTop(page, '#foafos-session-win'), 'what you open comes to the front');
 
+  // A window comes back where it was left
+  const bar = await page.evaluate(() => { const r = document.querySelector('#foafos-session-win .foafos-window-bar span').getBoundingClientRect(); return { x: r.x + 10, y: r.y + r.height / 2 }; });
+  await page.mouse.move(bar.x, bar.y); await page.mouse.down();
+  await page.mouse.move(bar.x + 150, bar.y + 90, { steps: 6 }); await page.mouse.up();
+  const movedTo = await page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)]; });
+  await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-close').click());
+  await page.waitForTimeout(300);
+  await page.evaluate(() => FoafOS.launchApp('system'));
+  await page.waitForTimeout(500);
+  const reopenedAt = await page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)]; });
+  check(String(movedTo) === String(reopenedAt), `a window reopens where it was left (${movedTo} then ${reopenedAt})`);
+
   // Ctrl ; j brings the next window to the front, and round again
   const front = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.style.zIndex === '2640')?.dataset.wid);
   const f0 = await front();

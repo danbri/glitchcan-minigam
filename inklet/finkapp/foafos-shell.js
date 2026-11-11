@@ -2968,6 +2968,11 @@ function buildUI() {
     document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; });
     win.style.zIndex = 2640;
   };
+  const GEOM_KEY = 'foafos.windows.geom';
+  function loadGeom() { try { return JSON.parse(localStorage.getItem(GEOM_KEY)) || {}; } catch { return {}; } }
+  function saveGeom(key, box) {
+    try { localStorage.setItem(GEOM_KEY, JSON.stringify({ ...loadGeom(), [key]: box })); } catch { /* for this visit */ }
+  }
   function makeWindow(title, w, h, opts = {}) {
     widgetSeq++;
     const win = document.createElement('div');
@@ -2992,6 +2997,21 @@ function buildUI() {
     win.style.height = `${winH}px`;
     win.style.left = `${clamp(12 + (widgetSeq % 5) * 24, window.innerWidth - winW - 8)}px`;
     win.style.top = `${clamp(60 + (widgetSeq % 5) * 24, window.innerHeight - winH - 8)}px`;
+    // An app's window comes back where it was left, at the size it was left, as on a desktop.
+    // Keyed by the title before any document or instance name; only where windows float.
+    const geomKey = String(title).split(/ · |: /)[0];
+    const kept = window.innerWidth >= 520 ? loadGeom()[geomKey] : null;
+    if (kept && !opts.float) {
+      const kw = Math.min(kept.w, window.innerWidth - 16), kh = Math.min(kept.h, window.innerHeight - 16);
+      Object.assign(win.style, { width: `${kw}px`, height: `${kh}px`,
+        left: `${clamp(kept.x, window.innerWidth - kw - 8)}px`, top: `${clamp(kept.y, window.innerHeight - kh - 8)}px` });
+    }
+    win._keepGeom = () => {
+      if (window.innerWidth < 520 || opts.float || win.classList.contains('maximized') || win.classList.contains('minimized') || win.classList.contains('foafos-ov')) return;
+      const r = win.getBoundingClientRect();
+      if (r.width < 80 || r.height < 60) return;
+      saveGeom(geomKey, { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) });
+    };
     // Real window controls, uniform across every floated app — minimize
     // (collapse to the bar), maximize (fill the viewport, toggling back to
     // the saved geometry), close. Before this, an app window offered only
@@ -3115,11 +3135,17 @@ function buildUI() {
       Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
     };
     const endDrag = () => {
+      const was = drag;
       const zone = drag?.zone;
       drag = null;
       preview(null);
       if (zone) win._snap(zone);
+      if (was) win._keepGeom();
     };
+    // A resize by the corner is kept once it settles.
+    let resizeTimer = 0;
+    new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (win.isConnected && win.dataset.userSized) win._keepGeom(); }, 300); }).observe(win);
+    win.addEventListener('pointerdown', (e) => { if (e.target === win) win.dataset.userSized = '1'; });
     bar.addEventListener('pointerup', endDrag);
     bar.addEventListener('pointercancel', endDrag);
     // Double-click the title bar to maximise or restore, as on a desktop.
