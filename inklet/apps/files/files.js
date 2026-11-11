@@ -208,9 +208,11 @@
     if (icons) {
       box.replaceChildren(h('div', { class: 'grid', role: 'listbox', 'aria-label': 'Items' }, rows.map((it) => {
         const k = kindOf(it);
-        return h('button', { type: 'button', role: 'option', 'aria-selected': String(picked?.path === it.path),
+        const btn = h('button', { type: 'button', role: 'option', 'aria-selected': String(picked?.path === it.path),
           on: { click: () => (it.container ? pick(it) : activate(it)), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
         h('span', { class: 'ico', 'aria-hidden': 'true' }, k.icon), nameOf(it.path));
+        btn.dataset.path = it.path;
+        return btn;
       })));
       return;
     }
@@ -314,11 +316,12 @@
     const field = input ? h('input', { type: 'text', value, 'aria-label': label }) : null;
     const close = () => bar.remove();
     const submit = async (e) => { e.preventDefault(); const v = field ? cleanName(field.value) : ''; if (input && !v) return; close(); await done(v); };
-    const bar = h('form', { class: 'ask', on: { submit } }, input ? null : h('span', {}, label), field,
+    const bar = h('form', { class: 'ask', on: { submit, keydown: (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } } } }, input ? null : h('span', {}, label), field,
       h('button', { class: `tool ${danger ? 'danger' : 'tool-main'}`, type: 'submit' }, action),
       h('button', { class: 'tool', type: 'button', on: { click: close } }, 'Cancel'));
     statusEl.before(bar);
-    (field || bar.querySelector('button')).focus();
+    // A question that destroys something starts on Cancel, as Places does, so Enter alone cannot delete.
+    (field || (danger ? bar.querySelector('button[type=button]') : bar.querySelector('button'))).focus();
     field?.select();
   }
 
@@ -373,6 +376,16 @@
     if (e.target.closest('input, textarea, select')) return;
     const rows = [...$('items').querySelectorAll('tbody tr, .grid [role=option]')];
     const at = rows.indexOf(e.target);
+    // Delete (Cmd+Backspace on a Mac) asks to delete the item the keyboard is on; F2 renames it.
+    if (at >= 0 && (e.key === 'Delete' || (e.metaKey && e.key === 'Backspace') || e.key === 'F2')) {
+      e.preventDefault();
+      const it = items.find((i) => i.path === e.target.dataset.path);
+      if (!it) return;
+      await pick(it);
+      if (picked?.path !== it.path) { say('This kind of file cannot be renamed or deleted here.', true); return; }
+      if (e.key === 'F2') { if (!it.container) askRename(); } else askDelete();
+      return;
+    }
     if ((e.key === 'Backspace' || (e.altKey && e.key === 'ArrowUp')) && folder) {
       e.preventDefault();
       const from = folder;
