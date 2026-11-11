@@ -695,7 +695,8 @@ body.foafos-overview-on::before {
     min-height: 0;
     resize: none;
 }
-.foafos-window.minimized > :not(.foafos-window-bar) { display: none !important; }
+/* In All windows, a minimised card keeps its pick layer, close button and number. */
+.foafos-window.minimized > :not(.foafos-window-bar):not(.foafos-ov-hit):not(.foafos-ov-close):not(.foafos-ov-num) { display: none !important; }
 
 /* Maximized: fill the viewport, ignoring saved geometry until toggled back. */
 .foafos-window.maximized {

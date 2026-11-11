@@ -109,7 +109,7 @@ try {
   await page.waitForTimeout(600);
   const card = `.foafos-window[data-wid="${minWin}"] .foafos-ov-hit`;
   check(await page.evaluate((c) => /minimised/.test(document.querySelector(c)?.getAttribute('aria-label') || ''), card), 'a minimised window has a card in All windows');
-  await page.evaluate((c) => document.querySelector(c).click(), card);
+  await page.click(card);                      // a real click, as a person would
   await page.waitForTimeout(600);
   check(await page.evaluate((w) => { const el = document.querySelector(`.foafos-window[data-wid="${w}"]`); return !el.classList.contains('minimized') && el.style.zIndex === '2640'; }, minWin), 'picking it restores it to the front');
 
