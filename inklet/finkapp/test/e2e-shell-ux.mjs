@@ -194,6 +194,12 @@ try {
   const phone = await open({ width: 390, height: 780 }, true);
   await phone.page.evaluate(() => FoafOS.openSystem());
   await phone.page.waitForTimeout(400);
+  // On a touch-only phone, All apps opens without raising the on-screen keyboard
+  await phone.page.evaluate(() => FoafOS.openHome());
+  await phone.page.waitForTimeout(300);
+  check(await phone.page.evaluate(() => document.activeElement?.id === 'foafos-home'), 'All apps on a phone does not open the keyboard');
+  await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());
+
   // Swipe a card up to close its window; a short drag closes nothing
   await phone.page.evaluate(() => { FoafOS.launchApp('chat'); });
   await phone.page.waitForTimeout(800);
