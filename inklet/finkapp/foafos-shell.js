@@ -2842,16 +2842,28 @@ function buildUI() {
         setTimeout(enterOverview, 450);
       });
       win.appendChild(x);
-      // The first nine cards carry their number: press it to pick that window.
+      // Each card carries its window's name at a readable size (the title bar shrinks
+      // with the card), and the first nine their number: press it to pick that window.
+      const n = document.createElement('span');
+      n.className = 'foafos-ov-num';
       if (i < 9) {
-        const n = document.createElement('span');
-        n.className = 'foafos-ov-num';
-        n.textContent = String(i + 1);
-        n.setAttribute('aria-hidden', 'true');
-        n.style.transform = `scale(${1 / s})`;
-        win.appendChild(n);
+        const k = document.createElement('b');
+        k.textContent = String(i + 1);
+        n.appendChild(k);
         hit.setAttribute('aria-keyshortcuts', String(i + 1));
       }
+      const cardW = r.width * s;
+      if (title && win.id !== 'minigame-view') {
+        const t = document.createElement('span');
+        // A narrow card (a phone's) keeps the words and drops the icon.
+        t.textContent = cardW < 220 ? title.replace(/^[^\p{L}\p{N}]+/u, '') : title;
+        n.appendChild(t);
+      }
+      n.setAttribute('aria-hidden', 'true');
+      n.style.transform = `scale(${1 / s})`;
+      // Room for the close button on a wide card; a narrow one lets the button sit over the label.
+      n.style.maxWidth = `${Math.max(60, cardW < 220 ? cardW - 12 : cardW - 56)}px`;
+      if (n.childNodes.length) win.appendChild(n);
     });
 
     const strip = document.createElement('div');

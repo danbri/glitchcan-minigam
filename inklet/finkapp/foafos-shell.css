@@ -1485,7 +1485,10 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .fs-body summary { cursor: pointer; line-height: 1.4; }
 .fs-body .foafos-row { margin-top: 8px; }
 
-.foafos-ov-num { position: absolute; top: 6px; left: 6px; z-index: 6; min-width: 28px; height: 28px; transform-origin: top left; border-radius: 6px; background: rgba(0, 0, 0, .65); color: #fff; font-size: 15px; line-height: 28px; text-align: center; pointer-events: none; }
+.foafos-ov-num { position: absolute; top: 6px; left: 6px; z-index: 5; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 0; transform-origin: top left; border-radius: 6px; background: rgba(0, 0, 0, .72); color: #fff; font: 600 15px/30px system-ui, sans-serif; white-space: nowrap; overflow: hidden; pointer-events: none; }
+.foafos-ov-num b { min-width: 30px; text-align: center; border-right: 1px solid rgba(255, 255, 255, .3); }
+.foafos-ov-num span { overflow: hidden; text-overflow: ellipsis; }
+.foafos-ov-num span:only-child { padding-left: 10px; }
 .foafos-ov-close { position: absolute; top: 6px; right: 6px; z-index: 6; width: 36px; height: 36px; transform-origin: top right; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .5); background: rgba(0, 0, 0, .65); color: #fff; font-size: 16px; cursor: pointer; }
 
 /* Where a dragged window will land */

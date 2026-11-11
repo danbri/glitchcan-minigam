@@ -92,7 +92,8 @@ try {
   check(await page.evaluate(() => document.querySelectorAll('.foafos-ov-close').length) === before - 1, 'closing a card leaves All windows open on the rest');
   // A number key picks that card
   const second = await page.evaluate(() => document.querySelectorAll('.foafos-ov-hit')[1]?.closest('.foafos-window')?.dataset.wid);
-  check(await page.evaluate(() => document.querySelectorAll('.foafos-ov-num').length) >= 1, 'cards show their number');
+  check(await page.evaluate(() => document.querySelectorAll('.foafos-ov-num b').length) >= 1, 'cards show their number');
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-ov-num span')].some((t) => /System/.test(t.textContent) && t.getBoundingClientRect().height >= 14)), 'cards show their window name at a readable size');
   await page.keyboard.press('2');
   await page.waitForTimeout(600);
   check(!(await page.evaluate(() => document.body.classList.contains('foafos-overview-on'))) && (await page.evaluate((w) => document.querySelector(`.foafos-window[data-wid="${w}"]`)?.style.zIndex, second)) === '2640', 'pressing 2 picks the second card');
