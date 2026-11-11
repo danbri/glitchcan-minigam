@@ -181,7 +181,7 @@ try {
     `dropping files adds text and a photo, and names the one too large (${JSON.stringify(dropped)})`);
   // Size and Modified columns, from the listing; sorting by size puts the larger file last.
   const cols = await f.evaluate(async () => {
-    await foaf.pod.put('notes/big.txt', 'x'.repeat(5000), { contentType: 'text/plain' });
+    await foafos.pod.put('notes/big.txt', 'x'.repeat(5000), { contentType: 'text/plain' });
     await window.__files.go('notes/');
     const heads = [...document.querySelectorAll('#items thead th')].map((t) => t.textContent.replace(/[↑↓\s]/g, ''));
     const cell = (p) => document.querySelector(`#items tbody tr[data-path="${p}"] .c-size`)?.textContent;
@@ -189,7 +189,7 @@ try {
     sizeBtn.click();
     const order = [...document.querySelectorAll('#items tbody tr')].map((r) => r.dataset.path).filter((p) => /\.(txt|png)$/.test(p));
     [...document.querySelectorAll('#items thead button')].find((b) => /Name/.test(b.textContent)).click();
-    await foaf.pod.delete('notes/big.txt');
+    await foafos.pod.delete('notes/big.txt');
     return { heads, big: cell('notes/big.txt'), last: order.at(-1), mod: !!document.querySelector('#items tbody .c-mod')?.title };
   });
   check(cols.heads.includes('Size') && cols.heads.includes('Modified') && cols.big === '4.9 KB' && cols.last === 'notes/big.txt',
