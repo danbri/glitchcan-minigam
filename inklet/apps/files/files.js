@@ -376,6 +376,13 @@
     if (e.target.closest('input, textarea, select')) return;
     const rows = [...$('items').querySelectorAll('tbody tr, .grid [role=option]')];
     const at = rows.indexOf(e.target);
+    // Space shows the item in the side panel without opening it, as a Mac's Quick Look does.
+    if (at >= 0 && e.key === ' ' && !e.target.matches('button')) {
+      e.preventDefault();
+      const it = items.find((i) => i.path === e.target.dataset.path);
+      if (it) { await pick(it); e.target.focus(); }
+      return;
+    }
     // Delete (Cmd+Backspace on a Mac) asks to delete the item the keyboard is on; F2 renames it.
     if (at >= 0 && (e.key === 'Delete' || (e.metaKey && e.key === 'Backspace') || e.key === 'F2')) {
       e.preventDefault();
