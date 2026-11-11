@@ -3186,11 +3186,16 @@ function buildUI() {
     const matches = () => [...body.querySelectorAll('.foafos-app')].filter((b) => !b.hidden);
     find.addEventListener('input', () => {
       const q = find.value.trim().toLowerCase();
+      // Every word must appear, in any order. An app that is also in Recent is listed once.
+      const words = q.split(/\s+/).filter(Boolean);
+      const seen = new Set();
       for (const sec of body.querySelectorAll('section')) {
         const folder = sec.querySelector('details');
         let any = false;
         for (const b of sec.querySelectorAll('.foafos-app')) {
-          b.hidden = !!q && !(b.getAttribute('aria-label') || '').toLowerCase().includes(q);
+          const label = (b.getAttribute('aria-label') || '').toLowerCase();
+          b.hidden = !!q && (!words.every((w) => label.includes(w)) || seen.has(b.dataset.app));
+          if (q && !b.hidden) seen.add(b.dataset.app);
           any ||= !b.hidden;
         }
         sec.hidden = !any;

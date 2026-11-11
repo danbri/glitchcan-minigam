@@ -4,7 +4,7 @@
 import { chromium } from 'playwright';
 
 const { CHROMIUM_PATH } = process.env;
-const URL_ = 'http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all&player=none';
+const URL_ = process.env.SHELL_URL || 'http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all&player=none';
 let failed = 0;
 const check = (ok, what) => { console.log(`${ok ? 'PASS' : 'FAIL'} ${what}`); if (!ok) failed++; };
 
@@ -39,6 +39,14 @@ try {
   check(await page.evaluate(() => document.querySelector('#foafos-home details[data-folder="essentials"]')?.open === true), 'Essentials starts open');
   await page.fill('.foafos-home-search input', 'zzzz');
   check(await page.isVisible('.foafos-home-none'), 'a search with no match says so');
+  await page.evaluate(() => localStorage.setItem('foafos.apps.recent', JSON.stringify(['chat'])));
+  await page.keyboard.press('Escape');
+  await keys(page, [';', 'a']);
+  await page.fill('.foafos-home-search input', 'chat');
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="chat"]')].filter((b) => !b.hidden).length) === 1, 'an app in Recent is found once');
+  const chatWords = await page.evaluate(() => document.querySelector('.foafos-app[data-app="chat"]').getAttribute('aria-label').toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 3));
+  await page.fill('.foafos-home-search input', `${chatWords.at(-1)} ${chatWords[0]}`);
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="chat"]')].some((b) => !b.hidden)), `words match in any order (${chatWords.at(-1)} ${chatWords[0]})`);
   await page.fill('.foafos-home-search input', 'tally');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(800);
