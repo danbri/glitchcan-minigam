@@ -97,6 +97,17 @@ try {
   check(f1 && f1 !== f0 && (await front()) === f0, `ctrl ; j brings the next window forward and cycles (${n} windows)`);
   await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
 
+  // Task Manager: switching to a minimised window restores it
+  await page.evaluate(() => FoafOS.launchApp('files'));
+  await page.waitForTimeout(800);
+  const filesWid = await page.evaluate(() => { const w = [...document.querySelectorAll('.foafos-window')].find((x) => x.querySelector('iframe')?.src.includes('apps/files/')); w.querySelector('.foafos-window-min').click(); return w.dataset.wid; });
+  await page.evaluate(() => FoafOS.openSwitcher());
+  await page.waitForTimeout(300);
+  await page.click('#foafos-switcher button[aria-label="Switch to Files"]');
+  await page.waitForTimeout(300);
+  check(await page.evaluate((w) => { const el = document.querySelector(`.foafos-window[data-wid="${w}"]`); return !el.classList.contains('minimized') && el.style.zIndex === '2640'; }, filesWid), 'Task Manager brings a minimised window back');
+  await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
+
   // Ctrl ; p opens Task Manager, and again closes it
   await keys(page, [';', 'p']);
   const tmOpen = await page.isVisible('#foafos-switcher');
