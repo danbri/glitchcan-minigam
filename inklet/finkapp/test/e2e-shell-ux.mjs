@@ -4,7 +4,7 @@
 import { chromium } from 'playwright';
 
 const { CHROMIUM_PATH } = process.env;
-const URL_ = 'http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all&player=none';
+const URL_ = process.env.SHELL_URL || 'http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all&player=none';
 let failed = 0;
 const check = (ok, what) => { console.log(`${ok ? 'PASS' : 'FAIL'} ${what}`); if (!ok) failed++; };
 
@@ -73,6 +73,21 @@ try {
   await page.waitForTimeout(1000);
   check(await page.evaluate(() => document.querySelectorAll('.foafos-ov-close').length) === before - 1, 'closing a card leaves All windows open on the rest');
   await page.evaluate(() => document.getElementById('foafos-ov-done')?.click());
+  await page.waitForTimeout(500);
+
+  // A minimised window is still a card, and picking it restores it
+  const minWin = await page.evaluate(() => {
+    const w = [...document.querySelectorAll('.foafos-window')].pop();
+    w.querySelector('.foafos-window-min').click();
+    return w.dataset.wid;
+  });
+  await keys(page, [';', 's']);
+  await page.waitForTimeout(600);
+  const card = `.foafos-window[data-wid="${minWin}"] .foafos-ov-hit`;
+  check(await page.evaluate((c) => /minimised/.test(document.querySelector(c)?.getAttribute('aria-label') || ''), card), 'a minimised window has a card in All windows');
+  await page.evaluate((c) => document.querySelector(c).click(), card);
+  await page.waitForTimeout(600);
+  check(await page.evaluate((w) => { const el = document.querySelector(`.foafos-window[data-wid="${w}"]`); return !el.classList.contains('minimized') && el.style.zIndex === '2640'; }, minWin), 'picking it restores it to the front');
 
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
