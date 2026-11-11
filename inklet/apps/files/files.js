@@ -382,8 +382,20 @@
       return;
     }
     if (at < 0) return;
+    // In the grid, Up and Down go to the nearest item in the row above or below.
+    const vertical = (dir) => {
+      const r0 = e.target.getBoundingClientRect();
+      const cands = rows.map((r, i) => [i, r.getBoundingClientRect()])
+        .filter(([, r]) => (dir > 0 ? r.top > r0.top + 2 : r.top < r0.top - 2));
+      if (!cands.length) return undefined;
+      const rowTop = dir > 0 ? Math.min(...cands.map(([, r]) => r.top)) : Math.max(...cands.map(([, r]) => r.top));
+      return cands.filter(([, r]) => Math.abs(r.top - rowTop) < 2)
+        .sort(([, a], [, b]) => Math.abs(a.left - r0.left) - Math.abs(b.left - r0.left))[0][0];
+    };
+    const inGrid = e.target.matches('[role=option]');
     const to = { Home: 0, End: rows.length - 1 }[e.key]
-      ?? (e.target.matches('[role=option]') ? { ArrowRight: at + 1, ArrowLeft: at - 1 }[e.key] : undefined);
+      ?? (inGrid ? { ArrowRight: at + 1, ArrowLeft: at - 1 }[e.key] : undefined)
+      ?? (inGrid && (e.key === 'ArrowDown' || e.key === 'ArrowUp') ? vertical(e.key === 'ArrowDown' ? 1 : -1) : undefined);
     if (to !== undefined && rows[to]) { e.preventDefault(); rows[to].focus(); }
   });
   // Type-ahead, as in a desktop file browser: letters typed quickly in the list
