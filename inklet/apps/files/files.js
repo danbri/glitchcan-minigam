@@ -13,6 +13,7 @@
     denied: 'Files may not use your pod. Check its permissions.',
     'no-pod': 'No pod is chosen for apps yet. Choose one in System, under Pods.',
     conflict: 'This file changed elsewhere since you opened it. Open it again, then save.',
+    quota: 'This location is out of space: its owner set a limit, and this would go over it. Free some space, or raise the limit in System, under Pods.',
     offline: 'That location is not connected.',
     'needs-ok': 'This folder needs your OK. Use Allow access.',
     locked: 'This location is locked. Unlock your session first.',
