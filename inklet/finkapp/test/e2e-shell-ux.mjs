@@ -61,6 +61,16 @@ try {
   await page.waitForTimeout(500);
   check(await onTop(page, '#foafos-session-win'), 'what you open comes to the front');
 
+  // Ctrl ; j brings the next window to the front, and round again
+  const front = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.style.zIndex === '2640')?.dataset.wid);
+  const f0 = await front();
+  await keys(page, [';', 'j']);
+  const f1 = await front();
+  const n = await page.evaluate(() => document.querySelectorAll('.foafos-window:not(.minimized)').length);
+  for (let i = 1; i < n; i++) await keys(page, [';', 'j']);
+  check(f1 && f1 !== f0 && (await front()) === f0, `ctrl ; j brings the next window forward and cycles (${n} windows)`);
+  await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
+
   // Snapping
   const box = () => page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); });
   await keys(page, [';', 'l']);
