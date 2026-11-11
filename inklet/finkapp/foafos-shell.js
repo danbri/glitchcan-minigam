@@ -3357,7 +3357,15 @@ function buildUI() {
     home.querySelector('.foafos-overlay-close').addEventListener('click', () => home.remove());
     home.addEventListener('keydown', (e) => { if (e.key === 'Escape') home.remove(); });
     document.body.appendChild(home);
-    find.focus();
+    // On a touch-only screen, focusing search raises the on-screen keyboard over the apps the
+    // person came to see; there the panel takes focus (a screen reader still lands inside it)
+    // and the keyboard comes when search is tapped. With a keyboard or mouse, search is ready.
+    if (matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches) {
+      home.tabIndex = -1;
+      home.focus({ preventScroll: true });
+    } else {
+      find.focus();
+    }
     bus.publish('ui.home', { summary: 'Apps opened' });
     return home;
   }
