@@ -29,6 +29,10 @@
 .list tr[data-path] { cursor: default; }
 .list tr[data-path]:hover { background: var(--p-side); }
 .list tr[aria-selected=true], .grid button[aria-selected=true] { background: var(--p-pick); }
+/* The row the keyboard is on: a table row's outline barely shows, so tint it and mark its edge. */
+.list tr:focus-visible { outline: none; }
+.list tr:focus-visible td { background: var(--p-pick); }
+.list tr:focus-visible td:first-child { box-shadow: inset 3px 0 0 var(--p-accent); }
 .ico { display: inline-block; width: 1.5em; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: 4px; padding: 10px; }

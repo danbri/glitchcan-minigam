@@ -112,6 +112,8 @@ try {
   await page.keyboard.press('a'); await page.keyboard.press('v');
   const toAv = await f.evaluate(() => document.activeElement?.dataset?.path);
   check(toH === 'notes/hello.txt' && toAv === 'notes/avocado.txt', `typing a name jumps to it (${toH}, ${toAv})`);
+  const tint = await f.evaluate(() => getComputedStyle(document.activeElement.querySelector('td')).backgroundColor);
+  check(!/rgba\(0, 0, 0, 0\)|transparent/.test(tint), `the row the keyboard is on is tinted (${tint})`);
   // From the filter, Enter opens the top match and Down moves into the list.
   const filt = (v) => f.evaluate((x) => { const i = document.getElementById('filter'); i.value = x; i.dispatchEvent(new Event('input')); }, v);
   const narrow = await f.evaluate(() => ({ filter: !!document.getElementById('filter').offsetParent, wide: document.body.clientWidth > 620, crumbs: document.querySelector('#crumbs li:last-child button')?.offsetWidth > 0 }));
