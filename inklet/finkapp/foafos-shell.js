@@ -3225,8 +3225,9 @@ function buildUI() {
         b.className = 'foafos-app';
         b.setAttribute('role', 'listitem');
         b.dataset.app = app.id;
-        b.innerHTML = `<span class="ico" aria-hidden="true">${app.icon}</span><span class="nm"></span>`;
+        b.innerHTML = `<span class="ico" aria-hidden="true">${app.icon}</span><span class="nm"></span><span class="ds" aria-hidden="true"></span>`;
         b.querySelector('.nm').textContent = app.name;
+        b.querySelector('.ds').textContent = app.desc || '';
         if (app.desc) b.title = app.desc;
         // Chrome is furniture, not a launch: there is one of it and the
         // press turns it off and on. A toggle that looks like a launcher
@@ -3272,8 +3273,13 @@ function buildUI() {
         }
         sec.hidden = !any;
         folder.open = q ? any : openFolders.includes(folder.dataset.folder);
+        // The count says how many match while searching, and how many there are otherwise.
+        const count = sec.querySelector('.foafos-folder-count');
+        if (count) count.textContent = String([...sec.querySelectorAll('.foafos-app')].filter((b) => !b.hidden).length);
       }
       home.querySelector('.foafos-home-none').hidden = matches().length > 0;
+      // While searching, results are a list that says what each one does (hover never comes on a phone).
+      home.classList.toggle('searching', !!q);
     });
     find.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); matches()[0]?.click(); } });
     home.querySelector('.foafos-overlay-close').addEventListener('click', () => home.remove());
