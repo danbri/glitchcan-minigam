@@ -120,3 +120,26 @@ test('FoafProfile saves only a conforming profile, and keeps a diff for each cha
   const b = await prof.bindings([{ kind: 'keyProof', did: 'did:key:zDnaeB2' }]);
   assert.deepEqual(b.bound.map((i) => i.agent), [ME, 'did:key:zDnaeB2']);
 });
+
+test('email: canonical form, issuer authority per domain, and pins (Binding.canonEmail, emailOk)', async () => {
+  const { canonEmail, emailOk } = await import('../src/profile.mjs');
+  // The same cases as the Lean module's #guard lines.
+  assert.equal(canonEmail('John.Doe+lunch@GoogleMail.com'), 'johndoe@gmail.com');
+  assert.equal(canonEmail('John.Doe+lunch@Example.COM'), 'John.Doe+lunch@example.com');
+  assert.equal(canonEmail('no-at-sign'), null);
+  for (const a of ['John.Doe+x@GMAIL.com', 'a.b@Ex.org', 'x@googlemail.com']) assert.equal(canonEmail(canonEmail(a)), canonEmail(a));
+  const G = 'https://accounts.google.com';
+  const trust = { authority: [[G, 'gmail.com']] };
+  const ev = (iss, sub) => ({ kind: 'oidcEmail', iss, email: 'johndoe@gmail.com', sub, profile: ME });
+  const claim = { kind: 'email', addr: 'johndoe@gmail.com' };
+  assert.equal(supports(ME, ev(G, '1234'), claim, trust), true);
+  assert.equal(supports(ME, ev('https://evil.example', '1234'), claim, trust), false);
+  const pinned = { ...trust, pins: [['johndoe@gmail.com', G, '1234']] };
+  assert.equal(supports(ME, ev(G, '9999'), claim, pinned), false);
+  assert.equal(supports(ME, ev(G, '1234'), claim, pinned), true);
+  assert.equal(agentIri(claim), 'mailto:johndoe@gmail.com');
+  assert.equal(emailOk({}, G, 'johndoe@gmail.com', '1'), false);
+  const r = await readProfile(engine, CARD.replace('foaf:jabberID "me@localhost" .', 'foaf:jabberID "me@localhost" ;\n  <https://schema.org/email> "John.Doe+lunch@GoogleMail.com" .'), ME);
+  assert.equal(r.conforms, true, r.report);
+  assert.ok(r.claims.some((c) => c.kind === 'email' && c.addr === 'johndoe@gmail.com'));
+});

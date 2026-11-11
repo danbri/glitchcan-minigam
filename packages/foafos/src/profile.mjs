@@ -9,7 +9,8 @@
 //         did:service [ a lws:OpenIdProvider ; did:serviceEndpoint <https://issuer> ] ;
 //         solid:oidcIssuer <https://issuer> ;                      Solid WebID profiles
 //         owl:sameAs <did:key:z…> ;                                OWL
-//         foaf:jabberID "me@foafos-xmpp.fly.dev" .                 FOAF, read as well
+//         foaf:jabberID "me@foafos-xmpp.fly.dev" ;                 FOAF, read as well
+//         schema:email "me@example.org" .                          one address, a plain string
 //
 // What decides:
 //
@@ -49,6 +50,7 @@ const NS = {
   lws: 'https://www.w3.org/ns/lws#',
   solid: 'http://www.w3.org/ns/solid/terms#',
   foaf: 'http://xmlns.com/foaf/0.1/',
+  schema: 'https://schema.org/',
   sh: 'http://www.w3.org/ns/shacl#',
   xsd: 'http://www.w3.org/2001/XMLSchema#',
 };
@@ -68,7 +70,8 @@ export function profileShapes(me) {
   sh:property [ sh:path sec:authenticationMethod ; ${iri('^did:key:z')} ] ;
   sh:property [ sh:path sec:verificationMethod ; ${iri('^did:key:z')} ] ;
   sh:property [ sh:path solid:oidcIssuer ; ${iri('^https://')} ] ;
-  sh:property [ sh:path foaf:jabberID ; sh:datatype xsd:string ; sh:pattern "^[^@/\\\\s]+@[^@/\\\\s]+$" ] .
+  sh:property [ sh:path foaf:jabberID ; sh:datatype xsd:string ; sh:pattern "^[^@/\\\\s]+@[^@/\\\\s]+$" ] ;
+  sh:property [ sh:path schema:email ; sh:datatype xsd:string ; sh:pattern "^[^@\\\\s<>(),;:\\"]+@[A-Za-z0-9.-]+$" ] .
 `;
 }
 
@@ -79,6 +82,7 @@ SELECT DISTINCT ?link ?x WHERE {
   { <${me}> (owl:sameAs|^owl:sameAs|as:alsoKnownAs|^as:alsoKnownAs)* ?x . BIND("same" AS ?link) }
   UNION { <${me}> (sec:verificationMethod|sec:authenticationMethod) ?x . BIND("key" AS ?link) }
   UNION { <${me}> foaf:jabberID ?x . BIND("jabber" AS ?link) }
+  UNION { <${me}> schema:email ?x . BIND("email" AS ?link) }
   UNION { <${me}> solid:oidcIssuer ?x . BIND("oidc" AS ?link) }
   UNION { <${me}> did:service ?svc . ?svc a lws:OpenIdProvider ; did:serviceEndpoint ?x . BIND("oidc" AS ?link) }
 }`;
@@ -88,6 +92,7 @@ SELECT DISTINCT ?link ?x WHERE {
 export function classify(me, link, value) {
   if (link === 'oidc') return /^https:\/\//.test(value) ? { kind: 'oidc', iss: value, sub: me } : null;
   if (link === 'jabber') return BARE_JID.test(value) ? { kind: 'xmpp', jid: value } : null;
+  if (link === 'email') { const a = canonEmail(value); return a ? { kind: 'email', addr: a } : null; }
   if (value === me) return { kind: 'profile', iri: me };
   const d = value.split('#')[0];
   if (DID_KEY.test(d)) return { kind: 'didKey', did: d };
@@ -117,22 +122,47 @@ export async function readProfile(engine, ttl, me) {
   return { conforms: true, report: null, claims, others };
 }
 
-/** Binding.supports: does evidence `e` support identifier `i` for profile `me`? */
-export function supports(me, e, i) {
+/**
+ * Binding.canonEmail: the canonical form of one address, or null. The domain is lower-cased and
+ * googlemail.com is gmail.com; only at gmail.com do case, dots and a +tag of the local part not
+ * matter (Google's rule). Everywhere else the local part is kept exactly.
+ */
+export function canonEmail(addr) {
+  const s = String(addr), at = s.lastIndexOf('@');
+  if (at < 0) return null;
+  let local = s.slice(0, at), domain = s.slice(at + 1).replace(/[A-Z]/g, (c) => c.toLowerCase());
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') local = local.split('+')[0].replace(/\./g, '').replace(/[A-Z]/g, (c) => c.toLowerCase());
+  return `${local}@${domain}`;
+}
+
+const domainOf = (addr) => addr.slice(addr.lastIndexOf('@') + 1);
+
+/** Binding.emailOk: the owner lists this issuer for the address's domain, and any pin agrees. */
+export function emailOk(trust, iss, addr, sub) {
+  const t = trust || {};
+  return (t.authority || []).some(([i, d]) => i === iss && d === domainOf(addr)) &&
+    (t.pins || []).every(([a, i, s]) => a !== addr || (i === iss && s === sub));
+}
+
+/** Binding.supports: does evidence `e` support identifier `i` for profile `me`, under `trust`? */
+export function supports(me, e, i, trust = {}) {
   if (e.kind === 'keyProof') return i.kind === 'didKey' && e.did === i.did;
   if (e.kind === 'xmppReply') return i.kind === 'xmpp' && e.jid === i.jid && e.profile === me;
   if (e.kind === 'oidcToken') return i.kind === 'oidc' && e.iss === i.iss && e.sub === i.sub && e.profile === me && e.sub === me;
+  if (e.kind === 'oidcEmail') return i.kind === 'email' && e.email === i.addr && e.profile === me && emailOk(trust, e.iss, e.email, e.sub);
   return false;
 }
 
 /** Binding.bound: the claims an ACL may name. */
-export function bound(me, claims, evidence) {
-  return claims.filter((i) => (i.kind === 'profile' && i.iri === me) || evidence.some((e) => supports(me, e, i)));
+export function bound(me, claims, evidence, trust = {}) {
+  return claims.filter((i) => (i.kind === 'profile' && i.iri === me) || evidence.some((e) => supports(me, e, i, trust)));
 }
 
 /** Binding.agentIri: the WAC acl:agent of an identifier. */
 export function agentIri(i) {
-  return i.kind === 'profile' ? i.iri : i.kind === 'didKey' ? i.did : i.kind === 'xmpp' ? `xmpp:${i.jid}` : i.sub;
+  return i.kind === 'profile' ? i.iri : i.kind === 'didKey' ? i.did : i.kind === 'xmpp' ? `xmpp:${i.jid}`
+    : i.kind === 'email' ? `mailto:${i.addr}` : i.sub;
 }
 
 // ── Line diffs (Binding.Diff: keep pre lines, drop del, insert ins) ──
@@ -240,9 +270,9 @@ export class FoafProfile {
   }
 
   /** The identifiers an ACL may name now, with their agent IRIs. */
-  async bindings(evidence) {
+  async bindings(evidence, trust = {}) {
     const r = await readProfile(this.engine, await this.text(), this.me);
-    const b = r.conforms ? bound(this.me, r.claims, evidence) : [];
+    const b = r.conforms ? bound(this.me, r.claims, evidence, trust) : [];
     return { ...r, bound: b.map((i) => ({ ...i, agent: agentIri(i) })) };
   }
 }
