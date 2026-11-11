@@ -402,6 +402,9 @@
      *   await foaf.pod.put('notes/today.txt', 'hello', { contentType: 'text/plain' })
      *   const { body, etag } = await foaf.pod.get('notes/today.txt')
      *   const { items } = await foaf.pod.list('notes/')   // [{ path, container }]
+     *   await foaf.pod.put('photos/cat.png', arrayBuffer, { contentType: 'image/png' })   // bytes, up to 8 MiB
+     *   const { body } = await foaf.pod.get('photos/cat.png', { as: 'bytes' })          // an ArrayBuffer, any type
+     * Text is carried up to 1 MiB; a non-text file read without `as: 'bytes'` is `not-text`.
      *
      * Every call goes to the person's shared pod. If the person gave this app
      * an extra pod in System, `foaf.pod.extras()` gives its handle, and

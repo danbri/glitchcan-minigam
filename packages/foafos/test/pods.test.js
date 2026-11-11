@@ -39,7 +39,7 @@ function fakeStorage(BASE = 'https://pod.example/') {
       if (headers.get('if-none-match') === '*' && cur) return new Response(null, { status: 412 });
       if (path.endsWith('/')) { res.set(path, { container: true }); return new Response(null, { status: 201 }); }
       const etag = `"e${++n}"`;
-      res.set(path, { body: String(init.body ?? ''), type: headers.get('content-type') || 'text/plain', etag });
+      res.set(path, { body: init.body instanceof Uint8Array ? init.body : String(init.body ?? ''), type: headers.get('content-type') || 'text/plain', etag });
       return new Response(null, { status: cur ? 204 : 201, headers: { ETag: etag } });
     }
     if (method === 'DELETE') {
@@ -151,6 +151,36 @@ async function granted(opts) {
   r.pods.grant('reader', { 'pod:read': { pod: 'home', prefix: 'apps/notes/' } });
   return r;
 }
+
+test('bytes: a photo goes in as bytes and comes back as bytes; as text it is refused', async () => {
+  const r = await granted();
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 255]);
+  const put = await r.pods.invoke('notes', 'pod.put', { path: 'pic.png', body: png.buffer, contentType: 'image/png' });
+  assert.equal(put.ok, true);
+  png[9] = 1;                                           // the app's buffer is not the pod's
+  const got = await r.pods.invoke('notes', 'pod.get', { path: 'pic.png', as: 'bytes' });
+  assert.equal(got.ok, true);
+  assert.ok(got.body instanceof ArrayBuffer);
+  assert.deepEqual([...new Uint8Array(got.body)], [137, 80, 78, 71, 13, 10, 26, 10, 0, 255]);
+  assert.equal(got.contentType, 'image/png');
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'pic.png' })).reason, 'not-text');
+  // A typed array view is taken as its own bytes only.
+  const view = new Uint8Array([9, 9, 1, 2, 3, 9]).subarray(2, 5);
+  await r.pods.invoke('notes', 'pod.put', { path: 'v.bin', body: view, contentType: 'application/octet-stream' });
+  assert.deepEqual([...new Uint8Array((await r.pods.invoke('notes', 'pod.get', { path: 'v.bin', as: 'bytes' })).body)], [1, 2, 3]);
+  // Text still reads as text, and bytes can read it too.
+  await r.pods.invoke('notes', 'pod.put', { path: 't.txt', body: 'hé' });
+  assert.equal(new TextDecoder().decode((await r.pods.invoke('notes', 'pod.get', { path: 't.txt', as: 'bytes' })).body), 'hé');
+});
+
+test('bytes: over 8 MiB is refused before it is sent; a number is not a body', async () => {
+  const r = await granted();
+  const before = r.storage.calls.length;
+  const big = await r.pods.invoke('notes', 'pod.put', { path: 'big.bin', body: new Uint8Array(8 * 1024 * 1024 + 1) });
+  assert.equal(big.reason, 'too-large');
+  assert.equal(r.storage.calls.length, before);
+  assert.equal((await r.pods.invoke('notes', 'pod.put', { path: 'n', body: 42 })).reason, 'bad-params');
+});
 
 test('put then get then list then delete, inside apps/<appId>/', async () => {
   const r = await granted();

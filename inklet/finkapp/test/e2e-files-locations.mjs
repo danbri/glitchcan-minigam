@@ -62,6 +62,14 @@ try {
   check(s.ids.includes('device') && s.ids.includes('browser'), `locations listed: ${s.ids.join(', ')}`);
   check(/Where/.test(s.where) && /Needs/.test(s.where) && /Encrypted/.test(s.where) && /Could lose it/.test(s.where), 'the current location says where it is, what it needs, whether it is encrypted and what could lose it');
   check(/memory only|encrypted/.test(s.where), 'the built-in pod says how it is kept');
+  const builtinBytes = await f.evaluate(async () => {
+    const bytes = new Uint8Array(256).map((_, i) => i);
+    const put = await foaf.pod.put('bin/all-bytes.bin', bytes.buffer, { contentType: 'application/octet-stream' });
+    const got = await foaf.pod.get('bin/all-bytes.bin', { as: 'bytes' });
+    await foaf.pod.delete('bin/all-bytes.bin');
+    return { put: put.ok, same: got.ok && got.body.byteLength === 256 && new Uint8Array(got.body).every((v, i) => v === i) };
+  });
+  check(builtinBytes.put && builtinBytes.same, `the built-in pod keeps all 256 byte values (${JSON.stringify(builtinBytes)})`);
 
   await f.evaluate(() => window.__files.useLocation('device'));
   s = await state(f);
@@ -140,23 +148,34 @@ try {
   await page.waitForTimeout(600);
   const gone = await f.evaluate(async () => !(await foaf.pod.get('notes/doomed.txt')).ok);
   check(asked && kept && safe && gone, `Delete asks first (starting on Cancel), Escape keeps the file, the Delete button removes it (${asked}, ${kept}, ${safe}, ${gone})`);
-  // Dropping files: a text file is added to this folder, a binary one is named and left out.
+  // Dropping files: text and a photo are added (the photo as bytes); one over 8 MiB is named and left out.
+  // Picking the photo shows it, and it can be deleted.
   const dropped = await f.evaluate(async () => {
     await window.__files.go('notes/');
     const dt = new DataTransfer();
     dt.items.add(new File(['dropped text'], 'dropped.txt', { type: 'text/plain' }));
-    dt.items.add(new File([new Uint8Array([137, 80, 78, 71])], 'photo.png', { type: 'image/png' }));
+    const png1 = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+    dt.items.add(new File([png1], 'photo.png', { type: 'image/png' }));
+    dt.items.add(new File([new Uint8Array(8 * 1024 * 1024 + 1)], 'huge.bin', { type: 'application/octet-stream' }));
     const pane = document.getElementById('items-pane');
     pane.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
     const lit = pane.classList.contains('dropping');
     pane.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
     await new Promise((r) => setTimeout(r, 800));
     const got = await foaf.pod.get('notes/dropped.txt');
-    const png = await foaf.pod.get('notes/photo.png');
-    return { lit, body: got.body, png: png.ok, said: document.getElementById('status')?.textContent || '' };
+    const png = await foaf.pod.get('notes/photo.png', { as: 'bytes' });
+    const same = png.ok && new Uint8Array(png.body).every((v, i) => v === png1[i]) && png.body.byteLength === png1.length;
+    await window.__files.pick({ path: 'notes/photo.png', container: false });
+    const img = document.querySelector('#detail img');
+    await new Promise((r) => (img?.complete ? r() : img?.addEventListener('load', r, { once: true }) ?? r()));
+    const deleteOffered = [...document.querySelectorAll('#detail button')].some((b) => b.textContent === 'Delete');
+    const noNull = !/\bnull\b/.test(document.getElementById('detail').textContent);
+    return { lit, body: got.body, same, shown: img?.naturalWidth === 1, deleteOffered, noNull, said: document.getElementById('status')?.textContent || '' };
   });
-  check(dropped.lit && dropped.body === 'dropped text' && !dropped.png && /photo\.png/.test(dropped.said), `dropping files adds the text one and names the one left out (${JSON.stringify(dropped)})`);
-  await f.evaluate(() => foaf.pod.delete('notes/dropped.txt'));
+  check(dropped.lit && dropped.body === 'dropped text' && dropped.same && /huge\.bin/.test(dropped.said) && !/photo\.png/.test(dropped.said.split('Not added')[1] || ''),
+    `dropping files adds text and a photo, and names the one too large (${JSON.stringify(dropped)})`);
+  check(dropped.shown && dropped.deleteOffered && dropped.noNull, `a photo shows in the side panel and can be deleted (${dropped.shown}, ${dropped.deleteOffered}, no stray null: ${dropped.noNull})`);
+  await f.evaluate(() => Promise.all(['notes/dropped.txt', 'notes/photo.png'].map((p) => foaf.pod.delete(p))));
   // Icon view: Down goes to the item below, Up comes back.
   await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foaf.pod.put(`notes/z${i}.txt`, 'x', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
   await f.click('#view'); await page.waitForTimeout(300);
