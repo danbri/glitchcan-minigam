@@ -166,6 +166,9 @@ body[data-wm-mode="full"] #wm-chrome { top: 84px; }
 #wm-buttons .wm-ico { width: 1.3em; text-align: center; flex: none; }
 #wm-buttons .wm-label { flex: 1; min-width: 0; }
 #wm-buttons .wm-detail { color: #9ab; font-size: 0.8rem; flex: none; }
+/* A row's keys, shown where a keyboard is likely; a touch screen leaves them out. */
+#wm-buttons .wm-keys { flex: none; font: inherit; font-size: 0.8rem; color: #9ab; }
+@media (pointer: coarse) { #wm-buttons .wm-keys { display: none; } }
 #wm-buttons .wm-back { color: #9ab; }
 
 /* Paused: the row reads "Resume", in amber */

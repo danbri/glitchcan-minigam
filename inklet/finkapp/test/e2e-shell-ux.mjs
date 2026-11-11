@@ -92,6 +92,7 @@ try {
   await keys(page, [';', 'f', 'o', 'a', 'f']);
   check(await page.evaluate(() => !document.getElementById('wm-chrome').classList.contains('collapsed')), 'ctrl ; f o a f opens the menu');
   check(await page.evaluate(() => document.querySelectorAll('#wm-open-sect button').length) >= 2, 'the menu lists open windows');
+  check(await page.evaluate(() => ['wm-sys-apps', 'wm-sys-windows', 'wm-sys-next'].every((id) => /^Ctrl ; /.test(document.querySelector(`#${id} .wm-keys`)?.textContent || '') && document.querySelector(`#${id} .wm-keys`).offsetWidth > 0)), 'the menu shows each row\'s keys');
   await page.evaluate(() => FinkWM._setCollapsed(true));
   await keys(page, [';', 's']);
   await page.waitForTimeout(600);
