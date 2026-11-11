@@ -90,6 +90,19 @@ try {
   const after = await f.evaluate(() => foaf.pod.get('notes/hello.txt'));
   check(after.body === 'second', `the file survives a reload (${after.body ?? after.reason})`);
   check(s.items.includes('notes/'), `the list shows the folder (${s.items.join(', ')})`);
+  // Type-ahead: letters typed in the list jump to the first name that starts with them.
+  await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foaf.pod.put(`notes/${n}`, n, { contentType: 'text/plain' }))));
+  await f.evaluate(() => window.__files.go('notes/'));
+  await f.waitForFunction(() => document.querySelectorAll('#items tbody tr').length >= 3, null, { timeout: 5000 }).catch(() => {});
+  await f.focus('#items tbody tr');
+  await f.press('#items tbody tr', 'h');
+  const toH = await f.evaluate(() => document.activeElement?.dataset?.path);
+  await page.waitForTimeout(900);              // a pause starts a new name
+  await page.keyboard.press('a'); await page.keyboard.press('v');
+  const toAv = await f.evaluate(() => document.activeElement?.dataset?.path);
+  check(toH === 'notes/hello.txt' && toAv === 'notes/avocado.txt', `typing a name jumps to it (${toH}, ${toAv})`);
+  await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foaf.pod.delete?.(`notes/${n}`))));
+  await f.evaluate(() => window.__files.go(''));
 
   await page.screenshot({ path: process.env.SHOT || '/dev/null' }).catch(() => {});
   await f.click('#change-location');
