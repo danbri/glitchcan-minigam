@@ -114,6 +114,24 @@ try {
   check(toH === 'notes/hello.txt' && toAv === 'notes/avocado.txt', `typing a name jumps to it (${toH}, ${toAv})`);
   const tint = await f.evaluate(() => getComputedStyle(document.activeElement.querySelector('td')).backgroundColor);
   check(!/rgba\(0, 0, 0, 0\)|transparent/.test(tint), `the row the keyboard is on is tinted (${tint})`);
+  // Delete on the focused row asks first; Escape keeps the file, Delete then Enter removes it.
+  await f.evaluate(() => foaf.pod.put('notes/doomed.txt', 'x', { contentType: 'text/plain' }));
+  await f.evaluate(() => window.__files.go('notes/'));
+  await page.waitForTimeout(300);
+  await f.focus('#items tbody tr[data-path="notes/doomed.txt"]');
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(400);
+  const asked = await f.evaluate(() => /Delete doomed\.txt\?/.test(document.querySelector('.ask')?.textContent || ''));
+  await page.keyboard.press('Escape');
+  const kept = await f.evaluate(async () => !document.querySelector('.ask') && (await foaf.pod.get('notes/doomed.txt')).ok);
+  await f.focus('#items tbody tr[data-path="notes/doomed.txt"]');
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(400);
+  const safe = await f.evaluate(() => document.activeElement?.textContent === 'Cancel');
+  await f.click('.ask button.danger');
+  await page.waitForTimeout(600);
+  const gone = await f.evaluate(async () => !(await foaf.pod.get('notes/doomed.txt')).ok);
+  check(asked && kept && safe && gone, `Delete asks first (starting on Cancel), Escape keeps the file, the Delete button removes it (${asked}, ${kept}, ${safe}, ${gone})`);
   // Icon view: Down goes to the item below, Up comes back.
   await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foaf.pod.put(`notes/z${i}.txt`, 'x', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
   await f.click('#view'); await page.waitForTimeout(300);

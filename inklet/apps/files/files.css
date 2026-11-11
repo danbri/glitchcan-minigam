@@ -50,7 +50,7 @@
 .detail-body textarea, .detail-body pre { flex: 1; min-height: 8rem; margin: 0; padding: 8px; width: 100%; resize: none; overflow: auto; font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--p-side); border: 1px solid var(--p-line); border-radius: var(--p-corner); }
 .detail-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
-.detail-actions .danger { color: var(--p-bad); }
+.detail-actions .danger, .ask .danger { color: var(--p-bad); }
 .detail-none { margin: auto; padding: 16px; text-align: center; color: var(--p-dim); }
 .ask { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; background: var(--p-side); border-top: 1px solid var(--p-line); }
 .ask input { flex: 1; min-width: 8rem; min-height: 34px; padding: 0 8px; background: var(--p-bg); border: 1px solid var(--p-line); border-radius: var(--p-corner); }
