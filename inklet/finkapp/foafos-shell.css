@@ -641,6 +641,9 @@ body.foafos-carousel-on .foafos-window-max { display: none; }
     cursor: pointer;
 }
 .foafos-ov-hit:hover { background: rgba(0, 229, 255, 0.10); }
+/* A card follows the finger while it is swiped up to close, with no lag. */
+.foafos-ov-hit { touch-action: none; }
+.foafos-window.foafos-ov.foafos-ov-dragging { transition: none; }
 .foafos-ov-hit:focus-visible {
     outline: 3px solid var(--sk-accent, #6cf);
     outline-offset: -3px;

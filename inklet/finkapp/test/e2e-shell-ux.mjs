@@ -71,6 +71,12 @@ try {
   check(f1 && f1 !== f0 && (await front()) === f0, `ctrl ; j brings the next window forward and cycles (${n} windows)`);
   await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
 
+  // Ctrl ; p opens Task Manager, and again closes it
+  await keys(page, [';', 'p']);
+  const tmOpen = await page.isVisible('#foafos-switcher');
+  await keys(page, [';', 'p']);
+  check(tmOpen && !(await page.isVisible('#foafos-switcher')), 'ctrl ; p opens Task Manager and closes it again');
+
   // Option+H on a Mac types "˙": All apps opens by the key's position
   await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: '˙', code: 'KeyH', altKey: true, bubbles: true })));
   await page.waitForTimeout(300);
@@ -142,6 +148,25 @@ try {
   // Phone
   const phone = await open({ width: 390, height: 780 }, true);
   await phone.page.evaluate(() => FoafOS.openSystem());
+  await phone.page.waitForTimeout(400);
+  // Swipe a card up to close its window; a short drag closes nothing
+  await phone.page.evaluate(() => { FoafOS.launchApp('chat'); });
+  await phone.page.waitForTimeout(800);
+  await phone.page.evaluate(() => FoafOS.enterOverview());
+  await phone.page.waitForTimeout(600);
+  const count = () => phone.page.evaluate(() => document.querySelectorAll('.foafos-window').length);
+  const nBefore = await count();
+  const card0 = await phone.page.evaluate(() => { const r = document.querySelector('.foafos-ov-hit').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  await phone.page.mouse.move(card0.x, card0.y); await phone.page.mouse.down();
+  await phone.page.mouse.move(card0.x, card0.y - 30, { steps: 4 }); await phone.page.mouse.up();
+  await phone.page.waitForTimeout(500);
+  const afterShort = await count();
+  await phone.page.mouse.move(card0.x, card0.y); await phone.page.mouse.down();
+  await phone.page.mouse.move(card0.x, card0.y - 200, { steps: 8 }); await phone.page.mouse.up();
+  await phone.page.waitForTimeout(1200);
+  const afterLong = await count();
+  check(afterShort === nBefore && afterLong === nBefore - 1, `swiping a card up closes its window; a short drag does not (${nBefore}, ${afterShort}, ${afterLong})`);
+  await phone.page.evaluate(() => FoafOS.exitOverview?.(null));
   await phone.page.waitForTimeout(400);
   const small = await phone.page.evaluate(() => [...document.querySelectorAll('.foafos-window-btn')].filter((b) => b.offsetParent && b.getBoundingClientRect().height < 40).length);
   check(small === 0, 'window buttons are touch sized on a phone');
