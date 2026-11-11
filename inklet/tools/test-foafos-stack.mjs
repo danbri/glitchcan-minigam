@@ -285,7 +285,7 @@ test('a server that dies on start shows its own error', () => {
   stack(['stop', 'sparql']);
 });
 
-test('a storage made with no authorization gets its ACL through LWS, and keeps its data', async () => {
+test('a storage made with no authorization gets its ACL through LWS, and keeps its data', async (t) => {
   const home = join(T, 'state2');
   const dir = join(T, 'old-lws');
   const env = { FOAFOS_STACK_HOME: home, FOAFOS_LWS_DIR: dir, FOAFOS_LWS_PORT: String(P + 6) };
@@ -296,7 +296,23 @@ test('a storage made with no authorization gets its ACL through LWS, and keeps i
   await new Promise((r) => { old.on('exit', r); old.kill('SIGTERM'); });
   const before = readdirSync(dir).sort();
 
-  const r = stack(['lws-setup'], env);
+  // A factoidal that installs --root-acl into an existing storage at start: no window with authorization
+  // off. An older one: lws-setup refuses and changes nothing, unless --open-acl-window is given.
+  let setup = ['lws-setup'];
+  let r = stack(setup, env);
+  if (/cannot give an existing storage its first ACL with authorization on/.test(r.out)) {
+    t.diagnostic('this factoidal cannot install a root ACL at start: checked the refusal, then --open-acl-window');
+    assert.equal(r.code, 1, r.out);
+    assert.equal(readdirSync(T).filter((f) => f.startsWith('old-lws.before-acl-')).length, 0, 'nothing copied or changed');
+    assert.ok(!existsSync(join(home, 'lws/setup.json')));
+    setup = ['lws-setup', '--open-acl-window'];
+    r = stack(setup, env);
+    assert.match(r.out, /NO authorization for about a second/);
+  } else {
+    t.diagnostic('this factoidal installs the root ACL at start, with authorization on');
+    assert.match(r.out, /installed at start, with authorization on/);
+    assert.doesNotMatch(r.out, /NO authorization/);
+  }
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /its data is as it was/);
   const backup = readdirSync(T).find((f) => f.startsWith('old-lws.before-acl-'));
@@ -319,7 +335,7 @@ test('a storage made with no authorization gets its ACL through LWS, and keeps i
   const theirs = '@prefix acl: <http://www.w3.org/ns/auth/acl#> .\n<#x> a acl:Authorization ; acl:agentClass acl:AuthenticatedAgent ; acl:accessTo <./> ; acl:mode acl:Read .\n';
   assert.equal((await fetch(`http://127.0.0.1:${P + 7}/.acl`, { method: 'PUT', headers: { 'Content-Type': 'text/turtle' }, body: theirs })).status, 201);
   await new Promise((res) => { own.on('exit', res); own.kill('SIGTERM'); });
-  const r3 = stack(['lws-setup'], { ...env, FOAFOS_LWS_DIR: dir3 });
+  const r3 = stack(setup, { ...env, FOAFOS_LWS_DIR: dir3 });
   assert.equal(r3.code, 1);
   assert.match(r3.out, /did not write\. It is left as it is/);
   const check = spawn('factoidal', ['lws-serve', dir3, '--insecure-no-auth', '--host', '127.0.0.1', '--port', String(P + 7), '--storage', 'files'], { stdio: 'ignore' });

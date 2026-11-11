@@ -80,23 +80,54 @@ Measured with `@factoidal/core` 0.33.0 on temporary storages, 2026-11-07:
 3. One `PUT /.acl` through LWS, with authorization still off, then a start with `--authz`: the owner
    reads the old data (200), a stranger gets 403, no token gets 401.
 
+Before 2026-11-11, `foafos-stack lws-setup` did step 3 itself: it started
+`factoidal lws-serve ~/foafos-lws --insecure-no-auth --host 127.0.0.1 --port 0 --no-cors` for about one
+second and PUT `/.acl`. For that second any program on this computer could read and write the whole
+storage. That window is now gone.
+
+### Since 2026-11-11: the first ACL is installed with authorization on
+
+`@factoidal/core` (factoidal-core commit 495ef4a3c, https://github.com/danbri/factoidal-core/commit/495ef4a3c521de9c2006f08bb5cf3ecfcdd947c2 ; not yet in a release: 0.35.1 does not have it) installs `--root-acl`
+(or the `--owner` ACL) into an EXISTING storage that has no `/.acl`, at start, before it answers any
+request. It never replaces an existing `/.acl`, and it changes no other resource. A line on standard
+error says which: `root ACL: this storage had no root ACL resource (/.acl); the given root ACL is now
+/.acl`, or `root ACL: this storage has a root ACL resource (/.acl); it is kept, and the given root ACL
+is not used`. With `--insecure-no-auth` nothing is installed. The decision is in Lean
+(`formal/lean4/L4Factoidal/LWS/RootAclInstall.lean` in danbri/factoidal-core), with theorems:
+`install_only_when_absent`, `install_keeps_existing`, `install_has_root_acl`, `install_writes_given`,
+`install_other_paths`, `install_off_unchanged`, and `allowed_without_acl` (with no ACL resource, Web
+Access Control allows no agent anything: fail closed, unchanged).
+
 So `foafos-stack lws-setup`, for a storage that already holds data (it has `lws-files.json`,
 `lws-journal` or `lws-state.json`):
 
 - refuses while `lws` runs (the storage's lock refuses a second server anyway);
+- asks the installed factoidal whether it installs a root ACL at start: it opens a scratch storage in
+  a temporary folder through `openLwsStorage` (in the tool's own process, no socket), once with no
+  authorization and once with a root ACL, and looks for the `root ACL:` notice;
 - copies the storage directory to `~/foafos-lws.before-acl-YYYYMMDDTHHMM` (`cp -Rp`) first;
-- starts `factoidal lws-serve ~/foafos-lws --insecure-no-auth --host 127.0.0.1 --port 0 --no-cors`
-  (a random port, no CORS) for one request: `GET /.acl`; if 404, `PUT /.acl` with `If-None-Match: *`;
-- stops it. It changes no resource but `.acl`.
+- starts `factoidal lws-serve ~/foafos-lws --authz ~/.foafos-stack/lws/authz --allow-http --root-acl FILE
+  --host 127.0.0.1 --port 0 --storage files --no-cors` (authorization on from the first moment, a
+  random port, no CORS), reads `/.acl` back as the owner's did:key agent, and stops it.
 
-If the storage already has an ACL that foafos-stack did not write, `lws-setup` stops, writes
-nothing, and says so. The options then: add the owner `did:key` (from `foafos-stack lws-agents`)
-with Control to that ACL yourself and copy it to `~/.foafos-stack/lws/root.acl`, or set
-`FOAFOS_LWS_DIR` to a new storage.
+If the storage already has an ACL that foafos-stack did not write, factoidal keeps it; the owner
+cannot read it (403) or it differs, so `lws-setup` stops, records nothing, and says so. The options
+then: add the owner `did:key` (from `foafos-stack lws-agents`) with Control to that ACL yourself and
+copy it to `~/.foafos-stack/lws/root.acl`, or set `FOAFOS_LWS_DIR` to a new storage.
+
+With an OLDER factoidal, `lws-setup` refuses, changes nothing, and says to update
+(`npm i -g @factoidal/core`). Only `foafos-stack lws-setup --open-acl-window` still runs the old
+way (the second with no authorization, described above), and it says so when it does. There is no
+silent fallback.
 
 The test `a storage made with no authorization gets its ACL through LWS, and keeps its data`
 (`inklet/tools/test-foafos-stack.mjs`) runs this on a temporary storage, as does the case of a
-storage with an ACL of its own.
+storage with an ACL of its own. With an older factoidal it checks the refusal, then
+`--open-acl-window`. Measured 2026-11-11: with the factoidal of commit 495ef4a3c on `PATH`, all 24
+tests pass (`PATH=<dir with that factoidal>:$PATH node --test inklet/tools/test-foafos-stack.mjs`);
+with the installed 0.35.1, the migration test passes through the refusal and `--open-acl-window`.
+Until a release carries the change, `lws-setup` on the owner's machine refuses for an existing
+storage with no ACL (or needs `--open-acl-window`).
 
 ## No authorization: only on purpose, and loudly
 

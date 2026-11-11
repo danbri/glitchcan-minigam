@@ -10,16 +10,17 @@
 // every request needs a token for a did:key agent that the ACL names. Its owner
 // key, the read-only key of the Finder folders and the ACL that this tool last
 // wrote are in ~/.foafos-stack/lws/ (0700; keys 0600). `foafos-stack lws-setup`
-// makes them once (and gives an existing storage its ACL through LWS);
+// makes them once (and gives an existing storage its ACL through LWS, with
+// authorization on: factoidal installs it at start);
 // `lws-allow` and `lws-revoke` change who else may use it. Design and limits:
 // docs/foafos-local-lws-auth-20261107.md. The @factoidal/core behind the
 // `factoidal` command does the LWS client work (FOAFOS_FACTOIDAL_PKG overrides).
 
 import { spawn, spawnSync } from 'node:child_process';
 import { createECDH } from 'node:crypto';
-import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, statfsSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, statfsSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Backstage, describe, helpText } from '../../packages/foafos/src/backstage.mjs';
@@ -730,7 +731,8 @@ function urls() {
 // ── the storage's owner, ACL and agents ─────────────────────────────────
 
 /** Once: the keys, the ACL, and for a storage that already holds data, that ACL written through LWS. */
-async function lwsSetup() {
+async function lwsSetup(args = []) {
+  const openWindow = args.includes('--open-acl-window');
   mkdirSync(LWSK, { recursive: true, mode: 0o700 });
   chmodSync(LWSK, 0o700);
   if (!factoidalPkg() || !existsSync(join(factoidalPkg(), 'lws/client.mjs'))) { say(red('no @factoidal/core with lws/client.mjs behind the factoidal command: npm i -g @factoidal/core')); return 1; }
@@ -749,13 +751,23 @@ async function lwsSetup() {
     let how = 'new';
     let backup = null;
     if (existing) {
-      // An existing storage ignores --root-acl, and with no ACL it refuses every agent. So its root
-      // ACL is written once through LWS, with authorization off, on a private port, and nothing else.
+      // An existing storage with no root ACL refuses every agent once authorization is on. A factoidal
+      // that installs --root-acl into an existing storage at start (before it answers any request) gives
+      // it its ACL with authorization on from the first moment. An older one cannot: then the only way is
+      // the old one, a short start with NO authorization, and only when asked for by --open-acl-window.
+      const installs = await rootAclInstallSupported();
+      if (!installs && !openWindow) {
+        say(red('the factoidal behind the factoidal command cannot give an existing storage its first ACL with authorization on.'));
+        say(red('Update it (npm i -g @factoidal/core), then run lws-setup again. Nothing was changed.'));
+        say(`Or, knowing that for about a second any program on this computer could read and write ${short(C.lwsDir)}: foafos-stack lws-setup --open-acl-window`);
+        return 1;
+      }
       backup = `${C.lwsDir}.before-acl-${new Date().toISOString().replace(/[-:]/g, '').slice(0, 13)}`;
       if (existsSync(backup)) { say(red(`${short(backup)} exists already: move it away`)); return 1; }
       if (spawnSync('cp', ['-Rp', C.lwsDir, backup]).status !== 0) { say(red(`could not copy ${short(C.lwsDir)} to ${short(backup)}`)); return 1; }
       say(`copied the storage to ${short(backup)} first (nothing is deleted)`);
-      const r = await writeFirstAcl(acl);
+      if (!installs) say(yellow('--open-acl-window: the storage runs with NO authorization for about a second, on a private port'));
+      const r = installs ? await installFirstAcl(acl, a) : await writeFirstAcl(acl);
       if (!r.ok) { say(red(r.why)); return 1; }
       how = r.how;
     }
@@ -775,7 +787,55 @@ async function lwsSetup() {
   return 0;
 }
 
-/** Start the storage with no authorization on a private port, write its first ACL, stop it. */
+/** Does the factoidal behind the command install a root ACL into an existing storage at start? Asked of
+ *  its engine on a scratch storage in a temporary folder, in this process, with no socket. */
+async function rootAclInstallSupported() {
+  const tmp = mkdtempSync(join(tmpdir(), 'foafos-acl-probe-'));
+  try {
+    const { openLwsStorage } = await import(pathToFileURL(join(factoidalPkg(), 'lws/server.mjs')).href);
+    const at = { baseIri: 'http://127.0.0.1:9/', dir: join(tmp, 'storage'), storage: 'files' };
+    await (await openLwsStorage({ ...at, insecureNoAuth: true })).close();
+    const s = await openLwsStorage({ ...at, rootAcl: '@prefix acl: <http://www.w3.org/ns/auth/acl#> .\n' });
+    const said = (s.notices || []).some((n) => /^root ACL: /.test(n));
+    await s.close();
+    return said;
+  } catch { return false; } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+
+/** Start the storage WITH authorization on a private port and the ACL as --root-acl: factoidal installs it
+ *  before the first answer when the storage has none, and keeps one it has. Then read it back as the owner. */
+async function installFirstAcl(acl, a) {
+  const file = join(LWSK, 'root.acl.first');
+  writeFileSync(file, acl, { mode: 0o600 });
+  const child = spawn('factoidal', ['lws-serve', C.lwsDir, '--authz', K.authz, '--allow-http', '--root-acl', file, '--host', '127.0.0.1', '--port', '0', '--storage', 'files', '--no-cors'],
+    { cwd: HOME, stdio: ['ignore', 'pipe', 'pipe'] });
+  let out = '';
+  const origin = await new Promise((resolve) => {
+    const t = setTimeout(() => resolve(null), START_WAIT);
+    child.stdout.on('data', (b) => { out += b; const m = /^(http:\/\/127\.0\.0\.1:\d+)$/m.exec(out); if (m) { clearTimeout(t); resolve(m[1]); } });
+    child.stderr.on('data', (b) => { out += b; });
+    child.on('exit', () => { clearTimeout(t); resolve(null); });
+  });
+  const stop = () => new Promise((r) => { if (child.exitCode !== null) return r(); child.on('exit', r); child.kill('SIGTERM'); });
+  try {
+    if (!origin) return { ok: false, why: `the storage did not open:\n${out.split('\n').filter((l) => l && !/EXPERIMENTAL/.test(l)).slice(-4).join('\n')}` };
+    const installed = /root ACL: this storage had no root ACL/.test(out);
+    let text = null;
+    let status = null;
+    try {
+      const r = await withTimeout((await agentClient(a.owner, K.owner)).read(`${origin}/.acl`), PROBE_WAIT * 3);
+      status = r?.status ?? 200;
+      text = bodyText(r);
+    } catch (e) { status = e?.detail?.status ?? e?.reason ?? e?.message; }
+    if (text === acl) return { ok: true, how: installed ? 'an existing storage: its data is as it was, and it now has a root ACL (installed at start, with authorization on)' : 'it had this ACL already' };
+    if (installed) return { ok: false, why: `the root ACL was installed, but the owner could not read it back (${status}): see docs/foafos-local-lws-auth-20261107.md` };
+    return { ok: false, why: `this storage has a root ACL that foafos-stack did not write. It is left as it is.\nOptions: add the owner ${a.owner} to it with Control yourself, then copy it to ${short(K.acl)}; or point FOAFOS_LWS_DIR at a new storage. See docs/foafos-local-lws-auth-20261107.md.` };
+  } finally { await stop(); rmSync(file, { force: true }); }
+}
+
+/** Only with --open-acl-window and a factoidal too old to install a root ACL at start: start the storage
+ *  with NO authorization on a private port, write its first ACL, stop it. For that time any local program
+ *  could read and write the storage. */
 async function writeFirstAcl(acl) {
   const child = spawn('factoidal', ['lws-serve', C.lwsDir, '--insecure-no-auth', '--host', '127.0.0.1', '--port', '0', '--storage', 'files', '--no-cors'],
     { cwd: HOME, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -884,7 +944,8 @@ const HELP = `foafos-stack: the local Foafos servers, with one command.
   foafos-stack backstage [local|shared] [--as ACCOUNT] [--room NAME] [--wait SECONDS] [--watch] [--json]
                                       the bots: who is in the room, what each did; read only
   foafos-stack backstage help         what Backstage shows, and what it cannot see
-  foafos-stack lws-setup              once: the storage's owner key, its ACL, the Finder key and login
+  foafos-stack lws-setup [--open-acl-window]
+                                      once: the storage's owner key, its ACL, the Finder key and login
   foafos-stack lws-allow DID [--read-only] [--label TEXT]
                                       let a did:key agent (a browser's) use the storage
   foafos-stack lws-revoke DID         take that away again
@@ -948,7 +1009,7 @@ async function main([cmd = 'status', ...args]) {
     case 'logs': return logs(args);
     case 'chat': return spawnSync('python3', [join(HERE, 'xmpp-chat.py'), ...args], { stdio: 'inherit' }).status ?? 1;
     case 'doctor': return doctor();
-    case 'lws-setup': return lwsSetup();
+    case 'lws-setup': return lwsSetup(args);
     case 'lws-allow': return lwsAllow(args);
     case 'lws-revoke': return lwsRevoke(args);
     case 'lws-agents': return lwsAgents();
