@@ -51,6 +51,18 @@ try {
   check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="widget-tally"]')].some((b) => !b.hidden)), 'a widget is found by what it does');
   check(await page.evaluate(() => { const d = [...document.querySelectorAll('.foafos-app[data-app="widget-tally"]')].find((b) => !b.hidden)?.querySelector('.ds'); return !!d && d.offsetHeight > 0 && /counter/i.test(d.textContent); }), 'search results show what each one does');
   check(await page.evaluate(() => [...document.querySelectorAll('#foafos-home section:not([hidden]) .foafos-folder-count')].every((c) => Number(c.textContent) === [...c.closest('section').querySelectorAll('.foafos-app')].filter((b) => !b.hidden).length)), 'folder counts count the matches while searching');
+  // Arrow keys: Down from search enters the grid, Right moves along, Up from the top row returns to search
+  await page.fill('.foafos-home-search input', '');
+  await page.waitForTimeout(200);
+  check(await page.evaluate(() => document.querySelector('#foafos-home details[data-folder="recent"]')?.open === true), 'clearing a search leaves the folders as they were');
+  await page.focus('.foafos-home-search input');
+  await page.keyboard.press('ArrowDown');
+  const firstApp = await page.evaluate(() => document.activeElement?.classList.contains('foafos-app') && document.activeElement.dataset.app);
+  await page.keyboard.press('ArrowRight');
+  const secondApp = await page.evaluate(() => document.activeElement?.dataset?.app);
+  await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowUp');
+  const backInSearch = await page.evaluate(() => document.activeElement?.matches('.foafos-home-search input'));
+  check(!!firstApp && !!secondApp && secondApp !== firstApp && backInSearch, `arrow keys move through All apps (${firstApp} → ${secondApp}, back to search: ${backInSearch})`);
   await page.fill('.foafos-home-search input', 'tally');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(800);
