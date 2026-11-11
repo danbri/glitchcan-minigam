@@ -106,3 +106,9 @@
 .tm-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tm-size { opacity: .7; font-variant-numeric: tabular-nums; }
 @media (prefers-color-scheme: dark) { .tm-file { background: hsl(var(--hue, 0) var(--sat, 0%) 38%); color: #f2f2f2; } }
+/* An image's box in the Space view shows the picture, its name over it. */
+.tm-pic { position: absolute; inset: 0; }
+.tm-pic.thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; box-shadow: none; }
+.tm-has-pic .tm-label, .tm-has-pic .tm-size { position: relative; align-self: flex-start; max-width: 100%; padding: 0 4px; color: #fff; background: rgba(0, 0, 0, .5); }
+.tm-has-pic .tm-label { border-radius: 3px 3px 0 0; }
+.tm-has-pic .tm-size { opacity: 1; border-radius: 0 0 3px 3px; }

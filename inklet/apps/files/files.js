@@ -265,6 +265,14 @@
         'aria-label': `${b.k.name}, ${b.k.dir ? 'folder, ' : ''}${sizeText(b.k.size)}` });
       Object.assign(el.style, { left: `${b.x}px`, top: `${b.y}px`, width: `${Math.max(0, b.w - 2)}px`, height: `${Math.max(0, b.h - 2)}px` });
       if (!b.k.dir) el.style.setProperty('--hue', String(KIND_HUE[b.k.kind] ?? 0)), el.style.setProperty('--sat', KIND_HUE[b.k.kind] === undefined ? '0%' : '48%');
+      // An image big enough to recognise shows itself, through the same thumbnails as the list.
+      if (!b.k.dir && b.w > 60 && b.h > 44 && IMAGE_NAME.test(b.k.path)) {
+        const pic = h('span', { class: 'tm-pic', 'aria-hidden': 'true' });
+        pic.dataset.thumb = b.k.path;
+        if (thumbs.has(b.k.path)) showThumb(pic, b.k.path); else thumbSeen.observe(pic);
+        el.append(pic);
+        el.classList.add('tm-has-pic');
+      }
       if (big) el.append(h('span', { class: 'tm-label' }, b.k.name), h('span', { class: 'tm-size' }, sizeText(b.k.size)));
       const open = () => (b.k.dir ? go(b.k.path) : pick({ path: b.k.path, container: false }));
       el.addEventListener('click', (e) => { e.stopPropagation(); open(); });
