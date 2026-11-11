@@ -237,9 +237,12 @@
   }
 
   // ── the third pane ─────────────────────────────────────────────────────
-  const drawDetail = (...kids) => $('detail').replaceChildren(...kids);
+  // A part that is not there (no app offers to open the file) is left out, not written as "null".
+  const drawDetail = (...kids) => $('detail').replaceChildren(...kids.filter((k) => k != null));
 
   let picking = 0;               // only the newest pick may draw
+  let previewUrl = null;         // the image on show, released when another is picked
+  const sizeText = (n) => (n < 1024 ? `${n} bytes` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
   async function pick(it) {
     const mine = ++picking;
     $('panes').dataset.show = it ? 'detail' : 'items';
@@ -258,12 +261,29 @@
     const r = await foaf.pod.get(it.path);
     if (mine !== picking) return;
     if (r.reason === 'not-text') {
-      // Rename and Delete act on `picked`, and rename needs the file's text, so neither is offered here.
-      picked = null;
-      markPicked();
-      const offers = await openWithBox(it.path, r.contentType);
+      // Not text: read it as bytes, so it can be shown if it is an image, and renamed or deleted.
+      const raw = await foaf.pod.get(it.path, { as: 'bytes' });
       if (mine !== picking) return;
-      drawDetail(head, h('p', { class: 'detail-none' }, 'This kind of file has no preview here.'), offers, h('div', { class: 'detail-actions' }, backBtn));
+      if (!raw.ok) {
+        picked = null;
+        markPicked();
+        const offers = await openWithBox(it.path, r.contentType);
+        if (mine !== picking) return;
+        drawDetail(head, h('p', { class: 'detail-none' }, raw.reason === 'too-large' ? 'This file is too large to show here.' : 'This kind of file has no preview here.'), offers, h('div', { class: 'detail-actions' }, backBtn));
+        return;
+      }
+      const type = raw.contentType || r.contentType || '';
+      picked = { path: it.path, body: raw.body, etag: raw.etag, contentType: type, dirty: false };
+      markPicked();
+      head.querySelector('p').textContent = `${k.name}, ${sizeText(raw.body.byteLength)}`;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = /^image\//.test(type) ? URL.createObjectURL(new Blob([raw.body], { type })) : null;
+      const view = previewUrl
+        ? h('div', { class: 'detail-body detail-image' }, h('img', { src: previewUrl, alt: nameOf(it.path) }))
+        : h('p', { class: 'detail-none' }, 'This kind of file has no preview here.');
+      const offers = await openWithBox(it.path, type);
+      if (mine !== picking) return;
+      drawDetail(head, view, offers, actions(backBtn));
       return;
     }
     if (!r.ok) { say(explain(r), true); drawDetail(head); return; }
@@ -442,8 +462,8 @@
     first.focus();
     if (e.key === 'Enter') { const it = shown()[0]; if (it) activate(it); }
   });
-  // Drop files from the computer onto the list to add them to this folder. Pod verbs carry
-  // text up to 1 MiB, so other files are named and left out rather than silently lost.
+  // Drop files from the computer onto the list to add them to this folder: text up to 1 MiB,
+  // anything else up to 8 MiB. A larger file is named and left out rather than silently lost.
   const pane = $('items-pane');
   pane.addEventListener('dragover', (e) => {
     if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
@@ -460,13 +480,15 @@
     const added = [], left = [];
     for (const f of files) {
       const texty = /^text\/|json|xml|javascript|turtle|n-triples|markdown/.test(f.type) || /\.(txt|md|csv|json|ttl|nt|jsonld|html?|css|js|mjs|xml|svg|ya?ml|log)$/i.test(f.name);
-      if (!texty || f.size > 1024 * 1024) { left.push(f.name); continue; }
+      // Text up to 1 MiB goes as text; anything else up to 8 MiB as bytes.
+      if (f.size > (texty ? 1024 * 1024 : 8 * 1024 * 1024)) { left.push(f.name); continue; }
       const name = cleanName(f.name);
-      const r = await foaf.pod.put(folder + name, await f.text(), { contentType: f.type || 'text/plain' });
+      const r = await foaf.pod.put(folder + name, texty ? await f.text() : await f.arrayBuffer(),
+        { contentType: f.type || (texty ? 'text/plain' : 'application/octet-stream') });
       (r.ok ? added : left).push(name);
     }
     await go(folder, { remember: false });
-    say([added.length ? `Added ${added.join(', ')}.` : '', left.length ? `Not added (only text files up to 1 MiB): ${left.join(', ')}.` : ''].filter(Boolean).join(' '), !!left.length && !added.length);
+    say([added.length ? `Added ${added.join(', ')}.` : '', left.length ? `Not added (too large: text up to 1 MiB, other files up to 8 MiB): ${left.join(', ')}.` : ''].filter(Boolean).join(' '), !!left.length && !added.length);
   });
 
   $('new-file').addEventListener('click', askNewFile);

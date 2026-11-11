@@ -51,7 +51,10 @@ export const POD_VERBS = {
   'pod.put': 'pod:write',
   'pod.delete': 'pod:write',
 };
-export const MAX_POD_BODY = 1024 * 1024;   // what one call may carry either way
+export const MAX_POD_BODY = 1024 * 1024;   // what one call may carry as text
+/** What one call may carry as bytes (a photo, a PDF): read with { as: 'bytes' }, written as an ArrayBuffer or typed array. */
+export const MAX_POD_BYTES = 8 * 1024 * 1024;
+const asBytes = (b) => (b instanceof ArrayBuffer ? new Uint8Array(b) : ArrayBuffer.isView(b) ? new Uint8Array(b.buffer, b.byteOffset, b.byteLength) : null);
 const CONTAINER_LINK = '<https://www.w3.org/ns/lws#Container>; rel="type"';
 const TEXTUAL = /^(text\/|application\/([a-z0-9.+-]*\+)?(json|xml|turtle|n-triples|n-quads|trig))/i;
 const ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
@@ -713,10 +716,16 @@ export class FoafPods {
     }
     let body = null;
     if (verb === 'pod.put') {
-      if (typeof params.body !== 'string') return this._refuse(appId, verb, 'bad-params', `${appId}'s "pod.put" body is not a string`, { detail: 'body must be a string' });
-      body = params.body;
-      if (new TextEncoder().encode(body).length > MAX_POD_BODY) {
-        return this._refuse(appId, verb, 'too-large', `${appId}'s "pod.put" body is over ${MAX_POD_BODY} bytes`);
+      const bytes = asBytes(params.body);
+      if (bytes) {
+        if (bytes.byteLength > MAX_POD_BYTES) return this._refuse(appId, verb, 'too-large', `${appId}'s "pod.put" body is over ${MAX_POD_BYTES} bytes`);
+        body = bytes.slice();                // a copy: the app's buffer is not the pod's
+      } else {
+        if (typeof params.body !== 'string') return this._refuse(appId, verb, 'bad-params', `${appId}'s "pod.put" body is not a string or bytes`, { detail: 'body must be a string, an ArrayBuffer or a typed array' });
+        body = params.body;
+        if (new TextEncoder().encode(body).length > MAX_POD_BODY) {
+          return this._refuse(appId, verb, 'too-large', `${appId}'s "pod.put" body is over ${MAX_POD_BODY} bytes`);
+        }
       }
     }
     if (this._throttled(appId, verb)) return this._refuse(appId, verb, 'throttled', `${appId} called "${verb}" more than ${this.perMinute} times in a minute`);
@@ -771,6 +780,13 @@ export class FoafPods {
       const type = r.headers.get('content-type') || '';
       if (r.status === 413) return { ok: false, reason: 'too-large', status: 413 };
       if (!r.ok) return { ok: false, reason: 'http', status: r.status };
+      if (params.as === 'bytes') {
+        const declared = Number(r.headers.get('content-length'));
+        if (declared > MAX_POD_BYTES) return { ok: false, reason: 'too-large', status: r.status };
+        const buf = await r.arrayBuffer();
+        if (buf.byteLength > MAX_POD_BYTES) return { ok: false, reason: 'too-large', status: r.status };
+        return { ok: true, status: r.status, contentType: type, etag: r.headers.get('etag'), body: buf };
+      }
       if (!TEXTUAL.test(type)) return { ok: false, reason: 'not-text', status: r.status, contentType: type };
       const text = await r.text();
       if (text.length > MAX_POD_BODY) return { ok: false, reason: 'too-large', status: r.status };
