@@ -114,6 +114,22 @@ try {
   check(toH === 'notes/hello.txt' && toAv === 'notes/avocado.txt', `typing a name jumps to it (${toH}, ${toAv})`);
   const tint = await f.evaluate(() => getComputedStyle(document.activeElement.querySelector('td')).backgroundColor);
   check(!/rgba\(0, 0, 0, 0\)|transparent/.test(tint), `the row the keyboard is on is tinted (${tint})`);
+  // Icon view: Down goes to the item below, Up comes back.
+  await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foaf.pod.put(`notes/z${i}.txt`, 'x', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
+  await f.click('#view'); await page.waitForTimeout(300);
+  const grid = await f.evaluate(() => {
+    const items = [...document.querySelectorAll('#items .grid [role=option]')];
+    items[0].focus();
+    const top0 = items[0].getBoundingClientRect().top;
+    items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    const down = document.activeElement, below = down.getBoundingClientRect().top > top0 + 2;
+    const sameCol = Math.abs(down.getBoundingClientRect().left - items[0].getBoundingClientRect().left) < 4;
+    down.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    return { below, sameCol, back: document.activeElement === items[0], n: items.length };
+  });
+  check(grid.below && grid.sameCol && grid.back, `icon view: Down goes to the item below, Up comes back (${JSON.stringify(grid)})`);
+  await f.click('#view');
+  await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foaf.pod.delete(`notes/z${i}.txt`); await window.__files.go('notes/'); });
   // From the filter, Enter opens the top match and Down moves into the list.
   const filt = (v) => f.evaluate((x) => { const i = document.getElementById('filter'); i.value = x; i.dispatchEvent(new Event('input')); }, v);
   const narrow = await f.evaluate(() => ({ filter: !!document.getElementById('filter').offsetParent, wide: document.body.clientWidth > 620, crumbs: document.querySelector('#crumbs li:last-child button')?.offsetWidth > 0 }));
