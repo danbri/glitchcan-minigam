@@ -24,8 +24,11 @@
 .list th { position: sticky; top: 0; z-index: 1; padding: 5px 10px; text-align: left; font-weight: 600; font-size: 13px; color: var(--p-dim); background: var(--p-bg); border-bottom: 1px solid var(--p-line); }
 .list th button { padding: 0; font-weight: 600; cursor: pointer; background: none; border: 0; color: inherit; }
 .list td { padding: 5px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
-.list td:first-child { width: 72%; }
-.list td:last-child { color: var(--p-dim); }
+.list td:first-child { width: 52%; }
+.list td:not(:first-child) { color: var(--p-dim); }
+.list .c-size, .list th:nth-child(3) { text-align: right; font-variant-numeric: tabular-nums; }
+/* A narrow window keeps the name and kind; size and time are in the side panel. */
+@container (max-width: 620px) { .list th:nth-child(n+3), .list td:nth-child(n+3) { display: none; } .list td:first-child { width: 72%; } }
 .list tr[data-path] { cursor: default; }
 .list tr[data-path]:hover { background: var(--p-side); }
 .list tr[aria-selected=true], .grid button[aria-selected=true] { background: var(--p-pick); }

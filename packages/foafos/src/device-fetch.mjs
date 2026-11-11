@@ -52,7 +52,10 @@ export function deviceFetch(root, base) {
     const items = [];
     for await (const [name, h] of dir.entries()) {
       const id = url.replace(/\/?$/, '/') + encodeURIComponent(name) + (h.kind === 'directory' ? '/' : '');
-      items.push({ id, type: h.kind === 'directory' ? 'Container' : 'DataResource' });
+      if (h.kind === 'directory') { items.push({ id, type: 'Container' }); continue; }
+      // As an LWS listing does: each file's size, type and modification time (getFile reads metadata, not bytes).
+      const file = await h.getFile();
+      items.push({ id, type: 'DataResource', format: typeOf(name), size: file.size, modified: new Date(file.lastModified).toISOString().replace(/\.\d{3}Z$/, 'Z') });
     }
     return new Response(JSON.stringify({ id: url, type: 'Container', items }), { status: 200, headers: { 'Content-Type': 'application/lws+json' } });
   }

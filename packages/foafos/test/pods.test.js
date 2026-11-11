@@ -182,6 +182,31 @@ test('bytes: over 8 MiB is refused before it is sent; a number is not a body', a
   assert.equal((await r.pods.invoke('notes', 'pod.put', { path: 'n', body: 42 })).reason, 'bad-params');
 });
 
+test('list: every page of a large folder, with size, type and time; a next link off the pod is not followed', async () => {
+  const pages = {
+    'https://pod.example/apps/notes/': { items: [{ id: 'https://pod.example/apps/notes/a.png', type: 'DataResource', format: 'image/png', size: 5, modified: '2026-11-11T10:00:00Z' }], next: '?page=2' },
+    'https://pod.example/apps/notes/?page=2': { items: [{ id: 'https://pod.example/apps/notes/b/', type: 'Container' }], next: 'https://evil.example/steal?page=3' },
+  };
+  const seen = [];
+  const fetch = async (url, init = {}) => {
+    seen.push(String(url));
+    if ((init.method || 'GET') === 'HEAD') return new Response(null, { status: 200 });
+    const pg = pages[String(url)];
+    if (!pg) return new Response(null, { status: 404 });
+    return new Response(JSON.stringify({ items: pg.items }), { status: 200, headers: { 'Content-Type': 'application/lws+json', Link: `<${pg.next}>; rel="next"` } });
+  };
+  const r = rig({ storageImpl: { fetch, calls: [], res: new Map() } });
+  await r.pods.connect('home');
+  r.pods.grant('notes', { 'pod:read': { pod: 'home' } });
+  const ls = await r.pods.invoke('notes', 'pod.list', { path: '' });
+  assert.equal(ls.ok, true);
+  assert.deepEqual(ls.items, [
+    { path: 'a.png', container: false, size: 5, contentType: 'image/png', modified: '2026-11-11T10:00:00Z' },
+    { path: 'b/', container: true },
+  ]);
+  assert.ok(!seen.some((u) => u.includes('evil.example')));
+});
+
 test('put then get then list then delete, inside apps/<appId>/', async () => {
   const r = await granted();
   const put = await r.pods.invoke('notes', 'pod.put', { path: 'today.json', body: '{"a":1}', contentType: 'application/json' });
