@@ -132,6 +132,23 @@ try {
   await page.waitForTimeout(600);
   const gone = await f.evaluate(async () => !(await foaf.pod.get('notes/doomed.txt')).ok);
   check(asked && kept && safe && gone, `Delete asks first (starting on Cancel), Escape keeps the file, the Delete button removes it (${asked}, ${kept}, ${safe}, ${gone})`);
+  // Dropping files: a text file is added to this folder, a binary one is named and left out.
+  const dropped = await f.evaluate(async () => {
+    await window.__files.go('notes/');
+    const dt = new DataTransfer();
+    dt.items.add(new File(['dropped text'], 'dropped.txt', { type: 'text/plain' }));
+    dt.items.add(new File([new Uint8Array([137, 80, 78, 71])], 'photo.png', { type: 'image/png' }));
+    const pane = document.getElementById('items-pane');
+    pane.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    const lit = pane.classList.contains('dropping');
+    pane.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    await new Promise((r) => setTimeout(r, 800));
+    const got = await foaf.pod.get('notes/dropped.txt');
+    const png = await foaf.pod.get('notes/photo.png');
+    return { lit, body: got.body, png: png.ok, said: document.getElementById('status')?.textContent || '' };
+  });
+  check(dropped.lit && dropped.body === 'dropped text' && !dropped.png && /photo\.png/.test(dropped.said), `dropping files adds the text one and names the one left out (${JSON.stringify(dropped)})`);
+  await f.evaluate(() => foaf.pod.delete('notes/dropped.txt'));
   // Icon view: Down goes to the item below, Up comes back.
   await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foaf.pod.put(`notes/z${i}.txt`, 'x', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
   await f.click('#view'); await page.waitForTimeout(300);

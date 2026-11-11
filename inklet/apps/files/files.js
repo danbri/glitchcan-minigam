@@ -435,6 +435,33 @@
     first.focus();
     if (e.key === 'Enter') { const it = shown()[0]; if (it) activate(it); }
   });
+  // Drop files from the computer onto the list to add them to this folder. Pod verbs carry
+  // text up to 1 MiB, so other files are named and left out rather than silently lost.
+  const pane = $('items-pane');
+  pane.addEventListener('dragover', (e) => {
+    if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    pane.classList.add('dropping');
+  });
+  pane.addEventListener('dragleave', (e) => { if (!pane.contains(e.relatedTarget)) pane.classList.remove('dropping'); });
+  pane.addEventListener('drop', async (e) => {
+    const files = [...(e.dataTransfer?.files || [])];
+    if (!files.length) return;
+    e.preventDefault();
+    pane.classList.remove('dropping');
+    const added = [], left = [];
+    for (const f of files) {
+      const texty = /^text\/|json|xml|javascript|turtle|n-triples|markdown/.test(f.type) || /\.(txt|md|csv|json|ttl|nt|jsonld|html?|css|js|mjs|xml|svg|ya?ml|log)$/i.test(f.name);
+      if (!texty || f.size > 1024 * 1024) { left.push(f.name); continue; }
+      const name = cleanName(f.name);
+      const r = await foaf.pod.put(folder + name, await f.text(), { contentType: f.type || 'text/plain' });
+      (r.ok ? added : left).push(name);
+    }
+    await go(folder, { remember: false });
+    say([added.length ? `Added ${added.join(', ')}.` : '', left.length ? `Not added (only text files up to 1 MiB): ${left.join(', ')}.` : ''].filter(Boolean).join(' '), !!left.length && !added.length);
+  });
+
   $('new-file').addEventListener('click', askNewFile);
   $('add-folder').addEventListener('click', addFolder);
   $('new-folder').addEventListener('click', askNewFolder);
