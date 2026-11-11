@@ -4,7 +4,7 @@
 import { chromium } from 'playwright';
 
 const { CHROMIUM_PATH } = process.env;
-const URL_ = 'http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all&player=none';
+const URL_ = process.env.SHELL_URL || 'http://localhost:8080/glitchcan-minigam/inklet/finkapp/?root=all&player=none';
 let failed = 0;
 const check = (ok, what) => { console.log(`${ok ? 'PASS' : 'FAIL'} ${what}`); if (!ok) failed++; };
 
@@ -59,6 +59,14 @@ try {
   check(String(await box()) === '640,0,640,800', 'ctrl ; r snaps right');
   await keys(page, [';', 'm']);
   check(await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-max').getAttribute('aria-pressed')) === 'true', 'ctrl ; m uses the real Maximize');
+  const maxed = () => page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('maximized'));
+  await page.dblclick('#foafos-session-win .foafos-window-bar span');
+  check(!(await maxed()), 'double-clicking the title bar restores');
+  await page.dblclick('#foafos-session-win .foafos-window-bar span');
+  check(await maxed(), 'and double-clicking again maximises');
+  await page.click('#foafos-session-win .foafos-window-min');
+  await page.dblclick('#foafos-session-win .foafos-window-bar span');
+  check(await page.evaluate(() => !document.getElementById('foafos-session-win').classList.contains('minimized')), 'double-clicking a minimised title bar brings the window back');
 
   // Menu and All windows
   await keys(page, [';', 'f', 'o', 'a', 'f']);
