@@ -54,7 +54,8 @@ export const APPS = [
     "wholePod": true,
     "capabilities": [
       "pod:read",
-      "pod:write"
+      "pod:write",
+      "storage"
     ],
     "silent": true,
     "tools": true
