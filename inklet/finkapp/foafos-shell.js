@@ -2776,8 +2776,9 @@ function buildUI() {
   // otherwise reach the guest instead of picking the card.
   let overviewOn = false;
   function overviewWindows() {
-    const wins = [...document.querySelectorAll('.foafos-window')]
-      .filter(w => !w.classList.contains('minimized'));
+    // Minimised windows are cards too: in a dimmed overview their title bars would
+    // otherwise be stranded behind the backdrop, and picking one restores it.
+    const wins = [...document.querySelectorAll('.foafos-window')];
     // A full-screen or floating app is a window too.
     const stage = document.getElementById('minigame-view');
     if (window.FinkWM?.active && stage) wins.push(stage);
@@ -2823,6 +2824,7 @@ function buildUI() {
       const title = win.id === 'minigame-view' ? stageName() : win.querySelector('.foafos-window-bar span')?.textContent;
       hit.setAttribute('aria-label', `Show ${title || 'window'}`);
       if (win.id === 'minigame-view') { hit.textContent = title; hit.classList.add('foafos-ov-named'); }
+      if (win.classList.contains('minimized')) hit.setAttribute('aria-label', `Restore ${title || 'window'} (minimised)`);
       hit.addEventListener('click', (e) => { e.stopPropagation(); exitOverview(win); });
       win.appendChild(hit);
       // Close from here, as a task switcher does. Sized against the card's own scale.
@@ -2878,6 +2880,7 @@ function buildUI() {
     if (focusWin?.id === 'minigame-view') {
       if (window.FinkWM?.mode !== 'full') window.FinkWM?.setMode('full');
     } else if (focusWin) {
+      if (focusWin.classList.contains('minimized')) focusWin.querySelector('.foafos-window-min')?.click();
       FoafOS.raiseWindow(focusWin);
       // A full-screen game sits above every window, so the one just picked would vanish
       // behind it. Float the game instead: tapping it brings it back.
