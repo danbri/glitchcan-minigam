@@ -239,6 +239,14 @@ try {
     document.getElementById('view').click();
     return { list: !!inList && inList.naturalWidth > 0, grid: !!inGrid && inGrid.naturalWidth > 0, small: !!inGrid && inGrid.naturalWidth <= 160 };
   });
+  const tmPic = await f.evaluate(async () => {
+    document.getElementById('space').click();
+    for (let i = 0; i < 30 && !document.querySelector('.tm-pic img'); i++) await new Promise((r) => setTimeout(r, 100));
+    const ok = !!document.querySelector('.tm-pic img')?.naturalWidth;
+    document.getElementById('space').click();
+    return ok;
+  });
+  check(tmPic, `an image's box in the Space view shows the picture (${tmPic})`);
   check(thumb.list && thumb.grid && thumb.small, `an image shows a thumbnail in the list and the icon view (${JSON.stringify(thumb)})`);
   check(dropped.shown && dropped.deleteOffered && dropped.noNull, `a photo shows in the side panel and can be deleted (${dropped.shown}, ${dropped.deleteOffered}, no stray null: ${dropped.noNull})`);
   await f.evaluate(() => Promise.all(['notes/dropped.txt', 'notes/photo.png'].map((p) => foafos.pod.delete(p))));
