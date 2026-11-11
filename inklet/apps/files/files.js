@@ -123,8 +123,12 @@
   function shown() {
     const q = $('filter').value.trim().toLowerCase();
     const rows = items.filter((i) => !q || nameOf(i.path).toLowerCase().includes(q));
-    const key = (i) => sort.key === 'kind' ? kindOf(i).name : nameOf(i.path).toLowerCase();
-    return rows.sort((a, b) => (b.container - a.container) || key(a).localeCompare(key(b)) * sort.dir);
+    const byName = (a, b) => nameOf(a.path).toLowerCase().localeCompare(nameOf(b.path).toLowerCase());
+    const cmp = sort.key === 'kind' ? (a, b) => kindOf(a).name.localeCompare(kindOf(b).name)
+      : sort.key === 'size' ? (a, b) => (a.size ?? -1) - (b.size ?? -1)
+      : sort.key === 'modified' ? (a, b) => String(a.modified || '').localeCompare(String(b.modified || ''))
+      : byName;
+    return rows.sort((a, b) => (b.container - a.container) || (cmp(a, b) * sort.dir) || byName(a, b));
   }
 
   function draw() {
@@ -225,7 +229,7 @@
     const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; keepView(); drawItems(); } } },
       `${label}${sort.key === key ? (sort.dir > 0 ? ' ↑' : ' ↓') : ''}`));
     box.replaceChildren(h('table', { class: 'list' },
-      h('thead', {}, h('tr', {}, head('name', 'Name'), head('kind', 'Kind'))),
+      h('thead', {}, h('tr', {}, head('name', 'Name'), head('kind', 'Kind'), head('size', 'Size'), head('modified', 'Modified'))),
       h('tbody', {}, rows.map((it) => {
         const k = kindOf(it);
         const tr = h('tr', { tabIndex: 0, on: {
@@ -235,7 +239,9 @@
             if (e.key === 'ArrowDown') tr.nextElementSibling?.focus();
             if (e.key === 'ArrowUp') tr.previousElementSibling?.focus();
           } } },
-        h('td', {}, icoFor(it, k), nameOf(it.path)), h('td', {}, k.name));
+        h('td', {}, icoFor(it, k), nameOf(it.path)), h('td', {}, k.name),
+        h('td', { class: 'c-size' }, it.container || it.size == null ? '' : sizeText(it.size)),
+        h('td', { class: 'c-mod', title: it.modified || '' }, whenText(it.modified)));
         tr.dataset.path = it.path;
         tr.setAttribute('aria-selected', String(picked?.path === it.path));
         return tr;
@@ -310,6 +316,14 @@
 
   let picking = 0;               // only the newest pick may draw
   let previewUrl = null;         // the image on show, released when another is picked
+  // A modification time, short: the time today, the day and month this year, else the date.
+  const whenText = (iso) => {
+    const d = iso ? new Date(iso) : null;
+    if (!d || Number.isNaN(d.getTime())) return '';
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString([], d.getFullYear() === now.getFullYear() ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
+  };
   const sizeText = (n) => (n < 1024 ? `${n} bytes` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
   async function pick(it) {
     const mine = ++picking;
@@ -577,7 +591,7 @@
   foafos.onInit?.(() => {
     let kept = {};
     try { kept = JSON.parse(localStorage.getItem(VIEW_KEY)) || {}; } catch { /* the defaults */ }
-    if (['name', 'kind'].includes(kept.sort?.key) && [1, -1].includes(kept.sort?.dir)) sort = kept.sort;
+    if (['name', 'kind', 'size', 'modified'].includes(kept.sort?.key) && [1, -1].includes(kept.sort?.dir)) sort = kept.sort;
     icons = kept.icons === true;
     $('view').setAttribute('aria-pressed', String(icons));
     $('view').textContent = icons ? '☰' : '▦';

@@ -121,7 +121,11 @@ test('a device pod works through the ordinary pod verbs, and opens on first use'
   const pods = devicePods(async () => ({ ok: true, root: new Dir() }));
   assert.equal((await pods.invoke('files', 'pod.put', { path: 'a/b.txt', body: 'hi', contentType: 'text/plain' })).ok, true);
   assert.equal((await pods.invoke('files', 'pod.get', { path: 'a/b.txt' })).body, 'hi');
-  assert.deepEqual((await pods.invoke('files', 'pod.list', { path: 'a/' })).items, [{ path: 'b.txt', container: false }]);
+  // A listing says each file's size, type and modification time, as an LWS listing does.
+  const [item] = (await pods.invoke('files', 'pod.list', { path: 'a/' })).items;
+  assert.deepEqual({ path: item.path, container: item.container, contentType: item.contentType }, { path: 'b.txt', container: false, contentType: 'text/plain' });
+  assert.ok(Number.isInteger(item.size) && item.size > 0);
+  assert.match(item.modified, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
   assert.equal((await pods.invoke('files', 'pod.delete', { path: 'a/b.txt' })).ok, true);
 });
 

@@ -55,6 +55,14 @@ export const MAX_POD_BODY = 1024 * 1024;   // what one call may carry as text
 /** What one call may carry as bytes (a photo, a PDF): read with { as: 'bytes' }, written as an ArrayBuffer or typed array. */
 export const MAX_POD_BYTES = 8 * 1024 * 1024;
 const asBytes = (b) => (b instanceof ArrayBuffer ? new Uint8Array(b) : ArrayBuffer.isView(b) ? new Uint8Array(b.buffer, b.byteOffset, b.byteLength) : null);
+/** At most this many pages of one container listing (100 items each on Factoidal LWS). */
+const MAX_LIST_PAGES = 50;
+/** The `next` link of a paged listing, resolved against the page's URL, or null. */
+const nextPage = (link, from) => {
+  const m = /<([^>]+)>\s*;\s*rel="?next"?/i.exec(link || '');
+  if (!m) return null;
+  try { return new URL(m[1], from).href; } catch { return null; }
+};
 const CONTAINER_LINK = '<https://www.w3.org/ns/lws#Container>; rel="type"';
 const TEXTUAL = /^(text\/|application\/([a-z0-9.+-]*\+)?(json|xml|turtle|n-triples|n-quads|trig))/i;
 const ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
@@ -795,16 +803,33 @@ export class FoafPods {
     if (verb === 'pod.list') {
       const r = await podFetch(url, { headers: { Accept: 'application/lws+json' } });
       if (!r.ok) return { ok: false, reason: 'http', status: r.status };
-      const doc = await r.json();
+      // A large container is listed in pages (LWS pagination: `CONTAINER?page=N`, a `next` link).
+      // Every page is read, up to MAX_LIST_PAGES, so a folder of 101 items is not cut to 100.
+      const docs = [await r.json()];
+      // A next page must stay inside this pod: a link elsewhere would carry the pod's login with it.
+      const inPod = (u) => (u && u.startsWith(base) ? u : null);
+      let next = inPod(nextPage(r.headers.get('link'), url));
+      while (next && docs.length < MAX_LIST_PAGES) {
+        const pr = await podFetch(next, { headers: { Accept: 'application/lws+json' } });
+        if (!pr.ok) break;
+        docs.push(await pr.json());
+        next = inPod(nextPage(pr.headers.get('link'), next));
+      }
       // Relative to the scope's prefix: the app learns its own paths, not the pod's address.
+      // Size, type and modification time come through where the storage gives them.
       const root = base + encodePath(path);
-      const items = (doc.items || []).map((it) => {
+      const items = docs.flatMap((doc) => doc.items || []).map((it) => {
         const id = String(it.id || '');
         const rel = id.startsWith(root) ? decodeURIComponent(id.slice(root.length)) : null;
+        if (rel === null) return null;
         const types = [].concat(it.type || []);
-        return rel === null ? null : { path: rel, container: rel.endsWith('/') || types.some((t) => /Container$/.test(String(t))) };
+        const item = { path: rel, container: rel.endsWith('/') || types.some((t) => /Container$/.test(String(t))) };
+        if (Number.isFinite(it.size)) item.size = it.size;
+        if (typeof it.format === 'string') item.contentType = it.format;
+        if (typeof it.modified === 'string') item.modified = it.modified;
+        return item;
       }).filter(Boolean);
-      return { ok: true, status: r.status, etag: r.headers.get('etag'), items };
+      return { ok: true, status: r.status, etag: r.headers.get('etag'), items, ...(next ? { truncated: true } : {}) };
     }
     if (verb === 'pod.put') {
       const headers = { 'Content-Type': String(params.contentType || 'text/plain') };
