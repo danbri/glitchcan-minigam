@@ -54,6 +54,7 @@ export const POD_VERBS = {
 export const MAX_POD_BODY = 1024 * 1024;   // what one call may carry as text
 /** What one call may carry as bytes (a photo, a PDF): read with { as: 'bytes' }, written as an ArrayBuffer or typed array. */
 export const MAX_POD_BYTES = 8 * 1024 * 1024;
+const bodyBytes = (b) => (typeof b === 'string' ? new TextEncoder().encode(b).length : b?.byteLength ?? 0);
 const asBytes = (b) => (b instanceof ArrayBuffer ? new Uint8Array(b) : ArrayBuffer.isView(b) ? new Uint8Array(b.buffer, b.byteOffset, b.byteLength) : null);
 /** At most this many pages of one container listing (100 items each on Factoidal LWS). */
 const MAX_LIST_PAGES = 50;
@@ -127,6 +128,14 @@ export function checkPod(rec) {
   } else {
     delete r.relay; delete r.podJid;
   }
+  // A space limit for the whole pod, in bytes (the owner's): writes through the shell that would go
+  // over it are refused, and from 90% the shell says so. None: no limit.
+  if (r.quota === undefined || r.quota === null || r.quota === '') delete r.quota;
+  else {
+    const q = Number(r.quota);
+    if (!Number.isSafeInteger(q) || q <= 0) throw new Error('quota: a whole number of bytes, above 0');
+    r.quota = q;
+  }
   r.forApps = !!r.forApps;
   r.auto = !!r.auto;     // signed in and not disconnected: connect again when the logins unlock
   return r;
@@ -156,6 +165,7 @@ export class FoafPods {
     this.openBuiltin = openBuiltin;
     this._opening = new Map();      // pod id -> the connect() under way
     this.shares = new Map();        // token -> one file, held by one window
+    this.usage = new Map();         // pod id -> { used, partial }: bytes in the pod, for its quota
     this.offers = [];               // shares waiting for their window to open
     this.openDevice = openDevice;   // async (rec, {ask}) => {ok, root} | {ok:false, status, detail}, for carriage 'device'
     this.newAgent = newAgent;
@@ -243,6 +253,8 @@ export class FoafPods {
       locked: hasLogin(r) && !this.secrets.has(POD_OWNER, loginName(r)) && this._locked(),
       // 'builtin': is it written out (sealed), or held for this run only?
       kept: r.carriage === 'builtin' ? (this.secrets.sealed ? 'sealed' : 'run') : null,
+      // Bytes in use, once measured (a pod with a quota is measured at its first write).
+      usage: this.usage.get(r.id)?.used ?? null,
     }));
   }
 
@@ -751,8 +763,28 @@ export class FoafPods {
     this._say('pods.invoke', { summary: `${appId} → ${verb} ${path}`, appId, verb, path, pod: scope.pod });
     let result;
     try {
+      const quota = this.pods.get(scope.pod)?.quota;
+      let before = 0, after = 0;
+      if (quota && (verb === 'pod.put' || verb === 'pod.delete')) {
+        if (!this.usage.has(scope.pod)) this.usage.set(scope.pod, await this._measure(podFetch, base));
+        before = await this._sizeOf(podFetch, base + encodePath(path));
+        after = verb === 'pod.put' ? bodyBytes(body) : 0;
+        const used = this.usage.get(scope.pod).used;
+        if (verb === 'pod.put' && used - before + after > quota) {
+          return this._refuse(appId, verb, 'quota', `${appId}'s "pod.put" ${path} would take pod ${scope.pod} over its space limit`,
+            { used, quota, needs: after - before });
+        }
+      }
       if (verb === 'pod.put') await this._ensureContainers(podFetch, base, path);
       result = await this._run(verb, podFetch, base, path, params, body);
+      if (quota && result.ok && (verb === 'pod.put' || verb === 'pod.delete')) {
+        const u = this.usage.get(scope.pod);
+        u.used = Math.max(0, u.used - before + after);
+        result.space = { used: u.used, quota };
+        if (u.used >= quota * 0.9) {
+          this._say('pods.quota', { summary: `pod ${scope.pod} is ${Math.round((100 * u.used) / quota)}% full`, pod: scope.pod, used: u.used, quota });
+        }
+      }
       // A folder's permission can end during a visit: that is a question for the person, not a failure.
       if (result.status === 403 && this.pods.get(scope.pod)?.carriage === 'device') {
         this._setStatus(scope.pod, 'needs-ok', 'allow access to this folder');
@@ -766,6 +798,36 @@ export class FoafPods {
       summary: `${appId}'s ${verb} ${path}: ${result.status ?? result.reason}`, appId, verb, path, status: result.status,
     });
     return result;
+  }
+
+  /** A resource's size now, from HEAD (0 if it is not there). */
+  async _sizeOf(podFetch, url) {
+    const r = await podFetch(url, { method: 'HEAD' });
+    return r.ok ? Number(r.headers.get('content-length')) || 0 : 0;
+  }
+
+  /** Bytes in a pod: every container's listing sizes, summed (no request per file). */
+  async _measure(podFetch, base, maxContainers = 2000) {
+    let used = 0, seen = 0, partial = false;
+    const queue = [base];
+    while (queue.length) {
+      if (++seen > maxContainers) { partial = true; break; }
+      let url = queue.shift();
+      for (let page = 0; url && page < MAX_LIST_PAGES; page++) {
+        const r = await podFetch(url, { headers: { Accept: 'application/lws+json' } });
+        if (!r.ok) break;
+        const doc = await r.json();
+        for (const it of doc.items || []) {
+          const id = String(it.id || '');
+          if (!id.startsWith(base)) continue;
+          const container = id.endsWith('/') || [].concat(it.type || []).some((t) => /Container$/.test(String(t)));
+          if (container) queue.push(id); else used += Number.isFinite(it.size) ? it.size : 0;
+        }
+        const next = nextPage(r.headers.get('link'), url);
+        url = next && next.startsWith(base) ? next : null;
+      }
+    }
+    return { used, partial };
   }
 
   async _ensureContainers(podFetch, base, path) {

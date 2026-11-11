@@ -207,6 +207,52 @@ test('list: every page of a large folder, with size, type and time; a next link 
   assert.ok(!seen.some((u) => u.includes('evil.example')));
 });
 
+// The fake storage, with sizes as an LWS server gives them: in listings, and Content-Length on HEAD.
+function sizedStorage() {
+  const st = fakeStorage();
+  const len = (v) => (v instanceof Uint8Array ? v.length : new TextEncoder().encode(String(v)).length);
+  const inner = st.fetch;
+  st.fetch = async (url, init = {}) => {
+    const r = await inner(url, init);
+    const path = '/' + decodeURIComponent(String(url).slice('https://pod.example/'.length));
+    const cur = st.res.get(path);
+    if ((init.method || 'GET').toUpperCase() === 'HEAD' && cur && !cur.container) return new Response(null, { status: 200, headers: { 'Content-Length': String(len(cur.body)) } });
+    if ((init.method || 'GET').toUpperCase() === 'GET' && cur?.container) {
+      const doc = await r.json();
+      for (const it of doc.items) { const res = st.res.get('/' + decodeURIComponent(it.id.slice('https://pod.example/'.length))); if (res && !res.container) it.size = len(res.body); }
+      return new Response(JSON.stringify(doc), { status: 200, headers: { 'Content-Type': 'application/lws+json' } });
+    }
+    return r;
+  };
+  return st;
+}
+
+test('quota: a write that would go over the pod\'s limit is refused; replacing counts the difference; 90% is announced', async () => {
+  const r = await granted({ storageImpl: sizedStorage() });
+  r.pods.update('home', { quota: 100 });
+  assert.equal((await r.pods.invoke('notes', 'pod.put', { path: 'a.txt', body: 'x'.repeat(60) })).ok, true);   // 60 of 100
+  const over = await r.pods.invoke('notes', 'pod.put', { path: 'b.txt', body: 'x'.repeat(50) });                // would be 110
+  assert.equal(over.reason, 'quota');
+  assert.ok(!r.storage.res.has('/apps/notes/b.txt'));
+  // Replacing a.txt with 95 bytes is +35: 95 in all, allowed, and past 90%.
+  const near = await r.pods.invoke('notes', 'pod.put', { path: 'a.txt', body: 'x'.repeat(95) });
+  assert.equal(near.ok, true);
+  assert.deepEqual(near.space, { used: 95, quota: 100 });
+  assert.ok(r.bus.seen.some((e) => e.topic === 'pods.quota' && e.data.used === 95));
+  // Deleting gives the space back.
+  const del = await r.pods.invoke('notes', 'pod.delete', { path: 'a.txt' });
+  assert.deepEqual(del.space, { used: 0, quota: 100 });
+  assert.equal((await r.pods.invoke('notes', 'pod.put', { path: 'b.txt', body: 'x'.repeat(50) })).ok, true);
+  assert.equal(r.pods.get('home').usage, 50);
+  assert.throws(() => r.pods.update('home', { quota: -1 }), /quota/);
+});
+
+test('quota: a pod without one is not measured', async () => {
+  const r = await granted({ storageImpl: sizedStorage() });
+  await r.pods.invoke('notes', 'pod.put', { path: 'a.txt', body: 'x'.repeat(5000) });
+  assert.equal(r.pods.get('home').usage, null);
+});
+
 test('put then get then list then delete, inside apps/<appId>/', async () => {
   const r = await granted();
   const put = await r.pods.invoke('notes', 'pod.put', { path: 'today.json', body: '{"a":1}', contentType: 'application/json' });

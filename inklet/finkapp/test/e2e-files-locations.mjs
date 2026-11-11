@@ -215,6 +215,18 @@ try {
   });
   check(space.areas[0] === 300 && space.areas[1] === 100 && space.ratio > 2.5 && space.ratio < 3.5 && /in \d+ files/.test(space.note) && space.into === 'notes/space/',
     `the space view sizes boxes by bytes and opens a folder on click (${JSON.stringify(space)})`);
+  // A space limit on the pod: a write that would go over it is refused, and Files says why.
+  const capped = await page.evaluate(async () => {
+    const p = FoafOS.pods.list().find((x) => x.status === 'online' && x.carriage === 'device') || FoafOS.pods.list().find((x) => x.status === 'online');
+    FoafOS.pods.update(p.id, { quota: 1 });
+    return p.id;
+  });
+  const refused = await f.evaluate(async () => {
+    const r = await foafos.pod.put('notes/over.txt', 'x'.repeat(4000), { contentType: 'text/plain' });
+    return r.reason;
+  });
+  const usage = await page.evaluate((id) => { const p = FoafOS.pods.get(id); FoafOS.pods.update(id, { quota: null }); return p.usage; }, capped);
+  check(refused === 'quota' && usage > 1, `a pod's space limit refuses a write that would go over it (${refused}, used ${usage})`);
   // Thumbnails: the photo shows a small picture of itself in the list and in the icon view.
   const thumb = await f.evaluate(async () => {
     await window.__files.go('notes/');

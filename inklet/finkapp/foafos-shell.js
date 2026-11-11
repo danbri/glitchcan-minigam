@@ -6059,6 +6059,7 @@ function buildUI() {
       if (keep.childNodes.length) body.appendChild(keep);
     };
 
+    const mb = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(n >= 10 * 1048576 ? 0 : 1)} MB` : `${Math.ceil(n / 1024)} KB`);
     const drawCard = (p) => {
       const card = el('section');
       card.className = `fp-pod fp-${p.status}`;
@@ -6073,6 +6074,13 @@ function buildUI() {
       st.className = 'pod-status fp-status';
       card.appendChild(st);
       card.appendChild(el('p', whereIs(p))).className = 'fp-where';
+      // The space limit: how full, once measured, and a warning from 90%.
+      if (p.quota && p.usage != null) {
+        const pct = Math.round((100 * p.usage) / p.quota);
+        const line = el('p', `${mb(p.usage)} of ${mb(p.quota)} used (${pct}%)${pct >= 100 ? '. Full: new files are refused until space is freed.' : pct >= 90 ? '. Nearly full.' : ''}`);
+        line.className = `fp-space${pct >= 90 ? ' fp-space-warn' : ''}`;
+        card.appendChild(line);
+      }
       // The grant it waits for, as a command to copy. A did:key is public: it names the agent.
       if (p.auth === 'did-key' && p.agent && p.status === 'needs-ok') {
         const cmd = el('code', `foafos-stack lws-allow ${p.agent}`);
@@ -6103,6 +6111,22 @@ function buildUI() {
       const more2 = el('div'); more2.className = 'fp-actions';
       if (p.auth === 'did-key' && p.agent) more.appendChild(el('p', `This browser's agent: ${p.agent}`)).className = 'fp-address';
       if (remote && p.auth !== 'did-key' && !asking && !p.locked) act(more2, open ? 'Cancel' : 'Change how you sign in', () => { formFor(p.id).open = !open; draw(true); });
+      // The owner's space limit for this pod, in MB; empty for none.
+      const lim = document.createElement('label');
+      lim.className = 'fp-quota';
+      lim.append('Space limit (MB) ');
+      const limIn = document.createElement('input');
+      limIn.type = 'number'; limIn.min = '1'; limIn.step = '1'; limIn.placeholder = 'none';
+      limIn.value = p.quota ? String(Math.round(p.quota / 1048576)) : '';
+      limIn.setAttribute('aria-label', `Space limit for ${p.label}, in MB; empty for none`);
+      limIn.addEventListener('change', () => {
+        const n = Number(limIn.value);
+        try { pods.update(p.id, { quota: limIn.value === '' ? null : Math.round(n * 1048576) }); } catch (e) { limIn.setCustomValidity(e.message); limIn.reportValidity(); return; }
+        limIn.setCustomValidity('');
+        draw(true);
+      });
+      lim.appendChild(limIn);
+      more.appendChild(lim);
       act(more2, 'Remove', () => { if (browsing?.id === p.id) browsing = null; forms.delete(p.id); pods.remove(p.id).then(() => draw(true)); });
       more.appendChild(more2);
       card.appendChild(more);
