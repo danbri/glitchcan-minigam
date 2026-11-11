@@ -71,6 +71,12 @@ try {
   check(f1 && f1 !== f0 && (await front()) === f0, `ctrl ; j brings the next window forward and cycles (${n} windows)`);
   await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
 
+  // Option+H on a Mac types "˙": All apps opens by the key's position
+  await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: '˙', code: 'KeyH', altKey: true, bubbles: true })));
+  await page.waitForTimeout(300);
+  check(await page.isVisible('#foafos-home'), 'Option+H opens All apps on a Mac layout');
+  await page.evaluate(() => document.getElementById('foafos-home')?.remove());
+
   // Snapping
   const box = () => page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); });
   await keys(page, [';', 'l']);
@@ -92,7 +98,7 @@ try {
   await keys(page, [';', 'f', 'o', 'a', 'f']);
   check(await page.evaluate(() => !document.getElementById('wm-chrome').classList.contains('collapsed')), 'ctrl ; f o a f opens the menu');
   check(await page.evaluate(() => document.querySelectorAll('#wm-open-sect button').length) >= 2, 'the menu lists open windows');
-  check(await page.evaluate(() => ['wm-sys-apps', 'wm-sys-windows', 'wm-sys-next'].every((id) => /^Ctrl ; /.test(document.querySelector(`#${id} .wm-keys`)?.textContent || '') && document.querySelector(`#${id} .wm-keys`).offsetWidth > 0)), 'the menu shows each row\'s keys');
+  check(await page.evaluate(() => ['wm-sys-apps', 'wm-sys-windows', 'wm-sys-next', 'wm-sys-tasks'].every((id) => /^Ctrl ; /.test(document.querySelector(`#${id} .wm-keys`)?.textContent || '') && document.querySelector(`#${id} .wm-keys`).offsetWidth > 0)), 'the menu shows each row\'s keys');
   await page.evaluate(() => FinkWM._setCollapsed(true));
   await keys(page, [';', 's']);
   await page.waitForTimeout(600);

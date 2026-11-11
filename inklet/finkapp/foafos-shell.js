@@ -2135,7 +2135,7 @@ function buildUI() {
       <h4>Apps</h4>
       <div class="foafos-row">
         <button type="button" id="foafos-home-btn" title="All apps (Alt+H)">⊞ All apps</button>
-        <button type="button" id="foafos-switch-btn" title="Task Manager: what is running (Alt+Tab)">⧉ Task Manager</button>
+        <button type="button" id="foafos-switch-btn" title="Task Manager: what is running (Ctrl ; p)">⧉ Task Manager</button>
         <button type="button" id="foafos-windows-btn">▭ All windows</button>
       </div>
     </section>
@@ -5368,8 +5368,9 @@ function buildUI() {
     const t = e.target;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     if (e.altKey && e.key === 'Tab') { e.preventDefault(); openSwitcher(); }
-    else if (e.altKey && (e.key === 'h' || e.key === 'H')) { e.preventDefault(); openHome(); }
-    else if (e.altKey && (e.key === 'm' || e.key === 'M')) { e.preventDefault(); audio.toggleMute(); }
+    // By the key's position, not the character: on a Mac, Option+H types "˙".
+    else if (e.altKey && e.code === 'KeyH') { e.preventDefault(); openHome(); }
+    else if (e.altKey && e.code === 'KeyM') { e.preventDefault(); audio.toggleMute(); }
   });
 
   // ── the Maker window: the creator's x-ray of the delivery engine ──
