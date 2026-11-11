@@ -2825,7 +2825,30 @@ function buildUI() {
       hit.setAttribute('aria-label', `Show ${title || 'window'}`);
       if (win.id === 'minigame-view') { hit.textContent = title; hit.classList.add('foafos-ov-named'); }
       if (win.classList.contains('minimized')) hit.setAttribute('aria-label', `Restore ${title || 'window'} (minimised)`);
-      hit.addEventListener('click', (e) => { e.stopPropagation(); exitOverview(win); });
+      hit.addEventListener('click', (e) => { e.stopPropagation(); if (hit._swiped) { hit._swiped = false; return; } exitOverview(win); });
+      // Swipe a card up to close its window, as a phone's task switcher does.
+      const base = win.style.transform;
+      let swipe = null;
+      hit.addEventListener('pointerdown', (e) => { swipe = { y: e.clientY, id: e.pointerId }; });
+      hit.addEventListener('pointermove', (e) => {
+        if (!swipe || e.pointerId !== swipe.id) return;
+        const dy = Math.min(0, e.clientY - swipe.y);
+        if (dy < -6) { hit.setPointerCapture?.(e.pointerId); win.classList.add('foafos-ov-dragging'); }
+        win.style.transform = `translateY(${dy}px) ${base}`;
+        win.style.opacity = String(Math.max(0.3, 1 + dy / 300));
+      });
+      const endSwipe = (e) => {
+        if (!swipe) return;
+        const dy = e.clientY - swipe.y;
+        swipe = null;
+        win.classList.remove('foafos-ov-dragging');
+        win.style.opacity = '';
+        if (dy < -90) { hit._swiped = true; x.click(); return; }
+        if (dy < -6) hit._swiped = true;            // a short drag is not a pick
+        win.style.transform = base;
+      };
+      hit.addEventListener('pointerup', endSwipe);
+      hit.addEventListener('pointercancel', endSwipe);
       win.appendChild(hit);
       // Close from here, as a task switcher does. Sized against the card's own scale.
       const x = document.createElement('button');
