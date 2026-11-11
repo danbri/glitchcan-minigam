@@ -38,14 +38,14 @@ defineTree();
 // Launchable guest widgets (sandboxed processes). Paths resolve under
 // the deploy root; grants are per-instance.
 const WIDGET_CATALOG = [
-  { key: 'tally', title: '🔢 Tally', src: '../../packages/foafos/demo/tally/index.html',
+  { key: 'tally', title: '🔢 Tally', desc: 'A counter you tap; says each change on the bus', src: '../../packages/foafos/demo/tally/index.html',
     w: 240, h: 200, grants: (n) => ({ publish: [`widget.tally.${n}.*`], subscribe: ['widget.tally.*'] }) },
-  { key: 'data', title: '▦ Data (SQLite)', src: '../../magpie/edot/data/guest.html',
+  { key: 'data', title: '▦ Data (SQLite)', desc: 'A small spreadsheet and database (SQLite)', src: '../../magpie/edot/data/guest.html',
     w: 520, h: 400, grants: (n) => ({ publish: [`widget.data.${n}.*`], subscribe: ['widget.data.*'] }) },
   // The full standalone game (menu, episodes, map jukebox, ROBBAMP) as a
   // window — it speaks no guest protocol, which is also the demo: an
   // undeclared guest simply gets no bus access at all.
-  { key: 'robbin', title: '🐦 Robbin (full game)', src: '../../magpie/robbin/robbin.html',
+  { key: 'robbin', title: '🐦 Robbin (full game)', desc: 'The whole Robbin game, with no bus access', src: '../../magpie/robbin/robbin.html',
     w: 390, h: 560, grants: () => ({ publish: [], subscribe: [] }) },
 ];
 
@@ -3138,7 +3138,7 @@ function buildUI() {
       ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) })),
       { id: 'widgets', label: 'Widgets', icon: '🧩', apps: WIDGET_CATALOG.map((w) => {
         const [icon, ...name] = w.title.split(' ');
-        return { id: `widget-${w.key}`, icon, name: name.join(' '), desc: 'A small sandboxed widget', run: () => openWidgetWindow(w) };
+        return { id: `widget-${w.key}`, icon, name: name.join(' '), desc: w.desc || 'A small sandboxed widget', run: () => openWidgetWindow(w) };
       }) }];
     for (const fam of groups) {
       const offered = fam.apps.filter(a => a.run || rootOffers(ROOT, a.id));

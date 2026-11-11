@@ -47,6 +47,8 @@ try {
   const chatWords = await page.evaluate(() => document.querySelector('.foafos-app[data-app="chat"]').getAttribute('aria-label').toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 3));
   await page.fill('.foafos-home-search input', `${chatWords.at(-1)} ${chatWords[0]}`);
   check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="chat"]')].some((b) => !b.hidden)), `words match in any order (${chatWords.at(-1)} ${chatWords[0]})`);
+  await page.fill('.foafos-home-search input', 'counter');
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="widget-tally"]')].some((b) => !b.hidden)), 'a widget is found by what it does');
   await page.fill('.foafos-home-search input', 'tally');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(800);
