@@ -386,7 +386,30 @@
       ?? (e.target.matches('[role=option]') ? { ArrowRight: at + 1, ArrowLeft: at - 1 }[e.key] : undefined);
     if (to !== undefined && rows[to]) { e.preventDefault(); rows[to].focus(); }
   });
+  // Type-ahead, as in a desktop file browser: letters typed quickly in the list
+  // jump to the first item whose name starts with them.
+  let typed = '', typedAt = 0;
+  $('items').addEventListener('keydown', (e) => {
+    if (e.target.closest('input, textarea, select') || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key.length !== 1 || e.key === ' ') return;
+    const now = Date.now();
+    typed = (now - typedAt > 800 ? '' : typed) + e.key.toLowerCase();
+    typedAt = now;
+    const rows = [...$('items').querySelectorAll('tbody tr, .grid [role=option]')];
+    const name = (r) => (r.dataset.path ? nameOf(r.dataset.path) : r.textContent).toLowerCase();
+    const hit = rows.find((r) => name(r).startsWith(typed));
+    if (hit) { e.preventDefault(); hit.focus(); }
+  });
   $('filter').addEventListener('input', drawItems);
+  // From the filter: Down moves into the list, Enter opens the top match (as in All apps).
+  $('filter').addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'Enter') return;
+    const first = $('items').querySelector('tbody tr, .grid [role=option]');
+    if (!first) return;
+    e.preventDefault();
+    first.focus();
+    if (e.key === 'Enter') { const it = shown()[0]; if (it) activate(it); }
+  });
   $('new-file').addEventListener('click', askNewFile);
   $('add-folder').addEventListener('click', addFolder);
   $('new-folder').addEventListener('click', askNewFolder);

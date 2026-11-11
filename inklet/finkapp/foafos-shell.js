@@ -2842,11 +2842,21 @@ function buildUI() {
         setTimeout(enterOverview, 450);
       });
       win.appendChild(x);
+      // The first nine cards carry their number: press it to pick that window.
+      if (i < 9) {
+        const n = document.createElement('span');
+        n.className = 'foafos-ov-num';
+        n.textContent = String(i + 1);
+        n.setAttribute('aria-hidden', 'true');
+        n.style.transform = `scale(${1 / s})`;
+        win.appendChild(n);
+        hit.setAttribute('aria-keyshortcuts', String(i + 1));
+      }
     });
 
     const strip = document.createElement('div');
     strip.id = 'foafos-ov-strip';
-    strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — pick one</span>
+    strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — pick one${wins.length > 1 ? `, or press 1–${Math.min(wins.length, 9)}` : ''}</span>
       <button type="button" id="foafos-ov-done" aria-label="Leave overview">✕</button>`;
     document.body.appendChild(strip);
     strip.querySelector('#foafos-ov-done').addEventListener('click', () => exitOverview(null));
@@ -2855,6 +2865,9 @@ function buildUI() {
     strip._keys = (e) => {
       const hits = [...document.querySelectorAll('.foafos-ov-hit')];
       const at = hits.indexOf(document.activeElement);
+      if (/^[1-9]$/.test(e.key) && !e.altKey && !e.ctrlKey && !e.metaKey && hits[Number(e.key) - 1]) {
+        e.preventDefault(); hits[Number(e.key) - 1].click(); return;
+      }
       const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
       if (step) { e.preventDefault(); hits[(at + step + hits.length) % hits.length]?.focus(); }
     };
@@ -2872,6 +2885,7 @@ function buildUI() {
     for (const win of document.querySelectorAll('.foafos-ov')) {
       win.querySelector('.foafos-ov-hit')?.remove();
       win.querySelector('.foafos-ov-close')?.remove();
+      win.querySelector('.foafos-ov-num')?.remove();
       win.style.transform = '';                 // interpolates back home
       // Drop the class only after the return trip, or the transition it
       // rides is removed mid-flight and the card teleports.

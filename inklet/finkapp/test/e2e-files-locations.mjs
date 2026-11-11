@@ -101,6 +101,32 @@ try {
   await f.press('#items tbody tr[data-path="notes/"]', 'End');
   const end = await f.evaluate(() => { const rows = [...document.querySelectorAll('#items tbody tr')]; return document.activeElement === rows.at(-1); });
   check(end, 'End goes to the last item');
+  // Type-ahead: letters typed in the list jump to the first name that starts with them.
+  await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foaf.pod.put(`notes/${n}`, n, { contentType: 'text/plain' }))));
+  await f.evaluate(() => window.__files.go('notes/'));
+  await f.waitForFunction(() => document.querySelectorAll('#items tbody tr').length >= 3, null, { timeout: 5000 }).catch(() => {});
+  await f.focus('#items tbody tr');
+  await f.press('#items tbody tr', 'h');
+  const toH = await f.evaluate(() => document.activeElement?.dataset?.path);
+  await page.waitForTimeout(900);              // a pause starts a new name
+  await page.keyboard.press('a'); await page.keyboard.press('v');
+  const toAv = await f.evaluate(() => document.activeElement?.dataset?.path);
+  check(toH === 'notes/hello.txt' && toAv === 'notes/avocado.txt', `typing a name jumps to it (${toH}, ${toAv})`);
+  // From the filter, Enter opens the top match and Down moves into the list.
+  const filt = (v) => f.evaluate((x) => { const i = document.getElementById('filter'); i.value = x; i.dispatchEvent(new Event('input')); }, v);
+  const narrow = await f.evaluate(() => ({ filter: !!document.getElementById('filter').offsetParent, wide: document.body.clientWidth > 620, crumbs: document.querySelector('#crumbs li:last-child button')?.offsetWidth > 0 }));
+  check(narrow.wide || (narrow.filter && narrow.crumbs), `a narrow window keeps the filter and the folder name (${JSON.stringify(narrow)})`);
+  await filt('avo');
+  await f.focus('#filter'); await page.keyboard.press('Enter');
+  await page.waitForTimeout(500);
+  const opened = await f.evaluate(() => window.__files.state().picked?.path);
+  await filt('app');
+  await f.focus('#filter'); await page.keyboard.press('ArrowDown');
+  const down = await f.evaluate(() => document.activeElement?.dataset?.path);
+  check(opened === 'notes/avocado.txt' && down === 'notes/apple.txt', `the filter's Enter opens the top match, Down enters the list (${opened}, ${down})`);
+  await filt('');
+  await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foaf.pod.delete?.(`notes/${n}`))));
+  await f.evaluate(() => window.__files.go(''));
 
   await page.screenshot({ path: process.env.SHOT || '/dev/null' }).catch(() => {});
   await f.click('#change-location');

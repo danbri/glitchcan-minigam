@@ -4,7 +4,21 @@
 .tree button:hover { background: var(--p-line); }
 .tree button[aria-current=true] { background: var(--p-pick); font-weight: 600; }
 #filter { width: 8rem; min-height: 34px; padding: 0 8px; background: none; border: 1px solid var(--p-line); border-radius: var(--p-corner); }
-@container (max-width: 620px) { #filter, #new-folder { display: none; } }
+/* A narrow window keeps the filter, smaller; New folder is still offered in an empty folder. */
+/* A narrow window keeps the filter, smaller, and shows only the current folder's name
+   on one line, as a phone's file browser does; ↑ and ‹ still go up and back.
+   New folder is still offered in an empty folder. */
+@container (max-width: 620px) {
+  #new-folder { display: none; }
+  #new-file { font-size: 0; min-width: 36px; }
+  #new-file::before { content: "+"; font-size: 20px; line-height: 1; }
+  #filter { width: 4.5rem; min-width: 0; }
+  #crumbs { flex-wrap: nowrap; overflow: hidden; }
+  #crumbs li:not(:last-child) { display: none; }
+  #crumbs li { min-width: 0; }
+  #crumbs li::before { content: none; }
+  #crumbs button { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
 
 .list { width: 100%; border-collapse: collapse; }
 .list th { position: sticky; top: 0; z-index: 1; padding: 5px 10px; text-align: left; font-weight: 600; font-size: 13px; color: var(--p-dim); background: var(--p-bg); border-bottom: 1px solid var(--p-line); }
