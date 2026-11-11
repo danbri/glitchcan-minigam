@@ -89,10 +89,15 @@ try {
   });
   check(stale.reason === 'conflict', `a stale save is refused (${stale.reason})`);
 
+  await f.click('#view');                     // icons, kept across the reload below
   await page.reload();
   f = await filesFrame(page);
   s = await state(f);
   check(s.current === 'device', 'the location is remembered after a reload');
+  await f.waitForFunction(() => window.__files.state().items.length > 0, null, { timeout: 10000 }).catch(() => {});
+  const keptIcons = await f.evaluate(() => ({ grid: !!document.querySelector('#items .grid'), pressed: document.getElementById('view').getAttribute('aria-pressed') }));
+  check(keptIcons.grid && keptIcons.pressed === 'true', `the icon view is remembered after a reload (${JSON.stringify(keptIcons)})`);
+  await f.click('#view');                     // back to the list for the checks that follow
   await f.waitForFunction(() => window.__files.state().items.length > 0, null, { timeout: 10000 }).catch(() => {});
   s = await state(f);
   const after = await f.evaluate(() => foaf.pod.get('notes/hello.txt'));

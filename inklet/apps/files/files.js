@@ -54,8 +54,13 @@
   let folder = '';               // current folder: '' or 'a/b/'
   let items = [];
   let picked = null;             // { path, body, etag, contentType, dirty }
+  // The view and the sort order are kept for next time, in the shell's store for this app (the
+  // `storage` power). The SDK's localStorage stand-in is filled when the shell says hello, so the
+  // kept view is applied in onInit, which also runs if that has already happened.
+  const VIEW_KEY = 'files.view';
   let icons = false;
   let sort = { key: 'name', dir: 1 };
+  const keepView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ icons, sort })); } catch { /* not kept */ } };
   const trail = [];
   const children = new Map();    // folder -> subfolders, for the tree
   const expanded = new Set(['']);
@@ -216,7 +221,7 @@
       })));
       return;
     }
-    const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; drawItems(); } } },
+    const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; keepView(); drawItems(); } } },
       `${label}${sort.key === key ? (sort.dir > 0 ? ' ↑' : ' ↓') : ''}`));
     box.replaceChildren(h('table', { class: 'list' },
       h('thead', {}, h('tr', {}, head('name', 'Name'), head('kind', 'Kind'))),
@@ -497,9 +502,20 @@
   $('places').addEventListener('click', () => { const p = $('panes'); p.dataset.places = p.dataset.places === 'open' ? 'closed' : 'open'; });
   $('view').addEventListener('click', (e) => {
     icons = !icons;
+    keepView();
     e.currentTarget.setAttribute('aria-pressed', String(icons));
     e.currentTarget.textContent = icons ? '☰' : '▦';
     e.currentTarget.setAttribute('aria-label', icons ? 'Show as a list' : 'Show as icons');
+    drawItems();
+  });
+  foaf.onInit?.(() => {
+    let kept = {};
+    try { kept = JSON.parse(localStorage.getItem(VIEW_KEY)) || {}; } catch { /* the defaults */ }
+    if (['name', 'kind'].includes(kept.sort?.key) && [1, -1].includes(kept.sort?.dir)) sort = kept.sort;
+    icons = kept.icons === true;
+    $('view').setAttribute('aria-pressed', String(icons));
+    $('view').textContent = icons ? '☰' : '▦';
+    $('view').setAttribute('aria-label', icons ? 'Show as a list' : 'Show as icons');
     drawItems();
   });
 
