@@ -114,6 +114,14 @@ try {
   check(toH === 'notes/hello.txt' && toAv === 'notes/avocado.txt', `typing a name jumps to it (${toH}, ${toAv})`);
   const tint = await f.evaluate(() => getComputedStyle(document.activeElement.querySelector('td')).backgroundColor);
   check(!/rgba\(0, 0, 0, 0\)|transparent/.test(tint), `the row the keyboard is on is tinted (${tint})`);
+  // Space shows a folder in the side panel without opening it, and the list keeps the keyboard.
+  await f.evaluate(() => window.__files.go(''));
+  await page.waitForTimeout(300);
+  await f.focus('#items tbody tr[data-path="notes/"]');
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(300);
+  const peek = await f.evaluate(() => ({ folder: window.__files.state().folder, picked: window.__files.state().picked?.path, still: document.activeElement?.dataset?.path }));
+  check(peek.folder === '' && peek.picked === 'notes/' && peek.still === 'notes/', `Space shows an item without opening it (${JSON.stringify(peek)})`);
   // Delete on the focused row asks first; Escape keeps the file, Delete then Enter removes it.
   await f.evaluate(() => foaf.pod.put('notes/doomed.txt', 'x', { contentType: 'text/plain' }));
   await f.evaluate(() => window.__files.go('notes/'));
