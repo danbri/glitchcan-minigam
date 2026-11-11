@@ -49,6 +49,9 @@ try {
   check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="chat"]')].some((b) => !b.hidden)), `words match in any order (${chatWords.at(-1)} ${chatWords[0]})`);
   await page.fill('.foafos-home-search input', 'counter');
   check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="widget-tally"]')].some((b) => !b.hidden)), 'a widget is found by what it does');
+  await page.fill('.foafos-home-search input', 'widget');
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app^="widget-"]')].filter((b) => !b.hidden).length >= 3), 'searching a folder name ("widget") lists what is in it');
+  await page.fill('.foafos-home-search input', 'counter');
   check(await page.evaluate(() => { const d = [...document.querySelectorAll('.foafos-app[data-app="widget-tally"]')].find((b) => !b.hidden)?.querySelector('.ds'); return !!d && d.offsetHeight > 0 && /counter/i.test(d.textContent); }), 'search results show what each one does');
   check(await page.evaluate(() => [...document.querySelectorAll('#foafos-home section:not([hidden]) .foafos-folder-count')].every((c) => Number(c.textContent) === [...c.closest('section').querySelectorAll('.foafos-app')].filter((b) => !b.hidden).length)), 'folder counts count the matches while searching');
   // Arrow keys: Down from search enters the grid, Right moves along, Up from the top row returns to search

@@ -3316,9 +3316,11 @@ function buildUI() {
       const seen = new Set();
       for (const sec of body.querySelectorAll('section')) {
         const folder = sec.querySelector('details');
+        // A folder's name finds what is in it: "widget" lists the widgets, "games" the games.
+        const folderName = (folder.querySelector('summary h3')?.textContent || '').toLowerCase();
         let any = false;
         for (const b of sec.querySelectorAll('.foafos-app')) {
-          const label = (b.getAttribute('aria-label') || '').toLowerCase();
+          const label = `${b.getAttribute('aria-label') || ''} ${folderName}`.toLowerCase();
           b.hidden = !!q && (!words.every((w) => label.includes(w)) || seen.has(b.dataset.app));
           if (q && !b.hidden) seen.add(b.dataset.app);
           any ||= !b.hidden;
