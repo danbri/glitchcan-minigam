@@ -12,7 +12,10 @@
 // wrote are in ~/.foafos-stack/lws/ (0700; keys 0600). `foafos-stack lws-setup`
 // makes them once (and gives an existing storage its ACL through LWS, with
 // authorization on: factoidal installs it at start);
-// `lws-allow` and `lws-revoke` change who else may use it. Design and limits:
+// `lws-allow` and `lws-revoke` change who else may use it. lws-setup also names a
+// RECOVERY agent in the root ACL: acl:Control of the root only (no Read, no Write, no
+// acl:default), its key made once for the owner to move offline (`--recovery-did` names
+// one the owner has instead); `lws-recover` uses it. Design and limits:
 // docs/foafos-local-lws-auth-20261107.md. The @factoidal/core behind the
 // `factoidal` command does the LWS client work (FOAFOS_FACTOIDAL_PKG overrides).
 
@@ -83,6 +86,7 @@ const LWSK = join(STATE, 'lws');
 const K = {
   owner: join(LWSK, 'owner.jwk'), webdav: join(LWSK, 'webdav.jwk'), agents: join(LWSK, 'agents.json'),
   acl: join(LWSK, 'root.acl'), authz: join(LWSK, 'authz'), setup: join(LWSK, 'setup.json'),
+  recovery: join(LWSK, 'recovery.jwk'),
 };
 const DID_KEY = /^did:key:z[1-9A-HJ-NP-Za-km-z]{20,128}$/;
 const MODES = { rw: ['Read', 'Write'], r: ['Read'] };
@@ -118,15 +122,41 @@ async function agentClient(did, file) {
   return createLwsClient({ selfIssued: { subject: did, keyId: `${did}#${did.slice('did:key:'.length)}`, jwk } });
 }
 
-/** The root ACL: the owner (this tool) Read, Write and Control; the Finder folders Read; then each allowed agent. */
+/** The root ACL: the owner (this tool) Read, Write and Control; the Finder folders Read; the recovery
+ *  agent Control of the root only (it may rewrite this ACL, and read or write nothing else); then each
+ *  allowed agent. */
 function aclText(a) {
   const one = (frag, did, modes, note) => `# ${note}\n<#${frag}> a acl:Authorization ;\n  acl:agent <${did}> ;\n` +
     `  acl:accessTo <./> ; acl:default <./> ;\n  acl:mode ${modes.map((m) => `acl:${m}`).join(', ')} .\n\n`;
+  const recovery = (did) => '# the recovery agent: acl:Control of the root only, no Read, no Write, no acl:default.\n' +
+    '# Its key is kept offline; it may rewrite this ACL and nothing else (foafos-stack lws-recover).\n' +
+    `<#recovery> a acl:Authorization ;\n  acl:agent <${did}> ;\n  acl:accessTo <./> ;\n  acl:mode acl:Control .\n\n`;
   return '@prefix acl: <http://www.w3.org/ns/auth/acl#> .\n' +
-    '# Written by foafos-stack (lws-setup, lws-allow, lws-revoke). If it is changed elsewhere, they refuse to write it.\n\n' +
+    '# Written by foafos-stack (lws-setup, lws-allow, lws-revoke, lws-recover). If it is changed elsewhere, they refuse to write it.\n\n' +
     one('owner', a.owner, ['Read', 'Write', 'Control'], 'the owner: foafos-stack itself') +
     one('webdav', a.webdav, ['Read'], 'the Finder folders (webdav-serve): read only') +
+    (a.recovery ? recovery(a.recovery) : '') +
     a.agents.map((x, i) => one(`agent-${i + 1}`, x.did, x.modes, x.label)).join('');
+}
+
+/** The recovery agent of lws-setup: the did given with --recovery-did, or a new key in K.recovery. */
+async function recoveryAgent(args) {
+  const i = args.indexOf('--recovery-did');
+  if (i >= 0) {
+    const did = args[i + 1];
+    if (!did || !DID_KEY.test(did)) { say(red('--recovery-did needs a did:key')); return null; }
+    return { did, made: false };
+  }
+  if (existsSync(K.recovery)) { say(red(`${short(K.recovery)} exists but agents.json names no recovery agent: move it away, then run lws-setup again`)); return null; }
+  return { did: await makeAgent(K.recovery), made: true };
+}
+
+function sayRecovery(r) {
+  if (r.made) {
+    say(`made the recovery agent ${r.did} (acl:Control of the root only: it may rewrite the ACL, not read or write data)`);
+    say(yellow(`its key is ${short(K.recovery)}: move it offline now (a USB stick, a password manager), and delete it here.`));
+    say(yellow('With it, foafos-stack lws-recover KEYFILE gives the storage its ACL back, for example after the owner key is lost.'));
+  } else say(`the recovery agent is ${r.did} (given with --recovery-did; this tool holds no key for it)`);
 }
 const cleanLabel = (s) => String(s || 'an agent').replace(/[^\w .@:-]/g, '').slice(0, 60) || 'an agent';
 const bodyText = (r) => (typeof r?.body === 'string' ? r.body : typeof r?.bodyBase64 === 'string' ? Buffer.from(r.bodyBase64, 'base64').toString('utf8') : '');
@@ -738,11 +768,34 @@ async function lwsSetup(args = []) {
   if (!factoidalPkg() || !existsSync(join(factoidalPkg(), 'lws/client.mjs'))) { say(red('no @factoidal/core with lws/client.mjs behind the factoidal command: npm i -g @factoidal/core')); return 1; }
   let a = readJson(K.agents);
   if (!a) {
-    if (existsSync(K.owner) || existsSync(K.webdav)) { say(red(`key files in ${short(LWSK)} but no agents.json: move them away, then run lws-setup again`)); return 1; }
-    a = { owner: await makeAgent(K.owner), webdav: await makeAgent(K.webdav), agents: [] };
+    if (existsSync(K.owner) || existsSync(K.webdav) || existsSync(K.recovery)) { say(red(`key files in ${short(LWSK)} but no agents.json: move them away, then run lws-setup again`)); return 1; }
+    if (args.includes('--recovery-did') && !DID_KEY.test(args[args.indexOf('--recovery-did') + 1] || '')) { say(red('--recovery-did needs a did:key')); return 2; }
+    const owner = await makeAgent(K.owner);
+    const webdav = await makeAgent(K.webdav);
+    const r = await recoveryAgent(args);
+    if (!r) return 1;
+    a = { owner, webdav, recovery: r.did, agents: [] };
     writeFileSync(K.agents, `${JSON.stringify(a, null, 2)}\n`, { mode: 0o600 });
     say(`made the storage owner ${a.owner}`);
     say(`made the Finder folders' agent ${a.webdav} (read only)`);
+    sayRecovery(r);
+  } else if (!a.recovery && setupDone()) {
+    // A storage set up before the recovery agent: add it through LWS as the owner (lws must run).
+    const r = await recoveryAgent(args);
+    if (!r) return 1;
+    if (!(await writeAcl({ ...a, recovery: r.did }))) {
+      if (r.made) rmSync(K.recovery, { force: true });
+      say(red('the recovery agent was not added: foafos-stack start lws, then lws-setup again'));
+      return 1;
+    }
+    a = readJson(K.agents);
+    sayRecovery(r);
+  } else if (!a.recovery) {
+    const r = await recoveryAgent(args);
+    if (!r) return 1;
+    a = { ...a, recovery: r.did };
+    writeFileSync(K.agents, `${JSON.stringify(a, null, 2)}\n`, { mode: 0o600 });
+    sayRecovery(r);
   }
   const acl = aclText(a);
   if (readJson(K.setup)?.dir !== C.lwsDir) {
@@ -892,6 +945,40 @@ async function writeAcl(next) {
   return true;
 }
 
+/** As the recovery agent (its key in KEYFILE, kept offline): write the root ACL this tool would write for
+ *  agents.json. With --new-owner, first make a new owner key (the old owner.jwk must be moved away): the
+ *  way back after the owner key is lost. The last resort, with the storage stopped, is the operator
+ *  command of factoidal: factoidal lws-acl-reset DIR FILE --operator. */
+async function lwsRecover(args) {
+  const keyFile = args.find((x) => !x.startsWith('--') && !x.startsWith('did:'));
+  if (!keyFile || !existsSync(keyFile)) { say(red('give the recovery key file: foafos-stack lws-recover KEYFILE [--new-owner] [--did DID]')); return 2; }
+  if (C.lwsInsecure) { say(red('the storage runs with no authorization, so an ACL changes nothing: unset FOAFOS_LWS_INSECURE_NO_AUTH')); return 1; }
+  let a = readJson(K.agents);
+  if (!a) { say(red('no agents.json: foafos-stack lws-setup first')); return 1; }
+  const di = args.indexOf('--did');
+  const did = di >= 0 ? args[di + 1] : a.recovery;
+  if (!did || !DID_KEY.test(did)) { say(red('no recovery agent: give --did DID')); return 2; }
+  if (args.includes('--new-owner')) {
+    if (existsSync(K.owner)) { say(red(`${short(K.owner)} exists: move it away first (a new owner key is made only where none is)`)); return 1; }
+    a = { ...a, owner: await makeAgent(K.owner) };
+    say(`made a new storage owner ${a.owner}`);
+  }
+  const text = aclText(a);
+  let client;
+  try {
+    client = await agentClient(did, keyFile);
+    await withTimeout(client.update(`${lwsBase()}.acl`, { body: text, mediaType: 'text/turtle' }), PROBE_WAIT * 3);
+  } catch (e) {
+    say(red(`the storage did not take the ACL from the recovery agent (${e?.detail?.status ? `HTTP ${e.detail.status}` : e?.reason || e?.message}): is lws running, and is this the recovery key?`));
+    say('The last resort, with lws stopped: factoidal lws-acl-reset DIR FILE --operator (docs/foafos-local-lws-auth-20261107.md)');
+    return 1;
+  }
+  writeFileSync(K.acl, text, { mode: 0o600 });
+  writeFileSync(K.agents, `${JSON.stringify(a, null, 2)}\n`, { mode: 0o600 });
+  say(green('the storage has the ACL of foafos-stack again, written by the recovery agent'));
+  return 0;
+}
+
 function didArg(args) {
   const did = args.find((x) => x.startsWith('did:'));
   if (!did || !DID_KEY.test(did)) { say(red('give a did:key, as the Pods window of Foafos shows it')); return null; }
@@ -928,6 +1015,7 @@ function lwsAgents() {
   if (!a) { say('no owner yet: foafos-stack lws-setup'); return 1; }
   say(`owner   ${a.owner}  read, write, control`);
   say(`webdav  ${a.webdav}  read`);
+  if (a.recovery) say(`recovery ${a.recovery}  control of the root only (key kept offline)`);
   for (const x of a.agents) say(`agent   ${x.did}  ${x.modes.join(', ').toLowerCase()}  (${x.label})`);
   return 0;
 }
@@ -944,8 +1032,11 @@ const HELP = `foafos-stack: the local Foafos servers, with one command.
   foafos-stack backstage [local|shared] [--as ACCOUNT] [--room NAME] [--wait SECONDS] [--watch] [--json]
                                       the bots: who is in the room, what each did; read only
   foafos-stack backstage help         what Backstage shows, and what it cannot see
-  foafos-stack lws-setup [--open-acl-window]
-                                      once: the storage's owner key, its ACL, the Finder key and login
+  foafos-stack lws-setup [--open-acl-window] [--recovery-did DID]
+                                      once: the storage's owner key, its ACL, the Finder key and login,
+                                      and a recovery agent (Control only; move its key offline)
+  foafos-stack lws-recover KEYFILE [--new-owner] [--did DID]
+                                      as the recovery agent: give the storage this tool's ACL again
   foafos-stack lws-allow DID [--read-only] [--label TEXT]
                                       let a did:key agent (a browser's) use the storage
   foafos-stack lws-revoke DID         take that away again
@@ -1013,6 +1104,7 @@ async function main([cmd = 'status', ...args]) {
     case 'lws-allow': return lwsAllow(args);
     case 'lws-revoke': return lwsRevoke(args);
     case 'lws-agents': return lwsAgents();
+    case 'lws-recover': return lwsRecover(args);
     case 'open': spawnSync('open', [`${SHELL_ORIGIN}${SHELL_PAGE}?root=all`]); return 0;
     default: say(red(`unknown command: ${cmd}`)); say(HELP); return 2;
   }

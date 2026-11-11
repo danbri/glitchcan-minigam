@@ -39,6 +39,16 @@ try {
   check(await page.evaluate(() => document.querySelector('#foafos-home details[data-folder="essentials"]')?.open === true), 'Essentials starts open');
   await page.fill('.foafos-home-search input', 'zzzz');
   check(await page.isVisible('.foafos-home-none'), 'a search with no match says so');
+  await page.evaluate(() => localStorage.setItem('foafos.apps.recent', JSON.stringify(['chat'])));
+  await page.keyboard.press('Escape');
+  await keys(page, [';', 'a']);
+  await page.fill('.foafos-home-search input', 'chat');
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="chat"]')].filter((b) => !b.hidden).length) === 1, 'an app in Recent is found once');
+  const chatWords = await page.evaluate(() => document.querySelector('.foafos-app[data-app="chat"]').getAttribute('aria-label').toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 3));
+  await page.fill('.foafos-home-search input', `${chatWords.at(-1)} ${chatWords[0]}`);
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="chat"]')].some((b) => !b.hidden)), `words match in any order (${chatWords.at(-1)} ${chatWords[0]})`);
+  await page.fill('.foafos-home-search input', 'counter');
+  check(await page.evaluate(() => [...document.querySelectorAll('.foafos-app[data-app="widget-tally"]')].some((b) => !b.hidden)), 'a widget is found by what it does');
   await page.fill('.foafos-home-search input', 'tally');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(800);
@@ -59,6 +69,14 @@ try {
   check(String(await box()) === '640,0,640,800', 'ctrl ; r snaps right');
   await keys(page, [';', 'm']);
   check(await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-max').getAttribute('aria-pressed')) === 'true', 'ctrl ; m uses the real Maximize');
+  const maxed = () => page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('maximized'));
+  await page.dblclick('#foafos-session-win .foafos-window-bar span');
+  check(!(await maxed()), 'double-clicking the title bar restores');
+  await page.dblclick('#foafos-session-win .foafos-window-bar span');
+  check(await maxed(), 'and double-clicking again maximises');
+  await page.click('#foafos-session-win .foafos-window-min');
+  await page.dblclick('#foafos-session-win .foafos-window-bar span');
+  check(await page.evaluate(() => !document.getElementById('foafos-session-win').classList.contains('minimized')), 'double-clicking a minimised title bar brings the window back');
 
   // Menu and All windows
   await keys(page, [';', 'f', 'o', 'a', 'f']);
@@ -79,6 +97,21 @@ try {
   await page.waitForTimeout(600);
   check(!(await page.evaluate(() => document.body.classList.contains('foafos-overview-on'))) && (await page.evaluate((w) => document.querySelector(`.foafos-window[data-wid="${w}"]`)?.style.zIndex, second)) === '2640', 'pressing 2 picks the second card');
   await page.evaluate(() => document.getElementById('foafos-ov-done')?.click());
+  await page.waitForTimeout(500);
+
+  // A minimised window is still a card, and picking it restores it
+  const minWin = await page.evaluate(() => {
+    const w = [...document.querySelectorAll('.foafos-window')].pop();
+    w.querySelector('.foafos-window-min').click();
+    return w.dataset.wid;
+  });
+  await keys(page, [';', 's']);
+  await page.waitForTimeout(600);
+  const card = `.foafos-window[data-wid="${minWin}"] .foafos-ov-hit`;
+  check(await page.evaluate((c) => /minimised/.test(document.querySelector(c)?.getAttribute('aria-label') || ''), card), 'a minimised window has a card in All windows');
+  await page.evaluate((c) => document.querySelector(c).click(), card);
+  await page.waitForTimeout(600);
+  check(await page.evaluate((w) => { const el = document.querySelector(`.foafos-window[data-wid="${w}"]`); return !el.classList.contains('minimized') && el.style.zIndex === '2640'; }, minWin), 'picking it restores it to the front');
 
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });

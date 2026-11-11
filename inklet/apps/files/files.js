@@ -367,6 +367,25 @@
 
   $('back').addEventListener('click', () => { if (trail.length) go(trail.pop(), { remember: false }); });
   $('up').addEventListener('click', () => go(parentOf(folder)));
+  // Keys in the list, as in a desktop file browser: Backspace or Alt+Up goes up a
+  // folder, Home and End go to the first and last item. Arrow keys move in the grid too.
+  $('items').addEventListener('keydown', async (e) => {
+    if (e.target.closest('input, textarea, select')) return;
+    const rows = [...$('items').querySelectorAll('tbody tr, .grid [role=option]')];
+    const at = rows.indexOf(e.target);
+    if ((e.key === 'Backspace' || (e.altKey && e.key === 'ArrowUp')) && folder) {
+      e.preventDefault();
+      const from = folder;
+      await go(parentOf(folder));
+      const back = [...$('items').querySelectorAll('tbody tr')].find((r) => r.dataset.path === from);
+      (back || $('items').querySelector('tbody tr, .grid [role=option]'))?.focus();
+      return;
+    }
+    if (at < 0) return;
+    const to = { Home: 0, End: rows.length - 1 }[e.key]
+      ?? (e.target.matches('[role=option]') ? { ArrowRight: at + 1, ArrowLeft: at - 1 }[e.key] : undefined);
+    if (to !== undefined && rows[to]) { e.preventDefault(); rows[to].focus(); }
+  });
   // Type-ahead, as in a desktop file browser: letters typed quickly in the list
   // jump to the first item whose name starts with them.
   let typed = '', typedAt = 0;
