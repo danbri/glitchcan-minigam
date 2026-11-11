@@ -382,6 +382,15 @@
     if (hit) { e.preventDefault(); hit.focus(); }
   });
   $('filter').addEventListener('input', drawItems);
+  // From the filter: Down moves into the list, Enter opens the top match (as in All apps).
+  $('filter').addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'Enter') return;
+    const first = $('items').querySelector('tbody tr, .grid [role=option]');
+    if (!first) return;
+    e.preventDefault();
+    first.focus();
+    if (e.key === 'Enter') { const it = shown()[0]; if (it) activate(it); }
+  });
   $('new-file').addEventListener('click', askNewFile);
   $('add-folder').addEventListener('click', addFolder);
   $('new-folder').addEventListener('click', askNewFolder);

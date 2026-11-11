@@ -101,6 +101,21 @@ try {
   await page.keyboard.press('a'); await page.keyboard.press('v');
   const toAv = await f.evaluate(() => document.activeElement?.dataset?.path);
   check(toH === 'notes/hello.txt' && toAv === 'notes/avocado.txt', `typing a name jumps to it (${toH}, ${toAv})`);
+  // From the filter, Enter opens the top match and Down moves into the list.
+  const filt = (v) => f.evaluate((x) => { const i = document.getElementById('filter'); i.value = x; i.dispatchEvent(new Event('input')); }, v);
+  // The filter shows only in a wide window.
+  const maxFiles = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.querySelector('iframe')?.src.includes('apps/files/'))?.querySelector('.foafos-window-max')?.click());
+  await maxFiles(); await page.waitForTimeout(300);
+  await filt('avo');
+  await f.focus('#filter'); await page.keyboard.press('Enter');
+  await page.waitForTimeout(500);
+  const opened = await f.evaluate(() => window.__files.state().picked?.path);
+  await filt('app');
+  await f.focus('#filter'); await page.keyboard.press('ArrowDown');
+  const down = await f.evaluate(() => document.activeElement?.dataset?.path);
+  check(opened === 'notes/avocado.txt' && down === 'notes/apple.txt', `the filter's Enter opens the top match, Down enters the list (${opened}, ${down})`);
+  await filt('');
+  await maxFiles(); await page.waitForTimeout(300);
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foaf.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));
 
