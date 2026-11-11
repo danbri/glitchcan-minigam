@@ -1031,7 +1031,7 @@ window.FinkWM = {
     // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
     // Not w, t or n, which browsers keep for themselves on Windows and Linux.
     KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s',
-            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m' },
+            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j' },
     _initKeys() {
         let saved = {};
         try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
@@ -1047,6 +1047,7 @@ window.FinkWM = {
             snapLeft: () => window.FoafOS?.snapFront?.('left'),
             snapRight: () => window.FoafOS?.snapFront?.('right'),
             snapFull: () => window.FoafOS?.snapFront?.('top'),
+            next: () => window.FoafOS?.nextWindow?.(),
         };
         let typed = [], at = 0;
         window.addEventListener('keydown', (e) => {

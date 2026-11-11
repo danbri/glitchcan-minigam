@@ -2921,6 +2921,19 @@ function buildUI() {
     if (e.key === 'Escape' && overviewOn) { e.preventDefault(); exitOverview(null); }
   });
 
+  // Bring the next open window to the front, in the order they were opened, for the keyboard
+  // (Ctrl ; j). Minimised windows are skipped; All windows reaches those.
+  FoafOS.nextWindow = () => {
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    if (!wins.length) return null;
+    const front = wins.findIndex((w) => w.style.zIndex === '2640');
+    const next = wins[(front + 1) % wins.length];
+    FoafOS.raiseWindow(next);
+    next.querySelector('.foafos-window-bar button, .foafos-window-bar')?.focus?.();
+    bus.publish('wm.next', { summary: `front: ${next.querySelector('.foafos-window-bar span')?.textContent || 'window'}` });
+    return next;
+  };
+
   // Snap the front window, for the keyboard.
   FoafOS.snapFront = (zone) => {
     const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
