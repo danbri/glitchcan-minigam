@@ -90,6 +90,17 @@ try {
   const after = await f.evaluate(() => foaf.pod.get('notes/hello.txt'));
   check(after.body === 'second', `the file survives a reload (${after.body ?? after.reason})`);
   check(s.items.includes('notes/'), `the list shows the folder (${s.items.join(', ')})`);
+  // Keys: Backspace goes up a folder and lands on the folder you came from.
+  await f.evaluate(() => window.__files.go('notes/'));
+  await f.waitForFunction(() => document.querySelector('#items tbody tr'), null, { timeout: 5000 }).catch(() => {});
+  await f.focus('#items tbody tr');
+  await f.press('#items tbody tr', 'Backspace');
+  await page.waitForTimeout(400);
+  const up = await f.evaluate(() => ({ folder: window.__files.state().folder, focused: document.activeElement?.dataset?.path }));
+  check(up.folder === '' && up.focused === 'notes/', `Backspace goes up and lands on the folder (${JSON.stringify(up)})`);
+  await f.press('#items tbody tr[data-path="notes/"]', 'End');
+  const end = await f.evaluate(() => { const rows = [...document.querySelectorAll('#items tbody tr')]; return document.activeElement === rows.at(-1); });
+  check(end, 'End goes to the last item');
 
   await page.screenshot({ path: process.env.SHOT || '/dev/null' }).catch(() => {});
   await f.click('#change-location');
