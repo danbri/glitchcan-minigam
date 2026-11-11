@@ -63,7 +63,7 @@ try {
   await page.waitForTimeout(1200);
   // launch it the way `# MINIGAME: battleboids` does: the runner's
   // story.launch verb, so the shell's economy belongs to this story
-  const launched = await runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'battleboids' }));
+  const launched = await runner.evaluate(() => window.foafos.storyRequest('story.launch', { game: 'battleboids' }));
   if (!launched?.ok) throw new Error('story.launch battleboids refused: ' + JSON.stringify(launched));
 
   let game = null;

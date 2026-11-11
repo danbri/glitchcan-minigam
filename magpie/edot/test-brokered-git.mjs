@@ -3,10 +3,10 @@
 // The interesting assertion is a NEGATIVE one, so it is the one this file
 // works hardest at: BrokeredGitSource must have no path to a credential, no
 // way to name the repo, and no way to talk to api.github.com itself. What it
-// has is `foaf.invoke`, and the whole point is that everything about where
+// has is `foafos.invoke`, and the whole point is that everything about where
 // the commit goes lives on the other side of that call.
 //
-// Pure Node: a stub `foaf` stands in for the shell (which the real e2e-caps
+// Pure Node: a stub `foafos` stands in for the shell (which the real e2e-caps
 // leg exercises for real, inside a sandboxed frame). No network, by design.
 import { BrokeredGitSource } from './js/resource-source.js';
 
@@ -32,17 +32,17 @@ const stubFoaf = ({ caps = ['storage', 'git:write'], reply = () => ({ ok: true, 
 };
 
 // ---- it is a remote mount that publishes ------------------------------------
-const foaf = stubFoaf();
-const src = new BrokeredGitSource({ storage: memStorage(), foaf });
+const foafos = stubFoaf();
+const src = new BrokeredGitSource({ storage: memStorage(), foafos });
 ok('it presents as a remote github mount', src.provider === 'github' && src.locality === 'remote');
 ok('it says out loud that it holds no token', /never sees a token/.test(src.note));
 ok('canPublish reflects the capability, not a config flag', src.canPublish === true);
 
 const r = await src.write('/notes/todo.md', enc('# buy milk'));
-ok('a write publishes via the git.commit verb', foaf.invoked.length === 1 && foaf.invoked[0].verb === 'git.commit');
+ok('a write publishes via the git.commit verb', foafos.invoked.length === 1 && foafos.invoked[0].verb === 'git.commit');
 ok('it sends a RELATIVE path and text — no repo, no owner, no branch, no host',
   (() => {
-    const d = foaf.invoked[0].detail;
+    const d = foafos.invoked[0].detail;
     return d.path === 'notes/todo.md' && d.content === '# buy milk'
       && !('repo' in d) && !('owner' in d) && !('branch' in d)
       && !JSON.stringify(d).includes('github.com');
@@ -53,29 +53,29 @@ ok('the publish result is reported, not swallowed', r.ok === true && r.status ==
 ok('the bytes are readable locally straight away', dec(await src.read('/notes/todo.md')) === '# buy milk');
 
 const failing = stubFoaf({ reply: () => ({ ok: false, reason: 'http', status: 403 }) });
-const src2 = new BrokeredGitSource({ storage: memStorage(), foaf: failing });
+const src2 = new BrokeredGitSource({ storage: memStorage(), foafos: failing });
 const r2 = await src2.write('/a.md', enc('draft'));
 ok('a refused publish still keeps the edit locally', dec(await src2.read('/a.md')) === 'draft');
 ok('…and reports the status so a UI can say "saved, not published"', r2.ok === false && r2.status === 403);
 
 // ---- no capability, no publish ---------------------------------------------
-const src3 = new BrokeredGitSource({ storage: memStorage(), foaf: stubFoaf({ caps: ['storage'] }) });
+const src3 = new BrokeredGitSource({ storage: memStorage(), foafos: stubFoaf({ caps: ['storage'] }) });
 ok('without git:write it does not even try', src3.canPublish === false);
 const r3 = await src3.write('/a.md', enc('x'));
 ok('…and says why rather than looking successful', r3.ok === false && r3.reason === 'no-capability');
 ok('the local write still happened', dec(await src3.read('/a.md')) === 'x');
 
-const src4 = new BrokeredGitSource({ storage: memStorage(), foaf: null });
+const src4 = new BrokeredGitSource({ storage: memStorage(), foafos: null });
 ok('standalone (no shell at all) is a refusal, not a crash', src4.canPublish === false);
 
 // ---- honest about what it cannot do ----------------------------------------
-const src5 = new BrokeredGitSource({ storage: memStorage(), foaf: stubFoaf() });
+const src5 = new BrokeredGitSource({ storage: memStorage(), foafos: stubFoaf() });
 await src5.write('/gone.md', enc('bye'));
 const rm = src5.remove('/gone.md');
 ok('remove is local-only and SAYS so — there is no git.delete verb',
   rm.reason === 'delete-not-brokered');
 
-const bin = new BrokeredGitSource({ storage: memStorage(), foaf: stubFoaf() });
+const bin = new BrokeredGitSource({ storage: memStorage(), foafos: stubFoaf() });
 const rb = await bin.write('/img.png', new Uint8Array([0xff, 0xd8, 0xff, 0x00, 0x80]));
 ok('binary is refused rather than mangled into invalid UTF-8',
   rb.ok === false && rb.reason === 'binary-unsupported');

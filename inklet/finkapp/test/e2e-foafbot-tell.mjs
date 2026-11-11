@@ -116,7 +116,7 @@ try {
   let playlist;
   for (let i = 0; i < 200 && !playlist; i++) {
     const f = page.frames().find((x) => x.url().includes('/apps/playlist/'));
-    if (f && await f.evaluate(() => !!window.foaf?.bus).catch(() => false)) playlist = f;
+    if (f && await f.evaluate(() => !!window.foafos?.bus).catch(() => false)) playlist = f;
     else await wait(100);
   }
   await wait(1000);   // its app.init
@@ -189,7 +189,7 @@ try {
 
   // ── app data and the shell's replies are data ──
   await page.selectOption('#chat-mirror-apps', 'data');
-  await playlist.evaluate((t) => foaf.bus.publish('app.playlist.note', { summary: `@foafbot ${t}` }), tell());
+  await playlist.evaluate((t) => foafos.bus.publish('app.playlist.note', { summary: `@foafbot ${t}` }), tell());
   const mirrored = await me.message((t) => t.includes('app.playlist.note'));
   check(!!mirrored && mirrored.includes('/tell'), 'an app says /tell in the room, as data');
   await none('and that runs nothing');

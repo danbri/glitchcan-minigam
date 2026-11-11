@@ -13,7 +13,7 @@ Status: a survey. Nothing below is built yet, except where it says "exists".
 | Docklands WebMCP | `registerWebMCP()` in `api.js` | Exists: it registers every tool on `document.modelContext` (or `navigator.modelContext`) if the browser has one. Else it does nothing. |
 | Docklands in foafos | `inklet/finkapp/apps/docklands.jsonld` | Exists: the live page in a sandboxed frame (opaque origin), `capabilities: []`. It does not load `app-sdk.js` and does not speak the guest protocol. See `docs/foafos-docklands-20261103.md`. |
 | Bus over XMPP | `docs/foafos-chat-20261103.md` | Exists: the shell's in-page Lean XMPP server mirrors listed bus topics to a room. An outside client sees them (e2e-chat). Nothing from the room changes anything yet. |
-| Built-in LWS pod | `packages/foafos/src/pods.mjs`, `@factoidal/core@0.30.0` `lws/inpage` | Exists: Pod Notes uses it through `foaf.pod.*`. |
+| Built-in LWS pod | `packages/foafos/src/pods.mjs`, `@factoidal/core@0.30.0` `lws/inpage` | Exists: Pod Notes uses it through `foafos.pod.*`. |
 | RDF dataset over LWS | `@factoidal/core/lws/dataset`, `openLwsDataset(...).query()` | Exists in 0.30.0: SPARQL over an LWS storage, from the client side. |
 | HTTP over XMPP (XEP-0332) | factoidal-core `L4Factoidal/XMPP/HttpOverXmpp.lean`, `HttpRequester.lean`, `npm/factoidal/xmpp/proxy.mjs` | Exists in Lean and in the Node CLI (`xmpp-http-proxy`, `webdav-serve --xmpp`). Not wired into the in-page server or the shell. |
 
@@ -24,7 +24,7 @@ Status: a survey. Nothing below is built yet, except where it says "exists".
    shell. Its tools are there, but nothing carries them out of the frame.
 2. **From SPARQL: not yet.** Docklands has no RDF and no Factoidal code. Its tool answers are JSON.
 3. **LWS storage: not yet.** Docklands has no pod capability and no SDK. The built-in pod works for apps that use
-   `foaf.pod.*`.
+   `foafos.pod.*`.
 4. **SPARQL over XMPP: the parts exist, the connection does not.** XEP-0332 is in Lean and in the Node CLI. The shell's
    in-page server does not serve XEP-0332, and nothing sends a SPARQL request to `openLwsDataset`.
 

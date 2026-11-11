@@ -25,8 +25,8 @@ function setup() {
     _renderMain: () => { drawn++; },
   };
   const tools = new Map();
-  const foaf = { tools: { register: (t) => tools.set(t.name, t) } };
-  offerCalendarTools(cal, foaf);
+  const foafos = { tools: { register: (t) => tools.set(t.name, t) } };
+  offerCalendarTools(cal, foafos);
   const run = (name, args = {}) => tools.get(name).handler(args);
   return { tools, run, cal, drawn: () => drawn };
 }

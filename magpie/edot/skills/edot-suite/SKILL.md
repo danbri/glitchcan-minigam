@@ -76,7 +76,7 @@ Three behaviours that will surprise you:
 | call | registry | what it means |
 |---|---|---|
 | `kernel.capabilities.invoke('data.addTable', …)` | edot's own | ask another edot pane/tab to do something |
-| `foaf.invoke('git.commit', …)` | **the foafos shell** | ask the SHELL to act with a credential this app cannot read |
+| `foafos.invoke('git.commit', …)` | **the foafos shell** | ask the SHELL to act with a credential this app cannot read |
 
 They are unrelated systems that happen to share a verb. `git.commit` is the
 second kind — `BrokeredGitSource` calls it, and it only exists when edot is
@@ -104,7 +104,7 @@ S3ResourceSource       BrokeredResourceSource BrokeredGitSource
   The first is a whole filesystem over the foafos store broker (because OPFS
   needs an origin and is refused in a sandboxed frame). The second is a repo
   mount with **no token in it** — reads come from a local mirror, writes go
-  through `foaf.invoke('git.commit')`, so the semantics are *publish*, not
+  through `foafos.invoke('git.commit')`, so the semantics are *publish*, not
   sync, and it says so rather than pretending.
 
 ## Auth — better than its reputation
@@ -143,7 +143,7 @@ were migrated off the `same-origin` escape hatch. What that means for you:
 - Data gets a **4MB quota** by name (`quotas: { sheets: … }` in the shell)
   because an almost-empty SQLite file is already ~43KB base64 against a 256KB
   default. A refused write is announced, not swallowed.
-- A credential must go to `foaf.secrets` (put/use, never get), **not** to
+- A credential must go to `foafos.secrets` (put/use, never get), **not** to
   `localStorage`. Measured before that existed: "stay signed in" put a bearer
   token in the shell's own origin, in plaintext, on disk.
 

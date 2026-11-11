@@ -26,7 +26,7 @@
 // explanatory error instead of a bare SecurityError, because "you were
 // not granted storage" is a debuggable message and "SecurityError" is not.
 (function () {
-  if (window.foaf) return;
+  if (window.foafos) return;
 
   const listeners = { init: [], grant: [], suspend: [], resume: [], terminate: [], audio: [], action: [] };
   // ACTIONS (docs/foafos-apps-20261022.md, section 5): named operations the
@@ -280,7 +280,7 @@
      * result, and what it throws is the error. Returns a function that takes
      * the tool back.
      *
-     *   foaf.tools.register({
+     *   foafos.tools.register({
      *     name: 'list_notes',
      *     description: 'The names of your notes.',
      *     inputSchema: { type: 'object', properties: {} },
@@ -315,7 +315,7 @@
   };
 
   // ── the public surface ──────────────────────────────────────────────
-  const foaf = {
+  const foafos = {
     tools,
     get id() { return appId; },
     get ready() { return ready; },
@@ -325,11 +325,11 @@
     onInit: (fn) => {
       listeners.init.push(fn);
       // already initialised? replay, so a late (module) listener still boots
-      if (ready) { try { fn(lastInitConfig || {}, foaf); } catch (err) { console.error(err); } }
-      return foaf;
+      if (ready) { try { fn(lastInitConfig || {}, foafos); } catch (err) { console.error(err); } }
+      return foafos;
     },
     /** Return the state to keep; `null` declines (mid-animation, say). */
-    onSnapshot: (fn) => { snapshotFn = fn; declareContract('snapshot'); return foaf; },
+    onSnapshot: (fn) => { snapshotFn = fn; declareContract('snapshot'); return foafos; },
     /** Receive whatever was kept last time, right after init. */
     onRestore: (fn) => {
       restoreFn = fn;
@@ -341,7 +341,7 @@
         const held = pendingRestore; pendingRestore = undefined;
         try { fn(held); } catch (err) { console.error(err); }
       }
-      return foaf;
+      return foafos;
     },
     /**
      * Send the state to keep NOW, without being asked; `null` declines, as
@@ -351,7 +351,7 @@
      */
     keepSnapshot: (state) => {
       post({ type: 'app.snapshot-keep', state: state ?? null });
-      return foaf;
+      return foafos;
     },
     /**
      * Receive actions: `fn(action, args, from)`. `action` is one of the
@@ -366,11 +366,11 @@
         const a = heldActions.shift();
         try { fn(a.action, a.args, a.from); } catch (err) { console.error(err); }
       }
-      return foaf;
+      return foafos;
     },
-    onSuspend: (fn) => { listeners.suspend.push(fn); return foaf; },
-    onResume: (fn) => { listeners.resume.push(fn); return foaf; },
-    onTerminate: (fn) => { listeners.terminate.push(fn); return foaf; },
+    onSuspend: (fn) => { listeners.suspend.push(fn); return foafos; },
+    onResume: (fn) => { listeners.resume.push(fn); return foafos; },
+    onTerminate: (fn) => { listeners.terminate.push(fn); return foafos; },
 
     /**
      * Ask the shell to do something on the app's behalf.
@@ -399,16 +399,16 @@
      * address, JID or password. Needs `pod:read` (get, list) or `pod:write`
      * (put, delete) in the manifest.
      *
-     *   await foaf.pod.put('notes/today.txt', 'hello', { contentType: 'text/plain' })
-     *   const { body, etag } = await foaf.pod.get('notes/today.txt')
-     *   const { items } = await foaf.pod.list('notes/')   // [{ path, container }]
-     *   await foaf.pod.put('photos/cat.png', arrayBuffer, { contentType: 'image/png' })   // bytes, up to 8 MiB
-     *   const { body } = await foaf.pod.get('photos/cat.png', { as: 'bytes' })          // an ArrayBuffer, any type
+     *   await foafos.pod.put('notes/today.txt', 'hello', { contentType: 'text/plain' })
+     *   const { body, etag } = await foafos.pod.get('notes/today.txt')
+     *   const { items } = await foafos.pod.list('notes/')   // [{ path, container }]
+     *   await foafos.pod.put('photos/cat.png', arrayBuffer, { contentType: 'image/png' })   // bytes, up to 8 MiB
+     *   const { body } = await foafos.pod.get('photos/cat.png', { as: 'bytes' })          // an ArrayBuffer, any type
      * Text is carried up to 1 MiB; a non-text file read without `as: 'bytes'` is `not-text`.
      *
      * Every call goes to the person's shared pod. If the person gave this app
-     * an extra pod in System, `foaf.pod.extras()` gives its handle, and
-     * `{ pod: handle }` aims a call there, as `foaf.pod.list('', { pod: handle })`.
+     * an extra pod in System, `foafos.pod.extras()` gives its handle, and
+     * `{ pod: handle }` aims a call there, as `foafos.pod.list('', { pod: handle })`.
      * A handle says nothing about the pod. An app cannot list, name, add or ask
      * for a pod.
      *
@@ -430,7 +430,7 @@
       handlers: (path, contentType) => reqVerb({ type: 'pod', verb: 'pod.handlers', params: { path, contentType } }),
       openWith: (app, path, contentType) => reqVerb({ type: 'pod', verb: 'pod.openWith', params: { app, path, contentType } }),
       // Any app: was this window opened on a file? Then { share: { token, name, write } }.
-      // Read and write it with foaf.pod.get('', { share: token }) and foaf.pod.put('', body, { share: token }).
+      // Read and write it with foafos.pod.get('', { share: token }) and foafos.pod.put('', body, { share: token }).
       shared: () => reqVerb({ type: 'pod', verb: 'pod.shared' }),
     },
 
@@ -440,7 +440,7 @@
      * THERE IS NO `get`. A token you cannot read back is a token you
      * cannot leak, log, put in a URL, or be tricked into posting
      * somewhere by injected script. Ask the shell to USE it instead —
-     * `foaf.invoke('git.commit', …)` — so the value never enters this
+     * `foafos.invoke('git.commit', …)` — so the value never enters this
      * frame at all.
      *
      * Storage and secrets are separate capabilities on purpose: an app
@@ -454,7 +454,7 @@
       get() {
         const e = new Error(
           'foafos: secrets cannot be read back. Ask the shell to use the ' +
-          'secret on your behalf (foaf.invoke) so the value never enters ' +
+          'secret on your behalf (foafos.invoke) so the value never enters ' +
           'this frame.');
         e.name = 'FoafSecretsNotReadable';
         throw e;
@@ -488,7 +488,7 @@
     onAudio: (fn) => {
       listeners.audio.push(fn);
       if (lastAudio) { try { fn(lastAudio); } catch (err) { console.error(err); } }
-      return foaf;
+      return foafos;
     },
 
     /** Say something the shell's announcer should read out. */
@@ -582,7 +582,7 @@
         post({ type: 'conformance', contracts: [...contracts] });
         // Tools registered before the shell said hello: say them again.
         if (toolDefs.size) queueAnnounce();
-        listeners.init.forEach(fn => { try { fn(d.config || {}, foaf); } catch (err) { console.error(err); } });
+        listeners.init.forEach(fn => { try { fn(d.config || {}, foafos); } catch (err) { console.error(err); } });
         break;
       }
       case 'app.grant':
@@ -602,7 +602,10 @@
     }
   });
 
-  window.foaf = foaf;
+  window.foafos = foafos;
+  // The SDK was called `foaf` until 2026-11-11. The old name stays as an alias for apps outside
+  // this repository (Moglob, guests in other repos); everything here uses `foafos`.
+  window.foaf = foafos;
   // Tell the shell we exist. Until this arrives it does not know whether
   // this frame speaks the protocol at all.
   post({ type: 'app.hello', href: location.pathname });

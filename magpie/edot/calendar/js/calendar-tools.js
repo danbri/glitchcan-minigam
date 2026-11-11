@@ -1,5 +1,5 @@
 // calendar-tools.js — Calendar's tools for the foafos shell and agents, offered
-// through foaf.tools (inklet/apps/app-sdk.js). Two read, one writes:
+// through foafos.tools (inklet/apps/app-sdk.js). Two read, one writes:
 //
 //   list_calendars  the calendars (layers) you have
 //   list_events     events in a date range, with repeats expanded
@@ -32,11 +32,11 @@ const summary = (ev, calendar) => ({
   end: ev.end ? new Date(ev.end).toISOString() : null, allDay: !!ev.allDay, calendar,
 });
 
-export function offerCalendarTools(cal, foaf) {
+export function offerCalendarTools(cal, foafos) {
   const calendars = async () => cal.store.getCalendars();
   const nameOf = (list, id) => list.find((c) => c.id === id)?.name || null;
 
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'list_calendars',
     description: 'Your calendars: each one\'s id, name, whether it is shown, and whether it is a subscribed feed (read only).',
     inputSchema: { type: 'object', properties: {} },
@@ -46,7 +46,7 @@ export function offerCalendarTools(cal, foaf) {
     }),
   });
 
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'list_events',
     description: `Events that overlap a range of dates, in start order, with repeating events expanded. With no dates: today and the next 30 days. Times in the reply are UTC. At most ${MAX_EVENTS}.`,
     inputSchema: {
@@ -84,7 +84,7 @@ export function offerCalendarTools(cal, foaf) {
     },
   });
 
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'add_event',
     description: 'Add an event to one of your own calendars (the first one, unless you name another). With no end, it lasts an hour, or the whole day for an all-day event. Give an id to make a retry safe: if an event in your own calendars has that id already, it is returned (with existed: true) and nothing is added. Use a new id for each new event.',
     inputSchema: {

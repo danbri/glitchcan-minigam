@@ -90,9 +90,9 @@ try {
     const r = await f.evaluate(async ({ id, text }) => {
       await window.__files.useLocation(id);
       const s = window.__files.state();
-      const put = await foaf.pod.put('goal/hello.txt', text, { contentType: 'text/plain' });
-      const get = await foaf.pod.get('goal/hello.txt');
-      const list = await foaf.pod.list('goal/');
+      const put = await foafos.pod.put('goal/hello.txt', text, { contentType: 'text/plain' });
+      const get = await foafos.pod.get('goal/hello.txt');
+      const list = await foafos.pod.list('goal/');
       return { current: s.current, status: s.locations.find((l) => l.id === id)?.status, put: put.ok || put.reason, body: get.body, listed: list.items?.map((i) => i.path) };
     }, { id, text });
     let outsideView = '';
@@ -101,7 +101,7 @@ try {
       const seen = await fetch(`${POD}goal/hello.txt`, { headers: { Authorization: `Bearer ${TOKEN}` } });
       outsideView = (await seen.text()) === text ? ', and seen on Fly from outside the browser' : ', NOT seen from outside';
     }
-    const del = await f.evaluate(() => foaf.pod.delete('goal/hello.txt'));
+    const del = await f.evaluate(() => foafos.pod.delete('goal/hello.txt'));
     check(r.current === id && r.put === true && r.body === text && r.listed?.includes('hello.txt') && del.ok && !outsideView.includes('NOT'),
       `${words}: write, read, list, delete${outsideView}${r.put === true ? '' : ` (${JSON.stringify(r).slice(0, 160)})`}`);
   }

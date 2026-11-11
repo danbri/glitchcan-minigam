@@ -64,9 +64,9 @@ try {
   check(/memory only|encrypted/.test(s.where), 'the built-in pod says how it is kept');
   const builtinBytes = await f.evaluate(async () => {
     const bytes = new Uint8Array(256).map((_, i) => i);
-    const put = await foaf.pod.put('bin/all-bytes.bin', bytes.buffer, { contentType: 'application/octet-stream' });
-    const got = await foaf.pod.get('bin/all-bytes.bin', { as: 'bytes' });
-    await foaf.pod.delete('bin/all-bytes.bin');
+    const put = await foafos.pod.put('bin/all-bytes.bin', bytes.buffer, { contentType: 'application/octet-stream' });
+    const got = await foafos.pod.get('bin/all-bytes.bin', { as: 'bytes' });
+    await foafos.pod.delete('bin/all-bytes.bin');
     return { put: put.ok, same: got.ok && got.body.byteLength === 256 && new Uint8Array(got.body).every((v, i) => v === i) };
   });
   check(builtinBytes.put && builtinBytes.same, `the built-in pod keeps all 256 byte values (${JSON.stringify(builtinBytes)})`);
@@ -75,7 +75,7 @@ try {
   s = await state(f);
   check(s.current === 'device', `switched to This device (${s.status || 'no error'})`);
   check(/Finder and Explorer cannot show/.test(s.where), 'This device says Finder cannot show its files');
-  const wrote = await f.evaluate(() => foaf.pod.put('notes/hello.txt', 'kept on this device', { contentType: 'text/plain' }));
+  const wrote = await f.evaluate(() => foafos.pod.put('notes/hello.txt', 'kept on this device', { contentType: 'text/plain' }));
   check(wrote.ok, `a file is written through the pod verbs (${wrote.status ?? wrote.reason})`);
   const onDisk = await page.evaluate(async () => {
     const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('foafos')).getDirectoryHandle('notes');
@@ -83,9 +83,9 @@ try {
   });
   check(onDisk === 'kept on this device', 'the file is really in OPFS');
   const stale = await f.evaluate(async () => {
-    const a = await foaf.pod.get('notes/hello.txt');
-    await foaf.pod.put('notes/hello.txt', 'second', { contentType: 'text/plain', etag: a.etag });
-    return foaf.pod.put('notes/hello.txt', 'third', { contentType: 'text/plain', etag: a.etag });
+    const a = await foafos.pod.get('notes/hello.txt');
+    await foafos.pod.put('notes/hello.txt', 'second', { contentType: 'text/plain', etag: a.etag });
+    return foafos.pod.put('notes/hello.txt', 'third', { contentType: 'text/plain', etag: a.etag });
   });
   check(stale.reason === 'conflict', `a stale save is refused (${stale.reason})`);
 
@@ -100,7 +100,7 @@ try {
   await f.click('#view');                     // back to the list for the checks that follow
   await f.waitForFunction(() => window.__files.state().items.length > 0, null, { timeout: 10000 }).catch(() => {});
   s = await state(f);
-  const after = await f.evaluate(() => foaf.pod.get('notes/hello.txt'));
+  const after = await f.evaluate(() => foafos.pod.get('notes/hello.txt'));
   check(after.body === 'second', `the file survives a reload (${after.body ?? after.reason})`);
   check(s.items.includes('notes/'), `the list shows the folder (${s.items.join(', ')})`);
   // Keys: Backspace goes up a folder and lands on the folder you came from.
@@ -115,7 +115,7 @@ try {
   const end = await f.evaluate(() => { const rows = [...document.querySelectorAll('#items tbody tr')]; return document.activeElement === rows.at(-1); });
   check(end, 'End goes to the last item');
   // Type-ahead: letters typed in the list jump to the first name that starts with them.
-  await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foaf.pod.put(`notes/${n}`, n, { contentType: 'text/plain' }))));
+  await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.put(`notes/${n}`, n, { contentType: 'text/plain' }))));
   await f.evaluate(() => window.__files.go('notes/'));
   await f.waitForFunction(() => document.querySelectorAll('#items tbody tr').length >= 3, null, { timeout: 5000 }).catch(() => {});
   await f.focus('#items tbody tr');
@@ -136,7 +136,7 @@ try {
   const peek = await f.evaluate(() => ({ folder: window.__files.state().folder, picked: window.__files.state().picked?.path, still: document.activeElement?.dataset?.path }));
   check(peek.folder === '' && peek.picked === 'notes/' && peek.still === 'notes/', `Space shows an item without opening it (${JSON.stringify(peek)})`);
   // Delete on the focused row asks first; Escape keeps the file, Delete then Enter removes it.
-  await f.evaluate(() => foaf.pod.put('notes/doomed.txt', 'x', { contentType: 'text/plain' }));
+  await f.evaluate(() => foafos.pod.put('notes/doomed.txt', 'x', { contentType: 'text/plain' }));
   await f.evaluate(() => window.__files.go('notes/'));
   await page.waitForTimeout(300);
   await f.focus('#items tbody tr[data-path="notes/doomed.txt"]');
@@ -144,14 +144,14 @@ try {
   await page.waitForTimeout(400);
   const asked = await f.evaluate(() => /Delete doomed\.txt\?/.test(document.querySelector('.ask')?.textContent || ''));
   await page.keyboard.press('Escape');
-  const kept = await f.evaluate(async () => !document.querySelector('.ask') && (await foaf.pod.get('notes/doomed.txt')).ok);
+  const kept = await f.evaluate(async () => !document.querySelector('.ask') && (await foafos.pod.get('notes/doomed.txt')).ok);
   await f.focus('#items tbody tr[data-path="notes/doomed.txt"]');
   await page.keyboard.press('Delete');
   await page.waitForTimeout(400);
   const safe = await f.evaluate(() => document.activeElement?.textContent === 'Cancel');
   await f.click('.ask button.danger');
   await page.waitForTimeout(600);
-  const gone = await f.evaluate(async () => !(await foaf.pod.get('notes/doomed.txt')).ok);
+  const gone = await f.evaluate(async () => !(await foafos.pod.get('notes/doomed.txt')).ok);
   check(asked && kept && safe && gone, `Delete asks first (starting on Cancel), Escape keeps the file, the Delete button removes it (${asked}, ${kept}, ${safe}, ${gone})`);
   // Dropping files: text and a photo are added (the photo as bytes); one over 8 MiB is named and left out.
   // Picking the photo shows it, and it can be deleted.
@@ -167,8 +167,8 @@ try {
     const lit = pane.classList.contains('dropping');
     pane.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
     await new Promise((r) => setTimeout(r, 800));
-    const got = await foaf.pod.get('notes/dropped.txt');
-    const png = await foaf.pod.get('notes/photo.png', { as: 'bytes' });
+    const got = await foafos.pod.get('notes/dropped.txt');
+    const png = await foafos.pod.get('notes/photo.png', { as: 'bytes' });
     const same = png.ok && new Uint8Array(png.body).every((v, i) => v === png1[i]) && png.body.byteLength === png1.length;
     await window.__files.pick({ path: 'notes/photo.png', container: false });
     const img = document.querySelector('#detail img');
@@ -193,9 +193,9 @@ try {
   });
   check(thumb.list && thumb.grid && thumb.small, `an image shows a thumbnail in the list and the icon view (${JSON.stringify(thumb)})`);
   check(dropped.shown && dropped.deleteOffered && dropped.noNull, `a photo shows in the side panel and can be deleted (${dropped.shown}, ${dropped.deleteOffered}, no stray null: ${dropped.noNull})`);
-  await f.evaluate(() => Promise.all(['notes/dropped.txt', 'notes/photo.png'].map((p) => foaf.pod.delete(p))));
+  await f.evaluate(() => Promise.all(['notes/dropped.txt', 'notes/photo.png'].map((p) => foafos.pod.delete(p))));
   // Icon view: Down goes to the item below, Up comes back.
-  await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foaf.pod.put(`notes/z${i}.txt`, 'x', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
+  await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foafos.pod.put(`notes/z${i}.txt`, 'x', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
   await f.click('#view'); await page.waitForTimeout(300);
   const grid = await f.evaluate(() => {
     const items = [...document.querySelectorAll('#items .grid [role=option]')];
@@ -209,7 +209,7 @@ try {
   });
   check(grid.below && grid.sameCol && grid.back, `icon view: Down goes to the item below, Up comes back (${JSON.stringify(grid)})`);
   await f.click('#view');
-  await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foaf.pod.delete(`notes/z${i}.txt`); await window.__files.go('notes/'); });
+  await f.evaluate(async () => { for (let i = 0; i < 9; i++) await foafos.pod.delete(`notes/z${i}.txt`); await window.__files.go('notes/'); });
   // From the filter, Enter opens the top match and Down moves into the list.
   const filt = (v) => f.evaluate((x) => { const i = document.getElementById('filter'); i.value = x; i.dispatchEvent(new Event('input')); }, v);
   const narrow = await f.evaluate(() => ({ filter: !!document.getElementById('filter').offsetParent, wide: document.body.clientWidth > 620, crumbs: document.querySelector('#crumbs li:last-child button')?.offsetWidth > 0 }));
@@ -223,7 +223,7 @@ try {
   const down = await f.evaluate(() => document.activeElement?.dataset?.path);
   check(opened === 'notes/avocado.txt' && down === 'notes/apple.txt', `the filter's Enter opens the top match, Down enters the list (${opened}, ${down})`);
   await filt('');
-  await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foaf.pod.delete?.(`notes/${n}`))));
+  await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));
 
   await page.screenshot({ path: process.env.SHOT || '/dev/null' }).catch(() => {});
@@ -234,7 +234,7 @@ try {
   s = await state(f);
   check(s.current?.startsWith('folder-'), `a chosen folder becomes a location (${s.current}, ${s.status || 'no error'})`);
   check(/You can open it in Finder/.test(s.where), 'the folder says Finder can show it');
-  const folderWrite = await f.evaluate(() => foaf.pod.put('in-folder.txt', 'hi', { contentType: 'text/plain' }));
+  const folderWrite = await f.evaluate(() => foafos.pod.put('in-folder.txt', 'hi', { contentType: 'text/plain' }));
   const inFolder = await page.evaluate(async () => (await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('picked-folder')).getFileHandle('in-folder.txt')).getFile()).text());
   check(folderWrite.ok && inFolder === 'hi', 'a file lands in the chosen folder');
   await page.reload();
@@ -244,7 +244,7 @@ try {
   check(s.current?.startsWith('folder-') && s.items.includes('in-folder.txt'), `the folder comes back after a reload (${s.items.join(', ')})`);
 
   // Open with: Notes gets this one file, in this one window, and nothing else.
-  await f.evaluate(() => foaf.pod.put('other.txt', 'not shared', { contentType: 'text/plain' }));
+  await f.evaluate(() => foafos.pod.put('other.txt', 'not shared', { contentType: 'text/plain' }));
   await f.evaluate(() => window.__files.pick({ path: 'in-folder.txt' }));
   await f.waitForSelector('.open-with button', { timeout: 8000 });
   const offer = await f.evaluate(() => ({ button: document.querySelector('.open-with button').textContent, comment: document.querySelector('.open-with-comment')?.textContent }));
@@ -264,35 +264,35 @@ try {
       await window.__podnotes.save();
       return window.__podnotes.state().shared.token;
     });
-    const saved = await f.evaluate(() => foaf.pod.get('in-folder.txt'));
+    const saved = await f.evaluate(() => foafos.pod.get('in-folder.txt'));
     check(saved.body === 'edited in Notes', `saving in Notes writes the file in the folder (${saved.body})`);
     const reach = await editor.evaluate(async (share) => ({
-      via: (await foaf.pod.get('other.txt', { share })).body,
-      own: (await foaf.pod.get('../../other.txt')).ok,
-      del: (await foaf.pod.delete('', { share })).reason,
+      via: (await foafos.pod.get('other.txt', { share })).body,
+      own: (await foafos.pod.get('../../other.txt')).ok,
+      del: (await foafos.pod.delete('', { share })).reason,
     }), token);
     check(reach.via === 'edited in Notes' && reach.own === false && reach.del === 'denied', `the share reaches only that file (${JSON.stringify(reach)})`);
     const failedLoad = await editor.evaluate(async () => {
-      const get = foaf.pod.get;
-      foaf.pod.get = async () => ({ ok: false, reason: 'offline' });
+      const get = foafos.pod.get;
+      foafos.pod.get = async () => ({ ok: false, reason: 'offline' });
       document.getElementById('reload').click();
       await new Promise((r) => setTimeout(r, 200));
-      foaf.pod.get = get;
+      foafos.pod.get = get;
       const out = { save: document.getElementById('save').disabled, text: document.getElementById('text').readOnly };
       document.getElementById('reload').click();
       await new Promise((r) => setTimeout(r, 300));
       return { ...out, back: !document.getElementById('save').disabled };
     });
     check(failedLoad.save && failedLoad.text && failedLoad.back, `a shared file that fails to load cannot be saved over (${JSON.stringify(failedLoad)})`);
-    const md = await f.evaluate(async () => { await foaf.pod.put('kept.md', '# hi', { contentType: 'text/markdown' }); return (await foaf.pod.get('kept.md')).contentType; });
+    const md = await f.evaluate(async () => { await foafos.pod.put('kept.md', '# hi', { contentType: 'text/markdown' }); return (await foafos.pod.get('kept.md')).contentType; });
     const switched = await editor.evaluate(async () => {
       await window.__podnotes.save();
-      await foaf.pod.put('notes/mine.txt', 'my own note', { contentType: 'text/plain' });
+      await foafos.pod.put('notes/mine.txt', 'my own note', { contentType: 'text/plain' });
       await window.__podnotes.open('mine');
       await window.__podnotes.save();
       return { shared: window.__podnotes.state().shared, locked: document.getElementById('name').readOnly };
     });
-    const still = await f.evaluate(() => foaf.pod.get('in-folder.txt'));
+    const still = await f.evaluate(() => foafos.pod.get('in-folder.txt'));
     check(switched.shared === null && !switched.locked && still.body === 'edited in Notes', `picking a note leaves the shared file alone (${still.body})`);
     check(/markdown/.test(md), `a Markdown file reports its type (${md})`);
     await f.evaluate(() => window.__files.pick({ path: 'kept.md' }));
@@ -304,7 +304,7 @@ try {
       if (!mdEditor) await page.waitForTimeout(200);
     }
     await mdEditor.evaluate(async () => { document.getElementById('text').value = '# edited'; await window.__podnotes.save(); });
-    const kept = await f.evaluate(() => foaf.pod.get('kept.md'));
+    const kept = await f.evaluate(() => foafos.pod.get('kept.md'));
     check(kept.body === '# edited' && /markdown/.test(kept.contentType), `saving in Notes keeps the file's type (${kept.contentType})`);
     await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => w.querySelector('iframe')?.src.includes('podnotes')).at(-1).querySelector('[aria-label^="Close"]').click());
     await page.waitForTimeout(400);
@@ -314,7 +314,7 @@ try {
     const after = await page.evaluate(() => FoafOS.pods.shares.size);
     check(before === 1 && after === 0, `closing the window ends the share (${before} then ${after})`);
   }
-  const notText = await f.evaluate(() => foaf.pod.openWith('podnotes', 'photo.png', 'image/png'));
+  const notText = await f.evaluate(() => foafos.pod.openWith('podnotes', 'photo.png', 'image/png'));
   check(notText.reason === 'denied', `an app is not opened on a file it does not handle (${notText.reason})`);
 
   const denied = await page.evaluate(async () => {
@@ -323,7 +323,7 @@ try {
   });
   await page.waitForTimeout(1500);
   const notes = page.frames().find((x) => /podnotes/.test(x.url()));
-  const other = notes ? await notes.evaluate(() => Promise.all([foaf.pod.locations(), foaf.pod.use('device'), foaf.pod.addFolder()])) : null;
+  const other = notes ? await notes.evaluate(() => Promise.all([foafos.pod.locations(), foafos.pod.use('device'), foafos.pod.addFolder()])) : null;
   check(denied && other?.every((r) => r.ok === false && r.reason === 'denied'), `an ordinary app cannot list or switch locations (${other?.map((r) => r.reason)})`);
   check(!errors.length, `no page errors (${errors.slice(0, 2).join(' | ').slice(0, 160)})`);
 } catch (e) { check(false, `exception: ${e.message.slice(0, 300)}`); }

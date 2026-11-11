@@ -93,7 +93,7 @@ edot does not want a GitHub token. It wants *this file committed to that
 repo*. So:
 
 ```
-app:    foaf.invoke('git.commit', { path, content, message })
+app:    foafos.invoke('git.commit', { path, content, message })
 shell:  secrets.use('edot', 'git.token', (t) => fetch(…, {headers:{Authorization:`Bearer ${t}`}}))
 ```
 

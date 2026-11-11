@@ -194,7 +194,7 @@ try {
     : fail(`entry story prose: ${opening.slice(0, 120)}`);
 
   // 5. An unregistered game from a story is refused by the shell, before the stage
-  const ask = await runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'nosuchgame' }));
+  const ask = await runner.evaluate(() => window.foafos.storyRequest('story.launch', { game: 'nosuchgame' }));
   !ask.ok && ask.reason === 'unregistered'
     ? pass('the shell refuses a story\'s request for an unregistered game')
     : fail(`story.launch of an unknown game: ${JSON.stringify(ask)}`);

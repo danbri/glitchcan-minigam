@@ -84,7 +84,7 @@ try {
   const frame = async () => {
     for (let i = 0; i < 200; i++) {
       const f = page.frames().find((x) => x.url().includes('/apps/playlist/'));
-      if (f && await f.evaluate(() => !!window.foaf?.bus).catch(() => false)) return f;
+      if (f && await f.evaluate(() => !!window.foafos?.bus).catch(() => false)) return f;
       await wait(100);
     }
     throw new Error('no playlist frame');
@@ -95,7 +95,7 @@ try {
   const seen = (fn) => page.evaluate(`window.__seen.filter(${fn})`);
 
   // ── monitoring: what the app itself publishes ──
-  const probe = (tag) => playlist.evaluate((t) => foaf.bus.publish(`app.playlist.${t}`, {
+  const probe = (tag) => playlist.evaluate((t) => foafos.bus.publish(`app.playlist.${t}`, {
     summary: 'tea is ready', apiToken: 'hunter2-token', nested: { password: 'hunter2-pw' },
     link: 'https://bob:hunter2-login@example.org/a?access_token=hunter2-query&x=1', note: 'Bearer hunter2hunter2hunter2',
   }), tag);
@@ -115,12 +115,12 @@ try {
   check(!!full && !full.includes('hunter2'), 'no password, token, login or bearer value reaches the room');
   await page.selectOption('#chat-mirror-apps', 'topics');
 
-  await playlist.evaluate(() => foaf.bus.publish('wm.mode', { mode: 'forged' }));
+  await playlist.evaluate(() => foafos.bus.publish('wm.mode', { mode: 'forged' }));
   await wait(300);
   check((await seen("e => e.topic === 'sys.guest.denied'")).length > 0 && (await seen("e => e.topic === 'wm.mode' && e.data?.mode === 'forged'")).length === 0,
     'an app outside its scope is still stopped by scopeBus');
 
-  await playlist.evaluate(() => { for (let i = 0; i < 40; i++) foaf.bus.publish('app.playlist.flood', { i }); });
+  await playlist.evaluate(() => { for (let i = 0; i < 40; i++) foafos.bus.publish('app.playlist.flood', { i }); });
   const dropped = await agent.message((t) => t.includes('chat.dropped'));
   check(!!dropped, `a flood is cut, and the room is told: ${/"summary":"([^"]*)/.exec(dropped || '')?.[1]}`);
   const flood = await page.evaluate((r) => FoafOS.chat.conversations.get(r).messages.filter((m) => m.topic === 'app.playlist.flood').length, ROOM_JID);

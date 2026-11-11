@@ -5,7 +5,7 @@ podding without coordination."
 
 Page: https://danbri.github.io/glitchcan-minigam/inklet/finkapp/?root=office&app=pods (System, Pods tab).
 Code: `packages/foafos/src/pods.mjs`, `drawExtras()` and the `d.type === 'pod'` branch in `inklet/finkapp/foafos-shell.js`,
-`foaf.pod` in `inklet/apps/app-sdk.js`. Earlier design: `docs/foafos-pods-20261103.md`, `docs/foafos-system-pods-20261107.md`.
+`foafos.pod` in `inklet/apps/app-sdk.js`. Earlier design: `docs/foafos-pods-20261103.md`, `docs/foafos-system-pods-20261107.md`.
 
 ## Rules
 
@@ -18,7 +18,7 @@ Code: `packages/foafos/src/pods.mjs`, `drawExtras()` and the `d.type === 'pod'` 
 | Each app reaches only its own prefix in each pod. | An extra scope is always `apps/<appId>/`. A custom prefix or a whole pod is not possible for an extra pod. |
 | An app cannot list pods, or learn their names or addresses. | No verb gives them. Each miss has the same answer (see below). Refusals no longer carry the pod id (see "A fault this found"). |
 | An app cannot choose or add a pod, or ask for one. | No app verb reaches `grantExtra`. There is no request verb: a person who wants this goes to System. |
-| The app sees a neutral handle. | `foaf.pod.extras()` gives `[{ handle, read, write }]`. `handle` is `extra-` and 16 random hex digits. |
+| The app sees a neutral handle. | `foafos.pod.extras()` gives `[{ handle, read, write }]`. `handle` is `extra-` and 16 random hex digits. |
 | The grant screen warns. | "An app with two pods can copy data between them. Give an extra pod only to an app you trust with both pods." |
 | Removing a pod removes its grants. | `remove()` deletes its extra grants and saves. |
 | Removing the common pod leaves apps with no pod. | See "No shared pod". |
@@ -26,10 +26,10 @@ Code: `packages/foafos/src/pods.mjs`, `drawExtras()` and the `d.type === 'pod'` 
 ## The app's view
 
 ```js
-const { extras } = await foaf.pod.extras();             // [] for almost every app
-await foaf.pod.put('a.txt', 'text', { pod: extras[0].handle });
-await foaf.pod.list('', { pod: extras[0].handle });
-await foaf.pod.put('b.txt', 'text');                    // no handle: the shared pod
+const { extras } = await foafos.pod.extras();             // [] for almost every app
+await foafos.pod.put('a.txt', 'text', { pod: extras[0].handle });
+await foafos.pod.list('', { pod: extras[0].handle });
+await foafos.pod.put('b.txt', 'text');                    // no handle: the shared pod
 ```
 
 The present API allowed a handle with no new carriage: `get`, `put` and `delete` already passed their options on as

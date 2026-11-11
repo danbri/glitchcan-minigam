@@ -1,4 +1,4 @@
-// Notes (id podnotes): plain notes kept in the user's pod, through foaf.pod.* only.
+// Notes (id podnotes): plain notes kept in the user's pod, through foafos.pod.* only.
 // Every path is relative to this app's own container (apps/podnotes/ in the
 // pod the person chose for apps); the app never sees where that is.
 // Each note is `notes/<name>.txt`. A save sends the ETag read with the note,
@@ -30,7 +30,7 @@
   }
 
   async function openShared() {
-    const r = await foaf.pod.get('', { share: shared.token });
+    const r = await foafos.pod.get('', { share: shared.token });
     if (!r.ok) {
       // Nothing was loaded, so nothing may be saved over the file.
       $('save').disabled = true;
@@ -46,7 +46,7 @@
   }
 
   async function refresh() {
-    const r = await foaf.pod.list('notes/');
+    const r = await foafos.pod.list('notes/');
     const ul = $('notes');
     ul.textContent = '';
     if (!r.ok) {
@@ -70,7 +70,7 @@
   }
 
   async function open(name) {
-    const r = await foaf.pod.get(`notes/${name}.txt`);
+    const r = await foafos.pod.get(`notes/${name}.txt`);
     if (!r.ok) { say(explain(r), true); return; }
     shared = null;        // a note from the list is not the file from Files
     showShared();
@@ -85,7 +85,7 @@
     if (shared) {
       // Keep the file's own type: a Markdown file stays Markdown.
       const contentType = current?.contentType || 'text/plain; charset=utf-8';
-      const r = await foaf.pod.put('', $('text').value, { share: shared.token, contentType, ...(current?.etag ? { etag: current.etag } : {}) });
+      const r = await foafos.pod.put('', $('text').value, { share: shared.token, contentType, ...(current?.etag ? { etag: current.etag } : {}) });
       if (!r.ok) { say(explain(r), true); return; }
       current = { name: shared.name, etag: r.etag, contentType };
       say(`Saved ${shared.name}.`);
@@ -94,7 +94,7 @@
     const name = cleanName($('name').value);
     if (!name) { say('Give the note a name first.', true); $('name').focus(); return; }
     const sameNote = current?.name === name;
-    const r = await foaf.pod.put(`notes/${name}.txt`, $('text').value, {
+    const r = await foafos.pod.put(`notes/${name}.txt`, $('text').value, {
       contentType: 'text/plain; charset=utf-8',
       ...(sameNote && current.etag ? { etag: current.etag } : { ifNoneMatch: true }),
     });
@@ -110,7 +110,7 @@
 
   async function remove() {
     if (!current) { say('Open a note first.'); return; }
-    const r = await foaf.pod.delete(`notes/${current.name}.txt`, current.etag ? { etag: current.etag } : {});
+    const r = await foafos.pod.delete(`notes/${current.name}.txt`, current.etag ? { etag: current.etag } : {});
     if (!r.ok) { say(explain(r), true); return; }
     say(`Deleted ${current.name}.`);
     current = null;
@@ -127,22 +127,22 @@
   // For tests and agents: the same calls the buttons make.
   window.__podnotes = { refresh, open, save, remove, state: () => ({ current, shared, status: statusEl.textContent }) };
 
-  // Tools for the shell and agents (foaf.tools in app-sdk.js). Each answers from the pod,
+  // Tools for the shell and agents (foafos.tools in app-sdk.js). Each answers from the pod,
   // not from what the window shows, and a refusal throws with the reason a person would read.
   const fail = (r) => { throw new Error(explain(r)); };
   const noteNames = async () => {
-    const r = await foaf.pod.list('notes/');
+    const r = await foafos.pod.list('notes/');
     if (!r.ok) { if (r.reason === 'http' && r.status === 404) return []; fail(r); }
     return r.items.filter((it) => !it.container && it.path.endsWith('.txt')).map((it) => it.path.slice(0, -4)).sort();
   };
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'list_notes',
     description: 'The names of your notes, in name order.',
     inputSchema: { type: 'object', properties: {} },
     readOnly: true,
     handler: async () => ({ notes: await noteNames() }),
   });
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'read_note',
     description: 'The text of one note, by its name (from list_notes).',
     inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'The note name' } }, required: ['name'] },
@@ -150,12 +150,12 @@
     handler: async ({ name }) => {
       // A note made elsewhere may have a name the form would change: the listed name comes first.
       const exact = (await noteNames()).includes(String(name)) ? String(name) : cleanName(name);
-      const r = await foaf.pod.get(`notes/${exact}.txt`);
+      const r = await foafos.pod.get(`notes/${exact}.txt`);
       if (!r.ok) { if (r.status === 404) throw new Error(`No note called ${name}.`); fail(r); }
       return { name: exact, text: r.body };
     },
   });
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'add_note',
     description: 'Write a new note to your pod. Refused if a note with that name exists already.',
     inputSchema: {
@@ -167,16 +167,16 @@
       const clean = cleanName(name);
       if (!clean) throw new Error('Give the note a name.');
       if (String(text).length > 500000) throw new Error('A note may have up to 500,000 characters.');
-      const r = await foaf.pod.put(`notes/${clean}.txt`, String(text), { contentType: 'text/plain; charset=utf-8', ifNoneMatch: true });
+      const r = await foafos.pod.put(`notes/${clean}.txt`, String(text), { contentType: 'text/plain; charset=utf-8', ifNoneMatch: true });
       if (!r.ok) { if (r.reason === 'conflict') throw new Error(`A note called ${clean} exists already.`); fail(r); }
       if (!shared) refresh();
       return { saved: clean };
     },
   });
 
-  foaf.onInit(async () => {
+  foafos.onInit(async () => {
     await refresh();
-    const r = await foaf.pod.shared();
+    const r = await foafos.pod.shared();
     if (r.ok && r.share) { shared = r.share; await openShared(); }
   });
   if (window.parent === window) say(REASONS['no-shell'], true);

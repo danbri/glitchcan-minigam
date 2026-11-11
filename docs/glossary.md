@@ -46,7 +46,7 @@ A sub-section within a knot (optional nesting level).
 **The foafos term for a place that keeps an app's data, and for the shell window (app id `pods`) where the person
 adds, connects and chooses them.** A PodStore can be in this browser (the built-in one: a Lean LWS storage in the page,
 sealed under the session), on a server over HTTPS, or reached over XMPP. Apps never name a PodStore: they ask the
-shell (`foaf.pod.get/list/put/delete`), and the shell sends the request to the PodStore marked "apps use this", under
+shell (`foafos.pod.get/list/put/delete`), and the shell sends the request to the PodStore marked "apps use this", under
 the app's own folder. PodStore is our own word on purpose (owner, 2026-11-04: "It is then a technical term for
 something in this system, and its relationship to LWS, W3C, "foafpods" if we go there etc is decoupled from the
 technical detail"). LWS (W3C Linked Web Storage) is how today's PodStores work, not what the word means. The app that

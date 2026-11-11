@@ -1,4 +1,4 @@
-// Tools that apps offer through foaf.tools (app-sdk.js): Notes, Files and Calendar, called
+// Tools that apps offer through foafos.tools (app-sdk.js): Notes, Files and Calendar, called
 // through the shell's FoafTools as the person and as an account with a grant to look.
 // Headless, against `foafos-stack start shell`, on the built-in pod. No window appears.
 //   CHROMIUM_PATH=... node e2e-app-tools.mjs

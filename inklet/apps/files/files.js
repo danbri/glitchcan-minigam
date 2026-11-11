@@ -1,4 +1,4 @@
-// Files: the person's locations as folders and files, through foaf.pod.* only.
+// Files: the person's locations as folders and files, through foafos.pod.* only.
 // Each location says where it is, what it needs, and what could lose it.
 //
 // Three panes (../ui/panes.css): folders, what is in this folder, and the file
@@ -66,7 +66,7 @@
   const expanded = new Set(['']);
 
   async function list(path) {
-    const r = await foaf.pod.list(path);
+    const r = await foafos.pod.list(path);
     if (r.ok) return r;
     // A folder that does not exist yet is an empty folder, not a fault.
     if (r.reason === 'http' && r.status === 404) return { ok: true, items: [] };
@@ -78,7 +78,7 @@
     const mine = ++listing;
     const r = await list(path);
     if (mine !== listing) return;
-    if (r.reason === 'needs-ok') takeLocations(await foaf.pod.locations());
+    if (r.reason === 'needs-ok') takeLocations(await foafos.pod.locations());
     if (!r.ok) { say(explain(r), true); return; }
     if (path !== folder) dropThumbs();
     if (remember && path !== folder) trail.push(folder);
@@ -176,7 +176,7 @@
     draw();
   }
 
-  async function useLocation(id) { await showLocation(await foaf.pod.use(id)); }
+  async function useLocation(id) { await showLocation(await foafos.pod.use(id)); }
 
   async function showLocation(r) {
     takeLocations(r);
@@ -186,11 +186,11 @@
     say('');
     $('panes').dataset.places = 'closed';
     await go('', { remember: false });
-    takeLocations(await foaf.pod.locations());
+    takeLocations(await foafos.pod.locations());
   }
 
   async function addFolder() {
-    const r = await foaf.pod.addFolder();
+    const r = await foafos.pod.addFolder();
     if (!r.ok && !r.locations) { say(explain(r), true); return; }
     await showLocation(r);
   }
@@ -282,7 +282,7 @@
       thumbBusy++;
       (async () => {
         try {
-          const r = await foaf.pod.get(path, { as: 'bytes' });
+          const r = await foafos.pod.get(path, { as: 'bytes' });
           if (r.ok) thumbs.set(path, { url: await shrink(r.body, r.contentType || 'image/png'), etag: r.etag });
         } catch { /* no thumbnail: the icon stays */ }
         thumbBusy--;
@@ -326,11 +326,11 @@
       markPicked();
       return;
     }
-    const r = await foaf.pod.get(it.path);
+    const r = await foafos.pod.get(it.path);
     if (mine !== picking) return;
     if (r.reason === 'not-text') {
       // Not text: read it as bytes, so it can be shown if it is an image, and renamed or deleted.
-      const raw = await foaf.pod.get(it.path, { as: 'bytes' });
+      const raw = await foafos.pod.get(it.path, { as: 'bytes' });
       if (mine !== picking) return;
       if (!raw.ok) {
         picked = null;
@@ -374,11 +374,11 @@
   // Apps that can open this file, each with its own comment: what a person or an
   // agent should know before choosing. Exploring: docs/foafos-open-with-20261105.md.
   async function openWithBox(path, contentType) {
-    const r = await foaf.pod.handlers(path, contentType);
+    const r = await foafos.pod.handlers(path, contentType);
     if (!r.ok || !r.handlers?.length) return null;
     return h('div', { class: 'open-with' }, r.handlers.map((a) => h('div', { class: 'open-with-app' },
       h('button', { class: 'tool', type: 'button', on: { click: async () => {
-        const o = await foaf.pod.openWith(a.appId, path, contentType);
+        const o = await foafos.pod.openWith(a.appId, path, contentType);
         if (!o.ok) say(explain(o), true);
       } } }, `Open in ${a.name}`),
       a.comment ? h('p', { class: 'open-with-comment' }, a.comment) : null)));
@@ -392,7 +392,7 @@
   }
 
   async function saveFile(value, btn) {
-    const r = await foaf.pod.put(picked.path, value, { contentType: picked.contentType || 'text/plain', etag: picked.etag });
+    const r = await foafos.pod.put(picked.path, value, { contentType: picked.contentType || 'text/plain', etag: picked.etag });
     if (!r.ok) { say(explain(r), true); return; }
     picked.etag = r.etag; picked.body = value; picked.dirty = false; btn.disabled = true;
     say(`Saved ${nameOf(picked.path)}.`);
@@ -416,7 +416,7 @@
   const askNewFile = () => ask('Name of the new file', 'Create', { value: 'untitled.txt' }, async (name) => {
     const path = folder + name;
     if (items.some((i) => i.path === path)) { say(`${name} exists already.`, true); return; }
-    const r = await foaf.pod.put(path, '', { contentType: 'text/plain' });
+    const r = await foafos.pod.put(path, '', { contentType: 'text/plain' });
     if (!r.ok) { say(explain(r), true); return; }
     await go(folder, { remember: false });
     pick({ path, container: false });
@@ -424,7 +424,7 @@
 
   // A pod folder exists once something is in it, so a new one gets a hidden marker.
   const askNewFolder = () => ask('Name of the new folder', 'Create', { value: 'New folder' }, async (name) => {
-    const r = await foaf.pod.put(`${folder}${name}/.folder`, '', { contentType: 'text/plain' });
+    const r = await foafos.pod.put(`${folder}${name}/.folder`, '', { contentType: 'text/plain' });
     if (!r.ok) { say(explain(r), true); return; }
     await go(folder, { remember: false });
     say(`Created ${name}.`);
@@ -434,9 +434,9 @@
     const to = parentOf(picked.path) + name;
     if (to === picked.path) return;
     forgetThumb(to); forgetThumb(picked.path);
-    const put = await foaf.pod.put(to, picked.body, { contentType: picked.contentType || 'text/plain' });
+    const put = await foafos.pod.put(to, picked.body, { contentType: picked.contentType || 'text/plain' });
     if (!put.ok) { say(explain(put), true); return; }
-    const del = await foaf.pod.delete(picked.path, picked.etag ? { etag: picked.etag } : {});
+    const del = await foafos.pod.delete(picked.path, picked.etag ? { etag: picked.etag } : {});
     if (!del.ok) say(`Copied to ${name}, but the old file is still there: ${explain(del)}`, true);
     await go(folder, { remember: false });
     pick({ path: to, container: false });
@@ -449,10 +449,10 @@
       const r = await list(path);
       const rest = (r.items || []).filter((i) => !hiddenName(i.path.replace(/\/$/, '')));
       if (rest.length) { say('Empty this folder before deleting it.', true); return; }
-      await foaf.pod.delete(`${path}.folder`);
+      await foafos.pod.delete(`${path}.folder`);
     }
     forgetThumb(path);
-    const r = await foaf.pod.delete(path, picked.etag ? { etag: picked.etag } : {});
+    const r = await foafos.pod.delete(path, picked.etag ? { etag: picked.etag } : {});
     if (!r.ok) { say(explain(r), true); return; }
     await go(folder, { remember: false });
     say(`Deleted ${name}.`);
@@ -554,7 +554,7 @@
       if (f.size > (texty ? 1024 * 1024 : 8 * 1024 * 1024)) { left.push(f.name); continue; }
       const name = cleanName(f.name);
       forgetThumb(folder + name);
-      const r = await foaf.pod.put(folder + name, texty ? await f.text() : await f.arrayBuffer(),
+      const r = await foafos.pod.put(folder + name, texty ? await f.text() : await f.arrayBuffer(),
         { contentType: f.type || (texty ? 'text/plain' : 'application/octet-stream') });
       (r.ok ? added : left).push(name);
     }
@@ -574,7 +574,7 @@
     e.currentTarget.setAttribute('aria-label', icons ? 'Show as a list' : 'Show as icons');
     drawItems();
   });
-  foaf.onInit?.(() => {
+  foafos.onInit?.(() => {
     let kept = {};
     try { kept = JSON.parse(localStorage.getItem(VIEW_KEY)) || {}; } catch { /* the defaults */ }
     if (['name', 'kind'].includes(kept.sort?.key) && [1, -1].includes(kept.sort?.dir)) sort = kept.sort;
@@ -588,12 +588,12 @@
   pick(null);
   window.__files = { go, pick, useLocation, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
 
-  // Tools for the shell and agents (foaf.tools in app-sdk.js). All three only read, from the
+  // Tools for the shell and agents (foafos.tools in app-sdk.js). All three only read, from the
   // location Files has open, and none changes what the window shows.
   const fail = (r) => { throw new Error(explain(r)); };
   const folderPath = (p) => { const s = String(p ?? '').replace(/^\/+/, ''); return s && !s.endsWith('/') ? s + '/' : s; };
   const MAX_TEXT = 100000;
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'list_folder',
     description: 'What is in one folder of the location Files has open: each item\'s path and whether it is a folder. Hidden names (starting with ".") are left out.',
     inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'A folder path such as "apps/podnotes/notes/"; empty for the top' } } },
@@ -610,7 +610,7 @@
       };
     },
   });
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'search',
     description: 'Find files and folders whose name contains some text, in every folder of the location Files has open. Looks in up to 300 folders and returns up to 100 matches. "skipped" lists folders that could not be read, with the reason; "complete" is true only when every folder was read and no match was left out. Hidden names (starting with ".") are left out.',
     inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Text to find in names, in any case' } }, required: ['query'] },
@@ -638,7 +638,7 @@
       return { query: q, found, skipped, searched: seen, notSearched: queue.length, complete: !queue.length && !skipped.length && !dropped };
     },
   });
-  foaf.tools.register({
+  foafos.tools.register({
     name: 'read_file',
     description: `The text of one file in the location Files has open, with its content type. Text files only; at most ${MAX_TEXT.toLocaleString('en')} characters are returned. Hidden files and anything in a hidden folder (a name starting with ".") are refused.`,
     inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'A file path from list_folder or search' } }, required: ['path'] },
@@ -648,7 +648,7 @@
       if (!clean) throw new Error('Give the path of a file.');
       const hidden = clean.split('/').find((part) => hiddenName(part));
       if (hidden) throw new Error(`${path} is hidden (${hidden} starts with "."). read_file does not read hidden files or folders.`);
-      const r = await foaf.pod.get(clean);
+      const r = await foafos.pod.get(clean);
       if (!r.ok) {
         if (r.reason === 'not-text') throw new Error(`${path} is not a text file (${r.contentType || 'unknown type'}).`);
         if (r.status === 404) throw new Error(`No file at ${path}.`);
@@ -658,9 +658,9 @@
       return { path, contentType: r.contentType || null, length: r.body.length, truncated, text: truncated ? r.body.slice(0, MAX_TEXT) : r.body };
     },
   });
-  foaf.onInit(async () => {
-    takeLocations(await foaf.pod.locations());
+  foafos.onInit(async () => {
+    takeLocations(await foafos.pod.locations());
     await go('', { remember: false });
-    takeLocations(await foaf.pod.locations());   // a location opens on first use, so its status may have changed
+    takeLocations(await foafos.pod.locations());   // a location opens on first use, so its status may have changed
   });
 })();

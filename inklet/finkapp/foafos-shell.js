@@ -227,7 +227,7 @@ FoafOS.secrets = secrets;
 // the transport carries a VERB NAME and some data, and the shell decides
 // what that verb does:
 //
-//   app:   foaf.invoke('git.commit', { path, content, message })
+//   app:   foafos.invoke('git.commit', { path, content, message })
 //   shell: ops.invoke('edot', 'git.commit', params)
 //            → secrets.use('edot', 'git.token', (t) => fetch(…))
 //
@@ -3688,7 +3688,7 @@ function buildUI() {
 
   // ACTIONS: a named operation handed to a running app (`queue` a track).
   // Held per node until the frame has had `app.init`, then posted; the app
-  // reads them with `foaf.onAction`. Only names in the manifest's `actions`
+  // reads them with `foafos.onAction`. Only names in the manifest's `actions`
   // pass: an asker can choose among what the app offers, nothing else.
   const heldActions = new Map();   // node id -> [{ action, args, from }]
   const initedNodes = new Set();
@@ -4630,7 +4630,7 @@ function buildUI() {
           // relative to the story file and installations that keep their
           // art elsewhere break (#779).
           // NOTE: `story` and `mediaBase` belong on `app.init` (the
-          // app.hello reply), NOT here — `foaf.onInit` is fed by that
+          // app.hello reply), NOT here — `foafos.onInit` is fed by that
           // message, and this one only carries the audio/snapshot contract
           // offer. Putting them here silently did nothing: the runner kept
           // playing its own demo and reported mediaBase null.
