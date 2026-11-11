@@ -201,7 +201,97 @@
 
   function activate(it) { if (it.container) go(it.path); else pick(it); }
 
+  // ── where the space goes ──────────────────────────────────────────────
+  // A treemap of this folder: each file a box whose area is its size, inside a box for its folder.
+  // Sizes come from the listings (one per folder, no request per file), walked at most 400
+  // folders deep in all; a folder past that is drawn by what was measured, and the line says so.
+  let spaceOn = false, spaceRun = 0;
+  const SPACE_MAX_DIRS = 400;
+  async function measure(path, budget, mine) {
+    if (budget.left-- <= 0) { budget.cut = true; return { name: nameOf(path) || here()?.label || 'My files', path, dir: true, size: 0, files: 0, kids: [] }; }
+    const r = await list(path);
+    if (mine !== spaceRun) return null;
+    const kids = [];
+    let files = 0;
+    for (const it of r.ok ? r.items : []) {
+      const p = path + it.path.replace(/^\/+/, '');
+      if (hiddenName(nameOf(p))) continue;
+      if (it.container) {
+        const sub = await measure(p, budget, mine);
+        if (!sub) return null;
+        if (sub.size > 0 || sub.kids.length) { kids.push(sub); files += sub.files; }
+      } else {
+        kids.push({ name: nameOf(p), path: p, size: it.size || 0, kind: kindOf({ path: p }).name });
+        files++;
+      }
+    }
+    if (r.truncated) budget.cut = true;
+    return { name: nameOf(path) || here()?.label || 'My files', path, dir: true, size: kids.reduce((n, k) => n + k.size, 0), files, kids };
+  }
+  // Squarified treemap (Bruls, Huizing, van Wijk 2000): rows whose boxes stay near square.
+  function squarify(kids, x, y, w, h) {
+    const items = kids.filter((k) => k.size > 0).sort((a, b) => b.size - a.size);
+    const total = items.reduce((n, k) => n + k.size, 0);
+    const out = [];
+    if (!total || w <= 0 || h <= 0) return out;
+    const scale = (w * h) / total;
+    let rest = items.map((k) => ({ k, a: k.size * scale }));
+    while (rest.length) {
+      const side = Math.min(w, h);
+      const worst = (row) => { const s = row.reduce((n, r) => n + r.a, 0); const mx = Math.max(...row.map((r) => r.a)), mn = Math.min(...row.map((r) => r.a)); return Math.max((side * side * mx) / (s * s), (s * s) / (side * side * mn)); };
+      let row = [rest[0]], i = 1;
+      while (i < rest.length && worst([...row, rest[i]]) <= worst(row)) { row.push(rest[i]); i++; }
+      rest = rest.slice(i);
+      const s = row.reduce((n, r) => n + r.a, 0);
+      if (w >= h) {               // a column on the left
+        const cw = s / h; let cy = y;
+        for (const r of row) { const ch = r.a / cw; out.push({ k: r.k, x, y: cy, w: cw, h: ch }); cy += ch; }
+        x += cw; w -= cw;
+      } else {                    // a row along the top
+        const rh = s / w; let cx = x;
+        for (const r of row) { const rw = r.a / rh; out.push({ k: r.k, x: cx, y, w: rw, h: rh }); cx += rw; }
+        y += rh; h -= rh;
+      }
+    }
+    return out;
+  }
+  const KIND_HUE = { Image: 32, Text: 212, 'Linked data': 160, Code: 268, JSON: 190, Table: 190, Audio: 340, Video: 340 };
+  function drawBoxes(host, node, x, y, w, ht, depth) {
+    for (const b of squarify(node.kids, x, y, w, ht)) {
+      const big = b.w > 54 && b.h > 22;
+      const el = h('div', { class: `tm ${b.k.dir ? 'tm-dir' : 'tm-file'}`, role: 'listitem', tabIndex: 0,
+        title: `${b.k.path || b.k.name} — ${sizeText(b.k.size)}${b.k.dir ? `, ${b.k.files} files` : ''}`,
+        'aria-label': `${b.k.name}, ${b.k.dir ? 'folder, ' : ''}${sizeText(b.k.size)}` });
+      Object.assign(el.style, { left: `${b.x}px`, top: `${b.y}px`, width: `${Math.max(0, b.w - 2)}px`, height: `${Math.max(0, b.h - 2)}px` });
+      if (!b.k.dir) el.style.setProperty('--hue', String(KIND_HUE[b.k.kind] ?? 0)), el.style.setProperty('--sat', KIND_HUE[b.k.kind] === undefined ? '0%' : '48%');
+      if (big) el.append(h('span', { class: 'tm-label' }, b.k.name), h('span', { class: 'tm-size' }, sizeText(b.k.size)));
+      const open = () => (b.k.dir ? go(b.k.path) : pick({ path: b.k.path, container: false }));
+      el.addEventListener('click', (e) => { e.stopPropagation(); open(); });
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.stopPropagation(); open(); } });
+      host.append(el);
+      // A folder shows what is in it, inside its own box, below its name, three levels down.
+      if (b.k.dir && depth < 3 && b.w > 40 && b.h > 40) drawBoxes(host, b.k, b.x + 3, b.y + (big ? 34 : 4), b.w - 8, b.h - (big ? 38 : 8), depth + 1);
+    }
+  }
+  async function drawSpace() {
+    const mine = ++spaceRun;
+    const box = $('items');
+    box.replaceChildren(h('p', { class: 'tm-note' }, 'Measuring this folder…'));
+    const budget = { left: SPACE_MAX_DIRS, cut: false };
+    const tree = await measure(folder, budget, mine);
+    if (!tree || mine !== spaceRun || !spaceOn) return;
+    const note = h('p', { class: 'tm-note' }, `${tree.name}: ${sizeText(tree.size)} in ${tree.files} file${tree.files === 1 ? '' : 's'}`
+      + (budget.cut ? ` (measured the first ${SPACE_MAX_DIRS} folders only)` : ''));
+    const map = h('div', { class: 'tm-map', role: 'list', 'aria-label': `Where the space goes in ${tree.name}` });
+    box.replaceChildren(note, map);
+    if (!tree.size) { map.replaceWith(h('div', { class: 'empty' }, h('p', {}, 'Nothing here takes any space yet.'))); return; }
+    map.style.height = `${Math.max(240, $('items-pane').clientHeight - note.offsetHeight - 14)}px`;
+    const r = map.getBoundingClientRect();
+    drawBoxes(map, tree, 0, 0, r.width, r.height, 1);
+  }
+
   function drawItems() {
+    if (spaceOn) { drawSpace(); return; }
     const rows = shown();
     const box = $('items');
     if (!rows.length) {
@@ -580,6 +670,12 @@
   $('add-folder').addEventListener('click', addFolder);
   $('new-folder').addEventListener('click', askNewFolder);
   $('places').addEventListener('click', () => { const p = $('panes'); p.dataset.places = p.dataset.places === 'open' ? 'closed' : 'open'; });
+  $('space').addEventListener('click', (e) => {
+    spaceOn = !spaceOn;
+    e.currentTarget.setAttribute('aria-pressed', String(spaceOn));
+    $('view').disabled = spaceOn;
+    drawItems();
+  });
   $('view').addEventListener('click', (e) => {
     icons = !icons;
     keepView();
@@ -600,7 +696,7 @@
   });
 
   pick(null);
-  window.__files = { go, pick, useLocation, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+  window.__files = { go, pick, useLocation, squarify, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
 
   // Tools for the shell and agents (foafos.tools in app-sdk.js). All three only read, from the
   // location Files has open, and none changes what the window shows.

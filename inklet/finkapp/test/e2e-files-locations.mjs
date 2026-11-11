@@ -194,6 +194,27 @@ try {
   });
   check(cols.heads.includes('Size') && cols.heads.includes('Modified') && cols.big === '4.9 KB' && cols.last === 'notes/big.txt',
     `the list shows size and time, and sorts by size (${JSON.stringify(cols)})`);
+  // Where the space goes: a treemap whose box areas follow the sizes; clicking a folder opens it.
+  const space = await f.evaluate(async () => {
+    const sq = window.__files.squarify([{ size: 3 }, { size: 1 }], 0, 0, 40, 10);
+    const areas = sq.map((b) => Math.round(b.w * b.h));
+    await foafos.pod.put('notes/space/big.txt', 'x'.repeat(3000), { contentType: 'text/plain' });
+    await foafos.pod.put('notes/space/small.txt', 'x'.repeat(1000), { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+    document.getElementById('space').click();
+    for (let i = 0; i < 40 && !document.querySelector('.tm'); i++) await new Promise((r) => setTimeout(r, 100));
+    const box = (n) => [...document.querySelectorAll('.tm')].find((b) => b.getAttribute('aria-label')?.startsWith(n + ','));
+    const ratio = box('big.txt') && box('small.txt') ? (box('big.txt').offsetWidth * box('big.txt').offsetHeight) / (box('small.txt').offsetWidth * box('small.txt').offsetHeight) : 0;
+    const note = document.querySelector('.tm-note')?.textContent || '';
+    box('space').click();
+    await new Promise((r) => setTimeout(r, 600));
+    const into = window.__files.state().folder;
+    document.getElementById('space').click();
+    await Promise.all(['notes/space/big.txt', 'notes/space/small.txt'].map((x) => foafos.pod.delete(x)));
+    return { areas, ratio: Math.round(ratio * 10) / 10, note, into };
+  });
+  check(space.areas[0] === 300 && space.areas[1] === 100 && space.ratio > 2.5 && space.ratio < 3.5 && /in \d+ files/.test(space.note) && space.into === 'notes/space/',
+    `the space view sizes boxes by bytes and opens a folder on click (${JSON.stringify(space)})`);
   // Thumbnails: the photo shows a small picture of itself in the list and in the icon view.
   const thumb = await f.evaluate(async () => {
     await window.__files.go('notes/');
