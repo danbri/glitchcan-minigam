@@ -5319,8 +5319,9 @@ function buildUI() {
     }
     const win = document.querySelector(`.foafos-window[data-instance="${node.id}"]`);
     if (win) {
-      document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
-      win.style.zIndex = 2640;
+      // Switching to a minimised window brings it back, not just its title bar.
+      if (win.classList.contains('minimized')) win.querySelector('.foafos-window-min')?.click();
+      FoafOS.raiseWindow(win);
       win.scrollIntoView({ block: 'nearest' });
     }
   }
