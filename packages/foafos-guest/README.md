@@ -39,3 +39,17 @@ They also fail if the source names a network API or a global it might replace, o
 12 KiB.
 
 The Lean model of the contract is in `factoidal-core formal/lean4/L4Factoidal/Foafos/GuestContract.lean`.
+
+## Serving an app that imports this module
+
+An app frame that foafos sandboxes has an opaque origin, so the browser fetches every module it
+imports, `guest.mjs` included, as a cross-origin request. The server must answer with
+`Access-Control-Allow-Origin` (`*` is fine for public files). GitHub Pages sends it. Python's
+`http.server` does not, and the app then stays at "Connecting…" with a CORS error in the console.
+
+## Conformance
+
+`conformance/suite.mjs` holds checks an app runs on itself, and `conformance/app.html` is a small
+app that runs them. The same app and checks run standalone and under `@foafos/host-lite`
+(`packages/foafos-host-lite/test/conformance.test.mjs`), and inside full foafos
+(`inklet/finkapp/test/e2e-guest-conformance.mjs`).

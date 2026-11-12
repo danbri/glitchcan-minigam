@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>foafos-lite conformance</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; }
+  li.ok::marker { content: '✓ '; color: #18794e; }
+  li.bad::marker { content: '✗ '; color: #b3261e; }
+</style>
+<h1>foafos-lite conformance</h1>
+<p id="where">Connecting…</p>
+<ol id="results"></ol>
+<p>Lifecycle seen: <span id="life">none</span>. Actions called: <span id="acts">none</span>.</p>
+<script type="module">
+  import { connect } from '../guest.mjs';
+  import { runConformance } from './suite.mjs';
+  // A local store for level 0: the page's own memory (a real app might use localStorage).
+  const mem = new Map();
+  const local = { get: async (k) => mem.get(k), put: async (k, v) => { mem.set(k, v); }, delete: async (k) => { mem.delete(k); }, keys: async () => [...mem.keys()] };
+  const life = [], acts = [];
+  const guest = await connect({ level: 2, name: 'Conformance', actions: [{ id: 'ping', label: 'Ping' }], local, timeoutMs: 1500 });
+  guest.on('lifecycle', ({ state }) => { life.push(state); document.getElementById('life').textContent = life.join(', '); if (state === 'paused') guest.paused(); });
+  guest.on('action', ({ id }) => { acts.push(id); document.getElementById('acts').textContent = acts.join(', '); });
+  document.getElementById('where').textContent = guest.level ? `Hosted, level ${guest.level}.` : 'Standalone (level 0).';
+  const results = await runConformance(guest);
+  document.getElementById('results').replaceChildren(...results.map((r) => Object.assign(document.createElement('li'), { className: r.ok ? 'ok' : 'bad', textContent: `${r.name}${r.ok ? '' : ` (${r.detail})`}` })));
+  guest.ready();
+  window.__conformance = { level: guest.level, results, life, acts };
+</script>

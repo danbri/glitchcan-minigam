@@ -31,3 +31,10 @@ host.pause(); host.resume(); host.audio(0.5); host.action('new');
 
 The tests run this host and the real `@foafos/guest` against each other, through two fake windows
 that deliver messages the way a browser does.
+
+## Stores that version what they hold
+
+A store's `put` may return `{ etag }`. The host then replies with that etag, not its own counter,
+so a guest's next guarded write matches what the store's `get` reports. A store may also offer
+`list(prefix)` → `[{ path, container }]`, which the host uses in place of reading every key. Full
+foafos hosts foafos-lite apps this way, over the shared pod.

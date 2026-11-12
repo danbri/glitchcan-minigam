@@ -1531,3 +1531,8 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 
 /* All apps takes focus itself on a touch-only screen (no keyboard popping up); no ring round the whole panel. */
 #foafos-home:focus { outline: none; }
+
+/* A foafos-lite app's menu of actions, under its window bar's ⋯ */
+.foafos-lite-list { position: absolute; top: 34px; right: 8px; z-index: 5; display: flex; flex-direction: column; min-width: 10rem; padding: 4px; border: 1px solid var(--sk-line, #2b3d5c); border-radius: 8px; background: var(--sk-bg, #fff); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+.foafos-lite-list button { padding: 8px 10px; text-align: left; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; cursor: pointer; }
+.foafos-lite-list button:hover, .foafos-lite-list button:focus-visible { background: color-mix(in srgb, var(--sk-accent, #2e6fd1) 16%, transparent); }
