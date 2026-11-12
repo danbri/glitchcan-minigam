@@ -216,6 +216,14 @@ try {
   check(await phone.page.evaluate(() => document.activeElement?.id === 'foafos-home'), 'All apps on a phone does not open the keyboard');
   await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());
 
+  // A tap on the empty space around the cards leaves All windows
+  await phone.page.evaluate(() => FoafOS.enterOverview());
+  await phone.page.waitForTimeout(500);
+  const empty = await phone.page.evaluate(() => { for (let y = 780 - 60; y > 100; y -= 20) for (let x = 10; x < 380; x += 20) { const el = document.elementFromPoint(x, y); if (el && !el.closest('.foafos-ov, #foafos-ov-strip, #wm-chrome')) return { x, y }; } return null; });
+  await phone.page.mouse.click(empty.x, empty.y);
+  await phone.page.waitForTimeout(500);
+  check(!(await phone.page.evaluate(() => document.body.classList.contains('foafos-overview-on'))), `a tap on the empty space leaves All windows (${JSON.stringify(empty)})`);
+
   // Swipe a card up to close its window; a short drag closes nothing
   await phone.page.evaluate(() => { FoafOS.launchApp('chat'); });
   await phone.page.waitForTimeout(800);
