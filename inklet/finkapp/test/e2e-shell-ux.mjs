@@ -205,6 +205,23 @@ try {
   check(String(await box()) === '0,0,640,800', 'ctrl ; l snaps left, full height');
   await keys(page, [';', 'r']);
   check(String(await box()) === '640,0,640,800', 'ctrl ; r snaps right');
+  // When the page gets smaller, a snapped window fills its half of the new size, and a floating
+  // window that would be left off the edge comes back on screen; both follow it back up.
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.waitForTimeout(300);
+  const snappedSmall = String(await box());
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForTimeout(300);
+  const snappedBack = String(await box());
+  const other = await page.evaluate(() => [...document.querySelectorAll('.foafos-window:not(.minimized)')].find((w) => w.id !== 'foafos-session-win' && !w.classList.contains('maximized'))?.dataset.wid);
+  await page.evaluate((w) => Object.assign(document.querySelector(`.foafos-window[data-wid="${w}"]`).style, { left: '900px', top: '500px' }), other);
+  await page.setViewportSize({ width: 800, height: 600 });
+  await page.waitForTimeout(300);
+  const floated = await page.evaluate((w) => { const r = document.querySelector(`.foafos-window[data-wid="${w}"]`).getBoundingClientRect(); return { right: Math.round(r.right), bottom: Math.round(r.bottom), w: Math.round(r.width), h: Math.round(r.height) }; }, other);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForTimeout(300);
+  check(snappedSmall === '500,0,500,700' && snappedBack === '640,0,640,800' && !!other && floated.right <= Math.max(800, floated.w) && floated.bottom <= Math.max(600, floated.h),
+    `windows refit when the page changes size (${snappedSmall}, ${snappedBack}, ${JSON.stringify(floated)})`);
   // Dragged into a corner, a window fills that quarter
   await keys(page, [';', 'm']);
   await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-max').click());   // back from maximised
