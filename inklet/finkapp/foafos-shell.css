@@ -899,6 +899,11 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
     text-align: center;
 }
 .foafos-app .ico { font-size: 1.6rem; line-height: 1; }
+/* An app that is open has a dot under its icon, as on a dock. */
+.foafos-app .ico { position: relative; }
+.foafos-app.running .ico::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 5px; height: 5px;
+    margin-left: -2.5px; border-radius: 50%; background: currentColor; opacity: .75; }
+#foafos-home.searching .foafos-app.running .ico::after { bottom: -4px; }
 /* A pin beside each app: shown on hover or focus, always when pinned, always on a touch screen. */
 .foafos-app-cell { position: relative; display: grid; }
 .foafos-app-pin { position: absolute; top: 2px; right: 2px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--sk-ink-dim, #8fa3c0); font-size: 16px; line-height: 1; cursor: pointer; opacity: 0; }
