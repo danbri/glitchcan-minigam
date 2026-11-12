@@ -61,7 +61,7 @@ const sent = (page) => page.$$eval('#sent li', (lis) => lis.map((li) => JSON.par
 await check('level 1: in a sandboxed frame, hosted', async (page) => {
   await page.setViewportSize({ width: 980, height: 640 });
   await page.goto(base + 'host.html');
-  await page.waitForFunction(() => document.getElementById('level').textContent === '1');
+  await page.waitForFunction(() => document.getElementById('level').textContent === '2');
   await page.locator('#menu button', { hasText: 'Undo' }).waitFor();
   await page.waitForFunction(() => /"ready"/.test(document.getElementById('sent').textContent));
   // pause while black is thinking: black does not move until resumed
@@ -83,10 +83,44 @@ await check('level 1: in a sandboxed frame, hosted', async (page) => {
   await page.check('#pip');
   await app(page).locator('nav').waitFor({ state: 'hidden' });
   await shot(page, 'level1-small');
-  // What the app sent, all of it: hello (level, name, menu), ready, paused. Nothing else.
+  // What the app sent, all of it: hello (level, name, menu), ready, paused, and (level 2) its saved game.
   const msgs = await sent(page);
-  assert.deepEqual(msgs.map((m) => m.type), ['hello', 'ready', 'paused']);
-  assert.deepEqual(msgs[0], { fl: 1, type: 'hello', level: 1, name: 'Chess 5×5', actions: [{ id: 'new', label: 'New game' }, { id: 'undo', label: 'Undo' }] });
+  assert.deepEqual(msgs.filter((m) => m.type !== 'store').map((m) => m.type), ['hello', 'ready', 'paused']);
+  assert.deepEqual(msgs[0], { fl: 1, type: 'hello', level: 2, name: 'Chess 5×5', actions: [{ id: 'new', label: 'New game' }, { id: 'undo', label: 'Undo' }] });
+  for (const m of msgs.filter((m) => m.type === 'store')) {
+    assert.deepEqual(m.path, ['games', 'current.json']);
+    assert.ok(m.op === 'get' || (m.op === 'put' && Object.keys(JSON.parse(m.body)).join() === 'moves'), JSON.stringify(m));
+  }
+});
+
+await check('level 2: the game is kept in the host\'s folder and carries on after a reload', async (page) => {
+  await page.setViewportSize({ width: 980, height: 640 });
+  await page.goto(base + 'host.html');
+  await page.waitForFunction(() => document.getElementById('level').textContent === '2');
+  await appSq(page, 'b1').click(); await appSq(page, 'c3').click();
+  await app(page).locator('#status', { hasText: 'Your move' }).waitFor();
+  const board = await app(page).locator('#board').innerHTML();
+  await page.locator('#folder li', { hasText: 'chess/games/current.json' }).waitFor();
+  const kept = JSON.parse((await page.locator('#folder li').first().textContent()).split('  ')[1]);
+  assert.equal(kept.moves.length, 2);
+  assert.equal(kept.moves[0], 'b1c3');
+  await page.click('#reload');
+  await page.waitForFunction(() => document.getElementById('level').textContent === '2');
+  await app(page).locator('#status', { hasText: 'Your move' }).waitFor();
+  await page.waitForFunction((b) => document.querySelector('#app').contentDocument === null, board);   // still sandboxed
+  await page.waitForTimeout(200);
+  assert.equal(await app(page).locator('#board').innerHTML(), board);
+  await shot(page, 'level2-reloaded');
+});
+
+await check('level 2: with no host, the game is kept in the browser and carries on after a reload', async (page) => {
+  await page.goto(base + 'index.html');
+  await sq(page, 'e2').click(); await sq(page, 'e3').click();
+  await page.waitForFunction(() => /Your move/.test(document.getElementById('status').textContent));
+  const board = await page.locator('#board').innerHTML();
+  await page.reload();
+  await page.waitForFunction((b) => document.getElementById('board').innerHTML === b, board, { timeout: 3000 });
+  await page.click('#new');   // leave nothing behind for other tests
 });
 
 await check('level 1: framed by a page that is not a host, it still plays (level 0)', async (page) => {

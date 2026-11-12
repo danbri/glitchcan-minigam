@@ -33,13 +33,14 @@
   <nav><button id="new">New game</button><button id="undo">Undo</button></nav>
 </main>
 <script type="module">
-import { newGame, legalMoves, play, undo, status, bestMove, square, over } from './game.mjs';
+import { newGame, legalMoves, play, undo, replay, status, bestMove, square, over } from './game.mjs';
 import { connect } from '../../packages/foafos-guest/guest.mjs';
 
 const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
 const NAME = { K: 'king', Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', P: 'pawn' };
 const boardEl = document.getElementById('board'), statusEl = document.getElementById('status');
 let game = newGame(), picked = null, thinking = null, paused = false, volume = 1;
+let guest = null, saved = null;            // saved: the moves last saved (null until the saved game is loaded)
 
 // ---- the opponent (black) answers after a short pause
 function opponent() {
@@ -82,8 +83,17 @@ function takeBack() {
   picked = null; draw();
 }
 
+// ---- saving: the moves so far, whenever they change (level 2: in the host's folder; else locally)
+function save() {
+  const key = game.moves.join(' ');
+  if (!guest || saved === null || key === saved) return;
+  saved = key;
+  guest.store.put('games/current.json', JSON.stringify({ moves: game.moves }), { contentType: 'application/json' });
+}
+
 // ---- drawing
 function draw() {
+  save();
   const targets = new Set(picked ? legalMoves(game).filter((m) => m.from === picked).map((m) => m.to) : []);
   const focus = document.activeElement?.dataset?.sq;
   boardEl.replaceChildren(...[...game.board].map((p, i) => {
@@ -116,7 +126,7 @@ document.getElementById('undo').onclick = takeBack;
 draw();
 
 // ---- level 1: a good neighbour. With no host, connect() finds none and nothing changes.
-const guest = await connect({ level: 1, name: 'Chess 5×5', actions: [{ id: 'new', label: 'New game' }, { id: 'undo', label: 'Undo' }] });
+guest = await connect({ level: 2, name: 'Chess 5×5', actions: [{ id: 'new', label: 'New game' }, { id: 'undo', label: 'Undo' }] });
 guest.on('lifecycle', ({ state }) => {
   if (state === 'paused') {
     paused = true;
@@ -133,6 +143,13 @@ guest.on('audio', ({ level, muted }) => { volume = muted ? 0 : level; });
 guest.on('viewport', ({ mode }) => { document.body.dataset.mode = mode; });
 guest.on('action', ({ id }) => (id === 'new' ? newOne() : takeBack()));
 guest.ready();
+
+// ---- level 2: carry on with the saved game, wherever the host keeps it
+const last = await guest.store.get('games/current.json');
+let resumed = null;
+try { resumed = last.ok ? replay(JSON.parse(last.body).moves) : null; } catch { /* not a saved game: start afresh */ }
+saved = (resumed ?? game).moves.join(' ');
+if (resumed && !game.moves.length) { game = resumed; if (game.turn === 'b' && !over(game)) opponent(); draw(); }
 </script>
 </body>
 </html>
