@@ -146,6 +146,7 @@
     chosen.clear(); anchor = null;
     // Inside an archive nothing can be made, saved or dropped.
     for (const id of ['new-file', 'new-folder']) $(id).disabled = inArchive();
+    recentOrder = false;
     items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
       .filter((it) => !hiddenName(nameOf(it.path)));
     children.set(folder, items.filter((i) => i.container).map((i) => i.path));
@@ -194,16 +195,19 @@
     }
     items = found;
     searchResults = true;
+    recentOrder = false;
     pick(null);
     draw();
     const cut = queue.length ? `, after ${seen} folders` : '';
     say(`${found.length} found in all folders${cut}${inFiles ? `, ${inFiles} by what is in them` : ''}`);
   }
 
-  let searchResults = false;     // the list holds search results: the filter does not narrow them again
+  let searchResults = false;
+  let recentOrder = false;       // the list is Recent: newest first, not sorted     // the list holds search results: the filter does not narrow them again
   function shown() {
     const q = searchResults ? '' : $('filter').value.trim().toLowerCase();
     const rows = items.filter((i) => !q || nameOf(i.path).toLowerCase().includes(q));
+    if (recentOrder) return rows;             // Recent keeps the order they were opened in
     const byName = (a, b) => nameOf(a.path).toLowerCase().localeCompare(nameOf(b.path).toLowerCase());
     const cmp = sort.key === 'kind' ? (a, b) => kindOf(a).name.localeCompare(kindOf(b).name)
       : sort.key === 'size' ? (a, b) => (a.size ?? -1) - (b.size ?? -1)
@@ -343,7 +347,35 @@
   // An archive opens as a folder (read-only): `box.zip` → `box.zip!/`.
   const ARCHIVE = /\.(zip|tar|tgz|tar\.gz)$/i;
   const inArchive = () => folder.includes('!/');
-  function activate(it) { if (it.container) go(it.path); else if (ARCHIVE.test(it.path)) go(`${it.path}!/`); else pick(it); }
+  function activate(it) { if (it.container) go(it.path); else if (ARCHIVE.test(it.path)) go(`${it.path}!/`); else { noteRecent(it.path); pick(it); } }
+
+  // Recent: the files opened last, newest first, for each location, as a phone's or a desktop's
+  // file manager keeps them. A file that has gone since is left out when the list is shown.
+  const RECENT_KEY = 'files.recent';
+  const recentAll = () => { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || {}; } catch { return {}; } };
+  function noteRecent(path) {
+    if (!current || path.includes('!/')) return;
+    const all = recentAll();
+    all[current] = [path, ...(all[current] || []).filter((p) => p !== path)].slice(0, 15);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(all)); } catch { /* not kept */ }
+  }
+  async function showRecent() {
+    const mine = ++listing;
+    const want = recentAll()[current] || [];
+    // One listing per folder they are in, to leave out what has gone and to show size and date.
+    const byDir = new Map();
+    for (const p of want) { const d = parentOf(p); if (!byDir.has(d)) byDir.set(d, null); }
+    for (const d of byDir.keys()) { const r = await list(d); byDir.set(d, r.ok ? new Map(r.items.map((i) => [d + i.path.replace(/^\/+/, ''), i])) : new Map()); }
+    if (mine !== listing) return;
+    items = want.map((p) => { const i = byDir.get(parentOf(p))?.get(p); return i && !i.container ? { ...i, path: p } : null; }).filter(Boolean);
+    searchResults = true;
+    recentOrder = true;
+    $('filter').value = '';
+    pick(null);
+    draw();
+    $('panes').dataset.places = 'closed';
+    say(items.length ? `Recent: the ${items.length === 1 ? 'file' : `${items.length} files`} opened last. Open a folder to go back.` : 'Nothing opened yet: files you open show here.');
+  }
 
   // ── where the space goes ──────────────────────────────────────────────
   // A treemap of this folder: each file a box whose area is its size, inside a box for its folder.
@@ -481,7 +513,7 @@
       })));
       return;
     }
-    const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; keepView(); drawItems(); } } },
+    const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; recentOrder = false; keepView(); drawItems(); } } },
       `${label}${sort.key === key ? (sort.dir > 0 ? ' ↑' : ' ↓') : ''}`));
     box.replaceChildren(h('table', { class: 'list' },
       h('thead', {}, h('tr', {}, head('name', 'Name'), head('kind', 'Kind'), head('size', 'Size'), head('modified', 'Modified'))),
@@ -1015,6 +1047,7 @@
   });
 
   $('new-file').addEventListener('click', askNewFile);
+  $('recent').addEventListener('click', showRecent);
   $('add-folder').addEventListener('click', addFolder);
   $('new-folder').addEventListener('click', askNewFolder);
   $('places').addEventListener('click', () => { const p = $('panes'); p.dataset.places = p.dataset.places === 'open' ? 'closed' : 'open'; });
@@ -1044,7 +1077,7 @@
   });
 
   pick(null);
-  window.__files = { go, pick, useLocation, squarify, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+  window.__files = { go, pick, useLocation, squarify, showRecent, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
 
   // Tools for the shell and agents (foafos.tools in app-sdk.js). All three only read, from the
   // location Files has open, and none changes what the window shows.

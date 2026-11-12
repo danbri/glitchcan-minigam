@@ -618,6 +618,31 @@ try {
     return r;
   });
   check(dragged.d1 && dragged.d2 && !dragged.left && /Moved 2 files to notes\/dbox\//.test(dragged.said), `dragging one of several chosen files moves them all (${JSON.stringify(dragged)})`);
+  // Recent: files opened show newest first, from any folder; one deleted since is left out; a
+  // row opens the file
+  await f.evaluate(async () => {
+    for (const n of ['r1', 'r2']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+  });
+  await page.waitForTimeout(400);
+  await f.click('#items tbody tr[data-path="notes/r1.txt"]');
+  await f.click('#items tbody tr[data-path="notes/r2.txt"]');
+  await f.evaluate(() => window.__files.go(''));
+  await page.waitForTimeout(300);
+  await f.evaluate(() => { document.getElementById('panes').dataset.places = 'open'; });
+  await f.click('#recent');
+  await page.waitForTimeout(500);
+  const rec1 = await f.$$eval('#items tbody tr', (rs) => rs.map((r) => r.dataset.path));
+  await f.evaluate(() => foafos.pod.delete('notes/r1.txt'));
+  await f.evaluate(() => window.__files.showRecent());
+  await page.waitForTimeout(500);
+  const rec2 = await f.$$eval('#items tbody tr', (rs) => rs.map((r) => r.dataset.path));
+  await f.click('#items tbody tr[data-path="notes/r2.txt"]');
+  await page.waitForTimeout(400);
+  const recOpened = await f.evaluate(() => window.__files.state().picked?.path);
+  await f.evaluate(async () => { await foafos.pod.delete('notes/r2.txt'); await window.__files.go(''); });
+  check(rec1[0] === 'notes/r2.txt' && rec1[1] === 'notes/r1.txt' && !rec2.includes('notes/r1.txt') && rec2[0] === 'notes/r2.txt' && recOpened === 'notes/r2.txt',
+    `Recent lists files opened, newest first, leaves out what has gone, and opens them (${JSON.stringify({ rec1, rec2, recOpened })})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });
