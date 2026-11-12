@@ -227,6 +227,23 @@ try {
   });
   const usage = await page.evaluate((id) => { const p = FoafOS.pods.get(id); FoafOS.pods.update(id, { quota: null }); return p.usage; }, capped);
   check(refused === 'quota' && usage > 1, `a pod's space limit refuses a write that would go over it (${refused}, used ${usage})`);
+  // Search finds a word inside a file, not only in names, and shows the line it is on.
+  const found = await f.evaluate(async () => {
+    await foafos.pod.put('notes/trip.txt', 'Pack the blue kayak and the maps.', { contentType: 'text/plain' });
+    await window.__files.go('');
+    const filter = document.getElementById('filter');
+    filter.value = 'kayak'; filter.dispatchEvent(new Event('input'));
+    [...document.querySelectorAll('#items .empty button')].find((b) => /Search all folders/.test(b.textContent))?.click();
+    for (let i = 0; i < 40 && !document.querySelector('#items tbody tr[data-path="notes/trip.txt"]'); i++) await new Promise((r) => setTimeout(r, 100));
+    const row = document.querySelector('#items tbody tr[data-path="notes/trip.txt"]');
+    const out = { row: !!row, hit: row?.querySelector('.hit')?.textContent || '', said: document.getElementById('status').textContent };
+    filter.value = ''; filter.dispatchEvent(new Event('input'));
+    await foafos.pod.delete('notes/trip.txt');
+    await window.__files.go('');
+    return out;
+  });
+  check(found.row && /blue kayak/.test(found.hit) && /notes\//.test(found.hit) && /by what is in them/.test(found.said),
+    `search finds a word inside a file and shows the line (${JSON.stringify(found)})`);
   // Thumbnails: the photo shows a small picture of itself in the list and in the icon view.
   const thumb = await f.evaluate(async () => {
     await window.__files.go('notes/');

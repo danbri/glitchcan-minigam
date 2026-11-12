@@ -81,6 +81,7 @@
     if (mine !== listing) return;
     if (r.reason === 'needs-ok') takeLocations(await foafos.pod.locations());
     if (!r.ok) { say(explain(r), true); return; }
+    searchResults = false;
     if (path !== folder) dropThumbs();
     if (remember && path !== folder) trail.push(folder);
     folder = path;
@@ -114,15 +115,26 @@
         if (nameOf(path).toLowerCase().includes(q)) found.push({ ...it, path });
       }
     }
+    // And inside files: the shell's text search over the pod, with a line from each.
+    const inside = await foafos.pod.search(q, { limit: 100 });
+    if (mine !== listing) return;
+    let inFiles = 0;
+    for (const hit of inside.ok ? inside.hits : []) {
+      const had = found.find((f) => f.path === hit.path);
+      if (had) had.snippet = hit.snippet;
+      else { found.push({ path: hit.path, container: false, snippet: hit.snippet }); inFiles++; }
+    }
     items = found;
+    searchResults = true;
     pick(null);
     draw();
     const cut = queue.length ? `, after ${seen} folders` : '';
-    say(`${found.length} found in all folders${cut}`);
+    say(`${found.length} found in all folders${cut}${inFiles ? `, ${inFiles} by what is in them` : ''}`);
   }
 
+  let searchResults = false;     // the list holds search results: the filter does not narrow them again
   function shown() {
-    const q = $('filter').value.trim().toLowerCase();
+    const q = searchResults ? '' : $('filter').value.trim().toLowerCase();
     const rows = items.filter((i) => !q || nameOf(i.path).toLowerCase().includes(q));
     const byName = (a, b) => nameOf(a.path).toLowerCase().localeCompare(nameOf(b.path).toLowerCase());
     const cmp = sort.key === 'kind' ? (a, b) => kindOf(a).name.localeCompare(kindOf(b).name)
@@ -299,8 +311,17 @@
     drawBoxes(map, tree, 0, 0, r.width, r.height, 1);
   }
 
+  // While the filter has words, the list ends with a way to look further: every folder, and inside files.
+  const searchFurther = () => (!searchResults && $('filter').value.trim()
+    ? h('div', { class: 'search-further' }, h('button', { class: 'tool', type: 'button', on: { click: searchAll } }, `Search all folders and inside files for “${$('filter').value.trim()}”`))
+    : null);
   function drawItems() {
     if (spaceOn) { drawSpace(); return; }
+    drawList();
+    const more = searchFurther();
+    if (more && !$('items').querySelector('.empty')) $('items').append(more);
+  }
+  function drawList() {
     const rows = shown();
     const box = $('items');
     if (!rows.length) {
@@ -338,7 +359,8 @@
             if (e.key === 'ArrowDown') tr.nextElementSibling?.focus();
             if (e.key === 'ArrowUp') tr.previousElementSibling?.focus();
           } } },
-        h('td', {}, icoFor(it, k), nameOf(it.path)), h('td', {}, k.name),
+        h('td', {}, icoFor(it, k), nameOf(it.path),
+          searchResults ? h('span', { class: 'hit' }, `${parentOf(it.path) || (here()?.label || 'Top folder')}${it.snippet ? ` — ${it.snippet}` : ''}`) : null), h('td', {}, k.name),
         h('td', { class: 'c-size' }, it.container || it.size == null ? '' : sizeText(it.size)),
         h('td', { class: 'c-mod', title: it.modified || '' }, whenText(it.modified)));
         tr.dataset.path = it.path;
