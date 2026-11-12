@@ -178,6 +178,15 @@ try {
   check(String(await box()) === '0,0,640,800', 'ctrl ; l snaps left, full height');
   await keys(page, [';', 'r']);
   check(String(await box()) === '640,0,640,800', 'ctrl ; r snaps right');
+  // Dragged into a corner, a window fills that quarter
+  await keys(page, [';', 'm']);
+  await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-max').click());   // back from maximised
+  await page.waitForTimeout(200);
+  const grip = await page.evaluate(() => { const r = document.querySelector('#foafos-session-win .foafos-window-bar span').getBoundingClientRect(); return { x: r.x + 5, y: r.y + r.height / 2 }; });
+  await page.mouse.move(grip.x, grip.y); await page.mouse.down();
+  await page.mouse.move(1275, 795, { steps: 10 }); await page.mouse.up();
+  await page.waitForTimeout(200);
+  check(String(await box()) === '640,400,640,400', `a window dragged to the bottom-right corner fills that quarter (${await box()})`);
   await keys(page, [';', 'm']);
   check(await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-max').getAttribute('aria-pressed')) === 'true', 'ctrl ; m uses the real Maximize');
   const maxed = () => page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('maximized'));
