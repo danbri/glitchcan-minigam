@@ -63,6 +63,7 @@ window.FinkWM = {
                       'wm-sys-tasks': () => window.FoafOS?.openSwitcher?.(),
                       'wm-sys-windows': () => window.FoafOS?.enterOverview?.(),
                       'wm-sys-next': () => window.FoafOS?.nextWindow?.(),
+                      'wm-sys-prev': () => window.FoafOS?.nextWindow?.(-1),
                       'wm-sys-hide': () => window.FoafOS?.minimizeFront?.(),
                       'wm-sys-close': () => window.FoafOS?.closeFront?.(),
                       'wm-sys-activity': () => window.FoafOS?.openActivity?.() };
@@ -1034,7 +1035,7 @@ window.FinkWM = {
     // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
     // Not w, t or n, which browsers keep for themselves on Windows and Linux.
     KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s',
-            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q' },
+            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k' },
     _initKeys() {
         let saved = {};
         try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
@@ -1044,7 +1045,7 @@ window.FinkWM = {
             return { name, ctrl, keys: ctrl ? words.slice(1) : words };
         }).filter((s) => s.keys.length);
         // Each menu row shows its keys, as a desktop menu does, so they can be found.
-        const rowFor = { menu: null, apps: 'wm-sys-apps', windows: 'wm-sys-windows', next: 'wm-sys-next', tasks: 'wm-sys-tasks', hide: 'wm-sys-hide', close: 'wm-sys-close' };
+        const rowFor = { menu: null, apps: 'wm-sys-apps', windows: 'wm-sys-windows', next: 'wm-sys-next', tasks: 'wm-sys-tasks', hide: 'wm-sys-hide', close: 'wm-sys-close', prev: 'wm-sys-prev' };
         for (const s of seqs) {
             const row = rowFor[s.name] && document.getElementById(rowFor[s.name]);
             if (!row) continue;
@@ -1065,6 +1066,7 @@ window.FinkWM = {
             tasks: () => window.FoafOS?.openSwitcher?.(),
             hide: () => window.FoafOS?.minimizeFront?.(),
             close: () => window.FoafOS?.closeFront?.(),
+            prev: () => window.FoafOS?.nextWindow?.(-1),
         };
         let typed = [], at = 0;
         window.addEventListener('keydown', (e) => {

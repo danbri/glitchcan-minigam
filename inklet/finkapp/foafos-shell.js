@@ -2954,11 +2954,12 @@ function buildUI() {
 
   // Bring the next open window to the front, in the order they were opened, for the keyboard
   // (Ctrl ; j). Minimised windows are skipped; All windows reaches those.
-  FoafOS.nextWindow = () => {
+  // `step` -1 goes the other way (Ctrl ; k).
+  FoafOS.nextWindow = (step = 1) => {
     const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
     if (!wins.length) return null;
     const front = wins.findIndex((w) => w.style.zIndex === '2640');
-    const next = wins[(front + 1) % wins.length];
+    const next = wins[((front < 0 ? 0 : front) + (step < 0 ? -1 : 1) + wins.length) % wins.length];
     FoafOS.raiseWindow(next);
     next.querySelector('.foafos-window-bar button, .foafos-window-bar')?.focus?.();
     bus.publish('wm.next', { summary: `front: ${next.querySelector('.foafos-window-bar span')?.textContent || 'window'}` });
