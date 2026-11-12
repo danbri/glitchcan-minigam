@@ -123,3 +123,5 @@
 .about-list dd { margin: 0; overflow-wrap: anywhere; }
 .about-note { margin: 4px 0; color: var(--p-dim); font-size: 12px; }
 .about-rdf pre { max-height: 180px; overflow: auto; font-size: 11px; background: var(--p-side); padding: 6px; border-radius: var(--p-corner); }
+/* A folder a dragged file would move into. */
+.drop-target, .list tr.drop-target td { background: var(--p-pick) !important; outline: 2px solid var(--p-accent); outline-offset: -2px; }
