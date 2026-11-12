@@ -477,6 +477,20 @@ try {
   await f.focus('#filter'); await page.keyboard.press('ArrowDown');
   const down = await f.evaluate(() => document.activeElement?.dataset?.path);
   check(opened === 'notes/avocado.txt' && down === 'notes/apple.txt', `the filter's Enter opens the top match, Down enters the list (${opened}, ${down})`);
+  // Files opens at the folder it was in, after a reload; a kept folder that has gone opens the top
+  await f.evaluate(() => window.__files.go('notes/'));
+  await page.waitForTimeout(300);
+  await page.reload();
+  f = await filesFrame(page);
+  await f.waitForFunction(() => window.__files.state().items.length > 0, null, { timeout: 5000 }).catch(() => {});
+  const reopenedIn = await f.evaluate(() => ({ folder: window.__files.state().folder, crumbs: document.getElementById('crumbs').textContent }));
+  await f.evaluate(() => { const k = JSON.parse(localStorage.getItem('files.folder') || '{}'); const cur = window.__files.state().current; localStorage.setItem('files.folder', JSON.stringify({ ...k, [cur]: 'no-such-folder/' })); });
+  await page.reload();
+  f = await filesFrame(page);
+  await page.waitForTimeout(600);
+  const fellBack = await f.evaluate(() => ({ folder: window.__files.state().folder, said: document.getElementById('status').textContent }));
+  check(reopenedIn.folder === 'notes/' && /notes/.test(reopenedIn.crumbs) && fellBack.folder === '' && !/No |not found|cannot/i.test(fellBack.said),
+    `Files opens at the folder it was in after a reload, and at the top if that folder has gone (${JSON.stringify(reopenedIn)}, ${JSON.stringify(fellBack)})`);
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));
