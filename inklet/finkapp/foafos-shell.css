@@ -1566,3 +1566,11 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .foafos-app-sheet h3 { margin: 0; font-size: 1.1rem; }
 .foafos-app-sheet p { margin: 10px 0 14px; line-height: 1.4; }
 .foafos-app-sheet .sheet-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* The window menu: right-click a window's title bar. */
+#foafos-win-menu { position: fixed; z-index: 2800; min-width: 220px; padding: 4px; border-radius: 10px; background: var(--sk-bg, #fff); color: var(--sk-ink, #111);
+    border: 1px solid color-mix(in srgb, var(--sk-ink, #111) 20%, transparent); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); font: 14px/1.4 var(--sk-font-ui, system-ui, sans-serif); }
+#foafos-win-menu button { display: flex; width: 100%; justify-content: space-between; gap: 16px; padding: 7px 10px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#foafos-win-menu button:hover, #foafos-win-menu button:focus-visible { background: color-mix(in srgb, var(--sk-accent, #2e6fd1) 16%, transparent); outline: none; }
+#foafos-win-menu kbd { font: inherit; opacity: .6; }
+@media (pointer: coarse) { #foafos-win-menu button { min-height: 44px; } }

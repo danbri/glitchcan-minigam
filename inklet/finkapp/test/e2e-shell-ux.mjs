@@ -274,6 +274,22 @@ try {
   check(/^Moving .*Enter keeps it/.test(hinted) && k1[0] === k0[0] + 48 && k1[1] === k0[1] + 24 && k1[2] === k0[2] + 24 && k1[3] === k0[3] + 24 && String(k2) === String(k1) && gone,
     `ctrl ; v moves and resizes with the keyboard; Escape puts it back (${k0} → ${k1} → ${k2})`);
 
+  // Right-click a title bar: the window menu lists what can be done, with its keys; it does it
+  await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); if (w.classList.contains('maximized')) w.querySelector('.foafos-window-max').click(); FoafOS.raiseWindow(w); });
+  const barAt = await page.evaluate(() => { const r = document.querySelector('#foafos-session-win .foafos-window-bar span').getBoundingClientRect(); return { x: r.x + 20, y: r.y + r.height / 2 }; });
+  await page.mouse.click(barAt.x, barAt.y, { button: 'right' });
+  const wmenu = await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].map((b) => `${b.firstChild.textContent}=${b.lastChild.textContent}`));
+  const focusIn = await page.evaluate(() => document.activeElement?.closest('#foafos-win-menu') !== null);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Escape');
+  const menuGone = await page.evaluate(() => !document.getElementById('foafos-win-menu'));
+  await page.mouse.click(barAt.x, barAt.y, { button: 'right' });
+  await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /Minimise/.test(b.textContent)).click());
+  const minimised = await page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('minimized'));
+  await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); w.querySelector('.foafos-window-min').click(); FoafOS.raiseWindow(w); });
+  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Maximise=Ctrl ; m,Minimise=Ctrl ; h,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
+    `right-click on a title bar opens the window menu with its keys, and it acts (${wmenu}, ${focusIn}, ${menuGone}, ${minimised})`);
+
   // Snapping
   const box = () => page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); });
   await keys(page, [';', 'l']);
