@@ -624,6 +624,10 @@ body.foafos-carousel-on .foafos-window-max { display: none; }
    Windows interpolate into a grid of cards. Compositor-only: only
    `transform` animates, so no window is re-laid-out and no iframe
    reloads. Motion tokens, not magic numbers. */
+/* Typing a name in overview fades the windows it does not match. */
+.foafos-window.foafos-ov.foafos-ov-dim, #minigame-view.foafos-ov.foafos-ov-dim { opacity: 0.22; }
+.foafos-ov-find:empty { display: none; }
+.foafos-ov-find { font-weight: 600; margin-left: 10px; }
 .foafos-window.foafos-ov {
     transition: transform var(--dur-base, 300ms) var(--ease-out-soft, ease);
     resize: none;

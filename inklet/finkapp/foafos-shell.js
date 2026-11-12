@@ -2827,6 +2827,7 @@ function buildUI() {
       const title = win.id === 'minigame-view' ? stageName() : win.querySelector('.foafos-window-bar span')?.textContent;
       hit.setAttribute('aria-label', `Show ${title || 'window'}`);
       if (win.id === 'minigame-view') { hit.textContent = title; hit.classList.add('foafos-ov-named'); }
+      hit.dataset.find = String(title || '').replace(/^[^\p{L}\p{N}]+/u, '').toLowerCase();
       if (win.classList.contains('minimized')) hit.setAttribute('aria-label', `Restore ${title || 'window'} (minimised)`);
       hit.addEventListener('click', (e) => { e.stopPropagation(); if (hit._swiped) { hit._swiped = false; return; } exitOverview(win); });
       // Swipe a card up to close its window, as a phone's task switcher does.
@@ -2894,20 +2895,41 @@ function buildUI() {
 
     const strip = document.createElement('div');
     strip.id = 'foafos-ov-strip';
-    strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — pick one${wins.length > 1 ? `, or press 1–${Math.min(wins.length, 9)}` : ''}</span>
+    strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — pick one${wins.length > 1 ? `, press 1–${Math.min(wins.length, 9)}, or type a name` : ''}</span>
+      <span class="foafos-ov-find" role="status"></span>
       <button type="button" id="foafos-ov-done" aria-label="Leave overview">✕</button>`;
     document.body.appendChild(strip);
     strip.querySelector('#foafos-ov-done').addEventListener('click', () => exitOverview(null));
     document.querySelector('.foafos-ov-hit')?.focus();
-    // Arrow keys move between cards, Enter picks one, Escape leaves.
-    strip._keys = (e) => {
-      const hits = [...document.querySelectorAll('.foafos-ov-hit')];
-      const at = hits.indexOf(document.activeElement);
-      if (/^[1-9]$/.test(e.key) && !e.altKey && !e.ctrlKey && !e.metaKey && hits[Number(e.key) - 1]) {
-        e.preventDefault(); hits[Number(e.key) - 1].click(); return;
+    // Typing a name narrows the cards to the windows whose names contain it, as a desktop's
+    // overview does: the others fade, the first match takes the focus, and Enter picks it.
+    // Backspace takes a letter back; Escape clears the name first, then leaves.
+    strip._query = '';
+    strip._find = (q) => {
+      strip._query = q;
+      let first = null;
+      for (const h of document.querySelectorAll('.foafos-ov-hit')) {
+        const match = !q || h.dataset.find.includes(q);
+        h.parentElement.classList.toggle('foafos-ov-dim', !match);
+        h.tabIndex = match ? 0 : -1;
+        if (match && !first) first = h;
       }
+      first?.focus();
+      strip.querySelector('.foafos-ov-find').textContent = !q ? '' : first ? `“${q}”` : `No window is called “${q}”`;
+    };
+    // Arrow keys move between the cards that are showing, Enter picks one, Escape leaves.
+    strip._keys = (e) => {
+      const all = [...document.querySelectorAll('.foafos-ov-hit')];
+      const hits = all.filter((h) => !h.parentElement.classList.contains('foafos-ov-dim'));
+      const at = hits.indexOf(document.activeElement);
+      const plain = !e.altKey && !e.ctrlKey && !e.metaKey;
+      if (/^[1-9]$/.test(e.key) && plain && all[Number(e.key) - 1]) {
+        e.preventDefault(); all[Number(e.key) - 1].click(); return;
+      }
+      if (plain && /^\p{L}$/u.test(e.key)) { e.preventDefault(); strip._find(strip._query + e.key.toLowerCase()); return; }
+      if (e.key === 'Backspace' && strip._query) { e.preventDefault(); strip._find(strip._query.slice(0, -1)); return; }
       const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-      if (step) { e.preventDefault(); hits[(at + step + hits.length) % hits.length]?.focus(); }
+      if (step && hits.length) { e.preventDefault(); hits[(at + step + hits.length) % hits.length]?.focus(); }
     };
     document.addEventListener('keydown', strip._keys);
     // A tap on the empty space around the cards leaves, as a phone's task switcher does.
@@ -2932,6 +2954,7 @@ function buildUI() {
       win.querySelector('.foafos-ov-hit')?.remove();
       win.querySelector('.foafos-ov-close')?.remove();
       win.querySelector('.foafos-ov-num')?.remove();
+      win.classList.remove('foafos-ov-dim');
       win.style.transform = '';                 // interpolates back home
       // Drop the class only after the return trip, or the transition it
       // rides is removed mid-flight and the card teleports.
@@ -2952,7 +2975,10 @@ function buildUI() {
   FoafOS.exitOverview = exitOverview;
   FoafOS.toggleOverview = () => (overviewOn ? exitOverview(null) : enterOverview());
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overviewOn) { e.preventDefault(); exitOverview(null); }
+    if (e.key !== 'Escape' || !overviewOn) return;
+    e.preventDefault();
+    const strip = document.getElementById('foafos-ov-strip');
+    if (strip?._query) strip._find(''); else exitOverview(null);
   });
 
   // Bring the next open window to the front, in the order they were opened, for the keyboard
