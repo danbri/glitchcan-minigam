@@ -199,6 +199,23 @@ try {
   check(await page.isVisible('#foafos-home'), 'Option+H opens All apps on a Mac layout');
   await page.evaluate(() => document.getElementById('foafos-home')?.remove());
 
+  // Ctrl ; v moves and resizes the front window with the keyboard; Enter keeps it, Escape puts it back
+  await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); if (w.classList.contains('maximized')) w.querySelector('.foafos-window-max').click(); Object.assign(w.style, { left: '200px', top: '120px' }); FoafOS.raiseWindow(w); });
+  const kbox = () => page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); });
+  const k0 = await kbox();
+  await keys(page, [';', 'v']);
+  const hinted = await page.evaluate(() => document.getElementById('foafos-keymove')?.textContent || '');
+  for (const k of ['ArrowRight', 'ArrowRight', 'ArrowDown', 'Shift+ArrowRight', 'Shift+ArrowDown']) await page.keyboard.press(k);
+  await page.keyboard.press('Enter');
+  const k1 = await kbox();
+  await keys(page, [';', 'v']);
+  await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Escape');
+  const k2 = await kbox();
+  const gone = await page.evaluate(() => !document.getElementById('foafos-keymove') && !document.querySelector('.foafos-keymoving') && document.body.classList.contains('foafos-overview-on') === false);
+  check(/^Moving .*Enter keeps it/.test(hinted) && k1[0] === k0[0] + 48 && k1[1] === k0[1] + 24 && k1[2] === k0[2] + 24 && k1[3] === k0[3] + 24 && String(k2) === String(k1) && gone,
+    `ctrl ; v moves and resizes with the keyboard; Escape puts it back (${k0} → ${k1} → ${k2})`);
+
   // Snapping
   const box = () => page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); });
   await keys(page, [';', 'l']);
