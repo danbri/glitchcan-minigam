@@ -477,6 +477,37 @@ try {
   await f.focus('#filter'); await page.keyboard.press('ArrowDown');
   const down = await f.evaluate(() => document.activeElement?.dataset?.path);
   check(opened === 'notes/avocado.txt' && down === 'notes/apple.txt', `the filter's Enter opens the top match, Down enters the list (${opened}, ${down})`);
+  // Copy, cut and paste a file between folders: a copy lands beside nothing it replaces, a cut
+  // moves once, and the system clipboard gets only the file's name
+  const cc = await f.evaluate(async () => {
+    await foafos.pod.put('notes/cc.txt', 'copy me', { contentType: 'text/plain' });
+    await foafos.pod.put('notes/mv.txt', 'move me', { contentType: 'text/plain' });
+    const settle = () => new Promise((r) => setTimeout(r, 500));
+    const filter = document.getElementById('filter'); filter.value = ''; filter.dispatchEvent(new Event('input'));   // an earlier test left a filter
+    const fire = (type, dt, target = document.activeElement || document.body) => target.dispatchEvent(new ClipboardEvent(type, { clipboardData: dt, bubbles: true, cancelable: true }));
+    const focusRow = (p) => document.querySelector(`#items tbody tr[data-path="${p}"]`)?.focus();
+    await window.__files.go('notes/'); await settle();
+    const dt = new DataTransfer();
+    focusRow('notes/cc.txt'); fire('copy', dt);
+    const onClipboard = dt.getData('text/plain');
+    await window.__files.go(''); await settle();
+    fire('paste', dt, document.body); await settle();
+    fire('paste', dt, document.body); await settle();            // a second copy, beside the first
+    const copy1 = await foafos.pod.get('cc.txt'), copy2 = await foafos.pod.get('cc 2.txt'), orig = await foafos.pod.get('notes/cc.txt');
+    await window.__files.go('notes/'); await settle();
+    const dt2 = new DataTransfer();
+    focusRow('notes/mv.txt'); fire('cut', dt2);
+    await window.__files.go(''); await settle();
+    fire('paste', dt2, document.body); await settle();
+    fire('paste', dt2, document.body); await settle();            // already moved: nothing more
+    const moved = await foafos.pod.get('mv.txt'), left = await foafos.pod.get('notes/mv.txt');
+    const stray = (await foafos.pod.list('')).items.some((i) => /Pasted text/.test(i.path));
+    const said = document.getElementById('status').textContent;
+    for (const p of ['cc.txt', 'cc 2.txt', 'mv.txt', 'notes/cc.txt']) await foafos.pod.delete(p);
+    return { onClipboard, copy1: copy1.body, copy2: copy2.body, orig: orig.body, moved: moved.body, left: left.ok, stray, said };
+  });
+  check(cc.onClipboard === 'cc.txt' && cc.copy1 === 'copy me' && cc.copy2 === 'copy me' && cc.orig === 'copy me' && cc.moved === 'move me' && !cc.left && !cc.stray && /moved already/.test(cc.said),
+    `copy, cut and paste a file between folders (${JSON.stringify(cc)})`);
   // Files opens at the folder it was in, after a reload; a kept folder that has gone opens the top
   await f.evaluate(() => window.__files.go('notes/'));
   await page.waitForTimeout(300);
