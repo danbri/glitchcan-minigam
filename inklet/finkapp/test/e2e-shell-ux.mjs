@@ -54,6 +54,17 @@ try {
   await page.fill('.foafos-home-search input', 'counter');
   check(await page.evaluate(() => { const d = [...document.querySelectorAll('.foafos-app[data-app="widget-tally"]')].find((b) => !b.hidden)?.querySelector('.ds'); return !!d && d.offsetHeight > 0 && /counter/i.test(d.textContent); }), 'search results show what each one does');
   check(await page.evaluate(() => [...document.querySelectorAll('#foafos-home section:not([hidden]) .foafos-folder-count')].every((c) => Number(c.textContent) === [...c.closest('section').querySelectorAll('.foafos-app')].filter((b) => !b.hidden).length)), 'folder counts count the matches while searching');
+  // Pinning: ☆ pins an app into a Pinned folder at the top; ★ takes it out again
+  await page.fill('.foafos-home-search input', '');
+  await page.evaluate(() => document.querySelector('.foafos-app[data-app="files"] + .foafos-app-pin').click());
+  await page.waitForTimeout(200);
+  const pinnedNow = await page.evaluate(() => { const f = document.querySelector('#foafos-home details[data-folder]'); return { first: f?.dataset.folder, apps: [...f.querySelectorAll('.foafos-app')].map((b) => b.dataset.app), focus: document.activeElement?.getAttribute('aria-label') }; });
+  await page.evaluate(() => document.querySelector('#foafos-home details[data-folder="pinned"] .foafos-app[data-app="files"] + .foafos-app-pin').click());
+  await page.waitForTimeout(200);
+  const unpinned = await page.evaluate(() => !document.querySelector('#foafos-home details[data-folder="pinned"]'));
+  check(pinnedNow.first === 'pinned' && pinnedNow.apps.join() === 'files' && /Unpin Files/.test(pinnedNow.focus || '') && unpinned,
+    `☆ pins an app at the top of All apps, ★ unpins it (${JSON.stringify({ ...pinnedNow, unpinned })})`);
+
   // Arrow keys: Down from search enters the grid, Right moves along, Up from the top row returns to search
   await page.fill('.foafos-home-search input', '');
   await page.waitForTimeout(200);

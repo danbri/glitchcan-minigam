@@ -3219,6 +3219,15 @@ function buildUI() {
   // in ONE grid, opened the same way, because the shell does not know
   // which is which — that is the whole claim being tested.
   const RECENT_KEY = 'foafos.apps.recent';
+  // Apps the person pinned: a folder of their own at the top of All apps, kept on this device.
+  const PINNED_KEY = 'foafos.apps.pinned';
+  const pinnedIds = () => { try { return JSON.parse(localStorage.getItem(PINNED_KEY)) || []; } catch { return []; } };
+  const togglePin = (id) => {
+    const now = pinnedIds();
+    const next = now.includes(id) ? now.filter((x) => x !== id) : [...now, id].slice(-24);
+    try { localStorage.setItem(PINNED_KEY, JSON.stringify(next)); } catch { /* for this visit only */ }
+    return next.includes(id);
+  };
   function noteRecent(id) {
     try {
       const was = JSON.parse(localStorage.getItem(RECENT_KEY)) || [];
@@ -3245,7 +3254,7 @@ function buildUI() {
     // Folders, as in a Start menu: which are open is kept, so it scales past one screen.
     const OPEN_KEY = 'foafos.apps.open';
     let restoredAt = -1e9;
-    let openFolders = ['recent', 'essentials'];
+    let openFolders = ['pinned', 'recent', 'essentials'];
     // Kept as { open, known }: a folder that did not exist when the choice was kept (Recent, at
     // first) takes the default rather than counting as closed. An older plain list still reads.
     const DEFAULT_OPEN = openFolders;
@@ -3266,7 +3275,9 @@ function buildUI() {
     const essentials = ESSENTIALS.map(appById).filter((a) => a && rootOffers(ROOT, a.id));
     let recent = [];
     try { recent = (JSON.parse(localStorage.getItem(RECENT_KEY)) || []).map(appById).filter((a) => a && rootOffers(ROOT, a.id) && a.surface !== 'chrome'); } catch { /* none yet */ }
-    const groups = [...(recent.length ? [{ id: 'recent', label: 'Recent', icon: '🕘', apps: recent }] : []),
+    const pinned = pinnedIds().map(appById).filter((a) => a && rootOffers(ROOT, a.id));
+    const groups = [...(pinned.length ? [{ id: 'pinned', label: 'Pinned', icon: '📌', apps: pinned }] : []),
+      ...(recent.length ? [{ id: 'recent', label: 'Recent', icon: '🕘', apps: recent }] : []),
       { id: 'essentials', label: 'Essentials', icon: '⭐', apps: essentials },
       ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) })),
       { id: 'widgets', label: 'Widgets', icon: '🧩', apps: WIDGET_CATALOG.map((w) => {
@@ -3325,7 +3336,30 @@ function buildUI() {
           // just opened.
           if (isChrome) { home.remove(); openHome(); } else { home.remove(); }
         });
-        grid.appendChild(b);
+        // The pin sits beside the app's button (a button cannot hold another): ☆ to pin, ★ to unpin.
+        const cell = document.createElement('div');
+        cell.className = 'foafos-app-cell';
+        cell.setAttribute('role', 'listitem');
+        b.removeAttribute('role');
+        cell.appendChild(b);
+        if (!app.run && !isChrome) {
+          const isPinned = pinnedIds().includes(app.id);
+          const pin = document.createElement('button');
+          pin.type = 'button';
+          pin.className = `foafos-app-pin${isPinned ? ' on' : ''}`;
+          pin.textContent = isPinned ? '★' : '☆';
+          pin.setAttribute('aria-pressed', String(isPinned));
+          pin.setAttribute('aria-label', `${isPinned ? 'Unpin' : 'Pin'} ${app.name}`);
+          pin.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePin(app.id);
+            home.remove();
+            const again = openHome();
+            again?.querySelector(`.foafos-app-cell .foafos-app[data-app="${CSS.escape(app.id)}"] + .foafos-app-pin`)?.focus();
+          });
+          cell.appendChild(pin);
+        }
+        grid.appendChild(cell);
       }
       folder.appendChild(grid);
       body.appendChild(sec);
