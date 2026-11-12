@@ -26,7 +26,29 @@ try {
   await page.waitForFunction(() => window.FoafOS?.launchApp, null, { timeout: 30000 });
   await page.waitForTimeout(700);
   let f = await open(page);
-  check(await f.evaluate(() => window.__minichess.guest.level) === 2, 'Minichess is hosted at level 2');
+  check(await f.evaluate(() => window.__minichess.guest.level) === 3, 'Minichess is hosted at level 3');
+  // Level 3: its tools are in the shell's registry, and play works through them; the board is on the bus.
+  await page.waitForFunction(() => FoafOS.tools.find('minichess-lite')?.tools.length === 4, null, { timeout: 10000 }).catch(() => {});
+  const viaTools = await page.evaluate(async () => {
+    const { PERSON } = await import('../../packages/foafos/src/tool-grants.mjs');
+    const seen = [];
+    const un = FoafOS.bus.subscribe('app.minichess-lite.board', (e) => seen.push(e.data));
+    const call = (t, a = {}) => FoafOS.tools.call('minichess-lite', t, a, { caller: PERSON });
+    const names = FoafOS.tools.find('minichess-lite').tools.map((t) => t.name + (t.readOnly ? '' : '*')).join();
+    const legal = await call('legal_moves');
+    const moved = await call('move', { to: legal.value[0] });
+    const bad = await call('move', { to: 'z9' });
+    const fresh = await call('new_game');
+    await new Promise((r) => setTimeout(r, 400));
+    un();
+    return { names, legal: legal.value, moved: moved.value, bad: bad.ok === false && /a square is/.test(bad.error || ''), fresh: fresh.value, seen: seen.length, lastSeen: seen.at(-1) };
+  });
+  check(viaTools.names === 'board,legal_moves,move*,new_game*', `its four tools are offered (${viaTools.names})`);
+  check(Array.isArray(viaTools.legal) && viaTools.legal.length > 0 && viaTools.moved?.queen === viaTools.legal[0] && viaTools.moved?.turn !== 'king',
+    `legal_moves and move play through the tools, the king replying (${JSON.stringify(viaTools.moved)})`);
+  check(viaTools.bad, 'a move to a square that is not on the board is refused with a reason');
+  check(viaTools.fresh?.queen === 'c2' && viaTools.seen > 0 && viaTools.lastSeen?.queen === 'c2', `the board is published on the bus as it changes (${viaTools.seen} events)`);
+
   // A queen move, chosen from the game's own legal moves.
   const moved = await f.evaluate(() => { const m = getValidMovesForPiece(queenPos, 'queen')[0]; makeQueenMove(m.row, m.col); return m; });
   // The move, the king's reply, and the save after it.

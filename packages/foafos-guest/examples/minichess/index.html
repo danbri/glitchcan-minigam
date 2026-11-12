@@ -785,7 +785,7 @@
     <style>body.paused #game-board { pointer-events: none; opacity: .55; }</style>
     <script type="module">
         import { connect } from '../../guest.mjs';
-        const guest = await connect({ level: 2, name: 'Minichess',
+        const guest = await connect({ level: 3, name: 'Minichess',
             actions: [{ id: 'new', label: 'New game' }, { id: 'rules', label: 'Show the rules' }] });
         guest.on('action', ({ id }) => { if (id === 'new') resetGame(); if (id === 'rules') explanationBtn.click(); });
         guest.on('lifecycle', ({ state }) => {
@@ -812,9 +812,51 @@
             } catch { /* not a saved game: start fresh */ }
         }
         let saving = null;
+        // Level 3: tools and the bus. Four tools let an AI opponent, a screen reader or a voice user
+        // play: board and legal_moves read, move and new_game act. Each change of the board is
+        // published as `board`, which another app may watch if the person lets it. What leaves the
+        // game, added at this level: tool results, and the position as it changes.
+        const fromAlg = (sq) => {
+            const m = /^([a-d])([1-3])$/.exec(String(sq ?? '').trim().toLowerCase());
+            return m ? { row: BOARD_SIZE.rows - Number(m[2]), col: m[1].charCodeAt(0) - 97 } : null;
+        };
+        const position = () => ({ queen: coordsToAlg(queenPos), king: coordsToAlg(kingPos), skull: coordsToAlg(SKULL_TARGET),
+            turn: gameOver ? null : currentTurn === 'white' ? 'queen' : 'king', over: gameOver, won: gameWon });
+        const settled = () => new Promise((resolve) => {
+            const t0 = Date.now();
+            const tick = () => ((!isAnimatingMove && (currentTurn === 'white' || gameOver)) || Date.now() - t0 > 5000 ? resolve() : setTimeout(tick, 50));
+            tick();
+        });
+        const none = { type: 'object', properties: {} };
+        guest.tools([
+            { name: 'board', description: 'Where the queen, the king and the skull stand (squares a1 to d3), whose turn it is, and whether the game is over.', inputSchema: none, readOnly: true },
+            { name: 'legal_moves', description: 'The squares the queen may move to now.', inputSchema: none, readOnly: true },
+            { name: 'move', description: 'Move the queen to a square, such as b2. The king replies; the result is the position after its reply.',
+              inputSchema: { type: 'object', properties: { to: { type: 'string', description: 'a square, a1 to d3' } }, required: ['to'] } },
+            { name: 'new_game', description: 'Start again from the first position.', inputSchema: none },
+        ], async (name, args = {}) => {
+            if (name === 'board') return position();
+            if (name === 'legal_moves') return gameOver || currentTurn !== 'white' ? [] : getValidMovesForPiece(queenPos, 'queen').map(coordsToAlg);
+            if (name === 'new_game') { resetGame(); return position(); }
+            if (name === 'move') {
+                const to = fromAlg(args.to);
+                if (!to) throw new Error('a square is a letter a to d and a number 1 to 3, such as b2');
+                await settled();
+                if (gameOver) throw new Error('the game is over: new_game starts again');
+                if (!getValidMovesForPiece(queenPos, 'queen').some((m) => m.row === to.row && m.col === to.col)) throw new Error(`the queen cannot move to ${args.to}`);
+                makeQueenMove(to.row, to.col);
+                await new Promise((r) => setTimeout(r, 50));
+                await settled();
+                return position();
+            }
+            throw new Error(`no tool ${name}`);
+        });
         window.onBoardChanged = () => {
             clearTimeout(saving);
-            saving = setTimeout(() => guest.store.put(SAVE, JSON.stringify({ kingPos, queenPos, currentTurn, gameOver, gameWon }), { contentType: 'application/json' }), 150);
+            saving = setTimeout(() => {
+                guest.store.put(SAVE, JSON.stringify({ kingPos, queenPos, currentTurn, gameOver, gameWon }), { contentType: 'application/json' });
+                guest.publish('board', position());
+            }, 150);
         };
         guest.ready();
         window.__minichess = { guest };
