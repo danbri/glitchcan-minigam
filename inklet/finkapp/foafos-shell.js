@@ -3037,8 +3037,11 @@ function buildUI() {
   // Reopen what was closed last, as a browser reopens a closed tab (Ctrl ; u). Kept for this visit
   // only, newest last; the app opens where it was, as every app does. The menu row names the app.
   const closedApps = [];
+  // A widget is named widget-<key>, as in All apps.
+  const widgetSpec = (id) => (String(id).startsWith('widget-') ? WIDGET_CATALOG.find((w) => `widget-${w.key}` === id) : null);
+  const closedName = (id) => appById(id)?.name || widgetSpec(id)?.title.replace(/^\S+\s+/, '') || 'closed app';
   function noteClosed(appId) {
-    const app = appId && appById(appId);
+    const app = appId && (appById(appId) || widgetSpec(appId));
     if (!app || app.surface === 'chrome') return;
     closedApps.push(appId);
     if (closedApps.length > 10) closedApps.shift();
@@ -3050,14 +3053,15 @@ function buildUI() {
     const last = closedApps.at(-1);
     row.hidden = !last;
     const label = row.querySelector('.wm-label');
-    if (label) label.textContent = last ? `Reopen ${appById(last)?.name || 'closed app'}` : 'Reopen closed app';
+    if (label) label.textContent = last ? `Reopen ${closedName(last)}` : 'Reopen closed app';
   }
   FoafOS.reopenClosed = () => {
     const appId = closedApps.pop();
     showReopen();
     if (!appId) return null;
-    bus.publish('wm.reopen', { summary: `reopened ${appById(appId)?.name || appId}`, id: appId });
-    return launchApp(appId);
+    bus.publish('wm.reopen', { summary: `reopened ${closedName(appId)}`, id: appId });
+    const widget = widgetSpec(appId);
+    return widget ? openWidgetWindow(widget) : launchApp(appId);
   };
 
   // Minimise the front window, for the keyboard (Ctrl ; h, as a Mac's hide), and bring the next
@@ -3358,6 +3362,7 @@ function buildUI() {
   function openWidgetWindow(spec) {
     const name = `${spec.key}${widgetSeq + 1}`;
     const win = makeWindow(`${spec.title} · ${name}`, spec.w, spec.h);
+    win.dataset.openedAs = `widget-${spec.key}`;   // as an app's window is: shown as open, and reopened after a close
 
     const guest = document.createElement('foafos-guest');
     guest.setAttribute('src', spec.src);
