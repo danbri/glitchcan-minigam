@@ -11,7 +11,7 @@
   body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--paper); color: var(--ink);
          font: 16px/1.4 system-ui, sans-serif; }
   main { display: grid; gap: 12px; justify-items: center; padding: 12px; }
-  #board { display: grid; grid-template-columns: repeat(5, 1fr); width: min(90vw, 70vh, 420px); aspect-ratio: 1;
+  #board { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); width: min(90vw, 70vh, 420px); aspect-ratio: 1;
            border: 3px solid var(--ink); border-radius: 4px; }
   #board button { all: unset; display: grid; place-items: center; font-size: min(11vw, 8vh, 56px); line-height: 1;
                   cursor: pointer; color: #111; position: relative; }
@@ -22,6 +22,7 @@
   #board .w { color: #fff; text-shadow: 0 0 2px #000, 0 0 1px #000; }
   #status { min-height: 1.4em; font-weight: 600; }
   nav { display: flex; gap: 8px; }
+  body[data-mode="pip"] #status, body[data-mode="pip"] nav { display: none; }
   nav button { font: inherit; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer; }
 </style>
 </head>
@@ -33,14 +34,16 @@
 </main>
 <script type="module">
 import { newGame, legalMoves, play, undo, status, bestMove, square, over } from './game.mjs';
+import { connect } from '../../packages/foafos-guest/guest.mjs';
 
 const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
 const NAME = { K: 'king', Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', P: 'pawn' };
 const boardEl = document.getElementById('board'), statusEl = document.getElementById('status');
-let game = newGame(), picked = null, thinking = null;
+let game = newGame(), picked = null, thinking = null, paused = false, volume = 1;
 
 // ---- the opponent (black) answers after a short pause
 function opponent() {
+  if (paused) { thinking = 'paused'; return; }        // it moves when the host resumes the app
   thinking = setTimeout(() => {
     thinking = null;
     const m = bestMove(game);
@@ -52,10 +55,11 @@ function opponent() {
 // ---- sound: a short click on each move
 let audio = null;
 function click() {
+  if (paused || volume === 0) return;
   try {
     audio ??= new AudioContext();
     const o = audio.createOscillator(), g = audio.createGain();
-    o.frequency.value = 660; g.gain.setValueAtTime(0.15, audio.currentTime);
+    o.frequency.value = 660; g.gain.setValueAtTime(0.15 * volume, audio.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.08);
     o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.08);
   } catch { /* no sound here */ }
@@ -63,7 +67,7 @@ function click() {
 
 // ---- moves
 function choose(sq) {
-  if (thinking || game.turn !== 'w' || over(game)) return;
+  if (paused || thinking || game.turn !== 'w' || over(game)) return;
   if (picked && picked !== sq) {
     const next = play(game, picked, sq);
     if (next) { game = next; picked = null; click(); if (!over(game)) opponent(); draw(); return; }
@@ -71,7 +75,7 @@ function choose(sq) {
   picked = picked === sq ? null : (legalMoves(game).some((m) => m.from === sq) ? sq : null);
   draw();
 }
-function newOne() { clearTimeout(thinking); thinking = null; game = newGame(); picked = null; draw(); }
+function newOne() { if (thinking !== 'paused') clearTimeout(thinking); thinking = null; game = newGame(); picked = null; draw(); }
 function takeBack() {
   if (thinking) return;
   game = undo(game); if (game.turn === 'b') game = undo(game);   // back to white's move
@@ -95,7 +99,7 @@ function draw() {
   const s = status(game);
   statusEl.textContent = s === 'checkmate' ? (game.turn === 'w' ? 'Checkmate. Black wins.' : 'Checkmate. You win.')
     : s === 'stalemate' ? 'Stalemate: a draw.' : s === 'draw' ? 'Kings alone: a draw.'
-    : thinking ? 'Black is thinking…' : s === 'check' ? 'Check. Your move.' : game.turn === 'w' ? 'Your move (white).' : 'Black to move.';
+    : paused ? 'Paused.' : thinking ? 'Black is thinking…' : s === 'check' ? 'Check. Your move.' : game.turn === 'w' ? 'Your move (white).' : 'Black to move.';
 }
 
 // ---- keys: arrows move between squares, Enter or Space chooses
@@ -110,6 +114,25 @@ boardEl.addEventListener('keydown', (e) => {
 document.getElementById('new').onclick = newOne;
 document.getElementById('undo').onclick = takeBack;
 draw();
+
+// ---- level 1: a good neighbour. With no host, connect() finds none and nothing changes.
+const guest = await connect({ level: 1, name: 'Chess 5×5', actions: [{ id: 'new', label: 'New game' }, { id: 'undo', label: 'Undo' }] });
+guest.on('lifecycle', ({ state }) => {
+  if (state === 'paused') {
+    paused = true;
+    if (thinking && thinking !== 'paused') { clearTimeout(thinking); thinking = 'paused'; }
+    audio?.suspend();
+    guest.paused();                                   // timers and sound are stopped
+  } else if (state === 'running') {
+    paused = false; audio?.resume();
+    if (thinking === 'paused') { thinking = null; opponent(); }
+  } else if (state === 'ending') { paused = true; if (thinking && thinking !== 'paused') clearTimeout(thinking); }
+  draw();
+});
+guest.on('audio', ({ level, muted }) => { volume = muted ? 0 : level; });
+guest.on('viewport', ({ mode }) => { document.body.dataset.mode = mode; });
+guest.on('action', ({ id }) => (id === 'new' ? newOne() : takeBack()));
+guest.ready();
 </script>
 </body>
 </html>

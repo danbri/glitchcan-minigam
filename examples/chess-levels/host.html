@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess host</title>
+<style>
+  :root { --paper: #eceae4; --ink: #222; --line: #b9b4a8; --panel: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #18181a; --ink: #e8e6e1; --line: #46454a; --panel: #232326; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 14px/1.4 system-ui, sans-serif;
+         display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; padding: 12px; min-height: 100vh; }
+  @media (max-width: 760px) { body { grid-template-columns: 1fr; } }
+  iframe { width: 100%; height: min(600px, 80vh); border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  aside { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  h2 { font-size: 13px; margin: 0 0 6px; }
+  button { font: inherit; padding: 4px 10px; margin: 0 4px 4px 0; }
+  #sent { overflow-wrap: anywhere; font: 12px/1.5 ui-monospace, monospace; max-height: 260px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+  #state { font-weight: 600; }
+</style>
+</head>
+<body>
+<!-- No allow-same-origin: the app gets an opaque origin, and only postMessage reaches this page. -->
+<iframe id="app" src="index.html" sandbox="allow-scripts" title="Chess"></iframe>
+<aside>
+  <section><h2>The app</h2><p>Level granted: <span id="level">none yet</span>. State: <span id="state">–</span></p>
+    <button id="pause">Pause</button><button id="resume">Resume</button>
+    <label>Volume <input id="vol" type="range" min="0" max="1" step="0.1" value="1"></label>
+    <label><input id="pip" type="checkbox"> Small</label></section>
+  <section><h2>Its menu</h2><div id="menu"></div></section>
+  <section><h2>Everything it sent</h2><ol id="sent"></ol></section>
+</aside>
+<script type="module">
+import { hostApp } from '../../packages/foafos-host-lite/host-lite.mjs';
+
+const frame = document.getElementById('app'), $ = (id) => document.getElementById(id);
+// The log: every message from the frame, shown as it arrived (this page's own listener, not the host's).
+addEventListener('message', (e) => {
+  if (e.source !== frame.contentWindow) return;
+  const li = document.createElement('li'); li.textContent = JSON.stringify(e.data); $('sent').append(li);
+});
+const host = hostApp(frame, {
+  offer: 1,
+  onHello: () => { $('level').textContent = host.level; show(); },
+  onActions: (items) => $('menu').replaceChildren(...items.map(({ id, label }) => {
+    const b = document.createElement('button'); b.textContent = label; b.onclick = () => host.action(id); return b;
+  })),
+  onPaused: () => { $('state').textContent = 'paused (acknowledged)'; },
+});
+const show = () => { $('state').textContent = host.state ?? '–'; };
+$('pause').onclick = () => { host.pause(); show(); };
+$('resume').onclick = () => { host.resume(); show(); };
+$('vol').oninput = (e) => host.audio(+e.target.value);
+$('pip').onchange = (e) => host.viewport({ width: frame.clientWidth, height: frame.clientHeight, safe: { top: 0, right: 0, bottom: 0, left: 0 }, mode: e.target.checked ? 'pip' : 'window' });
+</script>
+</body>
+</html>
