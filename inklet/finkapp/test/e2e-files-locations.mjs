@@ -148,6 +148,22 @@ try {
   await page.waitForTimeout(400);
   const up = await f.evaluate(() => ({ folder: window.__files.state().folder, focused: document.activeElement?.dataset?.path }));
   check(up.folder === '' && up.focused === 'notes/', `Backspace goes up and lands on the folder (${JSON.stringify(up)})`);
+  // Back and Forward, as in a browser: by button, by Alt+Left / Alt+Right, and a new place clears Forward.
+  const where_ = () => f.evaluate(() => ({ at: window.__files.state().folder, back: document.getElementById('back').disabled, fwd: document.getElementById('forward').disabled }));
+  const nav0 = await where_();
+  await f.click('#back'); await page.waitForTimeout(400);
+  const nav1 = await where_();
+  await f.click('#forward'); await page.waitForTimeout(400);
+  const nav2 = await where_();
+  await f.press('#items tbody tr', 'Alt+ArrowLeft'); await page.waitForTimeout(400);
+  const nav3 = await where_();
+  await f.press('#items tbody tr', 'Alt+ArrowRight'); await page.waitForTimeout(400);
+  const nav4 = await where_();
+  await f.click('#back'); await page.waitForTimeout(400);
+  await f.evaluate(() => window.__files.go('')); await page.waitForTimeout(400);
+  const nav5 = await where_();
+  check(nav0.at === '' && nav0.fwd && nav1.at === 'notes/' && !nav1.fwd && nav2.at === '' && nav2.fwd && nav3.at === 'notes/' && nav4.at === '' && nav5.at === '' && nav5.fwd,
+    `Back and Forward, by button and Alt+arrows; a new place clears Forward (${[nav0, nav1, nav2, nav3, nav4, nav5].map((n) => `${n.at || '/'}${n.fwd ? '' : '+'}`).join(' ')})`);
   await f.press('#items tbody tr[data-path="notes/"]', 'End');
   const end = await f.evaluate(() => { const rows = [...document.querySelectorAll('#items tbody tr')]; return document.activeElement === rows.at(-1); });
   check(end, 'End goes to the last item');
