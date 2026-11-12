@@ -3045,6 +3045,14 @@ function buildUI() {
     return front;
   };
 
+  // Refit every window once per frame while the page is resized.
+  let refitQueued = false;
+  window.addEventListener('resize', () => {
+    if (refitQueued) return;
+    refitQueued = true;
+    requestAnimationFrame(() => { refitQueued = false; for (const w of document.querySelectorAll('.foafos-window')) w._refit?.(); });
+  });
+
   // Snap the front window, for the keyboard.
   FoafOS.snapFront = (zone) => {
     const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
@@ -3212,7 +3220,7 @@ function buildUI() {
       if (win._unsnap && Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 8) {
         win.style.width = win._unsnap.w; win.style.height = win._unsnap.h;
         win.style.maxWidth = win.style.maxHeight = '';
-        win._unsnap = null;
+        win._unsnap = null; win._zone = null;
         drag.left = e.clientX - Math.min(win.getBoundingClientRect().width / 2, 120);
         drag.x = e.clientX;
       }
@@ -3225,8 +3233,25 @@ function buildUI() {
       if (zone === 'top') { maxBtn.click(); return; }   // the real Maximize, so its button stays true
       if (win.classList.contains('maximized')) maxBtn.click();
       if (!win._unsnap) win._unsnap = { w: win.style.width, h: win.style.height };
+      win._zone = zone;
       const [l, t, w, h] = snapBox(zone);
       Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
+    };
+    // When the page changes size, as a desktop does when its screen does: a snapped window fills
+    // its half or quarter of the new size, and a floating one comes back on screen. Its kept
+    // place is not changed, so it goes back there on a bigger screen next time.
+    win._refit = () => {
+      if (!win.isConnected || ['maximized', 'minimized', 'foafos-ov'].some((c) => win.classList.contains(c))) return;
+      if (win._zone && win._unsnap) {
+        const [l, t, w, h] = snapBox(win._zone);
+        Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px` });
+        return;
+      }
+      const r = win.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
+      const left = Math.max(0, Math.min(r.left, W - Math.min(r.width, W)));
+      const top = Math.max(0, Math.min(r.top, H - Math.min(r.height, H)));
+      if (left !== r.left) win.style.left = `${Math.round(left)}px`;
+      if (top !== r.top) win.style.top = `${Math.round(top)}px`;
     };
     const endDrag = () => {
       const was = drag;
