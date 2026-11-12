@@ -357,6 +357,36 @@ try {
     return { a: a.body, b: b.body };
   });
   check(dup.a === 'the plan' && dup.b === 'the plan', `Duplicate makes "plan copy.txt", then "plan copy 2.txt" (${JSON.stringify(dup)})`);
+  // Moving: a file dragged onto a folder row moves there; onto a folder that has one by that name, nothing moves.
+  const moved = await f.evaluate(async () => {
+    await foafos.pod.put('notes/move-me.txt', 'moving', { contentType: 'text/plain' });
+    await foafos.pod.put('notes/box/keep.txt', 'k', { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+    const drag = (fromSel, toSel) => {
+      const dt = new DataTransfer();
+      document.querySelector(fromSel).dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+      const target = document.querySelector(toSel);
+      target.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+      const lit = target.classList.contains('drop-target');
+      target.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+      return lit;
+    };
+    const lit = drag('#items tbody tr[data-path="notes/move-me.txt"]', '#items tbody tr[data-path="notes/box/"]');
+    await new Promise((r) => setTimeout(r, 700));
+    const there = (await foafos.pod.get('notes/box/move-me.txt')).body, gone = !(await foafos.pod.get('notes/move-me.txt')).ok;
+    // A second file by the same name: refused, both stay.
+    await foafos.pod.put('notes/keep.txt', 'other', { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+    drag('#items tbody tr[data-path="notes/keep.txt"]', '#items tbody tr[data-path="notes/box/"]');
+    await new Promise((r) => setTimeout(r, 700));
+    const both = (await foafos.pod.get('notes/keep.txt')).body === 'other' && (await foafos.pod.get('notes/box/keep.txt')).body === 'k';
+    const said = document.getElementById('status').textContent;
+    await Promise.all(['notes/box/move-me.txt', 'notes/box/keep.txt', 'notes/keep.txt'].map((p) => foafos.pod.delete(p)));
+    await window.__files.go('');
+    return { lit, there, gone, both, said };
+  });
+  check(moved.lit && moved.there === 'moving' && moved.gone && moved.both && /there already/.test(moved.said),
+    `dragging a file onto a folder moves it; a name already there is not replaced (${JSON.stringify(moved)})`);
   // Thumbnails: the photo shows a small picture of itself in the list and in the icon view.
   const thumb = await f.evaluate(async () => {
     await window.__files.go('notes/');

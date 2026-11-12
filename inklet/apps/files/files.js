@@ -160,10 +160,51 @@
     drawItems();
   }
 
+  // ── moving a file by dragging it onto a folder ──────────────────────────
+  // A file (not a folder: that would be a copy of a tree) dragged onto a folder row, a folder in the
+  // grid or the folder tree moves there: copied with If-None-Match (never over a file that is there),
+  // then the original deleted with its ETag (only if unchanged). If either step fails, nothing is lost.
+  const MOVE_TYPE = 'application/x-foafos-path';
+  function asDraggable(el, it) {
+    if (it.container || inArchive()) return;
+    el.draggable = true;
+    el.addEventListener('dragstart', (e) => { e.dataTransfer.setData(MOVE_TYPE, it.path); e.dataTransfer.effectAllowed = 'move'; });
+  }
+  function asDropTarget(el, dir) {
+    if (inArchive() || dir.includes('!/')) return;
+    el.addEventListener('dragover', (e) => {
+      if (![...(e.dataTransfer?.types || [])].includes(MOVE_TYPE)) return;
+      e.preventDefault(); e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      el.classList.add('drop-target');
+    });
+    el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
+    el.addEventListener('drop', (e) => {
+      const from = e.dataTransfer?.getData(MOVE_TYPE);
+      if (!from) return;
+      e.preventDefault(); e.stopPropagation();
+      el.classList.remove('drop-target');
+      moveFile(from, dir);
+    });
+  }
+  async function moveFile(from, dir) {
+    if (parentOf(from) === dir || dir.startsWith(from)) return;
+    const to = dir + nameOf(from);
+    const got = await foafos.pod.get(from, { as: 'bytes' });
+    if (!got.ok) { say(explain(got), true); return; }
+    const put = await foafos.pod.put(to, got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
+    if (!put.ok) { say(put.reason === 'conflict' ? `${nameOf(to)} is there already; nothing was moved.` : explain(put), true); return; }
+    const del = await foafos.pod.delete(from, got.etag ? { etag: got.etag } : {});
+    forgetThumb(from);
+    await go(folder, { remember: false });
+    say(del.ok ? `Moved ${nameOf(from)} to ${dir || here()?.label || 'the top folder'}.` : `Copied ${nameOf(from)} to ${dir}, but the original is still here: ${explain(del)}`, !del.ok);
+  }
+
   function treeNode(path, label) {
     const open = expanded.has(path);
     const b = h('button', { type: 'button', title: label, on: { click: () => { $('panes').dataset.places = 'closed'; go(path); } } }, `${open ? '📂' : '📁'} ${label}`);
     if (path === folder) b.setAttribute('aria-current', 'true');
+    asDropTarget(b, path);
     const li = h('li', {}, b);
     const kids = open ? children.get(path) || [] : [];
     if (kids.length) li.append(h('ul', {}, kids.map((k) => treeNode(k, nameOf(k)))));
@@ -351,6 +392,8 @@
           on: { click: () => (it.container || ARCHIVE.test(it.path) ? pick(it) : activate(it)), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
         icoFor(it, k), nameOf(it.path));
         btn.dataset.path = it.path;
+        asDraggable(btn, it);
+        if (it.container) asDropTarget(btn, it.path);
         return btn;
       })));
       return;
@@ -373,6 +416,8 @@
         h('td', { class: 'c-size' }, it.container || it.size == null ? '' : sizeText(it.size)),
         h('td', { class: 'c-mod', title: it.modified || '' }, whenText(it.modified)));
         tr.dataset.path = it.path;
+        asDraggable(tr, it);
+        if (it.container) asDropTarget(tr, it.path);
         tr.setAttribute('aria-selected', String(picked?.path === it.path));
         return tr;
       }))));
