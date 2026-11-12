@@ -136,6 +136,19 @@ try {
   await page.waitForTimeout(500);
   const reopenedAt = await page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)]; });
   check(String(movedTo) === String(reopenedAt), `a window reopens where it was left (${movedTo} then ${reopenedAt})`);
+  // Closed while maximised, it opens maximised; restored and closed, it opens where it was
+  const reopenSystem = async () => {
+    await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-close').click());
+    await page.waitForTimeout(300);
+    await page.evaluate(() => FoafOS.launchApp('system'));
+    await page.waitForTimeout(500);
+    return page.evaluate(() => { const w = document.getElementById('foafos-session-win'), r = w.getBoundingClientRect(); return { max: w.classList.contains('maximized'), at: [Math.round(r.x), Math.round(r.y)].join(',') }; });
+  };
+  await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-max').click());
+  const asMax = await reopenSystem();
+  await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-max').click());
+  const asFloat = await reopenSystem();
+  check(asMax.max && !asFloat.max && asFloat.at === String(reopenedAt), `a window closed maximised opens maximised, and restored opens where it was (${JSON.stringify(asMax)}, ${JSON.stringify(asFloat)})`);
 
   // Ctrl ; h minimises the front window and brings another forward
   const hid = await page.evaluate(() => document.getElementById('foafos-session-win').dataset.wid);
