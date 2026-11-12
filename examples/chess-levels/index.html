@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess, 5×5</title>
+<style>
+  :root { --light: #e9e1cf; --dark: #8a7a63; --ink: #231d16; --paper: #f6f2e9; --pick: #d9a43a; --hint: #3d6b4f; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #1c1915; --ink: #eee6d6; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--paper); color: var(--ink);
+         font: 16px/1.4 system-ui, sans-serif; }
+  main { display: grid; gap: 12px; justify-items: center; padding: 12px; }
+  #board { display: grid; grid-template-columns: repeat(5, 1fr); width: min(90vw, 70vh, 420px); aspect-ratio: 1;
+           border: 3px solid var(--ink); border-radius: 4px; }
+  #board button { all: unset; display: grid; place-items: center; font-size: min(11vw, 8vh, 56px); line-height: 1;
+                  cursor: pointer; color: #111; position: relative; }
+  #board button.light { background: var(--light); } #board button.dark { background: var(--dark); }
+  #board button.picked { box-shadow: inset 0 0 0 4px var(--pick); }
+  #board button.target::after { content: ''; position: absolute; width: 22%; height: 22%; border-radius: 50%; background: var(--hint); opacity: .55; }
+  #board button:focus-visible { outline: 3px solid var(--pick); outline-offset: -3px; z-index: 1; }
+  #board .w { color: #fff; text-shadow: 0 0 2px #000, 0 0 1px #000; }
+  #status { min-height: 1.4em; font-weight: 600; }
+  nav { display: flex; gap: 8px; }
+  nav button { font: inherit; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <div id="board" role="group" aria-label="Board"></div>
+  <p id="status" aria-live="polite"></p>
+  <nav><button id="new">New game</button><button id="undo">Undo</button></nav>
+</main>
+<script type="module">
+import { newGame, legalMoves, play, undo, status, bestMove, square, over } from './game.mjs';
+
+const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+const NAME = { K: 'king', Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', P: 'pawn' };
+const boardEl = document.getElementById('board'), statusEl = document.getElementById('status');
+let game = newGame(), picked = null, thinking = null;
+
+// ---- the opponent (black) answers after a short pause
+function opponent() {
+  thinking = setTimeout(() => {
+    thinking = null;
+    const m = bestMove(game);
+    if (m) { game = play(game, m.from, m.to); click(); }
+    draw();
+  }, 400);
+}
+
+// ---- sound: a short click on each move
+let audio = null;
+function click() {
+  try {
+    audio ??= new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = 660; g.gain.setValueAtTime(0.15, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.08);
+    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.08);
+  } catch { /* no sound here */ }
+}
+
+// ---- moves
+function choose(sq) {
+  if (thinking || game.turn !== 'w' || over(game)) return;
+  if (picked && picked !== sq) {
+    const next = play(game, picked, sq);
+    if (next) { game = next; picked = null; click(); if (!over(game)) opponent(); draw(); return; }
+  }
+  picked = picked === sq ? null : (legalMoves(game).some((m) => m.from === sq) ? sq : null);
+  draw();
+}
+function newOne() { clearTimeout(thinking); thinking = null; game = newGame(); picked = null; draw(); }
+function takeBack() {
+  if (thinking) return;
+  game = undo(game); if (game.turn === 'b') game = undo(game);   // back to white's move
+  picked = null; draw();
+}
+
+// ---- drawing
+function draw() {
+  const targets = new Set(picked ? legalMoves(game).filter((m) => m.from === picked).map((m) => m.to) : []);
+  const focus = document.activeElement?.dataset?.sq;
+  boardEl.replaceChildren(...[...game.board].map((p, i) => {
+    const sq = square(i), b = document.createElement('button');
+    b.dataset.sq = sq;
+    b.className = ((Math.floor(i / 5) + (i % 5)) % 2 ? 'light' : 'dark') + (sq === picked ? ' picked' : '') + (targets.has(sq) ? ' target' : '');
+    if (p !== '.') { const s = document.createElement('span'); s.className = p === p.toUpperCase() ? 'w' : 'b'; s.textContent = GLYPH[p.toUpperCase()]; b.append(s); }
+    b.setAttribute('aria-label', `${sq} ${p === '.' ? 'empty' : (p === p.toUpperCase() ? 'white ' : 'black ') + NAME[p.toUpperCase()]}`);
+    b.onclick = () => choose(sq);
+    return b;
+  }));
+  if (focus) boardEl.querySelector(`[data-sq="${focus}"]`)?.focus();
+  const s = status(game);
+  statusEl.textContent = s === 'checkmate' ? (game.turn === 'w' ? 'Checkmate. Black wins.' : 'Checkmate. You win.')
+    : s === 'stalemate' ? 'Stalemate: a draw.' : s === 'draw' ? 'Kings alone: a draw.'
+    : thinking ? 'Black is thinking…' : s === 'check' ? 'Check. Your move.' : game.turn === 'w' ? 'Your move (white).' : 'Black to move.';
+}
+
+// ---- keys: arrows move between squares, Enter or Space chooses
+boardEl.addEventListener('keydown', (e) => {
+  const sq = e.target.dataset?.sq; if (!sq) return;
+  const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+  if (!d) return;
+  e.preventDefault();
+  const f = 'abcde'.indexOf(sq[0]) + d[0], r = +sq[1] + d[1];
+  if (f >= 0 && f < 5 && r >= 1 && r <= 5) boardEl.querySelector(`[data-sq="${'abcde'[f]}${r}"]`).focus();
+});
+document.getElementById('new').onclick = newOne;
+document.getElementById('undo').onclick = takeBack;
+draw();
+</script>
+</body>
+</html>
