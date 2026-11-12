@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess, 5×5</title>
+<style>
+  :root { --light: #e9e1cf; --dark: #8a7a63; --ink: #231d16; --paper: #f6f2e9; --pick: #d9a43a; --hint: #3d6b4f; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #1c1915; --ink: #eee6d6; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--paper); color: var(--ink);
+         font: 16px/1.4 system-ui, sans-serif; }
+  main { display: grid; gap: 12px; justify-items: center; padding: 12px; }
+  #board { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); width: min(90vw, 70vh, 420px); aspect-ratio: 1;
+           border: 3px solid var(--ink); border-radius: 4px; }
+  #board button { all: unset; display: grid; place-items: center; font-size: min(11vw, 8vh, 56px); line-height: 1;
+                  cursor: pointer; color: #111; position: relative; }
+  #board button.light { background: var(--light); } #board button.dark { background: var(--dark); }
+  #board button.picked { box-shadow: inset 0 0 0 4px var(--pick); }
+  #board button.target::after { content: ''; position: absolute; width: 22%; height: 22%; border-radius: 50%; background: var(--hint); opacity: .55; }
+  #board button:focus-visible { outline: 3px solid var(--pick); outline-offset: -3px; z-index: 1; }
+  #board .w { color: #fff; text-shadow: 0 0 2px #000, 0 0 1px #000; }
+  #status { min-height: 1.4em; font-weight: 600; }
+  nav { display: flex; gap: 8px; }
+  body[data-mode="pip"] #status, body[data-mode="pip"] nav { display: none; }
+  nav button { font: inherit; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <div id="board" role="group" aria-label="Board"></div>
+  <p id="status" aria-live="polite"></p>
+  <nav><button id="new">New game</button><button id="undo">Undo</button></nav>
+</main>
+<script type="module">
+import { newGame, legalMoves, play, undo, replay, status, bestMove, square, over, boardText } from './game.mjs';
+import { connect } from '../../packages/foafos-guest/guest.mjs';
+
+const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+const NAME = { K: 'king', Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', P: 'pawn' };
+const boardEl = document.getElementById('board'), statusEl = document.getElementById('status');
+let game = newGame(), picked = null, thinking = null, paused = false, volume = 1;
+let guest = null, saved = null;            // saved: the moves last saved (null until the saved game is loaded)
+
+// ---- the opponent (black) answers after a short pause
+function opponent() {
+  if (paused) { thinking = 'paused'; return; }        // it moves when the host resumes the app
+  thinking = setTimeout(() => {
+    thinking = null;
+    const m = bestMove(game);
+    if (m) { game = play(game, m.from, m.to); click(); moved(m.from + m.to); }
+    draw();
+  }, 400);
+}
+
+// ---- sound: a short click on each move
+let audio = null;
+function click() {
+  if (paused || volume === 0) return;
+  try {
+    audio ??= new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = 660; g.gain.setValueAtTime(0.15 * volume, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.08);
+    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.08);
+  } catch { /* no sound here */ }
+}
+
+// ---- moves
+const yourMove = () => !paused && !thinking && game.turn === 'w' && !over(game);
+/** White plays from → to; black answers. False if it is not white's move or the move is not legal. */
+function moveWhite(from, to) {
+  const next = yourMove() && play(game, from, to);
+  if (!next) return false;
+  game = next; picked = null; click(); moved(from + to);
+  if (!over(game)) opponent();
+  draw();
+  return true;
+}
+function choose(sq) {
+  if (!yourMove()) return;
+  if (picked && picked !== sq && moveWhite(picked, sq)) return;
+  picked = picked === sq ? null : (legalMoves(game).some((m) => m.from === sq) ? sq : null);
+  draw();
+}
+function newOne() { if (thinking !== 'paused') clearTimeout(thinking); thinking = null; game = newGame(); picked = null; draw(); }
+function takeBack() {
+  if (thinking) return;
+  game = undo(game); if (game.turn === 'b') game = undo(game);   // back to white's move
+  picked = null; draw();
+}
+
+// ---- level 3: each move, on the bus (only if the host granted level 3; otherwise nothing is sent)
+function moved(move) { guest?.publish('chess.move', { move, status: status(game) }); }
+
+// ---- saving: the moves so far, whenever they change (level 2: in the host's folder; else locally)
+function save() {
+  const key = game.moves.join(' ');
+  if (!guest || saved === null || key === saved) return;
+  saved = key;
+  guest.store.put('games/current.json', JSON.stringify({ moves: game.moves }), { contentType: 'application/json' });
+}
+
+// ---- drawing
+function draw() {
+  save();
+  const targets = new Set(picked ? legalMoves(game).filter((m) => m.from === picked).map((m) => m.to) : []);
+  const focus = document.activeElement?.dataset?.sq;
+  boardEl.replaceChildren(...[...game.board].map((p, i) => {
+    const sq = square(i), b = document.createElement('button');
+    b.dataset.sq = sq;
+    b.className = ((Math.floor(i / 5) + (i % 5)) % 2 ? 'light' : 'dark') + (sq === picked ? ' picked' : '') + (targets.has(sq) ? ' target' : '');
+    if (p !== '.') { const s = document.createElement('span'); s.className = p === p.toUpperCase() ? 'w' : 'b'; s.textContent = GLYPH[p.toUpperCase()]; b.append(s); }
+    b.setAttribute('aria-label', `${sq} ${p === '.' ? 'empty' : (p === p.toUpperCase() ? 'white ' : 'black ') + NAME[p.toUpperCase()]}`);
+    b.onclick = () => choose(sq);
+    return b;
+  }));
+  if (focus) boardEl.querySelector(`[data-sq="${focus}"]`)?.focus();
+  const s = status(game);
+  statusEl.textContent = s === 'checkmate' ? (game.turn === 'w' ? 'Checkmate. Black wins.' : 'Checkmate. You win.')
+    : s === 'stalemate' ? 'Stalemate: a draw.' : s === 'draw' ? 'Kings alone: a draw.'
+    : paused ? 'Paused.' : thinking ? 'Black is thinking…' : s === 'check' ? 'Check. Your move.' : game.turn === 'w' ? 'Your move (white).' : 'Black to move.';
+}
+
+// ---- keys: arrows move between squares, Enter or Space chooses
+boardEl.addEventListener('keydown', (e) => {
+  const sq = e.target.dataset?.sq; if (!sq) return;
+  const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+  if (!d) return;
+  e.preventDefault();
+  const f = 'abcde'.indexOf(sq[0]) + d[0], r = +sq[1] + d[1];
+  if (f >= 0 && f < 5 && r >= 1 && r <= 5) boardEl.querySelector(`[data-sq="${'abcde'[f]}${r}"]`).focus();
+});
+document.getElementById('new').onclick = newOne;
+document.getElementById('undo').onclick = takeBack;
+draw();
+
+// ---- level 1: a good neighbour. With no host, connect() finds none and nothing changes.
+guest = await connect({ level: 3, name: 'Chess 5×5', actions: [{ id: 'new', label: 'New game' }, { id: 'undo', label: 'Undo' }] });
+guest.on('lifecycle', ({ state }) => {
+  if (state === 'paused') {
+    paused = true;
+    if (thinking && thinking !== 'paused') { clearTimeout(thinking); thinking = 'paused'; }
+    audio?.suspend();
+    guest.paused();                                   // timers and sound are stopped
+  } else if (state === 'running') {
+    paused = false; audio?.resume();
+    if (thinking === 'paused') { thinking = null; opponent(); }
+  } else if (state === 'ending') { paused = true; if (thinking && thinking !== 'paused') clearTimeout(thinking); }
+  draw();
+});
+guest.on('audio', ({ level, muted }) => { volume = muted ? 0 : level; });
+guest.on('viewport', ({ mode }) => { document.body.dataset.mode = mode; });
+guest.on('action', ({ id }) => (id === 'new' ? newOne() : takeBack()));
+guest.ready();
+
+// ---- level 2: carry on with the saved game, wherever the host keeps it
+const last = await guest.store.get('games/current.json');
+let resumed = null;
+try { resumed = last.ok ? replay(JSON.parse(last.body).moves) : null; } catch { /* not a saved game: start afresh */ }
+saved = (resumed ?? game).moves.join(' ');
+if (resumed && !game.moves.length) { game = resumed; if (game.turn === 'b' && !over(game)) opponent(); draw(); }
+
+// ---- level 3: the game as tools. A person using a screen reader or their voice, an AI opponent,
+// or a test can play through these; WebMCP and MCP take the same definitions.
+const TOOLS = [
+  { name: 'board', description: 'The board as text (white upper case, rank 5 at the top), whose move it is, and the status.',
+    inputSchema: { type: 'object', properties: {} } },
+  { name: 'legal_moves', description: 'Every move white may play now, like "c2c3". Empty while it is not white\'s move.',
+    inputSchema: { type: 'object', properties: {} } },
+  { name: 'move', description: 'Play a move for white, like "c2c3". Black answers a moment later.',
+    inputSchema: { type: 'object', properties: { move: { type: 'string', pattern: '^[a-e][1-5][a-e][1-5]$' } }, required: ['move'] } },
+  { name: 'new_game', description: 'Start a new game, with white to move.', inputSchema: { type: 'object', properties: {} } },
+];
+const describe = () => ({ board: boardText(game), toMove: thinking ? 'black' : game.turn === 'w' ? 'white' : 'black', status: status(game), moves: game.moves });
+guest.tools(TOOLS, (name, args = {}) => {
+  if (name === 'board') return describe();
+  if (name === 'legal_moves') return yourMove() ? legalMoves(game).map((m) => m.from + m.to) : [];
+  if (name === 'move') {
+    const m = String(args.move ?? '');
+    if (!yourMove()) throw new Error('it is not white\'s move');
+    if (!moveWhite(m.slice(0, 2), m.slice(2))) throw new Error(`${m} is not a legal move`);
+    return describe();
+  }
+  if (name === 'new_game') { newOne(); return describe(); }
+  throw new Error(`no tool ${name}`);
+});
+</script>
+</body>
+</html>

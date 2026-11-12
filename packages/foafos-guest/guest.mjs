@@ -93,7 +93,8 @@ export function connect({ level = 1, name = '', actions = [], hosts = null, loca
     const segs = cleanPath(path, { forList: op === 'list' });
     if (!segs) return { ok: false, reason: 'denied' };
     if (guest.level >= 2) return request({ type: 'store', op, path: segs, ...Object.fromEntries(Object.entries(extra).filter(([, v]) => v !== undefined)) });
-    return localOp(op, segs, extra);
+    // Local storage can be refused (a sandboxed frame has no IndexedDB): that is a failed request, not a throw.
+    try { return await localOp(op, segs, extra); } catch { return { ok: false, reason: 'offline' }; }
   }
   async function localOp(op, segs, { body, contentType } = {}) {
     const key = segs.join('/');

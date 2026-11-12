@@ -26,6 +26,15 @@ test('not framed, or asking for level 0: level 0, nothing sent', async () => {
   assert.deepEqual(await g.store.put('a.txt', 'x'), { ok: true }, 'level 0 keeps things locally');
 });
 
+test('local storage that is refused (a sandboxed frame) fails each request; nothing throws', async () => {
+  const refused = { get: async () => { throw new Error('SecurityError'); }, put: async () => { throw new Error('SecurityError'); },
+    delete: async () => { throw new Error('SecurityError'); }, keys: async () => { throw new Error('SecurityError'); } };
+  const g = await connect({ level: 0, window: { parent: null }, local: refused });
+  for (const r of [g.store.put('a.txt', 'x'), g.store.get('a.txt'), g.store.list(''), g.store.delete('a.txt')]) {
+    assert.deepEqual(await r, { ok: false, reason: 'offline' });
+  }
+});
+
 test('no welcome in time: level 0 after hello, and nothing more is sent; a late welcome is ignored', async () => {
   const f = frame();
   const g = await connect({ level: 2, name: 'Chess', window: f.w, local: memoryStore(), timeoutMs: 20 });
