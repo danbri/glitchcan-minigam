@@ -420,6 +420,8 @@
     pod: {
       get: (path, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.get', params: { ...opts, path } }),
       list: (path = '', opts = {}) => reqVerb({ type: 'pod', verb: 'pod.list', params: { ...opts, path } }),
+      // What a file says about itself: { kind, fields, location, turtle }. Through a share, never the position.
+      meta: (path, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.meta', params: { ...opts, path } }),
       // Text search in this app's own files (under `path`): { hits: [{ path, score, snippet }], partial }.
       search: (query, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.search', params: { path: '', ...opts, query } }),
       put: (path, body, opts = {}) => reqVerb({ type: 'pod', verb: 'pod.put', params: { ...opts, path, body } }),
