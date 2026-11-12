@@ -408,6 +408,21 @@ try {
   const tmAfter = await page.evaluate((w) => ({ gone: !document.getElementById('foafos-switcher'), front: document.querySelector(`.foafos-window[data-wid="${w}"]`)?.style.zIndex === '2640' }), tmTarget);
   check(tmW.length >= 1 && tmW.every((t) => /Tally/.test(t)) && tmAfter.gone && tmAfter.front, `Task Manager lists open widgets, and Show brings one forward (${JSON.stringify({ tmW, tmAfter })})`);
 
+  // Snap assist: snapping a window to the left half offers the other windows for the right half;
+  // picking one fills it; a key elsewhere dismisses the offer
+  await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); if (w.classList.contains('maximized')) w.querySelector('.foafos-window-max').click(); FoafOS.raiseWindow(w); });
+  await keys(page, [';', 'l']);
+  const offer = await page.evaluate(() => { const b = document.getElementById('foafos-snap-assist'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.x), names: [...b.querySelectorAll('button')].map((x) => x.textContent) }; });
+  const pickedWid = await page.evaluate(() => { const b = document.querySelector('#foafos-snap-assist button'); const name = b.textContent; b.click(); return [...document.querySelectorAll('.foafos-window')].find((w) => w.querySelector('.foafos-window-bar span')?.textContent === name)?.dataset.wid; });
+  await page.waitForTimeout(200);
+  const filled = await page.evaluate((w) => { const r = document.querySelector(`.foafos-window[data-wid="${w}"]`).getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round).join(','); }, pickedWid);
+  await keys(page, [';', 'r']);
+  const offered2 = await page.evaluate(() => !!document.getElementById('foafos-snap-assist'));
+  await page.keyboard.press('Shift');
+  const dismissed = await page.evaluate(() => !document.getElementById('foafos-snap-assist'));
+  check(offer && offer.x >= 640 && offer.names.length >= 1 && filled === '640,0,640,800' && offered2 && dismissed,
+    `snap assist offers the other windows for the other half, and fills it (${JSON.stringify({ offer, filled, offered2, dismissed })})`);
+
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
   await page.waitForTimeout(400);

@@ -3373,13 +3373,15 @@ function buildUI() {
       drag.zone = snapZone(e);
       preview(drag.zone);
     });
-    win._snap = (zone) => {
+    win._snap = (zone, { assist = true } = {}) => {
+      document.getElementById('foafos-snap-assist')?.remove();
       if (zone === 'top') { maxBtn.click(); return; }   // the real Maximize, so its button stays true
       if (win.classList.contains('maximized')) maxBtn.click();
       if (!win._unsnap) win._unsnap = { w: win.style.width, h: win.style.height };
       win._zone = zone;
       const [l, t, w, h] = snapBox(zone);
       Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
+      if (assist && (zone === 'left' || zone === 'right')) snapAssist(win, zone === 'left' ? 'right' : 'left', snapBox(zone === 'left' ? 'right' : 'left'));
     };
     // When the page changes size, as a desktop does when its screen does: a snapped window fills
     // its half or quarter of the new size, and a floating one comes back on screen. Its kept
@@ -3427,6 +3429,43 @@ function buildUI() {
       windowMenu(win, e.clientX || r.left + 12, e.clientY || r.bottom);
     });
     return win;
+  }
+
+  // Snap assist, as on a desktop: once a window fills one half, the other half offers the other
+  // open windows to fill it. Pick one, or press any other key or click anywhere to carry on.
+  function snapAssist(win, side, [l, t, w, h]) {
+    const others = [...document.querySelectorAll('.foafos-window:not(.minimized)')].filter((x) => x !== win && x._snap && !x.classList.contains('foafos-ov'));
+    if (!others.length || window.innerWidth < 700) return;
+    const box = document.createElement('div');
+    box.id = 'foafos-snap-assist';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-label', `Fill the ${side} half`);
+    Object.assign(box.style, { left: `${l + 16}px`, top: `${t + 16}px`, width: `${Math.max(200, w - 32)}px`, maxHeight: `${h - 32}px` });
+    const head = document.createElement('p');
+    head.textContent = `Fill the ${side} half with:`;
+    box.appendChild(head);
+    for (const o of others) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = o.querySelector('.foafos-window-bar span')?.textContent || 'Window';
+      b.addEventListener('click', () => { done(); o._snap(side, { assist: false }); FoafOS.raiseWindow(o); });
+      box.appendChild(b);
+    }
+    const done = () => { box.remove(); document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', key, true); };
+    const away = (e) => { if (!box.contains(e.target)) done(); };
+    const key = (e) => {
+      if (box.contains(e.target) && ['Tab', 'Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const bs = [...box.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+          bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus();
+        }
+        return;
+      }
+      done();
+    };
+    document.body.appendChild(box);
+    setTimeout(() => { document.addEventListener('pointerdown', away, true); document.addEventListener('keydown', key, true); }, 0);
   }
 
   function windowMenu(win, x, y) {
