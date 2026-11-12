@@ -90,13 +90,23 @@
   const chosen = new Set();
   let anchor = null;
   const markChosen = () => {
-    for (const r of document.querySelectorAll('#items tbody tr')) {
+    for (const r of document.querySelectorAll('#items tbody tr, #items .grid [role=option]')) {
       const on = chosen.has(r.dataset.path);
       r.classList.toggle('chosen', on);
       r.setAttribute('aria-selected', String(on || (!chosen.size && picked?.path === r.dataset.path)));
     }
     if (chosen.size) say(`${chosen.size} chosen. Delete to delete them, Escape to clear.`);
   };
+  // A click in the list or the icon view: with Ctrl or Cmd it adds or removes, with Shift it takes a run.
+  function clickItem(e, it) {
+    if (e.metaKey || e.ctrlKey) { if (!chosen.size && picked?.path && picked.path !== it.path) chosen.add(picked.path); chosen.has(it.path) ? chosen.delete(it.path) : chosen.add(it.path); anchor = it.path; markChosen(); return; }
+    if (e.shiftKey && anchor) {
+      const paths = shown().map((x) => x.path), a = paths.indexOf(anchor), b = paths.indexOf(it.path);
+      if (a >= 0 && b >= 0) { chosen.clear(); for (const p of paths.slice(Math.min(a, b), Math.max(a, b) + 1)) chosen.add(p); markChosen(); return; }
+    }
+    clearChosen(); anchor = it.path;
+    return it.container || ARCHIVE.test(it.path) ? pick(it) : activate(it);
+  }
   const clearChosen = () => { if (!chosen.size) return; chosen.clear(); markChosen(); };
   const children = new Map();    // folder -> subfolders, for the tree
   const expanded = new Set(['']);
@@ -445,9 +455,11 @@
       box.replaceChildren(h('div', { class: 'grid', role: 'listbox', 'aria-label': 'Items' }, rows.map((it) => {
         const k = kindOf(it);
         const btn = h('button', { type: 'button', role: 'option', 'aria-selected': String(picked?.path === it.path),
-          on: { click: () => (it.container || ARCHIVE.test(it.path) ? pick(it) : activate(it)), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
+          on: { click: (e) => clickItem(e, it), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
         icoFor(it, k), nameOf(it.path));
         btn.dataset.path = it.path;
+        btn.classList.toggle('chosen', chosen.has(it.path));
+        if (chosen.size) btn.setAttribute('aria-selected', String(chosen.has(it.path)));
         asDraggable(btn, it);
         if (it.container) asDropTarget(btn, it.path);
         return btn;
@@ -461,15 +473,7 @@
       h('tbody', {}, rows.map((it) => {
         const k = kindOf(it);
         const tr = h('tr', { tabIndex: 0, on: {
-          click: (e) => {
-            if (e.metaKey || e.ctrlKey) { if (!chosen.size && picked?.path && picked.path !== it.path) chosen.add(picked.path); chosen.has(it.path) ? chosen.delete(it.path) : chosen.add(it.path); anchor = it.path; markChosen(); return; }
-            if (e.shiftKey && anchor) {
-              const paths = shown().map((x) => x.path), a = paths.indexOf(anchor), b = paths.indexOf(it.path);
-              if (a >= 0 && b >= 0) { chosen.clear(); for (const p of paths.slice(Math.min(a, b), Math.max(a, b) + 1)) chosen.add(p); markChosen(); return; }
-            }
-            clearChosen(); anchor = it.path;
-            return it.container || ARCHIVE.test(it.path) ? pick(it) : activate(it);
-          },
+          click: (e) => clickItem(e, it),
           dblclick: () => activate(it),
           keydown: (e) => {
             if (e.key === 'Enter') activate(it);

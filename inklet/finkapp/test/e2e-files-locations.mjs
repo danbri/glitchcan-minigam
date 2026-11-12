@@ -574,6 +574,28 @@ try {
   });
   check(kClip === 'k1.txt\nk2.txt' && /Pasted 2 files/.test(kSaid) && kc.k1 && kc.k2 && kc.k1kept && /Moved 2 files here/.test(cSaid) && kc.c1 && kc.c2 && !kc.c1left,
     `copy and cut act on all the chosen files (${JSON.stringify({ kClip, kSaid, cSaid, kc })})`);
+  // In the icon view too: Ctrl + click chooses several, and Delete asks once for them
+  await f.evaluate(async () => {
+    for (const n of ['g1', 'g2']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+  });
+  const wasIcons = await f.evaluate(() => document.getElementById('view').getAttribute('aria-pressed') === 'true');
+  if (!wasIcons) await f.click('#view');
+  await page.waitForTimeout(400);
+  const gIt = (n) => `#items .grid [role=option][data-path="notes/${n}.txt"]`;
+  await f.click(gIt('g1'));
+  await f.click(gIt('g2'), { modifiers: ['ControlOrMeta'] });
+  const gChosen = await f.$$eval('#items .grid [role=option].chosen', (xs) => xs.map((x) => x.dataset.path));
+  await f.focus(gIt('g1'));
+  await f.press(gIt('g1'), 'Delete');
+  await page.waitForTimeout(300);
+  const gAsked = await f.evaluate(() => document.querySelector('.ask')?.textContent || '');
+  await f.click('.ask button.danger');
+  await page.waitForTimeout(700);
+  const gLeft = await f.evaluate(async () => [(await foafos.pod.get('notes/g1.txt')).ok, (await foafos.pod.get('notes/g2.txt')).ok]);
+  if (!wasIcons) await f.click('#view');
+  check(String(gChosen) === 'notes/g1.txt,notes/g2.txt' && /Delete 2 files\?/.test(gAsked) && String(gLeft) === 'false,false',
+    `in the icon view, Ctrl + click chooses several and Delete asks once (${JSON.stringify({ gChosen, gAsked, gLeft })})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });
