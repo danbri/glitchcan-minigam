@@ -66,6 +66,21 @@
   let icons = false;
   let sort = { key: 'name', dir: 1 };
   const keepView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ icons, sort })); } catch { /* not kept */ } };
+  // The folder you were in, for each location, so Files opens there again, as a desktop's file
+  // manager does. A folder that has gone since opens the top instead, without a complaint.
+  const FOLDER_KEY = 'files.folder';
+  const keptFolders = () => { try { return JSON.parse(localStorage.getItem(FOLDER_KEY)) || {}; } catch { return {}; } };
+  const keepFolder = () => { if (!current) return; try { localStorage.setItem(FOLDER_KEY, JSON.stringify({ ...keptFolders(), [current]: folder })); } catch { /* not kept */ } };
+  async function openKept() {
+    const want = keptFolders()[current] || '';
+    // Some stores list a folder that is not there as empty, so the folder must be in its parent.
+    if (want) {
+      const up = await list(parentOf(want));
+      const there = up.ok && up.items.some((it) => (parentOf(want) + it.path.replace(/^\/+/, '')) === want);
+      if (there) { await go(want, { remember: false }); return; }
+    }
+    await go('', { remember: false });
+  }
   const trail = [];
   const ahead = [];   // where Forward goes, after Back
   const children = new Map();    // folder -> subfolders, for the tree
@@ -92,6 +107,7 @@
     if (path !== folder && via === 'back') ahead.push(folder);
     else if (path !== folder && (remember || via === 'forward')) { trail.push(folder); if (via !== 'forward') ahead.length = 0; }
     folder = path;
+    keepFolder();
     // Inside an archive nothing can be made, saved or dropped.
     for (const id of ['new-file', 'new-folder']) $(id).disabled = inArchive();
     items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
@@ -253,7 +269,7 @@
     if (!r.ok) { say(explain(r), true); return; }
     say('');
     $('panes').dataset.places = 'closed';
-    await go('', { remember: false });
+    await openKept();
     takeLocations(await foafos.pod.locations());
   }
 
@@ -959,7 +975,7 @@
   });
   foafos.onInit(async () => {
     takeLocations(await foafos.pod.locations());
-    await go('', { remember: false });
+    await openKept();
     takeLocations(await foafos.pod.locations());   // a location opens on first use, so its status may have changed
   });
 })();
