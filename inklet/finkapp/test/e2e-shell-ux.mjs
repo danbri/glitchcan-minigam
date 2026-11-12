@@ -333,6 +333,21 @@ try {
   await page.waitForTimeout(600);
   check(await page.evaluate((w) => { const el = document.querySelector(`.foafos-window[data-wid="${w}"]`); return !el.classList.contains('minimized') && el.style.zIndex === '2640'; }, minWin), 'picking it restores it to the front');
 
+  // Widgets are apps here too: an open one is marked, and a closed one can be reopened
+  await page.evaluate(() => FoafOS.openWidget('tally'));
+  await page.waitForTimeout(500);
+  await keys(page, [';', 'a']);
+  const tallyMarked = await page.evaluate(() => document.querySelector('#foafos-home .foafos-app[data-app="widget-tally"]')?.classList.contains('running'));
+  await page.keyboard.press('Escape');
+  const tallyCount = () => page.evaluate(() => document.querySelectorAll('.foafos-window[data-opened-as="widget-tally"]').length);
+  const nTally = await tallyCount();
+  await page.evaluate(() => [...document.querySelectorAll('.foafos-window[data-opened-as="widget-tally"]')].pop().querySelector('.foafos-window-close').click());
+  await page.waitForTimeout(300);
+  const reopenRow = await page.evaluate(() => document.querySelector('#wm-sys-reopen .wm-label')?.textContent);
+  await keys(page, [';', 'u']);
+  await page.waitForTimeout(500);
+  check(tallyMarked && reopenRow === 'Reopen Tally' && await tallyCount() === nTally, `an open widget is marked in All apps, and a closed one reopens (${tallyMarked}, ${reopenRow}, ${nTally})`);
+
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
   await page.waitForTimeout(400);
