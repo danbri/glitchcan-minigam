@@ -520,6 +520,36 @@ try {
   });
   check(cc.onClipboard === 'cc.txt' && cc.copy1 === 'copy me' && cc.copy2 === 'copy me' && cc.orig === 'copy me' && cc.moved === 'move me' && !cc.left && !cc.stray && /moved already/.test(cc.said),
     `copy, cut and paste a file between folders (${JSON.stringify(cc)})`);
+  // Choosing several: Shift + click takes a run, Ctrl + click takes one out, Delete asks once and
+  // deletes the chosen files; Ctrl + A takes all shown, and Escape clears
+  await f.evaluate(async () => {
+    for (const n of ['m1', 'm2', 'm3']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
+    const filter = document.getElementById('filter'); filter.value = ''; filter.dispatchEvent(new Event('input'));
+    await window.__files.go('notes/');
+  });
+  await page.waitForTimeout(500);
+  const msRow = (n) => `#items tbody tr[data-path="notes/${n}.txt"]`;
+  await f.click(msRow('m1'));
+  await f.click(msRow('m3'), { modifiers: ['Shift'] });
+  const msRun = await f.$$eval('#items tbody tr.chosen', (rs) => rs.map((r) => r.dataset.path));
+  await f.click(msRow('m2'), { modifiers: ['ControlOrMeta'] });
+  const msTwo = await f.$$eval('#items tbody tr.chosen', (rs) => rs.map((r) => r.dataset.path));
+  await f.focus(msRow('m1'));
+  await f.press(msRow('m1'), 'Delete');
+  await page.waitForTimeout(300);
+  const msAsked = await f.evaluate(() => document.querySelector('.ask')?.textContent || '');
+  await f.click('.ask button.danger');
+  await page.waitForTimeout(700);
+  const msAfter = await f.evaluate(async () => ({ m1: (await foafos.pod.get('notes/m1.txt')).ok, m2: (await foafos.pod.get('notes/m2.txt')).ok, m3: (await foafos.pod.get('notes/m3.txt')).ok, said: document.getElementById('status').textContent }));
+  await f.focus('#items tbody tr');
+  await f.press('#items tbody tr', 'ControlOrMeta+a');
+  const msAll = await f.evaluate(() => ({ chosen: document.querySelectorAll('#items tbody tr.chosen').length, rows: document.querySelectorAll('#items tbody tr').length }));
+  await f.press('#items tbody tr', 'Escape');
+  const msCleared = await f.evaluate(() => document.querySelectorAll('#items tbody tr.chosen').length);
+  await f.evaluate(() => foafos.pod.delete('notes/m2.txt'));
+  check(String(msRun) === 'notes/m1.txt,notes/m2.txt,notes/m3.txt' && String(msTwo) === 'notes/m1.txt,notes/m3.txt' && /Delete 2 files\?/.test(msAsked)
+    && !msAfter.m1 && msAfter.m2 && !msAfter.m3 && /Deleted 2 files/.test(msAfter.said) && msAll.chosen === msAll.rows && msAll.rows > 0 && msCleared === 0,
+    `choosing several files: Shift and Ctrl clicks, one question for Delete, Ctrl+A and Escape (${JSON.stringify({ msRun, msTwo, msAsked, msAfter, msAll, msCleared })})`);
   // Files opens at the folder it was in, after a reload; a kept folder that has gone opens the top
   await f.evaluate(() => window.__files.go('notes/'));
   await page.waitForTimeout(300);

@@ -83,6 +83,21 @@
   }
   const trail = [];
   const ahead = [];   // where Forward goes, after Back
+  // Several items chosen at once, as in a desktop's file manager: Ctrl or Cmd + click adds or
+  // removes one, Shift + click takes a run from the last one clicked, Ctrl or Cmd + A takes all
+  // shown. Delete then deletes the chosen files after one question. A plain click, Escape or
+  // another folder clears it.
+  const chosen = new Set();
+  let anchor = null;
+  const markChosen = () => {
+    for (const r of document.querySelectorAll('#items tbody tr')) {
+      const on = chosen.has(r.dataset.path);
+      r.classList.toggle('chosen', on);
+      r.setAttribute('aria-selected', String(on || (!chosen.size && picked?.path === r.dataset.path)));
+    }
+    if (chosen.size) say(`${chosen.size} chosen. Delete to delete them, Escape to clear.`);
+  };
+  const clearChosen = () => { if (!chosen.size) return; chosen.clear(); markChosen(); };
   const children = new Map();    // folder -> subfolders, for the tree
   const expanded = new Set(['']);
 
@@ -118,6 +133,7 @@
     else if (path !== folder && (remember || via === 'forward')) { trail.push(folder); if (via !== 'forward') ahead.length = 0; }
     folder = path;
     keepFolder();
+    chosen.clear(); anchor = null;
     // Inside an archive nothing can be made, saved or dropped.
     for (const id of ['new-file', 'new-folder']) $(id).disabled = inArchive();
     items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
@@ -442,7 +458,16 @@
       h('tbody', {}, rows.map((it) => {
         const k = kindOf(it);
         const tr = h('tr', { tabIndex: 0, on: {
-          click: () => (it.container || ARCHIVE.test(it.path) ? pick(it) : activate(it)), dblclick: () => activate(it),
+          click: (e) => {
+            if (e.metaKey || e.ctrlKey) { if (!chosen.size && picked?.path && picked.path !== it.path) chosen.add(picked.path); chosen.has(it.path) ? chosen.delete(it.path) : chosen.add(it.path); anchor = it.path; markChosen(); return; }
+            if (e.shiftKey && anchor) {
+              const paths = shown().map((x) => x.path), a = paths.indexOf(anchor), b = paths.indexOf(it.path);
+              if (a >= 0 && b >= 0) { chosen.clear(); for (const p of paths.slice(Math.min(a, b), Math.max(a, b) + 1)) chosen.add(p); markChosen(); return; }
+            }
+            clearChosen(); anchor = it.path;
+            return it.container || ARCHIVE.test(it.path) ? pick(it) : activate(it);
+          },
+          dblclick: () => activate(it),
           keydown: (e) => {
             if (e.key === 'Enter') activate(it);
             if (e.key === 'ArrowDown') tr.nextElementSibling?.focus();
@@ -455,7 +480,8 @@
         tr.dataset.path = it.path;
         asDraggable(tr, it);
         if (it.container) asDropTarget(tr, it.path);
-        tr.setAttribute('aria-selected', String(picked?.path === it.path));
+        tr.setAttribute('aria-selected', String(chosen.has(it.path) || (!chosen.size && picked?.path === it.path)));
+        tr.classList.toggle('chosen', chosen.has(it.path));
         return tr;
       }))));
   }
@@ -719,7 +745,22 @@
     pick({ path: to, container: false });
   });
 
-  const askDelete = () => ask(`Delete ${nameOf(picked.path)}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
+  const askDeleteChosen = () => {
+    const files = [...chosen].filter((p) => !p.endsWith('/'));
+    const folders = chosen.size - files.length;
+    if (!files.length) { say('Folders are deleted one at a time, once they are empty.', true); return; }
+    ask(`Delete ${files.length} file${files.length === 1 ? '' : 's'}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
+      const failed = [];
+      for (const p of files) { forgetThumb(p); const r = await foafos.pod.delete(p); if (!r.ok) failed.push(nameOf(p)); }
+      chosen.clear();
+      await go(folder, { remember: false });
+      say([`Deleted ${files.length - failed.length} file${files.length - failed.length === 1 ? '' : 's'}.`,
+        failed.length ? `Not deleted: ${failed.join(', ')}.` : '', folders ? 'Folders are left: delete them one at a time.' : ''].filter(Boolean).join(' '), !!failed.length);
+    });
+  };
+  // One question for the chosen files, or the usual one for the item picked.
+  const askDelete = () => (chosen.size > 1 ? askDeleteChosen() : askDeleteOne());
+  const askDeleteOne = () => ask(`Delete ${nameOf(picked.path)}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
     const name = nameOf(picked.path);
     let path = picked.path;
     if (picked.container) {
@@ -763,6 +804,14 @@
       if (it) { await pick(it); e.target.focus(); }
       return;
     }
+    // Ctrl or Cmd + A chooses everything shown; Escape clears; Delete with several chosen asks once.
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      chosen.clear(); for (const it of shown()) chosen.add(it.path); markChosen();
+      return;
+    }
+    if (e.key === 'Escape' && chosen.size) { e.preventDefault(); e.stopPropagation(); clearChosen(); say(folderSummary()); return; }
+    if (chosen.size > 1 && (e.key === 'Delete' || (e.metaKey && e.key === 'Backspace'))) { e.preventDefault(); askDeleteChosen(); return; }
     // Delete (Cmd+Backspace on a Mac) asks to delete the item the keyboard is on; F2 renames it.
     if (at >= 0 && (e.key === 'Delete' || (e.metaKey && e.key === 'Backspace') || e.key === 'F2')) {
       e.preventDefault();

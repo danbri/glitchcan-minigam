@@ -125,3 +125,6 @@
 .about-rdf pre { max-height: 180px; overflow: auto; font-size: 11px; background: var(--p-side); padding: 6px; border-radius: var(--p-corner); }
 /* A folder a dragged file would move into. */
 .drop-target, .list tr.drop-target td { background: var(--p-pick) !important; outline: 2px solid var(--p-accent); outline-offset: -2px; }
+
+/* Several items chosen (Ctrl/Cmd + click, Shift + click, Ctrl/Cmd + A). */
+#items tbody tr.chosen { background: color-mix(in srgb, var(--accent, #2e6fd1) 22%, transparent); }
