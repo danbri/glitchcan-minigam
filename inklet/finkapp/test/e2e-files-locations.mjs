@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { makeZip } from '../../../packages/foafos/test/zip-fixture.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const FACTOIDAL = process.env.FACTOIDAL;
@@ -244,6 +245,31 @@ try {
   });
   check(found.row && /blue kayak/.test(found.hit) && /notes\//.test(found.hit) && /by what is in them/.test(found.said),
     `search finds a word inside a file and shows the line (${JSON.stringify(found)})`);
+  // An archive opens as a read-only folder: look inside, read a file, nothing can be made there.
+  const zipBytes = [...makeZip([{ name: 'readme.txt', data: 'Inside the zip.' }, { name: 'docs/plan.md', data: '# Plan' }])];
+  const arc = await f.evaluate(async (bytes) => {
+    await foafos.pod.put('notes/box.zip', new Uint8Array(bytes).buffer, { contentType: 'application/zip' });
+    await window.__files.go('notes/');
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    document.querySelector('#items tbody tr[data-path="notes/box.zip"]').click();
+    await wait(400);
+    const openBtn = [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Open');
+    openBtn.click();
+    await wait(500);
+    const st = window.__files.state();
+    const names = st.items.map((i) => i.path);
+    const readOnly = document.getElementById('new-file').disabled;
+    await window.__files.pick({ path: 'notes/box.zip!/readme.txt', container: false });
+    await wait(300);
+    const text = document.querySelector('#detail textarea')?.value;
+    const crumb = document.getElementById('crumbs').textContent;
+    await window.__files.go('notes/');
+    await foafos.pod.delete('notes/box.zip');
+    return { folder: st.folder, names, readOnly, text, crumb, writable: document.getElementById('new-file').disabled === false };
+  }, zipBytes);
+  check(arc.folder === 'notes/box.zip!/' && arc.names.includes('notes/box.zip!/readme.txt') && arc.names.includes('notes/box.zip!/docs/')
+    && arc.readOnly && arc.text === 'Inside the zip.' && /🗜 box\.zip/.test(arc.crumb) && arc.writable,
+    `an archive opens as a read-only folder (${JSON.stringify(arc)})`);
   // Thumbnails: the photo shows a small picture of itself in the list and in the icon view.
   const thumb = await f.evaluate(async () => {
     await window.__files.go('notes/');

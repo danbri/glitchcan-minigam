@@ -13,6 +13,10 @@
     denied: 'Files may not use your pod. Check its permissions.',
     'no-pod': 'No pod is chosen for apps yet. Choose one in System, under Pods.',
     conflict: 'This file changed elsewhere since you opened it. Open it again, then save.',
+    'read-only': 'This is inside an archive, which is read only.',
+    'too-deep': 'Archives inside archives open three deep at most.',
+    'bad-archive': 'This archive could not be read: it may be damaged, or a kind this view does not open.',
+    'not-supported': 'This archive uses something this view does not read (encryption, or an unusual compression).',
     quota: 'This location is out of space: its owner set a limit, and this would go over it. Free some space, or raise the limit in System, under Pods.',
     offline: 'That location is not connected.',
     'needs-ok': 'This folder needs your OK. Use Allow access.',
@@ -38,7 +42,7 @@
   const KINDS = [
     [/\.(txt|text|md)$/i, '📄', 'Text'], [/\.(ttl|n3|nt|nq|trig|rdf|jsonld)$/i, '🔗', 'Linked data'],
     [/\.json$/i, '{ }', 'JSON'], [/\.(html?|css|m?js|ts|xml|svg)$/i, '⌨', 'Code'], [/\.csv$/i, '▤', 'Table'],
-    [/\.(png|jpe?g|gif|webp|avif)$/i, '🖼', 'Image'], [/\.(mp3|wav|ogg|m4a)$/i, '♪', 'Audio'], [/\.(mp4|webm|mov)$/i, '🎞', 'Video'],
+    [/\.(zip|tar|tgz|tar\.gz)$/i, '🗜', 'Archive'], [/\.(png|jpe?g|gif|webp|avif)$/i, '🖼', 'Image'], [/\.(mp3|wav|ogg|m4a)$/i, '♪', 'Audio'], [/\.(mp4|webm|mov)$/i, '🎞', 'Video'],
   ];
   const kindOf = (it) => {
     if (it.container) return { icon: '📁', name: 'Folder' };
@@ -85,6 +89,8 @@
     if (path !== folder) dropThumbs();
     if (remember && path !== folder) trail.push(folder);
     folder = path;
+    // Inside an archive nothing can be made, saved or dropped.
+    for (const id of ['new-file', 'new-folder']) $(id).disabled = inArchive();
     items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
       .filter((it) => !hiddenName(nameOf(it.path)));
     children.set(folder, items.filter((i) => i.container).map((i) => i.path));
@@ -149,7 +155,7 @@
     $('up').disabled = !folder;
     const parts = folder.split('/').filter(Boolean);
     $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => go('') } }, here()?.label || 'My files')),
-      ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', on: { click: () => go(parts.slice(0, i + 1).join('/') + '/') } }, p))));
+      ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', on: { click: () => go(parts.slice(0, i + 1).join('/') + '/') } }, p.endsWith('!') ? `🗜 ${p.slice(0, -1)}` : p))));
     drawTree();
     drawItems();
   }
@@ -212,7 +218,10 @@
     await showLocation(r);
   }
 
-  function activate(it) { if (it.container) go(it.path); else pick(it); }
+  // An archive opens as a folder (read-only): `box.zip` → `box.zip!/`.
+  const ARCHIVE = /\.(zip|tar|tgz|tar\.gz)$/i;
+  const inArchive = () => folder.includes('!/');
+  function activate(it) { if (it.container) go(it.path); else if (ARCHIVE.test(it.path)) go(`${it.path}!/`); else pick(it); }
 
   // ── where the space goes ──────────────────────────────────────────────
   // A treemap of this folder: each file a box whose area is its size, inside a box for its folder.
@@ -339,7 +348,7 @@
       box.replaceChildren(h('div', { class: 'grid', role: 'listbox', 'aria-label': 'Items' }, rows.map((it) => {
         const k = kindOf(it);
         const btn = h('button', { type: 'button', role: 'option', 'aria-selected': String(picked?.path === it.path),
-          on: { click: () => (it.container ? pick(it) : activate(it)), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
+          on: { click: () => (it.container || ARCHIVE.test(it.path) ? pick(it) : activate(it)), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
         icoFor(it, k), nameOf(it.path));
         btn.dataset.path = it.path;
         return btn;
@@ -353,7 +362,7 @@
       h('tbody', {}, rows.map((it) => {
         const k = kindOf(it);
         const tr = h('tr', { tabIndex: 0, on: {
-          click: () => (it.container ? pick(it) : activate(it)), dblclick: () => activate(it),
+          click: () => (it.container || ARCHIVE.test(it.path) ? pick(it) : activate(it)), dblclick: () => activate(it),
           keydown: (e) => {
             if (e.key === 'Enter') activate(it);
             if (e.key === 'ArrowDown') tr.nextElementSibling?.focus();
@@ -453,6 +462,17 @@
     const k = kindOf(it);
     const head = h('div', { class: 'detail-head' }, h('h2', {}, `${k.icon} ${nameOf(it.path)}`), h('p', {}, k.name));
     const backBtn = h('button', { class: 'tool panes-back', type: 'button', on: { click: () => { $('panes').dataset.show = 'items'; } } }, 'Back to list');
+    if (!it.container && ARCHIVE.test(it.path)) {
+      // An archive: its details, and Open to look inside (read only); it can be renamed or deleted like any file.
+      const raw = await foafos.pod.get(it.path, { as: 'bytes' });
+      if (mine !== picking) return;
+      picked = raw.ok ? { path: it.path, body: raw.body, etag: raw.etag, contentType: raw.contentType || 'application/zip', dirty: false } : { path: it.path };
+      markPicked();
+      if (raw.ok) head.querySelector('p').textContent = `Archive, ${sizeText(raw.body.byteLength)}`;
+      drawDetail(head, h('p', { class: 'detail-none' }, 'Open it to see what it holds. Nothing inside can be changed here.'),
+        actions(h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(`${it.path}!/`) } }, 'Open'), backBtn));
+      return;
+    }
     if (it.container) {
       picked = { path: it.path, container: true };
       drawDetail(head, h('div', { class: 'detail-actions' },
@@ -500,6 +520,7 @@
     const text = h('textarea', { value: r.body, spellcheck: false, 'aria-label': `Contents of ${nameOf(it.path)}`,
       on: { input: () => { picked.dirty = text.value !== picked.body; save.disabled = !picked.dirty; } } });
     const save = h('button', { class: 'tool tool-main', type: 'button', disabled: true, on: { click: () => saveFile(text.value, save) } }, 'Save');
+    if (inArchive()) { text.readOnly = true; save.hidden = true; }
     head.querySelector('p').textContent = `${k.name}, ${r.body.length.toLocaleString()} characters`;
     const offers = await openWithBox(it.path, picked.contentType);
     if (mine !== picking) return;
@@ -519,8 +540,9 @@
       a.comment ? h('p', { class: 'open-with-comment' }, a.comment) : null)));
   }
   const actions = (...first) => h('div', { class: 'detail-actions' }, ...first,
-    h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
-    h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete'));
+    ...(inArchive() ? [h('span', { class: 'detail-none' }, 'In an archive: read only.')] : [
+      h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
+      h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')]));
 
   function markPicked() {
     for (const e of document.querySelectorAll('[aria-selected]')) e.setAttribute('aria-selected', String(e.dataset.path === picked?.path));
@@ -680,6 +702,7 @@
   pane.addEventListener('drop', async (e) => {
     const files = [...(e.dataTransfer?.files || [])];
     if (!files.length) return;
+    if (inArchive()) { e.preventDefault(); pane.classList.remove('dropping'); say('This is inside an archive, which is read only. Drop files into a folder.', true); return; }
     e.preventDefault();
     pane.classList.remove('dropping');
     const added = [], left = [];
