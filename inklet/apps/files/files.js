@@ -861,8 +861,46 @@
   }
   // Paste (Ctrl+V, Cmd+V) into the folder: copied files or a screenshot become files here, and
   // copied text becomes "Pasted text.txt". Not while typing in a field, where paste is the field's.
+  // Copy or cut a file here, and paste it into another folder, as in a desktop's file manager
+  // (Ctrl or Cmd + C, X, V). What is held is this app's own; the system clipboard gets the file's
+  // name, so pasting it elsewhere gives something sensible. A copy never replaces a file; a cut
+  // moves the file as a drag does, and only once.
+  let held = null;
+  const onCopy = (e) => {
+    if (e.target.closest?.('input, textarea, select, [contenteditable]') || window.getSelection()?.toString()) return;
+    const path = document.activeElement?.closest?.('#items [data-path]')?.dataset.path || picked?.path;
+    const it = path && items.find((i) => i.path === path);
+    if (!it) return;
+    e.preventDefault();
+    if (it.container) { say('Folders cannot be copied here yet; copy the files in it.', true); return; }
+    if (e.type === 'cut' && inArchive()) { say('This is inside an archive, which is read only. Copy instead.', true); return; }
+    held = { path, cut: e.type === 'cut', name: nameOf(path) };
+    e.clipboardData?.setData('text/plain', held.name);
+    say(`${held.cut ? 'Cut' : 'Copied'} ${held.name}. Paste in a folder to ${held.cut ? 'move it there' : 'put a copy there'}.`);
+  };
+  document.addEventListener('copy', onCopy);
+  document.addEventListener('cut', onCopy);
+  async function pasteHeld() {
+    const h0 = held;
+    if (h0.gone) { say(`${h0.name} was moved already.`); return; }
+    if (h0.cut) { held = { name: h0.name, gone: true }; await moveFile(h0.path, folder); return; }
+    const got = await foafos.pod.get(h0.path, { as: 'bytes' });
+    if (!got.ok) { say(explain(got), true); return; }
+    const to = folder + freeName(h0.name);
+    const put = await foafos.pod.put(to, got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
+    if (!put.ok) { say(explain(put), true); return; }
+    await go(folder, { remember: false });
+    say(`Pasted ${nameOf(to)}.`);
+    pick({ path: to, container: false });
+  }
   document.addEventListener('paste', async (e) => {
     if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+    if (held && !e.clipboardData?.files?.length && e.clipboardData?.getData('text/plain') === held.name) {
+      e.preventDefault();
+      if (inArchive()) { say('This is inside an archive, which is read only. Paste into a folder.', true); return; }
+      await pasteHeld();
+      return;
+    }
     const files = [...(e.clipboardData?.files || [])];
     const text = files.length ? '' : e.clipboardData?.getData('text/plain') || '';
     if (!files.length && !text) return;
