@@ -563,7 +563,24 @@
   const actions = (...first) => h('div', { class: 'detail-actions' }, ...first,
     ...(inArchive() ? [h('span', { class: 'detail-none' }, 'In an archive: read only.')] : [
       h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
+      h('button', { class: 'tool', type: 'button', on: { click: duplicate } }, 'Duplicate'),
       h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')]));
+
+  // A copy beside the original: "plan copy.txt", then "plan copy 2.txt", never over a file that is there.
+  async function duplicate() {
+    if (!picked?.path || picked.body === undefined) return;
+    const dir = parentOf(picked.path), file = nameOf(picked.path);
+    const dot = file.lastIndexOf('.');
+    const stem = dot > 0 ? file.slice(0, dot) : file, ext = dot > 0 ? file.slice(dot) : '';
+    const taken = new Set(items.map((i) => i.path));
+    let n = 1, to;
+    do { to = `${dir}${stem} copy${n > 1 ? ` ${n}` : ''}${ext}`; n++; } while (taken.has(to) && n < 1000);
+    const r = await foafos.pod.put(to, picked.body, { contentType: picked.contentType || 'application/octet-stream', ifNoneMatch: true });
+    if (!r.ok) { say(explain(r), true); return; }
+    await go(folder, { remember: false });
+    say(`Made ${nameOf(to)}.`);
+    pick({ path: to, container: false });
+  }
 
   function markPicked() {
     for (const e of document.querySelectorAll('[aria-selected]')) e.setAttribute('aria-selected', String(e.dataset.path === picked?.path));

@@ -341,6 +341,22 @@ try {
   // Orientation 6 (turn 90°) is kept and the browser honours it: 96 × 64 decodes as 64 × 96.
   check(decoded.had && decoded.left === null && decoded.w === 64 && decoded.h === 96 && decoded.model === 'Pocket 3',
     `a real JPEG without its place still decodes (${JSON.stringify(decoded)})`);
+  // Duplicate: a copy beside the original, numbered, never over a file that is there.
+  const dup = await f.evaluate(async () => {
+    await foafos.pod.put('notes/plan.txt', 'the plan', { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+    const press = async () => {
+      await window.__files.pick({ path: 'notes/plan.txt', container: false });
+      for (let i = 0; i < 20 && ![...document.querySelectorAll('#detail button')].some((b) => b.textContent === 'Duplicate'); i++) await new Promise((r) => setTimeout(r, 50));
+      [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Duplicate').click();
+      await new Promise((r) => setTimeout(r, 400));
+    };
+    await press(); await press();
+    const a = await foafos.pod.get('notes/plan copy.txt'), b = await foafos.pod.get('notes/plan copy 2.txt');
+    await Promise.all(['notes/plan.txt', 'notes/plan copy.txt', 'notes/plan copy 2.txt'].map((p) => foafos.pod.delete(p)));
+    return { a: a.body, b: b.body };
+  });
+  check(dup.a === 'the plan' && dup.b === 'the plan', `Duplicate makes "plan copy.txt", then "plan copy 2.txt" (${JSON.stringify(dup)})`);
   // Thumbnails: the photo shows a small picture of itself in the list and in the icon view.
   const thumb = await f.evaluate(async () => {
     await window.__files.go('notes/');
