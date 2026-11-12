@@ -1464,6 +1464,34 @@ const navigateStory = (parsed, hash = null, story = null) => {
 };
 FoafOS.navigateStory = (parsed) => navigateStory(parsed);
 let _navSuppress = false;
+// The Back button (a phone's, or the browser's) closes what is open over the windows, such as
+// All apps or All windows, rather than leaving the shell. Opening one adds a history entry;
+// closing it any other way takes that entry back off, so Back never lands on a stale one.
+// Heard in the capture phase, before the story's own Back below, which then never sees it.
+const backStack = [];
+let ignorePops = 0;
+function closeOnBack(el, close) {
+  history.pushState({ ...(history.state || {}), foafosOverlay: true }, '');
+  const entry = { el, close };
+  backStack.push(entry);
+  const watch = new MutationObserver(() => {
+    if (el.isConnected) return;
+    watch.disconnect();
+    const i = backStack.indexOf(entry);
+    if (i < 0) return;                       // it was Back that closed it
+    backStack.splice(i, 1);
+    ignorePops++;
+    history.back();
+  });
+  watch.observe(el.parentNode || document.body, { childList: true });
+}
+window.addEventListener('popstate', (e) => {
+  if (ignorePops) { ignorePops--; e.stopImmediatePropagation(); return; }
+  const top = backStack.pop();
+  if (!top) return;
+  e.stopImmediatePropagation();
+  top.close();
+}, { capture: true });
 window.addEventListener('popstate', () => {
   if (_navSuppress) return;
   const frag = (location.hash || '').slice(1);
@@ -2926,6 +2954,7 @@ function buildUI() {
       <span class="foafos-ov-find" role="status"></span>
       <button type="button" id="foafos-ov-done" aria-label="Leave overview">✕</button>`;
     document.body.appendChild(strip);
+    closeOnBack(strip, () => exitOverview(null));
     strip.querySelector('#foafos-ov-done').addEventListener('click', () => exitOverview(null));
     document.querySelector('.foafos-ov-hit')?.focus();
     // Typing a name narrows the cards to the windows whose names contain it, as a desktop's
@@ -3621,6 +3650,7 @@ function buildUI() {
     home.querySelector('.foafos-overlay-close').addEventListener('click', () => home.remove());
     home.addEventListener('keydown', (e) => { if (e.key === 'Escape') home.remove(); });
     document.body.appendChild(home);
+    closeOnBack(home, () => home.remove());
     // On a touch-only screen, focusing search raises the on-screen keyboard over the apps the
     // person came to see; there the panel takes focus (a screen reader still lands inside it)
     // and the keyboard comes when search is tapped. With a keyboard or mouse, search is ready.

@@ -230,6 +230,23 @@ try {
   check(await page.isVisible('#foafos-home'), 'Option+H opens All apps on a Mac layout');
   await page.evaluate(() => document.getElementById('foafos-home')?.remove());
 
+  // Back (a phone's, or the browser's) closes All apps and All windows, and the shell stays;
+  // closed another way, they leave no history entry behind
+  const url0 = page.url();
+  await keys(page, [';', 'a']);
+  const homeOpen = await page.isVisible('#foafos-home');
+  await page.evaluate(() => history.back()); await page.waitForTimeout(400);
+  const homeAfterBack = await page.evaluate(() => ({ home: !!document.getElementById('foafos-home'), shell: !!window.FoafOS?.launchApp, overlayState: !!history.state?.foafosOverlay }));
+  await keys(page, [';', 's']); await page.waitForTimeout(500);
+  const ovOpen = await page.evaluate(() => document.body.classList.contains('foafos-overview-on'));
+  await page.evaluate(() => history.back()); await page.waitForTimeout(600);
+  const ovAfterBack = await page.evaluate(() => document.body.classList.contains('foafos-overview-on'));
+  await keys(page, [';', 'a']);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  const afterEscape = await page.evaluate(() => ({ home: !!document.getElementById('foafos-home'), overlayState: !!history.state?.foafosOverlay }));
+  check(homeOpen && !homeAfterBack.home && homeAfterBack.shell && !homeAfterBack.overlayState && ovOpen && !ovAfterBack && !afterEscape.home && !afterEscape.overlayState && page.url() === url0,
+    `Back closes All apps and All windows, and the shell stays (${JSON.stringify({ homeAfterBack, ovAfterBack, afterEscape })})`);
+
   // Ctrl ; v moves and resizes the front window with the keyboard; Enter keeps it, Escape puts it back
   await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); if (w.classList.contains('maximized')) w.querySelector('.foafos-window-max').click(); Object.assign(w.style, { left: '200px', top: '120px' }); FoafOS.raiseWindow(w); });
   const kbox = () => page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); });
