@@ -1556,3 +1556,13 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 #foafos-home.searching .foafos-app.foafos-top-hit { border-color: var(--sk-accent, #2e6fd1); box-shadow: 0 0 0 2px var(--sk-accent, #2e6fd1) inset; }
 #foafos-home.searching .foafos-app.foafos-top-hit .nm::after { content: '  ↵'; opacity: .6; font-weight: 400; }
 #foafos-home.searching .foafos-app-cell:has(.foafos-top-hit) { order: -1; }
+
+/* What an app does, with Open and Pin: a sheet from a long press, a right-click or the menu key. */
+.foafos-app-sheet { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 2800; box-sizing: border-box;
+    width: min(calc(100vw - 32px), 420px); padding: 16px; border-radius: 14px; background: var(--sk-bg, #fff); color: var(--sk-ink, #111);
+    border: 1px solid color-mix(in srgb, var(--sk-ink, #111) 20%, transparent); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.foafos-app-sheet .sheet-head { display: flex; align-items: center; gap: 10px; }
+.foafos-app-sheet .ico { font-size: 1.8rem; line-height: 1; }
+.foafos-app-sheet h3 { margin: 0; font-size: 1.1rem; }
+.foafos-app-sheet p { margin: 10px 0 14px; line-height: 1.4; }
+.foafos-app-sheet .sheet-acts { display: flex; gap: 8px; flex-wrap: wrap; }
