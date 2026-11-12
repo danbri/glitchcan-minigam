@@ -1574,3 +1574,10 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 #foafos-win-menu button:hover, #foafos-win-menu button:focus-visible { background: color-mix(in srgb, var(--sk-accent, #2e6fd1) 16%, transparent); outline: none; }
 #foafos-win-menu kbd { font: inherit; opacity: .6; }
 @media (pointer: coarse) { #foafos-win-menu button { min-height: 44px; } }
+
+/* Task Manager: open widgets, which have no app row of their own. */
+.foafos-tm-widgets { margin: 14px 0 6px; }
+.foafos-tm-widgets h3 { margin: 0 0 6px; font-size: 13px; }
+.foafos-tm-widgets ul { list-style: none; margin: 0; padding: 0; }
+.foafos-tm-widgets li { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+.foafos-tm-widgets li > span { flex: 1; }
