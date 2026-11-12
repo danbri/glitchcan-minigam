@@ -161,6 +161,18 @@ test('fly_to calls Moglob\'s fly_to with the saved view, or go_to when Moglob ha
   assert.deepEqual(seen2.at(-1).args, { lon: -0.03, lat: 51.5, alt_m: 600, heading_deg: 90, pitch_deg: 2, animate: true });
 });
 
+test('fly_to passes sound to Moglob\'s fly_to only when asked', async () => {
+  const tools = new FoafTools();
+  const places = new FoafPlaces({ pod: fakePod().pod, now: NOW });
+  tools.offer({ id: 'places', label: 'Places', tools: placesTools({ places, tools }) });
+  await places.save({ name: 'Dock', lat: 51.5, lon: -0.03 });
+  const seen = moglob(tools);
+  await tools.call('places', 'fly_to', { place: 'Dock', sound: true }, { caller: PERSON });
+  assert.equal(seen.at(-1).args.sound, true);
+  await tools.call('places', 'fly_to', { place: 'Dock' }, { caller: PERSON });
+  assert.equal('sound' in seen.at(-1).args, false);
+});
+
 test('fly_to opens Moglob when it is closed, and says so when it never offers its tools', async () => {
   const tools = new FoafTools();
   const places = new FoafPlaces({ pod: fakePod().pod, now: NOW });
