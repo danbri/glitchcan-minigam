@@ -1,0 +1,12 @@
+{
+  "name": "@foafos/guest",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The one module an app needs to take part in foafos, or any host of the foafos-lite contract: no dependencies, no network, no globals replaced; works with no host at all.",
+  "main": "guest.mjs",
+  "exports": { ".": "./guest.mjs", "./package.json": "./package.json" },
+  "files": ["guest.mjs", "README.md"],
+  "sideEffects": false,
+  "license": "MIT",
+  "scripts": { "test": "node --test test/*.test.mjs" }
+}
