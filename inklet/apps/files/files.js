@@ -240,17 +240,20 @@
       moveFile(from, dir);
     });
   }
-  async function moveFile(from, dir) {
-    if (parentOf(from) === dir || dir.startsWith(from)) return;
+  // Returns whether the file moved. `quiet`: for a batch, which lists the folder and reports once.
+  async function moveFile(from, dir, { quiet = false } = {}) {
+    if (parentOf(from) === dir || dir.startsWith(from)) return false;
     const to = dir + nameOf(from);
     const got = await foafos.pod.get(from, { as: 'bytes' });
-    if (!got.ok) { say(explain(got), true); return; }
+    if (!got.ok) { if (!quiet) say(explain(got), true); return false; }
     const put = await foafos.pod.put(to, got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
-    if (!put.ok) { say(put.reason === 'conflict' ? `${nameOf(to)} is there already; nothing was moved.` : explain(put), true); return; }
+    if (!put.ok) { if (!quiet) say(put.reason === 'conflict' ? `${nameOf(to)} is there already; nothing was moved.` : explain(put), true); return false; }
     const del = await foafos.pod.delete(from, got.etag ? { etag: got.etag } : {});
     forgetThumb(from);
+    if (quiet) return del.ok;
     await go(folder, { remember: false });
     say(del.ok ? `Moved ${nameOf(from)} to ${dir || here()?.label || 'the top folder'}.` : `Copied ${nameOf(from)} to ${dir}, but the original is still here: ${explain(del)}`, !del.ok);
+    return del.ok;
   }
 
   function treeNode(path, label) {
@@ -934,30 +937,47 @@
   let held = null;
   const onCopy = (e) => {
     if (e.target.closest?.('input, textarea, select, [contenteditable]') || window.getSelection()?.toString()) return;
-    const path = document.activeElement?.closest?.('#items [data-path]')?.dataset.path || picked?.path;
-    const it = path && items.find((i) => i.path === path);
-    if (!it) return;
+    // The chosen items, if several are chosen; otherwise the one the keyboard is on, or the one picked.
+    const one = document.activeElement?.closest?.('#items [data-path]')?.dataset.path || picked?.path;
+    const paths = chosen.size > 1 ? [...chosen] : one ? [one] : [];
+    const its = paths.map((p) => items.find((i) => i.path === p)).filter(Boolean);
+    if (!its.length) return;
     e.preventDefault();
-    if (it.container) { say('Folders cannot be copied here yet; copy the files in it.', true); return; }
+    const files = its.filter((i) => !i.container).map((i) => i.path);
+    if (!files.length) { say('Folders cannot be copied here yet; copy the files in it.', true); return; }
     if (e.type === 'cut' && inArchive()) { say('This is inside an archive, which is read only. Copy instead.', true); return; }
-    held = { path, cut: e.type === 'cut', name: nameOf(path) };
+    const names = files.map(nameOf);
+    held = { paths: files, cut: e.type === 'cut', name: names.join('\n') };
     e.clipboardData?.setData('text/plain', held.name);
-    say(`${held.cut ? 'Cut' : 'Copied'} ${held.name}. Paste in a folder to ${held.cut ? 'move it there' : 'put a copy there'}.`);
+    const what = files.length === 1 ? names[0] : `${files.length} files`;
+    const left = its.length - files.length ? ` (${its.length - files.length} folder${its.length - files.length === 1 ? '' : 's'} left out)` : '';
+    say(`${held.cut ? 'Cut' : 'Copied'} ${what}${left}. Paste in a folder to ${held.cut ? 'move' : 'put a copy'} there.`);
   };
   document.addEventListener('copy', onCopy);
   document.addEventListener('cut', onCopy);
   async function pasteHeld() {
     const h0 = held;
-    if (h0.gone) { say(`${h0.name} was moved already.`); return; }
-    if (h0.cut) { held = { name: h0.name, gone: true }; await moveFile(h0.path, folder); return; }
-    const got = await foafos.pod.get(h0.path, { as: 'bytes' });
-    if (!got.ok) { say(explain(got), true); return; }
-    const to = folder + freeName(h0.name);
-    const put = await foafos.pod.put(to, got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
-    if (!put.ok) { say(explain(put), true); return; }
+    const what = h0.paths?.length === 1 ? nameOf(h0.paths[0]) : 'Those files';
+    if (h0.gone) { say(`${what} ${h0.paths?.length === 1 ? 'was' : 'were'} moved already.`); return; }
+    if (h0.cut) {
+      held = { ...h0, gone: true };
+      if (h0.paths.length === 1) { await moveFile(h0.paths[0], folder); return; }
+      const moved = [], not = [];
+      for (const p of h0.paths) ((await moveFile(p, folder, { quiet: true })) ? moved : not).push(nameOf(p));
+      await go(folder, { remember: false });
+      say([moved.length ? `Moved ${moved.length} file${moved.length === 1 ? '' : 's'} here.` : '', not.length ? `Not moved (already here, or a file of that name is here): ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !moved.length);
+      return;
+    }
+    const made = [], not = [];
+    for (const p of h0.paths) {
+      const got = await foafos.pod.get(p, { as: 'bytes' });
+      const to = folder + freeName(nameOf(p));
+      const put = got.ok && await foafos.pod.put(to, got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
+      if (put?.ok) { made.push(nameOf(to)); items.push({ path: to, container: false }); } else not.push(nameOf(p));
+    }
     await go(folder, { remember: false });
-    say(`Pasted ${nameOf(to)}.`);
-    pick({ path: to, container: false });
+    say([made.length ? `Pasted ${made.length === 1 ? made[0] : `${made.length} files`}.` : '', not.length ? `Not pasted: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !made.length);
+    if (made.length === 1) pick({ path: folder + made[0], container: false });
   }
   document.addEventListener('paste', async (e) => {
     if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;

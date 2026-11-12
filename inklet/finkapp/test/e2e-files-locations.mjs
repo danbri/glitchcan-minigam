@@ -550,6 +550,30 @@ try {
   check(String(msRun) === 'notes/m1.txt,notes/m2.txt,notes/m3.txt' && String(msTwo) === 'notes/m1.txt,notes/m3.txt' && /Delete 2 files\?/.test(msAsked)
     && !msAfter.m1 && msAfter.m2 && !msAfter.m3 && /Deleted 2 files/.test(msAfter.said) && msAll.chosen === msAll.rows && msAll.rows > 0 && msCleared === 0,
     `choosing several files: Shift and Ctrl clicks, one question for Delete, Ctrl+A and Escape (${JSON.stringify({ msRun, msTwo, msAsked, msAfter, msAll, msCleared })})`);
+  // Copy and cut act on all the chosen files: two copied go to the top together, two cut move together
+  await f.evaluate(async () => {
+    for (const n of ['k1', 'k2', 'c1', 'c2']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+  });
+  await page.waitForTimeout(500);
+  const kRow = (n) => `#items tbody tr[data-path="notes/${n}.txt"]`;
+  const clip = async (type) => f.evaluate((t) => { const dt = new DataTransfer(); (document.activeElement || document.body).dispatchEvent(new ClipboardEvent(t, { clipboardData: dt, bubbles: true, cancelable: true })); window.__dt = dt; return dt.getData('text/plain'); }, type);
+  const pasteTop = async () => f.evaluate(async () => { await window.__files.go(''); document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: window.__dt, bubbles: true, cancelable: true })); await new Promise((r) => setTimeout(r, 700)); return document.getElementById('status').textContent; });
+  await f.click(kRow('k1')); await f.click(kRow('k2'), { modifiers: ['ControlOrMeta'] });
+  const kClip = await clip('copy');
+  const kSaid = await pasteTop();
+  await f.evaluate(() => window.__files.go('notes/')); await page.waitForTimeout(500);
+  await f.click(kRow('c1')); await f.click(kRow('c2'), { modifiers: ['ControlOrMeta'] });
+  await clip('cut');
+  const cSaid = await pasteTop();
+  const kc = await f.evaluate(async () => {
+    const ok = async (p) => (await foafos.pod.get(p)).ok;
+    const r = { k1: await ok('k1.txt'), k2: await ok('k2.txt'), k1kept: await ok('notes/k1.txt'), c1: await ok('c1.txt'), c2: await ok('c2.txt'), c1left: await ok('notes/c1.txt') };
+    for (const p of ['k1.txt', 'k2.txt', 'c1.txt', 'c2.txt', 'notes/k1.txt', 'notes/k2.txt']) await foafos.pod.delete(p);
+    return r;
+  });
+  check(kClip === 'k1.txt\nk2.txt' && /Pasted 2 files/.test(kSaid) && kc.k1 && kc.k2 && kc.k1kept && /Moved 2 files here/.test(cSaid) && kc.c1 && kc.c2 && !kc.c1left,
+    `copy and cut act on all the chosen files (${JSON.stringify({ kClip, kSaid, cSaid, kc })})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });
