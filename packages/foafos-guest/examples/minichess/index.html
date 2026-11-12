@@ -820,8 +820,13 @@
             const m = /^([a-d])([1-3])$/.exec(String(sq ?? '').trim().toLowerCase());
             return m ? { row: BOARD_SIZE.rows - Number(m[2]), col: m[1].charCodeAt(0) - 97 } : null;
         };
-        const position = () => ({ queen: coordsToAlg(queenPos), king: coordsToAlg(kingPos), skull: coordsToAlg(SKULL_TARGET),
-            turn: gameOver ? null : currentTurn === 'white' ? 'queen' : 'king', over: gameOver, won: gameWon });
+        // A position, and the same in a line of words: for a chat, a screen reader or a log.
+        const position = () => {
+            const p = { queen: coordsToAlg(queenPos), king: coordsToAlg(kingPos), skull: coordsToAlg(SKULL_TARGET),
+                turn: gameOver ? null : currentTurn === 'white' ? 'queen' : 'king', over: gameOver, won: gameWon };
+            p.summary = `Queen ${p.queen}, king ${p.king}; ${p.over ? (p.won ? 'the queen has won' : 'the game is over') : `the ${p.turn} to move`}.`;
+            return p;
+        };
         const settled = () => new Promise((resolve) => {
             const t0 = Date.now();
             const tick = () => ((!isAnimatingMove && (currentTurn === 'white' || gameOver)) || Date.now() - t0 > 5000 ? resolve() : setTimeout(tick, 50));
