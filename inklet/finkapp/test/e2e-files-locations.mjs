@@ -596,6 +596,28 @@ try {
   if (!wasIcons) await f.click('#view');
   check(String(gChosen) === 'notes/g1.txt,notes/g2.txt' && /Delete 2 files\?/.test(gAsked) && String(gLeft) === 'false,false',
     `in the icon view, Ctrl + click chooses several and Delete asks once (${JSON.stringify({ gChosen, gAsked, gLeft })})`);
+  // Dragging one of several chosen files onto a folder moves them all, and says so once
+  await f.evaluate(async () => {
+    for (const n of ['d1', 'd2']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
+    await foafos.pod.put('notes/dbox/keep.txt', 'k', { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+  });
+  await page.waitForTimeout(400);
+  await f.click('#items tbody tr[data-path="notes/d1.txt"]');
+  await f.click('#items tbody tr[data-path="notes/d2.txt"]', { modifiers: ['ControlOrMeta'] });
+  const dragged = await f.evaluate(async () => {
+    const dt = new DataTransfer();
+    document.querySelector('#items tbody tr[data-path="notes/d2.txt"]').dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+    const target = document.querySelector('#items tbody tr[data-path="notes/dbox/"]');
+    target.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    target.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    await new Promise((r) => setTimeout(r, 900));
+    const ok = async (p) => (await foafos.pod.get(p)).ok;
+    const r = { d1: await ok('notes/dbox/d1.txt'), d2: await ok('notes/dbox/d2.txt'), left: (await ok('notes/d1.txt')) || (await ok('notes/d2.txt')), said: document.getElementById('status').textContent };
+    for (const p of ['notes/dbox/d1.txt', 'notes/dbox/d2.txt', 'notes/dbox/keep.txt']) await foafos.pod.delete(p);
+    return r;
+  });
+  check(dragged.d1 && dragged.d2 && !dragged.left && /Moved 2 files to notes\/dbox\//.test(dragged.said), `dragging one of several chosen files moves them all (${JSON.stringify(dragged)})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });

@@ -231,7 +231,12 @@
   function asDraggable(el, it) {
     if (it.container || inArchive()) return;
     el.draggable = true;
-    el.addEventListener('dragstart', (e) => { e.dataTransfer.setData(MOVE_TYPE, it.path); e.dataTransfer.effectAllowed = 'move'; });
+    // Dragging one of several chosen files takes them all, as a desktop's file manager does.
+    el.addEventListener('dragstart', (e) => {
+      const many = chosen.size > 1 && chosen.has(it.path) ? [...chosen].filter((p) => !p.endsWith('/')) : [it.path];
+      e.dataTransfer.setData(MOVE_TYPE, many.join('\n'));
+      e.dataTransfer.effectAllowed = 'move';
+    });
   }
   function asDropTarget(el, dir) {
     if (inArchive() || dir.includes('!/')) return;
@@ -247,8 +252,18 @@
       if (!from) return;
       e.preventDefault(); e.stopPropagation();
       el.classList.remove('drop-target');
-      moveFile(from, dir);
+      moveMany(from.split('\n').filter(Boolean), dir);
     });
+  }
+  // Several files dragged at once: one listing and one report at the end.
+  async function moveMany(paths, dir) {
+    if (paths.length === 1) { await moveFile(paths[0], dir); return; }
+    const moved = [], not = [];
+    for (const p of paths) ((await moveFile(p, dir, { quiet: true })) ? moved : not).push(nameOf(p));
+    chosen.clear();
+    await go(folder, { remember: false });
+    const there = dir || here()?.label || 'the top folder';
+    say([moved.length ? `Moved ${moved.length} file${moved.length === 1 ? '' : 's'} to ${there}.` : '', not.length ? `Not moved: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !moved.length);
   }
   // Returns whether the file moved. `quiet`: for a batch, which lists the folder and reports once.
   async function moveFile(from, dir, { quiet = false } = {}) {
