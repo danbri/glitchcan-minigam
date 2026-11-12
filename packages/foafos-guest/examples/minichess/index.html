@@ -778,5 +778,21 @@
         createBoard();
         resetGame();
     </script>
+    <!-- Level 1: a good neighbour. @foafos/guest tells a host the game's name and its menu, and
+         hears pause, resume and menu choices. Standalone, connect() finds no host and the game
+         plays as before. What leaves the game: its name, its two menu items, and "ready"/"paused". -->
+    <style>body.paused #game-board { pointer-events: none; opacity: .55; }</style>
+    <script type="module">
+        import { connect } from '../../guest.mjs';
+        const guest = await connect({ level: 1, name: 'Minichess',
+            actions: [{ id: 'new', label: 'New game' }, { id: 'rules', label: 'Show the rules' }] });
+        guest.on('action', ({ id }) => { if (id === 'new') resetGame(); if (id === 'rules') explanationBtn.click(); });
+        guest.on('lifecycle', ({ state }) => {
+            document.body.classList.toggle('paused', state === 'paused');
+            if (state === 'paused') guest.paused();
+        });
+        guest.ready();
+        window.__minichess = { guest };
+    </script>
 </body>
 </html>
