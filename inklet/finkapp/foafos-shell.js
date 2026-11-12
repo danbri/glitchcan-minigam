@@ -3418,7 +3418,61 @@ function buildUI() {
       if (win.classList.contains('minimized')) minBtn.click();
       else maxBtn.click();
     });
+    // The window menu, as on a desktop: right-click the title bar (or Shift+F10, the menu key, or a
+    // long press). It lists what can be done to the window, with the keys that do it, so they can be found.
+    bar.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('button')) return;
+      e.preventDefault();
+      const r = bar.getBoundingClientRect();
+      windowMenu(win, e.clientX || r.left + 12, e.clientY || r.bottom);
+    });
     return win;
+  }
+
+  function windowMenu(win, x, y) {
+    document.getElementById('foafos-win-menu')?.remove();
+    FoafOS.raiseWindow(win);
+    const max = win.classList.contains('maximized');
+    const wide = window.innerWidth >= 700;
+    // The keys as they are set here, which a person may have changed (localStorage 'foafos.keys').
+    let mine = {};
+    try { mine = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
+    const keyOf = (name) => { const t = String(mine[name] || window.FinkWM?.KEYS?.[name] || ''); return t.replace(/^ctrl\b/, 'Ctrl'); };
+    const rows = [
+      ['Snap left', keyOf('snapLeft'), () => win._snap?.('left'), wide],
+      ['Snap right', keyOf('snapRight'), () => win._snap?.('right'), wide],
+      [max ? 'Restore' : 'Maximise', keyOf('snapFull'), () => win.querySelector('.foafos-window-max')?.click(), true],
+      ['Minimise', keyOf('hide'), () => win.querySelector('.foafos-window-min')?.click(), true],
+      ['Move or resize', keyOf('move'), () => FoafOS.moveFrontByKeys?.(), !max],
+      ['Close', keyOf('close'), () => win.querySelector('.foafos-window-close')?.click(), true],
+    ].filter((row) => row[3]);
+    const menu = document.createElement('div');
+    menu.id = 'foafos-win-menu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', `Window: ${win.querySelector('.foafos-window-bar span')?.textContent || ''}`);
+    for (const [label, keys, run] of rows) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'menuitem');
+      b.innerHTML = '<span></span><kbd></kbd>';
+      b.firstChild.textContent = label;
+      b.lastChild.textContent = keys;
+      b.addEventListener('click', () => { close(); run(); });
+      menu.appendChild(b);
+    }
+    const close = () => { menu.remove(); document.removeEventListener('pointerdown', away, true); };
+    const away = (e) => { if (!menu.contains(e.target)) close(); };
+    menu.addEventListener('keydown', (e) => {
+      const items = [...menu.querySelectorAll('button')], at = items.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); win.querySelector('.foafos-window-bar button')?.focus(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus(); }
+    });
+    document.body.appendChild(menu);
+    const mr = menu.getBoundingClientRect();
+    menu.style.left = `${Math.max(4, Math.min(x, window.innerWidth - mr.width - 4))}px`;
+    menu.style.top = `${Math.max(4, Math.min(y, window.innerHeight - mr.height - 4))}px`;
+    menu.querySelector('button')?.focus();
+    setTimeout(() => document.addEventListener('pointerdown', away, true), 0);
   }
 
   function openWidgetWindow(spec) {
