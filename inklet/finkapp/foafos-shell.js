@@ -326,6 +326,8 @@ async function openDevice(rec, { ask = false } = {}) {
 
 const pods = new FoafPods({
   secrets, bus, storage: audioStore || null, openDevice,
+  // Build handlers (agi-bin/) run each in its own Worker, made from the runner's source.
+  makeWorker: (source) => new Worker(URL.createObjectURL(new Blob([source], { type: 'text/javascript' }))),
   connectXmpp: (opts) => XmppWs.connect(opts),
   snapshots: podSnapshots,
   openBuiltin: async ({ storageKey, snapshot, onSnapshot }) => {
@@ -6151,6 +6153,33 @@ function buildUI() {
       act(more2, 'Remove', () => { if (browsing?.id === p.id) browsing = null; forms.delete(p.id); pods.remove(p.id).then(() => draw(true)); });
       more.appendChild(more2);
       card.appendChild(more);
+      // Build handlers in agi-bin/: what each reads and writes, whether the owner approved these
+      // exact bytes, and the last runs. Approving names the program's SHA-256.
+      if (p.status === 'online') {
+        const box = document.createElement('details');
+        box.className = 'fp-agi'; box.dataset.for = p.id;
+        box.appendChild(el('summary', 'Build handlers'));
+        card.appendChild(box);
+        box.addEventListener('toggle', async () => {
+          if (!box.open || box.dataset.drawn) return;
+          box.dataset.drawn = '1';
+          const hs = await pods.handlersFor(p.id);
+          if (!hs.length) { box.appendChild(el('p', 'None. A handler is a .wasm and a .json in this pod\'s agi-bin/ folder.')); return; }
+          for (const h of hs) {
+            const row = el('div'); row.className = 'fp-agi-row'; row.dataset.handler = h.name;
+            row.appendChild(el('strong', h.name));
+            if (h.problem) { row.appendChild(el('p', `Cannot run: ${h.problem}`)).className = 'fp-space-warn'; box.appendChild(row); continue; }
+            const m = h.manifest;
+            row.appendChild(el('p', `${m.description ? m.description + ' — ' : ''}reads ${m.match}, writes ${m.output} (only under ${m.outputDir})`));
+            row.appendChild(el('p', `Program ${h.programHash.slice(0, 12)}…, ${h.wasm.length.toLocaleString()} bytes, manifest ${h.manifestHash.slice(0, 12)}…; it has no network, clock or pod of its own. Approving covers both: a change to either asks again.`)).className = 'fp-address';
+            if (h.approved) row.appendChild(el('p', 'Approved: runs when a matching file is saved.'));
+            else act(row, 'Approve', async () => { await pods.approveHandler(p.id, h.name, h.hash); draw(true); }, true);
+            box.appendChild(row);
+          }
+          const runs = pods.agiLog.filter((x) => x.pod === p.id).slice(0, 5);
+          if (runs.length) box.appendChild(el('p', 'Last runs: ' + runs.map((x) => `${x.name} ${x.input} → ${x.ok ? x.output : x.reason}`).join('; '))).className = 'fp-address';
+        });
+      }
       if (browsing?.id === p.id && p.status === 'online') drawBrowse(card, p.id, browsing.path);
       body.appendChild(card);
     };

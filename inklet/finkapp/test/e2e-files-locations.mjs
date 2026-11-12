@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { makeZip } from '../../../packages/foafos/test/zip-fixture.mjs';
 import { jpeg as fixtureJpeg, CAMERA } from '../../../packages/foafos/test/meta-fixture.mjs';
+import { readFileSync as readAgi } from 'node:fs';
+const MD2HTML_WASM = [...readAgi(new URL('../../../packages/foafos/agi/md2html.wasm', import.meta.url))];
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const FACTOIDAL = process.env.FACTOIDAL;
@@ -72,6 +74,39 @@ try {
     return { put: put.ok, same: got.ok && got.body.byteLength === 256 && new Uint8Array(got.body).every((v, i) => v === i) };
   });
   check(builtinBytes.put && builtinBytes.same, `the built-in pod keeps all 256 byte values (${JSON.stringify(builtinBytes)})`);
+
+  // A build handler, approved in System by the person, turns a saved Markdown file into a page.
+  await f.evaluate(async (wasm) => {
+    await foafos.pod.put('agi-bin/md2html.json', JSON.stringify({ match: 'notes/**/*.md', outputDir: 'site/', output: 'site/{dir}{name}.html', description: 'Markdown to a web page' }), { contentType: 'application/json' });
+    await foafos.pod.put('agi-bin/md2html.wasm', new Uint8Array(wasm).buffer, { contentType: 'application/wasm' });
+    await foafos.pod.put('notes/before.md', '# Before approval', { contentType: 'text/markdown' });
+  }, MD2HTML_WASM);
+  await page.evaluate(() => FoafOS.pods.agiIdle());
+  const unapproved = await f.evaluate(async () => (await foafos.pod.get('site/notes/before.html')).ok);
+  await page.evaluate(() => FoafOS.openSystem?.());
+  await page.waitForTimeout(400);
+  await page.evaluate(() => [...document.querySelectorAll('#foafos-session-win button, #foafos-session-win [role=tab]')].find((b) => /^Pods$/.test(b.textContent.trim()))?.click());
+  await page.waitForTimeout(400);
+  const approveShown = await page.evaluate(async () => {
+    const box = [...document.querySelectorAll('details.fp-agi')].find((d) => d.closest('.fp-pod')?.querySelector('.fp-dot'));
+    if (!box) return 'no panel';
+    box.open = true;
+    for (let i = 0; i < 30 && !box.querySelector('.fp-agi-row'); i++) await new Promise((r) => setTimeout(r, 100));
+    const row = box.querySelector('.fp-agi-row[data-handler="md2html"]');
+    const btn = [...(row?.querySelectorAll('button') || [])].find((b) => b.textContent === 'Approve');
+    if (!btn) return row ? row.textContent : 'no row';
+    btn.click();
+    await new Promise((r) => setTimeout(r, 400));
+    return 'clicked';
+  });
+  const built = await f.evaluate(async () => {
+    await foafos.pod.put('notes/trip.md', '# Trip\n\nBy *boat*, <b>not</b> bus.', { contentType: 'text/markdown' });
+    return true;
+  });
+  await page.evaluate(() => FoafOS.pods.agiIdle());
+  const html = await f.evaluate(async () => (await foafos.pod.get('site/notes/trip.html')).body || '');
+  check(!unapproved && approveShown === 'clicked' && built && /<h1>Trip<\/h1>/.test(html) && /By <em>boat<\/em>, &lt;b&gt;not&lt;\/b&gt; bus\./.test(html),
+    `an approved build handler makes a page from a saved Markdown file (${JSON.stringify({ unapproved, approveShown, html: html.slice(0, 160) })})`);
 
   await f.evaluate(() => window.__files.useLocation('device'));
   s = await state(f);
