@@ -1551,3 +1551,8 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 #foafos-keymove { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2700;
     max-width: min(90vw, 640px); padding: 8px 14px; border-radius: 8px; color: #fff;
     background: rgba(17, 20, 28, 0.92); font: 14px/1.4 system-ui, sans-serif; text-align: center; }
+
+/* While searching, the match Enter opens is marked. */
+#foafos-home.searching .foafos-app.foafos-top-hit { border-color: var(--sk-accent, #2e6fd1); box-shadow: 0 0 0 2px var(--sk-accent, #2e6fd1) inset; }
+#foafos-home.searching .foafos-app.foafos-top-hit .nm::after { content: '  ↵'; opacity: .6; font-weight: 400; }
+#foafos-home.searching .foafos-app-cell:has(.foafos-top-hit) { order: -1; }
