@@ -61,7 +61,9 @@ export function connect({ level = 1, name = '', actions = [], hosts = null, loca
   const emit = (type, msg) => { for (const fn of listeners.get(type) || []) { try { fn(msg); } catch (e) { console.error(e); } } };
   const send = (msg) => { if (granted > 0 && origin !== null && !ended) w.parent.postMessage({ fl: FL, ...msg }, origin); };
   const rid = () => `g${++seq}`;
-  const request = (msg) => new Promise((resolve) => { const r = rid(); pending.set(r, resolve); send({ ...msg, rid: r }); });
+  // After `ending` nothing is sent, so a request then fails at once rather than waiting forever.
+  const request = (msg) => (ended ? Promise.resolve({ ok: false, reason: 'offline' })
+    : new Promise((resolve) => { const r = rid(); pending.set(r, resolve); send({ ...msg, rid: r }); }));
 
   const guest = {
     get level() { return granted ?? 0; },
