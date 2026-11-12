@@ -550,6 +550,23 @@ try {
   check(String(msRun) === 'notes/m1.txt,notes/m2.txt,notes/m3.txt' && String(msTwo) === 'notes/m1.txt,notes/m3.txt' && /Delete 2 files\?/.test(msAsked)
     && !msAfter.m1 && msAfter.m2 && !msAfter.m3 && /Deleted 2 files/.test(msAfter.said) && msAll.chosen === msAll.rows && msAll.rows > 0 && msCleared === 0,
     `choosing several files: Shift and Ctrl clicks, one question for Delete, Ctrl+A and Escape (${JSON.stringify({ msRun, msTwo, msAsked, msAfter, msAll, msCleared })})`);
+  // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
+  // and nothing in the panel lies over anything else
+  await page.setViewportSize({ width: 1000, height: 560 });
+  const tight = await f.evaluate(async () => {
+    await foafos.pod.put('notes/tight.txt', 'words '.repeat(300), { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+    await new Promise((r) => setTimeout(r, 300));
+    document.querySelector('#items tbody tr[data-path="notes/tight.txt"]').click();
+    await new Promise((r) => setTimeout(r, 500));
+    const kids = [...document.getElementById('detail').children].map((k) => k.getBoundingClientRect());
+    const body = document.querySelector('#detail .detail-body')?.getBoundingClientRect();
+    const out = { body: Math.round(body?.height || 0), overlap: kids.some((k, i) => i && k.top < kids[i - 1].bottom - 1) };
+    await foafos.pod.delete('notes/tight.txt');
+    return out;
+  });
+  await page.setViewportSize({ width: 1100, height: 760 });
+  check(tight.body >= 100 && !tight.overlap, `in a short window the side panel keeps the preview's room (${JSON.stringify(tight)})`);
   // Files opens at the folder it was in, after a reload; a kept folder that has gone opens the top
   await f.evaluate(() => window.__files.go('notes/'));
   await page.waitForTimeout(300);

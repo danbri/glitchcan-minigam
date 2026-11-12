@@ -128,3 +128,9 @@
 
 /* Several items chosen (Ctrl/Cmd + click, Shift + click, Ctrl/Cmd + A). */
 #items tbody tr.chosen { background: color-mix(in srgb, var(--accent, #2e6fd1) 22%, transparent); }
+
+/* In a short window the side panel scrolls rather than squeezing: its heading, "Open in" and
+   buttons keep their height (they overlapped the preview when they shrank), and the preview keeps
+   room to read. */
+.pane-detail > * { flex-shrink: 0; }
+.pane-detail > .detail-body { flex-shrink: 1; min-height: 9rem; }
