@@ -3556,12 +3556,22 @@ function buildUI() {
         if (count) count.textContent = String([...sec.querySelectorAll('.foafos-app')].filter((b) => !b.hidden).length);
       }
       home.querySelector('.foafos-home-none').hidden = matches().length > 0;
+      // The best match is marked, and Enter opens it, as a desktop's search does: a name that starts
+      // with what was typed, then a name with every word in it, then the rest in the order shown.
+      const rank = (b) => {
+        const name = (b.querySelector('.nm')?.textContent || '').toLowerCase();
+        return name.startsWith(q) ? 3 : name.split(/\s+/).some((w) => w.startsWith(words[0] || '')) && words.every((w) => name.includes(w)) ? 2 : 1;
+      };
+      let top = null;
+      for (const b of matches()) if (q && (!top || rank(b) > rank(top))) top = b;
+      for (const b of body.querySelectorAll('.foafos-top-hit')) b.classList.remove('foafos-top-hit');
+      top?.classList.add('foafos-top-hit');
       // While searching, results are a list that says what each one does (hover never comes on a phone).
       home.classList.toggle('searching', !!q);
     });
     find.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); matches()[0]?.click(); }
-      if (e.key === 'ArrowDown') { e.preventDefault(); matches().find((b) => b.closest('details')?.open !== false)?.focus(); }
+      if (e.key === 'Enter') { e.preventDefault(); (body.querySelector('.foafos-top-hit:not([hidden])') || matches()[0])?.click(); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); (body.querySelector('.foafos-top-hit:not([hidden])') || matches().find((b) => b.closest('details')?.open !== false))?.focus(); }
     });
     // Arrow keys move between apps by where they sit on screen; Up from the top row goes back to search.
     body.addEventListener('keydown', (e) => {

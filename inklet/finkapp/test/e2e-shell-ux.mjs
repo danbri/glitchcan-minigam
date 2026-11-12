@@ -90,6 +90,16 @@ try {
   await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowUp');
   const backInSearch = await page.evaluate(() => document.activeElement?.matches('.foafos-home-search input'));
   check(!!firstApp && !!secondApp && secondApp !== firstApp && backInSearch, `arrow keys move through All apps (${firstApp} → ${secondApp}, back to search: ${backInSearch})`);
+  // The best match is marked and is what Enter or Down goes to: a name, before a description
+  // that mentions it ("activity" used to open Chat, whose description says "app activity")
+  const topFor = async (q) => { await page.fill('.foafos-home-search input', q); return page.evaluate(() => ({ first: [...document.querySelectorAll('#foafos-home .foafos-app')].find((b) => !b.hidden)?.dataset.app, top: document.querySelector('#foafos-home .foafos-top-hit')?.dataset.app })); };
+  const tActivity = await topFor('activity'), tDrift = await topFor('drift');
+  await page.fill('.foafos-home-search input', 'activity');
+  await page.keyboard.press('ArrowDown');
+  const downTo = await page.evaluate(() => document.activeElement?.dataset?.app);
+  await page.focus('.foafos-home-search input');
+  check(tActivity.first === 'chat' && tActivity.top === 'activity' && /drift/.test(tDrift.top || '') && tDrift.first !== tDrift.top && downTo === 'activity',
+    `search marks the best name match, and Down goes to it (${JSON.stringify(tActivity)}, ${JSON.stringify(tDrift)}, ${downTo})`);
   await page.fill('.foafos-home-search input', 'tally');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(800);
