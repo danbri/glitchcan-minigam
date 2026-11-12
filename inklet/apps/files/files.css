@@ -115,3 +115,11 @@
 /* A search result's folder and the line where the words were found. */
 .list .hit { display: block; margin-left: 1.5em; font-size: 12px; color: var(--p-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .search-further { padding: 10px 12px; }
+/* About this file: what the file says about itself. */
+.about { margin: 8px 0; font-size: 13px; }
+.about > summary { cursor: pointer; font-weight: 600; }
+.about-list { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 6px 0; }
+.about-list dt { color: var(--p-dim); }
+.about-list dd { margin: 0; overflow-wrap: anywhere; }
+.about-note { margin: 4px 0; color: var(--p-dim); font-size: 12px; }
+.about-rdf pre { max-height: 180px; overflow: auto; font-size: 11px; background: var(--p-side); padding: 6px; border-radius: var(--p-corner); }

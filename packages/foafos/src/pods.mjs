@@ -45,12 +45,14 @@ import { SECRETS_CAP } from './secrets.mjs';
 import { deviceFetch, typeOf } from './device-fetch.mjs';
 import { openArchive, listArchive, archiveParts, ArchiveError, ARCHIVE_LIMITS } from './archive.mjs';
 import { TextIndex } from './search.mjs';
+import { readMetadata, withoutLocation, metadataTurtle } from './metadata.mjs';
 
 export const POD_OWNER = 'foafos.pods';
 export const POD_VERBS = {
   'pod.get': 'pod:read',
   'pod.list': 'pod:read',
   'pod.search': 'pod:read',
+  'pod.meta': 'pod:read',
   'pod.put': 'pod:write',
   'pod.delete': 'pod:write',
 };
@@ -729,7 +731,7 @@ export class FoafPods {
     if (params.share !== undefined) {
       shared = this.shares.get(params.share) ?? null;
       if (!shared || shared.appId !== appId || shared.holder !== holder) return this._refuse(appId, verb, 'denied', `${appId} holds no such shared file`);
-      if (verb !== 'pod.get' && verb !== 'pod.put') return this._refuse(appId, verb, 'denied', `${appId} may only read or write a shared file`);
+      if (verb !== 'pod.get' && verb !== 'pod.put' && verb !== 'pod.meta') return this._refuse(appId, verb, 'denied', `${appId} may only read or write a shared file`);
       if (verb === 'pod.put' && !shared.write) return this._refuse(appId, verb, 'read-only', `${shared.name} was shared with ${appId} to read`);
     }
     // `params.pod` is a handle. A pod's real id, another app's handle and nonsense all miss alike.
@@ -769,6 +771,22 @@ export class FoafPods {
     this._say('pods.invoke', { summary: `${appId} → ${verb} ${path}`, appId, verb, path, pod: scope.pod });
     let result;
     try {
+      // What a file says about itself (EXIF, ID3, PDF Info), as fields and Turtle. Through a share,
+      // never the position: a photo shared with another app does not say where it was taken.
+      if (verb === 'pod.meta') {
+        const raw = path.includes('!/') ? await this._inArchive(podFetch, base, path, 'pod.get', { as: 'bytes' })
+          : await this._run('pod.get', podFetch, base, path, { as: 'bytes' }, null);
+        if (!raw.ok) result = raw;
+        else {
+          const m = readMetadata(new Uint8Array(raw.body));
+          const withLocation = !shared;
+          result = { ok: true, status: 200, kind: m.kind, fields: m.fields, location: withLocation ? m.location : null,
+            ...(shared && m.location ? { locationRemoved: true } : {}),
+            turtle: metadataTurtle(path.split('/').pop().replace(/!$/, ''), m, { withLocation }) };
+        }
+        this._say(result.ok ? 'pods.done' : 'pods.failed', { summary: `${appId}'s pod.meta ${path}: ${result.status ?? result.reason}`, appId, verb, path, status: result.status });
+        return result;
+      }
       // Inside an archive (`a.zip!/b/c.txt`): read-only, by the limits in archive.mjs.
       if (path.includes('!/')) {
         result = verb === 'pod.list' || verb === 'pod.get' ? await this._inArchive(podFetch, base, path, verb, params) : { ok: false, reason: 'read-only' };
@@ -797,6 +815,15 @@ export class FoafPods {
       }
       if (verb === 'pod.put') await this._ensureContainers(podFetch, base, path);
       result = await this._run(verb, podFetch, base, path, params, body);
+      // A photo read through a share leaves without its position (GPS emptied, XMP removed).
+      if (shared && verb === 'pod.get' && result.ok && result.body instanceof ArrayBuffer) {
+        const before = new Uint8Array(result.body);
+        const after = withoutLocation(before);
+        if (after.length !== before.length || after.some((v, i) => v !== before[i])) {
+          result.body = after.buffer.slice(after.byteOffset, after.byteOffset + after.byteLength);
+          result.locationRemoved = true;
+        }
+      }
       // A built index follows each write and delete through the shell.
       const built = result.ok && this.indexes.get(scope.pod);
       if (built && (verb === 'pod.put' || verb === 'pod.delete')) {

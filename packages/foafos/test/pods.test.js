@@ -5,6 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeZip } from './zip-fixture.mjs';
+import { jpeg, CAMERA } from './meta-fixture.mjs';
+import { readMetadata } from '../src/metadata.mjs';
 import { FoafSecrets } from '../src/secrets.mjs';
 import { FoafPods, POD_OWNER, checkPod, BUILTIN_BASE } from '../src/pods.mjs';
 
@@ -286,6 +288,32 @@ test('archives: list and read inside a zip, and a zip within it; writing inside 
   assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'box.zip!/nope.txt' })).status, 404);
   assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'box.zip!/a!/b!/c!/d' })).reason, 'too-deep');
   assert.equal((await r.pods.invoke('stranger', 'pod.get', { path: 'box.zip!/readme.txt' })).reason, 'denied');
+});
+
+test('meta: the owner sees a photo\'s fields and position; through a share, the bytes and the fields carry no position', async () => {
+  const r = await granted();
+  const photo = jpeg(CAMERA, { xmp: true });
+  await r.pods.invoke('notes', 'pod.put', { path: 'beach.jpg', body: photo, contentType: 'image/jpeg' });
+  const own = await r.pods.invoke('notes', 'pod.meta', { path: 'beach.jpg' });
+  assert.equal(own.ok, true);
+  assert.deepEqual(own.location, { lat: 51.5075, lon: -0.1275 });
+  assert.equal(own.fields.model, 'Pocket 3');
+  assert.match(own.turtle, /schema:latitude/);
+  // Shared with another app, to read.
+  const token = r.pods.offerShare('viewer', { pod: 'home', path: 'apps/notes/beach.jpg' });
+  assert.equal(r.pods.claimShare('viewer', 'w1').token, token);
+  const got = await r.pods.invoke('viewer', 'pod.get', { share: token, as: 'bytes' }, { holder: 'w1' });
+  assert.equal(got.ok, true);
+  assert.equal(got.locationRemoved, true);
+  assert.equal(readMetadata(new Uint8Array(got.body)).location, null);
+  assert.equal(readMetadata(new Uint8Array(got.body)).fields.model, 'Pocket 3');
+  const meta = await r.pods.invoke('viewer', 'pod.meta', { share: token }, { holder: 'w1' });
+  assert.equal(meta.location, null);
+  assert.equal(meta.locationRemoved, true);
+  assert.ok(!/latitude/.test(meta.turtle));
+  // The owner's file still has its position.
+  const still = await r.pods.invoke('notes', 'pod.get', { path: 'beach.jpg', as: 'bytes' });
+  assert.deepEqual(readMetadata(new Uint8Array(still.body)).location, { lat: 51.5075, lon: -0.1275 });
 });
 
 test('quota: a pod without one is not measured', async () => {

@@ -505,8 +505,9 @@
         ? h('div', { class: 'detail-body detail-image' }, h('img', { src: previewUrl, alt: nameOf(it.path) }))
         : h('p', { class: 'detail-none' }, 'This kind of file has no preview here.');
       const offers = await openWithBox(it.path, type);
+      const about = await aboutBox(it.path);
       if (mine !== picking) return;
-      drawDetail(head, view, offers, actions(backBtn));
+      drawDetail(head, view, about, offers, actions(backBtn));
       return;
     }
     if (!r.ok) { say(explain(r), true); drawDetail(head); return; }
@@ -525,6 +526,26 @@
     const offers = await openWithBox(it.path, picked.contentType);
     if (mine !== picking) return;
     drawDetail(head, h('div', { class: 'detail-body' }, text), offers, actions(backBtn, save));
+  }
+
+  // What the file says about itself (camera, date, size, artist, title, pages; a photo's place),
+  // from the shell's pod.meta, and the same as linked data. Nothing for a file that says nothing.
+  async function aboutBox(path) {
+    const m = await foafos.pod.meta(path);
+    if (!m.ok || !m.kind || (!Object.keys(m.fields || {}).length && !m.location)) return null;
+    const f = m.fields;
+    const when = (v) => { const d = new Date(v); return Number.isNaN(d.getTime()) ? v : d.toLocaleString([], { dateStyle: 'medium', ...(String(v).includes('T') ? { timeStyle: 'short' } : {}) }); };
+    const rows = [
+      ['Title', f.title], ['By', f.author || f.artist], ['Album', f.album], ['Year', f.year],
+      ['Taken', f.taken && when(f.taken)], ['Created', !f.taken && f.created && when(f.created)],
+      ['Camera', [f.make, f.model].filter(Boolean).join(' ')], ['Pixels', f.width && f.height ? `${f.width} × ${f.height}` : null],
+      ['Pages', f.pages], ['About', f.description],
+      ['Place', m.location ? `${m.location.lat}, ${m.location.lon}` : null],
+    ].filter(([, v]) => v !== undefined && v !== null && v !== '' && v !== false);
+    const dl = h('dl', { class: 'about-list' }, rows.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, String(v))]));
+    return h('details', { class: 'about', open: true }, h('summary', {}, 'About this file'), dl,
+      m.location ? h('p', { class: 'about-note' }, 'The place is not given to apps you share this file with.') : null,
+      h('details', { class: 'about-rdf' }, h('summary', {}, 'As linked data'), h('pre', {}, m.turtle)));
   }
 
   // Apps that can open this file, each with its own comment: what a person or an

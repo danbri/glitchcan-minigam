@@ -7,6 +7,7 @@ import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { makeZip } from '../../../packages/foafos/test/zip-fixture.mjs';
+import { jpeg as fixtureJpeg, CAMERA } from '../../../packages/foafos/test/meta-fixture.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const FACTOIDAL = process.env.FACTOIDAL;
@@ -270,6 +271,38 @@ try {
   check(arc.folder === 'notes/box.zip!/' && arc.names.includes('notes/box.zip!/readme.txt') && arc.names.includes('notes/box.zip!/docs/')
     && arc.readOnly && arc.text === 'Inside the zip.' && /🗜 box\.zip/.test(arc.crumb) && arc.writable,
     `an archive opens as a read-only folder (${JSON.stringify(arc)})`);
+  // About this file: a photo's camera, size and place, read by the shell from its EXIF.
+  const photo = [...fixtureJpeg(CAMERA)];
+  const about = await f.evaluate(async (bytes) => {
+    await foafos.pod.put('notes/beach.jpg', new Uint8Array(bytes).buffer, { contentType: 'image/jpeg' });
+    await window.__files.go('notes/');
+    await window.__files.pick({ path: 'notes/beach.jpg', container: false });
+    for (let i = 0; i < 30 && !document.querySelector('#detail .about'); i++) await new Promise((r) => setTimeout(r, 100));
+    const rows = Object.fromEntries([...document.querySelectorAll('#detail .about-list dt')].map((dt) => [dt.textContent, dt.nextElementSibling.textContent]));
+    const rdf = document.querySelector('#detail .about-rdf pre')?.textContent || '';
+    await foafos.pod.delete('notes/beach.jpg');
+    return { rows, rdf: /schema:ImageObject/.test(rdf) && /exif:model "Pocket 3"/.test(rdf) };
+  }, photo);
+  check(about.rows.Camera === 'Acme Pocket 3' && about.rows.Pixels === '640 × 480' && about.rows.Place === '51.5075, -0.1275' && about.rdf,
+    `a photo shows what it says about itself (${JSON.stringify(about)})`);
+
+  // A real JPEG (the browser's own encoder) with EXIF and GPS spliced in: stripping the place
+  // leaves an image that still decodes at its full size.
+  const app1 = (() => { const j = fixtureJpeg(CAMERA); const len = (j[4] << 8) | j[5]; return [...j.subarray(2, 4 + len)]; })();
+  const decoded = await page.evaluate(async ({ app1, url }) => {
+    const { readMetadata, withoutLocation } = await import(url);
+    const c = document.createElement('canvas'); c.width = 96; c.height = 64;
+    const g = c.getContext('2d'); g.fillStyle = '#3a7'; g.fillRect(0, 0, 96, 64); g.fillStyle = '#fc0'; g.fillRect(20, 10, 30, 30);
+    const real = new Uint8Array(await (await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9))).arrayBuffer());
+    const withExif = new Uint8Array(real.length + app1.length);
+    withExif.set(real.subarray(0, 2)); withExif.set(app1, 2); withExif.set(real.subarray(2), 2 + app1.length);
+    const stripped = withoutLocation(withExif);
+    const bmp = await createImageBitmap(new Blob([stripped], { type: 'image/jpeg' }));
+    return { had: !!readMetadata(withExif).location, left: readMetadata(stripped).location, w: bmp.width, h: bmp.height, model: readMetadata(stripped).fields.model };
+  }, { app1, url: new URL('../../packages/foafos/src/metadata.mjs', page.url()).href });
+  // Orientation 6 (turn 90°) is kept and the browser honours it: 96 × 64 decodes as 64 × 96.
+  check(decoded.had && decoded.left === null && decoded.w === 64 && decoded.h === 96 && decoded.model === 'Pocket 3',
+    `a real JPEG without its place still decodes (${JSON.stringify(decoded)})`);
   // Thumbnails: the photo shows a small picture of itself in the list and in the icon view.
   const thumb = await f.evaluate(async () => {
     await window.__files.go('notes/');
