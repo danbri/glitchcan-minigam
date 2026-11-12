@@ -420,6 +420,27 @@ try {
     `a long press on an app shows what it does, and Open opens it (${JSON.stringify(sheet)}, ${files0}/${files1}/${files2})`);
   await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());
 
+  // Swiping a full-screen window's title bar sideways goes to the next window, and back; a short swipe does not
+  await phone.page.evaluate(() => { FoafOS.launchApp('chat'); });
+  await phone.page.waitForTimeout(600);
+  const pfront = () => phone.page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.style.zIndex === '2640')?.dataset.wid);
+  const swipeBar = async (dx) => {
+    const r = await phone.page.evaluate(() => { const w = [...document.querySelectorAll('.foafos-window')].find((x) => x.style.zIndex === '2640'); const b = w.querySelector('.foafos-window-bar span').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; });
+    const cdp2 = await phone.ctx.newCDPSession(phone.page);
+    await cdp2.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: r.x, y: r.y }] });
+    for (let k = 1; k <= 5; k++) await cdp2.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: r.x + (dx * k) / 5, y: r.y + 2 }] });
+    await cdp2.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await phone.page.waitForTimeout(300);
+  };
+  const s0 = await pfront();
+  await swipeBar(-30);
+  const sShort = await pfront();
+  await swipeBar(-120);
+  const s1 = await pfront();
+  await swipeBar(120);
+  const s2 = await pfront();
+  check(!!s0 && sShort === s0 && s1 !== s0 && s2 === s0, `on a phone, swiping the title bar sideways goes to the next window and back; a short swipe does not (${s0}, ${sShort}, ${s1}, ${s2})`);
+
   // On a phone a notice sits over the top of the window; a tap elsewhere folds it into the
   // handle, and the menu still has it, so it is not lost
   await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());

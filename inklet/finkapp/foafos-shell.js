@@ -3308,6 +3308,23 @@ function buildUI() {
 
     const bar = win.querySelector('.foafos-window-bar');
     let drag = null;
+    // A full-screen window's title bar, swiped sideways with a finger, goes to the next or the
+    // previous window, as a phone's bottom bar does. Its buttons and a short or slanted swipe do not.
+    let swipe = null;
+    bar.addEventListener('pointerdown', (e) => {
+      if (!win.classList.contains('maximized') || e.pointerType === 'mouse' || e.target.closest('button')) return;
+      swipe = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      bar.setPointerCapture?.(e.pointerId);
+    });
+    bar.style.touchAction = 'none';
+    const endSwipe = (e) => {
+      if (!swipe || e.pointerId !== swipe.id) return;
+      const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+      swipe = null;
+      if (e.type === 'pointerup' && Math.abs(dx) > 60 && Math.abs(dy) < 40) FoafOS.nextWindow?.(dx < 0 ? 1 : -1);
+    };
+    bar.addEventListener('pointerup', endSwipe);
+    bar.addEventListener('pointercancel', endSwipe);
     bar.addEventListener('pointerdown', (e) => {
       if (e.target.tagName === 'BUTTON') return;
       if (win.classList.contains('maximized')) return;   // restore first to move
