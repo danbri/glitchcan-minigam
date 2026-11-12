@@ -3138,10 +3138,26 @@ function buildUI() {
     const front = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
     front?._snap?.(zone);
   };
+  // Windows in the order they were last at the front, newest first, for "the window before".
+  const recentWins = [];
   FoafOS.raiseWindow = (win) => {
     if (FoafOS.noRaise) return;
     document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; });
     win.style.zIndex = 2640;
+    const i = recentWins.indexOf(win);
+    if (i) { if (i > 0) recentWins.splice(i, 1); recentWins.unshift(win); }
+    if (recentWins.length > 40) recentWins.length = 40;
+  };
+  // Back to the window used last, as a single Alt+Tab or Cmd+Tab does (Ctrl ; ;). Pressed again,
+  // it comes back: the two most recent windows trade places. A minimised one is restored.
+  FoafOS.lastWindow = () => {
+    const before = recentWins.find((w, k) => k > 0 && w.isConnected && w.classList.contains('foafos-window'));
+    if (!before) return null;
+    if (before.classList.contains('minimized')) before.querySelector('.foafos-window-min')?.click();
+    FoafOS.raiseWindow(before);
+    before.querySelector('.foafos-window-bar button, .foafos-window-bar')?.focus?.();
+    bus.publish('wm.last', { summary: `front: ${before.querySelector('.foafos-window-bar span')?.textContent || 'window'}` });
+    return before;
   };
   const GEOM_KEY = 'foafos.windows.geom';
   function loadGeom() { try { return JSON.parse(localStorage.getItem(GEOM_KEY)) || {}; } catch { return {}; } }

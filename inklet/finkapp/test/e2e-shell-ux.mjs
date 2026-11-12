@@ -197,6 +197,14 @@ try {
   await keys(page, [';', 'j']);
   await keys(page, [';', 'k']);
   check((await front()) === f0, 'ctrl ; k goes back to the window before');
+  // Ctrl ; ; goes back to the window used last, and again comes back, as a single Alt+Tab does
+  const wins2 = await page.evaluate(() => [...document.querySelectorAll('.foafos-window:not(.minimized)')].slice(0, 3).map((w) => w.dataset.wid));
+  await page.evaluate((ids) => { for (const id of ids) FoafOS.raiseWindow(document.querySelector(`.foafos-window[data-wid="${id}"]`)); }, wins2);   // last raised: wins2[2], before it wins2[1]
+  await keys(page, [';', ';']);
+  const l1 = await front();
+  await keys(page, [';', ';']);
+  const l2 = await front();
+  check(wins2.length === 3 && l1 === wins2[1] && l2 === wins2[2], `ctrl ; ; goes back to the window used last, and again returns (${wins2} → ${l1} → ${l2})`);
   await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
 
   // Task Manager: switching to a minimised window restores it
