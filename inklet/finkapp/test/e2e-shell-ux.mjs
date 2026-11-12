@@ -292,6 +292,7 @@ try {
   await page.waitForTimeout(600);
   const before = await page.evaluate(() => document.querySelectorAll('.foafos-ov-close').length);
   check(before >= 2, 'ctrl ; s shows cards with close buttons');
+  check(/press 1–\d, or type a name/.test(await page.evaluate(() => document.querySelector('#foafos-ov-strip span')?.textContent || '')), 'All windows with a keyboard says which keys');
   await page.evaluate(() => document.querySelector('.foafos-ov-close').click());
   await page.waitForTimeout(1000);
   check(await page.evaluate(() => document.querySelectorAll('.foafos-ov-close').length) === before - 1, 'closing a card leaves All windows open on the rest');
@@ -381,6 +382,8 @@ try {
   await phone.page.waitForTimeout(800);
   await phone.page.evaluate(() => FoafOS.enterOverview());
   await phone.page.waitForTimeout(600);
+  const phoneHint = await phone.page.evaluate(() => document.querySelector('#foafos-ov-strip span')?.textContent || '');
+  check(/tap one to open it, or swipe one up to close it/.test(phoneHint) && !/press|type/.test(phoneHint), `All windows on a phone says tap and swipe, not keys (${phoneHint})`);
   const count = () => phone.page.evaluate(() => document.querySelectorAll('.foafos-window').length);
   const nBefore = await count();
   const card0 = await phone.page.evaluate(() => { const r = document.querySelector('.foafos-ov-hit').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });

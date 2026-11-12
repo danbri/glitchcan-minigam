@@ -2918,7 +2918,11 @@ function buildUI() {
 
     const strip = document.createElement('div');
     strip.id = 'foafos-ov-strip';
-    strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — pick one${wins.length > 1 ? `, press 1–${Math.min(wins.length, 9)}, or type a name` : ''}</span>
+    // What to do, in the terms of the hand in use: keys on a keyboard, taps and swipes on a touch screen.
+    const touch = window.matchMedia?.('(pointer: coarse)').matches && !window.matchMedia?.('(any-pointer: fine)').matches;
+    const how = touch ? `tap one to open it, or swipe one up to close it`
+      : `pick one${wins.length > 1 ? `, press 1–${Math.min(wins.length, 9)}, or type a name` : ''}`;
+    strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — ${how}</span>
       <span class="foafos-ov-find" role="status"></span>
       <button type="button" id="foafos-ov-done" aria-label="Leave overview">✕</button>`;
     document.body.appendChild(strip);
