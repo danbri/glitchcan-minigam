@@ -105,6 +105,16 @@ try {
   await page.waitForTimeout(800);
   check(await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].some((w) => /Tally/.test(w.textContent))), 'Enter opens the top result, and search finds widgets');
 
+  // Right-click (or the menu key) on an app shows the same sheet; Escape puts it away, and a
+  // plain click afterwards still opens apps
+  await keys(page, [';', 'a']);
+  await page.click('#foafos-home .foafos-app[data-app="chat"]', { button: 'right' });
+  const rsheet = await page.evaluate(() => document.querySelector('.foafos-app-sheet h3')?.textContent);
+  await page.keyboard.press('Escape');
+  const rafter = await page.evaluate(() => ({ sheet: !!document.querySelector('.foafos-app-sheet'), home: !!document.getElementById('foafos-home'), focus: document.activeElement?.dataset?.app }));
+  await page.evaluate(() => document.getElementById('foafos-home')?.remove());
+  check(rsheet === 'Chat' && !rafter.sheet && rafter.home && rafter.focus === 'chat', `right-click on an app shows its sheet; Escape puts it away and stays in All apps (${rsheet}, ${JSON.stringify(rafter)})`);
+
   // What you open comes to the front
   await page.evaluate(() => FoafOS.launchApp('chat'));
   await page.waitForTimeout(800);
@@ -390,6 +400,26 @@ try {
   await phone.page.evaluate(() => FoafOS.openHome());
   await phone.page.waitForTimeout(300);
   check(await phone.page.evaluate(() => document.activeElement?.id === 'foafos-home'), 'All apps on a phone does not open the keyboard');
+  // A long press on an app shows what it does, with Open and Pin, and does not open it
+  await phone.page.evaluate(() => { document.getElementById('foafos-home')?.remove(); FoafOS.openHome(); });   // openHome toggles
+  await phone.page.waitForTimeout(300);
+  const files0 = await phone.page.evaluate(() => document.querySelectorAll('.foafos-window[data-opened-as="files"]').length);
+  const appBox = await phone.page.evaluate(() => { const r = document.querySelector('#foafos-home .foafos-app[data-app="files"]').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  const cdp = await phone.ctx.newCDPSession(phone.page);
+  const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+  await touch('touchStart', [{ x: appBox.x, y: appBox.y }]);
+  await phone.page.waitForTimeout(700);
+  await touch('touchEnd', []);
+  await phone.page.waitForTimeout(300);
+  const sheet = await phone.page.evaluate(() => { const s = document.querySelector('.foafos-app-sheet'); return s && { title: s.querySelector('h3').textContent, desc: s.querySelector('p').textContent, acts: [...s.querySelectorAll('button:not([hidden])')].map((x) => x.textContent) }; });
+  const files1 = await phone.page.evaluate(() => document.querySelectorAll('.foafos-window[data-opened-as="files"]').length);
+  await phone.page.evaluate(() => document.querySelector('.foafos-app-sheet [data-act="open"]').click());
+  await phone.page.waitForTimeout(600);
+  const files2 = await phone.page.evaluate(() => document.querySelectorAll('.foafos-window[data-opened-as="files"]').length);
+  check(sheet?.title === 'Files' && /files/i.test(sheet.desc) && String(sheet.acts) === 'Open,Pin,Close' && files1 === files0 && files2 >= files0,
+    `a long press on an app shows what it does, and Open opens it (${JSON.stringify(sheet)}, ${files0}/${files1}/${files2})`);
+  await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());
+
   // On a phone a notice sits over the top of the window; a tap elsewhere folds it into the
   // handle, and the menu still has it, so it is not lost
   await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());

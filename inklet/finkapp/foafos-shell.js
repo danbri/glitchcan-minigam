@@ -3463,6 +3463,47 @@ function buildUI() {
       <div class="foafos-home-body"></div>`;
     const body = home.querySelector('.foafos-home-body');
     const find = home.querySelector('.foafos-home-search input');
+    // What an app does, with Open and Pin: a long press on a touch screen (where hover never comes),
+    // a right-click, or the menu key. Escape or Close puts it away and goes back to the app.
+    const showSheet = (app, b) => {
+      home.querySelector('.foafos-app-sheet')?.remove();
+      const sheet = document.createElement('div');
+      sheet.className = 'foafos-app-sheet';
+      sheet.setAttribute('role', 'dialog');
+      sheet.setAttribute('aria-label', `About ${app.name}`);
+      sheet.innerHTML = `<div class="sheet-head"><span class="ico" aria-hidden="true"></span><h3></h3></div><p></p>
+        <div class="sheet-acts"><button type="button" class="fp-btn fp-primary" data-act="open">Open</button><button type="button" class="fp-btn" data-act="pin" hidden></button><button type="button" class="fp-btn" data-act="close">Close</button></div>`;
+      sheet.querySelector('.ico').textContent = app.icon || '';
+      sheet.querySelector('h3').textContent = app.name;
+      sheet.querySelector('p').textContent = app.desc || 'No description yet.';
+      const pin = b.parentElement?.querySelector('.foafos-app-pin');
+      const pinB = sheet.querySelector('[data-act="pin"]');
+      if (pin) { pinB.hidden = false; pinB.textContent = pin.classList.contains('on') ? 'Unpin' : 'Pin'; }
+      const close = () => { sheet.remove(); b.focus(); };
+      sheet.addEventListener('click', (e) => {
+        const act = e.target.closest('button')?.dataset.act;
+        if (act === 'open') { sheet.remove(); b._sheet = false; b.click(); }
+        else if (act === 'pin') { sheet.remove(); pin?.click(); }
+        else if (act === 'close') close();
+      });
+      sheet.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
+      home.appendChild(sheet);
+      sheet.querySelector('button').focus();
+    };
+    const offerSheet = (app, b) => {
+      let timer = 0, at = null;
+      b.addEventListener('contextmenu', (e) => { e.preventDefault(); clearTimeout(timer); if (!home.querySelector('.foafos-app-sheet')) showSheet(app, b); });
+      b.addEventListener('pointerdown', (e) => {
+        b._sheet = false;
+        if (e.pointerType === 'mouse') return;
+        at = { x: e.clientX, y: e.clientY };
+        timer = setTimeout(() => { b._sheet = true; showSheet(app, b); }, 500);
+      });
+      b.addEventListener('pointermove', (e) => { if (at && Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) clearTimeout(timer); });
+      for (const t of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(t, () => clearTimeout(timer));
+      // The click that ends a long press is not a launch.
+      b.addEventListener('click', (e) => { if (b._sheet) { b._sheet = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+    };
     // Which apps are open now: a dot under each, as on a dock, so you can tell a launch from a switch.
     const running = new Set([
       ...[...document.querySelectorAll('.foafos-window[data-opened-as]')].map((w) => w.dataset.openedAs),
@@ -3583,6 +3624,7 @@ function buildUI() {
           });
           cell.appendChild(pin);
         }
+        offerSheet(app, b);
         grid.appendChild(cell);
       }
       folder.appendChild(grid);
