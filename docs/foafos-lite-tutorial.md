@@ -94,7 +94,29 @@ change of the board is published as `board`.
   from the menu). The contract's own checks run the same way in
   `e2e-guest-conformance.mjs` and `packages/foafos-host-lite/test/conformance.test.mjs`.
 
-## Next level (not yet here)
+## Level 4: full foafos
 
-- **Level 4:** in full foafos, outside this contract: chat about a game, play over XMPP, an AI
-  opponent from the shell.
+Level 4 is outside the contract: what full foafos does with a level-3 app's tools and events,
+with no further change to the game beyond one line of words in each position (`summary`, such as
+"Queen d2, king b3; the queen to move."), for chats, screen readers and logs.
+
+- **Play from Chat.** In the Chat window, `/tools minichess-lite` lists the tools,
+  `/call minichess-lite board` shows the position, and `/call minichess-lite move {"to":"d2"}`
+  plays (the result is the position after the king's reply).
+- **Play over XMPP.** A direct message from another account runs the same commands, checked
+  against that account's grants. Until the person grants it, it is refused. After
+  `/grant friend@example.org minichess-lite move` it may read the game and move, and nothing
+  else: `new_game` is still refused. `/revoke` takes it back. (A room cannot carry commands: its
+  members are known by nickname only.)
+- **An AI opponent.** The shell publishes app tools to the page's WebMCP model context where the
+  browser offers one, so an agent in the browser plays through the same four tools, as the
+  person's agent and under its grants.
+- **Talk about a game.** Each tool call shows in the room's app activity ("you called Minichess
+  move: ok"). The board events (`app.minichess-lite.board`) are not mirrored to the room unless
+  the person adds the topic to Chat's mirror list: mirroring to a room is publishing.
+- **What leaves, added at this level:** to whoever the person grants, the results of the tools
+  they may call; to the room, only what the person chose to mirror.
+
+**Test:** `inklet/finkapp/test/e2e-minichess-lite.mjs` plays from the person's chat, and as
+another account (the bare JID, as a direct message arrives): refused, granted `move`, moves,
+still refused `new_game`.

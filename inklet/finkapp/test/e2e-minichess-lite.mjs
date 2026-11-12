@@ -49,6 +49,27 @@ try {
   check(viaTools.bad, 'a move to a square that is not on the board is refused with a reason');
   check(viaTools.fresh?.queen === 'c2' && viaTools.seen > 0 && viaTools.lastSeen?.queen === 'c2', `the board is published on the bus as it changes (${viaTools.seen} events)`);
 
+  // Level 4, in full foafos: play from chat. The person's own window uses /tools and /call; another
+  // account (a direct message over XMPP takes this same path) is refused until the person grants it
+  // the move tool, and then may move but not start a new game.
+  const viaChat = await page.evaluate(async () => {
+    const say = (t, from) => FoafOS.chatCommand(t, from ? { remote: { from } } : {});
+    const friend = 'friend@example.org';            // a direct message's from, as the chat passes it: the bare JID
+    const tools = await say('/tools minichess-lite');
+    const mine = await say('/call minichess-lite board');
+    const before = await say('/call minichess-lite legal_moves', friend);
+    await say('/grant friend@example.org minichess-lite move');
+    const legal = (await say('/call minichess-lite legal_moves')).value;
+    const theirs = await say(`/call minichess-lite move {"to":"${legal[0]}"}`, friend);
+    const notGranted = await say('/call minichess-lite new_game', friend);
+    await say('/revoke friend@example.org minichess-lite');
+    await say('/call minichess-lite new_game');
+    return { tools: tools.text, mine: mine.value?.summary, before: before.text, theirs: theirs.value?.summary, notGranted: notGranted.text };
+  });
+  check(/move/.test(viaChat.tools) && /^Queen c2, king a3; the queen to move\.$/.test(viaChat.mine || ''), `/tools and /call work from the person's chat (${viaChat.mine})`);
+  check(!/Queen/.test(viaChat.before) && /Queen .*; the queen to move\./.test(viaChat.theirs || '') && !/Queen/.test(viaChat.notGranted),
+    `another account plays only once granted, and only the granted tool (${viaChat.before} | ${viaChat.theirs} | ${viaChat.notGranted})`);
+
   // A queen move, chosen from the game's own legal moves.
   const moved = await f.evaluate(() => { const m = getValidMovesForPiece(queenPos, 'queen')[0]; makeQueenMove(m.row, m.col); return m; });
   // The move, the king's reply, and the save after it.
