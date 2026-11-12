@@ -95,6 +95,16 @@
   }
 
   let listing = 0;               // only the newest listing may draw: an old one may be from another location
+  // What a desktop's status bar says of a folder: how many items, what its files take, and, where
+  // the owner set a limit, how much room is left.
+  function folderSummary() {
+    const n = items.length;
+    if (!n) return 'This folder is empty.';
+    const bytes = items.reduce((t, i) => t + (i.container ? 0 : i.size || 0), 0);
+    const space = here()?.space;
+    const left = space?.limit && space.used != null ? `, ${sizeText(Math.max(0, space.limit - space.used))} free of ${sizeText(space.limit)}` : '';
+    return `${n} item${n === 1 ? '' : 's'}${bytes ? `, ${sizeText(bytes)}` : ''}${left}`;
+  }
   async function go(path, { remember = true, via = null } = {}) {
     const mine = ++listing;
     const r = await list(path);
@@ -116,8 +126,15 @@
     for (let p = folder; ; p = parentOf(p)) { expanded.add(p); if (!p) break; }
     pick(null);
     draw();
-    const n = items.length;
-    say(n ? `${n} item${n === 1 ? '' : 's'}` : 'This folder is empty.');
+    say(folderSummary());
+    // The room left changes with every write, anywhere: ask again, after the list is drawn.
+    // Only the figure changes: nothing is redrawn, so the keyboard stays where it is.
+    foafos.pod.locations().then((loc) => {
+      const now = loc?.ok && loc.locations?.find((l) => l.id === current), was = here();
+      if (mine !== listing || !now || !was) return;
+      was.space = now.space;
+      if (now.space && !statusEl.classList.contains('bad')) say(folderSummary());
+    }, () => {});
   }
 
   // Walks every folder for a name, with a limit, so a very large pod cannot hang the window.

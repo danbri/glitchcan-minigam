@@ -303,6 +303,18 @@ try {
   });
   const usage = await page.evaluate((id) => { const p = FoafOS.pods.get(id); FoafOS.pods.update(id, { quota: null }); return p.usage; }, capped);
   check(refused === 'quota' && usage > 1, `a pod's space limit refuses a write that would go over it (${refused}, used ${usage})`);
+  // The status bar says what a folder holds, and with a limit, how much room is left
+  const summ = await page.evaluate((id) => { FoafOS.pods.update(id, { quota: 10 * 1024 * 1024 }); return true; }, capped);
+  const said = await f.evaluate(async () => {
+    await foafos.pod.put('notes/sum.txt', 'y'.repeat(2048), { contentType: 'text/plain' });   // measured on a write
+    await window.__files.go('notes/');
+    await new Promise((r) => setTimeout(r, 600));
+    const text = document.getElementById('status').textContent;
+    await foafos.pod.delete('notes/sum.txt');
+    return text;
+  });
+  await page.evaluate((id) => FoafOS.pods.update(id, { quota: null }), capped);
+  check(summ && /^\d+ items?, [\d.]+ (KB|MB|bytes), [\d.]+ MB free of 10\.0 MB$/.test(said), `the status bar sums a folder and says the room left (${said})`);
   // Search finds a word inside a file, not only in names, and shows the line it is on.
   const found = await f.evaluate(async () => {
     await foafos.pod.put('notes/trip.txt', 'Pack the blue kayak and the maps.', { contentType: 'text/plain' });
