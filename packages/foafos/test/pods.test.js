@@ -247,6 +247,27 @@ test('quota: a write that would go over the pod\'s limit is refused; replacing c
   assert.throws(() => r.pods.update('home', { quota: -1 }), /quota/);
 });
 
+test('search: finds text in the asker\'s own files only, follows writes and deletes, refuses without read', async () => {
+  const r = await granted();
+  r.pods.grant('other', { 'pod:read': { pod: 'home' }, 'pod:write': { pod: 'home' } });
+  await r.pods.invoke('notes', 'pod.put', { path: 'trip.txt', body: 'Bring the blue tent and maps' });
+  await r.pods.invoke('notes', 'pod.put', { path: 'shop.md', body: 'tent pegs, rope', contentType: 'text/markdown' });
+  await r.pods.invoke('other', 'pod.put', { path: 'secret.txt', body: 'the tent is a decoy' });
+  await r.pods.invoke('notes', 'pod.put', { path: 'pic.png', body: new Uint8Array([1, 2, 3]), contentType: 'image/png' });
+  let s = await r.pods.invoke('notes', 'pod.search', { query: 'tent' });
+  assert.equal(s.ok, true);
+  assert.deepEqual(s.hits.map((h) => h.path).sort(), ['shop.md', 'trip.txt']);      // not other's secret.txt
+  assert.match(s.hits.find((h) => h.path === 'trip.txt').snippet, /blue tent/);
+  assert.ok(!JSON.stringify(s).includes('apps/'));                                     // paths are the app's own
+  // A write and a delete through the shell keep the index fresh.
+  await r.pods.invoke('notes', 'pod.put', { path: 'trip.txt', body: 'Bring maps only' });
+  await r.pods.invoke('notes', 'pod.delete', { path: 'shop.md' });
+  s = await r.pods.invoke('notes', 'pod.search', { query: 'tent' });
+  assert.deepEqual(s.hits, []);
+  assert.deepEqual((await r.pods.invoke('notes', 'pod.search', { query: 'maps' })).hits.map((h) => h.path), ['trip.txt']);
+  assert.equal((await r.pods.invoke('stranger', 'pod.search', { query: 'tent' })).reason, 'denied');
+});
+
 test('quota: a pod without one is not measured', async () => {
   const r = await granted({ storageImpl: sizedStorage() });
   await r.pods.invoke('notes', 'pod.put', { path: 'a.txt', body: 'x'.repeat(5000) });

@@ -43,11 +43,13 @@
 import { cleanPath } from './ops.mjs';
 import { SECRETS_CAP } from './secrets.mjs';
 import { deviceFetch } from './device-fetch.mjs';
+import { TextIndex } from './search.mjs';
 
 export const POD_OWNER = 'foafos.pods';
 export const POD_VERBS = {
   'pod.get': 'pod:read',
   'pod.list': 'pod:read',
+  'pod.search': 'pod:read',
   'pod.put': 'pod:write',
   'pod.delete': 'pod:write',
 };
@@ -166,6 +168,7 @@ export class FoafPods {
     this._opening = new Map();      // pod id -> the connect() under way
     this.shares = new Map();        // token -> one file, held by one window
     this.usage = new Map();         // pod id -> { used, partial }: bytes in the pod, for its quota
+    this.indexes = new Map();       // pod id -> Promise<{ index: TextIndex, partial }>: text search
     this.offers = [];               // shares waiting for their window to open
     this.openDevice = openDevice;   // async (rec, {ask}) => {ok, root} | {ok:false, status, detail}, for carriage 'device'
     this.newAgent = newAgent;
@@ -538,6 +541,8 @@ export class FoafPods {
   }
 
   async disconnect(id, { quiet = false } = {}) {
+    this.indexes.delete(id);         // built again on the next search, so changes made elsewhere show
+    this.usage.delete(id);           // measured again at the next write
     const l = this.live.get(id);
     if (l) {
       try { l.conn?.close(); } catch { /* gone */ }
@@ -729,7 +734,7 @@ export class FoafPods {
     // `params.pod` is a handle. A pod's real id, another app's handle and nonsense all miss alike.
     const scope = shared ? { pod: shared.pod, prefix: '' } : this.scopeFor(appId, cap, params.pod ?? null);
     if (!scope) return this._refuse(appId, verb, 'denied', `${appId} may not "${verb}": no ${cap} grant`, { capability: cap });
-    const path = shared ? shared.path : FoafPods.target(scope, params.path, { container: verb === 'pod.list' });
+    const path = shared ? shared.path : FoafPods.target(scope, params.path, { container: verb === 'pod.list' || verb === 'pod.search' });
     if (path === null) {
       return this._refuse(appId, verb, 'bad-params', `${appId}'s "${verb}" path was refused`,
         { detail: verb === 'pod.list' ? 'a container path, without ".."' : 'a resource path, without ".." and not ending in "/"' });
@@ -763,6 +768,14 @@ export class FoafPods {
     this._say('pods.invoke', { summary: `${appId} → ${verb} ${path}`, appId, verb, path, pod: scope.pod });
     let result;
     try {
+      if (verb === 'pod.search') {
+        // Results only under the asker's own scope (and the folder asked about), as paths relative to it.
+        const { index, partial } = await this._index(scope.pod, podFetch, base);
+        const hits = index.search(String(params.query || ''), { limit: Math.min(Number(params.limit) || 50, 200), keep: (p) => p.startsWith(path) });
+        result = { ok: true, status: 200, partial, hits: hits.map((h) => ({ path: h.path.slice(scope.prefix.length), score: h.score, snippet: h.snippet })) };
+        this._say('pods.done', { summary: `${appId}'s pod.search ${path}: ${hits.length} found`, appId, verb, path, status: 200 });
+        return result;
+      }
       const quota = this.pods.get(scope.pod)?.quota;
       let before = 0, after = 0;
       if (quota && (verb === 'pod.put' || verb === 'pod.delete')) {
@@ -777,6 +790,13 @@ export class FoafPods {
       }
       if (verb === 'pod.put') await this._ensureContainers(podFetch, base, path);
       result = await this._run(verb, podFetch, base, path, params, body);
+      // A built index follows each write and delete through the shell.
+      const built = result.ok && this.indexes.get(scope.pod);
+      if (built && (verb === 'pod.put' || verb === 'pod.delete')) {
+        const { index } = await built;
+        if (verb === 'pod.put' && typeof body === 'string' && TEXTUAL.test(String(params.contentType || 'text/plain'))) index.put(path, body);
+        else index.remove(path);
+      }
       if (quota && result.ok && (verb === 'pod.put' || verb === 'pod.delete')) {
         const u = this.usage.get(scope.pod);
         u.used = Math.max(0, u.used - before + after);
@@ -798,6 +818,45 @@ export class FoafPods {
       summary: `${appId}'s ${verb} ${path}: ${result.status ?? result.reason}`, appId, verb, path, status: result.status,
     });
     return result;
+  }
+
+  /**
+   * The pod's text index, built on first search: every textual resource up to MAX_POD_BODY,
+   * found through the listings, at most 3000 files. Writes and deletes through the shell keep it
+   * fresh; a change made elsewhere shows after the pod reconnects.
+   */
+  _index(podId, podFetch, base) {
+    if (!this.indexes.has(podId)) {
+      this.indexes.set(podId, (async () => {
+        const index = new TextIndex();
+        let partial = false, files = 0;
+        const queue = [base];
+        for (let seen = 0; queue.length; seen++) {
+          if (seen >= 2000) { partial = true; break; }
+          let url = queue.shift();
+          for (let page = 0; url && page < MAX_LIST_PAGES; page++) {
+            const r = await podFetch(url, { headers: { Accept: 'application/lws+json' } });
+            if (!r.ok) break;
+            const doc = await r.json();
+            for (const it of doc.items || []) {
+              const id = String(it.id || '');
+              if (!id.startsWith(base)) continue;
+              if (id.endsWith('/') || [].concat(it.type || []).some((t) => /Container$/.test(String(t)))) { queue.push(id); continue; }
+              if (it.format && !TEXTUAL.test(String(it.format))) continue;
+              if (Number(it.size) > MAX_POD_BODY) continue;
+              if (++files > 3000) { partial = true; break; }
+              const got = await podFetch(id, { headers: { Accept: 'text/*, application/*' } });
+              const type = got.headers.get('content-type') || '';
+              if (got.ok && TEXTUAL.test(type)) { if (!index.put(decodeURIComponent(id.slice(base.length)), await got.text())) partial = true; }
+            }
+            const next = nextPage(r.headers.get('link'), url);
+            url = next && next.startsWith(base) ? next : null;
+          }
+        }
+        return { index, partial };
+      })());
+    }
+    return this.indexes.get(podId);
   }
 
   /** A resource's size now, from HEAD (0 if it is not there). */
