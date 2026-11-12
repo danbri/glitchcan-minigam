@@ -60,6 +60,66 @@ test('withoutLocation: no position left, every other field kept, image data unto
   assert.deepEqual(withoutLocation(pdf), pdf);
 });
 
+// ── crafted EXIF: the gap the Lean spec found, and a search for others ─────
+const le16 = (n) => [n & 255, (n >> 8) & 255];
+const le32 = (n) => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255];
+const ent = (tag, type, count, value) => [...le16(tag), ...le16(type), ...le32(count), ...le32(value)];
+const rat3 = (d, m, s) => [...le32(d), ...le32(1), ...le32(m), ...le32(1), ...le32(s), ...le32(1)];
+const inJpeg = (t) => new Uint8Array([0xff, 0xd8, 0xff, 0xe1, ((t.length + 8) >> 8) & 255, (t.length + 8) & 255, ...Buffer.from('Exif\0\0', 'latin1'), ...t, ...SCAN]);
+
+test('the overlap file (PodMetadata.lean overlapTiff): no position before, none after the checked strip', () => {
+  // Two GPS pointers in IFD0; the reader takes the last (to a GPS IFD with no position), whose one
+  // entry's value lies over the last pointer's tag. Emptying it used to expose the first pointer.
+  const t = [0x49, 0x49, ...le16(42), ...le32(8),
+    ...le16(2), ...ent(0x8825, 4, 1, 56), ...ent(0x8825, 4, 1, 38), ...le32(0),
+    ...le16(1), ...ent(0, 1, 5, 22), ...le32(0),
+    ...le16(4), ...ent(1, 2, 2, 0x4e), ...ent(2, 5, 3, 110), ...ent(3, 2, 2, 0x45), ...ent(4, 5, 3, 134), ...le32(0),
+    ...rat3(51, 0, 0), ...rat3(1, 0, 0)];
+  assert.equal(t.length, 158);
+  const x = inJpeg(t);
+  assert.equal(readMetadata(x).location, null);
+  const out = withoutLocation(x);
+  assert.equal(readMetadata(out).location, null, 'the checked strip leaves no position');
+  assert.ok(!Buffer.from(out).includes(Buffer.from('Exif\0\0', 'latin1')), 'the crafted EXIF block is dropped whole');
+  assert.ok(Buffer.from(out).subarray(-SCAN.length).equals(SCAN), 'the image data is kept');
+  assert.deepEqual(withoutLocation(out), out, 'stable');
+});
+
+test('20000 hostile EXIF blocks (several GPS pointers, overlapping offsets): never a position after stripping', () => {
+  let seed = 4242;
+  const rnd = (n) => (seed = (seed * 1103515245 + 12345) >>> 0) % n;
+  let leaksBefore = 0;
+  for (let i = 0; i < 20000; i++) {
+    const size = 120 + rnd(160);
+    const t = new Array(size).fill(0).map(() => rnd(256));
+    t.splice(0, 8, 0x49, 0x49, 42, 0, 8, 0, 0, 0);
+    // IFD0 at 8 with 1–4 GPS pointers aimed anywhere; GPS-like IFDs sprinkled at random offsets.
+    const nPtr = 1 + rnd(4);
+    const ifd0 = [...le16(nPtr)];
+    for (let k = 0; k < nPtr; k++) ifd0.push(...ent(0x8825, 4, 1, 8 + rnd(size - 20)));
+    ifd0.push(...le32(0));
+    t.splice(8, ifd0.length, ...ifd0);
+    for (let k = 0; k < 3; k++) {
+      // A GPS IFD at a random place, its rationals at random places (written as valid degrees), any of
+      // which may overlap the pointers, the other IFDs or each other.
+      const free = 8 + ifd0.length, latAt = free + rnd(size - free - 24), lonAt = free + rnd(size - free - 24);
+      const at = 8 + ifd0.length + rnd(Math.max(1, size - ifd0.length - 60));
+      t.splice(latAt, 24, ...rat3(rnd(90), rnd(60), rnd(60)));
+      t.splice(lonAt, 24, ...rat3(rnd(180), rnd(60), rnd(60)));
+      const g = [...le16(4), ...ent(1, 2, 2, 0x4e), ...ent(2, 5, 3, latAt), ...ent(3, 2, 2, 0x45), ...ent(4, 5, 3, lonAt)];
+      t.splice(at, g.length, ...g);
+      // and aim pointers at it: sometimes any, mostly the last (the one the reader follows)
+      if (rnd(2)) t.splice(8 + 2 + rnd(nPtr) * 12 + 8, 4, ...le32(at));
+      if (k === 2 && rnd(10) < 7) t.splice(8 + 2 + (nPtr - 1) * 12 + 8, 4, ...le32(at));
+    }
+    const x = inJpeg(t.slice(0, size));
+    if (readMetadata(x).location) leaksBefore++;
+    assert.equal(readMetadata(withoutLocation(x)).location, null, `case ${i}`);
+  }
+  assert.ok(leaksBefore > 100, `the search does produce positions to strip (${leaksBefore})`);
+  console.log(`hostile EXIF: ${leaksBefore} of 20000 had a position; none kept one after stripping`);
+});
+
 // ── robustness ───────────────────────────────────────────────────────────
 test('broken files: ~3000 truncations and corruptions never throw and never invent a position', () => {
   let seed = 12345;

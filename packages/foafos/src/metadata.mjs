@@ -8,7 +8,8 @@
 //
 // Location: a photo's GPS position is the most sensitive thing it carries. `withoutLocation`
 // returns a copy of a JPEG or PNG whose GPS entries are emptied and whose XMP packets (which can
-// repeat the position) are removed; the rest of the EXIF (camera, date, orientation) stays, and
+// repeat the position) are removed; if a crafted EXIF block still yields a position after that,
+// the whole block is dropped (fail closed); otherwise the rest of the EXIF (camera, date, orientation) stays, and
 // the image data is untouched, so it still opens. The shell uses it when a file is read through a
 // share, so where a photo was taken does not leave with it.
 
@@ -103,6 +104,14 @@ function readTiff(t) {
   return out;
 }
 
+/**
+ * After emptying, is any position still readable? A crafted block can make emptying expose another
+ * GPS IFD (two GPS pointers, one GPS value lying over the other pointer's tag). The checked strip
+ * reads the block again and, if the reader still finds a GPS IFD with entries or a position, drops
+ * the whole EXIF block: it fails closed (theorem stripChecked_no_location, LWS/PodMetadata.lean).
+ */
+const stillLocated = (t) => { const again = readTiff(t); return again.location !== null || (again.gps?.ifd?.n ?? 0) > 0; };
+
 /** Empty a GPS IFD in place: every entry's value bytes zeroed, then the entry count set to 0. */
 function emptyGps(t, gps, le) {
   if (!gps?.ifd) return;
@@ -164,7 +173,7 @@ function jpegWithoutLocation(src) {
       const t = seg.subarray(tiffAt);
       const info = readTiff(t);
       emptyGps(t, info.gps, t[0] === 0x49);
-      parts.push(seg);
+      if (!stillLocated(t)) parts.push(seg);                       // else the EXIF block is dropped whole
       last = s.end;
     }
   }
@@ -240,6 +249,7 @@ function pngWithoutLocation(src) {
       const chunk = src.slice(c.start, c.end);
       const t = chunk.subarray(8, 8 + c.len);
       emptyGps(t, readTiff(t).gps, t[0] === 0x49);
+      if (stillLocated(t)) continue;                               // dropped whole: fail closed
       const crc = crc32(chunk.subarray(4, 8 + c.len));
       chunk[8 + c.len] = crc >>> 24; chunk[9 + c.len] = (crc >>> 16) & 255; chunk[10 + c.len] = (crc >>> 8) & 255; chunk[11 + c.len] = crc & 255;
       parts.push(chunk);
