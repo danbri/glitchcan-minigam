@@ -183,6 +183,7 @@ export class FoafPods {
     this.agi = new Map();           // pod id -> Promise<[{ manifest, wasm, hash, approved, problem }]>
     this.agiLog = [];               // the last runs, newest first: { pod, name, input, output, ok, reason, ms }
     this._agiQueue = Promise.resolve();
+    this._locks = new Map();        // pod id -> the tail of its write queue (measure, write, count)
     this.offers = [];               // shares waiting for their window to open
     this.openDevice = openDevice;   // async (rec, {ask}) => {ok, root} | {ok:false, status, detail}, for carriage 'device'
     this.newAgent = newAgent;
@@ -295,6 +296,7 @@ export class FoafPods {
     if (!old) throw new Error(`no pod "${id}"`);
     const r = checkPod({ ...old, ...changes, id });
     this.pods.set(id, r);
+    if ('agi' in changes) this.agi.delete(id);     // an approval given or taken back holds from now (PodAgi gap 4)
     this._save();
     this._say('pods.updated', { summary: `pod ${id} updated`, id });
     return this.get(id);
@@ -813,20 +815,36 @@ export class FoafPods {
         this._say('pods.done', { summary: `${appId}'s pod.search ${path}: ${hits.length} found`, appId, verb, path, status: 200 });
         return result;
       }
+      // A write or delete measures, writes and counts under the pod's lock, so a handler run cannot
+      // write the same path in between (PodAgi.lean, gap 3); the count moves only after the write
+      // succeeds.
       const quota = this.pods.get(scope.pod)?.quota;
-      let before = 0, after = 0;
-      if (quota && (verb === 'pod.put' || verb === 'pod.delete')) {
-        if (!this.usage.has(scope.pod)) this.usage.set(scope.pod, await this._measure(podFetch, base));
-        before = await this._sizeOf(podFetch, base + encodePath(path));
-        after = verb === 'pod.put' ? bodyBytes(body) : 0;
-        const used = this.usage.get(scope.pod).used;
-        if (verb === 'pod.put' && used - before + after > quota) {
-          return this._refuse(appId, verb, 'quota', `${appId}'s "pod.put" ${path} would take pod ${scope.pod} over its space limit`,
-            { used, quota, needs: after - before });
+      const writes = verb === 'pod.put' || verb === 'pod.delete';
+      const doWrite = async () => {
+        let before = 0, after = 0;
+        if (quota) {
+          if (!this.usage.has(scope.pod)) this.usage.set(scope.pod, await this._measure(podFetch, base));
+          before = await this._sizeOf(podFetch, base + encodePath(path));
+          after = verb === 'pod.put' ? bodyBytes(body) : 0;
+          const used = this.usage.get(scope.pod).used;
+          if (verb === 'pod.put' && used - before + after > quota) {
+            return this._refuse(appId, verb, 'quota', `${appId}'s "pod.put" ${path} would take pod ${scope.pod} over its space limit`,
+              { used, quota, needs: after - before });
+          }
         }
-      }
-      if (verb === 'pod.put') await this._ensureContainers(podFetch, base, path);
-      result = await this._run(verb, podFetch, base, path, params, body);
+        if (verb === 'pod.put') await this._ensureContainers(podFetch, base, path);
+        const res = await this._run(verb, podFetch, base, path, params, body);
+        if (quota && res.ok) {
+          const u = this.usage.get(scope.pod);
+          u.used = Math.max(0, u.used - before + after);
+          res.space = { used: u.used, quota };
+          if (u.used >= quota * 0.9) {
+            this._say('pods.quota', { summary: `pod ${scope.pod} is ${Math.round((100 * u.used) / quota)}% full`, pod: scope.pod, used: u.used, quota });
+          }
+        }
+        return res;
+      };
+      result = writes ? await this._withLock(scope.pod, doWrite) : await this._run(verb, podFetch, base, path, params, body);
       // A photo read through a share leaves without its position (GPS emptied, XMP removed).
       if (shared && verb === 'pod.get' && result.ok && result.body instanceof ArrayBuffer) {
         const before = new Uint8Array(result.body);
@@ -851,14 +869,6 @@ export class FoafPods {
         const { index } = await built;
         if (verb === 'pod.put' && typeof body === 'string' && TEXTUAL.test(String(params.contentType || 'text/plain'))) index.put(path, body);
         else index.remove(path);
-      }
-      if (quota && result.ok && (verb === 'pod.put' || verb === 'pod.delete')) {
-        const u = this.usage.get(scope.pod);
-        u.used = Math.max(0, u.used - before + after);
-        result.space = { used: u.used, quota };
-        if (u.used >= quota * 0.9) {
-          this._say('pods.quota', { summary: `pod ${scope.pod} is ${Math.round((100 * u.used) / quota)}% full`, pod: scope.pod, used: u.used, quota });
-        }
       }
       // A folder's permission can end during a visit: that is a question for the person, not a failure.
       if (result.status === 403 && this.pods.get(scope.pod)?.carriage === 'device') {
@@ -959,6 +969,16 @@ export class FoafPods {
     }
   }
 
+  /** Run `fn` alone among the pod's writes: app writes and handler outputs take turns. */
+  async _withLock(pod, fn) {
+    const prev = this._locks.get(pod) || Promise.resolve();
+    let release;
+    const mine = new Promise((r) => { release = r; });
+    this._locks.set(pod, prev.then(() => mine));
+    await prev;
+    try { return await fn(); } finally { release(); }
+  }
+
   /** Wait until every build-handler run set off so far has finished (for tests and the UI). */
   agiIdle() { return this._agiQueue; }
 
@@ -982,13 +1002,18 @@ export class FoafPods {
           const entry = { name, manifest: null, wasm: null, hash: null, approved: false, problem: null };
           try {
             const mr = await podFetch(base + encodePath(AGI_DIR + name + '.json'));
-            entry.manifest = checkManifest(name, JSON.parse(await mr.text()));
+            const mbytes = new Uint8Array(await mr.arrayBuffer());
+            entry.manifest = checkManifest(name, JSON.parse(new TextDecoder().decode(mbytes)));
+            entry.manifestHash = await sha256(mbytes);
             const wr = await podFetch(base + encodePath(AGI_DIR + name + '.wasm'));
             if (!wr.ok) throw new Error('no .wasm');
             entry.wasm = new Uint8Array(await wr.arrayBuffer());
             const bad = checkModule(entry.wasm);
             if (bad) throw new Error(`module: ${bad}`);
-            entry.hash = await sha256(entry.wasm);
+            // The approval names the program AND its manifest: the manifest decides what the program
+            // reads and where it writes, so editing it withdraws the approval (PodAgi gap 1).
+            entry.programHash = await sha256(entry.wasm);
+            entry.hash = await sha256(new TextEncoder().encode(`${entry.programHash}:${entry.manifestHash}`));
             entry.approved = this.pods.get(podId)?.agi?.[name] === entry.hash;
           } catch (e) { entry.problem = String(e.message || e).slice(0, 200); }
           out.push(entry);
@@ -1008,7 +1033,8 @@ export class FoafPods {
   }
 
   async _runTriggers(pod, podFetch, base, path, written, kind) {
-    const all = (await this.handlersFor(pod)).filter((h) => h.approved && h.manifest);
+    // Approved now, by the record as it stands, for these exact bytes (PodAgi gap 4).
+    const all = (await this.handlersFor(pod)).filter((h) => h.manifest && h.hash && this.pods.get(pod)?.agi?.[h.name] === h.hash);
     for (const h of triggered(all.map((x) => x.manifest), path)) {
       const entry = all.find((x) => x.manifest === h);
       if (h.kind === 'file' && kind === 'pod.delete') continue;            // a deleted file's page stays until rebuilt
@@ -1030,18 +1056,26 @@ export class FoafPods {
       }
       const r = await runHandler(this.makeWorker, entry.wasm, frameInput(h, files));
       if (!r.ok) { log({ ...r, output: out }); continue; }
-      // The output counts against the pod's space limit like any write.
-      const quota = this.pods.get(pod)?.quota;
+      // The output counts against the pod's space limit like any write, under the pod's lock, and
+      // the count moves only after the write succeeds (PodAgi gaps 2 and 3).
       const url = base + encodePath(out);
-      if (quota) {
-        if (!this.usage.has(pod)) this.usage.set(pod, await this._measure(podFetch, base));
-        const before = await this._sizeOf(podFetch, url), u = this.usage.get(pod);
-        if (u.used - before + r.bytes.length > quota) { log({ ok: false, reason: 'quota', output: out }); continue; }
-        u.used = u.used - before + r.bytes.length;
-      }
-      await this._ensureContainers(podFetch, base, out);
       const type = /\.html?$/.test(out) ? 'text/html' : /\.xml$/.test(out) ? (/feed/.test(out) ? 'application/atom+xml' : 'application/xml') : 'text/plain';
-      const w = await podFetch(url, { method: 'PUT', headers: { 'Content-Type': type }, body: r.bytes });
+      const w = await this._withLock(pod, async () => {
+        const quota = this.pods.get(pod)?.quota;
+        let before = 0;
+        if (quota) {
+          if (!this.usage.has(pod)) this.usage.set(pod, await this._measure(podFetch, base));
+          before = await this._sizeOf(podFetch, url);
+          if (this.usage.get(pod).used - before + r.bytes.length > quota) return { ok: false, quota: true };
+        }
+        try {
+          await this._ensureContainers(podFetch, base, out);
+          const put = await podFetch(url, { method: 'PUT', headers: { 'Content-Type': type }, body: r.bytes });
+          if (put.ok && quota) { const u = this.usage.get(pod); u.used = Math.max(0, u.used - before + r.bytes.length); }
+          return { ok: put.ok };
+        } catch { return { ok: false }; }
+      });
+      if (w.quota) { log({ ok: false, reason: 'quota', output: out }); continue; }
       log({ ok: w.ok, reason: w.ok ? null : 'http', output: out });
     }
   }

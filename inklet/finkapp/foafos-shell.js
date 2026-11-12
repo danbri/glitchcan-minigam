@@ -6150,7 +6150,7 @@ function buildUI() {
             if (h.problem) { row.appendChild(el('p', `Cannot run: ${h.problem}`)).className = 'fp-space-warn'; box.appendChild(row); continue; }
             const m = h.manifest;
             row.appendChild(el('p', `${m.description ? m.description + ' — ' : ''}reads ${m.match}, writes ${m.output} (only under ${m.outputDir})`));
-            row.appendChild(el('p', `Program ${h.hash.slice(0, 12)}…, ${h.wasm.length.toLocaleString()} bytes; it has no network, clock or pod of its own.`)).className = 'fp-address';
+            row.appendChild(el('p', `Program ${h.programHash.slice(0, 12)}…, ${h.wasm.length.toLocaleString()} bytes, manifest ${h.manifestHash.slice(0, 12)}…; it has no network, clock or pod of its own. Approving covers both: a change to either asks again.`)).className = 'fp-address';
             if (h.approved) row.appendChild(el('p', 'Approved: runs when a matching file is saved.'));
             else act(row, 'Approve', async () => { await pods.approveHandler(p.id, h.name, h.hash); draw(true); }, true);
             box.appendChild(row);

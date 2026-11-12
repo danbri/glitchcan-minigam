@@ -383,7 +383,7 @@ test('build handlers: a folder handler builds one feed; a handler that loops is 
   await r.pods.agiIdle();
   assert.ok(!r.storage.res.has('/out/x.txt'));
   assert.equal(r.pods.agiLog[0].reason, 'timeout');
-  assert.equal(await sha256(FEED), (await r.pods.handlersFor('home')).find((h) => h.name === 'feed').hash);
+  assert.equal(await sha256(FEED), (await r.pods.handlersFor('home')).find((h) => h.name === 'feed').programHash);
 });
 
 test('quota: a pod without one is not measured', async () => {
@@ -997,4 +997,94 @@ test('removing the shared pod leaves apps with no pod, and picks no extra pod', 
   await r.pods.connect('next');
   r.pods.grant('notes', { 'pod:read': { pod: 'next' } });
   assert.equal(r.pods.scopeFor('notes', 'pod:read', handle).pod, 'vault');
+});
+
+// ── /agi-bin/ gaps found by the Lean spec (factoidal-core LWS/PodAgi.lean), each now a regression test ──
+const realSize = (st) => { let n = 0; for (const v of st.res.values()) if (!v.container) n += (v.body instanceof Uint8Array ? v.body.length : new TextEncoder().encode(String(v.body)).length); return n; };
+
+test('agi gap 1 (fixed): editing a manifest withdraws the approval, so a program cannot be re-pointed at private files', async () => {
+  const r = await granted();
+  r.pods.makeWorker = nodeWorker;
+  r.pods.grant('files', { 'pod:read': { pod: 'home', prefix: '' }, 'pod:write': { pod: 'home', prefix: '' } });
+  // mallory may write anywhere (a sync or backup app) but read only public/.
+  r.pods.grant('mallory', { 'pod:read': { pod: 'home', prefix: 'public/' }, 'pod:write': { pod: 'home', prefix: '' } });
+  const put = (app, path, body, contentType = 'text/plain') => r.pods.invoke(app, 'pod.put', { path, body, contentType });
+  await put('files', 'agi-bin/md2html.json', JSON.stringify({ match: 'notes/**/*.md', outputDir: 'site/', output: 'site/{dir}{name}.html' }), 'application/json');
+  await put('files', 'agi-bin/md2html.wasm', MD2HTML, 'application/wasm');
+  for (const h of await r.pods.handlersFor('home')) await r.pods.approveHandler('home', h.name, h.hash);
+  assert.equal((await r.pods.invoke('mallory', 'pod.get', { path: '../private/diary.md' })).reason, 'bad-params');
+  // mallory rewrites the manifest only; the .wasm (and so the approval) is unchanged.
+  await put('mallory', 'agi-bin/md2html.json', JSON.stringify({ match: 'private/*.md', outputDir: 'public/', output: 'public/{name}.html' }), 'application/json');
+  const hs = await r.pods.handlersFor('home');
+  assert.equal(hs.find((h) => h.name === 'md2html').approved, false, 'the manifest changed, so the approval no longer holds');
+  // The owner writes a private note.
+  await put('files', 'private/diary.md', '# Secret\n\nThe safe code is 4321.');
+  await r.pods.agiIdle();
+  const leak = await r.pods.invoke('mallory', 'pod.get', { path: 'diary.html' });
+  assert.equal(leak.ok, false, 'nothing was copied out');
+});
+
+test('agi gap 2 (fixed): a handler\'s failed write does not move the space count, so the pod cannot pass its limit', async () => {
+  const st = sizedStorage();
+  const inner = st.fetch;
+  st.fetch = async (url, init = {}) => {
+    if ((init.method || '').toUpperCase() === 'PUT' && String(url).endsWith('site/notes/a.html') && st.failSite) return new Response(null, { status: 507 });
+    return inner(url, init);
+  };
+  const r = await granted({ storageImpl: st });
+  r.pods.makeWorker = nodeWorker;
+  r.pods.grant('files', { 'pod:read': { pod: 'home', prefix: '' }, 'pod:write': { pod: 'home', prefix: '' } });
+  const put = (path, body, contentType = 'text/plain') => r.pods.invoke('files', 'pod.put', { path, body, contentType });
+  await put('agi-bin/md2html.json', JSON.stringify({ match: 'notes/**/*.md', outputDir: 'site/', output: 'site/{dir}{name}.html' }), 'application/json');
+  await put('agi-bin/md2html.wasm', MD2HTML, 'application/wasm');
+  for (const h of await r.pods.handlersFor('home')) await r.pods.approveHandler('home', h.name, h.hash);
+  await put('site/notes/a.html', 'x'.repeat(600));
+  const q = realSize(st) + 100;
+  r.pods.update('home', { quota: q });
+  st.failSite = true;
+  await put('notes/a.md', '# A');
+  await r.pods.agiIdle();
+  assert.equal(r.pods.get('home').usage, realSize(st), 'the count matches what is stored');
+  const room = q - r.pods.get('home').usage;
+  await put('big.txt', 'y'.repeat(room));
+  assert.ok(realSize(st) <= q, 'within the limit');
+});
+
+test('agi gap 3 (fixed): an app write and a handler run on the same path take turns, so the count stays exact', async () => {
+  const st = sizedStorage();
+  const inner = st.fetch;
+  st.fetch = async (url, init = {}) => {
+    if ((init.method || '').toUpperCase() === 'PUT' && String(url).endsWith('site/notes/a.html') && st.slowOnce) { st.slowOnce = false; await new Promise((ok) => setTimeout(ok, 500)); }
+    return inner(url, init);
+  };
+  const r = await granted({ storageImpl: st });
+  r.pods.makeWorker = nodeWorker;
+  r.pods.grant('files', { 'pod:read': { pod: 'home', prefix: '' }, 'pod:write': { pod: 'home', prefix: '' } });
+  const put = (path, body, contentType = 'text/plain') => r.pods.invoke('files', 'pod.put', { path, body, contentType });
+  await put('agi-bin/md2html.json', JSON.stringify({ match: 'notes/**/*.md', outputDir: 'site/', output: 'site/{dir}{name}.html' }), 'application/json');
+  await put('agi-bin/md2html.wasm', MD2HTML, 'application/wasm');
+  for (const h of await r.pods.handlersFor('home')) await r.pods.approveHandler('home', h.name, h.hash);
+  await put('site/notes/a.html', 'x'.repeat(600));
+  const q = realSize(st) + 100;
+  r.pods.update('home', { quota: q });
+  await put('notes/a.md', '# A');          // sets off md2html, which runs after this returns
+  st.slowOnce = true;
+  await put('site/notes/a.html', 'z'.repeat(600));   // the app's own page, same size as before
+  await r.pods.agiIdle();
+  assert.equal(r.pods.get('home').usage, realSize(st));
+});
+
+test('agi gap 4 (fixed): taking an approval out of the pod record stops the handler at once', async () => {
+  const r = await granted();
+  r.pods.makeWorker = nodeWorker;
+  r.pods.grant('files', { 'pod:read': { pod: 'home', prefix: '' }, 'pod:write': { pod: 'home', prefix: '' } });
+  const put = (path, body, contentType = 'text/plain') => r.pods.invoke('files', 'pod.put', { path, body, contentType });
+  await put('agi-bin/md2html.json', JSON.stringify({ match: 'notes/**/*.md', outputDir: 'site/', output: 'site/{dir}{name}.html' }), 'application/json');
+  await put('agi-bin/md2html.wasm', MD2HTML, 'application/wasm');
+  for (const h of await r.pods.handlersFor('home')) await r.pods.approveHandler('home', h.name, h.hash);
+  await r.pods.handlersFor('home');
+  r.pods.update('home', { agi: {} });
+  await put('notes/b.md', '# B');
+  await r.pods.agiIdle();
+  assert.ok(!r.storage.res.has('/site/notes/b.html'));
 });
