@@ -2907,6 +2907,13 @@ function buildUI() {
       if (step) { e.preventDefault(); hits[(at + step + hits.length) % hits.length]?.focus(); }
     };
     document.addEventListener('keydown', strip._keys);
+    // A tap on the empty space around the cards leaves, as a phone's task switcher does.
+    strip._away = (e) => {
+      if (e.target.closest?.('.foafos-ov, #foafos-ov-strip, #wm-chrome')) return;
+      e.preventDefault(); e.stopPropagation();
+      exitOverview(null);
+    };
+    setTimeout(() => document.addEventListener('pointerdown', strip._away, true), 0);
 
     bus.publish('wm.overview', { summary: `overview: ${wins.length} windows`, count: wins.length, on: true });
   }
@@ -2916,6 +2923,7 @@ function buildUI() {
     document.body.classList.remove('foafos-overview-on');
     const ovStrip = document.getElementById('foafos-ov-strip');
     if (ovStrip?._keys) document.removeEventListener('keydown', ovStrip._keys);
+    if (ovStrip?._away) document.removeEventListener('pointerdown', ovStrip._away, true);
     ovStrip?.remove();
     for (const win of document.querySelectorAll('.foafos-ov')) {
       win.querySelector('.foafos-ov-hit')?.remove();
