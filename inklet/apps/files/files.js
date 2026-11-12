@@ -813,19 +813,46 @@
     if (inArchive()) { e.preventDefault(); pane.classList.remove('dropping'); say('This is inside an archive, which is read only. Drop files into a folder.', true); return; }
     e.preventDefault();
     pane.classList.remove('dropping');
+    await addFiles(files);
+  });
+  // A name in this folder that is not taken: "image.png", then "image 2.png".
+  const freeName = (name) => {
+    const taken = new Set(items.map((i) => i.path));
+    const dot = name.lastIndexOf('.');
+    const stem = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
+    let n = 1, to;
+    do { to = `${stem}${n > 1 ? ` ${n}` : ''}${ext}`; n++; } while (taken.has(folder + to) && n < 1000);
+    return to;
+  };
+  // Files dropped or pasted into this folder. A drop keeps each file's name, as a copy onto a
+  // folder does; a paste never replaces a file, so a second screenshot is "Pasted image 2.png".
+  async function addFiles(files, { paste = false } = {}) {
     const added = [], left = [];
     for (const f of files) {
       const texty = /^text\/|json|xml|javascript|turtle|n-triples|markdown/.test(f.type) || /\.(txt|md|csv|json|ttl|nt|jsonld|html?|css|js|mjs|xml|svg|ya?ml|log)$/i.test(f.name);
       // Text up to 1 MiB goes as text; anything else up to 8 MiB as bytes.
       if (f.size > (texty ? 1024 * 1024 : 8 * 1024 * 1024)) { left.push(f.name); continue; }
-      const name = cleanName(f.name);
+      const given = cleanName(f.name) || 'Pasted';
+      const name = paste ? freeName(/^image\.\w+$/.test(given) ? `Pasted ${given}` : given) : given;
       forgetThumb(folder + name);
       const r = await foafos.pod.put(folder + name, texty ? await f.text() : await f.arrayBuffer(),
-        { contentType: f.type || (texty ? 'text/plain' : 'application/octet-stream') });
+        { contentType: f.type || (texty ? 'text/plain' : 'application/octet-stream'), ...(paste ? { ifNoneMatch: true } : {}) });
       (r.ok ? added : left).push(name);
     }
     await go(folder, { remember: false });
     say([added.length ? `Added ${added.join(', ')}.` : '', left.length ? `Not added (too large: text up to 1 MiB, other files up to 8 MiB): ${left.join(', ')}.` : ''].filter(Boolean).join(' '), !!left.length && !added.length);
+    if (added.length === 1) pick({ path: folder + added[0], container: false });
+  }
+  // Paste (Ctrl+V, Cmd+V) into the folder: copied files or a screenshot become files here, and
+  // copied text becomes "Pasted text.txt". Not while typing in a field, where paste is the field's.
+  document.addEventListener('paste', async (e) => {
+    if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+    const files = [...(e.clipboardData?.files || [])];
+    const text = files.length ? '' : e.clipboardData?.getData('text/plain') || '';
+    if (!files.length && !text) return;
+    e.preventDefault();
+    if (inArchive()) { say('This is inside an archive, which is read only. Paste into a folder.', true); return; }
+    await addFiles(files.length ? files : [new File([text], 'Pasted text.txt', { type: 'text/plain' })], { paste: true });
   });
 
   $('new-file').addEventListener('click', askNewFile);

@@ -232,6 +232,29 @@ try {
   });
   check(dropped.lit && dropped.body === 'dropped text' && dropped.same && /huge\.bin/.test(dropped.said) && !/photo\.png/.test(dropped.said.split('Not added')[1] || ''),
     `dropping files adds text and a photo, and names the one too large (${JSON.stringify(dropped)})`);
+  // Pasting: a screenshot (named image.png by the browser) becomes "Pasted image.png", a second
+  // one "Pasted image 2.png", never over the first; copied text becomes "Pasted text.txt".
+  // In a text field, paste is the field's own.
+  const pasted = await f.evaluate(async () => {
+    await window.__files.go('notes/');
+    const png1 = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+    const paste = (fill, target = document.body) => { const dt = new DataTransfer(); fill(dt); target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); };
+    const settle = () => new Promise((r) => setTimeout(r, 500));
+    paste((dt) => dt.items.add(new File([png1], 'image.png', { type: 'image/png' }))); await settle();
+    paste((dt) => dt.items.add(new File([png1], 'image.png', { type: 'image/png' }))); await settle();
+    paste((dt) => dt.setData('text/plain', 'a line I copied')); await settle();
+    const filter = document.getElementById('filter');
+    const before = (await foafos.pod.list('notes/')).items.length;
+    paste((dt) => dt.setData('text/plain', 'typed into the filter'), filter); await settle();
+    const after = (await foafos.pod.list('notes/')).items.length;
+    const one = await foafos.pod.get('notes/Pasted image.png', { as: 'bytes' }), two = await foafos.pod.get('notes/Pasted image 2.png', { as: 'bytes' }), txt = await foafos.pod.get('notes/Pasted text.txt');
+    const out = { one: one.ok && one.contentType === 'image/png' && new Uint8Array(one.body).length === png1.length, two: two.ok, txt: txt.body, filterLeft: before === after, picked: window.__files.state().picked?.path ?? null };
+    for (const p of ['notes/Pasted image.png', 'notes/Pasted image 2.png', 'notes/Pasted text.txt']) await foafos.pod.delete(p);
+    await window.__files.go('notes/');
+    return out;
+  });
+  check(pasted.one && pasted.two && pasted.txt === 'a line I copied' && pasted.filterLeft,
+    `pasting adds a screenshot, a second beside it, and copied text; not while typing in the filter (${JSON.stringify(pasted)})`);
   // Size and Modified columns, from the listing; sorting by size puts the larger file last.
   const cols = await f.evaluate(async () => {
     await foafos.pod.put('notes/big.txt', 'x'.repeat(5000), { contentType: 'text/plain' });
