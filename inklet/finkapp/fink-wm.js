@@ -68,6 +68,7 @@ window.FinkWM = {
                       'wm-sys-close': () => window.FoafOS?.closeFront?.(),
                       'wm-sys-move': () => window.FoafOS?.moveFrontByKeys?.(),
                       'wm-sys-reopen': () => window.FoafOS?.reopenClosed?.(),
+                      'wm-sys-nudge': () => window.FoafOS?.runNudge?.(),
                       'wm-sys-activity': () => window.FoafOS?.openActivity?.() };
         for (const [id, go] of Object.entries(sys)) {
             document.getElementById(id)?.addEventListener('click', () => { this._setCollapsed(true); go(); });
