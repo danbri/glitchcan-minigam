@@ -703,6 +703,14 @@
   $('filter').addEventListener('input', drawItems);
   // From the filter: Down moves into the list, Enter opens the top match (as in All apps).
   $('filter').addEventListener('keydown', (e) => {
+    // Escape clears the filter, and after a search across folders goes back to the folder you were in.
+    if (e.key === 'Escape' && ($('filter').value || searchResults)) {
+      e.preventDefault();
+      e.stopPropagation();
+      $('filter').value = '';
+      if (searchResults) go(folder, { remember: false }); else drawItems();
+      return;
+    }
     if (e.key !== 'ArrowDown' && e.key !== 'Enter') return;
     const first = $('items').querySelector('tbody tr, .grid [role=option]');
     if (!first) return;

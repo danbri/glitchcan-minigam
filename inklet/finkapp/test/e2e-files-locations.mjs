@@ -239,12 +239,15 @@ try {
     for (let i = 0; i < 40 && !document.querySelector('#items tbody tr[data-path="notes/trip.txt"]'); i++) await new Promise((r) => setTimeout(r, 100));
     const row = document.querySelector('#items tbody tr[data-path="notes/trip.txt"]');
     const out = { row: !!row, hit: row?.querySelector('.hit')?.textContent || '', said: document.getElementById('status').textContent };
-    filter.value = ''; filter.dispatchEvent(new Event('input'));
+    // Escape in the filter clears it and goes back to the folder: no search results left.
+    filter.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await new Promise((r) => setTimeout(r, 300));
+    out.escaped = filter.value === '' && !document.querySelector('#items .hit') && window.__files.state().folder === '';
     await foafos.pod.delete('notes/trip.txt');
     await window.__files.go('');
     return out;
   });
-  check(found.row && /blue kayak/.test(found.hit) && /notes\//.test(found.hit) && /by what is in them/.test(found.said),
+  check(found.row && /blue kayak/.test(found.hit) && /notes\//.test(found.hit) && /by what is in them/.test(found.said) && found.escaped,
     `search finds a word inside a file and shows the line (${JSON.stringify(found)})`);
   // An archive opens as a read-only folder: look inside, read a file, nothing can be made there.
   const zipBytes = [...makeZip([{ name: 'readme.txt', data: 'Inside the zip.' }, { name: 'docs/plan.md', data: '# Plan' }])];
