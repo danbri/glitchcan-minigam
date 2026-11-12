@@ -102,6 +102,18 @@ try {
   await page.waitForTimeout(500);
   check(await onTop(page, '#foafos-session-win'), 'what you open comes to the front');
 
+  // All apps marks the apps that are open, as a dock does, and says so to a screen reader
+  await keys(page, [';', 'a']);
+  const marks = await page.evaluate(() => {
+    const b = (id) => document.querySelector(`#foafos-home .foafos-app[data-app="${id}"]`);
+    const dot = (id) => getComputedStyle(b(id).querySelector('.ico'), '::after').content;
+    return { chat: b('chat')?.classList.contains('running'), system: b('system')?.classList.contains('running'), files: b('files')?.classList.contains('running'),
+      label: b('chat')?.getAttribute('aria-label'), dot: dot('chat'), noDot: dot('files') };
+  });
+  await page.keyboard.press('Escape');
+  check(marks.chat && marks.system && !marks.files && /^Chat, open/.test(marks.label) && marks.dot === '""' && marks.noDot === 'none',
+    `All apps marks the open apps (${JSON.stringify(marks)})`);
+
   // A window comes back where it was left (dragged a little, so it stays wholly on screen: a window
   // left partly off screen comes back pulled on, by design)
   const bar = await page.evaluate(() => { const r = document.querySelector('#foafos-session-win .foafos-window-bar span').getBoundingClientRect(); return { x: r.x + 10, y: r.y + r.height / 2 }; });

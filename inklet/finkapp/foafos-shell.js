@@ -3310,6 +3310,11 @@ function buildUI() {
       <div class="foafos-home-body"></div>`;
     const body = home.querySelector('.foafos-home-body');
     const find = home.querySelector('.foafos-home-search input');
+    // Which apps are open now: a dot under each, as on a dock, so you can tell a launch from a switch.
+    const running = new Set([
+      ...[...document.querySelectorAll('.foafos-window[data-opened-as]')].map((w) => w.dataset.openedAs),
+      ...[...apps.nodes.values()].map((n) => n.appId),
+    ]);
     // Folders, as in a Start menu: which are open is kept, so it scales past one screen.
     const OPEN_KEY = 'foafos.apps.open';
     let restoredAt = -1e9;
@@ -3389,8 +3394,10 @@ function buildUI() {
           b.setAttribute('aria-pressed', String(chromeOn));
           b.classList.toggle('on', chromeOn);
         }
+        const isOpen = !isChrome && running.has(app.id);
+        b.classList.toggle('running', isOpen);
         b.setAttribute('aria-label',
-          `${app.name}${app.desc ? ` — ${app.desc}` : ''}${isChrome ? (chromeOn ? ', on' : ', off') : ''}`);
+          `${app.name}${isOpen ? ', open' : ''}${app.desc ? ` — ${app.desc}` : ''}${isChrome ? (chromeOn ? ', on' : ', off') : ''}`);
         b.addEventListener('click', () => {
           if (app.run) { app.run(); home.remove(); return; }
           noteRecent(app.id);
