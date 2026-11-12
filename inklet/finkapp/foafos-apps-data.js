@@ -638,5 +638,20 @@ export const APPS = [
       "shell"
     ],
     "silent": true
+  },
+  {
+    "id": "guest-conformance",
+    "family": "make",
+    "icon": "🧪",
+    "name": "foafos-lite conformance",
+    "surface": "window",
+    "url": "../../packages/foafos-guest/conformance/app.html",
+    "desc": "The foafos-lite guest contract's conformance checks, run by a small app",
+    "foafosLevel": 2,
+    "listed": false,
+    "capabilities": [
+      "pod:read",
+      "pod:write"
+    ]
   }
 ];

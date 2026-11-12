@@ -26,7 +26,9 @@ const LD_KEYS = ['@context', '@id', '@type', 'position', 'notes'];   // manifest
 const MEMBERS = new Set(['position', 'notes', 'id', 'family', 'icon', 'name', 'surface', 'url', 'desc',
   'capabilities', 'silent', 'game', 'controls', 'tools', 'wholePod', 'inline', 'aliases', 'args', 'variables', 'features', 'opens',
   'story', 'bus', 'featured', 'external', 'persists', 'panel', 'mount',
-  'instances', 'handles', 'actions', 'delegates', 'storage', 'headless', 'shows']);
+  'instances', 'handles', 'actions', 'delegates', 'storage', 'headless', 'shows',
+  // foafos-lite (docs/foafos-lite-contract.md): the guest contract level, and a fixture kept out of All apps
+  'foafosLevel', 'listed']);
 
 const files = readdirSync(dir).filter((f) => f.endsWith('.jsonld')).sort();
 const { handlesProblems } = await import('../../packages/foafos/src/handlers.mjs');

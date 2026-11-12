@@ -1,0 +1,24 @@
+{
+  "@context": {
+    "@vocab": "https://danbri.github.io/glitchcan-minigam/inklet/finkapp/apps/vocab#"
+  },
+  "@id": "guest-conformance",
+  "@type": "App",
+  "position": 38,
+  "id": "guest-conformance",
+  "family": "make",
+  "icon": "🧪",
+  "name": "foafos-lite conformance",
+  "surface": "window",
+  "url": "../../packages/foafos-guest/conformance/app.html",
+  "desc": "The foafos-lite guest contract's conformance checks, run by a small app",
+  "foafosLevel": 2,
+  "listed": false,
+  "capabilities": [
+    "pod:read",
+    "pod:write"
+  ],
+  "notes": [
+    "A test fixture (issue 1038 step 4), not listed in All apps: it runs packages/foafos-guest/conformance/suite.mjs through @foafos/guest. Opened by id from inklet/finkapp/test/e2e-guest-conformance.mjs. The same app and checks run standalone and under @foafos/host-lite in packages/foafos-host-lite/test/conformance.test.mjs."
+  ]
+}

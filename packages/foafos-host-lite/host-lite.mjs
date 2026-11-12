@@ -21,7 +21,9 @@ export function memoryStore() {
  * `window: w`. Options:
  *   offer   the most this host grants (0..3)
  *   folder  the app's folder name in `store` (its keys are folder + '/' + path)
- *   store   { get, put, delete, keys }; none: no storage is offered (level 2 is not granted)
+ *   store   { get, put, delete, keys }, and optionally list(prefix) → [{ path, container }]; put may
+ *           return { etag } when the store versions what it holds. None: no storage is offered
+ *           (level 2 is not granted)
  *   topics  the topics the person lets this app hear (level 3)
  *   onActions(items), onReady(), onTools(items), onPublish(topic, data), onPaused(), onHello(hello)
  * Returns a host with pause(), resume(), end(), audio(level, muted), viewport(v), input(map),
@@ -48,10 +50,17 @@ export function hostApp(frame, { offer = 1, folder = 'app', store = null, topics
         const cur = await store.get(key(segs));
         if (d.etag && cur?.etag !== d.etag) return reply({ ok: false, reason: 'conflict' });
         const etag = `"${++seq}"`;
-        await store.put(key(segs), { body: d.body, contentType: d.contentType || 'text/plain', etag });
-        return reply({ ok: true, etag });
+        // A store that keeps its own versions (a pod) says which one it made; that is the etag the
+        // guest must send back, since the next get reads it from the store.
+        const made = await store.put(key(segs), { body: d.body, contentType: d.contentType || 'text/plain', etag });
+        return reply({ ok: true, etag: made?.etag ?? etag });
       }
       if (d.op === 'delete') { await store.delete(key(segs)); return reply({ ok: true }); }
+      if (list && store.list) {
+        // A store that can list a folder itself (a pod) does, rather than reading every key.
+        const items = await store.list(segs.length ? key(segs) + '/' : `${folder}/`);
+        return reply({ ok: true, items: items.map((i) => ({ path: i.path, container: !!i.container })).sort((a, b) => (a.path < b.path ? -1 : 1)) });
+      }
       if (list) {
         const pre = segs.length ? key(segs) + '/' : `${folder}/`, seen = new Set();
         for (const k of await store.keys()) if (k.startsWith(pre)) { const rest = k.slice(pre.length), i = rest.indexOf('/'); seen.add(i < 0 ? rest : rest.slice(0, i + 1)); }

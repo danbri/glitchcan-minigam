@@ -18,6 +18,7 @@ import {
   defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, PERSON, describeLocation, handlersFor, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { FoafTools } from '../../packages/foafos/src/tools.mjs';
+import { hostApp } from '../../packages/foafos-host-lite/host-lite.mjs';
 import { lwsAgentFetch } from '../../packages/foafos/src/lws-agent.mjs';
 import { FoafPlaces, placesTools } from '../../packages/foafos/src/places.mjs';
 import { createChatCommands } from '../../packages/foafos/src/chat-commands.mjs';
@@ -3294,7 +3295,8 @@ function buildUI() {
       ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) })),
       { id: 'widgets', label: 'Widgets', icon: '🧩', apps: WIDGET_CATALOG.map(widgetEntry) }];
     for (const fam of groups) {
-      const offered = fam.apps.filter(a => a.run || rootOffers(ROOT, a.id));
+      // An app whose manifest says `"listed": false` (a test fixture) opens by id, not from here.
+      const offered = fam.apps.filter(a => a.listed !== false && (a.run || rootOffers(ROOT, a.id)));
       if (!offered.length) continue;
       const sec = document.createElement('section');
       const folder = document.createElement('details');
@@ -3840,6 +3842,44 @@ function buildUI() {
     capUse.set(appId, u);
   }
 
+  // A foafos-lite app's menu of actions: a ⋯ button in its window bar, one row per action.
+  function setLiteActions(win, items, choose) {
+    const bar = win.querySelector('.foafos-window-bar');
+    let btn = bar?.querySelector('.foafos-lite-menu');
+    if (!items.length) { btn?.remove(); return; }
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'foafos-window-btn foafos-lite-menu';
+      btn.textContent = '⋯';
+      btn.setAttribute('aria-haspopup', 'menu');
+      const controls = bar.querySelector('.foafos-window-controls');
+      controls.insertBefore(btn, controls.firstChild);
+      btn.title = 'Actions';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = win.querySelector('.foafos-lite-list');
+        if (open) { open.remove(); return; }
+        const list = document.createElement('div');
+        list.className = 'foafos-lite-list';
+        list.setAttribute('role', 'menu');
+        for (const it of btn._items) {
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.setAttribute('role', it.checked === undefined ? 'menuitem' : 'menuitemcheckbox');
+          if (it.checked !== undefined) row.setAttribute('aria-checked', String(it.checked));
+          row.textContent = `${it.checked ? '✓ ' : ''}${it.label}`;
+          row.addEventListener('click', () => { list.remove(); choose(it.id); });
+          list.appendChild(row);
+        }
+        win.appendChild(list);
+        list.querySelector('button')?.focus();
+      });
+    }
+    btn._items = items;
+    btn.setAttribute('aria-label', `${items.length} action${items.length === 1 ? '' : 's'}`);
+  }
+
   function governAppFrame(frame, app, win, node) {
     const sinkId = `app:${app.id}:${win.dataset.wid}`;
     const caps = app.capabilities || [];
@@ -3880,10 +3920,40 @@ function buildUI() {
     });
 
     let bootTaken;                   // the boot story, if this window's launch took it
+    // ── foafos-lite guests (docs/foafos-lite-contract.md) ─────────────
+    // An app whose manifest declares `foafosLevel` speaks the guest contract through
+    // @foafos/guest, not app-sdk.js. @foafos/host-lite answers it for the shell: at most level
+    // 2 here (level 3's tools and bus are the full SDK's for now), storage in the app's own scope
+    // of the shared pod (its pod grants, asked at each call), lifecycle from Task Manager's pause
+    // and the window's close, the audio level, the frame's size, and its menu of actions.
+    let lite = null;
+    if (Number.isInteger(app.foafosLevel)) {
+      const rel = (k) => k.replace(/^app\/?/, '');
+      const call = (verb, params) => pods.invoke(app.id, verb, params, { holder: nodeId });
+      const podStore = {
+        get: async (k) => { const r = await call('pod.get', { path: rel(k) }); if (r.ok) return { body: r.body, contentType: r.contentType, etag: r.etag }; if (r.status === 404) return undefined; throw new Error(r.reason); },
+        put: async (k, v) => { const r = await call('pod.put', { path: rel(k), body: v.body, contentType: v.contentType }); if (!r.ok) throw new Error(r.reason); return { etag: r.etag }; },
+        delete: async (k) => { const r = await call('pod.delete', { path: rel(k) }); if (!r.ok && r.status !== 404) throw new Error(r.reason); },
+        keys: async () => [],
+        list: async (prefix) => { const r = await call('pod.list', { path: rel(prefix) }); if (r.ok) return r.items; if (r.status === 404) return []; throw new Error(r.reason); },
+      };
+      const canStore = holds('pod:read') && holds('pod:write');
+      lite = hostApp(frame, {
+        offer: Math.max(0, Math.min(app.foafosLevel, canStore ? 2 : 1)), folder: 'app', store: canStore ? podStore : null, window,
+        audio: { level: audio.volume ?? 1, muted: !!audio.muted },
+        onHello: (h) => bus.publish('sys.guest.lite', { summary: `${app.name} speaks foafos-lite, asks level ${h.level}`, id: app.id, asked: h.level }),
+        onActions: (items) => setLiteActions(win, items, (id) => lite.action(id)),
+      });
+      win._liteHost = lite;
+      audio.register(sinkId, (level) => lite.audio(level, audio.muted), { label: app.name, kind: 'app' });
+      new ResizeObserver(() => lite.viewport()).observe(frame);
+    }
+
     const onMsg = (e) => {
       if (e.source !== frame.contentWindow) return;      // provenance, always
       const d = e.data;
       if (!d || typeof d.type !== 'string') return;
+      if (d.fl !== undefined) return;                    // the guest contract: host-lite answers it
 
       // ── the app protocol ──────────────────────────────────────────
       // An app that loads app-sdk.js says hello; we answer with its id,
@@ -4715,6 +4785,7 @@ function buildUI() {
     // and the coverage count lies.
     new MutationObserver((_, obs) => {
       if (!win.isConnected) {
+        lite?.end(); lite?.detach();
         window.removeEventListener('message', onMsg);
         audio.unregister(sinkId);
         scoped.close();
@@ -5429,6 +5500,7 @@ function buildUI() {
       if (frame) {
         try {
           frame.contentWindow?.postMessage({ type: suspended ? 'app.suspend' : 'app.resume' }, '*');
+        win._liteHost?.[suspended ? 'pause' : 'resume']();
         } catch (e) { /* closed */ }
         win.classList.toggle('suspended', suspended);
       }
