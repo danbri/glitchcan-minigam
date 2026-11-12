@@ -3275,15 +3275,19 @@ function buildUI() {
     const essentials = ESSENTIALS.map(appById).filter((a) => a && rootOffers(ROOT, a.id));
     let recent = [];
     try { recent = (JSON.parse(localStorage.getItem(RECENT_KEY)) || []).map(appById).filter((a) => a && rootOffers(ROOT, a.id) && a.surface !== 'chrome'); } catch { /* none yet */ }
-    const pinned = pinnedIds().map(appById).filter((a) => a && rootOffers(ROOT, a.id));
+    // A widget is pinned by its id ("widget-tally") and opened as from the Widgets folder.
+    const widgetEntry = (w) => { const [icon, ...name] = w.title.split(' '); return { id: `widget-${w.key}`, icon, name: name.join(' '), desc: w.desc || 'A small sandboxed widget', run: () => openWidgetWindow(w) }; };
+    const pinnedEntry = (id) => {
+      if (id.startsWith('widget-')) { const w = WIDGET_CATALOG.find((x) => `widget-${x.key}` === id); return w ? widgetEntry(w) : null; }
+      const a = appById(id);
+      return a && rootOffers(ROOT, a.id) ? a : null;
+    };
+    const pinned = pinnedIds().map(pinnedEntry).filter(Boolean);
     const groups = [...(pinned.length ? [{ id: 'pinned', label: 'Pinned', icon: '📌', apps: pinned }] : []),
       ...(recent.length ? [{ id: 'recent', label: 'Recent', icon: '🕘', apps: recent }] : []),
       { id: 'essentials', label: 'Essentials', icon: '⭐', apps: essentials },
       ...appsByFamily().map((f) => ({ ...f, apps: f.apps.filter((a) => !ESSENTIALS.includes(a.id)) })),
-      { id: 'widgets', label: 'Widgets', icon: '🧩', apps: WIDGET_CATALOG.map((w) => {
-        const [icon, ...name] = w.title.split(' ');
-        return { id: `widget-${w.key}`, icon, name: name.join(' '), desc: w.desc || 'A small sandboxed widget', run: () => openWidgetWindow(w) };
-      }) }];
+      { id: 'widgets', label: 'Widgets', icon: '🧩', apps: WIDGET_CATALOG.map(widgetEntry) }];
     for (const fam of groups) {
       const offered = fam.apps.filter(a => a.run || rootOffers(ROOT, a.id));
       if (!offered.length) continue;
@@ -3342,7 +3346,7 @@ function buildUI() {
         cell.setAttribute('role', 'listitem');
         b.removeAttribute('role');
         cell.appendChild(b);
-        if (!app.run && !isChrome) {
+        if (!isChrome) {
           const isPinned = pinnedIds().includes(app.id);
           const pin = document.createElement('button');
           pin.type = 'button';

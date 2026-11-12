@@ -65,6 +65,19 @@ try {
   check(pinnedNow.first === 'pinned' && pinnedNow.apps.join() === 'files' && /Unpin Files/.test(pinnedNow.focus || '') && unpinned,
     `☆ pins an app at the top of All apps, ★ unpins it (${JSON.stringify({ ...pinnedNow, unpinned })})`);
 
+  // A widget can be pinned too, and opens from Pinned
+  await page.evaluate(() => { const d = document.querySelector('#foafos-home details[data-folder="widgets"]'); d.open = true; d.querySelector('.foafos-app[data-app="widget-tally"] + .foafos-app-pin').click(); });
+  await page.waitForTimeout(200);
+  const wPinned = await page.evaluate(() => [...document.querySelectorAll('#foafos-home details[data-folder="pinned"] .foafos-app')].map((b) => b.dataset.app));
+  const tallyBefore = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => /Tally/.test(w.textContent)).length);
+  await page.evaluate(() => document.querySelector('#foafos-home details[data-folder="pinned"] .foafos-app[data-app="widget-tally"]').click());
+  await page.waitForTimeout(600);
+  const tallyAfter = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => /Tally/.test(w.textContent)).length);
+  await page.evaluate(() => { localStorage.removeItem('foafos.apps.pinned'); [...document.querySelectorAll('.foafos-window')].filter((w) => /Tally/.test(w.textContent)).forEach((w) => w.querySelector('.foafos-window-close')?.click()); });
+  await page.waitForTimeout(300);
+  await keys(page, [';', 'a']);
+  check(wPinned.join() === 'widget-tally' && tallyAfter === tallyBefore + 1, `a widget can be pinned and opens from Pinned (${wPinned}, ${tallyBefore} → ${tallyAfter})`);
+
   // Arrow keys: Down from search enters the grid, Right moves along, Up from the top row returns to search
   await page.fill('.foafos-home-search input', '');
   await page.waitForTimeout(200);
@@ -89,10 +102,11 @@ try {
   await page.waitForTimeout(500);
   check(await onTop(page, '#foafos-session-win'), 'what you open comes to the front');
 
-  // A window comes back where it was left
+  // A window comes back where it was left (dragged a little, so it stays wholly on screen: a window
+  // left partly off screen comes back pulled on, by design)
   const bar = await page.evaluate(() => { const r = document.querySelector('#foafos-session-win .foafos-window-bar span').getBoundingClientRect(); return { x: r.x + 10, y: r.y + r.height / 2 }; });
   await page.mouse.move(bar.x, bar.y); await page.mouse.down();
-  await page.mouse.move(bar.x + 150, bar.y + 90, { steps: 6 }); await page.mouse.up();
+  await page.mouse.move(bar.x + 150, bar.y + 30, { steps: 6 }); await page.mouse.up();
   const movedTo = await page.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)]; });
   await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-close').click());
   await page.waitForTimeout(300);
