@@ -3959,8 +3959,10 @@ function buildUI() {
     // @foafos/guest, not app-sdk.js. @foafos/host-lite answers it for the shell: at most level
     // 2 here (level 3's tools and bus are the full SDK's for now), storage in the app's own scope
     // of the shared pod (its pod grants, asked at each call), lifecycle from Task Manager's pause
-    // and the window's close, the audio level, the frame's size, and its menu of actions.
-    let lite = null;
+    // and the window's close, the audio level, the frame's size, and its menu of actions; and at
+    // level 3 its tools (in the shell's tool registry, FoafOS.tools, called under the same grants as
+    // any app's) and the bus (it publishes as app.<id>.<topic>; it hears only granted topics).
+    let lite = null, liteTools = null;
     if (Number.isInteger(app.foafosLevel)) {
       const rel = (k) => k.replace(/^app\/?/, '');
       const call = (verb, params) => pods.invoke(app.id, verb, params, { holder: nodeId });
@@ -3973,12 +3975,23 @@ function buildUI() {
       };
       const canStore = holds('pod:read') && holds('pod:write');
       lite = hostApp(frame, {
-        offer: Math.max(0, Math.min(app.foafosLevel, canStore ? 2 : 1)), folder: 'app', store: canStore ? podStore : null, window,
+        offer: Math.max(0, Math.min(app.foafosLevel, canStore ? 3 : 1)), folder: 'app', store: canStore ? podStore : null, window,
+        topics: (busGrants.subscribe || []).filter((t) => !t.includes('*')),
+        onTools: (items) => {
+          liteTools ??= appTools.attach({ id: app.id, label: app.name, source: frame.contentWindow, alive: () => frame.isConnected,
+            post: (m) => {
+              if (m.type !== 'webmcp.call') return;
+              lite.callTool(m.name, m.args).then((r) => appTools.receive(liteTools, { type: 'webmcp.result', id: m.id, ok: r.ok, value: r.result ?? null, error: r.error }));
+            } });
+          if (liteTools) appTools.receive(liteTools, { type: 'webmcp.tools', api: null, tools: items });
+        },
+        onPublish: (topic, data) => scoped.publish(`app.${app.id}.${topic}`, data),
         audio: { level: audio.volume ?? 1, muted: !!audio.muted },
         onHello: (h) => bus.publish('sys.guest.lite', { summary: `${app.name} speaks foafos-lite, asks level ${h.level}`, id: app.id, asked: h.level }),
         onActions: (items) => setLiteActions(win, items, (id) => lite.action(id)),
       });
       win._liteHost = lite;
+      scoped.subscribe('*', (e) => lite.emit(e.topic, e.data));
       audio.register(sinkId, (level) => lite.audio(level, audio.muted), { label: app.name, kind: 'app' });
       new ResizeObserver(() => lite.viewport()).observe(frame);
     }

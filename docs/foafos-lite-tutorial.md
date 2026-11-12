@@ -57,25 +57,44 @@ window.onBoardChanged = () => { /* after 150 ms: */ guest.store.put('games/curre
   Standalone or at level 1, the browser's own storage (IndexedDB).
 - **What leaves the game, added at this level:** the board position, to that folder only.
 
+## Level 3: tools and the bus
+
+The module asks for level 3 and declares four tools, so an AI opponent, a screen reader or a
+voice user can play the game without seeing the board:
+
+| Tool | Reads or acts | What it does |
+|---|---|---|
+| `board` | reads | where the queen, king and skull stand (a1 to d3), whose turn, whether it is over |
+| `legal_moves` | reads | the squares the queen may move to now |
+| `move { to }` | acts | moves the queen; the result is the position after the king's reply |
+| `new_game` | acts | starts again |
+
+A move to a square off the board, or one the queen cannot reach, is refused with a reason. Each
+change of the board is published as `board`.
+
+- **What the game gets:** in full foafos the tools join the shell's tool registry
+  (`FoafOS.tools`), called under the same grants as any app's tools (the person, and whoever the
+  person allows); the board appears on the shell's bus as `app.minichess-lite.board`, which
+  another app may hear if its manifest is granted that topic.
+- **What leaves the game, added at this level:** tool results (positions and legal squares) to
+  the host, and the position as it changes, on the bus.
+
 ## Running it
 
 - **Standalone:** open `packages/foafos-guest/examples/minichess/index.html` from any static
   server. It reports level 0.
 - **In full foafos:** All apps → Play → Minichess (manifest `inklet/finkapp/apps/minichess-lite.jsonld`,
-  `"foafosLevel": 2`).
+  `"foafosLevel": 3`).
 - **The server must send `Access-Control-Allow-Origin`.** foafos runs the game in a sandboxed
   frame with an opaque origin, so the browser fetches `guest.mjs` as a cross-origin module. GitHub
   Pages sends the header; Python's `http.server` does not, and the game then waits at its first
   `await` with a CORS error in the console.
-- **Test:** `inklet/finkapp/test/e2e-minichess-lite.mjs` (level 2, a move saved in the pod,
-  reopened in place, New game from the menu). The contract's own checks run the same way in
+- **Test:** `inklet/finkapp/test/e2e-minichess-lite.mjs` (level 3: the four tools, play through
+  them, a refused move, the board on the bus; a move saved in the pod, reopened in place, New game
+  from the menu). The contract's own checks run the same way in
   `e2e-guest-conformance.mjs` and `packages/foafos-host-lite/test/conformance.test.mjs`.
 
-## Next levels (not yet here)
+## Next level (not yet here)
 
-- **Level 3:** tools (`move`, `board`, `legal_moves`, `new_game`) so an AI opponent, a screen
-  reader or a voice user can play, the same definitions serving WebMCP and MCP; and bus events
-  another app can watch. `@foafos/host-lite` hosts level 3; full foafos hosts foafos-lite apps at
-  level 2 for now.
 - **Level 4:** in full foafos, outside this contract: chat about a game, play over XMPP, an AI
   opponent from the shell.

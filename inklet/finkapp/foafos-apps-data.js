@@ -662,7 +662,7 @@ export const APPS = [
     "surface": "window",
     "url": "../../packages/foafos-guest/examples/minichess/index.html",
     "desc": "A queen-and-king puzzle on a 3 by 4 board; your game is kept between visits",
-    "foafosLevel": 2,
+    "foafosLevel": 3,
     "capabilities": [
       "pod:read",
       "pod:write"

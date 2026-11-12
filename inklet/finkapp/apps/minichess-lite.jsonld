@@ -12,12 +12,12 @@
   "surface": "window",
   "url": "../../packages/foafos-guest/examples/minichess/index.html",
   "desc": "A queen-and-king puzzle on a 3 by 4 board; your game is kept between visits",
-  "foafosLevel": 2,
+  "foafosLevel": 3,
   "capabilities": [
     "pod:read",
     "pod:write"
   ],
   "notes": [
-    "The foafos-lite tutorial's worked example (issue 1038 step 5; docs/foafos-lite-tutorial.md): the game of thumbwar/minichess.html grown level by level through @foafos/guest, one commit per level. Level 2 here: pause and resume, a menu (New game, Show the rules), and the game in progress saved in its own folder of the pod. Test: inklet/finkapp/test/e2e-minichess-lite.mjs."
+    "The foafos-lite tutorial's worked example (issue 1038 step 5; docs/foafos-lite-tutorial.md): the game of thumbwar/minichess.html grown level by level through @foafos/guest, one commit per level. Level 3 here: pause and resume, a menu (New game, Show the rules), the game in progress saved in its own folder of the pod, four tools (board, legal_moves, move, new_game) and the position published as app.minichess-lite.board. Test: inklet/finkapp/test/e2e-minichess-lite.mjs."
   ]
 }
