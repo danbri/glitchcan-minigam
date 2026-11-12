@@ -67,6 +67,7 @@
   let sort = { key: 'name', dir: 1 };
   const keepView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ icons, sort })); } catch { /* not kept */ } };
   const trail = [];
+  const ahead = [];   // where Forward goes, after Back
   const children = new Map();    // folder -> subfolders, for the tree
   const expanded = new Set(['']);
 
@@ -79,7 +80,7 @@
   }
 
   let listing = 0;               // only the newest listing may draw: an old one may be from another location
-  async function go(path, { remember = true } = {}) {
+  async function go(path, { remember = true, via = null } = {}) {
     const mine = ++listing;
     const r = await list(path);
     if (mine !== listing) return;
@@ -87,7 +88,9 @@
     if (!r.ok) { say(explain(r), true); return; }
     searchResults = false;
     if (path !== folder) dropThumbs();
-    if (remember && path !== folder) trail.push(folder);
+    // Back and Forward, as in a browser: a new place clears Forward.
+    if (path !== folder && via === 'back') ahead.push(folder);
+    else if (path !== folder && (remember || via === 'forward')) { trail.push(folder); if (via !== 'forward') ahead.length = 0; }
     folder = path;
     // Inside an archive nothing can be made, saved or dropped.
     for (const id of ['new-file', 'new-folder']) $(id).disabled = inArchive();
@@ -152,6 +155,7 @@
 
   function draw() {
     $('back').disabled = !trail.length;
+    $('forward').disabled = !ahead.length;
     $('up').disabled = !folder;
     const parts = folder.split('/').filter(Boolean);
     $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => go('') } }, here()?.label || 'My files')),
@@ -244,7 +248,7 @@
 
   async function showLocation(r) {
     takeLocations(r);
-    folder = ''; items = []; trail.length = 0; children.clear(); expanded.clear(); expanded.add(''); pick(null);
+    folder = ''; items = []; trail.length = 0; ahead.length = 0; children.clear(); expanded.clear(); expanded.add(''); pick(null);
     drawItems(); drawTree();
     if (!r.ok) { say(explain(r), true); return; }
     say('');
@@ -698,7 +702,20 @@
     say(`Deleted ${name}.`);
   });
 
-  $('back').addEventListener('click', () => { if (trail.length) go(trail.pop(), { remember: false }); });
+  // A failed move leaves both lists as they were.
+  const goBack = () => { if (trail.length) { const to = trail.pop(); go(to, { remember: false, via: 'back' }).then(() => { if (folder !== to) trail.push(to); }); } };
+  const goForward = () => { if (ahead.length) { const to = ahead.pop(); go(to, { remember: false, via: 'forward' }).then(() => { if (folder !== to) ahead.push(to); }); } };
+  $('back').addEventListener('click', goBack);
+  $('forward').addEventListener('click', goForward);
+  // The keys and buttons people already use for this: Alt+Left and Alt+Right (Cmd+[ and Cmd+] on a
+  // Mac), and a mouse's own back and forward buttons.
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+    const back = (e.altKey && e.key === 'ArrowLeft') || (e.metaKey && e.key === '[');
+    const fwd = (e.altKey && e.key === 'ArrowRight') || (e.metaKey && e.key === ']');
+    if (back || fwd) { e.preventDefault(); (back ? goBack : goForward)(); }
+  });
+  document.addEventListener('mouseup', (e) => { if (e.button === 3) { e.preventDefault(); goBack(); } else if (e.button === 4) { e.preventDefault(); goForward(); } });
   $('up').addEventListener('click', () => go(parentOf(folder)));
   // Keys in the list, as in a desktop file browser: Backspace or Alt+Up goes up a
   // folder, Home and End go to the first and last item. Arrow keys move in the grid too.
