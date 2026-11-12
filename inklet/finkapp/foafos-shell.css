@@ -1545,3 +1545,9 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .foafos-lite-list { position: absolute; top: 34px; right: 8px; z-index: 5; display: flex; flex-direction: column; min-width: 10rem; padding: 4px; border: 1px solid var(--sk-line, #2b3d5c); border-radius: 8px; background: var(--sk-bg, #fff); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
 .foafos-lite-list button { padding: 8px 10px; text-align: left; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; cursor: pointer; }
 .foafos-lite-list button:hover, .foafos-lite-list button:focus-visible { background: color-mix(in srgb, var(--sk-accent, #2e6fd1) 16%, transparent); }
+
+/* Moving a window with the keyboard (Ctrl ; v): the window is outlined and a line says how. */
+.foafos-window.foafos-keymoving { outline: 3px dashed var(--sk-accent, #00e5ff); outline-offset: 2px; }
+#foafos-keymove { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2700;
+    max-width: min(90vw, 640px); padding: 8px 14px; border-radius: 8px; color: #fff;
+    background: rgba(17, 20, 28, 0.92); font: 14px/1.4 system-ui, sans-serif; text-align: center; }

@@ -3045,6 +3045,54 @@ function buildUI() {
     return front;
   };
 
+  // Move or resize the front window with the keyboard, as a desktop's window menu offers
+  // (Ctrl ; v): arrows move it, Shift and arrows resize it, Enter keeps it, Escape puts it back.
+  // For anyone who cannot drag. A click anywhere keeps it too.
+  FoafOS.moveFrontByKeys = () => {
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    let win = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
+    if (!win || document.getElementById('foafos-keymove')) return null;
+    if (win.classList.contains('maximized')) win.querySelector('.foafos-window-max')?.click();
+    if (win._unsnap) { win._unsnap = null; win._zone = null; }
+    const was = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+    const name = win.querySelector('.foafos-window-bar span')?.textContent || 'window';
+    const hint = document.createElement('div');
+    hint.id = 'foafos-keymove';
+    hint.setAttribute('role', 'status');
+    hint.textContent = `Moving ${name}: arrows move it, Shift and arrows resize it, Enter keeps it, Escape puts it back.`;
+    document.body.appendChild(hint);
+    win.classList.add('foafos-keymoving');
+    FoafOS.raiseWindow(win);
+    const STEP = 24;
+    const finish = (keep) => {
+      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('pointerdown', onPointer, true);
+      hint.remove();
+      win.classList.remove('foafos-keymoving');
+      if (keep) win._keepGeom?.(); else Object.assign(win.style, was);
+      bus.publish('wm.move', { summary: `${name} ${keep ? 'moved' : 'put back'}` });
+    };
+    const onPointer = () => finish(true);
+    const onKey = (e) => {
+      const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(e.key === 'Enter'); return; }
+      if (!d) return;
+      e.preventDefault(); e.stopPropagation();
+      const r = win.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
+      if (e.shiftKey) {
+        win.style.width = `${Math.max(200, Math.min(W - r.left, r.width + d[0] * STEP))}px`;
+        win.style.height = `${Math.max(120, Math.min(H - r.top, r.height + d[1] * STEP))}px`;
+        win.dataset.userSized = '1';
+      } else {
+        win.style.left = `${Math.max(0, Math.min(W - Math.min(r.width, W), r.left + d[0] * STEP))}px`;
+        win.style.top = `${Math.max(0, Math.min(H - Math.min(r.height, H), r.top + d[1] * STEP))}px`;
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(() => document.addEventListener('pointerdown', onPointer, true), 0);
+    return win;
+  };
+
   // Refit every window once per frame while the page is resized.
   let refitQueued = false;
   window.addEventListener('resize', () => {
