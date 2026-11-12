@@ -1529,7 +1529,7 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 /* Where a dragged window will land */
 #foafos-snap-preview { position: fixed; z-index: 2615; box-sizing: border-box; pointer-events: none; border-radius: 8px; border: 2px solid var(--sk-accent, #2e6fd1); background: color-mix(in srgb, var(--sk-accent, #2e6fd1) 18%, transparent); }
 
-@media (max-width: 520px) { #foafos-nudge { bottom: auto; top: 8px; } }
+@media (max-width: 520px) { #foafos-nudge { bottom: auto; top: 8px; } #foafos-nudge.folded { display: none; } }
 
 /* Fingers, not pointers: touch screens get targets near 44px; desktops stay compact */
 @media (pointer: coarse) {

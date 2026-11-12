@@ -2319,6 +2319,13 @@ function buildUI() {
   const showNudge = () => {
     const all = nudges();
     document.getElementById('wm-chrome')?.classList.toggle('wm-attention', all.length > 0);
+    // The menu always has a row for what needs the person, so a notice put away is not lost.
+    const row = document.getElementById('wm-sys-nudge');
+    if (row) {
+      row.hidden = !all.length;
+      const label = row.querySelector('.wm-label');
+      if (label) label.textContent = all.length ? `${all[0].text} ${all[0].action}` : '';
+    }
     const next = document.getElementById('foafos-unlock-ask') ? null : all.find((n) => !seen(n.key));
     let box = document.getElementById('foafos-nudge');
     if (!next) { box?.remove(); return; }
@@ -2339,8 +2346,24 @@ function buildUI() {
     later.addEventListener('click', dismiss);
     box.append(text, go, later);
     document.body.appendChild(box);
+    // On a phone it sits over the top of the window. It folds into the menu handle after a few
+    // seconds, or at a tap anywhere else, and stays in the menu until it is dealt with.
+    if (window.innerWidth <= 520) {
+      // A tap inside an app's frame never reaches this page; the page losing focus to it does.
+      const fold = () => { box.classList.add('folded'); document.removeEventListener('pointerdown', away, true); window.removeEventListener('blur', fold); };
+      const away = (e) => { if (!box.contains(e.target)) fold(); };
+      setTimeout(() => { document.addEventListener('pointerdown', away, true); window.addEventListener('blur', fold); }, 0);
+      setTimeout(fold, 8000);
+    }
   };
   FoafOS.showNudge = showNudge;
+  FoafOS.runNudge = () => {
+    const n = nudges()[0];
+    if (!n) return;
+    try { sessionStorage.setItem(`foafos.nudge.${n.key}`, '1'); } catch { /* until reload */ }
+    showNudge();
+    n.run();
+  };
   for (const t of ['secrets.*', 'pods.*', 'chat.status']) bus.subscribe(t, () => setTimeout(showNudge, 50));
   setTimeout(showNudge, 1500);
   $('#foafos-forget').addEventListener('click', () => {

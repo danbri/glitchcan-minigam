@@ -314,6 +314,7 @@ try {
   await page.waitForTimeout(400);
   const said = await page.evaluate(() => document.querySelector('#foafos-nudge span')?.textContent || ''); check(/Ux pod/.test(said), `a pod that needs a login says so: ${said}`);
   check(await page.evaluate(() => document.getElementById('wm-chrome').classList.contains('wm-attention')), 'and marks the menu handle');
+  check(await page.evaluate(() => { const r = document.getElementById('wm-sys-nudge'); return !r.hidden && /Ux pod.*Open Pods/.test(r.textContent); }), 'and the menu has a row for it');
   check(!errors.length, `no page errors ${errors.slice(0, 2)}`);
   await ctx.close();
 
@@ -325,6 +326,23 @@ try {
   await phone.page.evaluate(() => FoafOS.openHome());
   await phone.page.waitForTimeout(300);
   check(await phone.page.evaluate(() => document.activeElement?.id === 'foafos-home'), 'All apps on a phone does not open the keyboard');
+  // On a phone a notice sits over the top of the window; a tap elsewhere folds it into the
+  // handle, and the menu still has it, so it is not lost
+  await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());
+  await phone.page.evaluate(() => FoafOS.launchApp('files'));
+  await phone.page.waitForTimeout(1500);
+  await phone.page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod2', label: 'Phone pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod2'); });
+  await phone.page.waitForTimeout(400);
+  const shown = await phone.page.isVisible('#foafos-nudge');
+  // the tap lands inside the Files frame, as a person's would
+  const inFrame = await phone.page.evaluate(() => document.elementFromPoint(200, 500)?.tagName);
+  await phone.page.touchscreen.tap(200, 500);
+  await phone.page.waitForTimeout(300);
+  const folded = await phone.page.evaluate(() => ({ hidden: !document.querySelector('#foafos-nudge')?.checkVisibility(), row: !document.getElementById('wm-sys-nudge').hidden, ring: document.getElementById('wm-chrome').classList.contains('wm-attention') }));
+  check(shown && inFrame === 'IFRAME' && folded.hidden && folded.row && folded.ring, `a phone's notice folds into the handle at a tap in an app and stays in the menu (${shown}, ${inFrame}, ${JSON.stringify(folded)})`);
+  await phone.page.evaluate(() => document.getElementById('wm-sys-nudge').click());
+  await phone.page.waitForTimeout(600);
+  check(await phone.page.evaluate(() => /Pods/.test(document.querySelector('#foafos-session-win .fs-tabs [aria-selected="true"]')?.textContent || '')), 'the menu row does what the notice offered (System, on Pods)');
   await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());
 
   // A tap on the empty space around the cards leaves All windows
