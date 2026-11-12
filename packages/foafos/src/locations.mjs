@@ -71,6 +71,8 @@ const STATUS = {
 export function describeLocation(p) {
   return {
     id: p.id, label: p.label, ...words(p), status: p.status, statusText: STATUS[p.status] || p.status, detail: p.detail || '',
+    // The owner's space limit, and the bytes in use once measured: what a file manager's status bar shows.
+    space: p.quota ? { limit: p.quota, used: p.usage ?? null } : null,
     dev: { carriage: p.carriage, base: p.base, device: p.device ?? null, kept: p.kept ?? null, forApps: !!p.forApps },
   };
 }
