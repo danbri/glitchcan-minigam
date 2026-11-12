@@ -128,10 +128,25 @@ try {
   await page.waitForTimeout(600);
   const frontBefore = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((x) => x.style.zIndex === '2640')?.dataset.wid);
   const nBeforeClose = await page.evaluate(() => document.querySelectorAll('.foafos-window').length);
+  await page.evaluate((w) => { window.__closedAs = document.querySelector(`.foafos-window[data-wid="${w}"]`)?.dataset.openedAs; }, frontBefore);
   await keys(page, [';', 'q']);
   await page.waitForTimeout(400);
   const afterClose = await page.evaluate((w) => ({ n: document.querySelectorAll('.foafos-window').length, gone: !document.querySelector(`.foafos-window[data-wid="${w}"]`), front: [...document.querySelectorAll('.foafos-window:not(.minimized)')].some((x) => x.style.zIndex === '2640') }), frontBefore);
   check(afterClose.n === nBeforeClose - 1 && afterClose.gone && afterClose.front, `ctrl ; q closes the front window and another comes forward (${nBeforeClose} → ${JSON.stringify(afterClose)})`);
+
+  // Ctrl ; u reopens the app closed last, and the menu row names it
+  const closedAs = await page.evaluate((w) => window.__closedAs, frontBefore);
+  const rowText = await page.evaluate(() => { const r = document.getElementById('wm-sys-reopen'); return r.hidden ? null : r.querySelector('.wm-label').textContent; });
+  await keys(page, [';', 'u']);
+  await page.waitForTimeout(600);
+  const back = await page.evaluate((id) => ({ n: document.querySelectorAll('.foafos-window').length, there: !!document.querySelector(`.foafos-window[data-opened-as="${id}"]`) }), closedAs);
+  check(!!closedAs && /^Reopen \S/.test(rowText || '') && rowText !== 'Reopen closed app' && back.n === nBeforeClose && back.there,
+    `ctrl ; u reopens the closed app (${closedAs}, "${rowText}", ${nBeforeClose} → ${JSON.stringify(back)})`);
+  // Reopening everything left empties the list: the row hides, and the key then does nothing
+  for (let i = 0; i < 10 && await page.evaluate(() => !document.getElementById('wm-sys-reopen').hidden); i++) { await keys(page, [';', 'u']); await page.waitForTimeout(300); }
+  const nAll = await page.evaluate(() => document.querySelectorAll('.foafos-window').length);
+  await keys(page, [';', 'u']);
+  check(await page.evaluate(() => document.getElementById('wm-sys-reopen').hidden) && await page.evaluate(() => document.querySelectorAll('.foafos-window').length) === nAll, 'with nothing left to reopen, the row hides and ctrl ; u does nothing');
   await page.evaluate(() => { if (!document.getElementById('foafos-session-win')) FoafOS.launchApp('system'); });
   await page.waitForTimeout(400);
   await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));

@@ -2980,6 +2980,32 @@ function buildUI() {
     return front;
   };
 
+  // Reopen what was closed last, as a browser reopens a closed tab (Ctrl ; u). Kept for this visit
+  // only, newest last; the app opens where it was, as every app does. The menu row names the app.
+  const closedApps = [];
+  function noteClosed(appId) {
+    const app = appId && appById(appId);
+    if (!app || app.surface === 'chrome') return;
+    closedApps.push(appId);
+    if (closedApps.length > 10) closedApps.shift();
+    showReopen();
+  }
+  function showReopen() {
+    const row = document.getElementById('wm-sys-reopen');
+    if (!row) return;
+    const last = closedApps.at(-1);
+    row.hidden = !last;
+    const label = row.querySelector('.wm-label');
+    if (label) label.textContent = last ? `Reopen ${appById(last)?.name || 'closed app'}` : 'Reopen closed app';
+  }
+  FoafOS.reopenClosed = () => {
+    const appId = closedApps.pop();
+    showReopen();
+    if (!appId) return null;
+    bus.publish('wm.reopen', { summary: `reopened ${appById(appId)?.name || appId}`, id: appId });
+    return launchApp(appId);
+  };
+
   // Minimise the front window, for the keyboard (Ctrl ; h, as a Mac's hide), and bring the next
   // one forward so the keys keep acting on something you can see.
   FoafOS.minimizeFront = () => {
@@ -3073,6 +3099,7 @@ function buildUI() {
     // subtree down and still removes this window.
     win.querySelector('.foafos-window-close').addEventListener('click', () => {
       const nodeId = win.dataset.instance;
+      noteClosed(win.dataset.openedAs || FoafOS.apps.get(nodeId || '')?.appId);
       if (nodeId && FoafOS.apps.get(nodeId)) FoafOS.apps.close(nodeId);
       else win.remove();   // a window with no node behind it (shared table, tools)
     });
@@ -3517,7 +3544,14 @@ function buildUI() {
   // ONE launch path, ONE class of thing. `surface` decides where an app is
   // drawn; `capabilities` decide what it may do. Those are independent —
   // being drawn in a window never granted authority, though it used to.
+  // Every window an app opens is marked with the app, so closing it can be undone (Ctrl ; u)
+  // whatever kind of window it is.
   function launchApp(id, opts = {}) {
+    const r = openApp(id, opts);
+    if (r instanceof Element && r.classList.contains('foafos-window') && !r.dataset.openedAs) r.dataset.openedAs = id;
+    return r;
+  }
+  function openApp(id, opts = {}) {
     const app = appById(id);
     if (!app) return null;
     const caps = app.capabilities || [];
