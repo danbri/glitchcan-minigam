@@ -33,7 +33,7 @@
   <nav><button id="new">New game</button><button id="undo">Undo</button></nav>
 </main>
 <script type="module">
-import { newGame, legalMoves, play, undo, replay, status, bestMove, square, over } from './game.mjs';
+import { newGame, legalMoves, play, undo, replay, status, bestMove, square, over, boardText } from './game.mjs';
 import { connect } from '../../packages/foafos-guest/guest.mjs';
 
 const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
@@ -48,7 +48,7 @@ function opponent() {
   thinking = setTimeout(() => {
     thinking = null;
     const m = bestMove(game);
-    if (m) { game = play(game, m.from, m.to); click(); }
+    if (m) { game = play(game, m.from, m.to); click(); moved(m.from + m.to); }
     draw();
   }, 400);
 }
@@ -67,12 +67,19 @@ function click() {
 }
 
 // ---- moves
+const yourMove = () => !paused && !thinking && game.turn === 'w' && !over(game);
+/** White plays from → to; black answers. False if it is not white's move or the move is not legal. */
+function moveWhite(from, to) {
+  const next = yourMove() && play(game, from, to);
+  if (!next) return false;
+  game = next; picked = null; click(); moved(from + to);
+  if (!over(game)) opponent();
+  draw();
+  return true;
+}
 function choose(sq) {
-  if (paused || thinking || game.turn !== 'w' || over(game)) return;
-  if (picked && picked !== sq) {
-    const next = play(game, picked, sq);
-    if (next) { game = next; picked = null; click(); if (!over(game)) opponent(); draw(); return; }
-  }
+  if (!yourMove()) return;
+  if (picked && picked !== sq && moveWhite(picked, sq)) return;
   picked = picked === sq ? null : (legalMoves(game).some((m) => m.from === sq) ? sq : null);
   draw();
 }
@@ -82,6 +89,9 @@ function takeBack() {
   game = undo(game); if (game.turn === 'b') game = undo(game);   // back to white's move
   picked = null; draw();
 }
+
+// ---- level 3: each move, on the bus (only if the host granted level 3; otherwise nothing is sent)
+function moved(move) { guest?.publish('chess.move', { move, status: status(game) }); }
 
 // ---- saving: the moves so far, whenever they change (level 2: in the host's folder; else locally)
 function save() {
@@ -126,7 +136,7 @@ document.getElementById('undo').onclick = takeBack;
 draw();
 
 // ---- level 1: a good neighbour. With no host, connect() finds none and nothing changes.
-guest = await connect({ level: 2, name: 'Chess 5×5', actions: [{ id: 'new', label: 'New game' }, { id: 'undo', label: 'Undo' }] });
+guest = await connect({ level: 3, name: 'Chess 5×5', actions: [{ id: 'new', label: 'New game' }, { id: 'undo', label: 'Undo' }] });
 guest.on('lifecycle', ({ state }) => {
   if (state === 'paused') {
     paused = true;
@@ -150,6 +160,31 @@ let resumed = null;
 try { resumed = last.ok ? replay(JSON.parse(last.body).moves) : null; } catch { /* not a saved game: start afresh */ }
 saved = (resumed ?? game).moves.join(' ');
 if (resumed && !game.moves.length) { game = resumed; if (game.turn === 'b' && !over(game)) opponent(); draw(); }
+
+// ---- level 3: the game as tools. A person using a screen reader or their voice, an AI opponent,
+// or a test can play through these; WebMCP and MCP take the same definitions.
+const TOOLS = [
+  { name: 'board', description: 'The board as text (white upper case, rank 5 at the top), whose move it is, and the status.',
+    inputSchema: { type: 'object', properties: {} } },
+  { name: 'legal_moves', description: 'Every move white may play now, like "c2c3". Empty while it is not white\'s move.',
+    inputSchema: { type: 'object', properties: {} } },
+  { name: 'move', description: 'Play a move for white, like "c2c3". Black answers a moment later.',
+    inputSchema: { type: 'object', properties: { move: { type: 'string', pattern: '^[a-e][1-5][a-e][1-5]$' } }, required: ['move'] } },
+  { name: 'new_game', description: 'Start a new game, with white to move.', inputSchema: { type: 'object', properties: {} } },
+];
+const describe = () => ({ board: boardText(game), toMove: thinking ? 'black' : game.turn === 'w' ? 'white' : 'black', status: status(game), moves: game.moves });
+guest.tools(TOOLS, (name, args = {}) => {
+  if (name === 'board') return describe();
+  if (name === 'legal_moves') return yourMove() ? legalMoves(game).map((m) => m.from + m.to) : [];
+  if (name === 'move') {
+    const m = String(args.move ?? '');
+    if (!yourMove()) throw new Error('it is not white\'s move');
+    if (!moveWhite(m.slice(0, 2), m.slice(2))) throw new Error(`${m} is not a legal move`);
+    return describe();
+  }
+  if (name === 'new_game') { newOne(); return describe(); }
+  throw new Error(`no tool ${name}`);
+});
 </script>
 </body>
 </html>

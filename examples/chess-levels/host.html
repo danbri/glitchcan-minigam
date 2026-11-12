@@ -16,8 +16,9 @@
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
   h2 { font-size: 13px; margin: 0 0 6px; }
   button { font: inherit; padding: 4px 10px; margin: 0 4px 4px 0; }
-  #sent, #folder { overflow-wrap: anywhere; font: 12px/1.5 ui-monospace, monospace; max-height: 220px; overflow: auto; margin: 0 0 6px; padding: 0; list-style: none; }
+  #sent, #folder, #bus { overflow-wrap: anywhere; font: 12px/1.5 ui-monospace, monospace; max-height: 220px; overflow: auto; margin: 0 0 6px; padding: 0; list-style: none; }
   #state { font-weight: 600; }
+  #out { font: 12px/1.3 ui-monospace, monospace; margin: 6px 0 0; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -29,6 +30,10 @@
     <label>Volume <input id="vol" type="range" min="0" max="1" step="0.1" value="1"></label>
     <label><input id="pip" type="checkbox"> Small</label></section>
   <section><h2>Its menu</h2><div id="menu"></div></section>
+  <section><h2>Its tools</h2><p id="tools">none</p>
+    <input id="mv" placeholder="c2c3" size="6" aria-label="Move"><button id="callmove">move</button><button id="callboard">board</button><button id="helper">Let a helper play white</button>
+    <pre id="out"></pre></section>
+  <section><h2>On the bus</h2><ol id="bus"></ol></section>
   <section><h2>Its folder</h2><ul id="folder"></ul><button id="reload">Reload the app</button></section>
   <section><h2>Everything it sent</h2><ol id="sent"></ol></section>
 </aside>
@@ -51,7 +56,9 @@ const showFolder = async () => {
 addEventListener('message', (e) => { if (e.source === frame.contentWindow && e.data?.type === 'store') setTimeout(showFolder, 0); });
 let host;
 const start = () => { host = hostApp(frame, {
-  offer: 2, store, folder: 'chess',
+  offer: 3, store, folder: 'chess',
+  onTools: (items) => { $('tools').textContent = items.map((t) => t.name).join(', '); },
+  onPublish: (topic, data) => $('bus').append(Object.assign(document.createElement('li'), { textContent: `${topic} ${JSON.stringify(data)}` })),
   onHello: () => { $('level').textContent = host.level; show(); },
   onActions: (items) => $('menu').replaceChildren(...items.map(({ id, label }) => {
     const b = document.createElement('button'); b.textContent = label; b.onclick = () => host.action(id); return b;
@@ -67,6 +74,17 @@ $('pause').onclick = () => { host.pause(); show(); };
 $('resume').onclick = () => { host.resume(); show(); };
 $('vol').oninput = (e) => host.audio(+e.target.value);
 $('pip').onchange = (e) => host.viewport({ width: frame.clientWidth, height: frame.clientHeight, safe: { top: 0, right: 0, bottom: 0, left: 0 }, mode: e.target.checked ? 'pip' : 'window' });
+
+// Calling the app's tools: what an AI opponent, a screen reader or a voice interface would do.
+const out = (r) => { $('out').textContent = r.ok ? (r.result.board ? `${r.result.board}\n${r.result.toMove} to move, ${r.result.status}` : JSON.stringify(r.result)) : `refused: ${r.error}`; };
+$('callmove').onclick = async () => out(await host.callTool('move', { move: $('mv').value.trim() }));
+$('callboard').onclick = async () => out(await host.callTool('board'));
+// A helper that sees only the tools: it asks for the legal moves and plays the first.
+$('helper').onclick = async () => {
+  const legal = await host.callTool('legal_moves');
+  if (!legal.ok || !legal.result.length) return out(legal.ok ? { ok: false, error: 'no move for white now' } : legal);
+  out(await host.callTool('move', { move: legal.result[0] }));
+};
 </script>
 </body>
 </html>
