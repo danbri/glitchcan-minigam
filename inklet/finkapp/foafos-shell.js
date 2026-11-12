@@ -3132,6 +3132,10 @@ function buildUI() {
     // Dragging a snapped window away gives it back its size.
     const snapZone = (e) => {
       if (window.innerWidth < 700) return null;
+      // A corner fills that quarter.
+      const left = e.clientX < 16, right = e.clientX > window.innerWidth - 16;
+      const up = e.clientY < 16, down = e.clientY > window.innerHeight - 16;
+      if ((left || right) && (up || down)) return `${up ? 't' : 'b'}${left ? 'l' : 'r'}`;
       if (e.clientY < 6) return 'top';
       if (e.clientX < 16) return 'left';
       if (e.clientX > window.innerWidth - 16) return 'right';
@@ -3139,6 +3143,7 @@ function buildUI() {
     };
     const snapBox = (zone) => {
       const W = window.innerWidth, H = window.innerHeight;
+      if (zone.length === 2) return [zone[1] === 'l' ? 0 : W / 2, zone[0] === 't' ? 0 : H / 2, W / 2, H / 2];
       return zone === 'left' ? [0, 0, W / 2, H] : zone === 'right' ? [W / 2, 0, W / 2, H] : [0, 0, W, H];
     };
     const preview = (zone) => {
