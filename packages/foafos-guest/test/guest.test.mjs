@@ -94,6 +94,7 @@ test('level 2: store goes to the host with a fresh rid, one answer each; bad pat
   assert.deepEqual(await owed, { ok: false, reason: 'offline' });
   g.ready();
   assert.equal(f.sent.at(-1).data.type, 'store', 'nothing is sent after ending');
+  assert.deepEqual(await g.store.put('late.txt', 'x'), { ok: false, reason: 'offline' }, 'a request after ending fails at once');
   const rids = f.sent.filter((s) => s.data.rid).map((s) => s.data.rid);
   assert.equal(new Set(rids).size, rids.length, 'rids are unique');
 });

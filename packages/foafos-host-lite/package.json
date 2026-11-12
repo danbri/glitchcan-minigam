@@ -1,0 +1,12 @@
+{
+  "name": "@foafos/host-lite",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Host one app under the foafos-lite contract: a sandboxed frame, lifecycle, sound level, viewport, actions, optional local storage and tools. No servers, no sign-in, no network.",
+  "main": "host-lite.mjs",
+  "exports": { ".": "./host-lite.mjs", "./package.json": "./package.json" },
+  "files": ["host-lite.mjs", "README.md"],
+  "sideEffects": false,
+  "license": "MIT",
+  "scripts": { "test": "node --test test/*.test.mjs" }
+}
