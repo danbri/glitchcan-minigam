@@ -5300,6 +5300,10 @@ function buildUI() {
             <thead><tr></tr></thead>
             <tbody></tbody>
           </table>
+          <section class="foafos-tm-widgets" hidden aria-labelledby="foafos-tm-widgets-h">
+            <h3 id="foafos-tm-widgets-h">Widgets</h3>
+            <ul></ul>
+          </section>
           <details class="foafos-tm-limits">
             <summary><span aria-hidden="true">🧱</span> The sandbox and its limits</summary>
             <div class="foafos-tm-limits-body">
@@ -5325,6 +5329,34 @@ function buildUI() {
       </div>`;
     const $$ = (s) => sw.querySelector(s);
     const tbody = $$('tbody');
+    // Open widgets have no app of their own, so the table above never listed them. A task
+    // manager lists everything that runs: here they are, each with Show and Close.
+    const drawWidgets = () => {
+      const wins = [...document.querySelectorAll('.foafos-window[data-opened-as^="widget-"]')];
+      const sec = $$('.foafos-tm-widgets');
+      sec.hidden = !wins.length;
+      sec.querySelector('ul').replaceChildren(...wins.map((w) => {
+        const name = w.querySelector('.foafos-window-bar span')?.textContent || 'Widget';
+        const li = document.createElement('li');
+        const label = document.createElement('span');
+        label.textContent = name + (w.classList.contains('minimized') ? ' (minimised)' : '');
+        const show = document.createElement('button');
+        show.type = 'button'; show.className = 'foafos-tm-btn'; show.textContent = 'Show';
+        show.setAttribute('aria-label', `Show ${name}`);
+        show.addEventListener('click', () => {
+          sw.remove();
+          if (w.classList.contains('minimized')) w.querySelector('.foafos-window-min')?.click();
+          FoafOS.raiseWindow(w);
+        });
+        const shut = document.createElement('button');
+        shut.type = 'button'; shut.className = 'foafos-tm-btn'; shut.textContent = '✕';
+        shut.setAttribute('aria-label', `Close ${name}`);
+        shut.addEventListener('click', () => { w.querySelector('.foafos-window-close')?.click(); drawWidgets(); });
+        li.append(label, show, shut);
+        return li;
+      }));
+    };
+    drawWidgets();
     // How many columns are on screen: fewer at mid and phone widths, where
     // a row spanning all six would give the hidden ones a share of the row.
     const shownCols = () => [...sw.querySelectorAll('thead th')]

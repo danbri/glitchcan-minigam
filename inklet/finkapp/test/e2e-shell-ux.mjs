@@ -398,6 +398,15 @@ try {
   await keys(page, [';', 'u']);
   await page.waitForTimeout(500);
   check(tallyMarked && reopenRow === 'Reopen Tally' && await tallyCount() === nTally, `an open widget is marked in All apps, and a closed one reopens (${tallyMarked}, ${reopenRow}, ${nTally})`);
+  // Task Manager lists open widgets too, and Show brings one forward
+  await page.evaluate(() => { document.getElementById('foafos-switcher')?.remove(); FoafOS.openSwitcher(); });
+  await page.waitForTimeout(400);
+  const tmW = await page.evaluate(() => [...document.querySelectorAll('#foafos-switcher .foafos-tm-widgets li > span')].map((x) => x.textContent));
+  const tmTarget = await page.evaluate(() => [...document.querySelectorAll('.foafos-window[data-opened-as="widget-tally"]')][0]?.dataset.wid);
+  await page.evaluate(() => document.querySelector('#foafos-switcher .foafos-tm-widgets li button').click());
+  await page.waitForTimeout(300);
+  const tmAfter = await page.evaluate((w) => ({ gone: !document.getElementById('foafos-switcher'), front: document.querySelector(`.foafos-window[data-wid="${w}"]`)?.style.zIndex === '2640' }), tmTarget);
+  check(tmW.length >= 1 && tmW.every((t) => /Tally/.test(t)) && tmAfter.gone && tmAfter.front, `Task Manager lists open widgets, and Show brings one forward (${JSON.stringify({ tmW, tmAfter })})`);
 
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
