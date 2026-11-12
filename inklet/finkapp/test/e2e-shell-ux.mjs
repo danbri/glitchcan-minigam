@@ -226,6 +226,19 @@ try {
   await page.evaluate(() => document.querySelector('.foafos-ov-close').click());
   await page.waitForTimeout(1000);
   check(await page.evaluate(() => document.querySelectorAll('.foafos-ov-close').length) === before - 1, 'closing a card leaves All windows open on the rest');
+  // Typing a name narrows the cards; Backspace and Escape take it back before Escape leaves
+  const names = await page.evaluate(() => [...document.querySelectorAll('.foafos-ov-hit')].map((h) => h.dataset.find));
+  const target = names.find((n) => /system/.test(n));
+  await page.keyboard.type('syst');
+  const narrowed = await page.evaluate(() => ({ shown: [...document.querySelectorAll('.foafos-ov-hit')].filter((h) => !h.parentElement.classList.contains('foafos-ov-dim')).map((h) => h.dataset.find), focus: document.activeElement?.dataset?.find, said: document.querySelector('.foafos-ov-find').textContent }));
+  await page.keyboard.type('zz');
+  const none = await page.evaluate(() => ({ said: document.querySelector('.foafos-ov-find').textContent, dim: document.querySelectorAll('.foafos-ov-dim').length }));
+  await page.keyboard.press('Backspace'); await page.keyboard.press('Backspace');
+  await page.keyboard.press('Escape');
+  const cleared = await page.evaluate(() => ({ on: document.body.classList.contains('foafos-overview-on'), dim: document.querySelectorAll('.foafos-ov-dim').length, said: document.querySelector('.foafos-ov-find').textContent }));
+  check(!!target && narrowed.shown.every((n) => n.includes('syst')) && narrowed.shown.length < names.length && narrowed.focus === target && narrowed.said === '“syst”'
+    && /No window is called “systzz”/.test(none.said) && none.dim === names.length && cleared.on && cleared.dim === 0 && cleared.said === '',
+    `typing a name in All windows narrows the cards; Escape clears it first (${names.join('|')} → ${narrowed.shown.join('|')}, ${JSON.stringify(none)}, ${JSON.stringify(cleared)})`);
   // A number key picks that card
   const second = await page.evaluate(() => document.querySelectorAll('.foafos-ov-hit')[1]?.closest('.foafos-window')?.dataset.wid);
   check(await page.evaluate(() => document.querySelectorAll('.foafos-ov-num b').length) >= 1, 'cards show their number');
