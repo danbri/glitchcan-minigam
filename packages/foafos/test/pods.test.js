@@ -4,6 +4,7 @@
 // sent; the real engine over a real relay is packages/foafos/pod/test/run.mjs.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { makeZip } from './zip-fixture.mjs';
 import { FoafSecrets } from '../src/secrets.mjs';
 import { FoafPods, POD_OWNER, checkPod, BUILTIN_BASE } from '../src/pods.mjs';
 
@@ -266,6 +267,25 @@ test('search: finds text in the asker\'s own files only, follows writes and dele
   assert.deepEqual(s.hits, []);
   assert.deepEqual((await r.pods.invoke('notes', 'pod.search', { query: 'maps' })).hits.map((h) => h.path), ['trip.txt']);
   assert.equal((await r.pods.invoke('stranger', 'pod.search', { query: 'tent' })).reason, 'denied');
+});
+
+test('archives: list and read inside a zip, and a zip within it; writing inside is refused', async () => {
+  const r = await granted();
+  const inner = makeZip([{ name: 'deep.txt', data: 'from the inner zip' }]);
+  const zip = makeZip([{ name: 'readme.txt', data: 'hello zip' }, { name: 'pics/cat.png', data: 'PNG..' }, { name: 'inner.zip', data: Buffer.from(inner), method: 0 }]);
+  assert.equal((await r.pods.invoke('notes', 'pod.put', { path: 'box.zip', body: zip, contentType: 'application/zip' })).ok, true);
+  const ls = await r.pods.invoke('notes', 'pod.list', { path: 'box.zip!/' });
+  assert.equal(ls.ok, true);
+  assert.deepEqual(ls.items.map((i) => [i.path, i.container]), [['inner.zip', false], ['pics/', true], ['readme.txt', false]]);
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'box.zip!/readme.txt' })).body, 'hello zip');
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'box.zip!/inner.zip!/deep.txt' })).body, 'from the inner zip');
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'box.zip!/pics/cat.png' })).reason, 'not-text');
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'box.zip!/pics/cat.png', as: 'bytes' })).body.byteLength, 5);
+  assert.equal((await r.pods.invoke('notes', 'pod.put', { path: 'box.zip!/readme.txt', body: 'x' })).reason, 'read-only');
+  assert.equal((await r.pods.invoke('notes', 'pod.delete', { path: 'box.zip!/readme.txt' })).reason, 'read-only');
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'box.zip!/nope.txt' })).status, 404);
+  assert.equal((await r.pods.invoke('notes', 'pod.get', { path: 'box.zip!/a!/b!/c!/d' })).reason, 'too-deep');
+  assert.equal((await r.pods.invoke('stranger', 'pod.get', { path: 'box.zip!/readme.txt' })).reason, 'denied');
 });
 
 test('quota: a pod without one is not measured', async () => {

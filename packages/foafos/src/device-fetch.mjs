@@ -14,7 +14,7 @@ const TYPES = [
   [/\.mp3$/i, 'audio/mpeg'], [/\.wav$/i, 'audio/wav'], [/\.mp4$/i, 'video/mp4'], [/\.pdf$/i, 'application/pdf'],
 ];
 const MAX_READ = 8 * 1024 * 1024;   // more than a pod verb may carry: refuse before reading it into memory
-const typeOf = (name) => TYPES.find(([re]) => re.test(name))?.[1] || 'application/octet-stream';
+export const typeOf = (name) => TYPES.find(([re]) => re.test(name))?.[1] || 'application/octet-stream';
 const etagOf = (file) => `"${file.size}-${file.lastModified}"`;
 const status = (code, headers = {}) => new Response(null, { status: code, headers });
 const missing = (e) => e?.name === 'NotFoundError' || e?.name === 'TypeMismatchError';

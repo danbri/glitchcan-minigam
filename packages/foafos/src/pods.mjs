@@ -42,7 +42,8 @@
 
 import { cleanPath } from './ops.mjs';
 import { SECRETS_CAP } from './secrets.mjs';
-import { deviceFetch } from './device-fetch.mjs';
+import { deviceFetch, typeOf } from './device-fetch.mjs';
+import { openArchive, listArchive, archiveParts, ArchiveError, ARCHIVE_LIMITS } from './archive.mjs';
 import { TextIndex } from './search.mjs';
 
 export const POD_OWNER = 'foafos.pods';
@@ -768,6 +769,12 @@ export class FoafPods {
     this._say('pods.invoke', { summary: `${appId} → ${verb} ${path}`, appId, verb, path, pod: scope.pod });
     let result;
     try {
+      // Inside an archive (`a.zip!/b/c.txt`): read-only, by the limits in archive.mjs.
+      if (path.includes('!/')) {
+        result = verb === 'pod.list' || verb === 'pod.get' ? await this._inArchive(podFetch, base, path, verb, params) : { ok: false, reason: 'read-only' };
+        this._say(result.ok ? 'pods.done' : 'pods.failed', { summary: `${appId}'s ${verb} ${path}: ${result.status ?? result.reason}`, appId, verb, path, status: result.status });
+        return result;
+      }
       if (verb === 'pod.search') {
         // Results only under the asker's own scope (and the folder asked about), as paths relative to it.
         const { index, partial } = await this._index(scope.pod, podFetch, base);
@@ -857,6 +864,51 @@ export class FoafPods {
       })());
     }
     return this.indexes.get(podId);
+  }
+
+  /**
+   * List or read inside an archive, and archives within it, without writing anything. The outer
+   * archive is fetched as bytes (at most ARCHIVE_LIMITS.archiveBytes) and kept, by its ETag, for
+   * the next call; each inner archive is opened from its entry. Errors are reasons, not throws.
+   */
+  async _inArchive(podFetch, base, path, verb, params) {
+    const parts = archiveParts(path);
+    if (parts.length - 1 > ARCHIVE_LIMITS.depth) return { ok: false, reason: 'too-deep' };
+    try {
+      const url = base + encodePath(parts[0]);
+      const r = await podFetch(url, { headers: { Accept: '*/*' } });
+      if (!r.ok) return { ok: false, reason: 'http', status: r.status };
+      if (Number(r.headers.get('content-length')) > ARCHIVE_LIMITS.archiveBytes) return { ok: false, reason: 'too-large' };
+      const etag = r.headers.get('etag') || '';
+      this.archives ??= new Map();
+      let arc = etag && this.archives.get(url)?.etag === etag ? this.archives.get(url).arc : null;
+      if (!arc) {
+        arc = await openArchive(new Uint8Array(await r.arrayBuffer()));
+        if (etag) { this.archives.set(url, { etag, arc }); if (this.archives.size > 8) this.archives.delete(this.archives.keys().next().value); }
+      }
+      for (const name of parts.slice(1, -1)) {
+        const e = arc.entries.find((x) => x.name === name && !x.dir);
+        if (!e) return { ok: false, reason: 'http', status: 404 };
+        arc = await openArchive(await arc.read(e));
+      }
+      const inner = parts.at(-1);
+      if (verb === 'pod.list') {
+        if (inner && !inner.endsWith('/')) return { ok: false, reason: 'bad-params' };
+        const items = listArchive(arc, inner).map((e) => (e.dir ? { path: e.name, container: true }
+          : { path: e.name, container: false, size: e.size, contentType: typeOf(e.name) }));
+        return { ok: true, status: 200, etag: `${etag}!${inner}`, items, readOnly: true };
+      }
+      const e = arc.entries.find((x) => x.name === inner && !x.dir);
+      if (!e) return { ok: false, reason: 'http', status: 404 };
+      const bytes = await arc.read(e);
+      const type = typeOf(inner);
+      if (params.as === 'bytes') return { ok: true, status: 200, contentType: type, etag: `${etag}!${inner}`, body: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), readOnly: true };
+      if (!TEXTUAL.test(type)) return { ok: false, reason: 'not-text', status: 200, contentType: type };
+      if (bytes.length > MAX_POD_BODY) return { ok: false, reason: 'too-large', status: 200 };
+      return { ok: true, status: 200, contentType: type, etag: `${etag}!${inner}`, body: new TextDecoder().decode(bytes), readOnly: true };
+    } catch (err) {
+      return { ok: false, reason: err instanceof ArchiveError ? err.reason : 'bad-archive' };
+    }
   }
 
   /** A resource's size now, from HEAD (0 if it is not there). */
