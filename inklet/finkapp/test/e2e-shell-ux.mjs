@@ -98,6 +98,19 @@ try {
   check(afterHide.min && afterHide.front, `ctrl ; h minimises the front window and another comes forward (${JSON.stringify(afterHide)})`);
   await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); w.querySelector('.foafos-window-min').click(); FoafOS.raiseWindow(w); });
 
+  // Ctrl ; q closes the front window, and another comes forward
+  await page.evaluate(() => FoafOS.launchApp('chat'));
+  await page.waitForTimeout(600);
+  const frontBefore = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((x) => x.style.zIndex === '2640')?.dataset.wid);
+  const nBeforeClose = await page.evaluate(() => document.querySelectorAll('.foafos-window').length);
+  await keys(page, [';', 'q']);
+  await page.waitForTimeout(400);
+  const afterClose = await page.evaluate((w) => ({ n: document.querySelectorAll('.foafos-window').length, gone: !document.querySelector(`.foafos-window[data-wid="${w}"]`), front: [...document.querySelectorAll('.foafos-window:not(.minimized)')].some((x) => x.style.zIndex === '2640') }), frontBefore);
+  check(afterClose.n === nBeforeClose - 1 && afterClose.gone && afterClose.front, `ctrl ; q closes the front window and another comes forward (${nBeforeClose} → ${JSON.stringify(afterClose)})`);
+  await page.evaluate(() => { if (!document.getElementById('foafos-session-win')) FoafOS.launchApp('system'); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
+
   // Ctrl ; j brings the next window to the front, and round again
   const front = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.style.zIndex === '2640')?.dataset.wid);
   const f0 = await front();
@@ -152,7 +165,7 @@ try {
   await keys(page, [';', 'f', 'o', 'a', 'f']);
   check(await page.evaluate(() => !document.getElementById('wm-chrome').classList.contains('collapsed')), 'ctrl ; f o a f opens the menu');
   check(await page.evaluate(() => document.querySelectorAll('#wm-open-sect button').length) >= 2, 'the menu lists open windows');
-  check(await page.evaluate(() => ['wm-sys-apps', 'wm-sys-windows', 'wm-sys-next', 'wm-sys-tasks', 'wm-sys-hide'].every((id) => /^Ctrl ; /.test(document.querySelector(`#${id} .wm-keys`)?.textContent || '') && document.querySelector(`#${id} .wm-keys`).offsetWidth > 0)), 'the menu shows each row\'s keys');
+  check(await page.evaluate(() => ['wm-sys-apps', 'wm-sys-windows', 'wm-sys-next', 'wm-sys-tasks', 'wm-sys-hide', 'wm-sys-close'].every((id) => /^Ctrl ; /.test(document.querySelector(`#${id} .wm-keys`)?.textContent || '') && document.querySelector(`#${id} .wm-keys`).offsetWidth > 0)), 'the menu shows each row\'s keys');
   await page.evaluate(() => FinkWM._setCollapsed(true));
   await keys(page, [';', 's']);
   await page.waitForTimeout(600);

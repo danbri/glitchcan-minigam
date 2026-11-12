@@ -2957,6 +2957,18 @@ function buildUI() {
     return next;
   };
 
+  // Close the front window, for the keyboard (Ctrl ; q), with its own close button, so an app that
+  // asks before losing work still asks; the next window comes forward.
+  FoafOS.closeFront = () => {
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const front = wins.find((w) => w.style.zIndex === '2640') || wins.at(-1);
+    if (!front) return null;
+    front.querySelector('.foafos-window-close')?.click();
+    const next = [...document.querySelectorAll('.foafos-window:not(.minimized)')].filter((w) => w !== front && w.isConnected).at(-1);
+    if (next) FoafOS.raiseWindow(next);
+    return front;
+  };
+
   // Minimise the front window, for the keyboard (Ctrl ; h, as a Mac's hide), and bring the next
   // one forward so the keys keep acting on something you can see.
   FoafOS.minimizeFront = () => {
