@@ -653,5 +653,19 @@ export const APPS = [
       "pod:read",
       "pod:write"
     ]
+  },
+  {
+    "id": "minichess-lite",
+    "family": "play",
+    "icon": "♕",
+    "name": "Minichess",
+    "surface": "window",
+    "url": "../../packages/foafos-guest/examples/minichess/index.html",
+    "desc": "A queen-and-king puzzle on a 3 by 4 board; your game is kept between visits",
+    "foafosLevel": 2,
+    "capabilities": [
+      "pod:read",
+      "pod:write"
+    ]
   }
 ];
