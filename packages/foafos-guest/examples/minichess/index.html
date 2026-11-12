@@ -355,6 +355,7 @@
                     cell.appendChild(pieceSpan);
                 }
             });
+            window.onBoardChanged?.();   // level 2 saves the game here
         }
 
         function animatePieceMove(pieceEmojiText, oldLogicPos, newLogicPos, onAnimationComplete) {
@@ -784,13 +785,37 @@
     <style>body.paused #game-board { pointer-events: none; opacity: .55; }</style>
     <script type="module">
         import { connect } from '../../guest.mjs';
-        const guest = await connect({ level: 1, name: 'Minichess',
+        const guest = await connect({ level: 2, name: 'Minichess',
             actions: [{ id: 'new', label: 'New game' }, { id: 'rules', label: 'Show the rules' }] });
         guest.on('action', ({ id }) => { if (id === 'new') resetGame(); if (id === 'rules') explanationBtn.click(); });
         guest.on('lifecycle', ({ state }) => {
             document.body.classList.toggle('paused', state === 'paused');
             if (state === 'paused') guest.paused();
         });
+        // Level 2: the game in progress is saved in the app's own folder (games/current.json), so
+        // closing and reopening goes on where it was. The same calls work everywhere: a host's
+        // folder (the person's pod, in full foafos) at level 2, the browser's own storage without one.
+        // What leaves the game, added at this level: the board, to that folder only.
+        const SAVE = 'games/current.json';
+        const at = (p) => p && Number.isInteger(p.row) && Number.isInteger(p.col) && isValidBoardPos(p.row, p.col);
+        const kept = await guest.store.get(SAVE);
+        if (kept.ok) {
+            try {
+                const g = JSON.parse(kept.body);
+                if (at(g.kingPos) && at(g.queenPos) && ['white', 'black'].includes(g.currentTurn)) {
+                    kingPos = g.kingPos; queenPos = g.queenPos; currentTurn = g.currentTurn;
+                    gameOver = !!g.gameOver; gameWon = !!g.gameWon;
+                    updateMessage(); drawPiecesAndHighlights();
+                    // Saved on the computer's turn: it moves now, as it would have.
+                    if (currentTurn === 'black' && !gameOver) setTimeout(computerMove, 400);
+                }
+            } catch { /* not a saved game: start fresh */ }
+        }
+        let saving = null;
+        window.onBoardChanged = () => {
+            clearTimeout(saving);
+            saving = setTimeout(() => guest.store.put(SAVE, JSON.stringify({ kingPos, queenPos, currentTurn, gameOver, gameWon }), { contentType: 'application/json' }), 150);
+        };
         guest.ready();
         window.__minichess = { guest };
     </script>
