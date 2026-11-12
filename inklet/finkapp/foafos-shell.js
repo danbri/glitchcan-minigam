@@ -3168,7 +3168,7 @@ function buildUI() {
     // Keyed by the title before any document or instance name; only where windows float.
     const geomKey = String(title).split(/ · |: /)[0];
     const kept = window.innerWidth >= 520 ? loadGeom()[geomKey] : null;
-    if (kept && !opts.float) {
+    if (kept && !opts.float && Number.isFinite(kept.w)) {
       const kw = Math.min(kept.w, window.innerWidth - 16), kh = Math.min(kept.h, window.innerHeight - 16);
       Object.assign(win.style, { width: `${kw}px`, height: `${kh}px`,
         left: `${clamp(kept.x, window.innerWidth - kw - 8)}px`, top: `${clamp(kept.y, window.innerHeight - kh - 8)}px` });
@@ -3229,10 +3229,13 @@ function buildUI() {
       }
       maxBtn.setAttribute('aria-pressed', String(on));
       maxBtn.textContent = on ? '❐' : '▢';
+      // Whether it was maximised is kept with its place, so it opens that way next time, as on a desktop.
+      if (window.innerWidth >= 520 && !opts.float) saveGeom(geomKey, { ...(loadGeom()[geomKey] || {}), max: on });
     };
     maxBtn.addEventListener('click', () => {
       if (!win.classList.contains('maximized')) {
         restore = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+        win._keepGeom();   // the place it goes back to
         setMax(true);
       } else {
         setMax(false);
@@ -3245,7 +3248,7 @@ function buildUI() {
     // Small viewports open maximized; the ❐ button restores the floating
     // geometry (kept in `restore`) for anyone who wants the cascade.
     // (opts.float: a small window that should stay small, such as the Activity strip)
-    if (window.innerWidth < 520 && !opts.float) {
+    if ((window.innerWidth < 520 || kept?.max) && !opts.float) {
       restore = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
       setMax(true);
     }
