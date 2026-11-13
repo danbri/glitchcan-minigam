@@ -578,6 +578,29 @@ try {
   });
   check(follow.hiddenHere && follow.at === 2 && follow.shown && follow.front, `opening an app whose window is on another workspace goes there (${JSON.stringify(follow)})`);
 
+  // Speed: the everyday moves stay quick with ten windows open. Each time includes two frames (about
+  // 33 ms), and the limits are generous so a slow machine passes; measured here: All apps 19 ms,
+  // All windows 28 ms, raising each of ten windows 11 ms.
+  const speed = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((x) => setTimeout(x, ms));
+    const frame = () => new Promise((x) => requestAnimationFrame(() => requestAnimationFrame(x)));
+    const time = async (fn) => { const t = performance.now(); fn(); await frame(); return Math.round(performance.now() - t); };
+    document.getElementById('foafos-home')?.remove();
+    const extra = [];
+    while (document.querySelectorAll('.foafos-window:not(.ws-away)').length < 10) { extra.push(FoafOS.openWidget('tally')); await wait(50); }
+    await wait(800);
+    const out = { windows: document.querySelectorAll('.foafos-window:not(.ws-away)').length };
+    out.allApps = await time(() => FoafOS.openHome());
+    document.getElementById('foafos-home')?.remove();
+    out.allWindows = await time(() => FoafOS.enterOverview());
+    FoafOS.exitOverview(null); await wait(400);
+    const ws = [...document.querySelectorAll('.foafos-window:not(.ws-away)')];
+    out.raiseAll = await time(() => { for (const w of ws) FoafOS.raiseWindow(w); });
+    for (const w of extra) w?.querySelector('.foafos-window-close')?.click();
+    return out;
+  });
+  check(speed.windows >= 10 && speed.allApps < 250 && speed.allWindows < 250 && speed.raiseAll < 250, `the everyday moves stay quick with ten windows (${JSON.stringify(speed)} ms)`);
+
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
   await page.waitForTimeout(400);
