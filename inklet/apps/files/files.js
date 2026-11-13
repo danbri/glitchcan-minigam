@@ -563,8 +563,8 @@
           dblclick: () => activate(it),
           keydown: (e) => {
             if (e.key === 'Enter') activate(it);
-            if (e.key === 'ArrowDown') tr.nextElementSibling?.focus();
-            if (e.key === 'ArrowUp') tr.previousElementSibling?.focus();
+            if (e.key === 'ArrowDown' && !e.shiftKey) tr.nextElementSibling?.focus();
+            if (e.key === 'ArrowUp' && !e.shiftKey) tr.previousElementSibling?.focus();
           } } },
         h('td', {}, icoFor(it, k), nameOf(it.path),
           searchResults ? h('span', { class: 'hit' }, `${parentOf(it.path) || (here()?.label || 'Top folder')}${it.snippet ? ` — ${it.snippet}` : ''}`) : null), h('td', {}, k.name),
@@ -895,6 +895,26 @@
       e.preventDefault();
       const it = items.find((i) => i.path === e.target.dataset.path);
       if (it) { await pick(it); e.target.focus(); }
+      return;
+    }
+    // Shift + arrows extend the choice from where it started, as in a desktop's file manager:
+    // Up and Down in the list, and all four in the icon view.
+    if (e.shiftKey && at >= 0 && /^Arrow/.test(e.key)) {
+      const grid = e.target.matches('[role=option]');
+      // In the icon view Up and Down go a whole row of icons.
+      const top0 = rows[0].getBoundingClientRect().top;
+      const cols = grid ? Math.max(1, rows.filter((r) => Math.abs(r.getBoundingClientRect().top - top0) < 2).length) : 1;
+      const step = { ArrowDown: cols, ArrowUp: -cols, ArrowRight: grid ? 1 : 0, ArrowLeft: grid ? -1 : 0 }[e.key];
+      const to = rows[at + step];
+      if (!step || !to) return;
+      e.preventDefault(); e.stopPropagation();
+      const paths = rows.map((r) => r.dataset.path);
+      if (!anchor || !paths.includes(anchor)) anchor = paths[at];
+      const a = paths.indexOf(anchor), b = at + step;
+      chosen.clear();
+      for (const p of paths.slice(Math.min(a, b), Math.max(a, b) + 1)) chosen.add(p);
+      markChosen();
+      to.focus();
       return;
     }
     // Ctrl or Cmd + A chooses everything shown; Escape clears; Delete with several chosen asks once.

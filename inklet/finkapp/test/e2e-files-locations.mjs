@@ -680,6 +680,28 @@ try {
   await tcdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
   check(String(tOne.chosen) === 'notes/t1.txt' && tOne.bar && String(tTwo) === 'notes/t1.txt,notes/t2.txt' && String(tGone) === 'false,false' && /Paste t3\.txt here/.test(pasteLabel) && tCopied === 't3',
     `by touch: a long press chooses, a tap adds, and the bar deletes, copies and pastes (${JSON.stringify({ tOne, tTwo, tGone, pasteLabel, tCopied })})`);
+  // Shift + arrows extend the choice from the keyboard: Down twice takes three, Up gives one back
+  await f.evaluate(async () => {
+    for (const n of ['s1', 's2', 's3']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
+    const filter = document.getElementById('filter'); filter.value = ''; filter.dispatchEvent(new Event('input'));
+    await window.__files.go('notes/');
+  });
+  await page.waitForTimeout(400);
+  const sRow = (n) => `#items tbody tr[data-path="notes/${n}.txt"]`;
+  await f.focus(sRow('s1'));
+  await f.press(sRow('s1'), 'Shift+ArrowDown');
+  await f.press(sRow('s2'), 'Shift+ArrowDown');
+  const sThree = await f.$$eval('#items tbody tr.chosen', (rs) => rs.map((r) => r.dataset.path));
+  const sFocus = await f.evaluate(() => document.activeElement?.dataset?.path);
+  await f.press(sRow('s3'), 'Shift+ArrowUp');
+  const sTwo = await f.$$eval('#items tbody tr.chosen', (rs) => rs.map((r) => r.dataset.path));
+  await f.press(sRow('s2'), 'Delete');
+  await page.waitForTimeout(300);
+  const sAsked = await f.evaluate(() => document.querySelector('.ask')?.textContent || '');
+  await f.click('.ask button:not(.danger)');
+  await f.evaluate(async () => { for (const n of ['s1', 's2', 's3']) await foafos.pod.delete(`notes/${n}.txt`); await window.__files.go('notes/'); });
+  check(String(sThree) === 'notes/s1.txt,notes/s2.txt,notes/s3.txt' && sFocus === 'notes/s3.txt' && String(sTwo) === 'notes/s1.txt,notes/s2.txt' && /Delete 2 files\?/.test(sAsked),
+    `Shift + arrows extend the choice from the keyboard (${JSON.stringify({ sThree, sFocus, sTwo, sAsked })})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });
