@@ -1647,6 +1647,29 @@ try {
     await lp.close();
     check(rows[0] === 'New file' && rows.includes('Upload…'), `on a phone, holding the folder's empty space opens its menu (${rows})`);
   }
+  // On a phone, two fingers spread over the icons make them bigger
+  {
+    const zp = await context.newPage();
+    await zp.setViewportSize({ width: 390, height: 780 });
+    await zp.goto(SHELL);
+    const zf = await filesFrame(zp);
+    await zf.evaluate(async () => { await window.__files.go(''); if (document.getElementById('view').getAttribute('aria-pressed') !== 'true') document.getElementById('view').click(); });
+    const zcdp = await context.newCDPSession(zp);
+    await zcdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+    await zp.waitForTimeout(300);
+    const fr = await (await zf.frameElement()).boundingBox();
+    const c = await zf.evaluate(() => { const r = document.getElementById('items-pane').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    const cx = fr.x + c.x, cy = fr.y + c.y;
+    const z0 = await zf.evaluate(() => document.querySelector('#items .grid')?.style.getPropertyValue('--zoom') || '1');
+    await zcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx - 20, y: cy, id: 1 }, { x: cx + 20, y: cy, id: 2 }] });
+    for (let k = 1; k <= 6; k++) await zcdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx - 20 - k * 8, y: cy, id: 1 }, { x: cx + 20 + k * 8, y: cy, id: 2 }] });
+    await zcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await zp.waitForTimeout(200);
+    const z1 = await zf.evaluate(() => document.querySelector('#items .grid')?.style.getPropertyValue('--zoom'));
+    await zf.evaluate(() => { localStorage.removeItem('files.view'); document.getElementById('view').click(); });
+    await zp.close();
+    check(Number(z1) > Number(z0), `on a phone, spreading two fingers over the icons makes them bigger (${z0} → ${z1})`);
+  }
   // Pulling the list down from the top, by touch, looks for changes too. In a page of its own, so the
   // touch emulation touches nothing else.
   {
