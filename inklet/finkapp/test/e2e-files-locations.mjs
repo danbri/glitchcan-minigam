@@ -1424,6 +1424,22 @@ try {
     });
     check(r.n0 === 'seen.txt' && r.n1 === '.secret,seen.txt' && r.n2 === 'seen.txt', `Ctrl + Shift + . shows hidden files, never the .folder marker, and hides them again (${JSON.stringify(r)})`);
   }
+  // A double-click on a text file opens it in Notes, its first app
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/dbl.txt', 'double', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
+    await page.waitForTimeout(300);
+    await f.dblclick('#items tbody tr[data-path="notes/dbl.txt"]');
+    let opened = null;
+    for (let i = 0; i < 40 && !opened; i++) {
+      for (const x of page.frames()) if (/apps\/podnotes\//.test(x.url()) && await x.evaluate(() => window.__podnotes?.state().shared?.name === 'dbl.txt').catch(() => false)) opened = x;
+      if (!opened) await page.waitForTimeout(250);
+    }
+    const said = await f.evaluate(() => document.getElementById('status').textContent);
+    const text = opened ? await opened.evaluate(() => document.getElementById('text').value) : null;
+    await page.evaluate(() => { for (const w of document.querySelectorAll('.foafos-window')) if (w.querySelector('iframe')?.src.includes('podnotes') && /dbl/.test(w.querySelector('.foafos-window-bar span')?.textContent || '')) w.querySelector('.foafos-window-close')?.click(); });
+    await f.evaluate(async () => { await foafos.pod.delete('notes/dbl.txt'); });
+    check(!!opened && text === 'double' && /Opened dbl\.txt in Notes/.test(said), `a double-click opens a text file in Notes (${!!opened}, ${JSON.stringify(text)}, ${said})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

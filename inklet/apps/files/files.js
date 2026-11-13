@@ -819,7 +819,7 @@
       box.replaceChildren(h('div', { class: 'grid', role: 'listbox', 'aria-multiselectable': 'true', 'aria-label': `Items in ${nameOf(folder) || here()?.label || 'the top folder'}` }, rows.map((it) => {
         const k = kindOf(it);
         const btn = h('button', { type: 'button', role: 'option', 'aria-selected': String(picked?.path === it.path),
-          on: { click: (e) => clickItem(e, it), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
+          on: { click: (e) => clickItem(e, it), dblclick: () => openDefault(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
         icoFor(it, k), nameOf(it.path));
         btn.dataset.path = it.path;
         btn.classList.toggle('chosen', chosen.has(it.path));
@@ -840,7 +840,7 @@
         const k = kindOf(it);
         const tr = h('tr', { tabIndex: 0, on: {
           click: (e) => clickItem(e, it),
-          dblclick: () => activate(it),
+          dblclick: () => openDefault(it),
           keydown: (e) => {
             if (e.key === 'Enter') activate(it);
             if (e.metaKey || e.ctrlKey) return;            // Cmd + arrows are Finder's open and up
@@ -1084,6 +1084,18 @@
 
   // Apps that can open this file, each with its own comment: what a person or an
   // agent should know before choosing. Exploring: docs/foafos-open-with-20261105.md.
+  // A double-click opens a file in its app, as on a desktop: the first app that offers to open it
+  // (the same as its first "Open in" button). With none, or for a folder or an archive, it does what
+  // Enter does: opens the folder, or shows the file here.
+  async function openDefault(it) {
+    if (it.container || ARCHIVE.test(it.path) || inArchive() || it.trashId) return activate(it);
+    const r = await foafos.pod.handlers(it.path, it.contentType);
+    const app = r.ok && r.handlers?.[0];
+    if (!app) return activate(it);
+    noteRecent(it.path);
+    const o = await foafos.pod.openWith(app.appId, it.path, it.contentType);
+    say(o.ok ? `Opened ${nameOf(it.path)} in ${app.name}.` : explain(o), !o.ok);
+  }
   async function openWithBox(path, contentType) {
     const r = await foafos.pod.handlers(path, contentType);
     if (!r.ok || !r.handlers?.length) return null;
