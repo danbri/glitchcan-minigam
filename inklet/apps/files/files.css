@@ -8,8 +8,12 @@
 /* A narrow window keeps the filter, smaller, and shows only the current folder's name
    on one line, as a phone's file browser does; ↑ and ‹ still go up and back.
    New folder is still offered in an empty folder. */
+/* Upload a folder needs room: a mid-size window offers it in an empty folder only. */
+@container (max-width: 900px) { #upload-dir { display: none; } }
 @container (max-width: 620px) {
   #new-folder { display: none; }
+  #upload { font-size: 0; min-width: 36px; }
+  #upload::before { content: "📤"; font-size: 17px; line-height: 1; }
   #new-file { font-size: 0; min-width: 36px; }
   #new-file::before { content: "+"; font-size: 20px; line-height: 1; }
   #filter { width: 4.5rem; min-width: 0; }
@@ -159,3 +163,6 @@
 .detail-pdf .pdf-page { background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .25); align-self: center; }
 .detail-pdf .pdf-nav { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .detail-pdf .pdf-where { color: var(--p-dim); font-size: 13px; }
+
+/* A phone has no folder picker: Upload a folder is for a computer. */
+@media (pointer: coarse) and (not (any-pointer: fine)) { .upload-dir { display: none; } }

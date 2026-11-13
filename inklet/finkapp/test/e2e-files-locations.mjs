@@ -2,7 +2,8 @@
 // The browser's folder picker cannot be driven, so that one call is stubbed with an OPFS folder;
 // everything behind it is real. Run: CHROMIUM_PATH=... FACTOIDAL=... node e2e-files-locations.mjs
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -1105,6 +1106,23 @@ try {
     await f.evaluate(async () => { for (const p of ['notes/zipme/a.txt', 'notes/zipme/sub/b.txt', 'notes/zipme/empty/.folder']) await foafos.pod.delete(p); });
     check(zdl.suggestedFilename() === 'zipme.zip' && String(names) === 'zipme/a.txt,zipme/empty/,zipme/sub/b.txt' && aText === 'A',
       `a folder downloads as a .zip of all that is in it (${zdl.suggestedFilename()}: ${names})`);
+  }
+  // Upload: the system's file picker adds files here, and a folder keeps its shape
+  {
+    await f.evaluate(() => window.__files.go('notes/'));
+    await page.waitForTimeout(300);
+    await f.locator('#upload-input').setInputFiles([{ name: 'up1.txt', mimeType: 'text/plain', buffer: Buffer.from('one') }, { name: 'up2.txt', mimeType: 'text/plain', buffer: Buffer.from('two') }]);
+    await f.waitForFunction(() => !!document.querySelector('#items [data-path="notes/up2.txt"]'), null, { timeout: 8000 });
+    const ups = await f.evaluate(async () => [(await foafos.pod.get('notes/up1.txt')).body, (await foafos.pod.get('notes/up2.txt')).body]);
+    check(String(ups) === 'one,two', `Upload adds the chosen files to this folder (${ups})`);
+    const dir = mkdtempSync(join(tmpdir(), 'files-up-'));
+    mkdirSync(join(dir, 'trip', 'sub'), { recursive: true });
+    writeFileSync(join(dir, 'trip', 'a.txt'), 'A'); writeFileSync(join(dir, 'trip', 'sub', 'b.txt'), 'B');
+    await f.locator('#upload-dir-input').setInputFiles(join(dir, 'trip'));
+    await f.waitForFunction(() => /Added .*trip\/.*trip\//.test(document.getElementById('status')?.textContent || ''), null, { timeout: 8000 });
+    const tree = await f.evaluate(async () => [(await foafos.pod.get('notes/trip/a.txt')).body, (await foafos.pod.get('notes/trip/sub/b.txt')).body]);
+    await f.evaluate(async () => { for (const p of ['notes/up1.txt', 'notes/up2.txt', 'notes/trip/a.txt', 'notes/trip/sub/b.txt', 'notes/trip/sub/', 'notes/trip/']) await foafos.pod.delete(p); });
+    check(String(tree) === 'A,B', `Upload a folder keeps its folders (${tree})`);
   }
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
