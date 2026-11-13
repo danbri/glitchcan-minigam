@@ -621,6 +621,28 @@ try {
     return r;
   });
   check(String(ovws.btns) === '1:true,2:false' && ovws.on && ovws.at === 2 && ovws.cards === 1 && ovws.pressed === 'false,true', `All windows has a button for each workspace (${JSON.stringify(ovws)})`);
+  // A card dragged onto another workspace's button moves its window there
+  const dragWs = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    FoafOS.goWorkspace(1);
+    const two = [...document.querySelectorAll('.foafos-window:not(.ws-away):not(.minimized)')].slice(0, 2);
+    FoafOS.moveToWorkspace(two[0], 2, { quiet: true });       // so there are two workspaces
+    FoafOS.enterOverview(); await wait(400);
+    const card = two[1].querySelector('.foafos-ov-hit');
+    const dt = new DataTransfer();
+    card.dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+    const target = document.querySelectorAll('#foafos-ov-strip .foafos-ov-wsbtn')[1];
+    target.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    const lit = target.classList.contains('drop');
+    target.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    await wait(600);
+    const r = { lit, ws: two[1].dataset.ws, hidden: getComputedStyle(two[1]).display === 'none' };
+    FoafOS.exitOverview(null); await wait(300);
+    for (const w of two) FoafOS.moveToWorkspace(w, 1, { quiet: true });
+    FoafOS.goWorkspace(1);
+    return r;
+  });
+  check(dragWs.lit && dragWs.ws === '2' && dragWs.hidden, `a card dragged onto a workspace button moves its window there (${JSON.stringify(dragWs)})`);
   // Opening an app whose window is on another workspace goes there, rather than raising it out of sight
   const follow = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
