@@ -841,15 +841,25 @@ try {
     const r = await page.evaluate(async () => {
       const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
       const sheetFor = async (id) => {
-        if (document.getElementById('foafos-home')) { document.getElementById('foafos-home').remove(); await wait(400); }
+        document.getElementById('foafos-home')?.remove();
         FoafOS.openHome(); await wait(150);
         document.querySelector(`#foafos-home .foafos-app[data-app="${id}"]`)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); await wait(100);
         const out = [...document.querySelectorAll('.foafos-app-sheet .sheet-caps li')].map((li) => li.textContent);
-        document.getElementById('foafos-home')?.remove(); await wait(400);   // its history steps go back first
+        document.getElementById('foafos-home')?.remove();   // and straight on to the next: the race Back must survive
         return out;
       };
       return { files: await sheetFor('files'), notes: await sheetFor('podnotes') };
     });
+    // After that quick open, close, open, close: one Back press with All apps open closes it, and the shell stays
+    const race = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      await wait(300);
+      FoafOS.openHome(); await wait(150);
+      history.back(); await wait(400);
+      return { home: !!document.getElementById('foafos-home'), shell: !!window.FoafOS?.launchApp, overlay: !!history.state?.foafosOverlay };
+    });
+    r.race = race;
+    check(!race.home && race.shell && !race.overlay, `opening All apps again at once after closing it keeps Back right (${JSON.stringify(race)})`);
     check(r.files.includes('see every file in your pod') && r.files.includes('change and delete any file in your pod') && r.notes.includes('read its own folder in your pod'),
       `an app's sheet says what it may do (${JSON.stringify(r)})`);
   }

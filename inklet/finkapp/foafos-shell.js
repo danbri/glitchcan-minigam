@@ -1471,19 +1471,26 @@ let _navSuppress = false;
 // Heard in the capture phase, before the story's own Back below, which then never sees it.
 const backStack = [];
 let ignorePops = 0;
+// history.back() lands later, so an entry opened while one is still going back waits to be pushed
+// until it has landed: pushed at once, it would be the one taken off.
+const waitingPush = [];
+const pushEntry = (entry) => { history.pushState({ ...(history.state || {}), foafosOverlay: true }, ''); entry.pushed = true; };
 function closeOnBack(el, close) {
-  history.pushState({ ...(history.state || {}), foafosOverlay: true }, '');
-  const entry = { el, close };
+  const entry = { el, close, pushed: false };
   backStack.push(entry);
+  if (ignorePops) waitingPush.push(entry); else pushEntry(entry);
   const drop = () => {
     watch.disconnect();
     const i = backStack.indexOf(entry);
     if (i < 0) return;                       // it was Back that closed it
     // Only the newest entry can be taken off the history: one under another is marked spent, and
-    // goes when those above it have gone.
+    // goes when those above it have gone. One never pushed just goes.
     entry.spent = true;
     while (backStack.length && backStack[backStack.length - 1].spent) {
-      backStack.pop();
+      const top = backStack.pop();
+      const w = waitingPush.indexOf(top);
+      if (w >= 0) { waitingPush.splice(w, 1); continue; }
+      if (!top.pushed) continue;
       ignorePops++;
       history.back();
     }
@@ -1496,7 +1503,11 @@ function closeOnBack(el, close) {
 }
 FoafOS.closeOnBack = closeOnBack;
 window.addEventListener('popstate', (e) => {
-  if (ignorePops) { ignorePops--; e.stopImmediatePropagation(); return; }
+  if (ignorePops) {
+    ignorePops--; e.stopImmediatePropagation();
+    if (!ignorePops) for (const entry of waitingPush.splice(0)) pushEntry(entry);
+    return;
+  }
   const top = backStack.pop();
   if (!top) return;
   e.stopImmediatePropagation();
