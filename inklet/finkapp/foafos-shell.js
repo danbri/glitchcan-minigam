@@ -18,6 +18,7 @@ import {
   defaultOps, scopeBus, FoafPods, POD_VERBS, POD_OWNER, BUILTIN_BASE, BUILTIN_PRINCIPAL, BUILTIN_ACL, XmppWs, FoafChat, ToolGrants, PERSON, describeLocation, handlersFor, CHAT_OWNER,
 } from '../../packages/foafos/src/index.mjs';
 import { FoafTools } from '../../packages/foafos/src/tools.mjs';
+import { makeStoredZip } from '../../packages/foafos/src/zip-write.mjs';
 import { hostApp } from '../../packages/foafos-host-lite/host-lite.mjs';
 import { lwsAgentFetch } from '../../packages/foafos/src/lws-agent.mjs';
 import { FoafPlaces, placesTools } from '../../packages/foafos/src/places.mjs';
@@ -5383,16 +5384,46 @@ function buildUI() {
           tallyCap(app.id, 'pod:read');
           if (!holds('pod:read')) { refuseAtNode('pods', 'pod:read', d.verb); reply({ ok: false, reason: 'denied' }); return; }
           const path = String(d.params?.path ?? '');
-          pods.invoke(app.id, 'pod.get', { path, as: 'bytes' }, { holder: nodeId }).then((r) => {
-            if (!r.ok) { reply(r); return; }
-            const name = path.split('/').filter(Boolean).pop() || 'file';
+          const save = (bytes, type, name) => {
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([r.body], { type: r.contentType || 'application/octet-stream' }));
+            a.href = URL.createObjectURL(new Blob([bytes], { type }));
             a.download = name;
             document.body.appendChild(a); a.click(); a.remove();
             setTimeout(() => URL.revokeObjectURL(a.href), 30000);
             bus.publish('pod.download', { summary: `${app.name} saved ${name} to this computer`, id: app.id, name });
             reply({ ok: true, name });
+          };
+          // A folder (a path ending in /) is saved as one .zip of all that is in it, read with the
+          // app's own scope, up to 500 files or 50 MB. Hidden names (such as .folder) are left out.
+          if (path.endsWith('/')) {
+            (async () => {
+              const entries = [], queue = [path];
+              let bytes = 0;
+              while (queue.length) {
+                const dir = queue.shift();
+                const l = await pods.invoke(app.id, 'pod.list', { path: dir }, { holder: nodeId });
+                if (!l.ok) return reply(l);
+                const kids = l.items.filter((i) => !i.path.replace(/\/$/, '').split('/').pop().startsWith('.'));
+                if (!kids.length && dir !== path) entries.push({ name: dir.slice(path.length) });
+                for (const it of kids) {
+                  const p = dir + it.path.replace(/^\/+/, '');
+                  if (it.container) { queue.push(p); continue; }
+                  if (entries.length >= 500 || bytes > 50 * 1024 * 1024) return reply({ ok: false, reason: 'too-large' });
+                  const g = await pods.invoke(app.id, 'pod.get', { path: p, as: 'bytes' }, { holder: nodeId });
+                  if (!g.ok) return reply(g);
+                  const data = new Uint8Array(g.body);
+                  bytes += data.length;
+                  entries.push({ name: p.slice(path.length), data });
+                }
+              }
+              const base = path.replace(/\/$/, '').split('/').pop() || 'files';
+              save(makeStoredZip(entries.map((e) => ({ ...e, name: `${base}/${e.name}` }))), 'application/zip', `${base}.zip`);
+            })().catch(() => reply({ ok: false, reason: 'failed' }));
+            return;
+          }
+          pods.invoke(app.id, 'pod.get', { path, as: 'bytes' }, { holder: nodeId }).then((r) => {
+            if (!r.ok) { reply(r); return; }
+            save(r.body, r.contentType || 'application/octet-stream', path.split('/').filter(Boolean).pop() || 'file');
           }, () => reply({ ok: false, reason: 'failed' }));
           return;
         }

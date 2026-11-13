@@ -7,6 +7,7 @@ import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { makeZip } from '../../../packages/foafos/test/zip-fixture.mjs';
+import { openArchive } from '../../../packages/foafos/src/archive.mjs';
 import { jpeg as fixtureJpeg, CAMERA } from '../../../packages/foafos/test/meta-fixture.mjs';
 import { readFileSync as readAgi } from 'node:fs';
 const MD2HTML_WASM = [...readAgi(new URL('../../../packages/foafos/agi/md2html.wasm', import.meta.url))];
@@ -1005,6 +1006,26 @@ try {
     const said = await f.evaluate(() => document.getElementById('status').textContent);
     await f.evaluate(() => foafos.pod.delete('notes/dl.txt'));
     check(dl.suggestedFilename() === 'dl.txt' && body === 'download me' && /Downloaded dl\.txt/.test(said), `Download saves a file to this computer (${dl.suggestedFilename()}, ${JSON.stringify(body)}, ${said})`);
+  }
+  // A folder downloads as one .zip of everything in it, the empty folder too
+  {
+    await f.evaluate(async () => {
+      for (const [p, b] of [['notes/zipme/a.txt', 'A'], ['notes/zipme/sub/b.txt', 'B'], ['notes/zipme/empty/.folder', '']]) await foafos.pod.put(p, b, { contentType: 'text/plain' });
+      await window.__files.go('notes/');
+    });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/zipme/"]');
+    await page.waitForTimeout(300);
+    const [zdl] = await Promise.all([
+      page.waitForEvent('download', { timeout: 15000 }),
+      f.evaluate(() => [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Download as .zip').click()),
+    ]);
+    const arc = await openArchive(new Uint8Array(readFileSync(await zdl.path())));
+    const names = arc.entries.map((e) => e.name).sort();
+    const aText = new TextDecoder().decode(await arc.read(arc.entries.find((e) => e.name === 'zipme/a.txt')));
+    await f.evaluate(async () => { for (const p of ['notes/zipme/a.txt', 'notes/zipme/sub/b.txt', 'notes/zipme/empty/.folder']) await foafos.pod.delete(p); });
+    check(zdl.suggestedFilename() === 'zipme.zip' && String(names) === 'zipme/a.txt,zipme/empty/,zipme/sub/b.txt' && aText === 'A',
+      `a folder downloads as a .zip of all that is in it (${zdl.suggestedFilename()}: ${names})`);
   }
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));

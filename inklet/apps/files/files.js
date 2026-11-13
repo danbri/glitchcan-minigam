@@ -731,6 +731,7 @@
         kept ? 'Remove from the side panel' : 'Keep in the side panel');
       drawDetail(head, h('div', { class: 'detail-actions' },
         h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(it.path) } }, 'Open'), backBtn, favBtn,
+        h('button', { class: 'tool', type: 'button', on: { click: () => download([it.path]) } }, 'Download as .zip'),
         h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')));
       markPicked();
       return;
@@ -887,11 +888,11 @@
 
   // Save files to this computer, as a web file manager's Download does: the shell saves each one.
   async function download(paths) {
-    const files = paths.filter((p) => !p.endsWith('/'));
-    if (!files.length) { say('Folders cannot be downloaded yet: download the files in them.', true); return; }
+    // A folder comes down as one .zip of all that is in it; files one by one.
     const done = [], not = [];
-    for (const p of files) { const r = await foafos.pod.download(p); (r.ok ? done : not).push(r.ok ? nameOf(p) : `${nameOf(p)} (${explain(r)})`); }
-    say([done.length ? `Downloaded ${done.length === 1 ? done[0] : `${done.length} files`} to this computer.` : '', not.length ? `Not downloaded: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !done.length);
+    if (paths.some((p) => p.endsWith('/'))) say('Making a .zip of the folder…');
+    for (const p of paths) { const r = await foafos.pod.download(p); (r.ok ? done : not).push(r.ok ? r.name || nameOf(p) : `${nameOf(p)} (${explain(r)})`); }
+    say([done.length ? `Downloaded ${done.length === 1 ? done[0] : `${done.length} items`} to this computer.` : '', not.length ? `Not downloaded: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !done.length);
   }
 
   // A copy beside the original: "plan copy.txt", then "plan copy 2.txt", never over a file that is there.

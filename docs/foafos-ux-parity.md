@@ -29,7 +29,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
 | Duplicate (macOS) | Done: #1034 |
 | Drop files from the computer; paste files, screenshots and text (desktops) | Done: #1009, #1053 |
-| Download a file to this computer, one or several (web file managers) | Done: this PR |
+| Download a file to this computer, one or several (web file managers) | Done: #1112 |
+| Download a folder as one .zip (web file managers) | Done: this PR |
 | Copy, cut and paste between folders (desktops) | Done: #1061, #1069 |
 | Drag onto a folder to move (desktops) | Done: #1036, #1071 |
 | Choose several: Ctrl/Cmd + click, Shift + click, Ctrl/Cmd + A (desktops) | Done: #1067, #1070 |
