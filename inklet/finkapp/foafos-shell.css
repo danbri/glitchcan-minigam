@@ -1634,3 +1634,9 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 @media (pointer: coarse) and (not (any-pointer: fine)) {
   #wm-sys-keys, #wm-sys-move { display: none !important; }
 }
+
+/* All windows: a button for each workspace, the one shown pressed. */
+.foafos-ov-ws { display: inline-flex; gap: 6px; margin-left: auto; margin-right: 10px; }
+.foafos-ov-wsbtn { min-width: 32px; height: 28px; border-radius: 6px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; cursor: pointer; opacity: .7; }
+.foafos-ov-wsbtn[aria-pressed="true"] { opacity: 1; font-weight: 700; background: color-mix(in srgb, currentColor 15%, transparent); }
+@media (pointer: coarse) { .foafos-ov-wsbtn { min-width: 44px; height: 40px; } }

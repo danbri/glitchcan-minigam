@@ -2952,7 +2952,21 @@ function buildUI() {
       : `pick one${wins.length > 1 ? `, press 1–${Math.min(wins.length, 9)}, or type a name` : ''}`;
     strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — ${how}</span>
       <span class="foafos-ov-find" role="status"></span>
+      <span class="foafos-ov-ws" role="group" aria-label="Workspaces"></span>
       <button type="button" id="foafos-ov-done" aria-label="Leave overview">✕</button>`;
+    // With more than one workspace, a button for each, as Mission Control's row of Spaces: the one
+    // shown is pressed; another shows that workspace's windows.
+    const wsInfo = FoafOS.workspaces?.() || { at: 1, count: 1 };
+    if (wsInfo.count > 1) strip.querySelector('.foafos-ov-ws').append(...Array.from({ length: wsInfo.count }, (_, k) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'foafos-ov-wsbtn';
+      b.textContent = String(k + 1);
+      b.setAttribute('aria-label', `Workspace ${k + 1}`);
+      b.setAttribute('aria-pressed', String(k + 1 === wsInfo.at));
+      b.addEventListener('click', () => { if (k + 1 === wsInfo.at) return; exitOverview(null); FoafOS.goWorkspace(k + 1); setTimeout(enterOverview, 350); });
+      return b;
+    }));
     document.body.appendChild(strip);
     closeOnBack(strip, () => exitOverview(null));
     strip.querySelector('#foafos-ov-done').addEventListener('click', () => exitOverview(null));
