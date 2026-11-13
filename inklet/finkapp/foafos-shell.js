@@ -3167,6 +3167,20 @@ function buildUI() {
     const front = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
     front?._snap?.(zone);
   };
+  // The quarters by key (Ctrl ; i): each press moves the front window to the next quarter,
+  // top-left, top-right, bottom-right, bottom-left, as a desktop's quarter keys do. Only where
+  // snapping works (700 px and wider).
+  const QUARTERS = ['tl', 'tr', 'br', 'bl'];
+  FoafOS.quarterFront = () => {
+    if (window.innerWidth < 700) return null;
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const front = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
+    if (!front?._snap) return null;
+    const at = QUARTERS.indexOf(front._zone);
+    const next = QUARTERS[(at + 1) % QUARTERS.length];
+    front._snap(next);
+    return next;
+  };
   // Windows in the order they were last at the front, newest first, for "the window before".
   const recentWins = [];
   FoafOS.raiseWindow = (win) => {
@@ -3480,6 +3494,7 @@ function buildUI() {
     const rows = [
       ['Snap left', keyOf('snapLeft'), () => win._snap?.('left'), wide],
       ['Snap right', keyOf('snapRight'), () => win._snap?.('right'), wide],
+      ['Next quarter', keyOf('quarter'), () => { FoafOS.raiseWindow(win); FoafOS.quarterFront(); }, wide],
       [max ? 'Restore' : 'Maximise', keyOf('snapFull'), () => win.querySelector('.foafos-window-max')?.click(), true],
       ['Minimise', keyOf('hide'), () => win.querySelector('.foafos-window-min')?.click(), true],
       ['Move or resize', keyOf('move'), () => FoafOS.moveFrontByKeys?.(), !max],

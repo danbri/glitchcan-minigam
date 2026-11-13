@@ -1040,11 +1040,11 @@ window.FinkWM = {
     // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
     // Not w, t or n, which browsers keep for themselves on Windows and Linux.
     KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s',
-            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /' },
+            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i' },
     // What each sequence does, for the sheet of keys (Ctrl ; /, or Keys in the menu).
     KEY_LABELS: { menu: 'Open this menu', apps: 'All apps', windows: 'All windows', tasks: 'Task Manager',
             next: 'Next window', prev: 'Previous window', last: 'Last window, and back', snapLeft: 'Snap left',
-            snapRight: 'Snap right', snapFull: 'Maximise or restore', hide: 'Minimise window', move: 'Move or resize window',
+            snapRight: 'Snap right', quarter: 'Snap to the next quarter', snapFull: 'Maximise or restore', hide: 'Minimise window', move: 'Move or resize window',
             close: 'Close window', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
     _initKeys() {
         let saved = {};
@@ -1081,6 +1081,7 @@ window.FinkWM = {
             move: () => window.FoafOS?.moveFrontByKeys?.(),
             last: () => window.FoafOS?.lastWindow?.(),
             keys: () => this._showKeys(seqs),
+            quarter: () => window.FoafOS?.quarterFront?.(),
         };
         this._seqs = seqs;
         let typed = [], at = 0;
