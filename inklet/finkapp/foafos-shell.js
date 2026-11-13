@@ -3822,6 +3822,12 @@ function buildUI() {
         FoafOS.raiseWindow(win);
         bus.publish('wm.ontop', { summary: `${win.querySelector('.foafos-window-bar span')?.textContent || 'window'} ${on ? 'kept on top' : 'no longer on top'}` });
       }, true],
+      // Pin the app from its window, as a taskbar's "Pin to taskbar" does: into Pinned, the menu's row
+      // and Ctrl ; 1 to 9.
+      ...(win.dataset.openedAs ? [[pinnedIds().includes(win.dataset.openedAs) ? 'Unpin this app' : 'Pin this app', '', () => {
+        const on = togglePin(win.dataset.openedAs);
+        wsNote(on ? `Pinned: Ctrl ; ${pinnedIds().indexOf(win.dataset.openedAs) + 1} opens it` : 'No longer pinned');
+      }, true]] : []),
       [`Move to workspace ${FoafOS.workspace < 4 ? FoafOS.workspace + 1 : FoafOS.workspace - 1}`, '', () => FoafOS.moveToWorkspace(win, FoafOS.workspace < 4 ? FoafOS.workspace + 1 : FoafOS.workspace - 1), true],
       ['Minimise', keyOf('hide'), () => win.querySelector('.foafos-window-min')?.click(), true],
       // As a Mac's Hide Others: every other open window on this workspace is minimised.
