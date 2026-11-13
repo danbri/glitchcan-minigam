@@ -21,7 +21,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Go to a folder by typing its path: /, Cmd or Ctrl + Shift + G, or click the current folder's name (GNOME Files, Finder, Explorer's address bar) | Done: #1125 |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
-| A Sort picker where the list has no column heads (a narrow window, a phone): name, newest, largest, kind (phone file managers) | Done: this PR |
+| A Sort picker where the list has no column heads (a narrow window, a phone): name, newest, largest, kind (phone file managers) | Done: #1150 |
 | Names sort as people expect: Photo 2 before Photo 10, capitals aside (Finder, Explorer) | Done: #1123 |
 | Thumbnails for pictures (desktops, phones) | Done: #1018 |
 | Quick Look: Space shows an item without opening it (macOS) | Done: #1015 |
@@ -59,7 +59,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Feature | Status |
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
-| Close all from All windows, asking once first (Android's Clear all) | Done: #1148 |
+| Close all from All windows, asking once first; one Reopen brings them all back (Android's Clear all, a browser's reopen closed window) | Done: #1148, this PR |
 | Hold the menu handle for All windows, as holding a phone's gesture bar shows recent apps; its title lists every gesture | Done: #1133 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
 | A window's title says what is open in it (Files — notes, Notes — trip), the app's name always first: foafos.setTitle (every desktop) | Done: #1135, #1136 |

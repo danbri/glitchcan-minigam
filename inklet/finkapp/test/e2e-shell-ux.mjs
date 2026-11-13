@@ -1000,10 +1000,14 @@ try {
       b.click(); await wait(100);
       const asked = b.textContent, still = count();
       b.click(); await wait(800);
-      return { n0, asked, still, n1: count(), ov: document.body.classList.contains('foafos-overview-on') };
+      const n1 = count();
+      const label = document.querySelector('#wm-sys-reopen .wm-label')?.textContent;
+      FoafOS.reopenClosed(); await wait(800);
+      return { n0, asked, still, n1, ov: document.body.classList.contains('foafos-overview-on'), label, back: count() };
     });
     await cw.ctx.close();
-    check(r.n0 >= 2 && /^Close all \d+\?$/.test(r.asked) && r.still === r.n0 && r.n1 === 0 && !r.ov, `Close all in All windows asks once, then closes them (${JSON.stringify(r)})`);
+    check(r.n0 >= 2 && /^Close all \d+\?$/.test(r.asked) && r.still === r.n0 && r.n1 === 0 && !r.ov && r.label === `Reopen the ${r.n0} windows` && r.back === r.n0,
+      `Close all in All windows asks once, then closes them, and one Reopen brings them back (${JSON.stringify(r)})`);
   }
   const phone = await open({ width: 390, height: 780 }, true);
   await phone.page.evaluate(() => FoafOS.openSystem());
