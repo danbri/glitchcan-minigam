@@ -116,4 +116,5 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | All windows has a button for each workspace (Mission Control's row of Spaces) | Done: #1106 |
 | Drag a window's card onto a workspace in All windows to move it there (Mission Control) | Done: #1107 |
 | Take the front window to the next or previous workspace and go with it: Ctrl ; > and < (GNOME Shift+Super+Page Down) | Done: #1120 |
-| Close all of an app's windows from its sheet in All apps (a dock's Quit) | Done: this PR |
+| Close all of an app's windows from its sheet in All apps (a dock's Quit) | Done: #1121 |
+| Arrange this workspace's windows side by side, filling the screen: Ctrl ; g or the menu (Windows' Show windows side by side, tiling desktops) | Done: this PR |

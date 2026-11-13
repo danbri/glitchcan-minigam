@@ -72,6 +72,7 @@ window.FinkWM = {
                       'wm-sys-nudge': () => window.FoafOS?.runNudge?.(),
                       'wm-sys-keys': () => this._showKeys(this._seqs || []),
                       'wm-sys-desktop': () => window.FoafOS?.showDesktop?.(),
+                      'wm-sys-arrange': () => window.FoafOS?.arrangeWindows?.(),
                       'wm-sys-wsnext': () => window.FoafOS?.nextWorkspace?.(1),
                       'wm-sys-wsprev': () => window.FoafOS?.nextWorkspace?.(-1),
                       'wm-sys-activity': () => window.FoafOS?.openActivity?.() };
@@ -1044,12 +1045,12 @@ window.FinkWM = {
     // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
     // Not w, t or n, which browsers keep for themselves on Windows and Linux.
     KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s',
-            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i', desktop: 'ctrl ; d', wsNext: 'ctrl ; .', wsPrev: 'ctrl ; ,', carryNext: 'ctrl ; >', carryPrev: 'ctrl ; <' },
+            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i', desktop: 'ctrl ; d', wsNext: 'ctrl ; .', wsPrev: 'ctrl ; ,', carryNext: 'ctrl ; >', carryPrev: 'ctrl ; <', arrange: 'ctrl ; g' },
     // What each sequence does, for the sheet of keys (Ctrl ; /, or Keys in the menu).
     KEY_LABELS: { menu: 'Open this menu', apps: 'All apps', windows: 'All windows', tasks: 'Task Manager',
             next: 'Next window', prev: 'Previous window', last: 'Last window, and back (hold Ctrl to choose)', snapLeft: 'Snap left',
             snapRight: 'Snap right', quarter: 'Snap to the next quarter', snapFull: 'Maximise or restore', hide: 'Minimise window', move: 'Move or resize window',
-            close: 'Close window', wsNext: 'Next workspace', wsPrev: 'Workspace before', carryNext: 'Take this window to the next workspace', carryPrev: 'Take this window to the workspace before', desktop: 'Show the desktop, and back', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
+            close: 'Close window', wsNext: 'Next workspace', wsPrev: 'Workspace before', carryNext: 'Take this window to the next workspace', carryPrev: 'Take this window to the workspace before', arrange: 'Arrange windows side by side', desktop: 'Show the desktop, and back', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
     _initKeys() {
         let saved = {};
         try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
@@ -1059,7 +1060,7 @@ window.FinkWM = {
             return { name, ctrl, keys: ctrl ? words.slice(1) : words };
         }).filter((s) => s.keys.length);
         // Each menu row shows its keys, as a desktop menu does, so they can be found.
-        const rowFor = { menu: null, apps: 'wm-sys-apps', windows: 'wm-sys-windows', next: 'wm-sys-next', tasks: 'wm-sys-tasks', hide: 'wm-sys-hide', close: 'wm-sys-close', prev: 'wm-sys-prev', reopen: 'wm-sys-reopen', move: 'wm-sys-move', last: 'wm-sys-last', keys: 'wm-sys-keys', desktop: 'wm-sys-desktop', wsNext: 'wm-sys-wsnext', wsPrev: 'wm-sys-wsprev' };
+        const rowFor = { menu: null, apps: 'wm-sys-apps', windows: 'wm-sys-windows', next: 'wm-sys-next', tasks: 'wm-sys-tasks', hide: 'wm-sys-hide', close: 'wm-sys-close', prev: 'wm-sys-prev', reopen: 'wm-sys-reopen', move: 'wm-sys-move', last: 'wm-sys-last', keys: 'wm-sys-keys', desktop: 'wm-sys-desktop', arrange: 'wm-sys-arrange', wsNext: 'wm-sys-wsnext', wsPrev: 'wm-sys-wsprev' };
         for (const s of seqs) {
             const row = rowFor[s.name] && document.getElementById(rowFor[s.name]);
             if (!row) continue;
@@ -1091,6 +1092,7 @@ window.FinkWM = {
             wsPrev: () => window.FoafOS?.nextWorkspace?.(-1),
             carryNext: () => window.FoafOS?.carryToWorkspace?.(1),
             carryPrev: () => window.FoafOS?.carryToWorkspace?.(-1),
+            arrange: () => window.FoafOS?.arrangeWindows?.(),
         };
         this._seqs = seqs;
         let typed = [], at = 0;

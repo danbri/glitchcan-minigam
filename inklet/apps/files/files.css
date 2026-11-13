@@ -10,7 +10,7 @@
    New folder is still offered in an empty folder. */
 /* Upload a folder needs room: a mid-size window offers it in an empty folder only. */
 @container (max-width: 900px) { #upload-dir { display: none; } }
-@container (max-width: 620px) {
+@container (max-width: 680px) {
   #new-folder { display: none; }
   #upload { font-size: 0; min-width: 36px; }
   #upload::before { content: "📤"; font-size: 17px; line-height: 1; }
@@ -32,7 +32,7 @@
 .list td:not(:first-child) { color: var(--p-dim); }
 .list .c-size, .list th:nth-child(3) { text-align: right; font-variant-numeric: tabular-nums; }
 /* A narrow window keeps the name and kind; size and time are in the side panel. */
-@container (max-width: 620px) { .list th:nth-child(n+3), .list td:nth-child(n+3) { display: none; } .list td:first-child { width: 72%; } }
+@container (max-width: 680px) { .list th:nth-child(n+3), .list td:nth-child(n+3) { display: none; } .list td:first-child { width: 72%; } }
 .list tr[data-path] { cursor: default; }
 .list tr[data-path]:hover { background: var(--p-side); }
 .list tr[aria-selected=true], .grid button[aria-selected=true] { background: var(--p-pick); }
