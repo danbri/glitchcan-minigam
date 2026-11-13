@@ -654,6 +654,28 @@ try {
     });
     check(r.n1 === r.n0 - 1 && r.n2 === r.n0 - 2 && r.still, `All windows: middle click or Delete on a card closes its window (${JSON.stringify(r)})`);
   }
+  // Ctrl ; ` goes to the next window of the front window's app, and only that app's
+  {
+    const ids = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      const had = new Set([...document.querySelectorAll('.foafos-window')].map((w) => w.dataset.wid));
+      FoafOS.openWidget('tally'); await wait(200); FoafOS.openWidget('tally'); await wait(300);
+      const mine = [...document.querySelectorAll('.foafos-window')].filter((w) => !had.has(w.dataset.wid));
+      FoafOS.raiseWindow(mine[0]); await wait(100);
+      return mine.map((w) => w.dataset.wid);
+    });
+    const frontId = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].find((w) => w.style.zIndex === '2640')?.dataset.wid);
+    const f0 = await frontId();
+    await keys(page, [';', 'Backquote']);
+    const f1 = await frontId();
+    await keys(page, [';', 'Backquote']);
+    const f2 = await frontId();
+    const sameKind = await page.evaluate((ids) => ids.map((id) => document.querySelector(`.foafos-window[data-wid="${id}"]`).dataset.openedAs), [...ids, f1, f2]);
+    await page.evaluate((ids) => { for (const id of ids) document.querySelector(`.foafos-window[data-wid="${id}"] .foafos-window-close`)?.click(); }, ids);
+    await page.waitForTimeout(300);
+    check(ids.length === 2 && new Set(sameKind).size === 1 && f0 === ids[0] && f1 !== f0 && f2 !== f1,
+      `Ctrl ; \` steps through the front app's own windows (${JSON.stringify({ ids, f0, f1, f2, sameKind })})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -1045,12 +1045,12 @@ window.FinkWM = {
     // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
     // Not w, t or n, which browsers keep for themselves on Windows and Linux.
     KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s',
-            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i', desktop: 'ctrl ; d', wsNext: 'ctrl ; .', wsPrev: 'ctrl ; ,', carryNext: 'ctrl ; >', carryPrev: 'ctrl ; <', arrange: 'ctrl ; g' },
+            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i', desktop: 'ctrl ; d', wsNext: 'ctrl ; .', wsPrev: 'ctrl ; ,', carryNext: 'ctrl ; >', carryPrev: 'ctrl ; <', arrange: 'ctrl ; g', sameApp: 'ctrl ; `' },
     // What each sequence does, for the sheet of keys (Ctrl ; /, or Keys in the menu).
     KEY_LABELS: { menu: 'Open this menu', apps: 'All apps', windows: 'All windows', tasks: 'Task Manager',
             next: 'Next window', prev: 'Previous window', last: 'Last window, and back (hold Ctrl to choose)', snapLeft: 'Snap left',
             snapRight: 'Snap right', quarter: 'Snap to the next quarter', snapFull: 'Maximise or restore', hide: 'Minimise window', move: 'Move or resize window',
-            close: 'Close window', wsNext: 'Next workspace', wsPrev: 'Workspace before', carryNext: 'Take this window to the next workspace', carryPrev: 'Take this window to the workspace before', arrange: 'Arrange windows side by side', desktop: 'Show the desktop, and back', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
+            close: 'Close window', wsNext: 'Next workspace', wsPrev: 'Workspace before', carryNext: 'Take this window to the next workspace', carryPrev: 'Take this window to the workspace before', arrange: 'Arrange windows side by side', sameApp: 'Next window of the same app', desktop: 'Show the desktop, and back', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
     _initKeys() {
         let saved = {};
         try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
@@ -1093,6 +1093,7 @@ window.FinkWM = {
             carryNext: () => window.FoafOS?.carryToWorkspace?.(1),
             carryPrev: () => window.FoafOS?.carryToWorkspace?.(-1),
             arrange: () => window.FoafOS?.arrangeWindows?.(),
+            sameApp: () => window.FoafOS?.nextOfApp?.(),
         };
         this._seqs = seqs;
         let typed = [], at = 0;

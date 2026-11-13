@@ -3097,6 +3097,21 @@ function buildUI() {
     return next;
   };
 
+  // The next window of the same app as the front one, as a Mac's Cmd+` and GNOME's Super+` do
+  // (Ctrl ; `). Only this workspace's windows that are not minimised.
+  FoafOS.nextOfApp = (step = 1) => {
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
+    const front = wins.find((w) => w.style.zIndex === '2640') || wins.at(-1);
+    const id = front?.dataset.openedAs;
+    if (!id) return null;
+    const same = wins.filter((w) => w.dataset.openedAs === id).sort((a, b) => (a.dataset.wid || '').localeCompare(b.dataset.wid || '', undefined, { numeric: true }));
+    if (same.length < 2) { wsNote('This app has no other window here'); return front; }
+    const next = same[(same.indexOf(front) + (step < 0 ? -1 : 1) + same.length) % same.length];
+    FoafOS.raiseWindow(next);
+    next.querySelector('.foafos-window-bar button, .foafos-window-bar')?.focus?.();
+    return next;
+  };
+
   // Close the front window, for the keyboard (Ctrl ; q), with its own close button, so an app that
   // asks before losing work still asks; the next window comes forward.
   FoafOS.closeFront = () => {
@@ -3784,7 +3799,9 @@ function buildUI() {
     let mine = {};
     try { mine = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
     const keyOf = (name) => { const t = String(mine[name] || window.FinkWM?.KEYS?.[name] || ''); return t.replace(/^ctrl\b/, 'Ctrl'); };
+    const siblings = win.dataset.openedAs ? document.querySelectorAll(`.foafos-window[data-opened-as="${CSS.escape(win.dataset.openedAs)}"]:not(.minimized):not(.ws-away)`).length : 0;
     const rows = [
+      ...(siblings > 1 ? [['Next window of this app', keyOf('sameApp'), () => FoafOS.nextOfApp(), true]] : []),
       ['Snap left', keyOf('snapLeft'), () => win._snap?.('left'), wide],
       ['Snap right', keyOf('snapRight'), () => win._snap?.('right'), wide],
       ['Next quarter', keyOf('quarter'), () => { FoafOS.raiseWindow(win); FoafOS.quarterFront(); }, wide],
