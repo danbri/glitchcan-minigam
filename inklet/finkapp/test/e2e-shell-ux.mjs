@@ -734,6 +734,23 @@ try {
     await ff.evaluate(() => foafos.pod.delete('docs/zebrafinch notes.txt'));
     check(/Search files for “zebrafinch”/.test(row || '') && found, `All apps offers to search the files, and Files searches all folders (${row}; ${found})`);
   }
+  // A widget opened from All apps shows in its Recent folder, and opens from there
+  {
+    const r = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      document.getElementById('foafos-home')?.remove();
+      FoafOS.openHome(); await wait(200);
+      document.querySelector('#foafos-home details[data-folder="widgets"] .foafos-app')?.click(); await wait(300);
+      const n0 = document.querySelectorAll('.foafos-window').length;
+      FoafOS.openHome(); await wait(200);
+      const b = document.querySelector('#foafos-home details[data-folder="recent"] .foafos-app');
+      const first = b?.dataset.app;
+      b?.click(); await wait(400);
+      const n1 = document.querySelectorAll('.foafos-window').length;
+      return { first, opened: n1 - n0 };
+    });
+    check(/^widget-/.test(r.first || '') && r.opened === 1, `a widget opened from All apps is first in Recent, and opens from there (${JSON.stringify(r)})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
