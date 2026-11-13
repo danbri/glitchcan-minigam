@@ -44,6 +44,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
+| No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: this PR |
 | Swipe a card up to close it; tap the space around to leave (phones) | Done: #1006, #1031 |
 | The hint speaks of taps on a touch screen, keys on a keyboard | Done: #1056 |
 | Next and previous window by key (Ctrl ; j, k) | Done: #1002, #1032 |
