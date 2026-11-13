@@ -529,6 +529,12 @@ try {
     const e3 = await ebox();
     check(e1[0] === e0[0] - 60 && e1[2] === e0[2] + 60 && e1[1] === e0[1] && e2[1] === e1[1] + 40 && e2[3] === e1[3] - 40 && e2[0] === e1[0] && e3[2] === e2[2] + 30 && e3[0] === e2[0],
       `a window resizes from its left, top and right edges (${e0} → ${e1} → ${e2} → ${e3})`);
+    // Double-clicking the bottom edge gives the window the full height, keeping its width and place across
+    const sPt = await edgeAt('s');
+    await ep.mouse.dblclick(sPt.x, sPt.y);
+    await ep.waitForTimeout(150);
+    const e4 = await ebox();
+    check(e4[0] === e3[0] && e4[2] === e3[2] && e4[1] === 0 && e4[3] === 800, `double-clicking the bottom edge gives the full height (${e3} → ${e4})`);
     await ectx.close();
   }
 

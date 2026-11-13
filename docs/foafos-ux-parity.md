@@ -79,7 +79,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Reopens where it was left, at its size, maximised if it was (desktops) | Done: #1010, #1055 |
 | Reopen the app closed last (browsers' reopen closed tab) | Done: #1044 |
 | Windows follow the page when it changes size (desktops, when a screen changes) | Done: #1050 |
-| Resize from any edge or corner, not only the bottom-right (all desktops) | Done: this PR |
+| Resize from any edge or corner, not only the bottom-right (all desktops) | Done: #1079 |
+| Double-click the top or bottom edge for the full height (Windows) | Done: this PR |
 | Keys for the four quarters: Ctrl ; i steps round them (Windows, GNOME) | Done: this PR |
 
 ## Across all four

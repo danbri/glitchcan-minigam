@@ -3608,6 +3608,16 @@ function buildUI() {
         document.addEventListener('pointerup', up, true);
         document.addEventListener('pointercancel', up, true);
       });
+      // Double-click the top or bottom edge: the window takes the full height, keeping its width and
+      // place across, as Windows does.
+      if (dir === 'n' || dir === 's') hd.addEventListener('dblclick', (e) => {
+        if (win.classList.contains('maximized')) return;
+        e.preventDefault(); e.stopPropagation();
+        win._unsnap = null; win._zone = null;
+        Object.assign(win.style, { top: '0px', height: `${window.innerHeight}px`, maxHeight: 'none' });
+        win.dataset.userSized = '1';
+        win._keepGeom();
+      });
       win.appendChild(hd);
     }
     // A resize by the corner is kept once it settles.
