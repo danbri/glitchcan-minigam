@@ -31,7 +31,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Drop files from the computer; paste files, screenshots and text (desktops) | Done: #1009, #1053 |
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
 | Download a folder as one .zip (web file managers) | Done: #1113 |
-| Upload files, or a folder keeping its shape, with the system picker (web and phone file managers) | Done: this PR |
+| Upload files, or a folder keeping its shape, with the system picker (web and phone file managers) | Done: #1116 |
+| Rename a folder (F2 or Rename), and never rename over something already there (desktops) | Done: this PR |
 | Copy, cut and paste between folders (desktops) | Done: #1061, #1069 |
 | Move a folder, by drag or cut and paste; delete an empty folder (desktops) | Done: this PR |
 | Drag onto a folder to move (desktops) | Done: #1036, #1071 |

@@ -1107,6 +1107,31 @@ try {
     check(zdl.suggestedFilename() === 'zipme.zip' && String(names) === 'zipme/a.txt,zipme/empty/,zipme/sub/b.txt' && aText === 'A',
       `a folder downloads as a .zip of all that is in it (${zdl.suggestedFilename()}: ${names})`);
   }
+  // Rename: F2 renames a folder with all in it; a file is never renamed over another
+  {
+    await f.evaluate(async () => {
+      for (const [p, b] of [['notes/rn/a.txt', 'A'], ['notes/rn/sub/b.txt', 'B'], ['notes/keep1.txt', 'one'], ['notes/keep2.txt', 'two']]) await foafos.pod.put(p, b, { contentType: 'text/plain' });
+      await window.__files.go('notes/');
+    });
+    await page.waitForTimeout(300);
+    await f.focus('#items tbody tr[data-path="notes/rn/"]');
+    await f.press('#items tbody tr[data-path="notes/rn/"]', 'F2');
+    await f.waitForSelector('.ask input', { timeout: 5000 });
+    await f.fill('.ask input', 'renamed');
+    await f.press('.ask input', 'Enter');
+    await f.waitForFunction(() => /Renamed to renamed/.test(document.getElementById('status')?.textContent || ''), null, { timeout: 10000 });
+    const rn = await f.evaluate(async () => [(await foafos.pod.get('notes/renamed/a.txt')).body, (await foafos.pod.get('notes/renamed/sub/b.txt')).body, (await foafos.pod.get('notes/rn/a.txt')).ok]);
+    check(String(rn) === 'A,B,false', `F2 renames a folder with all that is in it (${rn})`);
+    await f.evaluate(() => window.__files.pick({ path: 'notes/keep1.txt', container: false }));
+    await page.waitForTimeout(300);
+    await f.evaluate(() => [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Rename').click());
+    await f.fill('.ask input', 'keep2.txt');
+    await f.press('.ask input', 'Enter');
+    await page.waitForTimeout(500);
+    const kept = await f.evaluate(async () => [(await foafos.pod.get('notes/keep1.txt')).body, (await foafos.pod.get('notes/keep2.txt')).body, document.getElementById('status').textContent]);
+    check(kept[0] === 'one' && kept[1] === 'two' && /already/.test(kept[2]), `renaming never replaces a file of that name (${kept})`);
+    await f.evaluate(async () => { for (const p of ['notes/renamed/a.txt', 'notes/renamed/sub/b.txt', 'notes/renamed/sub/', 'notes/renamed/', 'notes/keep1.txt', 'notes/keep2.txt']) await foafos.pod.delete(p); });
+  }
   // Upload: the system's file picker adds files here, and a folder keeps its shape
   {
     await f.evaluate(() => window.__files.go('notes/'));
