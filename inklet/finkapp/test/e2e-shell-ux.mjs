@@ -605,6 +605,18 @@ try {
   check(ws1.split(',').length >= 2 && ws2empty === '' && at2.at === 2 && ws2.split(',').length === 1 && back1 === ws1 && wsCards === ws1.split(',').length
     && !afterMove.split(',').includes(wsMover) && on2.split(',').includes(wsMover),
     `workspaces: a new empty one, windows stay where they opened, All windows shows this one's, a window moves (${JSON.stringify({ ws1, ws2empty, ws2, back1, wsCards, afterMove, on2 })})`);
+  // Ctrl ; > takes the front window to the next workspace and goes with it; Ctrl ; < brings it back
+  {
+    const front = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0]?.dataset.wid);
+    const w0 = await front();
+    await keys(page, [';', 'Shift+Period']);
+    const there = await page.evaluate((w) => ({ at: FoafOS.workspaces().at, ws: document.querySelector(`.foafos-window[data-wid="${w}"]`).dataset.ws }), w0);
+    const shown2 = await wsShown();
+    await keys(page, [';', 'Shift+Comma']);
+    const back = await page.evaluate((w) => ({ at: FoafOS.workspaces().at, ws: document.querySelector(`.foafos-window[data-wid="${w}"]`).dataset.ws }), w0);
+    check(w0 && there.at === 2 && there.ws === '2' && shown2 === w0 && back.at === 1 && back.ws === '1' && (await wsShown()) === ws1,
+      `Ctrl ; > takes the front window to the next workspace, Ctrl ; < brings it back (${JSON.stringify({ w0, there, shown2, back })})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
