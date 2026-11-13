@@ -1619,3 +1619,6 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 .foafos-sw-card.on { border-color: #fff; background: rgba(255, 255, 255, 0.2); }
 .foafos-sw-card.min { opacity: .65; }
+
+/* A window kept on top (window menu): a pin in its title bar says so. */
+.foafos-window.on-top > .foafos-window-bar > span:first-child::before { content: '📌 '; }

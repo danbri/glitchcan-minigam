@@ -3203,8 +3203,10 @@ function buildUI() {
   const recentWins = [];
   FoafOS.raiseWindow = (win) => {
     if (FoafOS.noRaise) return;
-    document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = 2620; });
-    win.style.zIndex = 2640;
+    // A window kept on top (window menu) stays over the others, even when another is raised; the
+    // one raised is still the one in use (z-index 2640 marks it, for the keys that act on it).
+    document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = w.classList.contains('on-top') ? 2645 : 2620; });
+    win.style.zIndex = 2640;   // over every ordinary window; another kept on top stays over it
     const i = recentWins.indexOf(win);
     if (i) { if (i > 0) recentWins.splice(i, 1); recentWins.unshift(win); }
     if (recentWins.length > 40) recentWins.length = 40;
@@ -3611,6 +3613,11 @@ function buildUI() {
       ['Snap right', keyOf('snapRight'), () => win._snap?.('right'), wide],
       ['Next quarter', keyOf('quarter'), () => { FoafOS.raiseWindow(win); FoafOS.quarterFront(); }, wide],
       [max ? 'Restore' : 'Maximise', keyOf('snapFull'), () => win.querySelector('.foafos-window-max')?.click(), true],
+      [win.classList.contains('on-top') ? 'Stop keeping on top' : 'Keep on top', '', () => {
+        const on = win.classList.toggle('on-top');
+        FoafOS.raiseWindow(win);
+        bus.publish('wm.ontop', { summary: `${win.querySelector('.foafos-window-bar span')?.textContent || 'window'} ${on ? 'kept on top' : 'no longer on top'}` });
+      }, true],
       ['Minimise', keyOf('hide'), () => win.querySelector('.foafos-window-min')?.click(), true],
       ['Move or resize', keyOf('move'), () => FoafOS.moveFrontByKeys?.(), !max],
       ['Close', keyOf('close'), () => win.querySelector('.foafos-window-close')?.click(), true],
