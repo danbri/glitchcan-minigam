@@ -3293,7 +3293,11 @@ function buildUI() {
       c.textContent = titleOf(w);
       return c;
     }));
-    sw.el.setAttribute('aria-activedescendant', '');
+    // The focus stays where it was while Ctrl is held, so a screen reader is told which is marked,
+    // by one live region that stays on the page (one made afresh is often not read).
+    let say = document.getElementById('foafos-sw-say');
+    if (!say) { say = Object.assign(document.createElement('span'), { id: 'foafos-sw-say', className: 'sr-only' }); say.setAttribute('aria-live', 'polite'); document.body.appendChild(say); }
+    say.textContent = `${titleOf(sw.wins[sw.at])}, ${sw.at + 1} of ${sw.wins.length}`;
   }
   function closeSwitch() { sw?.el.remove(); sw = null; }
   function commitSwitch() {
