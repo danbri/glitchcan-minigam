@@ -30,7 +30,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | The folder keeps up with files saved by other apps; pull down to refresh on a phone (desktops, phones) | Done: #1108 |
 | Recent files (desktops, phones) | Done: #1072 |
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
-| Duplicate (macOS) | Done: #1034 |
+| Duplicate a file, or a folder with all in it (macOS) | Done: #1034, this PR |
 | Drop files from the computer; paste files, screenshots and text (desktops) | Done: #1009, #1053 |
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
 | Download a folder as one .zip (web file managers) | Done: #1113 |
@@ -58,7 +58,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Feature | Status |
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
-| Close all from All windows, asking once first (Android's Clear all) | Done: this PR |
+| Close all from All windows, asking once first (Android's Clear all) | Done: #1148 |
 | Hold the menu handle for All windows, as holding a phone's gesture bar shows recent apps; its title lists every gesture | Done: #1133 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
 | A window's title says what is open in it (Files — notes, Notes — trip), the app's name always first: foafos.setTitle (every desktop) | Done: #1135, #1136 |

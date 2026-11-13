@@ -1232,6 +1232,18 @@ try {
     });
     check(/Extracted 2 files into trip/.test(r.said1) && String(r.got) === 'R,# P' && !r.escaped, `Extract makes a folder of a .zip's contents, and nothing climbs out (${JSON.stringify(r)})`);
   }
+  // Duplicate a folder: "name copy", with all that is in it
+  {
+    await f.evaluate(async () => { for (const [p, b] of [['notes/dp/a.txt', 'A'], ['notes/dp/sub/b.txt', 'B']]) await foafos.pod.put(p, b, { contentType: 'text/plain' }); await window.__files.go('notes/'); });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/dp/"]');
+    await page.waitForTimeout(300);
+    await f.evaluate(() => [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Duplicate').click());
+    await f.waitForFunction(() => /Made dp copy/.test(document.getElementById('status').textContent), null, { timeout: 8000 }).catch(() => {});
+    const got = await f.evaluate(async () => [(await foafos.pod.get('notes/dp copy/a.txt')).body, (await foafos.pod.get('notes/dp copy/sub/b.txt')).body, (await foafos.pod.get('notes/dp/a.txt')).body]);
+    await f.evaluate(async () => { for (const p of ['notes/dp/a.txt', 'notes/dp/sub/b.txt', 'notes/dp/sub/', 'notes/dp/', 'notes/dp copy/a.txt', 'notes/dp copy/sub/b.txt', 'notes/dp copy/sub/', 'notes/dp copy/.folder', 'notes/dp copy/sub/.folder', 'notes/dp copy/', 'notes/dp/.folder']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
+    check(String(got) === 'A,B,A', `Duplicate copies a folder whole beside it (${got})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

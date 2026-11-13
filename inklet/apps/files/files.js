@@ -815,6 +815,7 @@
       drawDetail(head, h('div', { class: 'detail-actions' },
         h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(it.path) } }, 'Open'), backBtn, favBtn,
         h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
+        h('button', { class: 'tool', type: 'button', on: { click: () => duplicateFolder(it.path) } }, 'Duplicate'),
         h('button', { class: 'tool', type: 'button', on: { click: () => download([it.path]) } }, 'Download as .zip'),
         inArchive() ? null : h('button', { class: 'tool', type: 'button', on: { click: () => compress([it.path]) } }, 'Compress'),
         h('button', { class: 'tool', type: 'button', on: { click: () => folderSize(it.path, mine, head) } }, 'Work out its size'),
@@ -990,7 +991,20 @@
   }
 
   // A copy beside the original: "plan copy.txt", then "plan copy 2.txt", never over a file that is there.
+  // A folder is duplicated whole, as Finder's Duplicate does: "trip copy", all that is in it.
+  async function duplicateFolder(path) {
+    const taken = new Set(items.map((i) => i.path.replace(/\/$/, '')));
+    let n = 1, to;
+    do { to = `${parentOf(path)}${nameOf(path)} copy${n > 1 ? ` ${n}` : ''}`; n++; } while (taken.has(to) && n < 1000);
+    say(`Making ${nameOf(to)}…`);
+    const r = await copyTree(path, `${to}/`);
+    await go(folder, { remember: false });
+    if (!r.ok) { say(`Not all copied: ${r.why}.`, true); return; }
+    say(`Made ${nameOf(to)}.`);
+    pick({ path: `${to}/`, container: true });
+  }
   async function duplicate() {
+    if (picked?.container && picked.path) { await duplicateFolder(picked.path); return; }
     if (!picked?.path || picked.body === undefined) return;
     const dir = parentOf(picked.path), file = nameOf(picked.path);
     const dot = file.lastIndexOf('.');
