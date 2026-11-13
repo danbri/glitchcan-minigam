@@ -51,6 +51,7 @@
   let lastInitConfig = null;
   let ready = false;
 
+  let backFn = null, backOn = false;   // setBack: the app's step back, and whether the shell holds it
   const post = (msg) => {
     try { if (window.parent !== window) window.parent.postMessage(msg, '*'); }
     catch { /* standalone */ }
@@ -501,6 +502,12 @@
     announce: (text) => window.__mgA11y?.announce?.(text),
     // What is open in this window, after the app's name in its title bar ("Files — notes").
     setTitle: (text) => { post({ type: 'app.title', text: String(text ?? '') }); return foafos; },
+    // A step back inside the app (fn), or none (null): the phone's Back is handed to fn while there is.
+    setBack: (fn) => {
+      backFn = typeof fn === 'function' ? fn : null;
+      if (!!backFn !== backOn) { backOn = !!backFn; post({ type: 'app.back-wanted', on: backOn }); }
+      return foafos;
+    },
     /** Explicit async store API for new code that does not want the shim. */
     store: {
       get: (k) => { try { return window.localStorage.getItem(k); } catch { return null; } },
@@ -546,6 +553,11 @@
     if (d.type === 'app.restore') {
       if (restoreFn) { try { restoreFn(d.state); } catch (err) { console.error(err); } }
       else pendingRestore = d.state;
+      return;
+    }
+    if (d.type === 'app.back') {
+      backOn = false;                        // the shell's entry is used; the app says again if it has another
+      try { backFn?.(); } catch (err) { console.error(err); }
       return;
     }
     if (d.type === 'app.action') {

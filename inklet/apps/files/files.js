@@ -277,6 +277,7 @@
     [...$('crumbs').querySelectorAll('button')].forEach((b, i, all) => { if (i < all.length - 1) asDropTarget(b, i ? `${parts.slice(0, i).join('/')}/` : ''); });
     drawTree();
     drawItems();
+    offerBack();
   }
 
   // ── moving a file by dragging it onto a folder ──────────────────────────
@@ -779,6 +780,7 @@
   async function pick(it) {
     const mine = ++picking;
     $('panes').dataset.show = it ? 'detail' : 'items';
+    offerBack();
     if (!it) { picked = null; drawDetail(h('p', { class: 'detail-none' }, 'Pick a file to see it here.')); return; }
     const k = kindOf(it);
     const head = h('div', { class: 'detail-head' }, h('h2', {}, `${k.icon} ${nameOf(it.path)}`), h('p', {}, k.name));
@@ -791,7 +793,7 @@
         it.from ? h('button', { class: 'tool', type: 'button', on: { click: () => go(parentOf(it.from)) } }, 'Show where it was') : null));
       return;
     }
-    const backBtn = h('button', { class: 'tool panes-back', type: 'button', on: { click: () => { $('panes').dataset.show = 'items'; } } }, 'Back to list');
+    const backBtn = h('button', { class: 'tool panes-back', type: 'button', on: { click: () => { $('panes').dataset.show = 'items'; offerBack(); } } }, 'Back to list');
     if (!it.container && ARCHIVE.test(it.path)) {
       // An archive: its details, and Open to look inside (read only); it can be renamed or deleted like any file.
       const raw = await foafos.pod.get(it.path, { as: 'bytes' });
@@ -1226,6 +1228,16 @@
   const goBack = () => { if (trail.length) { const to = trail.pop(); go(to, { remember: false, via: 'back' }).then(() => { if (folder !== to) trail.push(to); }); } };
   const goForward = () => { if (ahead.length) { const to = ahead.pop(); go(to, { remember: false, via: 'forward' }).then(() => { if (folder !== to) ahead.push(to); }); } };
   $('back').addEventListener('click', goBack);
+  // A phone's Back, inside Files: out of a file's panel to the list, then back through the folders
+  // (as Android's file managers do). Only where one pane shows at a time; a wide window has its
+  // own Back button and keys, and the browser's Back stays the browser's.
+  const onePane = () => window.matchMedia?.('(max-width: 680px)').matches;
+  function offerBack() {
+    const step = !onePane() ? null
+      : $('panes').dataset.show === 'detail' ? () => { $('panes').dataset.show = 'items'; offerBack(); }
+      : trail.length ? () => goBack() : null;
+    foafos.setBack?.(step);
+  }
   $('forward').addEventListener('click', goForward);
   // The keys and buttons people already use for this: Alt+Left and Alt+Right (Cmd+[ and Cmd+] on a
   // Mac), and a mouse's own back and forward buttons.
