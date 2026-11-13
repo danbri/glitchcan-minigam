@@ -1661,3 +1661,18 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 /* All windows: Close all, which asks once before it acts. */
 #foafos-ov-closeall { margin-right: 8px; padding: 4px 12px; border-radius: 6px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 #foafos-ov-closeall.sure { background: #b3261e; border-color: #b3261e; color: #fff; }
+
+/* Snap layouts: little screens, the window's place in each drawn in the accent. */
+#foafos-snap-layouts { position: fixed; z-index: 2710; display: grid; grid-template-columns: repeat(3, 44px); gap: 8px; padding: 10px; border-radius: 10px;
+  background: #1b2433; color: #fff; box-shadow: 0 8px 28px rgba(0, 0, 0, .35); }
+#foafos-snap-layouts button { position: relative; width: 44px; height: 30px; padding: 0; border-radius: 4px; cursor: pointer;
+  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .45); }
+#foafos-snap-layouts button span { position: absolute; background: rgba(110, 165, 255, .55); border-radius: 2px; }
+#foafos-snap-layouts button:hover span, #foafos-snap-layouts button:focus-visible span { background: #6ea5ff; }
+#foafos-snap-layouts button:hover, #foafos-snap-layouts button:focus-visible { border-color: #fff; outline: none; }
+#foafos-snap-layouts .snap-left span { inset: 2px 50% 2px 2px; }
+#foafos-snap-layouts .snap-right span { inset: 2px 2px 2px 50%; }
+#foafos-snap-layouts .snap-tl span { inset: 2px 50% 50% 2px; }
+#foafos-snap-layouts .snap-tr span { inset: 2px 2px 50% 50%; }
+#foafos-snap-layouts .snap-bl span { inset: 50% 50% 2px 2px; }
+#foafos-snap-layouts .snap-br span { inset: 50% 2px 2px 50%; }

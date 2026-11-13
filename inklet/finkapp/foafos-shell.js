@@ -3691,6 +3691,41 @@ function buildUI() {
     // When the page changes size, as a desktop does when its screen does: a snapped window fills
     // its half or quarter of the new size, and a floating one comes back on screen. Its kept
     // place is not changed, so it goes back there on a bigger screen next time.
+    // Snap layouts, as Windows 11 shows them: the mouse resting on Maximise offers where the window
+    // can go (left or right half, a quarter), drawn as the screen would look. Mouse only, and only
+    // where snapping works (700 px and wider); the window menu and keys do the same.
+    {
+      let timer = 0, hideTimer = 0, pop = null;
+      const hide = () => { clearTimeout(timer); pop?.remove(); pop = null; };
+      const later = () => { clearTimeout(hideTimer); hideTimer = setTimeout(hide, 300); };
+      const show = () => {
+        if (window.innerWidth < 700 || pop) return;
+        pop = document.createElement('div');
+        pop.id = 'foafos-snap-layouts';
+        pop.setAttribute('role', 'menu');
+        pop.setAttribute('aria-label', 'Snap layouts');
+        for (const [zone, label] of [['left', 'Left half'], ['right', 'Right half'], ['tl', 'Top-left quarter'], ['tr', 'Top-right quarter'], ['bl', 'Bottom-left quarter'], ['br', 'Bottom-right quarter']]) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('role', 'menuitem');
+          b.setAttribute('aria-label', label);
+          b.title = label;
+          b.className = `snap-${zone}`;
+          b.innerHTML = '<span></span>';
+          b.addEventListener('click', () => { hide(); FoafOS.raiseWindow(win); win._snap(zone); });
+          pop.appendChild(b);
+        }
+        pop.addEventListener('pointerenter', () => clearTimeout(hideTimer));
+        pop.addEventListener('pointerleave', later);
+        document.body.appendChild(pop);
+        const r = maxBtn.getBoundingClientRect(), pr = pop.getBoundingClientRect();
+        pop.style.left = `${Math.max(4, Math.min(r.left + r.width / 2 - pr.width / 2, window.innerWidth - pr.width - 4))}px`;
+        pop.style.top = `${Math.min(r.bottom + 6, window.innerHeight - pr.height - 4)}px`;
+      };
+      maxBtn?.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'mouse') return; clearTimeout(hideTimer); clearTimeout(timer); timer = setTimeout(show, 450); });
+      maxBtn?.addEventListener('pointerleave', () => { clearTimeout(timer); later(); });
+      maxBtn?.addEventListener('click', hide);
+    }
     win._refit = () => {
       if (!win.isConnected || ['maximized', 'minimized', 'foafos-ov'].some((c) => win.classList.contains(c))) return;
       if (win._zone && win._unsnap) {
