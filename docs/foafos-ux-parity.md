@@ -63,7 +63,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Hold the menu handle for All windows, as holding a phone's gesture bar shows recent apps; its title lists every gesture | Done: #1133 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
 | A window's title says what is open in it (Files — notes, Notes — trip), the app's name always first: foafos.setTitle (every desktop) | Done: #1135, #1136 |
-| The Task Manager names each window by its title too, so two windows of one app can be told apart and filtered (Windows' Task Manager) | Done: this PR |
+| The Task Manager names each window by its title too, so two windows of one app can be told apart and filtered (Windows' Task Manager) | Done: #1152, #1153 |
 | Next window of the same app: Ctrl ; ` or the window menu (a Mac's Cmd+`, GNOME Super+`) | Done: #1126 |
 | Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: #1124 |
 | No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: #1102 |
@@ -112,6 +112,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Resize from any edge or corner, not only the bottom-right (all desktops) | Done: #1079 |
 | Double-click the top or bottom edge for the full height (Windows) | Done: #1103 |
 | Keys for the four quarters: Ctrl ; i steps round them (Windows, GNOME) | Done: #1078 |
+| Snap layouts: rest the mouse on Maximise to pick a half or a quarter (Windows 11) | Done: this PR |
 
 ## Across all four
 

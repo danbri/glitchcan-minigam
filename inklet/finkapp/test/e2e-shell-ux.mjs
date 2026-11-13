@@ -631,6 +631,21 @@ try {
   check(ws1.split(',').length >= 2 && ws2empty === '' && at2.at === 2 && ws2.split(',').length === 1 && back1 === ws1 && wsCards === ws1.split(',').length
     && !afterMove.split(',').includes(wsMover) && on2.split(',').includes(wsMover),
     `workspaces: a new empty one, windows stay where they opened, All windows shows this one's, a window moves (${JSON.stringify({ ws1, ws2empty, ws2, back1, wsCards, afterMove, on2 })})`);
+  // Resting the mouse on Maximise offers snap layouts; one puts the window in that quarter
+  {
+    const wid = await page.evaluate(() => { const w = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away):not(.maximized)')].at(-1); FoafOS.raiseWindow(w); return w.dataset.wid; });
+    const mb = await page.evaluate((id) => { const r = document.querySelector(`.foafos-window[data-wid="${id}"] .foafos-window-max`).getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, wid);
+    await page.mouse.move(mb.x - 60, mb.y + 40);
+    await page.mouse.move(mb.x, mb.y, { steps: 4 });
+    await page.waitForTimeout(700);
+    const tiles = await page.evaluate(() => [...document.querySelectorAll('#foafos-snap-layouts button')].map((b) => b.getAttribute('aria-label')));
+    const tr = await page.evaluate(() => { const b = document.querySelector('#foafos-snap-layouts .snap-tr').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }).catch(() => null);
+    if (tr) { await page.mouse.move(tr.x, tr.y, { steps: 4 }); await page.mouse.click(tr.x, tr.y); }
+    await page.waitForTimeout(300);
+    const box = await page.evaluate((id) => { const r = document.querySelector(`.foafos-window[data-wid="${id}"]`).getBoundingClientRect(); return { l: Math.round(r.left / innerWidth * 100), t: Math.round(r.top), w: Math.round(r.width / innerWidth * 100), h: Math.round(r.height / innerHeight * 100), gone: !document.getElementById('foafos-snap-layouts') }; }, wid);
+    await page.evaluate(() => document.getElementById('foafos-snap-assist')?.remove());
+    check(tiles.length === 6 && box.l === 50 && box.t === 0 && box.w === 50 && box.h === 50 && box.gone, `resting on Maximise offers snap layouts, and one snaps the window there (${JSON.stringify({ tiles: tiles.length, box })})`);
+  }
   // Ctrl ; g arranges this workspace's windows in a grid that fills the screen, none overlapping
   {
     await keys(page, [';', 'g']);
