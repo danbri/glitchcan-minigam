@@ -32,7 +32,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
 | Download a folder as one .zip (web file managers) | Done: #1113 |
 | Upload files, or a folder keeping its shape, with the system picker (web and phone file managers) | Done: #1116 |
-| Rename a folder (F2 or Rename), and never rename over something already there (desktops) | Done: this PR |
+| Rename a folder (F2 or Rename), and never rename over something already there (desktops) | Done: #1117 |
+| A picked folder says what is in it, and its total size on request (Get Info, Properties) | Done: this PR |
 | Copy, cut and paste between folders (desktops) | Done: #1061, #1069 |
 | Move a folder, by drag or cut and paste; delete an empty folder (desktops) | Done: this PR |
 | Drag onto a folder to move (desktops) | Done: #1036, #1071 |
@@ -69,10 +70,10 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Search puts the best name match first, and Enter opens it (Spotlight, Start) | Done: #1054 |
 | What each app or widget does, in search and on a long press or right-click (phones, desktops) | Done: #997, #1007, #1062 |
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
-| Pinned apps in your own order: Alt+arrows, or Move earlier/later on a long press (docks, home screens) | Done: this PR |
+| Pinned apps in your own order: Alt+arrows, or Move earlier/later on a long press (docks, home screens) | Done: #1101 |
 | A dot under each app that is open (docks) | Done: #1049, #1057 |
 | Arrow keys through All apps; no on-screen keyboard thrown up on a phone | Done: #1008, #1013 |
-| A sheet of every key, from the menu or Ctrl ; / (desktops' keyboard help, "?" on the web) | Done: this PR |
+| A sheet of every key, from the menu or Ctrl ; / (desktops' keyboard help, "?" on the web) | Done: #1077 |
 
 ## Window manager
 

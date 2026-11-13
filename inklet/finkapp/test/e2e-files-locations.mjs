@@ -1107,6 +1107,22 @@ try {
     check(zdl.suggestedFilename() === 'zipme.zip' && String(names) === 'zipme/a.txt,zipme/empty/,zipme/sub/b.txt' && aText === 'A',
       `a folder downloads as a .zip of all that is in it (${zdl.suggestedFilename()}: ${names})`);
   }
+  // A picked folder says what is in it, and works out its size on request
+  {
+    await f.evaluate(async () => {
+      for (const [p, b] of [['notes/sz/a.txt', 'AAAA'], ['notes/sz/b.txt', 'BB'], ['notes/sz/sub/deep/c.txt', 'CCCCCC']]) await foafos.pod.put(p, b, { contentType: 'text/plain' });
+      await window.__files.go('notes/');
+    });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/sz/"]');
+    await f.waitForFunction(() => /Folder: 2 files and 1 folder/.test(document.querySelector('.detail-head p')?.textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    const what = await f.evaluate(() => document.querySelector('.detail-head p').textContent);
+    await f.evaluate(() => [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Work out its size').click());
+    await f.waitForFunction(() => /bytes in/.test(document.querySelector('.detail-head p')?.textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    const size = await f.evaluate(() => document.querySelector('.detail-head p').textContent);
+    await f.evaluate(async () => { for (const p of ['notes/sz/a.txt', 'notes/sz/b.txt', 'notes/sz/sub/deep/c.txt', 'notes/sz/sub/deep/', 'notes/sz/sub/', 'notes/sz/']) await foafos.pod.delete(p); });
+    check(what === 'Folder: 2 files and 1 folder' && size === 'Folder: 12 bytes in 3 files and 2 folders', `a folder says what is in it, and its size on request (${what}; ${size})`);
+  }
   // Rename: F2 renames a folder with all in it; a file is never renamed over another
   {
     await f.evaluate(async () => {
