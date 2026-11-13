@@ -1332,6 +1332,31 @@ try {
     check(r.chips[0]?.startsWith('All') && r.chips.some((c) => /^Pictures 1$/.test(c)) && r.chips.some((c) => /^Documents 1$/.test(c)) && String(r.only) === 'kfpic.png',
       `search results have a row of kinds, and Pictures shows only the pictures (${JSON.stringify(r)})`);
   }
+  // Copy path, from a file's menu, puts its path on the clipboard
+  {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+    await f.evaluate(async () => { await foafos.pod.put('notes/cp/where.txt', 'w', { contentType: 'text/plain' }); await window.__files.go('notes/cp/'); });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/cp/where.txt"]', { button: 'right' });
+    await page.waitForTimeout(300);
+    const btn = f.locator('.ctx-menu button', { hasText: 'Copy path' });
+    await btn.click();
+    await page.waitForTimeout(200);
+    const said = await f.evaluate(() => document.getElementById('status').textContent);
+    const clip = await page.evaluate(() => navigator.clipboard.readText()).catch((e) => `unreadable: ${e.message}`);
+    // Pasted into Go to folder, the path comes back to the file, chosen in its folder.
+    await f.evaluate(() => window.__files.go('notes/'));
+    await page.waitForTimeout(200);
+    await f.focus('#items tbody tr');
+    await f.press('#items tbody tr', '/');
+    await f.fill('.ask input', clip);
+    await f.press('.ask input', 'Enter');
+    await page.waitForTimeout(600);
+    const back = await f.evaluate(() => ({ folder: window.__files.state().folder, picked: window.__files.state().picked?.path }));
+    await f.evaluate(async () => { await foafos.pod.delete('notes/cp/where.txt'); await foafos.pod.delete('notes/cp/'); await window.__files.go('notes/'); });
+    check(/^Copied the path notes\/cp\/where\.txt/.test(said) && clip === 'notes/cp/where.txt' && back.folder === 'notes/cp/' && back.picked === 'notes/cp/where.txt',
+      `Copy path puts the file's path on the clipboard, and Go to folder comes back to it (${said.slice(0, 40)}; ${clip}; ${JSON.stringify(back)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {
