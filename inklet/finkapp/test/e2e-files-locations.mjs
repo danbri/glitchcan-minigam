@@ -1147,6 +1147,20 @@ try {
     check(band && got === 'm2.txt,m3.txt', `dragging a box over the list chooses what it touches (${band}, ${got})`);
     check(got2 === 'm1.txt,m2.txt' && moved === 3, `a box can begin in the blank space beside a name, and moves nothing (${got2}, ${moved})`);
   }
+  // Cmd (or Ctrl) + Down opens the folder the keyboard is on; Cmd + Up goes back up to it
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/kd/inner.txt', 'x', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
+    await page.waitForTimeout(300);
+    await f.focus('#items tbody tr[data-path="notes/kd/"]');
+    await page.keyboard.press('Control+ArrowDown');
+    await page.waitForTimeout(400);
+    const inside = await f.evaluate(() => window.__files.state().folder);
+    await page.keyboard.press('Control+ArrowUp');
+    await page.waitForTimeout(400);
+    const up = await f.evaluate(() => ({ folder: window.__files.state().folder, focus: document.activeElement?.dataset?.path }));
+    await f.evaluate(async () => { await foafos.pod.delete('notes/kd/inner.txt'); await foafos.pod.delete('notes/kd/'); await window.__files.go('notes/'); });
+    check(inside === 'notes/kd/' && up.folder === 'notes/' && up.focus === 'notes/kd/', `Ctrl or Cmd + Down opens a folder, + Up comes back to it (${inside}; ${JSON.stringify(up)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

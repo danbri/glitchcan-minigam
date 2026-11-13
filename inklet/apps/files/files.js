@@ -471,7 +471,14 @@
   // An archive opens as a folder (read-only): `box.zip` → `box.zip!/`.
   const ARCHIVE = /\.(zip|tar|tgz|tar\.gz)$/i;
   const inArchive = () => folder.includes('!/');
-  function activate(it) { if (it.container) go(it.path); else if (ARCHIVE.test(it.path)) go(`${it.path}!/`); else { noteRecent(it.path); pick(it); } }
+  // Up to the enclosing folder, with the keyboard on the folder just left.
+  async function upAndFocus() {
+    const from = folder;
+    await go(parentOf(folder));
+    const back = [...$('items').querySelectorAll('tbody tr, .grid [role=option]')].find((r) => r.dataset.path === from);
+    (back || $('items').querySelector('tbody tr, .grid [role=option]'))?.focus();
+  }
+  function activate(it) { if (it.container) return go(it.path); if (ARCHIVE.test(it.path)) return go(`${it.path}!/`); noteRecent(it.path); return pick(it); }
 
   // Recent: the files opened last, newest first, for each location, as a phone's or a desktop's
   // file manager keeps them. A file that has gone since is left out when the list is shown.
@@ -650,6 +657,7 @@
           dblclick: () => activate(it),
           keydown: (e) => {
             if (e.key === 'Enter') activate(it);
+            if (e.metaKey || e.ctrlKey) return;            // Cmd + arrows are Finder's open and up
             if (e.key === 'ArrowDown' && !e.shiftKey) tr.nextElementSibling?.focus();
             if (e.key === 'ArrowUp' && !e.shiftKey) tr.previousElementSibling?.focus();
           } } },
@@ -1222,6 +1230,8 @@
     const back = (e.altKey && e.key === 'ArrowLeft') || (e.metaKey && e.key === '[');
     const fwd = (e.altKey && e.key === 'ArrowRight') || (e.metaKey && e.key === ']');
     if (back || fwd) { e.preventDefault(); (back ? goBack : goForward)(); }
+    // Up a folder from anywhere in Files: Alt + Up (Explorer), Cmd or Ctrl + Up (Finder).
+    if ((e.altKey || e.metaKey || e.ctrlKey) && e.key === 'ArrowUp' && folder) { e.preventDefault(); upAndFocus(); }
     // Go to a folder by its path: / as in GNOME Files, Cmd or Ctrl + Shift + G as in Finder.
     if ((e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g')) { e.preventDefault(); askGoTo(); }
   });
@@ -1292,12 +1302,19 @@
       if (e.key === 'F2') askRename(); else askDelete();
       return;
     }
-    if ((e.key === 'Backspace' || (e.altKey && e.key === 'ArrowUp')) && folder) {
+    // Cmd (or Ctrl) + Down opens what the keyboard is on, as in Finder.
+    if ((e.metaKey || e.ctrlKey) && e.key === 'ArrowDown') {
+      const it = items.find((i) => i.path === e.target.dataset?.path);
+      if (it) {
+        e.preventDefault();
+        await activate(it);
+        if (it.container) $('items').querySelector('tbody tr, .grid [role=option]')?.focus();   // into it, as Finder does
+      }
+      return;
+    }
+    if (e.key === 'Backspace' && folder) {
       e.preventDefault();
-      const from = folder;
-      await go(parentOf(folder));
-      const back = [...$('items').querySelectorAll('tbody tr')].find((r) => r.dataset.path === from);
-      (back || $('items').querySelector('tbody tr, .grid [role=option]'))?.focus();
+      await upAndFocus();
       return;
     }
     if (at < 0) return;
