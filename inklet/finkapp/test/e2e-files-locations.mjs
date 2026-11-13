@@ -1269,6 +1269,26 @@ try {
     check(rows[0] === 'Open' && rows.includes('Rename') && rows.includes('Move to the Trash') && renamed === 'c' && byKey.open && byKey.focus && gone,
       `right-click on a file opens its menu, Rename works from it, Shift+F10 opens it too (${JSON.stringify({ rows, renamed, byKey, gone })})`);
   }
+  // A right-click on the folder's empty space opens the folder's menu; Paste there pastes what was copied
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/fm/src.txt', 's', { contentType: 'text/plain' }); await foafos.pod.put('notes/fm/to/.folder', '', { contentType: 'text/plain' }); await window.__files.go('notes/fm/'); });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/fm/src.txt"]', { button: 'right' });
+    await page.waitForTimeout(300);
+    await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button')].find((b) => b.textContent.startsWith('Copy')).click());
+    await f.evaluate(() => window.__files.go('notes/fm/to/'));
+    await page.waitForTimeout(300);
+    const spot = await f.evaluate(() => { const r = document.getElementById('items-pane').getBoundingClientRect(); return { x: r.left + 40, y: r.bottom - 30 }; });
+    const fr = await (await f.frameElement()).boundingBox();
+    await page.mouse.click(fr.x + spot.x, fr.y + spot.y, { button: 'right' });
+    await page.waitForTimeout(300);
+    const rows = await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button span')].map((x) => x.textContent));
+    await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button')].find((b) => b.textContent.startsWith('Paste'))?.click());
+    await page.waitForTimeout(800);
+    const pasted = await f.evaluate(async () => (await foafos.pod.get('notes/fm/to/src.txt')).body);
+    await f.evaluate(async () => { for (const p of ['notes/fm/to/src.txt', 'notes/fm/to/.folder', 'notes/fm/to/', 'notes/fm/src.txt', 'notes/fm/']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
+    check(rows[0] === 'New file' && rows.includes('New folder') && rows.some((r) => /^Paste src\.txt$/.test(r)) && pasted === 's', `a right-click on a folder's empty space opens its menu, and Paste works from it (${JSON.stringify({ rows, pasted })})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {
