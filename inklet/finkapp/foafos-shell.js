@@ -3274,6 +3274,26 @@ function buildUI() {
     wsRows();
   };
   FoafOS.workspaces = () => ({ at: FoafOS.workspace, count: wsCount });
+  // Arrange windows: every window on this workspace in a grid that fills the screen, the front one
+  // first, as Windows' "Show windows side by side" and tiling desktops do (Ctrl ; g). Each stays
+  // snapped to its cell, so it refits when the page changes size, and a drag frees it as a snap's
+  // does. Only where snapping works (700 px and wider); a phone shows one window at a time.
+  FoafOS.arrangeWindows = () => {
+    if (window.innerWidth < 700) { wsNote('Arrange needs a wider screen; here each window has the screen to itself.'); return 0; }
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away):not(.foafos-ov)')]
+      .filter((w) => w._snap).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0));
+    const n = wins.length;
+    if (!n) return 0;
+    const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols);
+    wins.forEach((w, i) => {
+      const r = Math.floor(i / cols);
+      // The last row's windows share its width when it is not full.
+      const inRow = r === rows - 1 ? n - r * cols : cols;
+      w._snap({ c: i - r * cols, r, cols: inRow, rows }, { assist: false });
+    });
+    wsNote(`${n} window${n === 1 ? '' : 's'} arranged`);
+    return n;
+  };
   // Take the front window to the next (or previous) workspace and go there with it, as GNOME's
   // Shift+Super+Page Down and a Mac's drag to the next Space do (Ctrl ; > and Ctrl ; <).
   FoafOS.carryToWorkspace = (step = 1) => {
@@ -3559,6 +3579,8 @@ function buildUI() {
     };
     const snapBox = (zone) => {
       const W = window.innerWidth, H = window.innerHeight;
+      // A cell of a grid, from Arrange windows: { c, r, cols, rows }.
+      if (typeof zone === 'object') return [W * zone.c / zone.cols, H * zone.r / zone.rows, W / zone.cols, H / zone.rows];
       if (zone.length === 2) return [zone[1] === 'l' ? 0 : W / 2, zone[0] === 't' ? 0 : H / 2, W / 2, H / 2];
       return zone === 'left' ? [0, 0, W / 2, H] : zone === 'right' ? [W / 2, 0, W / 2, H] : [0, 0, W, H];
     };

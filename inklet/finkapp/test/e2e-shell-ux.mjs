@@ -605,6 +605,22 @@ try {
   check(ws1.split(',').length >= 2 && ws2empty === '' && at2.at === 2 && ws2.split(',').length === 1 && back1 === ws1 && wsCards === ws1.split(',').length
     && !afterMove.split(',').includes(wsMover) && on2.split(',').includes(wsMover),
     `workspaces: a new empty one, windows stay where they opened, All windows shows this one's, a window moves (${JSON.stringify({ ws1, ws2empty, ws2, back1, wsCards, afterMove, on2 })})`);
+  // Ctrl ; g arranges this workspace's windows in a grid that fills the screen, none overlapping
+  {
+    await keys(page, [';', 'g']);
+    await page.waitForTimeout(300);
+    const grid = await page.evaluate(() => {
+      const rs = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].map((w) => w.getBoundingClientRect());
+      const area = rs.reduce((a, r) => a + r.width * r.height, 0);
+      let overlap = 0;
+      for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
+        const a = rs[i], b = rs[j];
+        overlap += Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      }
+      return { n: rs.length, fill: Math.round(100 * area / (innerWidth * innerHeight)), overlap: Math.round(overlap), row: !!document.querySelector('#wm-sys-arrange .wm-keys') };
+    });
+    check(grid.n >= 2 && grid.fill >= 97 && grid.overlap < 50 && grid.row, `Ctrl ; g arranges the windows side by side, filling the screen (${JSON.stringify(grid)})`);
+  }
   // Ctrl ; > takes the front window to the next workspace and goes with it; Ctrl ; < brings it back
   {
     const front = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0]?.dataset.wid);
