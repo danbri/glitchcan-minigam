@@ -4450,6 +4450,45 @@ function buildUI() {
     if (wanted) setTimeout(() => { try { if (wanted === 'pods') FoafOS.openSystem('pods'); else launchApp(wanted); } catch (e) { /* refused */ } }, 300);
   } catch (e) { /* no location */ }
 
+  // The windows you had open come back after a reload, as a browser restores its tabs and a desktop
+  // reopens an app's windows: the apps and widgets open now, kept on this device for this
+  // installation, reopened in the order they were stacked, each at its kept place. Not when the
+  // address names an app (?app=…): the link says what to open. Games and other stage apps, and
+  // chrome, are not kept.
+  const WINDOWS_KEY = `foafos.session.windows.${ROOT.id}`;
+  const keepableWindow = (id) => (String(id).startsWith('widget-') ? WIDGET_CATALOG.some((w) => `widget-${w.key}` === id)
+    : !!appById(id) && !['chrome', 'stage'].includes(appById(id).surface));
+  const saveWindows = () => {
+    const ids = [...document.querySelectorAll('.foafos-window[data-opened-as]')]
+      .sort((x, y) => Number(x.style.zIndex || 0) - Number(y.style.zIndex || 0))
+      .map((w) => w.dataset.openedAs).filter(keepableWindow).slice(-12);
+    try { localStorage.setItem(WINDOWS_KEY, JSON.stringify(ids)); } catch { /* not kept */ }
+  };
+  let windowsTimer = 0, restoringWindows = true;
+  new MutationObserver(() => { if (restoringWindows) return; clearTimeout(windowsTimer); windowsTimer = setTimeout(saveWindows, 300); })
+    .observe(document.body, { childList: true });
+  addEventListener('pagehide', () => { if (!restoringWindows) saveWindows(); });
+  let deepLinkedApp = false;
+  try { deepLinkedApp = !!new URLSearchParams(location.search).get('app'); } catch { /* no location */ }
+  setTimeout(() => {
+    try {
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem(WINDOWS_KEY)) || []; } catch { /* none */ }
+      if (!deepLinkedApp) {
+        // Windows the installation opened itself count against what was kept, so none is doubled.
+        const have = {};
+        for (const w of document.querySelectorAll('.foafos-window[data-opened-as]')) have[w.dataset.openedAs] = (have[w.dataset.openedAs] || 0) + 1;
+        for (const id of saved.filter(keepableWindow)) {
+          if (have[id] > 0) { have[id]--; continue; }
+          if (id.startsWith('widget-')) FoafOS.openWidget(id.slice('widget-'.length)); else launchApp(id);
+        }
+        if (saved.length) bus.publish('wm.session', { summary: `reopened ${saved.length} window${saved.length === 1 ? '' : 's'}` });
+      }
+    } catch (e) { /* a window that would not reopen is left closed */ }
+    restoringWindows = false;
+    saveWindows();
+  }, 700);
+
   // The sandbox an app gets, derived from its declared capabilities.
   //
   // `allow-scripts` alone yields an OPAQUE ORIGIN: no parent.document, no

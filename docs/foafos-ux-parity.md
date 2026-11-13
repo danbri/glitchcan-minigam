@@ -78,6 +78,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Move and resize with the keyboard (Windows, GNOME) | Done: #1051 |
 | Reopens where it was left, at its size, maximised if it was (desktops) | Done: #1010, #1055 |
 | Reopen the app closed last (browsers' reopen closed tab) | Done: #1044 |
+| The windows you had open come back after a reload (browsers' tab restore, macOS reopening windows) | Done: this PR |
 | Windows follow the page when it changes size (desktops, when a screen changes) | Done: #1050 |
 | Resize from any edge or corner, not only the bottom-right (all desktops) | Done: #1079 |
 | Double-click the top or bottom edge for the full height (Windows) | Done: this PR |
