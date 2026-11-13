@@ -224,6 +224,7 @@ try {
   const swShown = await page.evaluate(() => ({ n: document.querySelectorAll('#foafos-switch .foafos-sw-card').length, at: [...document.querySelectorAll('#foafos-switch .foafos-sw-card')].findIndex((c) => c.classList.contains('on')) }));
   await page.keyboard.press(';');
   const swAt2 = await page.evaluate(() => [...document.querySelectorAll('#foafos-switch .foafos-sw-card')].findIndex((c) => c.classList.contains('on')));
+  const swSaid = await page.evaluate(() => ({ text: document.getElementById('foafos-sw-say')?.textContent, live: document.getElementById('foafos-sw-say')?.getAttribute('aria-live'), card: document.querySelector('#foafos-switch .foafos-sw-card.on')?.textContent, n: document.querySelectorAll('#foafos-switch .foafos-sw-card').length }));
   await page.keyboard.up('Control');
   await page.waitForTimeout(200);
   const swFront = await front();
@@ -234,8 +235,8 @@ try {
   await page.keyboard.up('Control');
   await page.waitForTimeout(150);
   const swStayed = await front();
-  check(swShown.n >= 3 && swShown.at === 1 && swAt2 === 2 && swFront === wins2[0] && swGone && swStayed === wins2[0],
-    `held Ctrl ; ; shows a switcher; ; moves on; letting go switches; Escape stays (${JSON.stringify({ swShown, swAt2, swFront, want: wins2[0], swStayed })})`);
+  check(swShown.n >= 3 && swShown.at === 1 && swAt2 === 2 && swSaid.live === 'polite' && swSaid.text === `${swSaid.card}, 3 of ${swSaid.n}` && swFront === wins2[0] && swGone && swStayed === wins2[0],
+    `held Ctrl ; ; shows a switcher; ; moves on; letting go switches; Escape stays (${JSON.stringify({ swShown, swAt2, swSaid, swFront, want: wins2[0], swStayed })})`);
   await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
 
   // Task Manager: switching to a minimised window restores it
