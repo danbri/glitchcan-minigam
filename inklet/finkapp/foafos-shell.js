@@ -3239,6 +3239,7 @@ function buildUI() {
     if (back.length) bus.publish('wm.desktop', { summary: `${back.length} windows back` });
     return back.length ? 'back' : null;
   };
+  FoafOS.desktopShown = () => putAway.some((w) => w.isConnected && w.classList.contains('minimized'));
 
   // Workspaces, as macOS Spaces, Windows' virtual desktops and GNOME's workspaces: more than one
   // desktop of windows, one shown at a time. Ctrl ; . goes to the next and Ctrl ; , to the one
@@ -3823,10 +3824,15 @@ function buildUI() {
       ['Move or resize', keyOf('move'), () => FoafOS.moveFrontByKeys?.(), !max],
       ['Close', keyOf('close'), () => win.querySelector('.foafos-window-close')?.click(), true],
     ].filter((row) => row[3]);
+    popMenu(rows, x, y, `Window: ${win.querySelector('.foafos-window-bar span')?.textContent || ''}`, () => win.querySelector('.foafos-window-bar button')?.focus());
+  }
+  // A small menu at x, y: rows of [label, keys, run]; arrows, Escape, a click away closes it.
+  function popMenu(rows, x, y, label, onEscape) {
+    document.getElementById('foafos-win-menu')?.remove();
     const menu = document.createElement('div');
     menu.id = 'foafos-win-menu';
     menu.setAttribute('role', 'menu');
-    menu.setAttribute('aria-label', `Window: ${win.querySelector('.foafos-window-bar span')?.textContent || ''}`);
+    menu.setAttribute('aria-label', label);
     for (const [label, keys, run] of rows) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -3841,7 +3847,7 @@ function buildUI() {
     const away = (e) => { if (!menu.contains(e.target)) close(); };
     menu.addEventListener('keydown', (e) => {
       const items = [...menu.querySelectorAll('button')], at = items.indexOf(document.activeElement);
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); win.querySelector('.foafos-window-bar button')?.focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); onEscape?.(); }
       else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus(); }
     });
     document.body.appendChild(menu);
@@ -3851,6 +3857,51 @@ function buildUI() {
     menu.querySelector('button')?.focus();
     setTimeout(() => document.addEventListener('pointerdown', away, true), 0);
   }
+
+  // The desktop's own menu, from a right-click or a long press on the empty desktop, as Windows,
+  // a Mac and a phone's home screen have: what can be opened and arranged from there. Story text on
+  // the desktop keeps the browser's menu (to copy it), so only the empty desktop itself counts.
+  const emptyDesktop = (t) => t === document.body || t === document.documentElement || t?.id === 'narrative-view';
+  function desktopMenu(x, y) {
+    let mine = {};
+    try { mine = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
+    const keyOf = (name) => String(mine[name] || window.FinkWM?.KEYS?.[name] || '').replace(/^ctrl\b/, 'Ctrl');
+    const shown = document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)').length;
+    const rows = [
+      ['All apps', keyOf('apps'), () => FoafOS.openHome(), true],
+      ['Widgets', '', () => FoafOS.openWidgets(), true],
+      ['All windows', keyOf('windows'), () => FoafOS.enterOverview(), document.querySelectorAll('.foafos-window:not(.ws-away)').length > 0],
+      ['Arrange windows', keyOf('arrange'), () => FoafOS.arrangeWindows(), shown > 1 && window.innerWidth >= 700],
+      [shown ? 'Show the desktop' : 'Bring the windows back', keyOf('desktop'), () => FoafOS.showDesktop(), shown > 0 || FoafOS.desktopShown()],
+      ['Keys', keyOf('keys'), () => document.getElementById('wm-sys-keys')?.click(), !!window.matchMedia?.('(any-pointer: fine)').matches],
+    ].filter((r) => r[3]);
+    popMenu(rows, x, y, 'Desktop', null);
+  }
+  document.addEventListener('contextmenu', (e) => {
+    if (!emptyDesktop(e.target) || String(window.getSelection?.() || '')) return;
+    e.preventDefault();
+    desktopMenu(e.clientX, e.clientY);
+  });
+  // iOS sends no contextmenu for a long press: a finger held still on the empty desktop opens it too.
+  {
+    let held = null;
+    document.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch' || !emptyDesktop(e.target)) return;
+      const at = { x: e.clientX, y: e.clientY };
+      held = { at, timer: setTimeout(() => { held = null; desktopMenu(at.x, at.y); }, 550) };
+    });
+    const drop = (e) => { if (held && (e.type !== 'pointermove' || Math.hypot(e.clientX - held.at.x, e.clientY - held.at.y) > 10)) { clearTimeout(held.timer); held = null; } };
+    for (const t of ['pointermove', 'pointerup', 'pointercancel']) document.addEventListener(t, drop);
+  }
+  // All apps, opened at its Widgets folder: what a phone's "add widget" shows.
+  FoafOS.openWidgets = () => {
+    if (!document.getElementById('foafos-home')) FoafOS.openHome();
+    const folder = document.querySelector('#foafos-home details[data-folder="widgets"]');
+    if (!folder) return;
+    folder.open = true;
+    folder.scrollIntoView({ block: 'start' });
+    folder.querySelector('.foafos-app')?.focus();
+  };
 
   function openWidgetWindow(spec) {
     const name = `${spec.key}${widgetSeq + 1}`;
