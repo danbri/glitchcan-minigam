@@ -35,7 +35,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
 | Download a folder as one .zip (web file managers) | Done: #1113 |
 | Compress a folder or what is chosen into a .zip beside it, never over one there (Finder's Compress, Explorer's Send to zip) | Done: #1144 |
-| Extract a .zip into a new folder beside it (opening a .zip in Finder, Explorer's Extract all) | Done: this PR |
+| Extract a .zip into a new folder beside it (opening a .zip in Finder, Explorer's Extract all) | Done: #1145 |
 | Upload files, or a folder keeping its shape, with the system picker (web and phone file managers) | Done: #1116 |
 | Rename a folder (F2 or Rename), and never rename over something already there (desktops) | Done: #1117 |
 | A picked folder says what is in it, and its total size on request (Get Info, Properties) | Done: #1118 |
@@ -81,6 +81,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Search puts the best name match first, and Enter opens it (Spotlight, Start) | Done: #1054 |
 | Search files from All apps: a row hands what was typed to Files, which searches every folder with its own access (Start menu, Spotlight) | Done: #1131 |
 | What each app or widget does, in search and on a long press or right-click (phones, desktops) | Done: #997, #1007, #1062 |
+| An app's sheet says what it may do, in plain words, from its manifest (a phone's App info permissions) | Done: this PR |
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
 | Pin or unpin an app from its window's menu (a taskbar's Pin to taskbar, a dock's Keep in Dock) | Done: #1143 |
 | Widgets opened from All apps show in Recent with the apps (phones' recent widgets, Start's Recent) | Done: #1137 |
