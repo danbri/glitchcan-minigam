@@ -186,3 +186,15 @@
 .kind-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
 .kind-chip { min-height: 28px; padding: 2px 10px; border: 1px solid var(--p-line); border-radius: 999px; background: none; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
 .kind-chip[aria-pressed=true] { background: var(--p-pick); border-color: var(--p-accent); font-weight: 600; }
+
+/* High contrast (Windows' contrast themes, forced colors): the browser replaces every colour, so a
+   state shown only by a background would vanish. The chosen and picked items take the system's
+   Highlight; pressed and focused controls get outlines. */
+@media (forced-colors: active) {
+  .list tr[aria-selected=true] td, .grid button[aria-selected=true], #items tbody tr.chosen td, #items .grid [role=option].chosen {
+    forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .kind-chip[aria-pressed=true], .tree button[aria-current=true] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .ctx-menu button:focus-visible, .ctx-menu button:hover { outline: 2px solid Highlight; outline-offset: -2px; }
+  #items-pane .band { border: 2px dashed Highlight; background: transparent; }
+  .drop-target, .list tr.drop-target td { outline: 2px solid Highlight; }
+}

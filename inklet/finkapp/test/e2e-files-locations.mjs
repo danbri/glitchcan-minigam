@@ -1375,6 +1375,26 @@ try {
     });
     check(r.s1 > r.s0 && r.s2 < r.s0 && r.kept === 0.75, `Ctrl + plus and minus size the icons, and the size is kept (${JSON.stringify(r)})`);
   }
+  // In high contrast (forced colors), a chosen row still looks chosen: it takes the system Highlight
+  {
+    await page.emulateMedia({ forcedColors: 'active' });
+    const r = await f.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      await foafos.pod.put('notes/hc/a.txt', 'a', { contentType: 'text/plain' });
+      await foafos.pod.put('notes/hc/b.txt', 'b', { contentType: 'text/plain' });
+      await window.__files.go('notes/hc/'); await wait(200);
+      const rows = [...document.querySelectorAll('#items tbody tr[data-path]')];
+      rows[0].dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true })); await wait(100);
+      const bg = (tr) => getComputedStyle(tr.querySelector('td')).backgroundColor;
+      const out = { chosen: bg(rows[0]), plain: bg(rows[1]) };
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      for (const p of ['notes/hc/a.txt', 'notes/hc/b.txt', 'notes/hc/']) await foafos.pod.delete(p);
+      await window.__files.go('notes/');
+      return out;
+    });
+    await page.emulateMedia({ forcedColors: 'none' });
+    check(r.chosen !== r.plain, `in high contrast a chosen row still stands out (${JSON.stringify(r)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

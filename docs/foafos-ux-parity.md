@@ -22,7 +22,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Copy path from an item's menu; a file's path in Go to folder opens its folder with it chosen (Finder's Copy as pathname) | Done: #1161 |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
-| Bigger or smaller icons: Ctrl or Cmd + plus and minus, Ctrl + the wheel or a trackpad pinch, two fingers on a phone; kept with the view (Finder, Explorer, phone photo apps) | Done: #1162, this PR |
+| Bigger or smaller icons: Ctrl or Cmd + plus and minus, Ctrl + the wheel or a trackpad pinch, two fingers on a phone; kept with the view (Finder, Explorer, phone photo apps) | Done: #1162, #1163 |
 | A Sort picker where the list has no column heads (a narrow window, a phone): name, newest, largest, kind (phone file managers) | Done: #1150 |
 | Names sort as people expect: Photo 2 before Photo 10, capitals aside (Finder, Explorer) | Done: #1123 |
 | Thumbnails for pictures (desktops, phones) | Done: #1018 |
@@ -130,6 +130,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: #1091 |
 | Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: #1092 |
 | A phone's Back closes the innermost thing open: an app's sheet, a menu, the keys sheet, then All apps or All windows (Android) | Done: #1132 |
+| High contrast (Windows' contrast themes): chosen, pressed and best-match states stay visible, by the system's Highlight and outlines | Done: this PR |
 | A phone's Back goes back inside the app that has the screen: Files closes a file's panel, then goes back a folder (foafos.setBack; Android) | Done: #1139 |
 
 ## Second round
