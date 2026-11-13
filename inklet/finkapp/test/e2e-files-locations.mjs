@@ -57,7 +57,11 @@ await context.addInitScript(() => {
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (e) => { if (!/serviceWorker/.test(e.message)) errors.push(e.message); });
+// This run makes far more pod calls a minute than a person does. The pod's limit (120 a minute per
+// verb) is raised for it, after each load; how Files waits its turn when throttled has its own check.
 const filesFrame = async (p) => {
+  await p.waitForFunction(() => window.FoafOS?.pods, null, { timeout: 30000 }).catch(() => {});
+  await p.evaluate(() => { if (window.FoafOS?.pods) FoafOS.pods.perMinute = 2000; }).catch(() => {});
   for (let i = 0; i < 80; i++) {
     const f = p.frames().find((x) => x.url().includes('apps/files/'));
     if (f && await f.evaluate(() => !!window.__files?.state().locations.length).catch(() => false)) return f;
@@ -633,6 +637,36 @@ try {
     return { asked, said: document.getElementById('status').textContent, gone: !((await foafos.pod.list('notes/')).items || []).some((i) => i.path.replace(/^\/+/, '') === 'emptyf/') };
   });
   check(/Delete emptyf\?/.test(emptyDel.asked) && /^Deleted emptyf/.test(emptyDel.said) && emptyDel.gone, `an empty folder can be deleted (${JSON.stringify(emptyDel)})`);
+  // A folder with things in it goes to the Trash whole, and Put back brings it all back
+  const binF = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (ok, ms = 15000) => { for (let t = 0; t < ms && !(await ok()); t += 100) await wait(100); };
+    const body = async (p) => (await foafos.pod.get(p)).body ?? null;
+    for (const [p, b] of [['notes/binf/a.txt', 'A'], ['notes/binf/sub/b.txt', 'B']]) await foafos.pod.put(p, b, { contentType: 'text/plain' });
+    await window.__files.go('notes/'); await wait(300);
+    const row = document.querySelector('#items tbody tr[data-path="notes/binf/"]'); row.focus();
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    await until(() => document.querySelector('.ask button.danger'));
+    const asked = document.querySelector('.ask').textContent;
+    document.querySelector('.ask button.danger').click();
+    await until(() => /to the Trash/.test(document.getElementById('status').textContent));
+    const r = { asked, gone: (await body('notes/binf/a.txt')) === null };
+    await window.__files.showTrash();
+    const binRow = () => [...document.querySelectorAll('#items tbody tr')].find((x) => /^\.trash\/.+\/binf\/$/.test(x.dataset.path));
+    await until(() => binRow());
+    r.listed = !!binRow();
+    binRow().click();
+    await until(() => [...document.querySelectorAll('#detail button')].some((b) => b.textContent === 'Put back'));
+    [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Put back').click();
+    await until(() => /^Put .* back in/.test(document.getElementById('status').textContent));
+    r.a = await body('notes/binf/a.txt'); r.b = await body('notes/binf/sub/b.txt'); r.leftInTrash = !!binRow();
+    for (const p of ['notes/binf/a.txt', 'notes/binf/sub/b.txt']) await foafos.pod.delete(p);
+    for (const p of ['notes/binf/sub/', 'notes/binf/']) await foafos.pod.delete(p);
+    await window.__files.go('notes/');
+    return r;
+  });
+  check(/Move binf and all that is in it to the Trash\?/.test(binF.asked) && binF.gone && binF.listed && binF.a === 'A' && binF.b === 'B' && !binF.leftInTrash,
+    `a folder with things in it goes to the Trash whole, and comes back whole (${JSON.stringify(binF)})`);
   // In the icon view too: Ctrl + click chooses several, and Delete asks once for them
   await f.evaluate(async () => {
     for (const n of ['g1', 'g2']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
