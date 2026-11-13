@@ -3772,6 +3772,15 @@ function buildUI() {
     try { localStorage.setItem(PINNED_KEY, JSON.stringify(next)); } catch { /* for this visit only */ }
     return next.includes(id);
   };
+  // Pinned apps in the person's own order, as on a dock or a home screen: one step earlier or later.
+  const movePin = (id, step) => {
+    const now = pinnedIds(), i = now.indexOf(id), j = i + step;
+    if (i < 0 || j < 0 || j >= now.length) return false;
+    [now[i], now[j]] = [now[j], now[i]];
+    try { localStorage.setItem(PINNED_KEY, JSON.stringify(now)); } catch { /* for this visit only */ }
+    return true;
+  };
+  FoafOS.pinnedApps = () => pinnedIds();
   function noteRecent(id) {
     try {
       const was = JSON.parse(localStorage.getItem(RECENT_KEY)) || [];
@@ -3804,18 +3813,21 @@ function buildUI() {
       sheet.setAttribute('role', 'dialog');
       sheet.setAttribute('aria-label', `About ${app.name}`);
       sheet.innerHTML = `<div class="sheet-head"><span class="ico" aria-hidden="true"></span><h3></h3></div><p></p>
-        <div class="sheet-acts"><button type="button" class="fp-btn fp-primary" data-act="open">Open</button><button type="button" class="fp-btn" data-act="pin" hidden></button><button type="button" class="fp-btn" data-act="close">Close</button></div>`;
+        <div class="sheet-acts"><button type="button" class="fp-btn fp-primary" data-act="open">Open</button><button type="button" class="fp-btn" data-act="pin" hidden></button><button type="button" class="fp-btn" data-act="earlier" hidden>Move earlier</button><button type="button" class="fp-btn" data-act="later" hidden>Move later</button><button type="button" class="fp-btn" data-act="close">Close</button></div>`;
       sheet.querySelector('.ico').textContent = app.icon || '';
       sheet.querySelector('h3').textContent = app.name;
       sheet.querySelector('p').textContent = app.desc || 'No description yet.';
       const pin = b.parentElement?.querySelector('.foafos-app-pin');
       const pinB = sheet.querySelector('[data-act="pin"]');
       if (pin) { pinB.hidden = false; pinB.textContent = pin.classList.contains('on') ? 'Unpin' : 'Pin'; }
+      const order = pinnedIds(), at = order.indexOf(app.id);
+      if (at >= 0) { sheet.querySelector('[data-act="earlier"]').hidden = at === 0; sheet.querySelector('[data-act="later"]').hidden = at === order.length - 1; }
       const close = () => { sheet.remove(); b.focus(); };
       sheet.addEventListener('click', (e) => {
         const act = e.target.closest('button')?.dataset.act;
         if (act === 'open') { sheet.remove(); b._sheet = false; b.click(); }
         else if (act === 'pin') { sheet.remove(); pin?.click(); }
+        else if (act === 'earlier' || act === 'later') { sheet.remove(); reorderPin(app.id, act === 'earlier' ? -1 : 1); }
         else if (act === 'close') close();
       });
       sheet.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
@@ -3836,6 +3848,18 @@ function buildUI() {
       // The click that ends a long press is not a launch.
       b.addEventListener('click', (e) => { if (b._sheet) { b._sheet = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
     };
+    const reorderPin = (id, step) => {
+      if (!movePin(id, step)) return;
+      home.remove();
+      const again = openHome();
+      again?.querySelector(`details[data-folder="pinned"] .foafos-app[data-app="${CSS.escape(id)}"]`)?.focus();
+    };
+    home.addEventListener('keydown', (e) => {
+      const b = e.target.closest?.('details[data-folder="pinned"] .foafos-app');
+      if (!b || !e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+      e.preventDefault(); e.stopPropagation();
+      reorderPin(b.dataset.app, e.key === 'ArrowLeft' ? -1 : 1);
+    }, true);
     // Which apps are open now: a dot under each, as on a dock, so you can tell a launch from a switch.
     const running = new Set([
       ...[...document.querySelectorAll('.foafos-window[data-opened-as]')].map((w) => w.dataset.openedAs),
