@@ -1161,6 +1161,18 @@ try {
     await f.evaluate(async () => { await foafos.pod.delete('notes/kd/inner.txt'); await foafos.pod.delete('notes/kd/'); await window.__files.go('notes/'); });
     check(inside === 'notes/kd/' && up.folder === 'notes/' && up.focus === 'notes/kd/', `Ctrl or Cmd + Down opens a folder, + Up comes back to it (${inside}; ${JSON.stringify(up)})`);
   }
+  // The window's title says which folder is open
+  {
+    await f.evaluate(() => window.__files.go('notes/'));
+    await page.waitForTimeout(300);
+    const t = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.querySelector('iframe')?.src.includes('apps/files/'))?.querySelector('.foafos-window-bar span')?.textContent);
+    check(/Files — notes$/.test(t || ''), `the window's title says which folder is open (${t})`);
+    await f.evaluate(() => foafos.setTitle('\u202e⚙ System\n' + 'x'.repeat(200)));
+    await page.waitForTimeout(200);
+    const spoof = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.querySelector('iframe')?.src.includes('apps/files/'))?.querySelector('.foafos-window-bar span')?.textContent);
+    await f.evaluate(() => window.__files.go('notes/'));
+    check(/^📁 Files — ⚙ System x+$/.test(spoof || '') && !/[\u202e\n]/.test(spoof) && spoof.length <= 92, `an app's title keeps its own name first, one plain line (${(spoof || '').slice(0, 40)}…, ${spoof?.length})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

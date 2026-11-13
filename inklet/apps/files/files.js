@@ -268,6 +268,8 @@
     $('forward').disabled = !ahead.length;
     $('up').disabled = !folder;
     const parts = folder.split('/').filter(Boolean);
+    // The window's title says which folder is open, so two Files windows can be told apart.
+    foafos.setTitle?.(trashView ? 'Trash' : searchResults ? 'Search' : parts.length ? parts.at(-1).replace(/!$/, '') : (here()?.label || ''));
     $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => (folder ? go('') : askGoTo()) } }, here()?.label || 'My files')),
       ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', ...(i === parts.length - 1 ? { title: 'Go to another folder by typing its path (/)' } : {}),
         on: { click: () => (i === parts.length - 1 && !inArchive() ? askGoTo() : go(parts.slice(0, i + 1).join('/') + '/')) } }, p.endsWith('!') ? `🗜 ${p.slice(0, -1)}` : p))));
