@@ -22,7 +22,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Copy path from an item's menu; a file's path in Go to folder opens its folder with it chosen (Finder's Copy as pathname) | Done: #1161 |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
-| Show hidden files: Cmd or Ctrl + Shift + ., or the folder's menu; kept with the view (Finder, Explorer's Hidden items) | Done: this PR |
+| Show hidden files: Cmd or Ctrl + Shift + ., or the folder's menu; kept with the view (Finder, Explorer's Hidden items) | Done: #1167 |
 | Bigger or smaller icons: Ctrl or Cmd + plus and minus, Ctrl + the wheel or a trackpad pinch, two fingers on a phone; kept with the view (Finder, Explorer, phone photo apps) | Done: #1162, #1163 |
 | A Sort picker where the list has no column heads (a narrow window, a phone): name, newest, largest, kind (phone file managers) | Done: #1150 |
 | Names sort as people expect: Photo 2 before Photo 10, capitals aside (Finder, Explorer) | Done: #1123 |
@@ -34,6 +34,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | The folder keeps up with files saved by other apps; pull down to refresh on a phone (desktops, phones) | Done: #1108 |
 | Recent files (desktops, phones) | Done: #1072 |
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
+| A double-click opens a file in its app (the first that offers to); Enter and a click still show it here (every desktop) | Done: this PR |
 | A right-click (or the Menu key, Shift+F10) on an item opens its menu: Open, Rename, Duplicate, Copy, Cut, Download, Compress, Trash; on several chosen, for them all (every desktop) | Done: #1155 |
 | A right-click or long press on a folder's empty space opens its menu: New file, New folder, Upload, Paste, Choose all, view, Look for changes; a long press on a phone (Finder, Explorer, Android) | Done: #1156, #1157 |
 | Duplicate a file, or a folder with all in it (macOS) | Done: #1034, #1149 |
