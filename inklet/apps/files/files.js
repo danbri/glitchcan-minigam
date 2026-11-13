@@ -108,8 +108,8 @@
       bar = h('div', { id: 'choosebar', class: 'choosebar', role: 'toolbar', 'aria-label': 'Chosen items' });
       statusEl.before(bar);
     }
-    const holding = held && !held.gone;
-    bar.hidden = !chosen.size && !holding;
+    const holding = held && !held.gone && !trashView;
+    bar.hidden = !chosen.size && !holding && !lastTrashed.length && !trashView;
     const btn = (label, run, extra = {}) => h('button', { type: 'button', class: 'tool', on: { click: run }, ...extra }, label);
     bar.replaceChildren(...[
       chosen.size ? h('span', { class: 'choose-n' }, `${chosen.size} chosen`) : null,
@@ -117,6 +117,8 @@
       chosen.size && !inArchive() ? btn('Cut', () => holdChosen(true)) : null,
       chosen.size && !inArchive() ? btn('Delete', askDeleteChosen, { class: 'tool danger' }) : null,
       chosen.size ? btn('Clear', () => { clearChosen(); say(folderSummary()); }) : null,
+      lastTrashed.length && !trashView ? btn('Undo', () => undoTrash(), { class: 'tool tool-main' }) : null,
+      trashView ? btn('Empty Trash', () => emptyTrash(), { class: 'tool danger' }) : null,
       holding && !inArchive() ? btn(`Paste ${heldAll().length === 1 ? nameOf(heldAll()[0]) : `${heldAll().length} items`} here`, () => pasteHeld(), { class: 'tool tool-main' }) : null,
     ].filter(Boolean));
   }
@@ -171,7 +173,7 @@
     queueMicrotask(drawChooseBar);
     // Inside an archive nothing can be made, saved or dropped.
     for (const id of ['new-file', 'new-folder']) $(id).disabled = inArchive();
-    recentOrder = false;
+    recentOrder = false; trashView = false;
     items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
       .filter((it) => !hiddenName(nameOf(it.path)));
     children.set(folder, items.filter((i) => i.container).map((i) => i.path));
@@ -214,6 +216,7 @@
     if (mine !== listing) return;
     let inFiles = 0;
     for (const hit of inside.ok ? inside.hits : []) {
+      if (hit.path.split('/').some((seg) => seg.startsWith('.'))) continue;   // hidden, such as the Trash
       const had = found.find((f) => f.path === hit.path);
       if (had) had.snippet = hit.snippet;
       else { found.push({ path: hit.path, container: false, snippet: hit.snippet }); inFiles++; }
@@ -588,7 +591,7 @@
             if (e.key === 'ArrowUp' && !e.shiftKey) tr.previousElementSibling?.focus();
           } } },
         h('td', {}, icoFor(it, k), nameOf(it.path),
-          searchResults ? h('span', { class: 'hit' }, `${parentOf(it.path) || (here()?.label || 'Top folder')}${it.snippet ? ` — ${it.snippet}` : ''}`) : null), h('td', {}, k.name),
+          searchResults ? h('span', { class: 'hit' }, it.trashId ? `From ${parentOf(it.from) || (here()?.label || 'the top folder')}` : `${parentOf(it.path) || (here()?.label || 'Top folder')}${it.snippet ? ` — ${it.snippet}` : ''}`) : null), h('td', {}, k.name),
         h('td', { class: 'c-size' }, it.container || it.size == null ? '' : sizeText(it.size)),
         h('td', { class: 'c-mod', title: it.modified || '' }, whenText(it.modified)));
         tr.dataset.path = it.path;
@@ -683,6 +686,14 @@
     if (!it) { picked = null; drawDetail(h('p', { class: 'detail-none' }, 'Pick a file to see it here.')); return; }
     const k = kindOf(it);
     const head = h('div', { class: 'detail-head' }, h('h2', {}, `${k.icon} ${nameOf(it.path)}`), h('p', {}, k.name));
+    // In the Trash: where it came from, Put back, and Delete for good.
+    if (it.trashId) {
+      picked = { path: it.path, trashId: it.trashId, container: false };
+      drawDetail(head, h('p', { class: 'trash-from' }, `From ${it.from || 'an unknown folder'}`), h('div', { class: 'detail-actions' },
+        h('button', { class: 'tool tool-main', type: 'button', on: { click: async () => { const ix = await readTrash(); const r = await fromTrash(it.trashId, ix); if (r.ok) await writeTrash(ix); if (!r.ok) { say(`Not put back: ${r.why}.`, true); return; } await showTrash(); say(`Put ${nameOf(r.path)} back in ${parentOf(r.path) || here()?.label || 'the top folder'}.`); } } }, 'Put back'),
+        h('button', { class: 'tool danger', type: 'button', on: { click: askPurge } }, 'Delete for good')));
+      return;
+    }
     const backBtn = h('button', { class: 'tool panes-back', type: 'button', on: { click: () => { $('panes').dataset.show = 'items'; } } }, 'Back to list');
     if (!it.container && ARCHIVE.test(it.path)) {
       // An archive: its details, and Open to look inside (read only); it can be renamed or deleted like any file.
@@ -862,22 +873,118 @@
     pick({ path: to, container: false });
   });
 
+  // ── the Trash ───────────────────────────────────────────────────────────
+  // Deleting a file moves it to a hidden .trash/ folder in the same location, as a desktop's
+  // Trash or a phone's Recently deleted does: each in its own folder there. One index,
+  // .trash/index.json, says what each is and where it came from, so showing the Trash takes one
+  // read, not one per file (a pod throttles a burst of reads). A file is copied first and the
+  // original removed only if unchanged, so nothing is lost on the way. The bar offers Undo at once;
+  // "🗑 Trash" in the side panel lists what is there, to put back or delete for good. Empty
+  // folders are still deleted for good.
+  const TRASH = '.trash/';
+  const TRASH_INDEX = `${TRASH}index.json`;
+  let lastTrashed = [];          // what the last delete moved, for Undo
+  // The index is read once per location and then kept here: only Files writes it, and every read
+  // counts against the pod's calls per minute.
+  let trashCache = null;
+  async function readTrash() {
+    if (trashCache && trashCache.loc === current) return trashCache.ix;
+    const r = await foafos.pod.get(TRASH_INDEX);
+    let ix = {};
+    try { ix = r.ok ? JSON.parse(r.body) || {} : {}; } catch { /* a new index */ }
+    if (r.ok || r.status === 404 || r.reason === 'not-found') trashCache = { loc: current, ix };
+    return ix;
+  }
+  const writeTrash = (ix) => { trashCache = { loc: current, ix }; return foafos.pod.put(TRASH_INDEX, JSON.stringify(ix), { contentType: 'application/json' }); };
+  async function toTrash(path, ix) {
+    const got = await foafos.pod.get(path, { as: 'bytes' });
+    if (!got.ok) return { ok: false, why: explain(got) };
+    const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const name = nameOf(path);
+    const put = await foafos.pod.put(`${TRASH}${id}/${name}`, got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
+    if (!put.ok) return { ok: false, why: explain(put) };
+    const del = await foafos.pod.delete(path, got.etag ? { etag: got.etag } : {});
+    forgetThumb(path);
+    if (!del.ok) { await foafos.pod.delete(`${TRASH}${id}/${name}`); return { ok: false, why: explain(del) }; }
+    ix[id] = { from: path, name, size: got.body?.byteLength ?? got.body?.length ?? null, at: new Date().toISOString(), type: got.contentType || null };
+    return { ok: true, id };
+  }
+  // Put one trashed item back where it came from, never over a file that is there now.
+  async function fromTrash(id, ix) {
+    const e = ix[id];
+    if (!e) return { ok: false, why: 'it is no longer in the Trash' };
+    const inTrash = `${TRASH}${id}/${e.name}`;
+    const got = await foafos.pod.get(inTrash, { as: 'bytes' });
+    if (!got.ok) return { ok: false, why: explain(got) };
+    const put = await foafos.pod.put(e.from, got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
+    if (!put.ok) return { ok: false, why: put.reason === 'conflict' ? `a file called ${e.name} is there now` : explain(put) };
+    await foafos.pod.delete(inTrash);
+    delete ix[id];
+    return { ok: true, path: e.from };
+  }
+  async function purge(id, ix) {
+    const e = ix[id];
+    if (e) await foafos.pod.delete(`${TRASH}${id}/${e.name}`);
+    delete ix[id];
+  }
+  async function trashMany(paths) {
+    const ix = await readTrash();
+    const moved = [], not = [];
+    for (const p of paths) { const r = await toTrash(p, ix); if (r.ok) moved.push(r.id); else not.push(`${nameOf(p)} (${r.why})`); }
+    if (moved.length) await writeTrash(ix);
+    lastTrashed = moved;
+    chosen.clear();
+    await go(folder, { remember: false });
+    say([moved.length ? `Moved ${moved.length === 1 ? nameOf(paths[0]) : `${moved.length} files`} to the Trash.` : '', not.length ? `Not moved: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !moved.length);
+    drawChooseBar();
+  }
+  async function undoTrash() {
+    const ids = lastTrashed; lastTrashed = [];
+    const ix = await readTrash();
+    let back = 0;
+    for (const id of ids) if ((await fromTrash(id, ix)).ok) back++;
+    await writeTrash(ix);
+    await go(folder, { remember: false });
+    say(`Put back ${back === 1 ? '1 file' : `${back} files`}.`);
+    drawChooseBar();
+  }
+  let trashView = false;
+  async function showTrash() {
+    const mine = ++listing;
+    const ix = await readTrash();
+    if (mine !== listing) return;
+    const rows = Object.entries(ix).sort(([, a], [, b]) => String(b.at).localeCompare(String(a.at)))
+      .map(([id, e]) => ({ path: `${TRASH}${id}/${e.name}`, container: false, size: e.size, modified: e.at, contentType: e.type, trashId: id, from: e.from }));
+    items = rows; searchResults = true; recentOrder = true; trashView = true;
+    $('filter').value = '';
+    pick(null); draw();
+    $('panes').dataset.places = 'closed';
+    say(rows.length ? `Trash: ${rows.length} item${rows.length === 1 ? '' : 's'}, newest first. Pick one to put it back or delete it for good.` : 'The Trash is empty.');
+    drawChooseBar();
+  }
+  async function emptyTrash() {
+    ask('Delete everything in the Trash for good? This cannot be undone.', 'Empty Trash', { input: false, danger: true }, async () => {
+      const ix = await readTrash();
+      for (const id of Object.keys(ix)) await purge(id, ix);
+      await writeTrash(ix);
+      await showTrash();
+    });
+  }
+
   const askDeleteChosen = () => {
     const files = [...chosen].filter((p) => !p.endsWith('/'));
     const folders = chosen.size - files.length;
     if (!files.length) { say('Folders are deleted one at a time, once they are empty.', true); return; }
-    ask(`Delete ${files.length} file${files.length === 1 ? '' : 's'}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
-      const failed = [];
-      for (const p of files) { forgetThumb(p); const r = await foafos.pod.delete(p); if (!r.ok) failed.push(nameOf(p)); }
-      chosen.clear();
-      await go(folder, { remember: false });
-      say([`Deleted ${files.length - failed.length} file${files.length - failed.length === 1 ? '' : 's'}.`,
-        failed.length ? `Not deleted: ${failed.join(', ')}.` : '', folders ? 'Folders are left: delete them one at a time.' : ''].filter(Boolean).join(' '), !!failed.length);
+    ask(`Move ${files.length} file${files.length === 1 ? '' : 's'} to the Trash? You can put ${files.length === 1 ? 'it' : 'them'} back from the Trash.`, 'Move to Trash', { input: false, danger: true }, async () => {
+      await trashMany(files);
+      if (folders) say(`${statusEl.textContent} Folders are left: delete them one at a time, once empty.`);
     });
   };
   // One question for the chosen files, or the usual one for the item picked.
   const askDelete = () => (chosen.size > 1 ? askDeleteChosen() : askDeleteOne());
-  const askDeleteOne = () => ask(`Delete ${nameOf(picked.path)}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
+  const askDeleteOne = () => (picked.container ? askDeleteFolder() : picked.trashId ? askPurge() : ask(`Move ${nameOf(picked.path)} to the Trash? You can put it back from the Trash.`, 'Move to Trash', { input: false, danger: true }, () => trashMany([picked.path])));
+  const askPurge = () => ask(`Delete ${nameOf(picked.path)} for good? This cannot be undone.`, 'Delete for good', { input: false, danger: true }, async () => { const ix = await readTrash(); await purge(picked.trashId, ix); await writeTrash(ix); await showTrash(); });
+  const askDeleteFolder = () => ask(`Delete ${nameOf(picked.path)}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
     const name = nameOf(picked.path);
     let path = picked.path;
     if (picked.container) {
@@ -1169,6 +1276,7 @@
 
   $('new-file').addEventListener('click', askNewFile);
   $('recent').addEventListener('click', showRecent);
+  $('trash').addEventListener('click', showTrash);
   $('add-folder').addEventListener('click', addFolder);
   $('new-folder').addEventListener('click', askNewFolder);
   $('places').addEventListener('click', () => { const p = $('panes'); p.dataset.places = p.dataset.places === 'open' ? 'closed' : 'open'; });
@@ -1198,7 +1306,7 @@
   });
 
   pick(null);
-  window.__files = { go, pick, useLocation, squarify, showRecent, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+  window.__files = { go, pick, useLocation, squarify, showRecent, showTrash, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
 
   // Tools for the shell and agents (foafos.tools in app-sdk.js). All three only read, from the
   // location Files has open, and none changes what the window shows.

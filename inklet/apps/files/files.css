@@ -145,3 +145,6 @@
 #favs .fav > button:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 #favs .fav-x { flex: none; width: auto; min-width: 28px; border: 0; background: none; color: var(--p-dim); cursor: pointer; padding: 2px 6px; opacity: .6; }
 #favs .fav-x:hover, #favs .fav-x:focus-visible { opacity: 1; }
+
+/* A file in the Trash says where it came from. */
+.trash-from { margin: 0 12px 8px; color: var(--p-dim); overflow-wrap: anywhere; }

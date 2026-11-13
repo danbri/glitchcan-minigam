@@ -195,7 +195,7 @@ try {
   await f.focus('#items tbody tr[data-path="notes/doomed.txt"]');
   await page.keyboard.press('Delete');
   await page.waitForTimeout(400);
-  const asked = await f.evaluate(() => /Delete doomed\.txt\?/.test(document.querySelector('.ask')?.textContent || ''));
+  const asked = await f.evaluate(() => /Move doomed\.txt to the Trash\?/.test(document.querySelector('.ask')?.textContent || ''));
   await page.keyboard.press('Escape');
   const kept = await f.evaluate(async () => !document.querySelector('.ask') && (await foafos.pod.get('notes/doomed.txt')).ok);
   await f.focus('#items tbody tr[data-path="notes/doomed.txt"]');
@@ -547,8 +547,8 @@ try {
   await f.press('#items tbody tr', 'Escape');
   const msCleared = await f.evaluate(() => document.querySelectorAll('#items tbody tr.chosen').length);
   await f.evaluate(() => foafos.pod.delete('notes/m2.txt'));
-  check(String(msRun) === 'notes/m1.txt,notes/m2.txt,notes/m3.txt' && String(msTwo) === 'notes/m1.txt,notes/m3.txt' && /Delete 2 files\?/.test(msAsked)
-    && !msAfter.m1 && msAfter.m2 && !msAfter.m3 && /Deleted 2 files/.test(msAfter.said) && msAll.chosen === msAll.rows && msAll.rows > 0 && msCleared === 0,
+  check(String(msRun) === 'notes/m1.txt,notes/m2.txt,notes/m3.txt' && String(msTwo) === 'notes/m1.txt,notes/m3.txt' && /Move 2 files to the Trash\?/.test(msAsked)
+    && !msAfter.m1 && msAfter.m2 && !msAfter.m3 && /Moved 2 files to the Trash/.test(msAfter.said) && msAll.chosen === msAll.rows && msAll.rows > 0 && msCleared === 0,
     `choosing several files: Shift and Ctrl clicks, one question for Delete, Ctrl+A and Escape (${JSON.stringify({ msRun, msTwo, msAsked, msAfter, msAll, msCleared })})`);
   // Copy and cut act on all the chosen files: two copied go to the top together, two cut move together
   await f.evaluate(async () => {
@@ -594,7 +594,7 @@ try {
   await page.waitForTimeout(700);
   const gLeft = await f.evaluate(async () => [(await foafos.pod.get('notes/g1.txt')).ok, (await foafos.pod.get('notes/g2.txt')).ok]);
   if (!wasIcons) await f.click('#view');
-  check(String(gChosen) === 'notes/g1.txt,notes/g2.txt' && /Delete 2 files\?/.test(gAsked) && String(gLeft) === 'false,false',
+  check(String(gChosen) === 'notes/g1.txt,notes/g2.txt' && /Move 2 files to the Trash\?/.test(gAsked) && String(gLeft) === 'false,false',
     `in the icon view, Ctrl + click chooses several and Delete asks once (${JSON.stringify({ gChosen, gAsked, gLeft })})`);
   // Dragging one of several chosen files onto a folder moves them all, and says so once
   await f.evaluate(async () => {
@@ -700,7 +700,7 @@ try {
   const sAsked = await f.evaluate(() => document.querySelector('.ask')?.textContent || '');
   await f.click('.ask button:not(.danger)');
   await f.evaluate(async () => { for (const n of ['s1', 's2', 's3']) await foafos.pod.delete(`notes/${n}.txt`); await window.__files.go('notes/'); });
-  check(String(sThree) === 'notes/s1.txt,notes/s2.txt,notes/s3.txt' && sFocus === 'notes/s3.txt' && String(sTwo) === 'notes/s1.txt,notes/s2.txt' && /Delete 2 files\?/.test(sAsked),
+  check(String(sThree) === 'notes/s1.txt,notes/s2.txt,notes/s3.txt' && sFocus === 'notes/s3.txt' && String(sTwo) === 'notes/s1.txt,notes/s2.txt' && /Move 2 files to the Trash\?/.test(sAsked),
     `Shift + arrows extend the choice from the keyboard (${JSON.stringify({ sThree, sFocus, sTwo, sAsked })})`);
   // Favourites: a folder's panel keeps it in the side panel; one click there opens it; ✕ takes it off
   await f.evaluate(async () => {
@@ -753,6 +753,46 @@ try {
   });
   check(tree.a === 'A' && tree.b === 'B' && tree.empty && tree.a2 === 'A' && tree.b2 === 'B' && tree.orig === 'A' && /Pasted trip 2/.test(tree.said),
     `copying a folder takes all that is in it, and a second paste goes beside it (${JSON.stringify(tree)})`);
+  // The Trash: Delete moves a file there, Undo puts it back; the Trash lists it with where it came
+  // from, Put back restores it, Delete for good removes it; search does not find what is in it
+  const bin = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    // Whether a file is there, by listing its folder: reads are counted per minute, and this run makes many.
+    const ok = async (p) => { const d = p.slice(0, p.lastIndexOf('/') + 1), n = p.slice(d.length); return ((await foafos.pod.list(d)).items || []).some((i) => i.path.replace(/^\/+/, '') === n); };
+    const clickBtn = (scope, re) => [...document.querySelectorAll(`${scope} button`)].find((b) => re.test(b.textContent))?.click();
+    const confirm = async () => { await wait(200); document.querySelector('.ask button.danger').click(); await wait(800); };
+    await foafos.pod.put('notes/bin.txt', 'binned words', { contentType: 'text/plain' });
+    const filter = document.getElementById('filter'); filter.value = ''; filter.dispatchEvent(new Event('input'));
+    await window.__files.go('notes/'); await wait(300);
+    const del = async () => { const row = document.querySelector('#items tbody tr[data-path="notes/bin.txt"]'); row.focus(); row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })); await wait(400); await confirm(); };
+    await del();
+    const r = { trashed: !(await ok('notes/bin.txt')), said: document.getElementById('status').textContent, undoShown: [...document.querySelectorAll('#choosebar button')].some((b) => b.textContent === 'Undo') };
+    clickBtn('#choosebar', /^Undo$/); await wait(900);
+    r.undone = await ok('notes/bin.txt');
+    await del();
+    await window.__files.showTrash(); await wait(400);
+    // Earlier tests' deletes are in the Trash too: find this one by name.
+    const binRow = () => [...document.querySelectorAll('#items tbody tr')].find((x) => /^\.trash\/.+\/bin\.txt$/.test(x.dataset.path));
+    r.listed = !!binRow();
+    binRow().click(); await wait(300);
+    r.from = document.querySelector('#detail .trash-from')?.textContent;
+    clickBtn('#detail', /^Put back$/); await wait(900);
+    r.putBack = await ok('notes/bin.txt');
+    r.emptyAfter = !binRow();
+    await window.__files.go('notes/'); await wait(300);
+    await del();
+    await window.__files.showTrash(); await wait(400);
+    binRow().click(); await wait(300);
+    clickBtn('#detail', /^Delete for good$/); await confirm();
+    r.purged = !(await ok('notes/bin.txt')) && !binRow();
+    filter.value = 'binned'; await window.__files.go('');
+    r.searchClean = !((await foafos.pod.search('binned', { limit: 20 })).hits || []).some((h) => !h.path.startsWith('.')) ;
+    filter.value = ''; filter.dispatchEvent(new Event('input'));
+    await window.__files.go('notes/');
+    return r;
+  });
+  check(bin.trashed && /Moved bin\.txt to the Trash/.test(bin.said) && bin.undoShown && bin.undone && bin.listed && bin.from === 'From notes/bin.txt' && bin.putBack && bin.emptyAfter && bin.purged,
+    `the Trash: Delete moves a file there, Undo and Put back restore it, Delete for good removes it (${JSON.stringify(bin)})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });
