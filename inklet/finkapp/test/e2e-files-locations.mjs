@@ -934,6 +934,29 @@ try {
     return r;
   });
   check(pdf.pages === '2' && pdf.page === '1' && pdf.ink > 50 && pdf.page2 === '2' && pdf.where2 === 'Page 2 of 2', `a PDF shows in the preview, a page at a time (${JSON.stringify(pdf)})`);
+  // Adding many files waits its turn when the pod says "throttled", and a file refused for another
+  // reason is named with that reason, not called too large
+  const bulk = await f.evaluate(async () => {
+    const real = foafos.pod.put;
+    const seen = {};
+    foafos.pod.put = async (path, body, opts) => {
+      seen[path] = (seen[path] || 0) + 1;
+      if (path.endsWith('slow.txt') && seen[path] <= 2) return { ok: false, reason: 'throttled' };
+      if (path.endsWith('nope.txt')) return { ok: false, reason: 'quota' };
+      return real(path, body, opts);
+    };
+    await window.__files.go('notes/');
+    try {
+      await window.__files.addFiles([new File(['a'], 'quick.txt', { type: 'text/plain' }), new File(['b'], 'slow.txt', { type: 'text/plain' }), new File(['c'], 'nope.txt', { type: 'text/plain' })]);
+    } finally { foafos.pod.put = real; }
+    const said = document.getElementById('status').textContent;
+    const got = async (p) => (await foafos.pod.list('notes/')).items.some((i) => i.path.replace(/^\/+/, '') === p);
+    const r = { said, quick: await got('quick.txt'), slow: await got('slow.txt'), slowTries: seen['notes/slow.txt'], nope: await got('nope.txt') };
+    for (const n of ['quick.txt', 'slow.txt']) await foafos.pod.delete(`notes/${n}`);
+    return r;
+  });
+  check(bulk.quick && bulk.slow && bulk.slowTries === 3 && !bulk.nope && /Added quick\.txt, slow\.txt\./.test(bulk.said) && /Not added: nope\.txt \(/.test(bulk.said) && !/too large/.test(bulk.said),
+    `adding files waits its turn when throttled, and names other failures truly (${JSON.stringify(bulk)})`);
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));
