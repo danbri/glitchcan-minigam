@@ -5948,7 +5948,7 @@ function buildUI() {
       const app = appById(node.appId);
       const isRoot = node.id === FoafOS.rootNode?.id;
       const r = {
-        node, depth, parent, id: node.id, appId: node.appId, label: node.label, isRoot,
+        node, depth, parent, id: node.id, appId: node.appId, label: titledLabel(node), isRoot,
         icon: isRoot ? (FoafOS.root?.icon || '🏠')
           : (app?.icon || (node.surface === 'story' ? '📖' : '🪟')),
         kind: TM_KIND[isRoot ? 'root' : node.surface] || 'App',
@@ -6024,6 +6024,13 @@ function buildUI() {
     if (i < text.length) el.append(text.slice(i));
   }
 
+  // A window's title says what is open in it ("Files — notes", foafos.setTitle): the Task Manager
+  // shows that too, so two windows of one app can be told apart there as in All windows.
+  function titledLabel(node) {
+    const win = document.querySelector(`.foafos-window[data-instance="${CSS.escape(String(node.id))}"]`);
+    const base = win?.dataset.baseTitle, now = win?.querySelector('.foafos-window-bar span')?.textContent;
+    return base && now?.startsWith(`${base} — `) ? `${node.label} — ${now.slice(base.length + 3)}` : node.label;
+  }
   function openSwitcher() {
     const old = document.getElementById('foafos-switcher');
     if (old) { old.remove(); return null; }

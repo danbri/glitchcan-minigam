@@ -1167,6 +1167,8 @@ try {
     await page.waitForTimeout(300);
     const t = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.querySelector('iframe')?.src.includes('apps/files/'))?.querySelector('.foafos-window-bar span')?.textContent);
     check(/Files — notes$/.test(t || ''), `the window's title says which folder is open (${t})`);
+    const tm = await page.evaluate(async () => { FoafOS.openSwitcher(); await new Promise((ok) => setTimeout(ok, 300)); const t2 = [...document.querySelectorAll('.foafos-switch-card .ttl')].map((x) => x.textContent); document.getElementById('foafos-switcher')?.remove(); document.querySelector('[aria-labelledby="foafos-tm-title"]')?.remove(); return t2; });
+    check(tm.some((x) => /^Files — notes$/.test(x)), `the Task Manager names the window by its title too (${tm.join(' | ').slice(0, 160)})`);
     await f.evaluate(() => foafos.setTitle('\u202e⚙ System\n' + 'x'.repeat(200)));
     await page.waitForTimeout(200);
     const spoof = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.querySelector('iframe')?.src.includes('apps/files/'))?.querySelector('.foafos-window-bar span')?.textContent);
