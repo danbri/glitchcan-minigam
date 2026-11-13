@@ -87,7 +87,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | A notice that does not cover a phone's title bar, and stays in the menu | Done: #1052 |
 | Every action named for screen readers; keys shown beside menu rows | Done: #1003, and each step above |
 | Touch targets of about 44 px on touch screens | Done: window buttons, All apps, the bars above |
-| On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: this PR |
+| On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: #1091 |
+| Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: this PR |
 
 ## Second round
 

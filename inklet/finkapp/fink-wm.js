@@ -72,6 +72,8 @@ window.FinkWM = {
                       'wm-sys-nudge': () => window.FoafOS?.runNudge?.(),
                       'wm-sys-keys': () => this._showKeys(this._seqs || []),
                       'wm-sys-desktop': () => window.FoafOS?.showDesktop?.(),
+                      'wm-sys-wsnext': () => window.FoafOS?.nextWorkspace?.(1),
+                      'wm-sys-wsprev': () => window.FoafOS?.nextWorkspace?.(-1),
                       'wm-sys-activity': () => window.FoafOS?.openActivity?.() };
         for (const [id, go] of Object.entries(sys)) {
             document.getElementById(id)?.addEventListener('click', () => { this._setCollapsed(true); go(); });
@@ -745,6 +747,7 @@ window.FinkWM = {
 
     _setCollapsed(collapsed) {
         const { chrome, handle } = this.elements;
+        if (!collapsed) window.FoafOS?.wsRows?.();   // the workspace rows say where you are
         // the menu as a ring (a setting, ☰ › Look): the list's rows are built as usual, unshown, and the ring
         // offers the same buttons (_openRadial)
         if (!collapsed && this._radialOn()) {
@@ -1056,7 +1059,7 @@ window.FinkWM = {
             return { name, ctrl, keys: ctrl ? words.slice(1) : words };
         }).filter((s) => s.keys.length);
         // Each menu row shows its keys, as a desktop menu does, so they can be found.
-        const rowFor = { menu: null, apps: 'wm-sys-apps', windows: 'wm-sys-windows', next: 'wm-sys-next', tasks: 'wm-sys-tasks', hide: 'wm-sys-hide', close: 'wm-sys-close', prev: 'wm-sys-prev', reopen: 'wm-sys-reopen', move: 'wm-sys-move', last: 'wm-sys-last', keys: 'wm-sys-keys', desktop: 'wm-sys-desktop' };
+        const rowFor = { menu: null, apps: 'wm-sys-apps', windows: 'wm-sys-windows', next: 'wm-sys-next', tasks: 'wm-sys-tasks', hide: 'wm-sys-hide', close: 'wm-sys-close', prev: 'wm-sys-prev', reopen: 'wm-sys-reopen', move: 'wm-sys-move', last: 'wm-sys-last', keys: 'wm-sys-keys', desktop: 'wm-sys-desktop', wsNext: 'wm-sys-wsnext', wsPrev: 'wm-sys-wsprev' };
         for (const s of seqs) {
             const row = rowFor[s.name] && document.getElementById(rowFor[s.name]);
             if (!row) continue;
