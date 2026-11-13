@@ -337,14 +337,19 @@
       searchResults ? ['Show in folder', '', () => showInFolder(it.path)] : null,
       ro ? null : [it.container ? 'Delete' : 'Move to the Trash', mac ? '⌘⌫' : 'Delete', () => askDelete(), 'danger'],
     ];
-    const menu = h('div', { class: 'ctx-menu', role: 'menu', 'aria-label': many ? `${many.length} items` : nameOf(it.path) },
-      ...rows.filter(Boolean).map(([label, keys, run, cls]) => h('button', { type: 'button', role: 'menuitem', class: cls || '',
-        on: { click: async () => { close(); await run(); } } }, h('span', {}, label), h('kbd', {}, keys))));
+    showMenu(rows, x, y, many ? `${many.length} items` : nameOf(it.path), () => document.querySelector(`#items [data-path="${CSS.escape(it.path)}"]`)?.focus());
+  }
+  // A small menu at x, y: rows of [label, keys, run, class]; arrows move, Escape or a click away closes.
+  function showMenu(rows, x, y, label, onEscape) {
+    document.querySelector('.ctx-menu')?.remove();
+    const menu = h('div', { class: 'ctx-menu', role: 'menu', 'aria-label': label },
+      ...rows.filter(Boolean).map(([text, keys, run, cls]) => h('button', { type: 'button', role: 'menuitem', class: cls || '',
+        on: { click: async () => { close(); await run(); } } }, h('span', {}, text), h('kbd', {}, keys))));
     const close = () => { menu.remove(); document.removeEventListener('pointerdown', away, true); };
     const away = (e) => { if (!menu.contains(e.target)) close(); };
     menu.addEventListener('keydown', (e) => {
       const bs = [...menu.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); document.querySelector(`#items [data-path="${CSS.escape(it.path)}"]`)?.focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); onEscape?.(); }
       else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length].focus(); }
     });
     document.body.appendChild(menu);
@@ -354,6 +359,28 @@
     menu.querySelector('button')?.focus();
     setTimeout(() => document.addEventListener('pointerdown', away, true), 0);
   }
+  // The folder's own menu, from a right-click on the empty space of the list or the icons, as in
+  // Finder and Explorer: make, add, paste, and how it is shown.
+  function folderMenu(x, y) {
+    const ro = inArchive() || trashView;
+    const mac = /Mac/.test(navigator.platform);
+    const holding = held && !held.gone;
+    showMenu([
+      ro ? null : ['New file', '', () => askNewFile()],
+      ro ? null : ['New folder', '', () => askNewFolder()],
+      ro ? null : ['Upload…', '', () => $('upload').click()],
+      ro || !holding ? null : [`Paste ${heldAll().length === 1 ? nameOf(heldAll()[0]) : `${heldAll().length} items`}`, mac ? '⌘V' : 'Ctrl+V', () => pasteHeld()],
+      ['Choose all', mac ? '⌘A' : 'Ctrl+A', () => { chosen.clear(); for (const i of shown()) chosen.add(i.path); markChosen(); }],
+      [icons ? 'Show as a list' : 'Show as icons', '', () => $('view').click()],
+      ['Look for changes', '', async () => { if (!(await refreshIfChanged())) say(folderSummary()); }],
+      folder ? ['Download this folder as .zip', '', () => download([folder])] : null,
+    ], x, y, `Folder ${nameOf(folder) || here()?.label || ''}`, null);
+  }
+  $('items-pane').addEventListener('contextmenu', (e) => {
+    if (e.target.closest('tr[data-path], [role=option], button, input, a, .ask, #choosebar')) return;
+    e.preventDefault();
+    folderMenu(e.clientX, e.clientY);
+  });
   function asDraggable(el, it) {
     asChoosable(el, it);
     if (inArchive() || touchOnly) return;
