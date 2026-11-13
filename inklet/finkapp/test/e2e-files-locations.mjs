@@ -1192,6 +1192,24 @@ try {
     });
     check(r.there === 'm' && r.gone, `a file dropped on a folder in the path bar moves there (${JSON.stringify(r)})`);
   }
+  // Compress makes a .zip beside the folder, with all in it, and never over one that is there
+  {
+    await f.evaluate(async () => {
+      for (const [p, b] of [['notes/cz/a.txt', 'A'], ['notes/cz/sub/b.txt', 'BB'], ['notes/cz.zip', 'not a zip']]) await foafos.pod.put(p, b, { contentType: 'text/plain' });
+      await window.__files.go('notes/');
+    });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/cz/"]');
+    await page.waitForTimeout(300);
+    await f.evaluate(() => [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Compress').click());
+    await f.waitForFunction(() => /Made cz 2\.zip/.test(document.getElementById('status').textContent), null, { timeout: 10000 }).catch(() => {});
+    const got = await f.evaluate(async () => ({ said: document.getElementById('status').textContent, old: new TextDecoder().decode((await foafos.pod.get('notes/cz.zip', { as: 'bytes' })).body), zip: [...new Uint8Array((await foafos.pod.get('notes/cz 2.zip', { as: 'bytes' })).body || [])] }));
+    const arc = got.zip.length ? await openArchive(new Uint8Array(got.zip)) : null;
+    const names = arc ? arc.entries.map((e) => e.name).sort().join(',') : '';
+    const bText = arc ? new TextDecoder().decode(await arc.read(arc.entries.find((e) => e.name === 'cz/sub/b.txt'))) : '';
+    await f.evaluate(async () => { for (const p of ['notes/cz/a.txt', 'notes/cz/sub/b.txt', 'notes/cz/sub/', 'notes/cz/', 'notes/cz.zip', 'notes/cz 2.zip']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
+    check(/Made cz 2\.zip/.test(got.said) && got.old === 'not a zip' && names === 'cz/a.txt,cz/sub/b.txt' && bText === 'BB', `Compress makes a .zip beside the folder, never over one there (${got.said}; ${names}; ${got.old}; ${JSON.stringify(bText)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {
