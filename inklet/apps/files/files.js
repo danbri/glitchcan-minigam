@@ -1218,21 +1218,36 @@
   };
   // Files dropped or pasted into this folder. A drop keeps each file's name, as a copy onto a
   // folder does; a paste never replaces a file, so a second screenshot is "Pasted image 2.png".
+  // How long to wait before asking again when the pod says it has had enough writes for now.
+  const THROTTLE_WAIT = 2000, THROTTLE_TRIES = 45;
   async function addFiles(files, { paste = false } = {}) {
-    const added = [], left = [];
+    const added = [], tooBig = [], failed = [];
+    let n = 0;
     for (const f of files) {
+      n++;
       const texty = /^text\/|json|xml|javascript|turtle|n-triples|markdown/.test(f.type) || /\.(txt|md|csv|json|ttl|nt|jsonld|html?|css|js|mjs|xml|svg|ya?ml|log)$/i.test(f.name);
       // Text up to 1 MiB goes as text; anything else up to 8 MiB as bytes.
-      if (f.size > (texty ? 1024 * 1024 : 8 * 1024 * 1024)) { left.push(f.name); continue; }
+      if (f.size > (texty ? 1024 * 1024 : 8 * 1024 * 1024)) { tooBig.push(f.name); continue; }
       const given = cleanName(f.name) || 'Pasted';
       const name = paste ? freeName(/^image\.\w+$/.test(given) ? `Pasted ${given}` : given) : given;
       forgetThumb(folder + name);
-      const r = await foafos.pod.put(folder + name, texty ? await f.text() : await f.arrayBuffer(),
-        { contentType: f.type || (texty ? 'text/plain' : 'application/octet-stream'), ...(paste ? { ifNoneMatch: true } : {}) });
-      (r.ok ? added : left).push(name);
+      const body = texty ? await f.text() : await f.arrayBuffer();
+      const put = () => foafos.pod.put(folder + name, body, { contentType: f.type || (texty ? 'text/plain' : 'application/octet-stream'), ...(paste ? { ifNoneMatch: true } : {}) });
+      let r = await put();
+      // A pod takes so many writes a minute. A large drop waits its turn, as a desktop's copy of
+      // many files takes its time, rather than leaving the rest behind.
+      for (let tries = 0; !r.ok && r.reason === 'throttled' && tries < THROTTLE_TRIES; tries++) {
+        say(`Adding ${n} of ${files.length}: the pod takes a limited number of files a minute, so this one waits its turn.`);
+        await new Promise((ok) => setTimeout(ok, THROTTLE_WAIT));
+        r = await put();
+      }
+      if (r.ok) added.push(name); else failed.push(`${name} (${explain(r)})`);
+      if (files.length > 10 && n % 10 === 0) say(`Adding ${n} of ${files.length}…`);
     }
     await go(folder, { remember: false });
-    say([added.length ? `Added ${added.join(', ')}.` : '', left.length ? `Not added (too large: text up to 1 MiB, other files up to 8 MiB): ${left.join(', ')}.` : ''].filter(Boolean).join(' '), !!left.length && !added.length);
+    say([added.length ? (added.length > 5 ? `Added ${added.length} files.` : `Added ${added.join(', ')}.`) : '',
+      tooBig.length ? `Not added (too large: text up to 1 MiB, other files up to 8 MiB): ${tooBig.join(', ')}.` : '',
+      failed.length ? `Not added: ${failed.join(', ')}.` : ''].filter(Boolean).join(' '), !added.length && !!(tooBig.length || failed.length));
     if (added.length === 1) pick({ path: folder + added[0], container: false });
   }
   // Paste (Ctrl+V, Cmd+V) into the folder: copied files or a screenshot become files here, and
@@ -1372,7 +1387,7 @@
   });
 
   pick(null);
-  window.__files = { go, pick, useLocation, squarify, showRecent, showTrash, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+  window.__files = { go, pick, useLocation, squarify, showRecent, showTrash, addFiles, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
 
   // Tools for the shell and agents (foafos.tools in app-sdk.js). All three only read, from the
   // location Files has open, and none changes what the window shows.
