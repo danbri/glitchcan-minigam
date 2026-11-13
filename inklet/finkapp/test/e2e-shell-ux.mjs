@@ -363,6 +363,7 @@ try {
   await keys(page, [';', 'f', 'o', 'a', 'f']);
   check(await page.evaluate(() => !document.getElementById('wm-chrome').classList.contains('collapsed')), 'ctrl ; f o a f opens the menu');
   check(await page.evaluate(() => document.querySelectorAll('#wm-open-sect button').length) >= 2, 'the menu lists open windows');
+  check(await page.evaluate(() => ['wm-sys-keys', 'wm-sys-move'].every((id) => getComputedStyle(document.getElementById(id)).display !== 'none')), 'with a mouse and keyboard the menu keeps Keys and Move or resize');
   check(await page.evaluate(() => ['wm-sys-apps', 'wm-sys-windows', 'wm-sys-next', 'wm-sys-tasks', 'wm-sys-hide', 'wm-sys-close', 'wm-sys-prev'].every((id) => /^Ctrl ; /.test(document.querySelector(`#${id} .wm-keys`)?.textContent || '') && document.querySelector(`#${id} .wm-keys`).offsetWidth > 0)), 'the menu shows each row\'s keys');
   // Ctrl ; / (or Keys in the menu) lists every key sequence with what it does; Escape shuts it
   await page.keyboard.press('Escape');
@@ -564,6 +565,8 @@ try {
   await phone.page.evaluate(() => FoafOS.openHome());
   await phone.page.waitForTimeout(300);
   check(await phone.page.evaluate(() => document.activeElement?.id === 'foafos-home'), 'All apps on a phone does not open the keyboard');
+  check(await phone.page.evaluate(() => ['wm-sys-keys', 'wm-sys-move'].every((id) => getComputedStyle(document.getElementById(id)).display === 'none') && getComputedStyle(document.getElementById('wm-sys-desktop')).display !== 'none'),
+    'a phone menu leaves out the rows that need a keyboard (Keys, Move or resize)');
   // A long press on an app shows what it does, with Open and Pin, and does not open it
   await phone.page.evaluate(() => { document.getElementById('foafos-home')?.remove(); FoafOS.openHome(); });   // openHome toggles
   await phone.page.waitForTimeout(300);
