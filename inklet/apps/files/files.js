@@ -27,6 +27,21 @@
     'too-large': 'This file is too large to open here.',
   };
   const say = (text, bad = false) => { statusEl.textContent = text; statusEl.classList.toggle('bad', bad); };
+  // A pod takes so many calls a minute from an app. Rather than fail a step in the middle of a copy,
+  // a move or a delete of many files, a call it answers "throttled" waits and asks again, for up to
+  // about a minute and a half, as a desktop's copy of many files takes its time.
+  const paced = (call, { wait = 2000, tries = 45, onWait = () => say('Waiting for the pod: it takes a limited number of calls a minute.') } = {}) => async (...args) => {
+    let r = await call(...args);
+    for (let t = 0; r && !r.ok && r.reason === 'throttled' && t < tries; t++) {
+      onWait();
+      await new Promise((ok) => setTimeout(ok, wait));
+      r = await call(...args);
+    }
+    return r;
+  };
+  if (window.foafos?.pod) for (const verb of ['get', 'put', 'delete', 'list']) {
+    if (typeof foafos.pod[verb] === 'function') foafos.pod[verb] = paced(foafos.pod[verb].bind(foafos.pod));
+  }
   const explain = (r) => REASONS[r.reason] || `That did not work: ${r.reason}${r.status ? ` (${r.status})` : ''}.`;
   const h = (tag, props = {}, ...kids) => {
     const e = document.createElement(tag);
@@ -1387,7 +1402,7 @@
   });
 
   pick(null);
-  window.__files = { go, pick, useLocation, squarify, showRecent, showTrash, addFiles, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+  window.__files = { go, pick, useLocation, squarify, showRecent, showTrash, addFiles, paced, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
 
   // Tools for the shell and agents (foafos.tools in app-sdk.js). All three only read, from the
   // location Files has open, and none changes what the window shows.

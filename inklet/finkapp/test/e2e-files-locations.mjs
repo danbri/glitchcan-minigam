@@ -769,29 +769,32 @@ try {
     // Whether a file is there, by listing its folder: reads are counted per minute, and this run makes many.
     const ok = async (p) => { const d = p.slice(0, p.lastIndexOf('/') + 1), n = p.slice(d.length); return ((await foafos.pod.list(d)).items || []).some((i) => i.path.replace(/^\/+/, '') === n); };
     const clickBtn = (scope, re) => [...document.querySelectorAll(`${scope} button`)].find((b) => re.test(b.textContent))?.click();
-    const confirm = async () => { await wait(200); document.querySelector('.ask button.danger').click(); await wait(800); };
+    // Wait for what should happen, not a fixed time: near the pod's calls a minute, a step waits its turn.
+    const until = async (ok, ms = 15000) => { for (let t = 0; t < ms && !(await ok()); t += 100) await wait(100); };
+    const confirm = async () => { await until(() => document.querySelector('.ask button.danger')); const said = document.getElementById('status').textContent; document.querySelector('.ask button.danger').click(); await until(() => document.getElementById('status').textContent !== said && !/^Waiting/.test(document.getElementById('status').textContent)); };
     await foafos.pod.put('notes/bin.txt', 'binned words', { contentType: 'text/plain' });
     const filter = document.getElementById('filter'); filter.value = ''; filter.dispatchEvent(new Event('input'));
     await window.__files.go('notes/'); await wait(300);
     const del = async () => { const row = document.querySelector('#items tbody tr[data-path="notes/bin.txt"]'); row.focus(); row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })); await wait(400); await confirm(); };
     await del();
     const r = { trashed: !(await ok('notes/bin.txt')), said: document.getElementById('status').textContent, undoShown: [...document.querySelectorAll('#choosebar button')].some((b) => b.textContent === 'Undo') };
-    clickBtn('#choosebar', /^Undo$/); await wait(900);
+    clickBtn('#choosebar', /^Undo$/); await until(() => /^Put back/.test(document.getElementById('status').textContent));
     r.undone = await ok('notes/bin.txt');
     await del();
-    await window.__files.showTrash(); await wait(400);
+    await window.__files.showTrash();
     // Earlier tests' deletes are in the Trash too: find this one by name.
     const binRow = () => [...document.querySelectorAll('#items tbody tr')].find((x) => /^\.trash\/.+\/bin\.txt$/.test(x.dataset.path));
+    await until(() => binRow());
     r.listed = !!binRow();
-    binRow().click(); await wait(300);
+    binRow().click(); await until(() => document.querySelector('#detail .trash-from'));
     r.from = document.querySelector('#detail .trash-from')?.textContent;
-    clickBtn('#detail', /^Put back$/); await wait(900);
+    clickBtn('#detail', /^Put back$/); await until(() => /^Put .* back in/.test(document.getElementById('status').textContent));
     r.putBack = await ok('notes/bin.txt');
     r.emptyAfter = !binRow();
     await window.__files.go('notes/'); await wait(300);
     await del();
-    await window.__files.showTrash(); await wait(400);
-    binRow().click(); await wait(300);
+    await window.__files.showTrash(); await until(() => binRow());
+    binRow().click(); await until(() => [...document.querySelectorAll('#detail button')].some((b) => b.textContent === 'Delete for good'));
     clickBtn('#detail', /^Delete for good$/); await confirm();
     r.purged = !(await ok('notes/bin.txt')) && !binRow();
     filter.value = 'binned'; await window.__files.go('');
@@ -957,6 +960,15 @@ try {
   });
   check(bulk.quick && bulk.slow && bulk.slowTries === 3 && !bulk.nope && /Added quick\.txt, slow\.txt\./.test(bulk.said) && /Not added: nope\.txt \(/.test(bulk.said) && !/too large/.test(bulk.said),
     `adding files waits its turn when throttled, and names other failures truly (${JSON.stringify(bulk)})`);
+  // Every pod call Files makes waits its turn the same way: a call answered "throttled" twice is
+  // asked a third time and its answer used; one throttled past the last try gives up
+  const pace = await f.evaluate(async () => {
+    let n = 0, m = 0;
+    const flaky = window.__files.paced(async () => (++n <= 2 ? { ok: false, reason: 'throttled' } : { ok: true, n }), { wait: 10, onWait: () => {} });
+    const stuck = window.__files.paced(async () => { m++; return { ok: false, reason: 'throttled' }; }, { wait: 5, tries: 3, onWait: () => {} });
+    return { flaky: await flaky(), calls: n, stuck: (await stuck()).reason, stuckCalls: m, wrapped: !/native|\[object/.test(String(foafos.pod.put)) };
+  });
+  check(pace.flaky.ok && pace.calls === 3 && pace.stuck === 'throttled' && pace.stuckCalls === 4, `pod calls wait their turn when throttled (${JSON.stringify(pace)})`);
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));
