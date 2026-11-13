@@ -770,6 +770,28 @@ try {
     check(n0 === 0 && n1 === 1 && front === 'widget-tally' && n2 === n1 && String(row) === 'Ctrl ; 1 … 9',
       `Ctrl ; 1 opens the first pinned app, then brings it forward (${JSON.stringify({ n0, n1, n2, front, row })})`);
   }
+  // The ☰ menu shows the pinned apps as a row; one opens its app
+  {
+    const r = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      const was = localStorage.getItem('foafos.apps.pinned');
+      localStorage.setItem('foafos.apps.pinned', JSON.stringify(['files', 'widget-tally']));
+      window.FinkWM._setCollapsed(false); await wait(150);
+      const sect = document.getElementById('wm-pinned-sect');
+      const row = { shown: !sect.hidden, labels: [...sect.querySelectorAll('button')].map((b) => b.getAttribute('aria-label')) };
+      const n0 = document.querySelectorAll('.foafos-window[data-opened-as="files"]').length;
+      sect.querySelector('button[data-app="files"]').click(); await wait(600);
+      const front = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].find((w) => w.style.zIndex === '2640')?.dataset.openedAs;
+      const collapsed = document.getElementById('wm-chrome').classList.contains('collapsed');
+      if (was === null) localStorage.removeItem('foafos.apps.pinned'); else localStorage.setItem('foafos.apps.pinned', was);
+      window.FinkWM._setCollapsed(false); await wait(100);
+      const after = document.getElementById('wm-pinned-sect').hidden || document.querySelectorAll('#wm-pinned-sect button').length;
+      window.FinkWM._setCollapsed(true);
+      return { row, n0, front, collapsed, after };
+    });
+    check(r.row.shown && r.row.labels.length === 2 && /^Files.*Ctrl ; 1\)$/.test(r.row.labels[0]) && /Ctrl ; 2\)$/.test(r.row.labels[1]) && r.front === 'files' && r.collapsed,
+      `the menu shows the pinned apps as a row, and one opens its app (${JSON.stringify(r)})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

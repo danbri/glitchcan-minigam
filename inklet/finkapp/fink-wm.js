@@ -749,6 +749,7 @@ window.FinkWM = {
     _setCollapsed(collapsed) {
         const { chrome, handle } = this.elements;
         if (!collapsed) window.FoafOS?.wsRows?.();   // the workspace rows say where you are
+        if (!collapsed) window.FoafOS?.pinnedRow?.();   // the pinned apps, as a dock shows them
         // the menu as a ring (a setting, ☰ › Look): the list's rows are built as usual, unshown, and the ring
         // offers the same buttons (_openRadial)
         if (!collapsed && this._radialOn()) {

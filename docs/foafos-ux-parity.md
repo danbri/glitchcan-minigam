@@ -82,7 +82,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
 | Widgets opened from All apps show in Recent with the apps (phones' recent widgets, Start's Recent) | Done: #1137 |
 | Pinned apps in your own order: Alt+arrows, or Move earlier/later on a long press (docks, home screens) | Done: #1101 |
-| A pinned app by its place, Ctrl ; 1 to 9: open it, or bring its window forward (Windows' Win+1 to 9) | Done: this PR |
+| A pinned app by its place, Ctrl ; 1 to 9: open it, or bring its window forward (Windows' Win+1 to 9) | Done: #1140 |
+| The pinned apps as a row of icons at the top of the ☰ menu, a dot under each open one (docks, taskbars) | Done: this PR |
 | A dot under each app that is open (docks) | Done: #1049, #1057 |
 | Arrow keys through All apps; no on-screen keyboard thrown up on a phone | Done: #1008, #1013 |
 | A sheet of every key, from the menu or Ctrl ; / (desktops' keyboard help, "?" on the web) | Done: #1077 |
