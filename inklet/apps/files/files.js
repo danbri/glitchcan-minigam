@@ -691,7 +691,8 @@
       picked = { path: it.path, trashId: it.trashId, container: false };
       drawDetail(head, h('p', { class: 'trash-from' }, `From ${it.from || 'an unknown folder'}`), h('div', { class: 'detail-actions' },
         h('button', { class: 'tool tool-main', type: 'button', on: { click: async () => { const ix = await readTrash(); const r = await fromTrash(it.trashId, ix); if (r.ok) await writeTrash(ix); if (!r.ok) { say(`Not put back: ${r.why}.`, true); return; } await showTrash(); say(`Put ${nameOf(r.path)} back in ${parentOf(r.path) || here()?.label || 'the top folder'}.`); } } }, 'Put back'),
-        h('button', { class: 'tool danger', type: 'button', on: { click: askPurge } }, 'Delete for good')));
+        h('button', { class: 'tool danger', type: 'button', on: { click: askPurge } }, 'Delete for good'),
+        it.from ? h('button', { class: 'tool', type: 'button', on: { click: () => go(parentOf(it.from)) } }, 'Show where it was') : null));
       return;
     }
     const backBtn = h('button', { class: 'tool panes-back', type: 'button', on: { click: () => { $('panes').dataset.show = 'items'; } } }, 'Back to list');
@@ -796,7 +797,18 @@
       } } }, `Open in ${a.name}`),
       a.comment ? h('p', { class: 'open-with-comment' }, a.comment) : null)));
   }
+  // From Recent or a search, "Show in folder" goes to the folder the file is in, with it chosen there,
+  // as a desktop's "Show in Finder" / "Open file location" does.
+  async function showInFolder(path) {
+    await go(parentOf(path));
+    const row = [...document.querySelectorAll('#items [data-path]')].find((r) => r.dataset.path === path);
+    const it = items.find((i) => i.path === path);
+    if (it) await pick(it);
+    row?.focus();
+    row?.scrollIntoView?.({ block: 'nearest' });
+  }
   const actions = (...first) => h('div', { class: 'detail-actions' }, ...first,
+    searchResults && picked?.path && !picked.trashId ? h('button', { class: 'tool', type: 'button', on: { click: () => showInFolder(picked.path) } }, 'Show in folder') : null,
     ...(inArchive() ? [h('span', { class: 'detail-none' }, 'In an archive: read only.')] : [
       h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
       h('button', { class: 'tool', type: 'button', on: { click: duplicate } }, 'Duplicate'),

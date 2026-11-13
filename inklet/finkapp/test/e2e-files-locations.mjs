@@ -824,6 +824,32 @@ try {
   const fellBack = await f.evaluate(() => ({ folder: window.__files.state().folder, said: document.getElementById('status').textContent }));
   check(reopenedIn.folder === 'notes/' && /notes/.test(reopenedIn.crumbs) && fellBack.folder === '' && !/No |not found|cannot/i.test(fellBack.said),
     `Files opens at the folder it was in after a reload, and at the top if that folder has gone (${JSON.stringify(reopenedIn)}, ${JSON.stringify(fellBack)})`);
+  // (after the reload above, so this run's pod calls per minute start again)
+  // "Show in folder" from Recent goes to the file's folder with it chosen; "Show where it was" from the Trash
+  const sif = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const clickBtn = (re) => [...document.querySelectorAll('#detail button')].find((b) => re.test(b.textContent))?.click();
+    await foafos.pod.put('notes/sif.txt', 'show me', { contentType: 'text/plain' });
+    const filter = document.getElementById('filter'); filter.value = ''; filter.dispatchEvent(new Event('input'));
+    await window.__files.go('notes/'); await wait(300);
+    document.querySelector('#items tbody tr[data-path="notes/sif.txt"]').click(); await wait(300);
+    await window.__files.go(''); await window.__files.showRecent(); await wait(400);
+    document.querySelector('#items tbody tr[data-path="notes/sif.txt"]').click(); await wait(400);
+    const offered = [...document.querySelectorAll('#detail button')].some((b) => b.textContent === 'Show in folder');
+    clickBtn(/^Show in folder$/); await wait(600);
+    const st = window.__files.state();
+    const r = { offered, folder: st.folder, picked: st.picked?.path, focus: document.activeElement?.dataset?.path };
+    const row = document.querySelector('#items tbody tr[data-path="notes/sif.txt"]');
+    row.focus(); row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })); await wait(400);
+    document.querySelector('.ask button.danger').click(); await wait(800);
+    await window.__files.go(''); await window.__files.showTrash(); await wait(400);
+    [...document.querySelectorAll('#items tbody tr')].find((x) => /\/sif\.txt$/.test(x.dataset.path)).click(); await wait(300);
+    clickBtn(/^Show where it was$/); await wait(500);
+    r.wasIn = window.__files.state().folder;
+    return r;
+  });
+  check(sif.offered && sif.folder === 'notes/' && sif.picked === 'notes/sif.txt' && sif.focus === 'notes/sif.txt' && sif.wasIn === 'notes/',
+    `"Show in folder" from Recent, and "Show where it was" from the Trash (${JSON.stringify(sif)})`);
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));
