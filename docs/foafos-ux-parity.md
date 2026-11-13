@@ -34,7 +34,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Drop files from the computer; paste files, screenshots and text (desktops) | Done: #1009, #1053 |
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
 | Download a folder as one .zip (web file managers) | Done: #1113 |
-| Compress a folder or what is chosen into a .zip beside it, never over one there (Finder's Compress, Explorer's Send to zip) | Done: this PR |
+| Compress a folder or what is chosen into a .zip beside it, never over one there (Finder's Compress, Explorer's Send to zip) | Done: #1144 |
+| Extract a .zip into a new folder beside it (opening a .zip in Finder, Explorer's Extract all) | Done: this PR |
 | Upload files, or a folder keeping its shape, with the system picker (web and phone file managers) | Done: #1116 |
 | Rename a folder (F2 or Rename), and never rename over something already there (desktops) | Done: #1117 |
 | A picked folder says what is in it, and its total size on request (Get Info, Properties) | Done: #1118 |
