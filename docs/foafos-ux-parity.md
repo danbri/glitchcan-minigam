@@ -77,7 +77,7 @@ The finish line this proposes: every item below is done, or the owner has struck
 | Reopen the app closed last (browsers' reopen closed tab) | Done: #1044 |
 | Windows follow the page when it changes size (desktops, when a screen changes) | Done: #1050 |
 | Resize from any edge, not only the corner (all desktops) | Open |
-| Keys for the four quarters (Windows, GNOME) | Open |
+| Keys for the four quarters: Ctrl ; i steps round them (Windows, GNOME) | Done: this PR |
 
 ## Across all four
 

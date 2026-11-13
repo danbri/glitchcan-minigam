@@ -287,7 +287,7 @@ try {
   await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /Minimise/.test(b.textContent)).click());
   const minimised = await page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('minimized'));
   await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); w.querySelector('.foafos-window-min').click(); FoafOS.raiseWindow(w); });
-  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Maximise=Ctrl ; m,Minimise=Ctrl ; h,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
+  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Minimise=Ctrl ; h,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
     `right-click on a title bar opens the window menu with its keys, and it acts (${wmenu}, ${focusIn}, ${menuGone}, ${minimised})`);
 
   // Snapping
@@ -296,6 +296,11 @@ try {
   check(String(await box()) === '0,0,640,800', 'ctrl ; l snaps left, full height');
   await keys(page, [';', 'r']);
   check(String(await box()) === '640,0,640,800', 'ctrl ; r snaps right');
+  // Ctrl ; i steps the front window round the quarters: top-left, top-right, bottom-right, bottom-left
+  const qs = [];
+  for (let k = 0; k < 4; k++) { await keys(page, [';', 'i']); qs.push(String(await box())); }
+  check(qs.join(' | ') === '0,0,640,400 | 640,0,640,400 | 640,400,640,400 | 0,400,640,400', `ctrl ; i steps through the quarters (${qs.join(' | ')})`);
+  await keys(page, [';', 'r']);   // back as the tests below expect
   // When the page gets smaller, a snapped window fills its half of the new size, and a floating
   // window that would be left off the edge comes back on screen; both follow it back up.
   await page.setViewportSize({ width: 1000, height: 700 });
