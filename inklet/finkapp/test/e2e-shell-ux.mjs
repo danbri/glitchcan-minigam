@@ -692,6 +692,22 @@ try {
     await page.waitForTimeout(400);
     check(spot && rows[0] === 'All apps' && rows.includes('Widgets') && rows.includes('Bring the windows back') && w.home && w.open && w.focus, `a right-click on the desktop opens its menu, and Widgets opens them (${JSON.stringify({ spot, rows, w })})`);
   }
+  // All apps search offers to search the files: Files opens and searches all folders for it
+  {
+    await page.evaluate(() => { document.getElementById('foafos-home')?.remove(); FoafOS.openHome(); });
+    await page.waitForTimeout(200);
+    await page.fill('#foafos-home .foafos-home-search input', 'zebrafinch');
+    await page.waitForTimeout(100);
+    const row = await page.evaluate(() => { const b = document.querySelector('.foafos-file-search'); return b && !b.closest('[hidden]') ? b.textContent : null; });
+    await page.click('.foafos-file-search');
+    let ff = null;
+    for (let i = 0; i < 40 && !ff; i++) { ff = page.frames().find((fr) => /apps\/files\//.test(fr.url())); if (!ff) await page.waitForTimeout(250); }
+    await ff.evaluate(() => foafos.pod.put('docs/zebrafinch notes.txt', 'about zebrafinches', { contentType: 'text/plain' }));
+    await page.evaluate(() => FoafOS.searchInFiles('zebrafinch'));
+    const found = await ff.waitForFunction(() => document.querySelector('#items [data-path="docs/zebrafinch notes.txt"]') && document.getElementById('filter').value === 'zebrafinch', null, { timeout: 10000 }).then(() => true, () => false);
+    await ff.evaluate(() => foafos.pod.delete('docs/zebrafinch notes.txt'));
+    check(/Search files for “zebrafinch”/.test(row || '') && found, `All apps offers to search the files, and Files searches all folders (${row}; ${found})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

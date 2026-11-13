@@ -1725,9 +1725,21 @@
       return { path, contentType: r.contentType || null, length: r.body.length, truncated, text: truncated ? r.body.slice(0, MAX_TEXT) : r.body };
     },
   });
+  // "show": go to a file's folder with it chosen, as asked by the shell (All apps search finds files).
+  // Held until Files has opened its location, so its own start does not move away again.
+  let started = null;
+  // "search": search all folders for what was typed in All apps, as Files' own search does.
+  foafos.onAction?.(async (action, args) => {
+    await started;
+    if (action === 'show' && args?.path) await showInFolder(String(args.path).replace(/^\/+/, ''));
+    if (action === 'search' && args?.query) { $('filter').value = String(args.query).slice(0, 200); await searchAll(); }
+  });
   foafos.onInit(async () => {
-    takeLocations(await foafos.pod.locations());
-    await openKept();
-    takeLocations(await foafos.pod.locations());   // a location opens on first use, so its status may have changed
+    started = (async () => {
+      takeLocations(await foafos.pod.locations());
+      await openKept();
+      takeLocations(await foafos.pod.locations());   // a location opens on first use, so its status may have changed
+    })();
+    await started;
   });
 })();

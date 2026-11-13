@@ -3954,6 +3954,17 @@ function buildUI() {
       localStorage.setItem(RECENT_KEY, JSON.stringify([id, ...was.filter((x) => x !== id)].slice(0, 6)));
     } catch { /* not kept */ }
   }
+  // Hand Files an action ("show" a path, "search" for words): the Files window there is, or a new one.
+  function toFiles(action, args) {
+    const app = appById('files');
+    if (!app) return;
+    const node = [...apps.nodes.values()].reverse().find((n) => n.appId === 'files');
+    if (node) { deliverAction(node.id, app, { action, args, from: { label: 'All apps' } }); focusNode(node); return; }
+    launchApp('files', { action, args, from: { label: 'All apps' } });
+  }
+  const searchInFiles = (query) => toFiles('search', { query });
+  FoafOS.showInFiles = (path) => toFiles('show', { path });
+  FoafOS.searchInFiles = searchInFiles;
   function openHome() {
     const existing = document.getElementById('foafos-home');
     if (existing) { existing.remove(); return null; }
@@ -4207,6 +4218,21 @@ function buildUI() {
       top?.classList.add('foafos-top-hit');
       // While searching, results are a list that says what each one does (hover never comes on a phone).
       home.classList.toggle('searching', !!q);
+    });
+    // Search the files too, as a Start menu offers: a row that hands what was typed to Files, which
+    // searches with its own access. The shell reads nothing from the pod itself.
+    const fileRow = document.createElement('div');
+    fileRow.className = 'foafos-home-files';
+    fileRow.hidden = true;
+    fileRow.innerHTML = '<button type="button" class="foafos-file-search"><span class="ico" aria-hidden="true">🔎</span><span class="nm"></span><span class="ds">Search all folders in Files</span></button>';
+    const fileBtn = fileRow.querySelector('button');
+    fileBtn.addEventListener('click', () => { const q = find.value.trim(); home.remove(); searchInFiles(q); });
+    body.appendChild(fileRow);
+    find.addEventListener('input', () => {
+      const q = find.value.trim();
+      fileRow.hidden = q.length < 2 || !appById('files') || !rootOffers(ROOT, 'files');
+      fileBtn.querySelector('.nm').textContent = `Search files for “${q}”`;
+      fileBtn.setAttribute('aria-label', `Search files for ${q}`);
     });
     find.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); (body.querySelector('.foafos-top-hit:not([hidden])') || matches()[0])?.click(); }
