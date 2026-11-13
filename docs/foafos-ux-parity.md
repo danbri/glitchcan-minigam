@@ -21,6 +21,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Go to a folder by typing its path: /, Cmd or Ctrl + Shift + G, or click the current folder's name (GNOME Files, Finder, Explorer's address bar) | Done: #1125 |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
+| A Sort picker where the list has no column heads (a narrow window, a phone): name, newest, largest, kind (phone file managers) | Done: this PR |
 | Names sort as people expect: Photo 2 before Photo 10, capitals aside (Finder, Explorer) | Done: #1123 |
 | Thumbnails for pictures (desktops, phones) | Done: #1018 |
 | Quick Look: Space shows an item without opening it (macOS) | Done: #1015 |
@@ -30,7 +31,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | The folder keeps up with files saved by other apps; pull down to refresh on a phone (desktops, phones) | Done: #1108 |
 | Recent files (desktops, phones) | Done: #1072 |
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
-| Duplicate a file, or a folder with all in it (macOS) | Done: #1034, this PR |
+| Duplicate a file, or a folder with all in it (macOS) | Done: #1034, #1149 |
 | Drop files from the computer; paste files, screenshots and text (desktops) | Done: #1009, #1053 |
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
 | Download a folder as one .zip (web file managers) | Done: #1113 |

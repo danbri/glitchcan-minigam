@@ -1442,6 +1442,30 @@ try {
   const notes = page.frames().find((x) => /podnotes/.test(x.url()));
   const other = notes ? await notes.evaluate(() => Promise.all([foafos.pod.locations(), foafos.pod.use('device'), foafos.pod.addFolder()])) : null;
   check(denied && other?.every((r) => r.ok === false && r.reason === 'denied'), `an ordinary app cannot list or switch locations (${other?.map((r) => r.reason)})`);
+  // On a phone, the Sort picker shows and sorts (no column heads there); on a desktop it is hidden
+  {
+    const sp = await context.newPage();
+    await sp.setViewportSize({ width: 390, height: 780 });
+    await sp.goto(SHELL);
+    const sf = await filesFrame(sp);
+    const r = await sf.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      await foafos.pod.put('srt/small.txt', 'x', { contentType: 'text/plain' });
+      await foafos.pod.put('srt/big.txt', 'x'.repeat(500), { contentType: 'text/plain' });
+      await window.__files.go('srt/'); await wait(200);
+      const sel = document.getElementById('sort-pick');
+      const shown = getComputedStyle(sel).display !== 'none';
+      sel.value = 'size:-1'; sel.dispatchEvent(new Event('change')); await wait(100);
+      const order = [...document.querySelectorAll('#items tbody tr[data-path]')].map((x) => x.dataset.path.split('/').pop()).join(',');
+      sel.value = 'name:1'; sel.dispatchEvent(new Event('change'));
+      for (const p of ['srt/small.txt', 'srt/big.txt', 'srt/']) await foafos.pod.delete(p);
+      return { shown, order };
+    });
+    await sp.close();
+    // Shown exactly where the list has no Size column to sort by.
+    const wideHidden = await f.evaluate(() => { const th = document.querySelector('#items thead th:nth-child(3)'); return !th || (getComputedStyle(document.getElementById('sort-pick')).display === 'none') === (getComputedStyle(th).display !== 'none'); });
+    check(r.shown && r.order === 'big.txt,small.txt' && wideHidden, `a narrow Files has a Sort picker that sorts; it shows exactly where the columns are hidden (${JSON.stringify(r)}, ${wideHidden})`);
+  }
   // On a phone, Back inside Files: out of a file's panel to the list, then back a folder
   {
     const bp = await context.newPage();
