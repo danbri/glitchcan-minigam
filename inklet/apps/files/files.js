@@ -774,6 +774,7 @@
         kept ? 'Remove from the side panel' : 'Keep in the side panel');
       drawDetail(head, h('div', { class: 'detail-actions' },
         h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(it.path) } }, 'Open'), backBtn, favBtn,
+        h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
         h('button', { class: 'tool', type: 'button', on: { click: () => download([it.path]) } }, 'Download as .zip'),
         h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')));
       markPicked();
@@ -997,13 +998,31 @@
     say(`Created ${name}.`);
   });
 
+  // Rename never replaces something already called that, as on a desktop. A folder is renamed by
+  // moving all that is in it, as a folder move does.
   const askRename = () => ask('New name', 'Rename', { value: nameOf(picked.path) }, async (name) => {
-    const to = parentOf(picked.path) + name;
-    if (to === picked.path) return;
-    forgetThumb(to); forgetThumb(picked.path);
-    const put = await foafos.pod.put(to, picked.body, { contentType: picked.contentType || 'text/plain' });
-    if (!put.ok) { say(explain(put), true); return; }
-    const del = await foafos.pod.delete(picked.path, picked.etag ? { etag: picked.etag } : {});
+    const it = picked;
+    const there = items.some((i) => i.path.replace(/\/$/, '') === parentOf(it.path) + name && i.path !== it.path);
+    if (there) { say(`Something called ${name} is here already; nothing was renamed.`, true); return; }
+    if (it.container) {
+      const to = `${parentOf(it.path)}${name}/`;
+      if (to === it.path) return;
+      say(`Renaming ${nameOf(it.path)}…`);
+      const r = await moveTree(it.path, to);
+      await go(folder, { remember: false });
+      if (!r.ok) { say(`Not renamed: ${r.why}.`, true); return; }
+      say(`Renamed to ${name}.`);
+      pick({ path: to, container: true });
+      return;
+    }
+    const to = parentOf(it.path) + name;
+    if (to === it.path) return;
+    forgetThumb(to); forgetThumb(it.path);
+    const got = await foafos.pod.get(it.path, { as: 'bytes' });
+    if (!got.ok) { say(explain(got), true); return; }
+    const put = await foafos.pod.put(to, got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
+    if (!put.ok) { say(put.reason === 'conflict' ? `${name} is there already; nothing was renamed.` : explain(put), true); return; }
+    const del = await foafos.pod.delete(it.path, got.etag ? { etag: got.etag } : {});
     if (!del.ok) say(`Copied to ${name}, but the old file is still there: ${explain(del)}`, true);
     await go(folder, { remember: false });
     pick({ path: to, container: false });
@@ -1221,7 +1240,7 @@
       if (!it) return;
       await pick(it);
       if (picked?.path !== it.path) { say('This kind of file cannot be renamed or deleted here.', true); return; }
-      if (e.key === 'F2') { if (!it.container) askRename(); } else askDelete();
+      if (e.key === 'F2') askRename(); else askDelete();
       return;
     }
     if ((e.key === 'Backspace' || (e.altKey && e.key === 'ArrowUp')) && folder) {
