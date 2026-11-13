@@ -633,6 +633,27 @@ try {
     check(w0 && there.at === 2 && there.ws === '2' && shown2 === w0 && back.at === 1 && back.ws === '1' && (await wsShown()) === ws1,
       `Ctrl ; > takes the front window to the next workspace, Ctrl ; < brings it back (${JSON.stringify({ w0, there, shown2, back })})`);
   }
+  // In All windows, a middle click on a card closes its window, and so does Delete on a focused card
+  {
+    const r = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      const had = new Set([...document.querySelectorAll('.foafos-window')].map((w) => w.dataset.wid));
+      FoafOS.openWidget('tally'); FoafOS.openWidget('tally'); await wait(400);
+      const mine = [...document.querySelectorAll('.foafos-window')].filter((w) => !had.has(w.dataset.wid)).map((w) => w.dataset.wid);
+      const count = () => document.querySelectorAll('.foafos-window:not(.ws-away)').length;
+      const n0 = count();
+      FoafOS.enterOverview(); await wait(400);
+      const card = () => [...document.querySelectorAll('.foafos-ov-hit')].find((h) => mine.includes(h.parentElement.dataset.wid) && h.parentElement.isConnected);
+      card().dispatchEvent(new MouseEvent('auxclick', { button: 1, bubbles: true, cancelable: true })); await wait(900);
+      const n1 = count(), still = document.body.classList.contains('foafos-overview-on');
+      card().focus();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true })); await wait(900);
+      const n2 = count();
+      FoafOS.exitOverview(null); await wait(700);
+      return { n0, n1, n2, still };
+    });
+    check(r.n1 === r.n0 - 1 && r.n2 === r.n0 - 2 && r.still, `All windows: middle click or Delete on a card closes its window (${JSON.stringify(r)})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

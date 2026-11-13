@@ -2927,6 +2927,9 @@ function buildUI() {
         setTimeout(enterOverview, 450);
       });
       win.appendChild(x);
+      // A middle click closes a card's window, as it closes a browser tab or a GNOME overview window.
+      hit.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });   // not the scroll cursor
+      hit.addEventListener('auxclick', (e) => { if (e.button !== 1) return; e.preventDefault(); e.stopPropagation(); x.click(); });
       // Each card carries its window's name at a readable size (the title bar shrinks
       // with the card), and the first nine their number: press it to pick that window.
       const n = document.createElement('span');
@@ -3023,6 +3026,8 @@ function buildUI() {
         e.preventDefault(); all[Number(e.key) - 1].click(); return;
       }
       if (plain && /^\p{L}$/u.test(e.key)) { e.preventDefault(); strip._find(strip._query + e.key.toLowerCase()); return; }
+      // Delete closes the window whose card has the focus, as a task switcher's close does.
+      if (e.key === 'Delete' && at >= 0) { e.preventDefault(); hits[at].parentElement.querySelector('.foafos-ov-close')?.click(); return; }
       if (e.key === 'Backspace' && strip._query) { e.preventDefault(); strip._find(strip._query.slice(0, -1)); return; }
       const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
       if (step && hits.length) { e.preventDefault(); hits[(at + step + hits.length) % hits.length]?.focus(); }
