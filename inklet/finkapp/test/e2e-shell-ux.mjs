@@ -646,7 +646,7 @@ try {
   // The windows you had open come back after a reload; not when the address names an app
   {
     const { ctx: rctx, page: rp } = await open({ width: 1280, height: 800 });
-    await rp.evaluate(() => { FoafOS.launchApp('chat'); FoafOS.launchApp('files'); FoafOS.openWidget('tally'); });
+    await rp.evaluate(() => { FoafOS.launchApp('chat'); FoafOS.launchApp('files'); const t = FoafOS.openWidget('tally'); FoafOS.moveToWorkspace(t, 2); });
     await rp.waitForTimeout(800);
     const openNow = () => rp.evaluate(() => [...document.querySelectorAll('.foafos-window[data-opened-as]')].map((w) => w.dataset.openedAs).sort().join(','));
     const before = await openNow();
@@ -654,13 +654,14 @@ try {
     await rp.waitForFunction(() => window.FoafOS?.launchApp, null, { timeout: 30000 });
     await rp.waitForTimeout(1500);
     const after = await openNow();
+    const tallyWs = await rp.evaluate(() => ({ ws: document.querySelector('.foafos-window[data-opened-as="widget-tally"]')?.dataset.ws, hidden: getComputedStyle(document.querySelector('.foafos-window[data-opened-as="widget-tally"]')).display === 'none', count: FoafOS.workspaces().count }));
     await rp.goto(URL_ + '&app=system');
     await rp.waitForFunction(() => window.FoafOS?.launchApp, null, { timeout: 30000 });
     await rp.waitForTimeout(1500);
     const linked = await openNow();
     await rctx.close();
-    check(before.includes('chat') && before.includes('files') && before.includes('widget-tally') && after === before && !linked.includes('chat') && linked.includes('system'),
-      `the windows you had open come back after a reload, but not past a link to an app (${before} → ${after}; with ?app=system: ${linked})`);
+    check(before.includes('chat') && before.includes('files') && before.includes('widget-tally') && after === before && tallyWs.ws === '2' && tallyWs.hidden && tallyWs.count === 2 && !linked.includes('chat') && linked.includes('system'),
+      `the windows you had open come back after a reload, on their workspaces, but not past a link to an app (${before} → ${after}, Tally ${JSON.stringify(tallyWs)}; with ?app=system: ${linked})`);
   }
 
   // Notices
