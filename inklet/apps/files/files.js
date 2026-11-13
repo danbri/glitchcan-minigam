@@ -69,6 +69,11 @@
   const parentOf = (p) => { const s = p.replace(/\/$/, ''); const i = s.lastIndexOf('/'); return i < 0 ? '' : s.slice(0, i + 1); };
   const cleanName = (s) => String(s).trim().replace(/[^\p{L}\p{N} ._-]+/gu, '-').replace(/^\.+/, '').slice(0, 100);
   const hiddenName = (n) => n.startsWith('.');
+  // Hidden names (starting with a dot) are left out, as on every desktop, unless Show hidden files
+  // is on (Finder's Cmd + Shift + ., Explorer's Hidden items). A folder's own .folder marker never
+  // shows: it is how an empty folder is kept, not a file of the person's.
+  let showHidden = false;
+  const listed = (n) => n !== '.folder' && (showHidden || !hiddenName(n));
 
   let locations = [];            // what the shell says about each pod
   let current = null;            // the location in use
@@ -99,7 +104,12 @@
     const [key, dir] = e.target.value.split(':');
     sort = { key, dir: Number(dir) }; recentOrder = false; keepView(); drawItems();
   });
-  const keepView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ icons, sort, zoom })); } catch { /* not kept */ } };
+  const keepView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ icons, sort, zoom, showHidden })); } catch { /* not kept */ } };
+  const toggleHidden = async () => {
+    showHidden = !showHidden; keepView();
+    await go(folder, { remember: false });
+    say(showHidden ? 'Hidden files are shown (names starting with a dot).' : 'Hidden files are hidden again.');
+  };
   // The folder you were in, for each location, so Files opens there again, as a desktop's file
   // manager does. A folder that has gone since opens the top instead, without a complaint.
   const FOLDER_KEY = 'files.folder';
@@ -211,7 +221,7 @@
     for (const id of ['new-file', 'new-folder', 'upload', 'upload-dir']) $(id).disabled = inArchive();
     recentOrder = false; trashView = false;
     items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
-      .filter((it) => !hiddenName(nameOf(it.path)));
+      .filter((it) => listed(nameOf(it.path)));
     children.set(folder, items.filter((i) => i.container).map((i) => i.path));
     for (let p = folder; ; p = parentOf(p)) { expanded.add(p); if (!p) break; }
     pick(null);
@@ -402,6 +412,7 @@
       ['Choose all', mac ? '⌘A' : 'Ctrl+A', () => { chosen.clear(); for (const i of shown()) chosen.add(i.path); markChosen(); }],
       [icons ? 'Show as a list' : 'Show as icons', '', () => $('view').click()],
       ['Look for changes', '', async () => { if (!(await refreshIfChanged())) say(folderSummary()); }],
+      [showHidden ? 'Hide hidden files' : 'Show hidden files', mac ? '⌘⇧.' : 'Ctrl+Shift+.', () => toggleHidden()],
       folder ? ['Download this folder as .zip', '', () => download([folder])] : null,
     ], x, y, `Folder ${nameOf(folder) || here()?.label || ''}`, null);
   }
@@ -1436,6 +1447,8 @@
     if ((e.altKey || e.metaKey || e.ctrlKey) && e.key === 'ArrowUp' && folder) { e.preventDefault(); upAndFocus(); }
     // Go to a folder by its path: / as in GNOME Files, Cmd or Ctrl + Shift + G as in Finder.
     if ((e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g')) { e.preventDefault(); askGoTo(); }
+    // Show or hide hidden files: Cmd or Ctrl + Shift + . (Finder's key).
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === '.' || e.key === '>' || e.code === 'Period')) { e.preventDefault(); toggleHidden(); }
     // Bigger and smaller icons in the icon view (not the page's own zoom, which the shell keeps).
     if (icons && (e.metaKey || e.ctrlKey) && ['=', '+', '-', '_'].includes(e.key)) { e.preventDefault(); stepZoom(e.key === '-' || e.key === '_' ? -1 : 1); }
   });
@@ -1582,7 +1595,7 @@
     try {
       const r = await list(folder);
       if (!r.ok) return false;
-      const fresh = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') })).filter((it) => !hiddenName(nameOf(it.path)));
+      const fresh = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') })).filter((it) => listed(nameOf(it.path)));
       if (sig(fresh) === sig(items)) return false;
       const keep = document.activeElement?.dataset?.path, was = picked?.path;
       await go(folder, { remember: false });
@@ -1941,6 +1954,7 @@
     try { kept = JSON.parse(localStorage.getItem(VIEW_KEY)) || {}; } catch { /* the defaults */ }
     if (['name', 'kind', 'size', 'modified'].includes(kept.sort?.key) && [1, -1].includes(kept.sort?.dir)) sort = kept.sort;
     if (ZOOMS.includes(kept.zoom)) zoom = kept.zoom;
+    showHidden = kept.showHidden === true;
     showSort();
     icons = kept.icons === true;
     $('view').setAttribute('aria-pressed', String(icons));

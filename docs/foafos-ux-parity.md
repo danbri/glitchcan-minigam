@@ -22,6 +22,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Copy path from an item's menu; a file's path in Go to folder opens its folder with it chosen (Finder's Copy as pathname) | Done: #1161 |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
+| Show hidden files: Cmd or Ctrl + Shift + ., or the folder's menu; kept with the view (Finder, Explorer's Hidden items) | Done: this PR |
 | Bigger or smaller icons: Ctrl or Cmd + plus and minus, Ctrl + the wheel or a trackpad pinch, two fingers on a phone; kept with the view (Finder, Explorer, phone photo apps) | Done: #1162, #1163 |
 | A Sort picker where the list has no column heads (a narrow window, a phone): name, newest, largest, kind (phone file managers) | Done: #1150 |
 | Names sort as people expect: Photo 2 before Photo 10, capitals aside (Finder, Explorer) | Done: #1123 |
@@ -132,7 +133,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | A phone's Back closes the innermost thing open: an app's sheet, a menu, the keys sheet, then All apps or All windows (Android) | Done: #1132 |
 | High contrast (Windows' contrast themes): chosen, pressed and best-match states stay visible, by the system's Highlight and outlines | Done: #1164 |
 | A screen reader hears Files' list as a grid named after the folder, which rows are chosen, and how it is sorted (Finder and Explorer with VoiceOver, Narrator) | Done: #1165 |
-| Each window is a named landmark, so a screen reader jumps from window to window (VoiceOver's rotor, NVDA's D) | Done: this PR |
+| Each window is a named landmark, so a screen reader jumps from window to window (VoiceOver's rotor, NVDA's D) | Done: #1166 |
 | A phone's Back goes back inside the app that has the screen: Files closes a file's panel, then goes back a folder (foafos.setBack; Android) | Done: #1139 |
 
 ## Second round
