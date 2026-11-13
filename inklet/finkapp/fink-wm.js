@@ -1043,7 +1043,7 @@ window.FinkWM = {
             snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i' },
     // What each sequence does, for the sheet of keys (Ctrl ; /, or Keys in the menu).
     KEY_LABELS: { menu: 'Open this menu', apps: 'All apps', windows: 'All windows', tasks: 'Task Manager',
-            next: 'Next window', prev: 'Previous window', last: 'Last window, and back', snapLeft: 'Snap left',
+            next: 'Next window', prev: 'Previous window', last: 'Last window, and back (hold Ctrl to choose)', snapLeft: 'Snap left',
             snapRight: 'Snap right', quarter: 'Snap to the next quarter', snapFull: 'Maximise or restore', hide: 'Minimise window', move: 'Move or resize window',
             close: 'Close window', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
     _initKeys() {
@@ -1079,13 +1079,14 @@ window.FinkWM = {
             prev: () => window.FoafOS?.nextWindow?.(-1),
             reopen: () => window.FoafOS?.reopenClosed?.(),
             move: () => window.FoafOS?.moveFrontByKeys?.(),
-            last: () => window.FoafOS?.lastWindow?.(),
+            last: () => (window.FoafOS?.switchRecent || window.FoafOS?.lastWindow)?.(),
             keys: () => this._showKeys(seqs),
             quarter: () => window.FoafOS?.quarterFront?.(),
         };
         this._seqs = seqs;
         let typed = [], at = 0;
         window.addEventListener('keydown', (e) => {
+            if (window.FoafOS?.switcherKey?.(e)) return;       // the held switcher takes its own keys
             if (e.repeat || e.key === 'Control') return;
             // Letters are what the key types, so a word works on any Latin layout; other
             // scripts fall back to the key's position. The first key is a position, the key
