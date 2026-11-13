@@ -605,6 +605,22 @@ try {
   check(ws1.split(',').length >= 2 && ws2empty === '' && at2.at === 2 && ws2.split(',').length === 1 && back1 === ws1 && wsCards === ws1.split(',').length
     && !afterMove.split(',').includes(wsMover) && on2.split(',').includes(wsMover),
     `workspaces: a new empty one, windows stay where they opened, All windows shows this one's, a window moves (${JSON.stringify({ ws1, ws2empty, ws2, back1, wsCards, afterMove, on2 })})`);
+  // All windows shows a button for each workspace; another one's button shows its windows
+  const ovws = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    FoafOS.goWorkspace(1);
+    const w = [...document.querySelectorAll('.foafos-window:not(.ws-away):not(.minimized)')][0];
+    FoafOS.moveToWorkspace(w, 2, { quiet: true });
+    FoafOS.enterOverview(); await wait(400);
+    const btns = [...document.querySelectorAll('#foafos-ov-strip .foafos-ov-wsbtn')].map((b) => `${b.textContent}:${b.getAttribute('aria-pressed')}`);
+    document.querySelectorAll('#foafos-ov-strip .foafos-ov-wsbtn')[1].click(); await wait(900);
+    const r = { btns, on: document.body.classList.contains('foafos-overview-on'), at: FoafOS.workspaces().at, cards: document.querySelectorAll('.foafos-ov-hit').length,
+      pressed: [...document.querySelectorAll('#foafos-ov-strip .foafos-ov-wsbtn')].map((b) => b.getAttribute('aria-pressed')).join() };
+    FoafOS.exitOverview(null); await wait(300);
+    FoafOS.moveToWorkspace(w, 1, { quiet: true }); FoafOS.goWorkspace(1);
+    return r;
+  });
+  check(String(ovws.btns) === '1:true,2:false' && ovws.on && ovws.at === 2 && ovws.cards === 1 && ovws.pressed === 'false,true', `All windows has a button for each workspace (${JSON.stringify(ovws)})`);
   // Opening an app whose window is on another workspace goes there, rather than raising it out of sight
   const follow = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

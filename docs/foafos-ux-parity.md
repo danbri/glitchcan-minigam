@@ -104,3 +104,4 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Files: show PDFs in the preview, a page at a time, with pdf.js (Quick Look, phones) | Done: this PR |
 | Files: "Show in folder" from Recent and search; "Show where it was" from the Trash (desktops) | Done: this PR |
 | Workspaces: more than one desktop of windows, Ctrl ; . and , (Spaces, virtual desktops, GNOME workspaces) | Done: this PR |
+| All windows has a button for each workspace (Mission Control's row of Spaces) | Done: this PR |
