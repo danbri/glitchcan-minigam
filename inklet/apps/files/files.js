@@ -739,6 +739,27 @@
     if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return d.toLocaleDateString([], d.getFullYear() === now.getFullYear() ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
   };
+  // The size of a folder and all in it, on request: a walk of the tree, which costs one call per
+  // folder, so it is not done on every pick. Stops at 5000 files.
+  async function folderSize(path, mine, head) {
+    const p = head.querySelector('p');
+    p.textContent = 'Folder: working out its size…';
+    let bytes = 0, files = 0, folders = 0;
+    const queue = [path];
+    while (queue.length && files < 5000) {
+      const dir = queue.shift();
+      const r = await list(dir);
+      if (mine !== picking) return;
+      for (const i of r.ok ? r.items : []) {
+        const name = i.path.replace(/\/$/, '').split('/').pop();
+        if (hiddenName(name)) continue;
+        if (i.container) { folders++; queue.push(dir + i.path.replace(/^\/+/, '')); continue; }
+        files++; bytes += i.size || 0;
+      }
+    }
+    p.textContent = `Folder: ${sizeText(bytes)} in ${files} file${files === 1 ? '' : 's'}${folders ? ` and ${folders} folder${folders === 1 ? '' : 's'}` : ''}${queue.length ? ' (at least; there is more)' : ''}`;
+    say(`${nameOf(path)} holds ${p.textContent.replace(/^Folder: /, '')}.`);
+  }
   const sizeText = (n) => (n < 1024 ? `${n} bytes` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
   async function pick(it) {
     const mine = ++picking;
@@ -776,8 +797,17 @@
         h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(it.path) } }, 'Open'), backBtn, favBtn,
         h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
         h('button', { class: 'tool', type: 'button', on: { click: () => download([it.path]) } }, 'Download as .zip'),
+        h('button', { class: 'tool', type: 'button', on: { click: () => folderSize(it.path, mine, head) } }, 'Work out its size'),
         h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')));
       markPicked();
+      // What is in it, as a desktop's Get Info or Properties says: one look, at this level only.
+      const r = await list(it.path);
+      if (mine !== picking || !r.ok) return;
+      const seen = r.items.filter((i) => !hiddenName(i.path.replace(/\/$/, '').split('/').pop()));
+      const nf = seen.filter((i) => i.container).length, nd = seen.length - nf;
+      head.querySelector('p').textContent = seen.length
+        ? `Folder: ${[nd ? `${nd} file${nd === 1 ? '' : 's'}` : '', nf ? `${nf} folder${nf === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ')}`
+        : 'Folder: empty';
       return;
     }
     const r = await foafos.pod.get(it.path);
