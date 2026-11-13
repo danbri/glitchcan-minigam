@@ -7,6 +7,8 @@
   const $ = (id) => document.getElementById(id);
   const statusEl = $('status');
   let current = null;   // { name, etag }
+  // The window's title names the note open in it, so two Notes windows can be told apart.
+  const setCurrent = (c) => { current = c; window.foafos?.setTitle?.(c?.name ? c.name.replace(/\.(txt|md)$/i, '') : ''); };
   let shared = null;    // a file the shell gave this window: { token, name, write }, or null
 
   const REASONS = {
@@ -38,7 +40,7 @@
       say(explain(r), true);
       return;
     }
-    current = { name: shared.name, etag: r.etag, contentType: r.contentType };
+    setCurrent({ name: shared.name, etag: r.etag, contentType: r.contentType });
     $('name').value = shared.name;
     $('text').value = r.body;
     showShared();
@@ -74,7 +76,7 @@
     if (!r.ok) { say(explain(r), true); return; }
     shared = null;        // a note from the list is not the file from Files
     showShared();
-    current = { name, etag: r.etag };
+    setCurrent({ name, etag: r.etag });
     $('name').value = name;
     $('text').value = r.body;
     say(`Opened ${name}.`);
@@ -87,7 +89,7 @@
       const contentType = current?.contentType || 'text/plain; charset=utf-8';
       const r = await foafos.pod.put('', $('text').value, { share: shared.token, contentType, ...(current?.etag ? { etag: current.etag } : {}) });
       if (!r.ok) { say(explain(r), true); return; }
-      current = { name: shared.name, etag: r.etag, contentType };
+      setCurrent({ name: shared.name, etag: r.etag, contentType });
       say(`Saved ${shared.name}.`);
       return;
     }
@@ -102,7 +104,7 @@
       say(r.reason === 'conflict' && !sameNote ? `A note called ${name} exists already. Open it, or choose another name.` : explain(r), true);
       return;
     }
-    current = { name, etag: r.etag };
+    setCurrent({ name, etag: r.etag });
     $('name').value = name;
     say(`Saved ${name}.`);
     refresh();
@@ -113,14 +115,14 @@
     const r = await foafos.pod.delete(`notes/${current.name}.txt`, current.etag ? { etag: current.etag } : {});
     if (!r.ok) { say(explain(r), true); return; }
     say(`Deleted ${current.name}.`);
-    current = null;
+    setCurrent(null);
     $('name').value = '';
     $('text').value = '';
     refresh();
   }
 
   $('save').addEventListener('click', save);
-  $('new').addEventListener('click', () => { shared = null; showShared(); current = null; $('name').value = ''; $('text').value = ''; $('name').focus(); refresh(); });
+  $('new').addEventListener('click', () => { shared = null; showShared(); setCurrent(null); $('name').value = ''; $('text').value = ''; $('name').focus(); refresh(); });
   $('del').addEventListener('click', remove);
   $('reload').addEventListener('click', () => (shared ? openShared() : current ? open(current.name) : refresh()));
 

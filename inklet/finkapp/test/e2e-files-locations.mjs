@@ -1350,6 +1350,8 @@ try {
     await mdEditor.evaluate(async () => { document.getElementById('text').value = '# edited'; await window.__podnotes.save(); });
     const kept = await f.evaluate(() => foafos.pod.get('kept.md'));
     check(kept.body === '# edited' && /markdown/.test(kept.contentType), `saving in Notes keeps the file's type (${kept.contentType})`);
+    const notesTitle = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => w.querySelector('iframe')?.src.includes('podnotes')).map((w) => w.querySelector('.foafos-window-bar span').textContent));
+    check(notesTitle.some((t) => /Notes — kept$/.test(t)), `a Notes window's title names its note (${notesTitle})`);
     await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => w.querySelector('iframe')?.src.includes('podnotes')).at(-1).querySelector('[aria-label^="Close"]').click());
     await page.waitForTimeout(400);
     const before = await page.evaluate(() => FoafOS.pods.shares.size);
