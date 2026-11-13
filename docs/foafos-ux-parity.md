@@ -54,7 +54,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
-| Next window of the same app: Ctrl ; ` or the window menu (a Mac's Cmd+`, GNOME Super+`) | Done: this PR |
+| Next window of the same app: Ctrl ; ` or the window menu (a Mac's Cmd+`, GNOME Super+`) | Done: #1126 |
 | Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: #1124 |
 | No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: #1102 |
 | Swipe a card up to close it; tap the space around to leave (phones) | Done: #1006, #1031 |
@@ -78,6 +78,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | A dot under each app that is open (docks) | Done: #1049, #1057 |
 | Arrow keys through All apps; no on-screen keyboard thrown up on a phone | Done: #1008, #1013 |
 | A sheet of every key, from the menu or Ctrl ; / (desktops' keyboard help, "?" on the web) | Done: #1077 |
+| The desktop's own menu, from a right-click or long press on it: All apps, Widgets, All windows, Arrange, Show the desktop (Windows, a Mac, a phone's home screen) | Done: this PR |
 
 ## Window manager
 

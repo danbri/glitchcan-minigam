@@ -676,6 +676,22 @@ try {
     check(ids.length === 2 && new Set(sameKind).size === 1 && f0 === ids[0] && f1 !== f0 && f2 !== f1,
       `Ctrl ; \` steps through the front app's own windows (${JSON.stringify({ ids, f0, f1, f2, sameKind })})`);
   }
+  // A right-click on the empty desktop opens the desktop's menu; Widgets opens All apps at its widgets
+  {
+    await page.evaluate(() => FoafOS.showDesktop());
+    await page.waitForTimeout(400);
+    const spot = await page.evaluate(() => { for (let y = 60; y < innerHeight - 60; y += 40) for (let x = 60; x < innerWidth - 120; x += 60) { const e = document.elementFromPoint(x, y); if (e === document.body || e?.id === 'narrative-view') return { x, y }; } return null; });
+    if (spot) await page.mouse.click(spot.x, spot.y, { button: 'right' });
+    await page.waitForTimeout(200);
+    const rows = await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button span')].map((x) => x.textContent));
+    await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].find((b) => b.textContent.startsWith('Widgets'))?.click());
+    await page.waitForTimeout(400);
+    const w = await page.evaluate(() => ({ home: !!document.getElementById('foafos-home'), open: !!document.querySelector('#foafos-home details[data-folder="widgets"]')?.open, focus: !!document.activeElement?.closest?.('details[data-folder="widgets"]') }));
+    await page.evaluate(() => document.getElementById('foafos-home')?.remove());
+    await page.evaluate(() => FoafOS.showDesktop());
+    await page.waitForTimeout(400);
+    check(spot && rows[0] === 'All apps' && rows.includes('Widgets') && rows.includes('Bring the windows back') && w.home && w.open && w.focus, `a right-click on the desktop opens its menu, and Widgets opens them (${JSON.stringify({ spot, rows, w })})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
