@@ -973,6 +973,22 @@ try {
     return { flaky: await flaky(), calls: n, stuck: (await stuck()).reason, stuckCalls: m, wrapped: !/native|\[object/.test(String(foafos.pod.put)) };
   });
   check(pace.flaky.ok && pace.calls === 3 && pace.stuck === 'throttled' && pace.stuckCalls === 4, `pod calls wait their turn when throttled (${JSON.stringify(pace)})`);
+  // The folder keeps up: a file saved behind Files' back shows when Files comes back into use, and
+  // nothing is redrawn when nothing changed
+  const live = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    await window.__files.go('notes/'); await wait(300);
+    const first = document.querySelector('#items tbody tr'); first.focus();
+    const same = await window.__files.refreshIfChanged();
+    await foafos.pod.put('notes/elsewhere.txt', 'saved by another app', { contentType: 'text/plain' });
+    const shownBefore = !!document.querySelector('#items tbody tr[data-path="notes/elsewhere.txt"]');
+    window.dispatchEvent(new Event('focus'));
+    for (let k = 0; k < 30 && !document.querySelector('#items tbody tr[data-path="notes/elsewhere.txt"]'); k++) await wait(100);
+    const r = { same, shownBefore, shownAfter: !!document.querySelector('#items tbody tr[data-path="notes/elsewhere.txt"]'), focusKept: document.activeElement?.dataset?.path === first.dataset.path };
+    await foafos.pod.delete('notes/elsewhere.txt');
+    return r;
+  });
+  check(live.same === false && !live.shownBefore && live.shownAfter && live.focusKept, `the folder keeps up with changes made elsewhere (${JSON.stringify(live)})`);
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));

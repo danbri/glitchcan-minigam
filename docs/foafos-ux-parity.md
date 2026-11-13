@@ -24,6 +24,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Where the space goes: a treemap (desktop disk tools) | Done: #1021, #1024 |
 | Status bar: items, size, room left under a limit (desktops) | Done: #1064 |
 | Opens at the folder you were in (desktops, phones) | Done: #1058 |
+| The folder keeps up with files saved by other apps; pull down to refresh on a phone (desktops, phones) | Done: this PR |
 | Recent files (desktops, phones) | Done: #1072 |
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
 | Duplicate (macOS) | Done: #1034 |
