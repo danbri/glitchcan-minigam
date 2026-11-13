@@ -59,10 +59,11 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Feature | Status |
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
-| Close all from All windows, asking once first; one Reopen brings them all back (Android's Clear all, a browser's reopen closed window) | Done: #1148, this PR |
+| Close all from All windows, asking once first; one Reopen brings them all back (Android's Clear all, a browser's reopen closed window) | Done: #1148, #1151 |
 | Hold the menu handle for All windows, as holding a phone's gesture bar shows recent apps; its title lists every gesture | Done: #1133 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
 | A window's title says what is open in it (Files — notes, Notes — trip), the app's name always first: foafos.setTitle (every desktop) | Done: #1135, #1136 |
+| The Task Manager names each window by its title too, so two windows of one app can be told apart and filtered (Windows' Task Manager) | Done: this PR |
 | Next window of the same app: Ctrl ; ` or the window menu (a Mac's Cmd+`, GNOME Super+`) | Done: #1126 |
 | Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: #1124 |
 | No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: #1102 |
