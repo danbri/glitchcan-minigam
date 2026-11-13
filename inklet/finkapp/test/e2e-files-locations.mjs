@@ -1289,6 +1289,26 @@ try {
     await f.evaluate(async () => { for (const p of ['notes/fm/to/src.txt', 'notes/fm/to/.folder', 'notes/fm/to/', 'notes/fm/src.txt', 'notes/fm/']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
     check(rows[0] === 'New file' && rows.includes('New folder') && rows.some((r) => /^Paste src\.txt$/.test(r)) && pasted === 's', `a right-click on a folder's empty space opens its menu, and Paste works from it (${JSON.stringify({ rows, pasted })})`);
   }
+  // A right-click on a folder in the side panel opens its menu; Keep in the side panel works from it
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/tm/x.txt', 'x', { contentType: 'text/plain' }); await window.__files.go('notes/tm/'); await window.__files.go('notes/'); });
+    await page.waitForTimeout(400);
+    const rclick = () => f.evaluate(() => { const b = document.querySelector('.tree button[title="tm"]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.x + 10, clientY: r.y + 5 })); });
+    await rclick();
+    await page.waitForTimeout(300);
+    const rows = await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button span')].map((x) => x.textContent));
+    await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button')].find((b) => b.textContent.startsWith('Keep in the side panel'))?.click());
+    await page.waitForTimeout(300);
+    const said = await f.evaluate(() => document.getElementById('status').textContent);
+    await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button')].length);
+    await rclick();
+    await page.waitForTimeout(200);
+    const rows2 = await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button span')].map((x) => x.textContent));
+    await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button')].find((b) => b.textContent.startsWith('Remove from the side panel'))?.click());
+    await f.evaluate(async () => { await foafos.pod.delete('notes/tm/x.txt'); await foafos.pod.delete('notes/tm/'); await window.__files.go('notes/'); });
+    check(rows[0] === 'Open' && rows.includes('Keep in the side panel') && /kept in the side panel/.test(said) && rows2.includes('Remove from the side panel'),
+      `a right-click on a side-panel folder opens its menu, and Keep works from it (${JSON.stringify({ rows, said, rows2 })})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {
@@ -1545,13 +1565,19 @@ try {
     await lf.evaluate(() => window.__files.go(''));
     const lcdp = await context.newCDPSession(lp);
     await lcdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+    await lp.waitForTimeout(300);   // touch emulation settles before the first touch
     const fr = await (await lf.frameElement()).boundingBox();
-    const spot = await lf.evaluate(() => { const r = document.getElementById('items-pane').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.bottom - 40 }; });
-    await lcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: fr.x + spot.x, y: fr.y + spot.y }] });
-    await lp.waitForTimeout(800);
-    await lcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await lp.waitForTimeout(300);
-    const rows = await lf.evaluate(() => [...document.querySelectorAll('.ctx-menu button span')].map((x) => x.textContent));
+    // Empty space below the items, but clear of the bottom, where the shell's notices can sit.
+    const spot = await lf.evaluate(() => { const r = document.getElementById('items-pane').getBoundingClientRect(); const last = [...document.querySelectorAll('#items [data-path]')].at(-1)?.getBoundingClientRect(); return { x: r.left + r.width / 2, y: Math.min(r.bottom - 120, Math.max(r.top + r.height * 0.5, (last?.bottom ?? r.top) + 30)) }; });
+    const hold = async () => {
+      await lcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: fr.x + spot.x, y: fr.y + spot.y }] });
+      await lp.waitForTimeout(800);
+      await lcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await lp.waitForTimeout(300);
+      return lf.evaluate(() => [...document.querySelectorAll('.ctx-menu button span')].map((x) => x.textContent));
+    };
+    let rows = await hold();
+    if (!rows.length) rows = await hold();   // a second hold, if the first touch went astray in emulation
     await lp.close();
     check(rows[0] === 'New file' && rows.includes('Upload…'), `on a phone, holding the folder's empty space opens its menu (${rows})`);
   }
@@ -1564,6 +1590,7 @@ try {
     const pdir = await pf.evaluate(async () => { await window.__files.go(''); document.getElementById('items-pane').scrollTop = 0; await foafos.pod.put('pulled.txt', 'x', { contentType: 'text/plain' }); return ''; });
     const pcdp = await context.newCDPSession(pp);
     await pcdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+    await pp.waitForTimeout(300);   // touch emulation settles before the first touch
     const pane = await (await pf.$('#items-pane')).boundingBox();
     const x = pane.x + pane.width / 2, y0 = pane.y + 30;
     await pcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] });
