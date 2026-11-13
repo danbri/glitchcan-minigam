@@ -1676,3 +1676,15 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 #foafos-snap-layouts .snap-tr span { inset: 2px 2px 50% 50%; }
 #foafos-snap-layouts .snap-bl span { inset: 50% 50% 2px 2px; }
 #foafos-snap-layouts .snap-br span { inset: 50% 2px 2px 50%; }
+
+/* High contrast (forced colors): states shown by colour alone get outlines or the system Highlight. */
+@media (forced-colors: active) {
+  .foafos-window { border: 1px solid CanvasText; }
+  #foafos-home.searching .foafos-app.foafos-top-hit, .foafos-ov-hit:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
+  #foafos-home .foafos-app.running .ico::after, #wm-chrome #wm-buttons #wm-pinned-sect button.running::after { forced-color-adjust: none; background: CanvasText; }
+  .foafos-ov-wsbtn[aria-pressed=true], #wm-chrome [aria-pressed=true] { outline: 2px solid Highlight; outline-offset: -2px; }
+  #foafos-snap-layouts button span { forced-color-adjust: none; background: GrayText; }
+  #foafos-snap-layouts button:hover span, #foafos-snap-layouts button:focus-visible span { background: Highlight; }
+  #foafos-ov-closeall.sure { outline: 3px solid Highlight; }
+  #foafos-win-menu button:focus-visible { outline: 2px solid Highlight; outline-offset: -2px; }
+}
