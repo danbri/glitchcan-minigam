@@ -3274,6 +3274,20 @@ function buildUI() {
     wsRows();
   };
   FoafOS.workspaces = () => ({ at: FoafOS.workspace, count: wsCount });
+  // Take the front window to the next (or previous) workspace and go there with it, as GNOME's
+  // Shift+Super+Page Down and a Mac's drag to the next Space do (Ctrl ; > and Ctrl ; <).
+  FoafOS.carryToWorkspace = (step = 1) => {
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
+    const win = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
+    if (!win) return null;
+    const here = FoafOS.workspace;
+    const to = step > 0 ? Math.min(4, here + 1) : Math.max(1, here - 1);
+    if (to === here) return here;
+    FoafOS.moveToWorkspace(win, to, { quiet: true });
+    FoafOS.goWorkspace(to);
+    FoafOS.raiseWindow(win);
+    return to;
+  };
 
   // Snap the front window, for the keyboard.
   FoafOS.snapFront = (zone) => {
