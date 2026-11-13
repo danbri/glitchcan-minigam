@@ -19,6 +19,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Type a name to jump to it (desktops) | Done: type-ahead in the list |
 | Cmd or Ctrl + Down opens, Cmd, Ctrl or Alt + Up goes up from anywhere in Files, the keyboard landing where you were (Finder, Explorer) | Done: #1134 |
 | Go to a folder by typing its path: /, Cmd or Ctrl + Shift + G, or click the current folder's name (GNOME Files, Finder, Explorer's address bar) | Done: #1125 |
+| A right-click or long press on the path lists every enclosing folder to jump to (Finder's Cmd-click on a title, iOS Files' long press on Back) | Done: this PR |
 | Copy path from an item's menu; a file's path in Go to folder opens its folder with it chosen (Finder's Copy as pathname) | Done: #1161 |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
@@ -36,7 +37,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
 | A double-click opens a file in its app (the first that offers to); Enter and a click still show it here (every desktop) | Done: #1168 |
 | A right-click (or the Menu key, Shift+F10) on an item opens its menu: Open, Rename, Duplicate, Copy, Cut, Download, Compress, Trash; on several chosen, for them all (every desktop) | Done: #1155 |
-| An item's menu lists Open in each app that offers to open the file (Finder's Open With) | Done: this PR |
+| An item's menu lists Open in each app that offers to open the file (Finder's Open With) | Done: #1169 |
 | A right-click or long press on a folder's empty space opens its menu: New file, New folder, Upload, Paste, Choose all, view, Look for changes; a long press on a phone (Finder, Explorer, Android) | Done: #1156, #1157 |
 | Duplicate a file, or a folder with all in it (macOS) | Done: #1034, #1149 |
 | Drop files from the computer; paste files, screenshots and text (desktops) | Done: #1009, #1053 |
