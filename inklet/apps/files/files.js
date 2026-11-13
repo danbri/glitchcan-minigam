@@ -319,6 +319,18 @@
   // An item's menu, as every desktop file manager has: a right-click, the Menu key or Shift+F10 on
   // an item. It is picked first (or, if it is among several chosen, the menu acts on them all), and
   // the menu offers what its panel and keys do, with the keys named.
+  // Text onto the system clipboard, from a click: a frame has no clipboard permission of its own,
+  // but the classic copy of selected text works inside a user's click. As Finder's "Copy as pathname".
+  function copyText(text, said) {
+    const ta = h('textarea', { 'aria-hidden': 'true', style: 'position:fixed;left:-9999px;top:0;opacity:0' });
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { /* refused */ }
+    ta.remove();
+    say(ok ? said : `This browser would not copy here. The path is ${text}`, !ok);
+  }
   async function itemMenu(it, x, y) {
     document.querySelector('.ctx-menu')?.remove();
     const many = chosen.size > 1 && chosen.has(it.path) ? [...chosen] : null;
@@ -340,6 +352,7 @@
       [it.container ? 'Download as .zip' : 'Download', '', () => download([it.path])],
       ro ? null : ['Compress', '', () => compress([it.path])],
       searchResults ? ['Show in folder', '', () => showInFolder(it.path)] : null,
+      ['Copy path', '', () => copyText(it.path, `Copied the path ${it.path}. Paste it into Go to folder (/) to come back here.`)],
       ro ? null : [it.container ? 'Delete' : 'Move to the Trash', mac ? '⌘⌫' : 'Delete', () => askDelete(), 'danger'],
     ];
     showMenu(rows, x, y, many ? `${many.length} items` : nameOf(it.path), () => document.querySelector(`#items [data-path="${CSS.escape(it.path)}"]`)?.focus());
@@ -1396,7 +1409,14 @@
       const to = parts.length ? `${parts.join('/')}/` : '';
       if (to) {
         const r = await foafos.pod.list(to);
-        if (!r.ok) { say(r.status === 404 ? `There is no folder ${to} here.` : explain(r), true); return; }
+        if (!r.ok && r.status === 404) {
+          // A file's path (from Copy path) goes to its folder, with it chosen.
+          const file = parts.join('/');
+          const there = await foafos.pod.list(parentOf(file));
+          if (there.ok && there.items.some((i) => parentOf(file) + i.path.replace(/^\/+/, '') === file)) { await showInFolder(file); return; }
+          say(`There is no folder ${to} here.`, true); return;
+        }
+        if (!r.ok) { say(explain(r), true); return; }
       }
       await go(to);
     });

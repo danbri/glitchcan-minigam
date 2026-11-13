@@ -19,6 +19,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Type a name to jump to it (desktops) | Done: type-ahead in the list |
 | Cmd or Ctrl + Down opens, Cmd, Ctrl or Alt + Up goes up from anywhere in Files, the keyboard landing where you were (Finder, Explorer) | Done: #1134 |
 | Go to a folder by typing its path: /, Cmd or Ctrl + Shift + G, or click the current folder's name (GNOME Files, Finder, Explorer's address bar) | Done: #1125 |
+| Copy path from an item's menu; a file's path in Go to folder opens its folder with it chosen (Finder's Copy as pathname) | Done: this PR |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
 | A Sort picker where the list has no column heads (a narrow window, a phone): name, newest, largest, kind (phone file managers) | Done: #1150 |
@@ -140,7 +141,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Files: play sound and video in the preview (Quick Look, phones) | Done: #1088 |
 | Files: show PDFs in the preview, a page at a time, with pdf.js (Quick Look, phones) | Done: #1090 |
 | Files: "Show in folder" from Recent and search; "Show where it was" from the Trash (desktops) | Done: #1087 |
-| Search results narrowed by kind: Folders, Pictures, Documents, Sound and video, Code and data, Archives, with counts (Finder's and Explorer's search filters) | Done: this PR |
+| Search results narrowed by kind: Folders, Pictures, Documents, Sound and video, Code and data, Archives, with counts (Finder's and Explorer's search filters) | Done: #1160 |
 | Workspaces: more than one desktop of windows, Ctrl ; . and , (Spaces, virtual desktops, GNOME workspaces) | Done: #1089 |
 | All windows has a button for each workspace (Mission Control's row of Spaces) | Done: #1106 |
 | Drag a window's card onto a workspace in All windows to move it there (Mission Control) | Done: #1107 |
