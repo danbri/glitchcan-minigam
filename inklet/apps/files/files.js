@@ -336,7 +336,27 @@
   }
   const shortcut = (label, path) => h('li', {}, h('button', { type: 'button', on: { click: () => { $('panes').dataset.places = 'closed'; go(path); } } }, label));
   const here = () => locations.find((l) => l.id === current);
-  const drawTree = () => $('tree').replaceChildren(treeNode('', here()?.label || 'My files'), shortcut('🗒️ Notes', 'apps/podnotes/notes/'));
+  const drawTree = () => { $('tree').replaceChildren(treeNode('', here()?.label || 'My files'), shortcut('🗒️ Notes', 'apps/podnotes/notes/')); drawFavs(); };
+
+  // Folders you use often, kept at the top of the side panel, as Finder's sidebar and Explorer's
+  // Quick access keep them: for each location, on this device. A folder's panel adds or removes it.
+  const FAV_KEY = 'files.favourites';
+  const favAll = () => { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || {}; } catch { return {}; } };
+  const favs = () => favAll()[current] || [];
+  function toggleFav(path) {
+    const all = favAll(), now = all[current] || [];
+    all[current] = now.includes(path) ? now.filter((p) => p !== path) : [...now, path].slice(-20);
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(all)); } catch { /* for this visit */ }
+    drawFavs();
+    return all[current].includes(path);
+  }
+  function drawFavs() {
+    const list = favs();
+    $('favs-title').hidden = !list.length;
+    $('favs').replaceChildren(...list.map((path) => h('li', { class: 'fav' },
+      h('button', { type: 'button', title: path, 'aria-current': String(path === folder), on: { click: () => { $('panes').dataset.places = 'closed'; go(path); } } }, `⭐ ${nameOf(path)}`),
+      h('button', { type: 'button', class: 'fav-x', 'aria-label': `Remove ${nameOf(path)} from the side panel`, on: { click: () => toggleFav(path) } }, '✕'))));
+  }
 
   function drawLocations() {
     $('locations').replaceChildren(...locations.map((l) => h('li', {}, h('button', { type: 'button', 'aria-current': String(l.id === current), on: { click: () => useLocation(l.id) } },
@@ -676,8 +696,11 @@
     }
     if (it.container) {
       picked = { path: it.path, container: true };
+      const kept = favs().includes(it.path);
+      const favBtn = h('button', { class: 'tool', type: 'button', on: { click: () => { const on = toggleFav(it.path); favBtn.textContent = on ? 'Remove from the side panel' : 'Keep in the side panel'; say(on ? `${nameOf(it.path)} is kept in the side panel.` : `${nameOf(it.path)} is no longer in the side panel.`); } } },
+        kept ? 'Remove from the side panel' : 'Keep in the side panel');
       drawDetail(head, h('div', { class: 'detail-actions' },
-        h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(it.path) } }, 'Open'), backBtn,
+        h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(it.path) } }, 'Open'), backBtn, favBtn,
         h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')));
       markPicked();
       return;
