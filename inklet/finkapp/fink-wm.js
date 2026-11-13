@@ -931,11 +931,21 @@ window.FinkWM = {
             this._drag = { x: e.clientX, y: e.clientY, left: rect.left, top: rect.top, moved: false };
             chrome.classList.add('wm-dragging');
             this._framesAside(true);
+            // Held still: All windows, as holding a phone's gesture bar shows its recent apps.
+            // (A tap opens this menu, a double tap All apps, a drag moves the handle.)
+            clearTimeout(this._holdTimer);
+            this._holdTimer = setTimeout(() => {
+                if (!this._drag || this._drag.moved) return;
+                this._drag.held = true;
+                this._setCollapsed(true);
+                this._haptic();
+                window.FoafOS?.enterOverview?.();
+            }, 550);
         });
         handle.addEventListener('pointermove', (e) => {
             if (!this._drag) return;
             const dx = e.clientX - this._drag.x, dy = e.clientY - this._drag.y;
-            if (Math.abs(dx) + Math.abs(dy) > 6) this._drag.moved = true;
+            if (Math.abs(dx) + Math.abs(dy) > 6) { this._drag.moved = true; clearTimeout(this._holdTimer); }
             if (!this._drag.moved) return;
             chrome.style.left = `${this._drag.left + dx}px`;
             chrome.style.top = `${this._drag.top + dy}px`;
@@ -944,6 +954,8 @@ window.FinkWM = {
         });
         const finish = (e) => {
             if (!this._drag) return;
+            clearTimeout(this._holdTimer);
+            if (this._drag.held) { this._drag = null; chrome.classList.remove('wm-dragging'); this._framesAside(false); return; }
             const wasDrag = this._drag.moved;
             this._drag = null;
             chrome.classList.remove('wm-dragging');

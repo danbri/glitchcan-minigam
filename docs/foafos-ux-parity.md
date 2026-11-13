@@ -54,6 +54,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Feature | Status |
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
+| Hold the menu handle for All windows, as holding a phone's gesture bar shows recent apps; its title lists every gesture | Done: this PR |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
 | Next window of the same app: Ctrl ; ` or the window menu (a Mac's Cmd+`, GNOME Super+`) | Done: #1126 |
 | Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: #1124 |
@@ -108,7 +109,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Touch targets of about 44 px on touch screens | Done: window buttons, All apps, the bars above |
 | On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: #1091 |
 | Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: #1092 |
-| A phone's Back closes the innermost thing open: an app's sheet, a menu, the keys sheet, then All apps or All windows (Android) | Done: this PR |
+| A phone's Back closes the innermost thing open: an app's sheet, a menu, the keys sheet, then All apps or All windows (Android) | Done: #1132 |
 
 ## Second round
 
