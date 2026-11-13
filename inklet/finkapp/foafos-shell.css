@@ -1622,3 +1622,9 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 
 /* A window kept on top (window menu): a pin in its title bar says so. */
 .foafos-window.on-top > .foafos-window-bar > span:first-child::before { content: '📌 '; }
+
+/* Workspaces: a window on another one is hidden; a note says which workspace is shown. */
+.foafos-window.ws-away { display: none !important; }
+#foafos-ws-note { position: fixed; z-index: 2760; left: 50%; top: 16px; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px;
+    background: rgba(20, 24, 32, 0.88); color: #fff; font: 14px/1.3 var(--sk-font-ui, system-ui, sans-serif); opacity: 0; pointer-events: none; transition: opacity .2s; }
+#foafos-ws-note.on { opacity: 1; }

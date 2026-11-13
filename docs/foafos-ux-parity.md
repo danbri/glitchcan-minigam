@@ -97,4 +97,4 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Files: play sound and video in the preview (Quick Look, phones) | Done: this PR |
 | Files: show PDFs in the preview (Quick Look, phones). Chrome's PDF viewer does not run in a sandboxed frame: needs another way | Open |
 | Files: "Show in folder" from Recent and search; "Show where it was" from the Trash (desktops) | Done: this PR |
-| Workspaces: more than one desktop of windows (Spaces, virtual desktops, GNOME workspaces) | Open |
+| Workspaces: more than one desktop of windows, Ctrl ; . and , (Spaces, virtual desktops, GNOME workspaces) | Done: this PR |

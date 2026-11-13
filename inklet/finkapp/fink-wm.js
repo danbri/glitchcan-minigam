@@ -1041,12 +1041,12 @@ window.FinkWM = {
     // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
     // Not w, t or n, which browsers keep for themselves on Windows and Linux.
     KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s',
-            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i', desktop: 'ctrl ; d' },
+            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i', desktop: 'ctrl ; d', wsNext: 'ctrl ; .', wsPrev: 'ctrl ; ,' },
     // What each sequence does, for the sheet of keys (Ctrl ; /, or Keys in the menu).
     KEY_LABELS: { menu: 'Open this menu', apps: 'All apps', windows: 'All windows', tasks: 'Task Manager',
             next: 'Next window', prev: 'Previous window', last: 'Last window, and back (hold Ctrl to choose)', snapLeft: 'Snap left',
             snapRight: 'Snap right', quarter: 'Snap to the next quarter', snapFull: 'Maximise or restore', hide: 'Minimise window', move: 'Move or resize window',
-            close: 'Close window', desktop: 'Show the desktop, and back', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
+            close: 'Close window', wsNext: 'Next workspace', wsPrev: 'Workspace before', desktop: 'Show the desktop, and back', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
     _initKeys() {
         let saved = {};
         try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
@@ -1084,6 +1084,8 @@ window.FinkWM = {
             keys: () => this._showKeys(seqs),
             quarter: () => window.FoafOS?.quarterFront?.(),
             desktop: () => window.FoafOS?.showDesktop?.(),
+            wsNext: () => window.FoafOS?.nextWorkspace?.(1),
+            wsPrev: () => window.FoafOS?.nextWorkspace?.(-1),
         };
         this._seqs = seqs;
         let typed = [], at = 0;

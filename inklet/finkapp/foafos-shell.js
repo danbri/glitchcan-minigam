@@ -2832,7 +2832,7 @@ function buildUI() {
   function overviewWindows() {
     // Minimised windows are cards too: in a dimmed overview their title bars would
     // otherwise be stranded behind the backdrop, and picking one restores it.
-    const wins = [...document.querySelectorAll('.foafos-window')];
+    const wins = [...document.querySelectorAll('.foafos-window:not(.ws-away)')];   // this workspace's
     // A full-screen or floating app is a window too.
     const stage = document.getElementById('minigame-view');
     if (window.FinkWM?.active && stage) wins.push(stage);
@@ -3041,7 +3041,7 @@ function buildUI() {
   // (Ctrl ; j). Minimised windows are skipped; All windows reaches those.
   // `step` -1 goes the other way (Ctrl ; k).
   FoafOS.nextWindow = (step = 1) => {
-    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
     if (!wins.length) return null;
     const front = wins.findIndex((w) => w.style.zIndex === '2640');
     const next = wins[((front < 0 ? 0 : front) + (step < 0 ? -1 : 1) + wins.length) % wins.length];
@@ -3054,11 +3054,11 @@ function buildUI() {
   // Close the front window, for the keyboard (Ctrl ; q), with its own close button, so an app that
   // asks before losing work still asks; the next window comes forward.
   FoafOS.closeFront = () => {
-    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
     const front = wins.find((w) => w.style.zIndex === '2640') || wins.at(-1);
     if (!front) return null;
     front.querySelector('.foafos-window-close')?.click();
-    const next = [...document.querySelectorAll('.foafos-window:not(.minimized)')].filter((w) => w !== front && w.isConnected).at(-1);
+    const next = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].filter((w) => w !== front && w.isConnected).at(-1);
     if (next) FoafOS.raiseWindow(next);
     return front;
   };
@@ -3096,7 +3096,7 @@ function buildUI() {
   // Minimise the front window, for the keyboard (Ctrl ; h, as a Mac's hide), and bring the next
   // one forward so the keys keep acting on something you can see.
   FoafOS.minimizeFront = () => {
-    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
     const front = wins.find((w) => w.style.zIndex === '2640') || wins.at(-1);
     if (!front) return null;
     front.querySelector('.foafos-window-min')?.click();
@@ -3109,7 +3109,7 @@ function buildUI() {
   // (Ctrl ; v): arrows move it, Shift and arrows resize it, Enter keeps it, Escape puts it back.
   // For anyone who cannot drag. A click anywhere keeps it too.
   FoafOS.moveFrontByKeys = () => {
-    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
     let win = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
     if (!win || document.getElementById('foafos-keymove')) return null;
     if (win.classList.contains('maximized')) win.querySelector('.foafos-window-max')?.click();
@@ -3165,7 +3165,7 @@ function buildUI() {
   // the same keys again bring back just those, in the order they were stacked (Ctrl ; d).
   let putAway = [];
   FoafOS.showDesktop = () => {
-    const open = [...document.querySelectorAll('.foafos-window:not(.minimized)')].filter((w) => !w.classList.contains('foafos-ov'));
+    const open = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].filter((w) => !w.classList.contains('foafos-ov'));
     if (open.length) {
       putAway = open.sort((a, b) => Number(a.style.zIndex || 0) - Number(b.style.zIndex || 0));
       for (const w of putAway) w.querySelector('.foafos-window-min')?.click();
@@ -3179,9 +3179,51 @@ function buildUI() {
     return back.length ? 'back' : null;
   };
 
+  // Workspaces, as macOS Spaces, Windows' virtual desktops and GNOME's workspaces: more than one
+  // desktop of windows, one shown at a time. Ctrl ; . goes to the next and Ctrl ; , to the one
+  // before; a new one is made, as GNOME does, when the one in use has windows (up to four). The
+  // window menu moves a window to another. Windows elsewhere are hidden, and every list of open
+  // windows (All windows, the switchers, the keys) is of this workspace's.
+  FoafOS.workspace = 1;
+  let wsCount = 1;
+  const wsWins = (n) => [...document.querySelectorAll('.foafos-window')].filter((w) => Number(w.dataset.ws || 1) === n);
+  function wsNote(text) {
+    let n = document.getElementById('foafos-ws-note');
+    if (!n) { n = document.createElement('div'); n.id = 'foafos-ws-note'; n.setAttribute('role', 'status'); document.body.appendChild(n); }
+    n.textContent = text;
+    n.classList.add('on');
+    clearTimeout(n._t); n._t = setTimeout(() => n.classList.remove('on'), 1600);
+  }
+  FoafOS.goWorkspace = (n) => {
+    n = Math.max(1, Math.min(4, n | 0));
+    if (n > wsCount) wsCount = n;
+    FoafOS.workspace = n;
+    for (const w of document.querySelectorAll('.foafos-window')) w.classList.toggle('ws-away', Number(w.dataset.ws || 1) !== n);
+    // The empty workspaces at the end go, as GNOME's do.
+    while (wsCount > n && !wsWins(wsCount).length) wsCount--;
+    const front = wsWins(n).filter((w) => !w.classList.contains('minimized')).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
+    if (front) FoafOS.raiseWindow(front);
+    wsNote(`Workspace ${n} of ${wsCount}`);
+    bus.publish('wm.workspace', { summary: `workspace ${n} of ${wsCount}`, n, count: wsCount });
+    return n;
+  };
+  FoafOS.nextWorkspace = (step = 1) => {
+    const here = FoafOS.workspace;
+    if (step > 0 && here === wsCount && wsWins(here).length && wsCount < 4) wsCount++;
+    const to = step > 0 ? Math.min(wsCount, here + 1) : Math.max(1, here - 1);
+    return FoafOS.goWorkspace(to);
+  };
+  FoafOS.moveToWorkspace = (win, n) => {
+    if (n > wsCount) wsCount = Math.min(4, n);
+    win.dataset.ws = String(n);
+    win.classList.toggle('ws-away', n !== FoafOS.workspace);
+    wsNote(`${win.querySelector('.foafos-window-bar span')?.textContent || 'Window'} moved to workspace ${n}`);
+  };
+  FoafOS.workspaces = () => ({ at: FoafOS.workspace, count: wsCount });
+
   // Snap the front window, for the keyboard.
   FoafOS.snapFront = (zone) => {
-    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
     const front = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
     front?._snap?.(zone);
   };
@@ -3191,7 +3233,7 @@ function buildUI() {
   const QUARTERS = ['tl', 'tr', 'br', 'bl'];
   FoafOS.quarterFront = () => {
     if (window.innerWidth < 700) return null;
-    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
+    const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
     const front = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
     if (!front?._snap) return null;
     const at = QUARTERS.indexOf(front._zone);
@@ -3249,7 +3291,7 @@ function buildUI() {
   }
   FoafOS.switchRecent = () => {
     if (!ctrlHeld) return FoafOS.lastWindow();
-    const wins = recentWins.filter((w) => w.isConnected && w.classList.contains('foafos-window'));
+    const wins = recentWins.filter((w) => w.isConnected && w.classList.contains('foafos-window') && !w.classList.contains('ws-away'));
     if (wins.length < 2) return FoafOS.lastWindow();
     const el = document.createElement('div');
     el.id = 'foafos-switch';
@@ -3272,7 +3314,7 @@ function buildUI() {
     return e.key === 'Control' || e.key === 'Shift';
   };
   FoafOS.lastWindow = () => {
-    const before = recentWins.find((w, k) => k > 0 && w.isConnected && w.classList.contains('foafos-window'));
+    const before = recentWins.find((w, k) => k > 0 && w.isConnected && w.classList.contains('foafos-window') && !w.classList.contains('ws-away'));
     if (!before) return null;
     if (before.classList.contains('minimized')) before.querySelector('.foafos-window-min')?.click();
     FoafOS.raiseWindow(before);
@@ -3290,6 +3332,7 @@ function buildUI() {
     const win = document.createElement('div');
     win.className = 'foafos-window';
     win.dataset.wid = `w${widgetSeq}`;
+    win.dataset.ws = String(FoafOS.workspace || 1);
     // What you open comes to the front, over panels and a full-screen app alike,
     // and so does a window you click in. A click inside an app's frame stays in the frame.
     FoafOS.raiseWindow?.(win);
@@ -3565,7 +3608,7 @@ function buildUI() {
   // Snap assist, as on a desktop: once a window fills one half, the other half offers the other
   // open windows to fill it. Pick one, or press any other key or click anywhere to carry on.
   function snapAssist(win, side, [l, t, w, h]) {
-    const others = [...document.querySelectorAll('.foafos-window:not(.minimized)')].filter((x) => x !== win && x._snap && !x.classList.contains('foafos-ov'));
+    const others = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].filter((x) => x !== win && x._snap && !x.classList.contains('foafos-ov'));
     if (!others.length || window.innerWidth < 700) return;
     const box = document.createElement('div');
     box.id = 'foafos-snap-assist';
@@ -3618,6 +3661,7 @@ function buildUI() {
         FoafOS.raiseWindow(win);
         bus.publish('wm.ontop', { summary: `${win.querySelector('.foafos-window-bar span')?.textContent || 'window'} ${on ? 'kept on top' : 'no longer on top'}` });
       }, true],
+      [`Move to workspace ${FoafOS.workspace < 4 ? FoafOS.workspace + 1 : FoafOS.workspace - 1}`, '', () => FoafOS.moveToWorkspace(win, FoafOS.workspace < 4 ? FoafOS.workspace + 1 : FoafOS.workspace - 1), true],
       ['Minimise', keyOf('hide'), () => win.querySelector('.foafos-window-min')?.click(), true],
       ['Move or resize', keyOf('move'), () => FoafOS.moveFrontByKeys?.(), !max],
       ['Close', keyOf('close'), () => win.querySelector('.foafos-window-close')?.click(), true],
