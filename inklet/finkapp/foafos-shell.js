@@ -3959,6 +3959,32 @@ function buildUI() {
     return true;
   };
   FoafOS.pinnedApps = () => pinnedIds();
+  // The pinned apps as a row at the top of the ☰ menu, as a dock or taskbar keeps them in reach:
+  // each opens its app, or brings its window forward (as Ctrl ; 1 to 9 do), with a dot when open.
+  FoafOS.pinnedRow = () => {
+    const sect = document.getElementById('wm-pinned-sect');
+    if (!sect) return;
+    const ids = pinnedIds().slice(0, 9);
+    const entries = ids.map((id) => {
+      if (id.startsWith('widget-')) { const w = WIDGET_CATALOG.find((x) => `widget-${x.key}` === id); if (!w) return null; const [icon, ...name] = w.title.split(' '); return { id, icon, name: name.join(' ') }; }
+      const a = appById(id);
+      return a && rootOffers(ROOT, a.id) ? { id, icon: a.icon, name: a.name } : null;
+    });
+    const open = new Set([...document.querySelectorAll('.foafos-window[data-opened-as]')].map((w) => w.dataset.openedAs));
+    sect.replaceChildren(...entries.map((e, i) => {
+      if (!e) return null;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = e.icon || '•';
+      b.dataset.app = e.id;
+      b.classList.toggle('running', open.has(e.id));
+      b.setAttribute('aria-label', `${e.name}${open.has(e.id) ? ', open' : ''} (Ctrl ; ${i + 1})`);
+      b.title = `${e.name} — Ctrl ; ${i + 1}`;
+      b.addEventListener('click', () => { window.FinkWM?._setCollapsed?.(true); FoafOS.openPinned(i + 1); });
+      return b;
+    }).filter(Boolean));
+    sect.hidden = !sect.children.length;
+  };
   // The nth pinned app by key (Ctrl ; 1 to 9), as Windows' Win+1 to 9 does for its taskbar: its
   // window on this workspace comes forward (the next one, pressed again), or it opens.
   FoafOS.openPinned = (n) => {
