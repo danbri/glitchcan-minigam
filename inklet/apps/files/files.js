@@ -803,7 +803,8 @@
       markPicked();
       if (raw.ok) head.querySelector('p').textContent = `Archive, ${sizeText(raw.body.byteLength)}`;
       drawDetail(head, h('p', { class: 'detail-none' }, 'Open it to see what it holds. Nothing inside can be changed here.'),
-        actions(h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(`${it.path}!/`) } }, 'Open'), backBtn));
+        actions(h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(`${it.path}!/`) } }, 'Open'),
+          inArchive() ? null : h('button', { class: 'tool', type: 'button', on: { click: () => extract(it.path) } }, 'Extract'), backBtn));
       return;
     }
     if (it.container) {
@@ -1656,6 +1657,17 @@
   }
   // Copy a folder and everything in it, its own marker and empty folders too, never over
   // anything that is there. Stops at 500 files or 50 MB, and says how far it got.
+  // Extract, as opening a .zip in Finder does: everything in it, copied into a new folder beside it
+  // named after it (trip.zip → trip/, or trip 2/ if that is taken), up to 500 files or 50 MB.
+  async function extract(path) {
+    const name = freeName(nameOf(path).replace(/\.(zip|tar|tgz|tar\.gz)$/i, '') || 'Extracted');
+    say(`Extracting into ${name}…`);
+    const r = await copyTree(`${path}!/`, `${folder}${name}/`);
+    await go(folder, { remember: false });
+    if (!r.ok) { say(`Not all extracted: ${r.why}.`, true); return; }
+    say(`Extracted ${r.files} file${r.files === 1 ? '' : 's'} into ${name}.`);
+    pick({ path: `${folder}${name}/`, container: true });
+  }
   async function copyTree(src, to) {
     if (to.startsWith(src)) return { ok: false, why: 'not into itself' };
     const queue = [src];
@@ -1668,6 +1680,8 @@
       if (!r.items.some((i) => i.path.replace(/^\/+/, '') === '.folder')) await foafos.pod.put(`${dest}.folder`, '', { contentType: 'text/plain', ifNoneMatch: true });
       for (const it of r.items) {
         const path = dir + it.path.replace(/^\/+/, '');
+        // Never a name that climbs out (an archive's "../x"): everything lands inside `to`.
+        if (path.slice(src.length).split('/').some((seg) => seg === '..' || seg === '.')) return { ok: false, why: `${it.path} is not a name that can be copied` };
         if (it.container) { queue.push(path); continue; }
         if (files >= 500 || bytes > 50 * 1024 * 1024) return { ok: false, to, why: `stopped after ${files} files: a copy takes at most 500 files or 50 MB` };
         const got = await foafos.pod.get(path, { as: 'bytes' });

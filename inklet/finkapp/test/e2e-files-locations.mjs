@@ -1210,6 +1210,28 @@ try {
     await f.evaluate(async () => { for (const p of ['notes/cz/a.txt', 'notes/cz/sub/b.txt', 'notes/cz/sub/', 'notes/cz/', 'notes/cz.zip', 'notes/cz 2.zip']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
     check(/Made cz 2\.zip/.test(got.said) && got.old === 'not a zip' && names === 'cz/a.txt,cz/sub/b.txt' && bText === 'BB', `Compress makes a .zip beside the folder, never over one there (${got.said}; ${names}; ${got.old}; ${JSON.stringify(bText)})`);
   }
+  // Extract copies all in a .zip into a new folder beside it; a name that climbs out is refused
+  {
+    const good = [...makeZip([{ name: 'readme.txt', data: 'R' }, { name: 'docs/plan.md', data: '# P' }])];
+    const bad = [...makeZip([{ name: 'ok.txt', data: 'k' }, { name: '../escaped.txt', data: 'x' }])];
+    const r = await f.evaluate(async ([g, b]) => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      await foafos.pod.put('notes/ex/trip.zip', new Uint8Array(g).buffer, { contentType: 'application/zip' });
+      await foafos.pod.put('notes/ex/bad.zip', new Uint8Array(b).buffer, { contentType: 'application/zip' });
+      await window.__files.go('notes/ex/');
+      const run = async (p) => { await window.__files.pick({ path: p, container: false }); await wait(300); [...document.querySelectorAll('#detail button')].find((x) => x.textContent === 'Extract').click(); for (let i = 0; i < 40 && !/Extracted|Not all extracted/.test(document.getElementById('status').textContent); i++) await wait(150); return document.getElementById('status').textContent; };
+      const said1 = await run('notes/ex/trip.zip');
+      const got = [(await foafos.pod.get('notes/ex/trip/readme.txt')).body, (await foafos.pod.get('notes/ex/trip/docs/plan.md')).body];
+      const said2 = await run('notes/ex/bad.zip');
+      const escaped = (await foafos.pod.get('notes/ex/escaped.txt')).ok || (await foafos.pod.get('notes/escaped.txt')).ok;
+      return { said1, got, said2, escaped };
+    }, [good, bad]);
+    await f.evaluate(async () => {
+      const rm = async (d) => { const l = await foafos.pod.list(d); for (const it of l.items || []) { const p = d + it.path.replace(/^\/+/, ''); if (it.container) await rm(p); else await foafos.pod.delete(p); } await foafos.pod.delete(d); };
+      await rm('notes/ex/'); await window.__files.go('notes/');
+    });
+    check(/Extracted 2 files into trip/.test(r.said1) && String(r.got) === 'R,# P' && !r.escaped, `Extract makes a folder of a .zip's contents, and nothing climbs out (${JSON.stringify(r)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {
