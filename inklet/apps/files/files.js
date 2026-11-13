@@ -407,6 +407,20 @@
   }
   const emptySpace = (t) => !t.closest('tr[data-path], [role=option], button, input, a, .ask, #choosebar');
   // Ctrl + the wheel (a trackpad's pinch, too) over the icons sizes them.
+  // Two fingers pinched over the icons size them, as a phone's photo and file apps do: a step each
+  // time the fingers have spread or closed by a quarter. One finger still scrolls.
+  {
+    let base = 0;
+    const gap = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    $('items-pane').addEventListener('touchstart', (e) => { base = icons && e.touches.length === 2 ? gap(e.touches) : 0; }, { passive: true });
+    $('items-pane').addEventListener('touchmove', (e) => {
+      if (!base || e.touches.length !== 2) return;
+      e.preventDefault();                       // the pinch is ours, not a page zoom
+      const r = gap(e.touches) / base;
+      if (r > 1.25 || r < 0.8) { stepZoom(r > 1 ? 1 : -1); base = gap(e.touches); }
+    }, { passive: false });
+    for (const t of ['touchend', 'touchcancel']) $('items-pane').addEventListener(t, (e) => { if (e.touches.length < 2) base = 0; }, { passive: true });
+  }
   let wheelSum = 0;
   $('items-pane').addEventListener('wheel', (e) => {
     if (!icons || !e.ctrlKey) return;
