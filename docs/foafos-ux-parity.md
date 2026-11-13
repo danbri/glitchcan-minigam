@@ -17,6 +17,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Back and Forward, with Alt+arrows, Cmd+[ ], mouse buttons (all desktops, browsers) | Done: #1046 |
 | Up a folder: Backspace, Alt+Up; Home and End; arrows in the icon view (desktops) | Done: #996, #1001 |
 | Type a name to jump to it (desktops) | Done: type-ahead in the list |
+| Go to a folder by typing its path: /, Cmd or Ctrl + Shift + G, or click the current folder's name (GNOME Files, Finder, Explorer's address bar) | Done: this PR |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
 | Names sort as people expect: Photo 2 before Photo 10, capitals aside (Finder, Explorer) | Done: #1123 |
@@ -53,7 +54,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
-| Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: this PR |
+| Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: #1124 |
 | No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: #1102 |
 | Swipe a card up to close it; tap the space around to leave (phones) | Done: #1006, #1031 |
 | The hint speaks of taps on a touch screen, keys on a keyboard | Done: #1056 |
