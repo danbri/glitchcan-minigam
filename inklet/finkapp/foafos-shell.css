@@ -1657,3 +1657,7 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .foafos-app-sheet .sheet-caps { margin: .2rem 0 .6rem; font-size: .85rem; }
 .foafos-app-sheet .sheet-caps h4 { margin: 0 0 .2rem; font-size: .8rem; font-weight: 600; opacity: .75; }
 .foafos-app-sheet .sheet-caps ul { margin: 0; padding-left: 1.1rem; }
+
+/* All windows: Close all, which asks once before it acts. */
+#foafos-ov-closeall { margin-right: 8px; padding: 4px 12px; border-radius: 6px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+#foafos-ov-closeall.sure { background: #b3261e; border-color: #b3261e; color: #fff; }

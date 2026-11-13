@@ -987,6 +987,24 @@ try {
   await ctx.close();
 
   // Phone
+  // All windows: Close all asks once, then closes this workspace's windows (in a page of its own)
+  {
+    const cw = await open({ width: 1280, height: 800 }, false);
+    const r = await cw.page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      FoafOS.openWidget('tally'); FoafOS.openWidget('tally'); await wait(400);
+      const count = () => document.querySelectorAll('.foafos-window:not(.ws-away)').length;
+      const n0 = count();
+      FoafOS.enterOverview(); await wait(400);
+      const b = document.getElementById('foafos-ov-closeall');
+      b.click(); await wait(100);
+      const asked = b.textContent, still = count();
+      b.click(); await wait(800);
+      return { n0, asked, still, n1: count(), ov: document.body.classList.contains('foafos-overview-on') };
+    });
+    await cw.ctx.close();
+    check(r.n0 >= 2 && /^Close all \d+\?$/.test(r.asked) && r.still === r.n0 && r.n1 === 0 && !r.ov, `Close all in All windows asks once, then closes them (${JSON.stringify(r)})`);
+  }
   const phone = await open({ width: 390, height: 780 }, true);
   await phone.page.evaluate(() => FoafOS.openSystem());
   await phone.page.waitForTimeout(400);

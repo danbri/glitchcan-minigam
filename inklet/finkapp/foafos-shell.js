@@ -2984,7 +2984,21 @@ function buildUI() {
     strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — ${how}</span>
       <span class="foafos-ov-find" role="status"></span>
       <span class="foafos-ov-ws" role="group" aria-label="Workspaces"></span>
+      ${wins.length > 1 ? '<button type="button" id="foafos-ov-closeall">Close all</button>' : ''}
       <button type="button" id="foafos-ov-done" aria-label="Leave overview">✕</button>`;
+    // Close all, as a phone's recent apps screen offers: this workspace's windows, each by its own
+    // close button (so one that asks first still asks). Two taps: the first asks, so a stray tap
+    // closes nothing.
+    const closeAll = strip.querySelector('#foafos-ov-closeall');
+    closeAll?.addEventListener('click', () => {
+      if (!closeAll.dataset.sure) { closeAll.dataset.sure = '1'; closeAll.textContent = `Close all ${wins.length}?`; closeAll.classList.add('sure'); return; }
+      exitOverview(null);
+      for (const w of wins) {
+        if (w.id === 'minigame-view') continue;          // the story is left; it has its own way out
+        w.querySelector('.foafos-window-close')?.click();
+      }
+      bus.publish('wm.closeall', { summary: `closed all windows on workspace ${FoafOS.workspace}` });
+    });
     // With more than one workspace, a button for each, as Mission Control's row of Spaces: the one
     // shown is pressed; another shows that workspace's windows.
     const wsInfo = FoafOS.workspaces?.() || { at: 1, count: 1 };
