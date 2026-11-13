@@ -80,6 +80,17 @@
   // kept view is applied in onInit, which also runs if that has already happened.
   const VIEW_KEY = 'files.view';
   let icons = false;
+  // Icon size in the icon view, as Finder's and Explorer's: Ctrl or Cmd + plus and minus, or Ctrl +
+  // the wheel; kept with the view. Five steps, from small to large.
+  const ZOOMS = [0.75, 1, 1.35, 1.75, 2.25];
+  let zoom = 1;
+  const applyZoom = () => document.querySelector('#items .grid')?.style.setProperty('--zoom', String(zoom));
+  const stepZoom = (d) => {
+    const i = Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(zoom) + d));
+    if (ZOOMS[i] === zoom) return;
+    zoom = ZOOMS[i]; applyZoom(); keepView();
+    say(`Icons ${['smallest', 'small', 'medium', 'large', 'largest'][i]}.`);
+  };
   let sort = { key: 'name', dir: 1 };
   // In a narrow window the list has no column heads to sort by: a Sort picker, as phone file
   // managers have, says how it is sorted and changes it.
@@ -88,7 +99,7 @@
     const [key, dir] = e.target.value.split(':');
     sort = { key, dir: Number(dir) }; recentOrder = false; keepView(); drawItems();
   });
-  const keepView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ icons, sort })); } catch { /* not kept */ } };
+  const keepView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ icons, sort, zoom })); } catch { /* not kept */ } };
   // The folder you were in, for each location, so Files opens there again, as a desktop's file
   // manager does. A folder that has gone since opens the top instead, without a complaint.
   const FOLDER_KEY = 'files.folder';
@@ -395,6 +406,16 @@
     ], x, y, `Folder ${nameOf(folder) || here()?.label || ''}`, null);
   }
   const emptySpace = (t) => !t.closest('tr[data-path], [role=option], button, input, a, .ask, #choosebar');
+  // Ctrl + the wheel (a trackpad's pinch, too) over the icons sizes them.
+  let wheelSum = 0;
+  $('items-pane').addEventListener('wheel', (e) => {
+    if (!icons || !e.ctrlKey) return;
+    e.preventDefault();
+    wheelSum += e.deltaY;                      // a pinch sends many small steps: one size per 60
+    if (Math.abs(wheelSum) < 60) return;
+    stepZoom(wheelSum < 0 ? 1 : -1);
+    wheelSum = 0;
+  }, { passive: false });
   $('items-pane').addEventListener('contextmenu', (e) => {
     if (!emptySpace(e.target)) return;
     e.preventDefault();
@@ -782,6 +803,7 @@
         if (it.container) asDropTarget(btn, it.path);
         return btn;
       })));
+      applyZoom();
       return;
     }
     const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; recentOrder = false; keepView(); showSort(); drawItems(); } } },
@@ -1399,6 +1421,8 @@
     if ((e.altKey || e.metaKey || e.ctrlKey) && e.key === 'ArrowUp' && folder) { e.preventDefault(); upAndFocus(); }
     // Go to a folder by its path: / as in GNOME Files, Cmd or Ctrl + Shift + G as in Finder.
     if ((e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g')) { e.preventDefault(); askGoTo(); }
+    // Bigger and smaller icons in the icon view (not the page's own zoom, which the shell keeps).
+    if (icons && (e.metaKey || e.ctrlKey) && ['=', '+', '-', '_'].includes(e.key)) { e.preventDefault(); stepZoom(e.key === '-' || e.key === '_' ? -1 : 1); }
   });
   // Go to folder: type a path in this location, as in an address bar. Typed with or without the
   // slashes at either end; a folder that is not there says so and stays put.
@@ -1901,6 +1925,7 @@
     let kept = {};
     try { kept = JSON.parse(localStorage.getItem(VIEW_KEY)) || {}; } catch { /* the defaults */ }
     if (['name', 'kind', 'size', 'modified'].includes(kept.sort?.key) && [1, -1].includes(kept.sort?.dir)) sort = kept.sort;
+    if (ZOOMS.includes(kept.zoom)) zoom = kept.zoom;
     showSort();
     icons = kept.icons === true;
     $('view').setAttribute('aria-pressed', String(icons));

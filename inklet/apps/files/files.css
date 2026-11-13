@@ -43,10 +43,10 @@
 .list tr:focus-visible td:first-child { box-shadow: inset 3px 0 0 var(--p-accent); }
 .ico { display: inline-block; width: 1.5em; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: 4px; padding: 10px; }
+.grid { --zoom: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(6.5rem * var(--zoom)), 1fr)); gap: 4px; padding: 10px; }
 .grid button { display: grid; justify-items: center; gap: 4px; padding: 10px 4px; cursor: default; background: none; border: 0; border-radius: var(--p-corner); overflow-wrap: anywhere; font-size: 13.5px; }
 .grid button:hover { background: var(--p-side); }
-.grid .ico { width: auto; font-size: 2rem; line-height: 1; }
+.grid .ico { width: auto; font-size: calc(2rem * var(--zoom)); line-height: 1; }
 
 .empty { max-width: 22rem; margin: 15% auto; padding: 16px; text-align: center; color: var(--p-dim); }
 .empty .tool { margin-top: 10px; }
@@ -98,7 +98,7 @@
 .ico.thumb { vertical-align: middle; line-height: 0; }
 .ico.thumb img { display: inline-block; width: 1.15em; height: 1.15em; object-fit: cover; border-radius: 3px; box-shadow: 0 0 0 1px var(--p-line); }
 .grid .ico.thumb { font-size: inherit; line-height: 1; }
-.grid .ico.thumb img { width: 88px; height: 66px; object-fit: cover; border-radius: 6px; box-shadow: 0 0 0 1px var(--p-line); }
+.grid .ico.thumb img { width: calc(88px * var(--zoom)); height: calc(66px * var(--zoom)); object-fit: cover; border-radius: 6px; box-shadow: 0 0 0 1px var(--p-line); }
 
 /* Where the space goes: a treemap that fills the list pane. */
 .tm-note { margin: 0; padding: 8px 12px; color: var(--p-dim); font-size: 13px; }
