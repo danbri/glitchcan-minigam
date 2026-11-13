@@ -139,3 +139,9 @@
 .choosebar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--p-line); background: var(--p-side); }
 .choosebar[hidden] { display: none; }
 .choosebar .choose-n { font-weight: 600; margin-right: 4px; }
+
+/* Favourite folders at the top of the side panel, each with a ✕ to take it off. */
+#favs .fav { display: flex; align-items: center; }
+#favs .fav > button:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#favs .fav-x { flex: none; width: auto; min-width: 28px; border: 0; background: none; color: var(--p-dim); cursor: pointer; padding: 2px 6px; opacity: .6; }
+#favs .fav-x:hover, #favs .fav-x:focus-visible { opacity: 1; }

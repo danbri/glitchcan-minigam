@@ -702,6 +702,32 @@ try {
   await f.evaluate(async () => { for (const n of ['s1', 's2', 's3']) await foafos.pod.delete(`notes/${n}.txt`); await window.__files.go('notes/'); });
   check(String(sThree) === 'notes/s1.txt,notes/s2.txt,notes/s3.txt' && sFocus === 'notes/s3.txt' && String(sTwo) === 'notes/s1.txt,notes/s2.txt' && /Delete 2 files\?/.test(sAsked),
     `Shift + arrows extend the choice from the keyboard (${JSON.stringify({ sThree, sFocus, sTwo, sAsked })})`);
+  // Favourites: a folder's panel keeps it in the side panel; one click there opens it; ✕ takes it off
+  await f.evaluate(async () => {
+    await foafos.pod.put('notes/fav/a.txt', 'a', { contentType: 'text/plain' });
+    const filter = document.getElementById('filter'); filter.value = ''; filter.dispatchEvent(new Event('input'));
+    await window.__files.go('notes/');
+  });
+  await page.waitForTimeout(400);
+  await f.click('#items tbody tr[data-path="notes/fav/"]');
+  await page.waitForTimeout(300);
+  await f.evaluate(() => [...document.querySelectorAll('#detail button')].find((b) => /Keep in the side panel/.test(b.textContent)).click());
+  const favShown = await f.evaluate(() => ({ title: !document.getElementById('favs-title').hidden, items: [...document.querySelectorAll('#favs .fav > button:first-child')].map((b) => b.textContent) }));
+  await f.evaluate(() => window.__files.go(''));
+  await page.waitForTimeout(300);
+  await f.evaluate(() => document.getElementById('panes').dataset.places = 'open');
+  await page.waitForTimeout(300);   // the panel slides in on a narrow window
+  const favW = await f.evaluate(() => Math.round(document.querySelector('#favs .fav > button').getBoundingClientRect().width));
+  await f.click('#favs .fav > button:first-child');
+  await page.waitForTimeout(400);
+  const favWent = await f.evaluate(() => window.__files.state().folder);
+  await f.evaluate(() => document.getElementById('panes').dataset.places = 'open');   // opening a favourite put the panel away
+  await page.waitForTimeout(300);
+  await f.click('#favs .fav-x');
+  const favAfter = await f.evaluate(() => ({ title: !document.getElementById('favs-title').hidden, n: document.querySelectorAll('#favs .fav').length }));
+  await f.evaluate(async () => { await foafos.pod.delete('notes/fav/a.txt'); await window.__files.go('notes/'); });
+  check(favShown.title && String(favShown.items) === '⭐ fav' && favW > 100 && favWent === 'notes/fav/' && !favAfter.title && favAfter.n === 0,
+    `a folder kept in the side panel opens from there, and ✕ takes it off (${JSON.stringify({ favShown, favW, favWent, favAfter })})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });
@@ -837,7 +863,7 @@ try {
   const other = notes ? await notes.evaluate(() => Promise.all([foafos.pod.locations(), foafos.pod.use('device'), foafos.pod.addFolder()])) : null;
   check(denied && other?.every((r) => r.ok === false && r.reason === 'denied'), `an ordinary app cannot list or switch locations (${other?.map((r) => r.reason)})`);
   check(!errors.length, `no page errors (${errors.slice(0, 2).join(' | ').slice(0, 160)})`);
-} catch (e) { check(false, `exception: ${e.message.slice(0, 300)}`); }
+} catch (e) { check(false, `exception: ${e.message.slice(0, 1200).replace(/\n/g, " / ")}`); }
 await cleanup();
 console.log(failed ? `${failed} FAILED` : 'ALL PASS');
 process.exit(failed ? 1 : 0);
