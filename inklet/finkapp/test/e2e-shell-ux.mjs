@@ -958,6 +958,23 @@ try {
   await phone.page.waitForTimeout(400);
   const small = await phone.page.evaluate(() => [...document.querySelectorAll('.foafos-window-btn')].filter((b) => b.offsetParent && b.getBoundingClientRect().height < 40).length);
   check(small === 0, 'window buttons are touch sized on a phone');
+  // A finger held on the empty desktop opens the desktop's menu (iOS sends no contextmenu)
+  {
+    await phone.page.evaluate(async () => { document.getElementById('foafos-home')?.remove(); FoafOS.exitOverview(null); await new Promise((ok) => setTimeout(ok, 500)); if (document.querySelector('.foafos-window:not(.minimized):not(.ws-away)')) FoafOS.showDesktop(); });
+    await phone.page.waitForTimeout(400);
+    const spot = await phone.page.evaluate(() => { for (let y = 120; y < innerHeight - 120; y += 40) for (let x = 40; x < innerWidth - 40; x += 40) { const e = document.elementFromPoint(x, y); if (e === document.body || e?.id === 'narrative-view') return { x, y }; } return null; });
+    const lcdp = await phone.ctx.newCDPSession(phone.page);
+    if (spot) {
+      await lcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [spot] });
+      await phone.page.waitForTimeout(800);
+      await lcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    }
+    await phone.page.waitForTimeout(200);
+    const rows = await phone.page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button span')].map((x) => x.textContent));
+    await phone.page.evaluate(() => { document.getElementById('foafos-win-menu')?.remove(); if (FoafOS.desktopShown()) FoafOS.showDesktop(); });
+    await phone.page.waitForTimeout(400);
+    check(spot && rows[0] === 'All apps' && rows.includes('Widgets') && !rows.includes('Keys'), `a long press on the empty desktop opens its menu, without Keys on a phone (${JSON.stringify({ spot, rows })})`);
+  }
   await phone.ctx.close();
 } catch (e) {
   console.log(`FAIL exception: ${e.message}`);
