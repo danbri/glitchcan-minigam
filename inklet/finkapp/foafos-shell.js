@@ -2993,10 +2993,12 @@ function buildUI() {
     closeAll?.addEventListener('click', () => {
       if (!closeAll.dataset.sure) { closeAll.dataset.sure = '1'; closeAll.textContent = `Close all ${wins.length}?`; closeAll.classList.add('sure'); return; }
       exitOverview(null);
+      const n = FoafOS.closedCount();
       for (const w of wins) {
         if (w.id === 'minigame-view') continue;          // the story is left; it has its own way out
         w.querySelector('.foafos-window-close')?.click();
       }
+      FoafOS.closedSince(n);                             // one Reopen brings them all back
       bus.publish('wm.closeall', { summary: `closed all windows on workspace ${FoafOS.workspace}` });
     });
     // With more than one workspace, a button for each, as Mission Control's row of Spaces: the one
@@ -3169,7 +3171,7 @@ function buildUI() {
     const app = appId && (appById(appId) || widgetSpec(appId));
     if (!app || app.surface === 'chrome') return;
     closedApps.push(appId);
-    if (closedApps.length > 10) closedApps.shift();
+    if (closedApps.length > 10 && !batching) closedApps.shift();
     showReopen();
   }
   function showReopen() {
@@ -3178,12 +3180,27 @@ function buildUI() {
     const last = closedApps.at(-1);
     row.hidden = !last;
     const label = row.querySelector('.wm-label');
-    if (label) label.textContent = last ? `Reopen ${closedName(last)}` : 'Reopen closed app';
+    if (label) label.textContent = !last ? 'Reopen closed app' : Array.isArray(last) ? `Reopen the ${last.length} windows` : `Reopen ${closedName(last)}`;
   }
+  // What Close all closed is one entry, so one Reopen brings them all back, as a browser reopens a
+  // closed window with all its tabs.
+  let batching = false;
+  FoafOS.closedSince = (n) => {
+    batching = false;
+    const batch = closedApps.splice(n);
+    if (batch.length > 1) closedApps.push(batch); else closedApps.push(...batch);
+    while (closedApps.length > 10) closedApps.shift();
+    showReopen();
+  };
+  FoafOS.closedCount = () => { batching = true; return closedApps.length; };
   FoafOS.reopenClosed = () => {
     const appId = closedApps.pop();
     showReopen();
     if (!appId) return null;
+    if (Array.isArray(appId)) {
+      bus.publish('wm.reopen', { summary: `reopened ${appId.length} windows`, ids: appId });
+      return appId.map((id) => { const w = widgetSpec(id); return w ? openWidgetWindow(w) : launchApp(id); }).at(-1);
+    }
     bus.publish('wm.reopen', { summary: `reopened ${closedName(appId)}`, id: appId });
     const widget = widgetSpec(appId);
     return widget ? openWidgetWindow(widget) : launchApp(appId);
