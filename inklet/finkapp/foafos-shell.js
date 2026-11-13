@@ -4086,8 +4086,6 @@ function buildUI() {
     // What Foafos itself runs on comes first, in one place, and is not repeated below.
     const ESSENTIALS = ['system', 'chat', 'files', 'backstage', 'activity'];
     const essentials = ESSENTIALS.map(appById).filter((a) => a && rootOffers(ROOT, a.id));
-    let recent = [];
-    try { recent = (JSON.parse(localStorage.getItem(RECENT_KEY)) || []).map(appById).filter((a) => a && rootOffers(ROOT, a.id) && a.surface !== 'chrome'); } catch { /* none yet */ }
     // A widget is pinned by its id ("widget-tally") and opened as from the Widgets folder.
     const widgetEntry = (w) => { const [icon, ...name] = w.title.split(' '); return { id: `widget-${w.key}`, icon, name: name.join(' '), desc: w.desc || 'A small sandboxed widget', run: () => openWidgetWindow(w) }; };
     const pinnedEntry = (id) => {
@@ -4096,6 +4094,9 @@ function buildUI() {
       return a && rootOffers(ROOT, a.id) ? a : null;
     };
     const pinned = pinnedIds().map(pinnedEntry).filter(Boolean);
+    // Recent holds widgets too ("widget-tally"), opened as from the Widgets folder.
+    let recent = [];
+    try { recent = (JSON.parse(localStorage.getItem(RECENT_KEY)) || []).map(pinnedEntry).filter((a) => a && a.surface !== 'chrome'); } catch { /* none yet */ }
     const groups = [...(pinned.length ? [{ id: 'pinned', label: 'Pinned', icon: '📌', apps: pinned }] : []),
       ...(recent.length ? [{ id: 'recent', label: 'Recent', icon: '🕘', apps: recent }] : []),
       { id: 'essentials', label: 'Essentials', icon: '⭐', apps: essentials },
@@ -4148,7 +4149,7 @@ function buildUI() {
         b.setAttribute('aria-label',
           `${app.name}${isOpen ? ', open' : ''}${app.desc ? ` — ${app.desc}` : ''}${isChrome ? (chromeOn ? ', on' : ', off') : ''}`);
         b.addEventListener('click', () => {
-          if (app.run) { app.run(); home.remove(); return; }
+          if (app.run) { noteRecent(app.id); app.run(); home.remove(); return; }
           noteRecent(app.id);
           launchApp(app.id);
           // A toggle that closes the panel it lives in cannot be pressed

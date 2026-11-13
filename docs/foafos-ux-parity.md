@@ -57,7 +57,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
 | Hold the menu handle for All windows, as holding a phone's gesture bar shows recent apps; its title lists every gesture | Done: #1133 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
-| A window's title says what is open in it (Files — notes, Notes — trip), the app's name always first: foafos.setTitle (every desktop) | Done: #1135, this PR |
+| A window's title says what is open in it (Files — notes, Notes — trip), the app's name always first: foafos.setTitle (every desktop) | Done: #1135, #1136 |
 | Next window of the same app: Ctrl ; ` or the window menu (a Mac's Cmd+`, GNOME Super+`) | Done: #1126 |
 | Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: #1124 |
 | No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: #1102 |
@@ -79,6 +79,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Search files from All apps: a row hands what was typed to Files, which searches every folder with its own access (Start menu, Spotlight) | Done: #1131 |
 | What each app or widget does, in search and on a long press or right-click (phones, desktops) | Done: #997, #1007, #1062 |
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
+| Widgets opened from All apps show in Recent with the apps (phones' recent widgets, Start's Recent) | Done: this PR |
 | Pinned apps in your own order: Alt+arrows, or Move earlier/later on a long press (docks, home screens) | Done: #1101 |
 | A dot under each app that is open (docks) | Done: #1049, #1057 |
 | Arrow keys through All apps; no on-screen keyboard thrown up on a phone | Done: #1008, #1013 |
