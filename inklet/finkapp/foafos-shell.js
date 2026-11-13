@@ -3521,7 +3521,9 @@ function buildUI() {
     // and so does a window you click in. A click inside an app's frame stays in the frame.
     FoafOS.raiseWindow?.(win);
     win.addEventListener('pointerdown', () => { if (win.style.zIndex !== '2640') FoafOS.raiseWindow(win); }, true);
-    win.setAttribute('role', 'group');
+    // A labelled region is a landmark: a screen reader can jump from window to window (VoiceOver's
+    // rotor, NVDA's D), each named by its title, which foafos.setTitle keeps up to date.
+    win.setAttribute('role', 'region');
     win.setAttribute('aria-label', title);
     // Fit the screen, then cascade inside it. A fixed 380px window with a
     // cascade offset put its right edge 26-98px past a 390px phone, and

@@ -899,6 +899,11 @@ try {
     });
     check(r.rows[0] === 'Show' && r.rows.includes('Close') && r.rows.some((x) => /^Move to workspace 2$/.test(x)) && r.moved === '2' && r.hitsLeft === 0, `a right-click on an All windows card offers its window's choices, Move works, and no card is left behind (${JSON.stringify(r)})`);
   }
+  // Each window is a named landmark, so a screen reader can jump between them
+  {
+    const marks = await page.evaluate(() => [...document.querySelectorAll('.foafos-window:not(.ws-away):not(.minimized)')].map((w) => `${w.getAttribute('role')}:${w.getAttribute('aria-label') || ''}`));
+    check(marks.length > 1 && marks.every((m) => /^region:.+/.test(m)), `each window is a named landmark (${marks.slice(0, 4).join(' | ')})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
