@@ -1357,6 +1357,24 @@ try {
     check(/^Copied the path notes\/cp\/where\.txt/.test(said) && clip === 'notes/cp/where.txt' && back.folder === 'notes/cp/' && back.picked === 'notes/cp/where.txt',
       `Copy path puts the file's path on the clipboard, and Go to folder comes back to it (${said.slice(0, 40)}; ${clip}; ${JSON.stringify(back)})`);
   }
+  // In the icon view, Ctrl + plus makes the icons bigger, Ctrl + minus smaller; kept with the view
+  {
+    const r = await f.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      await window.__files.go('notes/');
+      const wasIcons = document.getElementById('view').getAttribute('aria-pressed') === 'true';
+      if (!wasIcons) document.getElementById('view').click();
+      await wait(100);
+      const size = () => parseFloat(getComputedStyle(document.querySelector('#items .grid .ico')).fontSize);
+      const key = (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, ctrlKey: true, bubbles: true, cancelable: true }));
+      const s0 = size(); key('='); await wait(50); const s1 = size(); key('-'); key('-'); await wait(50); const s2 = size();
+      const kept = JSON.parse(localStorage.getItem('files.view') || '{}').zoom;
+      key('='); await wait(50);
+      if (!wasIcons) document.getElementById('view').click();
+      return { s0, s1, s2, kept };
+    });
+    check(r.s1 > r.s0 && r.s2 < r.s0 && r.kept === 0.75, `Ctrl + plus and minus size the icons, and the size is kept (${JSON.stringify(r)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

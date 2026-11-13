@@ -19,9 +19,10 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Type a name to jump to it (desktops) | Done: type-ahead in the list |
 | Cmd or Ctrl + Down opens, Cmd, Ctrl or Alt + Up goes up from anywhere in Files, the keyboard landing where you were (Finder, Explorer) | Done: #1134 |
 | Go to a folder by typing its path: /, Cmd or Ctrl + Shift + G, or click the current folder's name (GNOME Files, Finder, Explorer's address bar) | Done: #1125 |
-| Copy path from an item's menu; a file's path in Go to folder opens its folder with it chosen (Finder's Copy as pathname) | Done: this PR |
+| Copy path from an item's menu; a file's path in Go to folder opens its folder with it chosen (Finder's Copy as pathname) | Done: #1161 |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
+| Bigger or smaller icons: Ctrl or Cmd + plus and minus, or Ctrl + the wheel or a pinch, kept with the view (Finder, Explorer) | Done: this PR |
 | A Sort picker where the list has no column heads (a narrow window, a phone): name, newest, largest, kind (phone file managers) | Done: #1150 |
 | Names sort as people expect: Photo 2 before Photo 10, capitals aside (Finder, Explorer) | Done: #1123 |
 | Thumbnails for pictures (desktops, phones) | Done: #1018 |
