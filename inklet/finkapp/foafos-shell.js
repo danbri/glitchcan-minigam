@@ -2894,7 +2894,8 @@ function buildUI() {
       });
       const endSwipe = (e) => {
         if (!swipe) return;
-        const dy = e.clientY - swipe.y;
+        // A cancelled pointer (the browser took the gesture over) is never a swipe.
+        const dy = e.type === 'pointercancel' ? 0 : e.clientY - swipe.y;
         swipe = null;
         win.classList.remove('foafos-ov-dragging');
         win.style.opacity = '';
@@ -2904,6 +2905,11 @@ function buildUI() {
       };
       hit.addEventListener('pointerup', endSwipe);
       hit.addEventListener('pointercancel', endSwipe);
+      // A card dragged onto a workspace button moves its window there (with a mouse; the window
+      // menu's "Move to workspace" does it by keys or touch).
+      // Only where there is a mouse: on a touch screen the card is swiped up to close instead.
+      hit.draggable = !!window.matchMedia?.('(any-pointer: fine)').matches;
+      hit.addEventListener('dragstart', (e) => { e.dataTransfer.setData('application/x-foafos-wid', win.dataset.wid || ''); e.dataTransfer.effectAllowed = 'move'; });
       win.appendChild(hit);
       // Close from here, as a task switcher does. Sized against the card's own scale.
       const x = document.createElement('button');
@@ -2965,6 +2971,17 @@ function buildUI() {
       b.setAttribute('aria-label', `Workspace ${k + 1}`);
       b.setAttribute('aria-pressed', String(k + 1 === wsInfo.at));
       b.addEventListener('click', () => { if (k + 1 === wsInfo.at) return; exitOverview(null); FoafOS.goWorkspace(k + 1); setTimeout(enterOverview, 350); });
+      b.addEventListener('dragover', (e) => { if ([...(e.dataTransfer?.types || [])].includes('application/x-foafos-wid') && k + 1 !== wsInfo.at) { e.preventDefault(); b.classList.add('drop'); } });
+      b.addEventListener('dragleave', () => b.classList.remove('drop'));
+      b.addEventListener('drop', (e) => {
+        const wid = e.dataTransfer?.getData('application/x-foafos-wid');
+        const w = wid && document.querySelector(`.foafos-window[data-wid="${CSS.escape(wid)}"]`);
+        if (!w) return;
+        e.preventDefault();
+        exitOverview(null);
+        FoafOS.moveToWorkspace(w, k + 1);
+        setTimeout(() => { if (document.querySelector('.foafos-window:not(.ws-away)')) enterOverview(); }, 350);
+      });
       return b;
     }));
     document.body.appendChild(strip);

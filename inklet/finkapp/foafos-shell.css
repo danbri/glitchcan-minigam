@@ -1640,3 +1640,4 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .foafos-ov-wsbtn { min-width: 32px; height: 28px; border-radius: 6px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; cursor: pointer; opacity: .7; }
 .foafos-ov-wsbtn[aria-pressed="true"] { opacity: 1; font-weight: 700; background: color-mix(in srgb, currentColor 15%, transparent); }
 @media (pointer: coarse) { .foafos-ov-wsbtn { min-width: 44px; height: 40px; } }
+.foafos-ov-wsbtn.drop { opacity: 1; outline: 2px solid currentColor; outline-offset: 2px; }
