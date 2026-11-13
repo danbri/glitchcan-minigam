@@ -303,6 +303,32 @@ try {
   const afterEscape = await page.evaluate(() => ({ home: !!document.getElementById('foafos-home'), overlayState: !!history.state?.foafosOverlay }));
   check(homeOpen && !homeAfterBack.home && homeAfterBack.shell && !homeAfterBack.overlayState && ovOpen && !ovAfterBack && !afterEscape.home && !afterEscape.overlayState && page.url() === url0,
     `Back closes All apps and All windows, and the shell stays (${JSON.stringify({ homeAfterBack, ovAfterBack, afterEscape })})`);
+  // Back closes an app's sheet first and All apps second; and the keys sheet; and closing All apps
+  // with its sheet open leaves no stale entry
+  {
+    const r = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      const depth0 = history.length;
+      FoafOS.openHome(); await wait(200);
+      document.querySelector('#foafos-home .foafos-app[data-app="files"]').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); await wait(100);
+      const sheet0 = !!document.querySelector('.foafos-app-sheet');
+      history.back(); await wait(300);
+      const s1 = { sheet: !!document.querySelector('.foafos-app-sheet'), home: !!document.getElementById('foafos-home') };
+      history.back(); await wait(300);
+      const s2 = { home: !!document.getElementById('foafos-home'), overlay: !!history.state?.foafosOverlay };
+      FoafOS.openHome(); await wait(200);
+      document.querySelector('#foafos-home .foafos-app[data-app="files"]').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); await wait(100);
+      document.getElementById('foafos-home').remove(); await wait(400);
+      const s3 = { overlay: !!history.state?.foafosOverlay, shell: !!window.FoafOS?.launchApp };
+      document.getElementById('wm-sys-keys').click(); await wait(200);
+      const k0 = !!document.getElementById('wm-keys-sheet');
+      history.back(); await wait(300);
+      const k1 = !!document.getElementById('wm-keys-sheet');
+      return { sheet0, s1, s2, s3, k0, k1 };
+    });
+    check(r.sheet0 && !r.s1.sheet && r.s1.home && !r.s2.home && !r.s2.overlay && !r.s3.overlay && r.s3.shell && r.k0 && !r.k1 && page.url() === url0,
+      `Back closes an app's sheet, then All apps, and the keys sheet, leaving no stale entry (${JSON.stringify(r)})`);
+  }
 
   // Ctrl ; v moves and resizes the front window with the keyboard; Enter keeps it, Escape puts it back
   await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); if (w.classList.contains('maximized')) w.querySelector('.foafos-window-max').click(); Object.assign(w.style, { left: '200px', top: '120px' }); FoafOS.raiseWindow(w); });

@@ -1147,6 +1147,7 @@ window.FinkWM = {
         sheet.querySelector('.foafos-overlay-close').addEventListener('click', shut);
         sheet.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); shut(); } });
         document.body.appendChild(sheet);
+        window.FoafOS?.closeOnBack?.(sheet, shut);   // a phone's Back closes it
         sheet.querySelector('.foafos-overlay-close').focus();
     },
 
