@@ -1309,6 +1309,29 @@ try {
     check(rows[0] === 'Open' && rows.includes('Keep in the side panel') && /kept in the side panel/.test(said) && rows2.includes('Remove from the side panel'),
       `a right-click on a side-panel folder opens its menu, and Keep works from it (${JSON.stringify({ rows, said, rows2 })})`);
   }
+  // Search results have a row of kinds; Pictures shows only the pictures
+  {
+    const r = await f.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      await foafos.pod.put('notes/kf/kfpic.png', new Uint8Array([137, 80, 78, 71]).buffer, { contentType: 'image/png' });
+      await foafos.pod.put('notes/kf/kfdoc.txt', 'kf', { contentType: 'text/plain' });
+      await window.__files.go('notes/');
+      document.getElementById('filter').value = 'kf';
+      document.getElementById('filter').dispatchEvent(new Event('input', { bubbles: true }));
+      await wait(100);
+      document.querySelector('.search-further button')?.click();
+      for (let i = 0; i < 40 && !document.querySelector('.kind-chips'); i++) await wait(150);
+      const chips = [...document.querySelectorAll('.kind-chip')].map((b) => b.textContent);
+      [...document.querySelectorAll('.kind-chip')].find((b) => b.textContent.startsWith('Pictures'))?.click(); await wait(100);
+      const only = [...document.querySelectorAll('#items tbody tr[data-path]')].map((x) => x.dataset.path.split('/').pop());
+      document.getElementById('filter').value = '';
+      for (const p of ['notes/kf/kfpic.png', 'notes/kf/kfdoc.txt', 'notes/kf/']) await foafos.pod.delete(p);
+      await window.__files.go('notes/');
+      return { chips, only };
+    });
+    check(r.chips[0]?.startsWith('All') && r.chips.some((c) => /^Pictures 1$/.test(c)) && r.chips.some((c) => /^Documents 1$/.test(c)) && String(r.only) === 'kfpic.png',
+      `search results have a row of kinds, and Pictures shows only the pictures (${JSON.stringify(r)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

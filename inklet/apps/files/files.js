@@ -187,7 +187,7 @@
     if (mine !== listing) return;
     if (r.reason === 'needs-ok') takeLocations(await foafos.pod.locations());
     if (!r.ok) { say(explain(r), true); return; }
-    searchResults = false;
+    searchResults = false; kindFilter = null;
     if (path !== folder) dropThumbs();
     // Back and Forward, as in a browser: a new place clears Forward.
     if (path !== folder && via === 'back') ahead.push(folder);
@@ -247,7 +247,7 @@
       else { found.push({ path: hit.path, container: false, snippet: hit.snippet }); inFiles++; }
     }
     items = found;
-    searchResults = true;
+    searchResults = true; kindFilter = null;
     recentOrder = false;
     pick(null);
     draw();
@@ -256,11 +256,16 @@
   }
 
   let searchResults = false;
+  // In search results, a row of kinds narrows them, as Finder's and Explorer's search filters do.
+  const KIND_GROUPS = [['Folders', ['Folder']], ['Pictures', ['Image']], ['Documents', ['Text', 'PDF', 'Table']],
+    ['Sound and video', ['Audio', 'Video']], ['Code and data', ['Code', 'JSON', 'Linked data']], ['Archives', ['Archive']]];
+  let kindFilter = null;
   let recentOrder = false;       // the list is Recent: newest first, not sorted     // the list holds search results: the filter does not narrow them again
   const NAME_ORDER = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
   function shown() {
     const q = searchResults ? '' : $('filter').value.trim().toLowerCase();
-    const rows = items.filter((i) => !q || nameOf(i.path).toLowerCase().includes(q));
+    const group = kindFilter && KIND_GROUPS.find(([g]) => g === kindFilter)?.[1];
+    const rows = items.filter((i) => (!q || nameOf(i.path).toLowerCase().includes(q)) && (!group || group.includes(kindOf(i).name)));
     if (recentOrder) return rows;             // Recent keeps the order they were opened in
     // Names in the order people expect, as Finder and Explorer sort: "Photo 2" before "Photo 10".
     const byName = (a, b) => NAME_ORDER.compare(nameOf(a.path), nameOf(b.path));
@@ -723,6 +728,15 @@
   function drawItems() {
     if (spaceOn) { drawSpace(); return; }
     drawList();
+    if (searchResults && !trashView && items.length) {
+      const counts = KIND_GROUPS.map(([g, kinds]) => [g, items.filter((i) => kinds.includes(kindOf(i).name)).length]).filter(([, n]) => n);
+      if (counts.length > 1 || kindFilter) {
+        const chip = (label, value, n) => h('button', { type: 'button', class: 'kind-chip', 'aria-pressed': String(kindFilter === value),
+          on: { click: () => { kindFilter = value; drawItems(); } } }, n == null ? label : `${label} ${n}`);
+        $('items').prepend(h('div', { class: 'kind-chips', role: 'group', 'aria-label': 'Show only' },
+          chip('All', null, items.length), ...counts.map(([g, n]) => chip(g, g, n))));
+      }
+    }
     const more = searchFurther();
     if (more && !$('items').querySelector('.empty')) $('items').append(more);
   }
