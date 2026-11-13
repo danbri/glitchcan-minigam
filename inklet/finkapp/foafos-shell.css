@@ -1591,3 +1591,10 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 #foafos-snap-assist button { text-align: left; padding: 10px 12px; border-radius: 8px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
     background: var(--sk-bg, #fff); color: inherit; font: inherit; cursor: pointer; }
 #foafos-snap-assist button:hover, #foafos-snap-assist button:focus-visible { border-color: var(--sk-accent, #2e6fd1); outline: none; }
+
+/* The sheet of keys (Ctrl ; /, or Keys in the menu). */
+.wm-keys-note { margin: 0 16px 10px; opacity: .75; }
+.wm-keys-table { margin: 0 16px 16px; border-collapse: collapse; width: calc(100% - 32px); max-width: 560px; }
+.wm-keys-table td { padding: 7px 8px; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+.wm-keys-table td:last-child { text-align: right; white-space: nowrap; }
+.wm-keys-table kbd { font: inherit; padding: 2px 6px; border-radius: 5px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); }

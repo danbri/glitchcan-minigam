@@ -70,6 +70,7 @@ window.FinkWM = {
                       'wm-sys-move': () => window.FoafOS?.moveFrontByKeys?.(),
                       'wm-sys-reopen': () => window.FoafOS?.reopenClosed?.(),
                       'wm-sys-nudge': () => window.FoafOS?.runNudge?.(),
+                      'wm-sys-keys': () => this._showKeys(this._seqs || []),
                       'wm-sys-activity': () => window.FoafOS?.openActivity?.() };
         for (const [id, go] of Object.entries(sys)) {
             document.getElementById(id)?.addEventListener('click', () => { this._setCollapsed(true); go(); });
@@ -1039,7 +1040,12 @@ window.FinkWM = {
     // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
     // Not w, t or n, which browsers keep for themselves on Windows and Linux.
     KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s',
-            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;' },
+            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /' },
+    // What each sequence does, for the sheet of keys (Ctrl ; /, or Keys in the menu).
+    KEY_LABELS: { menu: 'Open this menu', apps: 'All apps', windows: 'All windows', tasks: 'Task Manager',
+            next: 'Next window', prev: 'Previous window', last: 'Last window, and back', snapLeft: 'Snap left',
+            snapRight: 'Snap right', snapFull: 'Maximise or restore', hide: 'Minimise window', move: 'Move or resize window',
+            close: 'Close window', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
     _initKeys() {
         let saved = {};
         try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
@@ -1049,7 +1055,7 @@ window.FinkWM = {
             return { name, ctrl, keys: ctrl ? words.slice(1) : words };
         }).filter((s) => s.keys.length);
         // Each menu row shows its keys, as a desktop menu does, so they can be found.
-        const rowFor = { menu: null, apps: 'wm-sys-apps', windows: 'wm-sys-windows', next: 'wm-sys-next', tasks: 'wm-sys-tasks', hide: 'wm-sys-hide', close: 'wm-sys-close', prev: 'wm-sys-prev', reopen: 'wm-sys-reopen', move: 'wm-sys-move', last: 'wm-sys-last' };
+        const rowFor = { menu: null, apps: 'wm-sys-apps', windows: 'wm-sys-windows', next: 'wm-sys-next', tasks: 'wm-sys-tasks', hide: 'wm-sys-hide', close: 'wm-sys-close', prev: 'wm-sys-prev', reopen: 'wm-sys-reopen', move: 'wm-sys-move', last: 'wm-sys-last', keys: 'wm-sys-keys' };
         for (const s of seqs) {
             const row = rowFor[s.name] && document.getElementById(rowFor[s.name]);
             if (!row) continue;
@@ -1074,7 +1080,9 @@ window.FinkWM = {
             reopen: () => window.FoafOS?.reopenClosed?.(),
             move: () => window.FoafOS?.moveFrontByKeys?.(),
             last: () => window.FoafOS?.lastWindow?.(),
+            keys: () => this._showKeys(seqs),
         };
+        this._seqs = seqs;
         let typed = [], at = 0;
         window.addEventListener('keydown', (e) => {
             if (e.repeat || e.key === 'Control') return;
@@ -1094,6 +1102,38 @@ window.FinkWM = {
             const done = live.find((s) => s.keys.length === typed.length);
             if (done) { typed = []; go[done.name]?.(); }
         }, true);
+    },
+
+    // Every key sequence, with what it does, as a desktop's keyboard help does. The keys are the
+    // person's own (localStorage 'foafos.keys'), so the list is always true. Escape or Close shuts it.
+    _showKeys(seqs) {
+        const old = document.getElementById('wm-keys-sheet');
+        if (old) { old.remove(); return; }
+        const sheet = document.createElement('div');
+        sheet.id = 'wm-keys-sheet';
+        sheet.className = 'foafos-overlay';
+        sheet.setAttribute('role', 'dialog');
+        sheet.setAttribute('aria-modal', 'true');
+        sheet.setAttribute('aria-labelledby', 'wm-keys-title');
+        sheet.innerHTML = `<div class="foafos-overlay-head"><h2 id="wm-keys-title">Keys</h2>
+            <button type="button" class="foafos-overlay-close" aria-label="Close keys">✕</button></div>
+            <p class="wm-keys-note">Hold Ctrl, then press the keys in turn. On a Mac, Option+H opens All apps and Option+M this menu.</p>
+            <table class="wm-keys-table"><tbody></tbody></table>`;
+        const order = Object.keys(this.KEY_LABELS);
+        const rows = [...seqs].sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+        for (const s of rows) {
+            const tr = document.createElement('tr');
+            const what = document.createElement('td'); what.textContent = this.KEY_LABELS[s.name] || s.name;
+            const how = document.createElement('td'); const k = document.createElement('kbd');
+            k.textContent = `${s.ctrl ? 'Ctrl ' : ''}${s.keys.join(' ')}`; how.appendChild(k);
+            tr.append(what, how);
+            sheet.querySelector('tbody').appendChild(tr);
+        }
+        const shut = () => sheet.remove();
+        sheet.querySelector('.foafos-overlay-close').addEventListener('click', shut);
+        sheet.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); shut(); } });
+        document.body.appendChild(sheet);
+        sheet.querySelector('.foafos-overlay-close').focus();
     },
 
     _loadDock() {

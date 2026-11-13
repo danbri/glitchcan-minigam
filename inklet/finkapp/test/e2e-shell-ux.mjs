@@ -338,6 +338,14 @@ try {
   check(await page.evaluate(() => !document.getElementById('wm-chrome').classList.contains('collapsed')), 'ctrl ; f o a f opens the menu');
   check(await page.evaluate(() => document.querySelectorAll('#wm-open-sect button').length) >= 2, 'the menu lists open windows');
   check(await page.evaluate(() => ['wm-sys-apps', 'wm-sys-windows', 'wm-sys-next', 'wm-sys-tasks', 'wm-sys-hide', 'wm-sys-close', 'wm-sys-prev'].every((id) => /^Ctrl ; /.test(document.querySelector(`#${id} .wm-keys`)?.textContent || '') && document.querySelector(`#${id} .wm-keys`).offsetWidth > 0)), 'the menu shows each row\'s keys');
+  // Ctrl ; / (or Keys in the menu) lists every key sequence with what it does; Escape shuts it
+  await page.keyboard.press('Escape');
+  await keys(page, [';', '/']);
+  const sheetRows = await page.evaluate(() => [...document.querySelectorAll('#wm-keys-sheet tr')].map((r) => `${r.cells[0].textContent}=${r.cells[1].textContent}`));
+  await page.keyboard.press('Escape');
+  const sheetGone = await page.evaluate(() => !document.getElementById('wm-keys-sheet'));
+  check(sheetRows.length >= 15 && sheetRows.includes('All apps=Ctrl ; a') && sheetRows.includes('Last window, and back=Ctrl ; ;') && sheetRows.includes('This list of keys=Ctrl ; /') && sheetGone,
+    `ctrl ; / shows every key with what it does (${sheetRows.length}: ${sheetRows.slice(0, 3).join(', ')}...)`);
   await page.evaluate(() => FinkWM._setCollapsed(true));
   await keys(page, [';', 's']);
   await page.waitForTimeout(600);
