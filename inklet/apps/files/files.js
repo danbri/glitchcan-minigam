@@ -304,8 +304,55 @@
     });
     el.addEventListener('pointermove', (e) => { if (at && Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) clearTimeout(timer); });
     for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, () => clearTimeout(timer));
-    el.addEventListener('contextmenu', (e) => { if (el._held || at) e.preventDefault(); });
+    el.addEventListener('contextmenu', (e) => {
+      if (el._held || at) { e.preventDefault(); at = null; return; }   // a long press chose it; no menu
+      e.preventDefault();
+      itemMenu(it, e.clientX, e.clientY);
+    });
     el.addEventListener('click', (e) => { if (el._held) { el._held = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  }
+  // An item's menu, as every desktop file manager has: a right-click, the Menu key or Shift+F10 on
+  // an item. It is picked first (or, if it is among several chosen, the menu acts on them all), and
+  // the menu offers what its panel and keys do, with the keys named.
+  async function itemMenu(it, x, y) {
+    document.querySelector('.ctx-menu')?.remove();
+    const many = chosen.size > 1 && chosen.has(it.path) ? [...chosen] : null;
+    if (!many) { clearChosen(); await pick(it); }
+    const ro = inArchive() || !!it.trashId;
+    const mac = /Mac/.test(navigator.platform);
+    const rows = many ? [
+      [`Copy ${many.length} items`, mac ? '⌘C' : 'Ctrl+C', () => holdPaths(many, false)],
+      ro ? null : [`Cut ${many.length} items`, mac ? '⌘X' : 'Ctrl+X', () => holdPaths(many, true)],
+      [`Download ${many.length} items`, '', () => download(many)],
+      ro ? null : ['Compress', '', () => compress(many)],
+      ro ? null : [`Move ${many.length} items to the Trash`, mac ? '⌘⌫' : 'Delete', () => askDeleteChosen(), 'danger'],
+    ] : [
+      ['Open', 'Enter', () => activate(it)],
+      ro ? null : ['Rename', 'F2', () => askRename()],
+      ro ? null : ['Duplicate', '', () => (it.container ? duplicateFolder(it.path) : duplicate())],
+      ['Copy', mac ? '⌘C' : 'Ctrl+C', () => holdPaths([it.path], false)],
+      ro ? null : ['Cut', mac ? '⌘X' : 'Ctrl+X', () => holdPaths([it.path], true)],
+      [it.container ? 'Download as .zip' : 'Download', '', () => download([it.path])],
+      ro ? null : ['Compress', '', () => compress([it.path])],
+      searchResults ? ['Show in folder', '', () => showInFolder(it.path)] : null,
+      ro ? null : [it.container ? 'Delete' : 'Move to the Trash', mac ? '⌘⌫' : 'Delete', () => askDelete(), 'danger'],
+    ];
+    const menu = h('div', { class: 'ctx-menu', role: 'menu', 'aria-label': many ? `${many.length} items` : nameOf(it.path) },
+      ...rows.filter(Boolean).map(([label, keys, run, cls]) => h('button', { type: 'button', role: 'menuitem', class: cls || '',
+        on: { click: async () => { close(); await run(); } } }, h('span', {}, label), h('kbd', {}, keys))));
+    const close = () => { menu.remove(); document.removeEventListener('pointerdown', away, true); };
+    const away = (e) => { if (!menu.contains(e.target)) close(); };
+    menu.addEventListener('keydown', (e) => {
+      const bs = [...menu.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); document.querySelector(`#items [data-path="${CSS.escape(it.path)}"]`)?.focus(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length].focus(); }
+    });
+    document.body.appendChild(menu);
+    const r = menu.getBoundingClientRect();
+    menu.style.left = `${Math.max(4, Math.min(x, innerWidth - r.width - 4))}px`;
+    menu.style.top = `${Math.max(4, Math.min(y, innerHeight - r.height - 4))}px`;
+    menu.querySelector('button')?.focus();
+    setTimeout(() => document.addEventListener('pointerdown', away, true), 0);
   }
   function asDraggable(el, it) {
     asChoosable(el, it);
@@ -1302,6 +1349,12 @@
       e.preventDefault();
       const it = items.find((i) => i.path === e.target.dataset.path);
       if (it) { await pick(it); e.target.focus(); }
+      return;
+    }
+    // The Menu key or Shift+F10 opens the item's menu, as a right-click does.
+    if (at >= 0 && (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10'))) {
+      const it = items.find((i) => i.path === e.target.dataset.path);
+      if (it) { e.preventDefault(); const r = e.target.getBoundingClientRect(); itemMenu(it, r.left + 24, r.bottom); }
       return;
     }
     // Shift + arrows extend the choice from where it started, as in a desktop's file manager:

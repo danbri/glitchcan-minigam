@@ -31,6 +31,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | The folder keeps up with files saved by other apps; pull down to refresh on a phone (desktops, phones) | Done: #1108 |
 | Recent files (desktops, phones) | Done: #1072 |
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
+| A right-click (or the Menu key, Shift+F10) on an item opens its menu: Open, Rename, Duplicate, Copy, Cut, Download, Compress, Trash; on several chosen, for them all (every desktop) | Done: this PR |
 | Duplicate a file, or a folder with all in it (macOS) | Done: #1034, #1149 |
 | Drop files from the computer; paste files, screenshots and text (desktops) | Done: #1009, #1053 |
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
@@ -112,7 +113,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Resize from any edge or corner, not only the bottom-right (all desktops) | Done: #1079 |
 | Double-click the top or bottom edge for the full height (Windows) | Done: #1103 |
 | Keys for the four quarters: Ctrl ; i steps round them (Windows, GNOME) | Done: #1078 |
-| Snap layouts: rest the mouse on Maximise to pick a half or a quarter (Windows 11) | Done: this PR |
+| Snap layouts: rest the mouse on Maximise to pick a half or a quarter (Windows 11) | Done: #1154 |
 
 ## Across all four
 

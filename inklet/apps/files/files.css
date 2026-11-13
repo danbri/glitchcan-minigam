@@ -174,3 +174,10 @@
 
 /* The Sort picker: only where the list has no column heads to sort by (a narrow window). */
 #sort-pick { display: none; min-height: 34px; max-width: 6.5rem; padding: 0 4px; background: none; border: 1px solid var(--p-line); border-radius: var(--p-corner); color: inherit; font: inherit; }
+
+/* An item's menu (right-click, the Menu key, Shift+F10). */
+.ctx-menu { position: fixed; z-index: 20; min-width: 12rem; padding: 4px; background: var(--p-bg); border: 1px solid var(--p-line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .22); }
+.ctx-menu button { display: flex; width: 100%; gap: 1.5rem; justify-content: space-between; align-items: center; min-height: 30px; padding: 4px 10px; background: none; border: 0; border-radius: 5px; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ctx-menu button:hover, .ctx-menu button:focus-visible { background: var(--p-pick); outline: none; }
+.ctx-menu button.danger { color: #b3261e; }
+.ctx-menu kbd { font: inherit; font-size: .8em; opacity: .6; }
