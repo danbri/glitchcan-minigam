@@ -19,6 +19,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Type a name to jump to it (desktops) | Done: type-ahead in the list |
 | Filter this folder; search every folder and inside files (desktops, phones) | Done: #1025, #1029 |
 | List and icon views, sort by any column, both kept (desktops) | Done: #1017, #1020 |
+| Names sort as people expect: Photo 2 before Photo 10, capitals aside (Finder, Explorer) | Done: this PR |
 | Thumbnails for pictures (desktops, phones) | Done: #1018 |
 | Quick Look: Space shows an item without opening it (macOS) | Done: #1015 |
 | Where the space goes: a treemap (desktop disk tools) | Done: #1021, #1024 |
@@ -117,4 +118,4 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Drag a window's card onto a workspace in All windows to move it there (Mission Control) | Done: #1107 |
 | Take the front window to the next or previous workspace and go with it: Ctrl ; > and < (GNOME Shift+Super+Page Down) | Done: #1120 |
 | Close all of an app's windows from its sheet in All apps (a dock's Quit) | Done: #1121 |
-| Arrange this workspace's windows side by side, filling the screen: Ctrl ; g or the menu (Windows' Show windows side by side, tiling desktops) | Done: this PR |
+| Arrange this workspace's windows side by side, filling the screen: Ctrl ; g or the menu (Windows' Show windows side by side, tiling desktops) | Done: #1122 |

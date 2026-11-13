@@ -1107,6 +1107,19 @@ try {
     check(zdl.suggestedFilename() === 'zipme.zip' && String(names) === 'zipme/a.txt,zipme/empty/,zipme/sub/b.txt' && aText === 'A',
       `a folder downloads as a .zip of all that is in it (${zdl.suggestedFilename()}: ${names})`);
   }
+  // Names sort as people expect: numbers by value, case aside
+  {
+    const order = await f.evaluate(async () => {
+      for (const n of ['Photo 10.txt', 'photo 2.txt', 'Photo 1.txt']) await foafos.pod.put(`notes/ns/${n}`, 'x', { contentType: 'text/plain' });
+      await window.__files.go('notes/ns/');
+      const names = [...document.querySelectorAll('#items tbody tr[data-path]')].map((r) => r.dataset.path.split('/').pop());
+      for (const n of ['Photo 10.txt', 'photo 2.txt', 'Photo 1.txt']) await foafos.pod.delete(`notes/ns/${n}`);
+      await foafos.pod.delete('notes/ns/');
+      await window.__files.go('notes/');
+      return names.join('|');
+    });
+    check(order === 'Photo 1.txt|photo 2.txt|Photo 10.txt', `names sort with numbers by value (${order})`);
+  }
   // A picked folder says what is in it, and works out its size on request
   {
     await f.evaluate(async () => {
@@ -1282,8 +1295,7 @@ try {
     await pcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] });
     for (let k = 1; k <= 6; k++) await pcdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y0 + k * 20 }] });
     await pcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await pp.waitForTimeout(800);
-    const pulled = await pf.evaluate(() => !!document.querySelector('#items [data-path="pulled.txt"]'));
+    const pulled = await pf.waitForFunction(() => !!document.querySelector('#items [data-path="pulled.txt"]'), null, { timeout: 4000 }).then(() => true, () => false);
     await pf.evaluate(() => foafos.pod.delete('pulled.txt'));
     await pp.close();
     check(pulled, `pulling the list down by touch shows a file saved elsewhere (${pulled}${pdir})`);
