@@ -3258,6 +3258,9 @@ function buildUI() {
   const recentWins = [];
   FoafOS.raiseWindow = (win) => {
     if (FoafOS.noRaise) return;
+    // A window on another workspace: go there first, as a desktop does when you pick a window on
+    // another desktop (from Task Manager, All apps, or an app that is opened again).
+    if (win?.classList?.contains('ws-away') && FoafOS.goWorkspace) FoafOS.goWorkspace(Number(win.dataset.ws || 1));
     // A window kept on top (window menu) stays over the others, even when another is raised; the
     // one raised is still the one in use (z-index 2640 marks it, for the keys that act on it).
     document.querySelectorAll('.foafos-window').forEach((w) => { w.style.zIndex = w.classList.contains('on-top') ? 2645 : 2620; });
@@ -4094,6 +4097,9 @@ function buildUI() {
   function launchApp(id, opts = {}) {
     const r = openApp(id, opts);
     if (r instanceof Element && r.classList.contains('foafos-window') && !r.dataset.openedAs) r.dataset.openedAs = id;
+    // What you open comes to the front, an app already open too (and on another workspace, it goes
+    // there), unless the caller asked to stay put (opts.quiet).
+    if (r instanceof Element && r.classList.contains('foafos-window') && !opts.quiet) FoafOS.raiseWindow(r);
     return r;
   }
   function openApp(id, opts = {}) {

@@ -547,6 +547,20 @@ try {
   check(ws1.split(',').length >= 2 && ws2empty === '' && at2.at === 2 && ws2.split(',').length === 1 && back1 === ws1 && wsCards === ws1.split(',').length
     && !afterMove.split(',').includes(wsMover) && on2.split(',').includes(wsMover),
     `workspaces: a new empty one, windows stay where they opened, All windows shows this one's, a window moves (${JSON.stringify({ ws1, ws2empty, ws2, back1, wsCards, afterMove, on2 })})`);
+  // Opening an app whose window is on another workspace goes there, rather than raising it out of sight
+  const follow = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    FoafOS.goWorkspace(1);
+    let chat = document.getElementById('foafos-chat');
+    if (!chat) { FoafOS.launchApp('chat'); await wait(500); chat = document.getElementById('foafos-chat'); }
+    FoafOS.moveToWorkspace(chat, 2);
+    const hiddenHere = getComputedStyle(chat).display === 'none';
+    FoafOS.launchApp('chat'); await wait(400);
+    const r = { hiddenHere, at: FoafOS.workspaces().at, shown: getComputedStyle(chat).display !== 'none', front: chat.style.zIndex === '2640' };
+    FoafOS.moveToWorkspace(chat, 1); FoafOS.goWorkspace(1);
+    return r;
+  });
+  check(follow.hiddenHere && follow.at === 2 && follow.shown && follow.front, `opening an app whose window is on another workspace goes there (${JSON.stringify(follow)})`);
 
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
