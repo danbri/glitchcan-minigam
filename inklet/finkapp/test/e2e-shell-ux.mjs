@@ -792,6 +792,29 @@ try {
     check(r.row.shown && r.row.labels.length === 2 && /^Files.*Ctrl ; 1\)$/.test(r.row.labels[0]) && /Ctrl ; 2\)$/.test(r.row.labels[1]) && r.front === 'files' && r.collapsed,
       `the menu shows the pinned apps as a row, and one opens its app (${JSON.stringify(r)})`);
   }
+  // In the ring menu, Pinned is a ring of its own; an app there opens
+  {
+    const r = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      const was = localStorage.getItem('foafos.apps.pinned'), wasR = localStorage.getItem('foafos.menu.radial');
+      localStorage.setItem('foafos.apps.pinned', JSON.stringify(['files']));
+      localStorage.setItem('foafos.menu.radial', '1');
+      window.FinkWM._setCollapsed(false); await wait(150);
+      const ring = () => [...document.querySelectorAll('#wm-radial .wm-rad-item:not(.wm-rad-centre)')];
+      ring().find((b) => b.getAttribute('aria-label') === 'foafos')?.click(); await wait(100);
+      const top = ring().map((b) => b.getAttribute('aria-label'));
+      ring().find((b) => b.getAttribute('aria-label') === 'Pinned')?.click(); await wait(100);
+      const inner = ring().map((b) => b.getAttribute('aria-label'));
+      ring()[0]?.click(); await wait(600);
+      const front = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].find((w) => w.style.zIndex === '2640')?.dataset.openedAs;
+      const closed = document.getElementById('wm-radial')?.hidden;
+      if (was === null) localStorage.removeItem('foafos.apps.pinned'); else localStorage.setItem('foafos.apps.pinned', was);
+      if (wasR === null) localStorage.removeItem('foafos.menu.radial'); else localStorage.setItem('foafos.menu.radial', wasR);
+      window.FinkWM._setCollapsed(true);
+      return { top: top.slice(0, 3), inner, front, closed };
+    });
+    check(r.top[1] === 'Pinned' && /^Files.*Ctrl ; 1\)$/.test(r.inner[0] || '') && r.front === 'files' && r.closed, `the ring menu has a Pinned ring, and an app there opens (${JSON.stringify(r)})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

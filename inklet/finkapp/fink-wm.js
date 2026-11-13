@@ -548,16 +548,17 @@ window.FinkWM = {
         // the project's ring: the app's own rows, then two smaller rings (how the window sits, the on-screen
         // controls) and Exit; foafos's ring: its own rows and pages
         const ids = branch === 'project' ? ['wm-app-sect'] : branch === 'project/win' ? ['wm-win-sect']
-            : branch === 'project/pad' ? ['wm-pad-sect'] : ['wm-sys-sect', 'wm-shell-sect'];
+            : branch === 'project/pad' ? ['wm-pad-sect'] : branch === 'foafos/pinned' ? ['wm-pinned-sect'] : ['wm-sys-sect', 'wm-shell-sect'];
         const out = [];
         for (const id of ids) {
             const sect = document.getElementById(id);
             if (!sect || sect.hidden) continue;
             for (const b of sect.querySelectorAll('button')) {
                 if (b.hidden || b.disabled) continue;
-                const label = (b.querySelector('.wm-label')?.textContent || b.textContent || '').trim();
+                // A pinned app's button is its icon alone; its name is in its label.
+                const label = (b.querySelector('.wm-label')?.textContent || b.getAttribute('aria-label') || b.textContent || '').trim();
                 if (!label) continue;
-                out.push({ btn: b, icon: (b.querySelector('.wm-ico')?.textContent || '').trim() || '•', label,
+                out.push({ btn: b, icon: (b.querySelector('.wm-ico')?.textContent || (id === 'wm-pinned-sect' ? b.textContent : '') || '').trim() || '•', label,
                     stay: !b.dataset.closes && (b.hasAttribute('aria-expanded') || b.hasAttribute('aria-pressed') || b.classList.contains('wm-back')),
                     pressed: b.getAttribute('aria-pressed') === 'true' });
             }
@@ -567,6 +568,9 @@ window.FinkWM = {
             const back = document.createElement('button');
             back.addEventListener('click', () => { this._setRadial(false); this._closeRadial(); this._setCollapsed(false); });
             out.unshift({ btn: back, icon: '☰', label: 'Use the list menu' });
+            // The pinned apps, a ring of their own, as the list menu's top row.
+            const pinned = document.getElementById('wm-pinned-sect');
+            if (pinned && !pinned.hidden && pinned.querySelector('button')) out.splice(1, 0, { go: 'foafos/pinned', icon: '📌', label: 'Pinned', stay: true });
         }
         if (branch === 'project') {
             out.push({ go: 'project/win', icon: '▣', label: 'Window', stay: true });
