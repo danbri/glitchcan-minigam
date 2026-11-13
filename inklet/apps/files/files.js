@@ -42,7 +42,8 @@
   const KINDS = [
     [/\.(txt|text|md)$/i, '📄', 'Text'], [/\.(ttl|n3|nt|nq|trig|rdf|jsonld)$/i, '🔗', 'Linked data'],
     [/\.json$/i, '{ }', 'JSON'], [/\.(html?|css|m?js|ts|xml|svg)$/i, '⌨', 'Code'], [/\.csv$/i, '▤', 'Table'],
-    [/\.(zip|tar|tgz|tar\.gz)$/i, '🗜', 'Archive'], [/\.(png|jpe?g|gif|webp|avif)$/i, '🖼', 'Image'], [/\.(mp3|wav|ogg|m4a)$/i, '♪', 'Audio'], [/\.(mp4|webm|mov)$/i, '🎞', 'Video'],
+    [/\.(zip|tar|tgz|tar\.gz)$/i, '🗜', 'Archive'], [/\.(png|jpe?g|gif|webp|avif)$/i, '🖼', 'Image'], [/\.(mp3|wav|ogg|oga|opus|m4a|aac|flac)$/i, '♪', 'Audio'], [/\.(mp4|m4v|webm|ogv|mov)$/i, '🎞', 'Video'],
+    [/\.pdf$/i, '📕', 'PDF'],
   ];
   const kindOf = (it) => {
     if (it.container) return { icon: '📁', name: 'Folder' };
@@ -740,7 +741,8 @@
       // Pictures show; sound and video play here, from the file's own bytes, as Quick Look and a
       // phone's Files do. Nothing is fetched from anywhere else.
       previewUrl = /^(image|audio|video)\//.test(type) ? URL.createObjectURL(new Blob([raw.body], { type })) : null;
-      const view = !previewUrl ? h('p', { class: 'detail-none' }, 'This kind of file has no preview here.')
+      const view = type === 'application/pdf' ? pdfView(raw.body, nameOf(it.path))
+        : !previewUrl ? h('p', { class: 'detail-none' }, 'This kind of file has no preview here.')
         : /^audio\//.test(type) ? h('div', { class: 'detail-body detail-media' }, h('audio', { controls: true, src: previewUrl, preload: 'metadata', 'aria-label': `Play ${nameOf(it.path)}` }))
         : /^video\//.test(type) ? h('div', { class: 'detail-body detail-media' }, h('video', { controls: true, src: previewUrl, preload: 'metadata', playsInline: true, 'aria-label': `Play ${nameOf(it.path)}` }))
         : h('div', { class: 'detail-body detail-image' }, h('img', { src: previewUrl, alt: nameOf(it.path) }));
@@ -816,6 +818,55 @@
       h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
       h('button', { class: 'tool', type: 'button', on: { click: duplicate } }, 'Duplicate'),
       h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')]));
+
+  // A PDF shows in the preview, a page at a time, drawn by pdf.js (third_party/pdfjs, Apache-2.0):
+  // Chrome's own PDF viewer does not run in a sandboxed frame. It is loaded only when a PDF is
+  // picked.
+  let pdfjs = null;
+  async function loadPdfjs() {
+    if (pdfjs) return pdfjs;
+    const base = new URL('../../../third_party/pdfjs/', location.href);
+    const lib = await import(new URL('pdf.min.mjs', base).href);
+    // pdf.js starts its worker from this URL where it may, and where it may not (a frame with no
+    // origin of its own) runs the same code on the page instead.
+    lib.GlobalWorkerOptions.workerSrc = new URL('pdf.worker.min.mjs', base).href;
+    pdfjs = lib;
+    return lib;
+  }
+  function pdfView(bytes, name) {
+    const canvas = h('canvas', { class: 'pdf-page', 'aria-label': `${name}, page 1` });
+    const where = h('span', { class: 'pdf-where' }, 'Opening…');
+    const prev = h('button', { class: 'tool', type: 'button', disabled: true }, 'Previous page');
+    const next = h('button', { class: 'tool', type: 'button', disabled: true }, 'Next page');
+    const box = h('div', { class: 'detail-body detail-pdf' }, canvas, h('div', { class: 'pdf-nav' }, prev, where, next));
+    (async () => {
+      try {
+        const lib = await loadPdfjs();
+        const doc = await lib.getDocument({ data: new Uint8Array(bytes) }).promise;
+        let at = 1;
+        const show = async () => {
+          const page = await doc.getPage(at);
+          const width = Math.max(200, box.clientWidth - 16);
+          const vp0 = page.getViewport({ scale: 1 });
+          const vp = page.getViewport({ scale: (width / vp0.width) * (window.devicePixelRatio || 1) });
+          canvas.width = vp.width; canvas.height = vp.height;
+          canvas.style.width = `${width}px`;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp, canvas }).promise;
+          where.textContent = `Page ${at} of ${doc.numPages}`;
+          canvas.setAttribute('aria-label', `${name}, page ${at} of ${doc.numPages}`);
+          prev.disabled = at <= 1; next.disabled = at >= doc.numPages;
+          box.dataset.page = String(at); box.dataset.pages = String(doc.numPages);
+        };
+        prev.addEventListener('click', () => { if (at > 1) { at--; show(); } });
+        next.addEventListener('click', () => { if (at < doc.numPages) { at++; show(); } });
+        await show();
+      } catch (err) {
+        where.textContent = 'This PDF could not be shown here.';
+        box.dataset.error = String(err?.message || err);
+      }
+    })();
+    return box;
+  }
 
   // A copy beside the original: "plan copy.txt", then "plan copy 2.txt", never over a file that is there.
   async function duplicate() {

@@ -153,3 +153,9 @@
 .detail-media { display: flex; align-items: center; justify-content: center; padding: 8px; }
 .detail-media audio { width: 100%; }
 .detail-media video { max-width: 100%; max-height: 100%; border-radius: var(--p-corner); background: #000; }
+
+/* A PDF in the preview, a page at a time. */
+.detail-pdf { display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow: auto; }
+.detail-pdf .pdf-page { background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .25); align-self: center; }
+.detail-pdf .pdf-nav { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.detail-pdf .pdf-where { color: var(--p-dim); font-size: 13px; }
