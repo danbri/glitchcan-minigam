@@ -1211,11 +1211,17 @@
   addEventListener('focus', () => { refreshIfChanged(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshIfChanged(); });
   {
-    let pullFrom = null;
+    // Touch events, not pointer events: once the browser takes a pull as a scroll it cancels the
+    // pointer, but touchend still comes.
+    let pullFrom = null, pullLast = null;
     const pane = $('items-pane');
-    pane.addEventListener('pointerdown', (e) => { pullFrom = e.pointerType === 'touch' && pane.scrollTop <= 0 ? e.clientY : null; });
-    pane.addEventListener('pointerup', (e) => { if (pullFrom !== null && e.clientY - pullFrom > 80) { say('Looking for changes…'); refreshIfChanged().then((did) => { if (!did) say(folderSummary()); }); } pullFrom = null; });
-    pane.addEventListener('pointercancel', () => { pullFrom = null; });
+    pane.addEventListener('touchstart', (e) => { pullFrom = pane.scrollTop <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null; pullLast = pullFrom; }, { passive: true });
+    pane.addEventListener('touchmove', (e) => { if (pullFrom !== null) pullLast = e.touches[0].clientY; }, { passive: true });
+    pane.addEventListener('touchend', () => {
+      if (pullFrom !== null && pullLast - pullFrom > 80 && pane.scrollTop <= 0) { say('Looking for changes…'); refreshIfChanged().then((did) => { if (!did) say(folderSummary()); }); }
+      pullFrom = pullLast = null;
+    });
+    pane.addEventListener('touchcancel', () => { pullFrom = pullLast = null; });
   }
   // From the filter: Down moves into the list, Enter opens the top match (as in All apps).
   $('filter').addEventListener('keydown', (e) => {

@@ -1092,6 +1092,26 @@ try {
   const notes = page.frames().find((x) => /podnotes/.test(x.url()));
   const other = notes ? await notes.evaluate(() => Promise.all([foafos.pod.locations(), foafos.pod.use('device'), foafos.pod.addFolder()])) : null;
   check(denied && other?.every((r) => r.ok === false && r.reason === 'denied'), `an ordinary app cannot list or switch locations (${other?.map((r) => r.reason)})`);
+  // Pulling the list down from the top, by touch, looks for changes too. In a page of its own, so the
+  // touch emulation touches nothing else.
+  {
+    const pp = await context.newPage();
+    await pp.goto(SHELL);
+    const pf = await filesFrame(pp);
+    const pdir = await pf.evaluate(async () => { await window.__files.go(''); document.getElementById('items-pane').scrollTop = 0; await foafos.pod.put('pulled.txt', 'x', { contentType: 'text/plain' }); return ''; });
+    const pcdp = await context.newCDPSession(pp);
+    await pcdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+    const pane = await (await pf.$('#items-pane')).boundingBox();
+    const x = pane.x + pane.width / 2, y0 = pane.y + 30;
+    await pcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] });
+    for (let k = 1; k <= 6; k++) await pcdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y0 + k * 20 }] });
+    await pcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await pp.waitForTimeout(800);
+    const pulled = await pf.evaluate(() => !!document.querySelector('#items [data-path="pulled.txt"]'));
+    await pf.evaluate(() => foafos.pod.delete('pulled.txt'));
+    await pp.close();
+    check(pulled, `pulling the list down by touch shows a file saved elsewhere (${pulled}${pdir})`);
+  }
   check(!errors.length, `no page errors (${errors.slice(0, 2).join(' | ').slice(0, 160)})`);
 } catch (e) { check(false, `exception: ${e.message.slice(0, 1200).replace(/\n/g, " / ")}`); }
 await cleanup();
