@@ -215,6 +215,27 @@ try {
   await keys(page, [';', ';']);
   const l2 = await front();
   check(wins2.length === 3 && l1 === wins2[1] && l2 === wins2[2], `ctrl ; ; goes back to the window used last, and again returns (${wins2} → ${l1} → ${l2})`);
+  // Held, it is a switcher: with Ctrl still down after Ctrl ; ;, a strip of recent windows shows;
+  // ; again moves on; letting go of Ctrl goes to the one marked; Escape stays put
+  await page.evaluate((ids) => { for (const id of ids) FoafOS.raiseWindow(document.querySelector(`.foafos-window[data-wid="${id}"]`)); }, wins2);
+  await page.keyboard.down('Control');
+  await page.keyboard.press(';'); await page.keyboard.press(';');
+  await page.waitForTimeout(150);
+  const swShown = await page.evaluate(() => ({ n: document.querySelectorAll('#foafos-switch .foafos-sw-card').length, at: [...document.querySelectorAll('#foafos-switch .foafos-sw-card')].findIndex((c) => c.classList.contains('on')) }));
+  await page.keyboard.press(';');
+  const swAt2 = await page.evaluate(() => [...document.querySelectorAll('#foafos-switch .foafos-sw-card')].findIndex((c) => c.classList.contains('on')));
+  await page.keyboard.up('Control');
+  await page.waitForTimeout(200);
+  const swFront = await front();
+  const swGone = await page.evaluate(() => !document.getElementById('foafos-switch'));
+  await page.keyboard.down('Control');
+  await page.keyboard.press(';'); await page.keyboard.press(';');
+  await page.keyboard.press('Escape');
+  await page.keyboard.up('Control');
+  await page.waitForTimeout(150);
+  const swStayed = await front();
+  check(swShown.n >= 3 && swShown.at === 1 && swAt2 === 2 && swFront === wins2[0] && swGone && swStayed === wins2[0],
+    `held Ctrl ; ; shows a switcher; ; moves on; letting go switches; Escape stays (${JSON.stringify({ swShown, swAt2, swFront, want: wins2[0], swStayed })})`);
   await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
 
   // Task Manager: switching to a minimised window restores it
@@ -349,7 +370,7 @@ try {
   const sheetRows = await page.evaluate(() => [...document.querySelectorAll('#wm-keys-sheet tr')].map((r) => `${r.cells[0].textContent}=${r.cells[1].textContent}`));
   await page.keyboard.press('Escape');
   const sheetGone = await page.evaluate(() => !document.getElementById('wm-keys-sheet'));
-  check(sheetRows.length >= 15 && sheetRows.includes('All apps=Ctrl ; a') && sheetRows.includes('Last window, and back=Ctrl ; ;') && sheetRows.includes('This list of keys=Ctrl ; /') && sheetGone,
+  check(sheetRows.length >= 15 && sheetRows.includes('All apps=Ctrl ; a') && sheetRows.includes('Last window, and back (hold Ctrl to choose)=Ctrl ; ;') && sheetRows.includes('This list of keys=Ctrl ; /') && sheetGone,
     `ctrl ; / shows every key with what it does (${sheetRows.length}: ${sheetRows.slice(0, 3).join(', ')}...)`);
   await page.evaluate(() => FinkWM._setCollapsed(true));
   await keys(page, [';', 's']);

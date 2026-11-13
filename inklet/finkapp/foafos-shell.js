@@ -3193,6 +3193,64 @@ function buildUI() {
   };
   // Back to the window used last, as a single Alt+Tab or Cmd+Tab does (Ctrl ; ;). Pressed again,
   // it comes back: the two most recent windows trade places. A minimised one is restored.
+  // Held, it is a switcher, as Alt+Tab held is: with Ctrl still down after Ctrl ; ;, a strip of the
+  // windows most recently used, newest first, with the one before marked. Each ; again moves the
+  // mark on (Shift + ; back); letting go of Ctrl goes to the marked window; Escape stays put.
+  // Pressed and let go at once, it is just the window before (FoafOS.lastWindow).
+  let ctrlHeld = false, sw = null;
+  window.addEventListener('keydown', (e) => { if (e.key === 'Control') ctrlHeld = true; }, true);
+  window.addEventListener('keyup', (e) => {
+    if (e.key !== 'Control') return;
+    ctrlHeld = false;
+    if (sw) commitSwitch();
+  }, true);
+  window.addEventListener('blur', () => { ctrlHeld = false; if (sw) closeSwitch(); });
+  const titleOf = (w) => w.querySelector('.foafos-window-bar span')?.textContent || 'Window';
+  function drawSwitch() {
+    sw.el.replaceChildren(...sw.wins.map((w, i) => {
+      const c = document.createElement('div');
+      c.className = `foafos-sw-card${i === sw.at ? ' on' : ''}${w.classList.contains('minimized') ? ' min' : ''}`;
+      c.setAttribute('role', 'option');
+      c.setAttribute('aria-selected', String(i === sw.at));
+      c.textContent = titleOf(w);
+      return c;
+    }));
+    sw.el.setAttribute('aria-activedescendant', '');
+  }
+  function closeSwitch() { sw?.el.remove(); sw = null; }
+  function commitSwitch() {
+    const w = sw.wins[sw.at];
+    closeSwitch();
+    if (!w || !w.isConnected) return;
+    if (w.classList.contains('minimized')) w.querySelector('.foafos-window-min')?.click();
+    FoafOS.raiseWindow(w);
+    w.querySelector('.foafos-window-bar button, .foafos-window-bar')?.focus?.();
+    bus.publish('wm.switch', { summary: `front: ${titleOf(w)}` });
+  }
+  FoafOS.switchRecent = () => {
+    if (!ctrlHeld) return FoafOS.lastWindow();
+    const wins = recentWins.filter((w) => w.isConnected && w.classList.contains('foafos-window'));
+    if (wins.length < 2) return FoafOS.lastWindow();
+    const el = document.createElement('div');
+    el.id = 'foafos-switch';
+    el.setAttribute('role', 'listbox');
+    el.setAttribute('aria-label', 'Windows, most recent first. Let go of Ctrl to switch.');
+    document.body.appendChild(el);
+    sw = { el, wins, at: 1 };
+    drawSwitch();
+    return wins[1];
+  };
+  FoafOS.switcherKey = (e) => {
+    if (!sw) return false;
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSwitch(); return true; }
+    if (e.code === 'Semicolon' || e.key === ';') {
+      e.preventDefault(); e.stopPropagation();
+      sw.at = (sw.at + (e.shiftKey ? -1 : 1) + sw.wins.length) % sw.wins.length;
+      drawSwitch();
+      return true;
+    }
+    return e.key === 'Control' || e.key === 'Shift';
+  };
   FoafOS.lastWindow = () => {
     const before = recentWins.find((w, k) => k > 0 && w.isConnected && w.classList.contains('foafos-window'));
     if (!before) return null;

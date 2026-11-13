@@ -50,7 +50,7 @@ The finish line this proposes: every item below is done, or the owner has struck
 | Swipe sideways along a full-screen window's bar to switch (phones' bottom bar) | Done: #1063 |
 | Task Manager: everything running, pause, close, bring back a minimised one (desktops) | Done: #1011, #1073 |
 | Back closes All windows and All apps rather than leaving the shell (phones, browsers) | Done: #1060 |
-| A switcher that shows while a key is held and cycles while it is pressed again (Alt+Tab held) | Open |
+| A switcher that shows while a key is held and cycles while it is pressed again: Ctrl ; ; held (Alt+Tab held) | Done: this PR |
 
 ## App and widget discovery
 
