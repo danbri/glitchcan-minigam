@@ -654,6 +654,17 @@ try {
   await swipeBar(120);
   const s2 = await pfront();
   check(!!s0 && sShort === s0 && s1 !== s0 && s2 === s0, `on a phone, swiping the title bar sideways goes to the next window and back; a short swipe does not (${s0}, ${sShort}, ${s1}, ${s2})`);
+  // A finger held still on a title bar opens the window menu (iOS sends no contextmenu for this)
+  await phone.page.evaluate(() => document.getElementById('foafos-win-menu')?.remove());
+  const barPt = await phone.page.evaluate(() => { const w = [...document.querySelectorAll('.foafos-window')].find((x) => x.style.zIndex === '2640'); const r = w.querySelector('.foafos-window-bar span').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  const hcdp = await phone.ctx.newCDPSession(phone.page);
+  await hcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [barPt] });
+  await phone.page.waitForTimeout(800);
+  await hcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await phone.page.waitForTimeout(200);
+  const held = await phone.page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].map((b) => b.firstChild.textContent));
+  await phone.page.evaluate(() => document.getElementById('foafos-win-menu')?.remove());
+  check(held.includes('Minimise') && held.includes('Close'), `on a phone, holding a title bar opens the window menu (${held.join(', ')})`);
 
   // On a phone a notice sits over the top of the window; a tap elsewhere folds it into the
   // handle, and the menu still has it, so it is not lost
