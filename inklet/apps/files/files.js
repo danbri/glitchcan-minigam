@@ -189,7 +189,7 @@
     chosen.clear(); anchor = null;
     queueMicrotask(drawChooseBar);
     // Inside an archive nothing can be made, saved or dropped.
-    for (const id of ['new-file', 'new-folder']) $(id).disabled = inArchive();
+    for (const id of ['new-file', 'new-folder', 'upload', 'upload-dir']) $(id).disabled = inArchive();
     recentOrder = false; trashView = false;
     items = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') }))
       .filter((it) => !hiddenName(nameOf(it.path)));
@@ -616,7 +616,9 @@
         ...(filtering ? [h('button', { class: 'tool tool-main', type: 'button', on: { click: searchAll } }, 'Search all folders'),
           h('button', { class: 'tool', type: 'button', on: { click: clearFilter } }, 'Clear filter')]
           : [h('button', { class: 'tool tool-main', type: 'button', on: { click: askNewFile } }, 'New file'),
-            h('button', { class: 'tool', type: 'button', on: { click: newFolder } }, 'New folder')])));
+            h('button', { class: 'tool', type: 'button', on: { click: newFolder } }, 'New folder'),
+            h('button', { class: 'tool', type: 'button', on: { click: () => $('upload').click() } }, 'Upload…'),
+            h('button', { class: 'tool upload-dir', type: 'button', on: { click: () => $('upload-dir').click() } }, 'Upload a folder…')])));
       return;
     }
     if (icons) {
@@ -1355,7 +1357,9 @@
       // Text up to 1 MiB goes as text; anything else up to 8 MiB as bytes.
       if (f.size > (texty ? 1024 * 1024 : 8 * 1024 * 1024)) { tooBig.push(f.name); continue; }
       const given = cleanName(f.name) || 'Pasted';
-      const name = paste ? freeName(/^image\.\w+$/.test(given) ? `Pasted ${given}` : given) : given;
+      // A file from an uploaded folder keeps its place in it: trip/sub/b.txt.
+      const rel = f.webkitRelativePath ? f.webkitRelativePath.split('/').map(cleanName).filter(Boolean).join('/') : '';
+      const name = rel || (paste ? freeName(/^image\.\w+$/.test(given) ? `Pasted ${given}` : given) : given);
       forgetThumb(folder + name);
       const body = texty ? await f.text() : await f.arrayBuffer();
       const put = () => foafos.pod.put(folder + name, body, { contentType: f.type || (texty ? 'text/plain' : 'application/octet-stream'), ...(paste ? { ifNoneMatch: true } : {}) });
@@ -1479,6 +1483,15 @@
   });
 
   $('new-file').addEventListener('click', askNewFile);
+  // Upload, as every web and phone file manager has: the system's own picker, for a phone that cannot
+  // drop or paste. Files, or a whole folder (where the browser offers one), added to this folder.
+  $('upload').addEventListener('click', () => { if (inArchive()) { say('This is inside an archive, which is read only. Upload into a folder.', true); return; } $('upload-input').click(); });
+  $('upload-dir').addEventListener('click', () => { if (inArchive()) { say('This is inside an archive, which is read only. Upload into a folder.', true); return; } $('upload-dir-input').click(); });
+  for (const id of ['upload-input', 'upload-dir-input']) $(id).addEventListener('change', async (e) => {
+    const files = [...(e.target.files || [])];
+    e.target.value = '';
+    if (files.length) await addFiles(files);
+  });
   $('recent').addEventListener('click', showRecent);
   $('trash').addEventListener('click', showTrash);
   $('add-folder').addEventListener('click', addFolder);

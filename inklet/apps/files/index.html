@@ -20,6 +20,10 @@
     <button id="space" class="tool" type="button" aria-pressed="false" title="Where the space goes" aria-label="Show where the space goes">◫</button>
     <button id="new-file" class="tool tool-main" type="button" title="New file">New file</button>
     <button id="new-folder" class="tool" type="button">New folder</button>
+    <button id="upload" class="tool" type="button" title="Upload files from this device" aria-label="Upload files">Upload…</button>
+    <button id="upload-dir" class="tool upload-dir" type="button" title="Add a folder from this computer">Upload a folder…</button>
+    <input id="upload-input" type="file" multiple hidden>
+    <input id="upload-dir-input" type="file" webkitdirectory multiple hidden>
   </div>
   <section id="where" class="where" aria-label="Where these files are"></section>
   <div id="panes" class="panes" data-show="items">
