@@ -1407,6 +1407,23 @@ try {
     await f.evaluate(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); for (const p of ['notes/sr/a.txt', 'notes/sr/b.txt', 'notes/sr/']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
     check(/grid "Items in sr"/.test(tree) && /row ".*a\.txt.*" \[selected\]/.test(tree) && /row ".*b\.txt.*" \[selected\]/.test(tree) && sortAttr === 'ascending', `the list is a grid a screen reader can follow, chosen rows and the sort marked (${sortAttr}; ${tree.replace(/\n/g, ' / ').slice(0, 260)})`);
   }
+  // Ctrl + Shift + . shows hidden files (not the .folder marker), and again hides them
+  {
+    const r = await f.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      await foafos.pod.put('notes/hd/.secret', 's', { contentType: 'text/plain' });
+      await foafos.pod.put('notes/hd/seen.txt', 'v', { contentType: 'text/plain' });
+      await foafos.pod.put('notes/hd/.folder', '', { contentType: 'text/plain' });
+      await window.__files.go('notes/hd/'); await wait(200);
+      const names = () => [...document.querySelectorAll('#items [data-path]')].map((x) => x.dataset.path.split('/').pop()).sort().join(',');
+      const key = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: '.', code: 'Period', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+      const n0 = names(); key(); await wait(400); const n1 = names(); key(); await wait(400); const n2 = names();
+      for (const p of ['notes/hd/.secret', 'notes/hd/seen.txt', 'notes/hd/.folder', 'notes/hd/']) await foafos.pod.delete(p);
+      await window.__files.go('notes/');
+      return { n0, n1, n2 };
+    });
+    check(r.n0 === 'seen.txt' && r.n1 === '.secret,seen.txt' && r.n2 === 'seen.txt', `Ctrl + Shift + . shows hidden files, never the .folder marker, and hides them again (${JSON.stringify(r)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {
