@@ -850,6 +850,46 @@ try {
   });
   check(sif.offered && sif.folder === 'notes/' && sif.picked === 'notes/sif.txt' && sif.focus === 'notes/sif.txt' && sif.wasIn === 'notes/',
     `"Show in folder" from Recent, and "Show where it was" from the Trash (${JSON.stringify(sif)})`);
+  // Sound plays in the preview: a quarter-second WAV made here loads in an <audio> player
+  const snd = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const n = 2000, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const str = (o, t) => { for (let k = 0; k < t.length; k++) v.setUint8(o + k, t.charCodeAt(k)); };
+    str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, 'data'); v.setUint32(40, n, true);
+    for (let k = 0; k < n; k++) v.setUint8(44 + k, 128);
+    await foafos.pod.put('notes/beep.wav', new Uint8Array(buf), { contentType: 'audio/wav' });
+    await window.__files.go('notes/'); await wait(300);
+    document.querySelector('#items tbody tr[data-path="notes/beep.wav"]').click();
+    for (let k = 0; k < 30 && !(document.querySelector('#detail audio')?.duration > 0); k++) await wait(100);
+    const a = document.querySelector('#detail audio');
+    const r = { player: !!a, controls: !!a?.controls, blob: /^blob:/.test(a?.src || ''), duration: a ? Math.round(a.duration * 100) / 100 : null };
+    await foafos.pod.delete('notes/beep.wav');
+    return r;
+  });
+  check(snd.player && snd.controls && snd.blob && snd.duration === 0.25, `sound plays in the preview (${JSON.stringify(snd)})`);
+  // Video too: a short WebM recorded here from a canvas loads in a <video> player
+  const vid = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    if (typeof MediaRecorder === 'undefined') return { skipped: 'no MediaRecorder' };
+    const cv = document.createElement('canvas'); cv.width = 64; cv.height = 48;
+    const g = cv.getContext('2d'); const stream = cv.captureStream(10);
+    const rec = new MediaRecorder(stream, { mimeType: 'video/webm' }); const parts = [];
+    rec.ondataavailable = (e) => parts.push(e.data);
+    rec.start();
+    for (let k = 0; k < 6; k++) { g.fillStyle = `hsl(${k * 60},80%,50%)`; g.fillRect(0, 0, 64, 48); await wait(60); }
+    await new Promise((r) => { rec.onstop = r; rec.stop(); });
+    const bytes = new Uint8Array(await new Blob(parts, { type: 'video/webm' }).arrayBuffer());
+    await foafos.pod.put('notes/clip.webm', bytes, { contentType: 'video/webm' });
+    await window.__files.go('notes/'); await wait(300);
+    document.querySelector('#items tbody tr[data-path="notes/clip.webm"]').click();
+    for (let k = 0; k < 30 && !(document.querySelector('#detail video')?.readyState >= 1); k++) await wait(100);
+    const v = document.querySelector('#detail video');
+    const r = { player: !!v, controls: !!v?.controls, blob: /^blob:/.test(v?.src || ''), ready: v?.readyState ?? null, w: v?.videoWidth ?? null };
+    await foafos.pod.delete('notes/clip.webm');
+    return r;
+  });
+  check(vid.skipped || (vid.player && vid.controls && vid.blob && vid.ready >= 1 && vid.w === 64), `video plays in the preview (${JSON.stringify(vid)})`);
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));
