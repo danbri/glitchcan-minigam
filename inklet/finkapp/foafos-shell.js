@@ -5376,6 +5376,26 @@ function buildUI() {
           reply({ ok: true, extras: pods.extrasFor(app.id).map((x) => ({ ...x, read: x.read && holds('pod:read'), write: x.write && holds('pod:write') })) });
           return;
         }
+        // Save a file to this computer, as a web file manager's Download does. App frames have no
+        // allow-downloads, so the shell saves it from its own page, after reading it with the
+        // app's own scope: an app can download only what it may read.
+        if (d.verb === 'pod.download') {
+          tallyCap(app.id, 'pod:read');
+          if (!holds('pod:read')) { refuseAtNode('pods', 'pod:read', d.verb); reply({ ok: false, reason: 'denied' }); return; }
+          const path = String(d.params?.path ?? '');
+          pods.invoke(app.id, 'pod.get', { path, as: 'bytes' }, { holder: nodeId }).then((r) => {
+            if (!r.ok) { reply(r); return; }
+            const name = path.split('/').filter(Boolean).pop() || 'file';
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([r.body], { type: r.contentType || 'application/octet-stream' }));
+            a.download = name;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+            bus.publish('pod.download', { summary: `${app.name} saved ${name} to this computer`, id: app.id, name });
+            reply({ ok: true, name });
+          }, () => reply({ ok: false, reason: 'failed' }));
+          return;
+        }
         const need = POD_VERBS[d.verb];
         if (!need) { reply({ ok: false, reason: 'unknown-verb' }); return; }
         tallyCap(app.id, need);

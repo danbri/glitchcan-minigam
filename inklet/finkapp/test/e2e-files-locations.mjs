@@ -991,6 +991,21 @@ try {
     return r;
   });
   check(live.same === false && !live.shownBefore && live.shownAfter && live.focusKept, `the folder keeps up with changes made elsewhere (${JSON.stringify(live)})`);
+  // Download: the shell saves a picked file to this computer (app frames cannot download)
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/dl.txt', 'download me', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/dl.txt"]');
+    await page.waitForTimeout(400);
+    const [dl] = await Promise.all([
+      page.waitForEvent('download', { timeout: 10000 }),
+      f.evaluate(() => [...document.querySelectorAll('#detail button')].find((b) => b.textContent === 'Download').click()),
+    ]);
+    const body = readFileSync(await dl.path(), 'utf8');
+    const said = await f.evaluate(() => document.getElementById('status').textContent);
+    await f.evaluate(() => foafos.pod.delete('notes/dl.txt'));
+    check(dl.suggestedFilename() === 'dl.txt' && body === 'download me' && /Downloaded dl\.txt/.test(said), `Download saves a file to this computer (${dl.suggestedFilename()}, ${JSON.stringify(body)}, ${said})`);
+  }
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));

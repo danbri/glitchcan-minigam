@@ -130,6 +130,7 @@
     bar.replaceChildren(...[
       chosen.size ? h('span', { class: 'choose-n' }, `${chosen.size} chosen`) : null,
       chosen.size ? btn('Copy', () => holdChosen(false)) : null,
+      chosen.size ? btn('Download', () => download([...chosen])) : null,
       chosen.size && !inArchive() ? btn('Cut', () => holdChosen(true)) : null,
       chosen.size && !inArchive() ? btn('Delete', askDeleteChosen, { class: 'tool danger' }) : null,
       chosen.size ? btn('Clear', () => { clearChosen(); say(folderSummary()); }) : null,
@@ -829,6 +830,7 @@
   }
   const actions = (...first) => h('div', { class: 'detail-actions' }, ...first,
     searchResults && picked?.path && !picked.trashId ? h('button', { class: 'tool', type: 'button', on: { click: () => showInFolder(picked.path) } }, 'Show in folder') : null,
+    picked?.path && !picked.trashId ? h('button', { class: 'tool', type: 'button', on: { click: () => download([picked.path]) } }, 'Download') : null,
     ...(inArchive() ? [h('span', { class: 'detail-none' }, 'In an archive: read only.')] : [
       h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
       h('button', { class: 'tool', type: 'button', on: { click: duplicate } }, 'Duplicate'),
@@ -881,6 +883,15 @@
       }
     })();
     return box;
+  }
+
+  // Save files to this computer, as a web file manager's Download does: the shell saves each one.
+  async function download(paths) {
+    const files = paths.filter((p) => !p.endsWith('/'));
+    if (!files.length) { say('Folders cannot be downloaded yet: download the files in them.', true); return; }
+    const done = [], not = [];
+    for (const p of files) { const r = await foafos.pod.download(p); (r.ok ? done : not).push(r.ok ? nameOf(p) : `${nameOf(p)} (${explain(r)})`); }
+    say([done.length ? `Downloaded ${done.length === 1 ? done[0] : `${done.length} files`} to this computer.` : '', not.length ? `Not downloaded: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !done.length);
   }
 
   // A copy beside the original: "plan copy.txt", then "plan copy 2.txt", never over a file that is there.
