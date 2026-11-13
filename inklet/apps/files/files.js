@@ -273,6 +273,8 @@
     $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => (folder ? go('') : askGoTo()) } }, here()?.label || 'My files')),
       ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', ...(i === parts.length - 1 ? { title: 'Go to another folder by typing its path (/)' } : {}),
         on: { click: () => (i === parts.length - 1 && !inArchive() ? askGoTo() : go(parts.slice(0, i + 1).join('/') + '/')) } }, p.endsWith('!') ? `🗜 ${p.slice(0, -1)}` : p))));
+    // A file or folder dragged onto a folder in the path moves there, as onto Finder's path bar.
+    [...$('crumbs').querySelectorAll('button')].forEach((b, i, all) => { if (i < all.length - 1) asDropTarget(b, i ? `${parts.slice(0, i).join('/')}/` : ''); });
     drawTree();
     drawItems();
   }

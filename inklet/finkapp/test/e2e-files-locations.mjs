@@ -1173,6 +1173,25 @@ try {
     await f.evaluate(() => window.__files.go('notes/'));
     check(/^📁 Files — ⚙ System x+$/.test(spoof || '') && !/[\u202e\n]/.test(spoof) && spoof.length <= 92, `an app's title keeps its own name first, one plain line (${(spoof || '').slice(0, 40)}…, ${spoof?.length})`);
   }
+  // A file dragged onto a folder in the path bar moves there
+  {
+    const r = await f.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      await foafos.pod.put('notes/cr/deep/mv.txt', 'm', { contentType: 'text/plain' });
+      await window.__files.go('notes/cr/deep/'); await wait(200);
+      const dt = new DataTransfer();
+      document.querySelector('#items tbody tr[data-path="notes/cr/deep/mv.txt"]').dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+      const crumb = [...document.querySelectorAll('#crumbs button')].find((b) => b.textContent === 'notes');
+      crumb.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+      crumb.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+      await wait(800);
+      const out = { there: (await foafos.pod.get('notes/mv.txt')).body, gone: !(await foafos.pod.get('notes/cr/deep/mv.txt')).ok };
+      for (const p of ['notes/mv.txt', 'notes/cr/deep/', 'notes/cr/']) await foafos.pod.delete(p);
+      await window.__files.go('notes/');
+      return out;
+    });
+    check(r.there === 'm' && r.gone, `a file dropped on a folder in the path bar moves there (${JSON.stringify(r)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {
