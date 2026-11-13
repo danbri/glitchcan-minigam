@@ -2951,6 +2951,21 @@ function buildUI() {
       // A middle click closes a card's window, as it closes a browser tab or a GNOME overview window.
       hit.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });   // not the scroll cursor
       hit.addEventListener('auxclick', (e) => { if (e.button !== 1) return; e.preventDefault(); e.stopPropagation(); x.click(); });
+      // A right-click on a card offers what can be done to its window from here, as Windows' Task
+      // View does: show it, snap it, send it to another workspace, close it.
+      hit.addEventListener('contextmenu', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (win.id === 'minigame-view') return;
+        const ws = FoafOS.workspaces?.() || { at: 1, count: 1 };
+        const other = ws.at < 4 ? ws.at + 1 : ws.at - 1;
+        const wide = window.innerWidth >= 700;
+        popMenu([
+          ['Show', '', () => exitOverview(win)],
+          ...(wide && win._snap ? [['Snap left', '', () => { exitOverview(win); win._snap('left'); }], ['Snap right', '', () => { exitOverview(win); win._snap('right'); }]] : []),
+          [`Move to workspace ${other}`, '', () => { exitOverview(null); FoafOS.moveToWorkspace(win, other); setTimeout(() => { if (document.querySelector('.foafos-window:not(.ws-away)')) enterOverview(); }, 350); }],
+          ['Close', '', () => x.click()],
+        ], e.clientX, e.clientY, `Window: ${title || ''}`, () => hit.focus());
+      });
       // Each card carries its window's name at a readable size (the title bar shrinks
       // with the card), and the first nine their number: press it to pick that window.
       const n = document.createElement('span');
@@ -3073,7 +3088,7 @@ function buildUI() {
     document.addEventListener('keydown', strip._keys);
     // A tap on the empty space around the cards leaves, as a phone's task switcher does.
     strip._away = (e) => {
-      if (e.target.closest?.('.foafos-ov, #foafos-ov-strip, #wm-chrome')) return;
+      if (e.target.closest?.('.foafos-ov, #foafos-ov-strip, #wm-chrome, #foafos-win-menu')) return;
       e.preventDefault(); e.stopPropagation();
       exitOverview(null);
     };
@@ -3089,15 +3104,16 @@ function buildUI() {
     if (ovStrip?._keys) document.removeEventListener('keydown', ovStrip._keys);
     if (ovStrip?._away) document.removeEventListener('pointerdown', ovStrip._away, true);
     ovStrip?.remove();
+    // Every card's parts go, whichever window holds them: a window re-entered within the return trip
+    // below could have lost its class while still holding them.
+    for (const el of document.querySelectorAll('.foafos-ov-hit, .foafos-ov-close, .foafos-ov-num')) el.remove();
     for (const win of document.querySelectorAll('.foafos-ov')) {
-      win.querySelector('.foafos-ov-hit')?.remove();
-      win.querySelector('.foafos-ov-close')?.remove();
-      win.querySelector('.foafos-ov-num')?.remove();
       win.classList.remove('foafos-ov-dim');
       win.style.transform = '';                 // interpolates back home
       // Drop the class only after the return trip, or the transition it
-      // rides is removed mid-flight and the card teleports.
-      setTimeout(() => win.classList.remove('foafos-ov'), 420);
+      // rides is removed mid-flight and the card teleports; not if the
+      // overview has opened again meanwhile (a workspace button does so).
+      setTimeout(() => { if (!overviewOn) win.classList.remove('foafos-ov'); }, 420);
     }
     if (focusWin?.id === 'minigame-view') {
       if (window.FinkWM?.mode !== 'full') window.FinkWM?.setMode('full');

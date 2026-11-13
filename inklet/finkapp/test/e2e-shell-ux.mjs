@@ -878,6 +878,27 @@ try {
     check(r.files.includes('see every file in your pod') && r.files.includes('change and delete any file in your pod') && r.notes.includes('read its own folder in your pod'),
       `an app's sheet says what it may do (${JSON.stringify(r)})`);
   }
+  // A right-click on an All windows card offers Show, Snap, Move to workspace, Close; Move works
+  {
+    const r = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      FoafOS.goWorkspace(1);
+      FoafOS.enterOverview(); await wait(400);
+      const hit = [...document.querySelectorAll('.foafos-ov-hit')].find((h) => h.parentElement.id !== 'minigame-view');
+      const win = hit.parentElement;
+      const rr = hit.getBoundingClientRect();
+      hit.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rr.x + 20, clientY: rr.y + 20 })); await wait(100);
+      const rows = [...document.querySelectorAll('#foafos-win-menu button')].map((b) => b.firstChild.textContent);
+      const mv = [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /^Move to workspace/.test(b.textContent));
+      mv.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); mv.click(); await wait(700);
+      const moved = win.dataset.ws;
+      FoafOS.exitOverview(null); await wait(300);
+      FoafOS.moveToWorkspace(win, 1, { quiet: true }); FoafOS.goWorkspace(1);
+      await wait(300);
+      return { rows, moved, hitsLeft: document.querySelectorAll('.foafos-ov-hit').length };
+    });
+    check(r.rows[0] === 'Show' && r.rows.includes('Close') && r.rows.some((x) => /^Move to workspace 2$/.test(x)) && r.moved === '2' && r.hitsLeft === 0, `a right-click on an All windows card offers its window's choices, Move works, and no card is left behind (${JSON.stringify(r)})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

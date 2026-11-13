@@ -55,7 +55,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Folders go to the Trash whole, and come back whole (desktops) | Done: #1115 |
 | Copy a folder and what is in it (desktops) | Done: #1082 |
 | Folders you use often, kept in the side panel (Finder sidebar, Explorer Quick access) | Done: #1081 |
-| A right-click on a folder in the side panel: Open, New folder in it, Download as .zip, Keep in or Remove from the side panel (Finder's sidebar, Explorer's navigation pane) | Done: this PR |
+| A right-click on a folder in the side panel: Open, New folder in it, Download as .zip, Keep in or Remove from the side panel (Finder's sidebar, Explorer's navigation pane) | Done: #1158 |
 
 ## Task switching
 
@@ -69,6 +69,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | The Task Manager names each window by its title too, so two windows of one app can be told apart and filtered (Windows' Task Manager) | Done: #1152, #1153 |
 | Next window of the same app: Ctrl ; ` or the window menu (a Mac's Cmd+`, GNOME Super+`) | Done: #1126 |
 | Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: #1124 |
+| A right-click on an All windows card: Show, Snap left or right, Move to another workspace, Close (Windows' Task View) | Done: this PR |
 | No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: #1102 |
 | Swipe a card up to close it; tap the space around to leave (phones) | Done: #1006, #1031 |
 | The hint speaks of taps on a touch screen, keys on a keyboard | Done: #1056 |
