@@ -1246,6 +1246,29 @@ try {
     await f.evaluate(async () => { for (const p of ['notes/dp/a.txt', 'notes/dp/sub/b.txt', 'notes/dp/sub/', 'notes/dp/', 'notes/dp copy/a.txt', 'notes/dp copy/sub/b.txt', 'notes/dp copy/sub/', 'notes/dp copy/.folder', 'notes/dp copy/sub/.folder', 'notes/dp copy/', 'notes/dp/.folder']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
     check(String(got) === 'A,B,A', `Duplicate copies a folder whole beside it (${got})`);
   }
+  // A right-click on a file opens its menu; Rename there renames it; the Menu key opens it too
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/cm.txt', 'c', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/cm.txt"]', { button: 'right' });
+    await page.waitForTimeout(300);
+    const rows = await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button span')].map((x) => x.textContent));
+    await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button')].find((b) => b.textContent.startsWith('Rename')).click());
+    await f.waitForSelector('.ask input', { timeout: 4000 });
+    await f.fill('.ask input', 'cm2.txt');
+    await f.press('.ask input', 'Enter');
+    await page.waitForTimeout(600);
+    const renamed = await f.evaluate(async () => (await foafos.pod.get('notes/cm2.txt')).body);
+    await f.focus('#items tbody tr[data-path="notes/cm2.txt"]');
+    await f.press('#items tbody tr[data-path="notes/cm2.txt"]', 'Shift+F10');
+    await page.waitForTimeout(300);
+    const byKey = await f.evaluate(() => ({ open: !!document.querySelector('.ctx-menu'), focus: !!document.activeElement?.closest('.ctx-menu') }));
+    await f.press('.ctx-menu button', 'Escape');
+    const gone = await f.evaluate(() => !document.querySelector('.ctx-menu'));
+    await f.evaluate(async () => { await foafos.pod.delete('notes/cm2.txt'); await window.__files.go('notes/'); });
+    check(rows[0] === 'Open' && rows.includes('Rename') && rows.includes('Move to the Trash') && renamed === 'c' && byKey.open && byKey.focus && gone,
+      `right-click on a file opens its menu, Rename works from it, Shift+F10 opens it too (${JSON.stringify({ rows, renamed, byKey, gone })})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {
