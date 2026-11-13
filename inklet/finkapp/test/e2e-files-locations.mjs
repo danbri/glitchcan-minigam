@@ -1266,7 +1266,7 @@ try {
     await f.press('.ctx-menu button', 'Escape');
     const gone = await f.evaluate(() => !document.querySelector('.ctx-menu'));
     await f.evaluate(async () => { await foafos.pod.delete('notes/cm2.txt'); await window.__files.go('notes/'); });
-    check(rows[0] === 'Open' && rows.includes('Rename') && rows.includes('Move to the Trash') && renamed === 'c' && byKey.open && byKey.focus && gone,
+    check(rows[0] === 'Open' && rows[1] === 'Open in Notes' && rows.includes('Rename') && rows.includes('Move to the Trash') && renamed === 'c' && byKey.open && byKey.focus && gone,
       `right-click on a file opens its menu, Rename works from it, Shift+F10 opens it too (${JSON.stringify({ rows, renamed, byKey, gone })})`);
   }
   // A right-click on the folder's empty space opens the folder's menu; Paste there pastes what was copied

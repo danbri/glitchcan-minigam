@@ -356,6 +356,13 @@
     document.querySelector('.ctx-menu')?.remove();
     const many = chosen.size > 1 && chosen.has(it.path) ? [...chosen] : null;
     if (!many) { clearChosen(); await pick(it); }
+    // The apps that offer to open it, as Finder's Open With: one row each, after Open.
+    const ro0 = inArchive() || !!it.trashId;
+    const hs = !many && !it.container && !ARCHIVE.test(it.path) && !ro0 ? await foafos.pod.handlers(it.path, it.contentType).catch(() => null) : null;
+    const openIn = (hs?.ok ? hs.handlers : []).slice(0, 5).map((a) => [`Open in ${a.name}`, '', async () => {
+      const o = await foafos.pod.openWith(a.appId, it.path, it.contentType);
+      say(o.ok ? `Opened ${nameOf(it.path)} in ${a.name}.` : explain(o), !o.ok);
+    }]);
     const ro = inArchive() || !!it.trashId;
     const mac = /Mac/.test(navigator.platform);
     const rows = many ? [
@@ -366,6 +373,7 @@
       ro ? null : [`Move ${many.length} items to the Trash`, mac ? '⌘⌫' : 'Delete', () => askDeleteChosen(), 'danger'],
     ] : [
       ['Open', 'Enter', () => activate(it)],
+      ...openIn,
       ro ? null : ['Rename', 'F2', () => askRename()],
       ro ? null : ['Duplicate', '', () => (it.container ? duplicateFolder(it.path) : duplicate())],
       ['Copy', mac ? '⌘C' : 'Ctrl+C', () => holdPaths([it.path], false)],
