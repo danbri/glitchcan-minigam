@@ -1187,6 +1187,36 @@
     if (hit) { e.preventDefault(); hit.focus(); }
   });
   $('filter').addEventListener('input', drawItems);
+  // The folder kept up to date, as Finder and Explorer keep theirs: when Files comes back into use
+  // (its window focused, the tab shown again) it lists the folder again, and redraws only if
+  // something changed there, such as a file another app saved. On a touch screen, pulling the list
+  // down from the top does the same. Not in Recent, search or the Trash, which are views.
+  const sig = (list) => list.map((i) => `${i.path}|${i.size ?? ''}|${i.modified ?? ''}`).sort().join('\n');
+  let refreshing = false;
+  async function refreshIfChanged() {
+    if (refreshing || searchResults || !current || document.querySelector('.ask')) return false;
+    refreshing = true;
+    try {
+      const r = await list(folder);
+      if (!r.ok) return false;
+      const fresh = r.items.map((it) => ({ ...it, path: folder + it.path.replace(/^\/+/, '') })).filter((it) => !hiddenName(nameOf(it.path)));
+      if (sig(fresh) === sig(items)) return false;
+      const keep = document.activeElement?.dataset?.path, was = picked?.path;
+      await go(folder, { remember: false });
+      if (was && items.some((i) => i.path === was)) await pick(items.find((i) => i.path === was));
+      [...document.querySelectorAll('#items [data-path]')].find((r2) => r2.dataset.path === keep)?.focus();
+      return true;
+    } finally { refreshing = false; }
+  }
+  addEventListener('focus', () => { refreshIfChanged(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshIfChanged(); });
+  {
+    let pullFrom = null;
+    const pane = $('items-pane');
+    pane.addEventListener('pointerdown', (e) => { pullFrom = e.pointerType === 'touch' && pane.scrollTop <= 0 ? e.clientY : null; });
+    pane.addEventListener('pointerup', (e) => { if (pullFrom !== null && e.clientY - pullFrom > 80) { say('Looking for changes…'); refreshIfChanged().then((did) => { if (!did) say(folderSummary()); }); } pullFrom = null; });
+    pane.addEventListener('pointercancel', () => { pullFrom = null; });
+  }
   // From the filter: Down moves into the list, Enter opens the top match (as in All apps).
   $('filter').addEventListener('keydown', (e) => {
     // Escape clears the filter, and after a search across folders goes back to the folder you were in.
@@ -1402,7 +1432,7 @@
   });
 
   pick(null);
-  window.__files = { go, pick, useLocation, squarify, showRecent, showTrash, addFiles, paced, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
+  window.__files = { go, pick, useLocation, squarify, showRecent, showTrash, addFiles, paced, refreshIfChanged, state: () => ({ folder, items, picked, current, locations, status: statusEl.textContent }) };
 
   // Tools for the shell and agents (foafos.tools in app-sdk.js). All three only read, from the
   // location Files has open, and none changes what the window shows.
