@@ -665,7 +665,9 @@ try {
   await page.waitForTimeout(400);
   const tcdp = await context.newCDPSession(page);
   await tcdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
-  const tAt = async (sel) => { const h = await f.$(sel); const b = await h.boundingBox(); return { x: b.x + 30, y: b.y + b.height / 2 }; };
+  // The row is scrolled into view first: notes/ has gathered files from earlier checks, and a touch at a
+  // row below the fold would land on something else.
+  const tAt = async (sel) => { const h = await f.$(sel); await h.scrollIntoViewIfNeeded(); const b = await h.boundingBox(); return { x: b.x + 30, y: b.y + b.height / 2 }; };
   const touchHold = async (pt, ms) => {
     await tcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [pt] });
     await page.waitForTimeout(ms);
