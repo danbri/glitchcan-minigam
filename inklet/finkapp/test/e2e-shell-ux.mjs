@@ -643,6 +643,26 @@ try {
   });
   check(speed.windows >= 10 && speed.allApps < 250 && speed.allWindows < 250 && speed.raiseAll < 250, `the everyday moves stay quick with ten windows (${JSON.stringify(speed)} ms)`);
 
+  // The windows you had open come back after a reload; not when the address names an app
+  {
+    const { ctx: rctx, page: rp } = await open({ width: 1280, height: 800 });
+    await rp.evaluate(() => { FoafOS.launchApp('chat'); FoafOS.launchApp('files'); FoafOS.openWidget('tally'); });
+    await rp.waitForTimeout(800);
+    const openNow = () => rp.evaluate(() => [...document.querySelectorAll('.foafos-window[data-opened-as]')].map((w) => w.dataset.openedAs).sort().join(','));
+    const before = await openNow();
+    await rp.reload();
+    await rp.waitForFunction(() => window.FoafOS?.launchApp, null, { timeout: 30000 });
+    await rp.waitForTimeout(1500);
+    const after = await openNow();
+    await rp.goto(URL_ + '&app=system');
+    await rp.waitForFunction(() => window.FoafOS?.launchApp, null, { timeout: 30000 });
+    await rp.waitForTimeout(1500);
+    const linked = await openNow();
+    await rctx.close();
+    check(before.includes('chat') && before.includes('files') && before.includes('widget-tally') && after === before && !linked.includes('chat') && linked.includes('system'),
+      `the windows you had open come back after a reload, but not past a link to an app (${before} → ${after}; with ?app=system: ${linked})`);
+  }
+
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
   await page.waitForTimeout(400);
