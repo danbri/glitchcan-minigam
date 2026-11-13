@@ -308,7 +308,7 @@ try {
   await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /Minimise/.test(b.textContent)).click());
   const minimised = await page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('minimized'));
   await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); w.querySelector('.foafos-window-min').click(); FoafOS.raiseWindow(w); });
-  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Keep on top=,Minimise=Ctrl ; h,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
+  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Keep on top=,Move to workspace 2=,Minimise=Ctrl ; h,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
     `right-click on a title bar opens the window menu with its keys, and it acts (${wmenu}, ${focusIn}, ${menuGone}, ${minimised})`);
 
   // Snapping
@@ -515,6 +515,37 @@ try {
     return { onTop: hit === sys, pin, inUse, after: hit2 === other };
   });
   check(ot.onTop && /📌/.test(ot.pin) && ot.inUse && ot.after, `a window kept on top stays over one raised after it, and can be let go (${JSON.stringify(ot)})`);
+
+  // Workspaces: Ctrl ; . goes to a new, empty one where a window opened stays; Ctrl ; , comes back;
+  // All windows shows only this workspace's; the window menu moves a window to another
+  const wsShown = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window')].filter((w) => getComputedStyle(w).display !== 'none' && !w.classList.contains('minimized')).map((w) => w.dataset.wid).sort().join(','));
+  const ws1 = await wsShown();
+  await keys(page, [';', '.']);
+  const ws2empty = await wsShown();
+  const at2 = await page.evaluate(() => FoafOS.workspaces());
+  await page.evaluate(() => FoafOS.openWidget('tally'));
+  await page.waitForTimeout(400);
+  const ws2 = await wsShown();
+  await keys(page, [';', ',']);
+  const back1 = await wsShown();
+  await keys(page, [';', 's']);
+  await page.waitForTimeout(500);
+  const wsCards = await page.evaluate(() => document.querySelectorAll('.foafos-ov-hit').length);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  const wsMover = ws1.split(',')[0];
+  await page.evaluate((w) => { const win = document.querySelector(`.foafos-window[data-wid="${w}"]`); const r = win.querySelector('.foafos-window-bar span').getBoundingClientRect();
+    win.querySelector('.foafos-window-bar').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.x + 10, clientY: r.y + 5 }));
+    [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /^Move to workspace 2/.test(b.textContent)).click(); }, wsMover);
+  const afterMove = await wsShown();
+  await keys(page, [';', '.']);
+  const on2 = await wsShown();
+  await page.evaluate((w) => { FoafOS.moveToWorkspace(document.querySelector(`.foafos-window[data-wid="${w}"]`), 1); }, wsMover);
+  for (const w of on2.split(',').filter((x) => x && x !== wsMover)) await page.evaluate((id) => document.querySelector(`.foafos-window[data-wid="${id}"] .foafos-window-close`)?.click(), w);
+  await keys(page, [';', ',']);
+  check(ws1.split(',').length >= 2 && ws2empty === '' && at2.at === 2 && ws2.split(',').length === 1 && back1 === ws1 && wsCards === ws1.split(',').length
+    && !afterMove.split(',').includes(wsMover) && on2.split(',').includes(wsMover),
+    `workspaces: a new empty one, windows stay where they opened, All windows shows this one's, a window moves (${JSON.stringify({ ws1, ws2empty, ws2, back1, wsCards, afterMove, on2 })})`);
 
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
