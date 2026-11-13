@@ -69,7 +69,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | The Task Manager names each window by its title too, so two windows of one app can be told apart and filtered (Windows' Task Manager) | Done: #1152, #1153 |
 | Next window of the same app: Ctrl ; ` or the window menu (a Mac's Cmd+`, GNOME Super+`) | Done: #1126 |
 | Close a window from All windows with a middle click, or Delete on its card (browser tabs, GNOME overview) | Done: #1124 |
-| A right-click on an All windows card: Show, Snap left or right, Move to another workspace, Close (Windows' Task View) | Done: this PR |
+| A right-click on an All windows card: Show, Snap left or right, Move to another workspace, Close (Windows' Task View) | Done: #1159 |
 | No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: #1102 |
 | Swipe a card up to close it; tap the space around to leave (phones) | Done: #1006, #1031 |
 | The hint speaks of taps on a touch screen, keys on a keyboard | Done: #1056 |
@@ -140,6 +140,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Files: play sound and video in the preview (Quick Look, phones) | Done: #1088 |
 | Files: show PDFs in the preview, a page at a time, with pdf.js (Quick Look, phones) | Done: #1090 |
 | Files: "Show in folder" from Recent and search; "Show where it was" from the Trash (desktops) | Done: #1087 |
+| Search results narrowed by kind: Folders, Pictures, Documents, Sound and video, Code and data, Archives, with counts (Finder's and Explorer's search filters) | Done: this PR |
 | Workspaces: more than one desktop of windows, Ctrl ; . and , (Spaces, virtual desktops, GNOME workspaces) | Done: #1089 |
 | All windows has a button for each workspace (Mission Control's row of Spaces) | Done: #1106 |
 | Drag a window's card onto a workspace in All windows to move it there (Mission Control) | Done: #1107 |
