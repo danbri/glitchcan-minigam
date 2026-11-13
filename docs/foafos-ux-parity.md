@@ -62,7 +62,7 @@ The finish line this proposes: every item below is done, or the owner has struck
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
 | A dot under each app that is open (docks) | Done: #1049, #1057 |
 | Arrow keys through All apps; no on-screen keyboard thrown up on a phone | Done: #1008, #1013 |
-| A sheet of every key, from the menu (desktops' keyboard help, "?" on the web) | Open |
+| A sheet of every key, from the menu or Ctrl ; / (desktops' keyboard help, "?" on the web) | Done: this PR |
 
 ## Window manager
 
