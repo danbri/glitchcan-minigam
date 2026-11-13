@@ -116,6 +116,10 @@ try {
   const html = await f.evaluate(async () => (await foafos.pod.get('site/notes/trip.html')).body || '');
   check(!unapproved && approveShown === 'clicked' && built && /<h1>Trip<\/h1>/.test(html) && /By <em>boat<\/em>, &lt;b&gt;not&lt;\/b&gt; bus\./.test(html),
     `an approved build handler makes a page from a saved Markdown file (${JSON.stringify({ unapproved, approveShown, html: html.slice(0, 160) })})`);
+  // The approval was made in System, which this test opened: close it, so it does not lie over Files'
+  // toolbar for the checks that follow (seen once: System's ✕ over Files' view button).
+  await page.evaluate(() => document.querySelector('#foafos-session-win .foafos-window-close')?.click());
+  await page.waitForTimeout(200);
 
   await f.evaluate(() => window.__files.useLocation('device'));
   s = await state(f);
