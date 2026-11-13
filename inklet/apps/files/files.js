@@ -653,7 +653,7 @@
             if (e.key === 'ArrowDown' && !e.shiftKey) tr.nextElementSibling?.focus();
             if (e.key === 'ArrowUp' && !e.shiftKey) tr.previousElementSibling?.focus();
           } } },
-        h('td', {}, icoFor(it, k), nameOf(it.path),
+        h('td', {}, icoFor(it, k), h('span', { class: 'nm' }, nameOf(it.path)),
           searchResults ? h('span', { class: 'hit' }, it.trashId ? `From ${parentOf(it.from) || (here()?.label || 'the top folder')}` : `${parentOf(it.path) || (here()?.label || 'Top folder')}${it.snippet ? ` — ${it.snippet}` : ''}`) : null), h('td', {}, k.name),
         h('td', { class: 'c-size' }, it.container || it.size == null ? '' : sizeText(it.size)),
         h('td', { class: 'c-mod', title: it.modified || '' }, whenText(it.modified)));
@@ -1393,11 +1393,16 @@
   {
     const box = $('items-pane');
     let band = null, drewAt = -1e9;
+    // A box begun beside a name is not a drag of that row.
+    box.addEventListener('dragstart', (e) => { if (band) e.preventDefault(); }, true);
     // The click that ends a drawn box is not a click on what is under it.
     box.addEventListener('click', (c) => { if (performance.now() - drewAt < 300) { c.stopPropagation(); c.preventDefault(); } }, true);
     box.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'touch' || e.button !== 0) return;
-      if (e.target.closest('tr[data-path], [role=option], button, input, a, .ask, #choosebar, .search-further')) return;
+      // In the list, the blank space beside a name counts as empty too, as in Finder and Explorer.
+      const row = e.target.closest('tr[data-path]');
+      const beside = row && e.target.closest('td') === row.firstElementChild && e.clientX > (row.querySelector('.nm')?.getBoundingClientRect().right ?? Infinity) + 8;
+      if (!beside && e.target.closest('tr[data-path], [role=option], button, input, a, .ask, #choosebar, .search-further')) return;
       const r = box.getBoundingClientRect();
       band = { x: e.clientX - r.left + box.scrollLeft, y: e.clientY - r.top + box.scrollTop, id: e.pointerId, keep: e.metaKey || e.ctrlKey ? new Set(chosen) : new Set(), el: null };
     });
