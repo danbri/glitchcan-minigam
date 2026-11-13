@@ -1536,6 +1536,25 @@ try {
     check(s0.show === 'detail' && s1.show === 'items' && s1.folder === 'bk/in/' && s2.folder === 'bk/' && still,
       `on a phone, Back closes a file's panel, then goes back a folder, and the shell stays (${JSON.stringify({ s0, s1, s2, still })})`);
   }
+  // On a phone, a finger held on the empty space opens the folder's menu
+  {
+    const lp = await context.newPage();
+    await lp.setViewportSize({ width: 390, height: 780 });
+    await lp.goto(SHELL);
+    const lf = await filesFrame(lp);
+    await lf.evaluate(() => window.__files.go(''));
+    const lcdp = await context.newCDPSession(lp);
+    await lcdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+    const fr = await (await lf.frameElement()).boundingBox();
+    const spot = await lf.evaluate(() => { const r = document.getElementById('items-pane').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.bottom - 40 }; });
+    await lcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: fr.x + spot.x, y: fr.y + spot.y }] });
+    await lp.waitForTimeout(800);
+    await lcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await lp.waitForTimeout(300);
+    const rows = await lf.evaluate(() => [...document.querySelectorAll('.ctx-menu button span')].map((x) => x.textContent));
+    await lp.close();
+    check(rows[0] === 'New file' && rows.includes('Upload…'), `on a phone, holding the folder's empty space opens its menu (${rows})`);
+  }
   // Pulling the list down from the top, by touch, looks for changes too. In a page of its own, so the
   // touch emulation touches nothing else.
   {

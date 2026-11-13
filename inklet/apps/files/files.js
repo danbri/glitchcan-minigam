@@ -376,11 +376,23 @@
       folder ? ['Download this folder as .zip', '', () => download([folder])] : null,
     ], x, y, `Folder ${nameOf(folder) || here()?.label || ''}`, null);
   }
+  const emptySpace = (t) => !t.closest('tr[data-path], [role=option], button, input, a, .ask, #choosebar');
   $('items-pane').addEventListener('contextmenu', (e) => {
-    if (e.target.closest('tr[data-path], [role=option], button, input, a, .ask, #choosebar')) return;
+    if (!emptySpace(e.target)) return;
     e.preventDefault();
-    folderMenu(e.clientX, e.clientY);
+    if (!touchOnly) folderMenu(e.clientX, e.clientY);   // a phone's long press is heard below
   });
+  // On a phone, a finger held still on the empty space opens the same menu (iOS sends no contextmenu).
+  {
+    let held = null;
+    $('items-pane').addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch' || !emptySpace(e.target)) return;
+      const at = { x: e.clientX, y: e.clientY };
+      held = { at, timer: setTimeout(() => { held = null; folderMenu(at.x, at.y); }, 550) };
+    });
+    const drop = (e) => { if (held && (e.type !== 'pointermove' || Math.hypot(e.clientX - held.at.x, e.clientY - held.at.y) > 10)) { clearTimeout(held.timer); held = null; } };
+    for (const t of ['pointermove', 'pointerup', 'pointercancel']) $('items-pane').addEventListener(t, drop);
+  }
   function asDraggable(el, it) {
     asChoosable(el, it);
     if (inArchive() || touchOnly) return;
