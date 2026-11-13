@@ -78,7 +78,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | A dot under each app that is open (docks) | Done: #1049, #1057 |
 | Arrow keys through All apps; no on-screen keyboard thrown up on a phone | Done: #1008, #1013 |
 | A sheet of every key, from the menu or Ctrl ; / (desktops' keyboard help, "?" on the web) | Done: #1077 |
-| The desktop's own menu, from a right-click or long press on it: All apps, Widgets, All windows, Arrange, Show the desktop (Windows, a Mac, a phone's home screen) | Done: this PR |
+| The desktop's own menu, from a right-click or long press on it: All apps, Widgets, All windows, Arrange, Show the desktop (Windows, a Mac, a phone's home screen) | Done: #1127 |
 
 ## Window manager
 
