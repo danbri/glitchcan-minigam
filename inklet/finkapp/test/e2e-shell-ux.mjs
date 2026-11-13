@@ -270,7 +270,7 @@ try {
   const filesWid = await page.evaluate(() => { const w = [...document.querySelectorAll('.foafos-window')].find((x) => x.querySelector('iframe')?.src.includes('apps/files/')); w.querySelector('.foafos-window-min').click(); return w.dataset.wid; });
   await page.evaluate(() => FoafOS.openSwitcher());
   await page.waitForTimeout(300);
-  await page.click('#foafos-switcher button[aria-label="Switch to Files"]');
+  await page.click('#foafos-switcher button[aria-label^="Switch to Files"]');
   await page.waitForTimeout(300);
   check(await page.evaluate((w) => { const el = document.querySelector(`.foafos-window[data-wid="${w}"]`); return !el.classList.contains('minimized') && el.style.zIndex === '2640'; }, filesWid), 'Task Manager brings a minimised window back');
   await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
