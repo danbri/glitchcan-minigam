@@ -751,6 +751,25 @@ try {
     });
     check(/^widget-/.test(r.first || '') && r.opened === 1, `a widget opened from All apps is first in Recent, and opens from there (${JSON.stringify(r)})`);
   }
+  // Ctrl ; 1 opens the first pinned app, and again brings its window forward
+  {
+    const before = await page.evaluate(() => { const was = localStorage.getItem('foafos.apps.pinned'); localStorage.setItem('foafos.apps.pinned', JSON.stringify(['widget-tally'])); return was; });
+    await page.evaluate(() => { for (const w of document.querySelectorAll('.foafos-window[data-opened-as="widget-tally"]')) w.querySelector('.foafos-window-close')?.click(); });
+    await page.waitForTimeout(400);
+    const n0 = await page.evaluate(() => document.querySelectorAll('.foafos-window[data-opened-as="widget-tally"]:not(.ws-away)').length);
+    await keys(page, [';', '1']);
+    await page.waitForTimeout(400);
+    const n1 = await page.evaluate(() => document.querySelectorAll('.foafos-window[data-opened-as="widget-tally"]:not(.ws-away)').length);
+    await page.evaluate(() => FoafOS.nextWindow());
+    await keys(page, [';', '1']);
+    await page.waitForTimeout(300);
+    const front = await page.evaluate(() => [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].find((w) => w.style.zIndex === '2640')?.dataset.openedAs);
+    const n2 = await page.evaluate(() => document.querySelectorAll('.foafos-window[data-opened-as="widget-tally"]:not(.ws-away)').length);
+    const row = await page.evaluate(async () => { document.getElementById('wm-sys-keys').click(); await new Promise((ok) => setTimeout(ok, 200)); const t = [...document.querySelectorAll('#wm-keys-sheet kbd')].map((k) => k.textContent).filter((x) => /; 1/.test(x)); document.getElementById('wm-keys-sheet')?.remove(); return t; });
+    await page.evaluate((was) => { if (was === null) localStorage.removeItem('foafos.apps.pinned'); else localStorage.setItem('foafos.apps.pinned', was); }, before);
+    check(n0 === 0 && n1 === 1 && front === 'widget-tally' && n2 === n1 && String(row) === 'Ctrl ; 1 … 9',
+      `Ctrl ; 1 opens the first pinned app, then brings it forward (${JSON.stringify({ n0, n1, n2, front, row })})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));

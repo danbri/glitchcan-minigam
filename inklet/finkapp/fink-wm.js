@@ -1057,12 +1057,12 @@ window.FinkWM = {
     // Ctrl ; first, as almost nothing claims it: Chrome's Gemini can take ctrl g across a Mac.
     // Not w, t or n, which browsers keep for themselves on Windows and Linux.
     KEYS: { menu: 'ctrl ; f o a f', apps: 'ctrl ; a', windows: 'ctrl ; s',
-            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i', desktop: 'ctrl ; d', wsNext: 'ctrl ; .', wsPrev: 'ctrl ; ,', carryNext: 'ctrl ; >', carryPrev: 'ctrl ; <', arrange: 'ctrl ; g', sameApp: 'ctrl ; `' },
+            snapLeft: 'ctrl ; l', snapRight: 'ctrl ; r', snapFull: 'ctrl ; m', next: 'ctrl ; j', tasks: 'ctrl ; p', hide: 'ctrl ; h', close: 'ctrl ; q', prev: 'ctrl ; k', reopen: 'ctrl ; u', move: 'ctrl ; v', last: 'ctrl ; ;', keys: 'ctrl ; /', quarter: 'ctrl ; i', desktop: 'ctrl ; d', wsNext: 'ctrl ; .', wsPrev: 'ctrl ; ,', carryNext: 'ctrl ; >', carryPrev: 'ctrl ; <', arrange: 'ctrl ; g', sameApp: 'ctrl ; `', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [`pinned${n}`, `ctrl ; ${n}`])) },
     // What each sequence does, for the sheet of keys (Ctrl ; /, or Keys in the menu).
     KEY_LABELS: { menu: 'Open this menu', apps: 'All apps', windows: 'All windows', tasks: 'Task Manager',
             next: 'Next window', prev: 'Previous window', last: 'Last window, and back (hold Ctrl to choose)', snapLeft: 'Snap left',
             snapRight: 'Snap right', quarter: 'Snap to the next quarter', snapFull: 'Maximise or restore', hide: 'Minimise window', move: 'Move or resize window',
-            close: 'Close window', wsNext: 'Next workspace', wsPrev: 'Workspace before', carryNext: 'Take this window to the next workspace', carryPrev: 'Take this window to the workspace before', arrange: 'Arrange windows side by side', sameApp: 'Next window of the same app', desktop: 'Show the desktop, and back', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
+            close: 'Close window', wsNext: 'Next workspace', wsPrev: 'Workspace before', carryNext: 'Take this window to the next workspace', carryPrev: 'Take this window to the workspace before', arrange: 'Arrange windows side by side', sameApp: 'Next window of the same app', pinned1: 'A pinned app by its place: open it, or its window', desktop: 'Show the desktop, and back', reopen: 'Reopen the app closed last', keys: 'This list of keys' },
     _initKeys() {
         let saved = {};
         try { saved = JSON.parse(localStorage.getItem('foafos.keys')) || {}; } catch { /* the defaults */ }
@@ -1106,6 +1106,7 @@ window.FinkWM = {
             carryPrev: () => window.FoafOS?.carryToWorkspace?.(-1),
             arrange: () => window.FoafOS?.arrangeWindows?.(),
             sameApp: () => window.FoafOS?.nextOfApp?.(),
+            ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [`pinned${n}`, () => window.FoafOS?.openPinned?.(n)])),
         };
         this._seqs = seqs;
         let typed = [], at = 0;
@@ -1148,10 +1149,11 @@ window.FinkWM = {
         const order = Object.keys(this.KEY_LABELS);
         const rows = [...seqs].sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
         for (const s of rows) {
+            if (/^pinned[2-9]$/.test(s.name)) continue;            // one row for the nine
             const tr = document.createElement('tr');
             const what = document.createElement('td'); what.textContent = this.KEY_LABELS[s.name] || s.name;
             const how = document.createElement('td'); const k = document.createElement('kbd');
-            k.textContent = `${s.ctrl ? 'Ctrl ' : ''}${s.keys.join(' ')}`; how.appendChild(k);
+            k.textContent = `${s.ctrl ? 'Ctrl ' : ''}${s.keys.join(' ')}${s.name === 'pinned1' ? ' … 9' : ''}`; how.appendChild(k);
             tr.append(what, how);
             sheet.querySelector('tbody').appendChild(tr);
         }
