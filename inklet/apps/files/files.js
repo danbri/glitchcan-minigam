@@ -737,10 +737,13 @@
       markPicked();
       head.querySelector('p').textContent = `${k.name}, ${sizeText(raw.body.byteLength)}`;
       if (previewUrl) URL.revokeObjectURL(previewUrl);
-      previewUrl = /^image\//.test(type) ? URL.createObjectURL(new Blob([raw.body], { type })) : null;
-      const view = previewUrl
-        ? h('div', { class: 'detail-body detail-image' }, h('img', { src: previewUrl, alt: nameOf(it.path) }))
-        : h('p', { class: 'detail-none' }, 'This kind of file has no preview here.');
+      // Pictures show; sound and video play here, from the file's own bytes, as Quick Look and a
+      // phone's Files do. Nothing is fetched from anywhere else.
+      previewUrl = /^(image|audio|video)\//.test(type) ? URL.createObjectURL(new Blob([raw.body], { type })) : null;
+      const view = !previewUrl ? h('p', { class: 'detail-none' }, 'This kind of file has no preview here.')
+        : /^audio\//.test(type) ? h('div', { class: 'detail-body detail-media' }, h('audio', { controls: true, src: previewUrl, preload: 'metadata', 'aria-label': `Play ${nameOf(it.path)}` }))
+        : /^video\//.test(type) ? h('div', { class: 'detail-body detail-media' }, h('video', { controls: true, src: previewUrl, preload: 'metadata', playsInline: true, 'aria-label': `Play ${nameOf(it.path)}` }))
+        : h('div', { class: 'detail-body detail-image' }, h('img', { src: previewUrl, alt: nameOf(it.path) }));
       const offers = await openWithBox(it.path, type);
       const about = await aboutBox(it.path);
       if (mine !== picking) return;

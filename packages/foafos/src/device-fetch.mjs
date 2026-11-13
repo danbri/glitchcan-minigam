@@ -12,6 +12,10 @@ const TYPES = [
   [/\.xml$/i, 'application/xml'], [/\.svg$/i, 'image/svg+xml'], [/\.csv$/i, 'text/csv'],
   [/\.png$/i, 'image/png'], [/\.jpe?g$/i, 'image/jpeg'], [/\.gif$/i, 'image/gif'], [/\.webp$/i, 'image/webp'],
   [/\.mp3$/i, 'audio/mpeg'], [/\.wav$/i, 'audio/wav'], [/\.mp4$/i, 'video/mp4'], [/\.pdf$/i, 'application/pdf'],
+  // More sound, video and pictures that browsers play or show, so Files can preview them.
+  [/\.webm$/i, 'video/webm'], [/\.ogv$/i, 'video/ogg'], [/\.mov$/i, 'video/quicktime'], [/\.m4v$/i, 'video/mp4'],
+  [/\.(ogg|oga|opus)$/i, 'audio/ogg'], [/\.m4a$/i, 'audio/mp4'], [/\.aac$/i, 'audio/aac'], [/\.flac$/i, 'audio/flac'],
+  [/\.avif$/i, 'image/avif'],
 ];
 const MAX_READ = 8 * 1024 * 1024;   // more than a pod verb may carry: refuse before reading it into memory
 export const typeOf = (name) => TYPES.find(([re]) => re.test(name))?.[1] || 'application/octet-stream';

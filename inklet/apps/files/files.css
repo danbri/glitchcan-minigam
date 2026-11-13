@@ -148,3 +148,8 @@
 
 /* A file in the Trash says where it came from. */
 .trash-from { margin: 0 12px 8px; color: var(--p-dim); overflow-wrap: anywhere; }
+
+/* Sound and video play in the preview. */
+.detail-media { display: flex; align-items: center; justify-content: center; padding: 8px; }
+.detail-media audio { width: 100%; }
+.detail-media video { max-width: 100%; max-height: 100%; border-radius: var(--p-corner); background: #000; }
