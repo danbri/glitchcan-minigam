@@ -1128,8 +1128,24 @@ try {
     await page.mouse.up();
     await page.waitForTimeout(200);
     const got = await f.evaluate(() => [...document.querySelectorAll('#items tbody tr.chosen')].map((r) => r.dataset.path.split('/').pop()).join(','));
+    // Begun in the blank space beside the first name, down over the second: those two
+    await f.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
+    const p2 = await f.evaluate(() => {
+      const rows = [...document.querySelectorAll('#items tbody tr[data-path]')];
+      const nm = rows[0].querySelector('.nm').getBoundingClientRect(), td = rows[0].firstElementChild.getBoundingClientRect();
+      const r1 = rows[1].getBoundingClientRect();
+      return { x0: Math.min(td.right - 6, nm.right + 30), y0: nm.top + nm.height / 2, y1: r1.top + 6 };
+    });
+    await page.mouse.move(fr.x + p2.x0, fr.y + p2.y0);
+    await page.mouse.down();
+    for (let k = 1; k <= 6; k++) await page.mouse.move(fr.x + p2.x0 + k * 2, fr.y + p2.y0 + (p2.y1 - p2.y0) * k / 6);
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    const got2 = await f.evaluate(() => [...document.querySelectorAll('#items tbody tr.chosen')].map((r) => r.dataset.path.split('/').pop()).join(','));
+    const moved = await f.evaluate(async () => (await foafos.pod.list('notes/mq/')).items.length);
     await f.evaluate(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); for (const n of ['m1.txt', 'm2.txt', 'm3.txt']) await foafos.pod.delete(`notes/mq/${n}`); await foafos.pod.delete('notes/mq/'); await window.__files.go('notes/'); });
     check(band && got === 'm2.txt,m3.txt', `dragging a box over the list chooses what it touches (${band}, ${got})`);
+    check(got2 === 'm1.txt,m2.txt' && moved === 3, `a box can begin in the blank space beside a name, and moves nothing (${got2}, ${moved})`);
   }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
