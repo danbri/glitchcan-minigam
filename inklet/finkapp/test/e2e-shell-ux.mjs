@@ -64,6 +64,31 @@ try {
   const unpinned = await page.evaluate(() => !document.querySelector('#foafos-home details[data-folder="pinned"]'));
   check(pinnedNow.first === 'pinned' && pinnedNow.apps.join() === 'files' && /Unpin Files/.test(pinnedNow.focus || '') && unpinned,
     `☆ pins an app at the top of All apps, ★ unpins it (${JSON.stringify({ ...pinnedNow, unpinned })})`);
+  // Pinned apps in your own order: Alt+Left moves one earlier; its sheet's "Move later" moves it back
+  const order = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const pinBtn = (id) => document.querySelector(`#foafos-home .foafos-app-cell .foafos-app[data-app="${id}"] + .foafos-app-pin`);
+    pinBtn('chat').click(); await wait(100);
+    pinBtn('files').click(); await wait(100);
+    const before = FoafOS.pinnedApps().join();
+    const files = document.querySelector('#foafos-home details[data-folder="pinned"] .foafos-app[data-app="files"]');
+    files.focus();
+    files.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true, bubbles: true, cancelable: true }));
+    await wait(100);
+    const afterKey = FoafOS.pinnedApps().join();
+    const focus = document.activeElement?.dataset?.app;
+    const f2 = document.querySelector('#foafos-home details[data-folder="pinned"] .foafos-app[data-app="files"]');
+    f2.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await wait(100);
+    const acts = [...document.querySelectorAll('.foafos-app-sheet button:not([hidden])')].map((x) => x.textContent);
+    document.querySelector('.foafos-app-sheet [data-act="later"]').click(); await wait(100);
+    const afterSheet = FoafOS.pinnedApps().join();
+    for (const id of ['chat', 'files']) pinBtn(id)?.click();
+    await wait(100);
+    return { before, afterKey, focus, acts, afterSheet, left: FoafOS.pinnedApps().join() };
+  });
+  check(order.before === 'chat,files' && order.afterKey === 'files,chat' && order.focus === 'files' && order.acts.includes('Move later') && !order.acts.includes('Move earlier')
+    && order.afterSheet === 'chat,files' && order.left === '', `pinned apps can be put in your own order (${JSON.stringify(order)})`);
 
   // A widget can be pinned too, and opens from Pinned
   await page.evaluate(() => { const d = document.querySelector('#foafos-home details[data-folder="widgets"]'); d.open = true; d.querySelector('.foafos-app[data-app="widget-tally"] + .foafos-app-pin').click(); });
