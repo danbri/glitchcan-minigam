@@ -3234,11 +3234,11 @@ function buildUI() {
     const to = step > 0 ? Math.min(wsCount, here + 1) : Math.max(1, here - 1);
     return FoafOS.goWorkspace(to);
   };
-  FoafOS.moveToWorkspace = (win, n) => {
+  FoafOS.moveToWorkspace = (win, n, { quiet = false } = {}) => {
     if (n > wsCount) wsCount = Math.min(4, n);
     win.dataset.ws = String(n);
     win.classList.toggle('ws-away', n !== FoafOS.workspace);
-    wsNote(`${win.querySelector('.foafos-window-bar span')?.textContent || 'Window'} moved to workspace ${n}`);
+    if (!quiet) wsNote(`${win.querySelector('.foafos-window-bar span')?.textContent || 'Window'} moved to workspace ${n}`);
     wsRows();
   };
   FoafOS.workspaces = () => ({ at: FoafOS.workspace, count: wsCount });
@@ -4459,9 +4459,11 @@ function buildUI() {
   const keepableWindow = (id) => (String(id).startsWith('widget-') ? WIDGET_CATALOG.some((w) => `widget-${w.key}` === id)
     : !!appById(id) && !['chrome', 'stage'].includes(appById(id).surface));
   const saveWindows = () => {
+    // Each as its app, and "@n" when it is on workspace n (n > 1), so it goes back there.
     const ids = [...document.querySelectorAll('.foafos-window[data-opened-as]')]
       .sort((x, y) => Number(x.style.zIndex || 0) - Number(y.style.zIndex || 0))
-      .map((w) => w.dataset.openedAs).filter(keepableWindow).slice(-12);
+      .filter((w) => keepableWindow(w.dataset.openedAs))
+      .map((w) => (Number(w.dataset.ws || 1) > 1 ? `${w.dataset.openedAs}@${w.dataset.ws}` : w.dataset.openedAs)).slice(-12);
     try { localStorage.setItem(WINDOWS_KEY, JSON.stringify(ids)); } catch { /* not kept */ }
   };
   let windowsTimer = 0, restoringWindows = true;
@@ -4478,9 +4480,19 @@ function buildUI() {
         // Windows the installation opened itself count against what was kept, so none is doubled.
         const have = {};
         for (const w of document.querySelectorAll('.foafos-window[data-opened-as]')) have[w.dataset.openedAs] = (have[w.dataset.openedAs] || 0) + 1;
-        for (const id of saved.filter(keepableWindow)) {
-          if (have[id] > 0) { have[id]--; continue; }
-          if (id.startsWith('widget-')) FoafOS.openWidget(id.slice('widget-'.length)); else launchApp(id);
+        const placed = new Set();
+        for (const entry of saved) {
+          const [id, wsText] = String(entry).split('@');
+          if (!keepableWindow(id)) continue;
+          const ws = Math.max(1, Math.min(4, Number(wsText) || 1));
+          let win = null;
+          if (have[id] > 0) {
+            have[id]--;
+            win = [...document.querySelectorAll(`.foafos-window[data-opened-as="${CSS.escape(id)}"]`)].find((w) => !placed.has(w));
+          } else {
+            win = id.startsWith('widget-') ? FoafOS.openWidget(id.slice('widget-'.length)) : launchApp(id);
+          }
+          if (win) { placed.add(win); if (ws > 1) FoafOS.moveToWorkspace(win, ws, { quiet: true }); }
         }
         if (saved.length) bus.publish('wm.session', { summary: `reopened ${saved.length} window${saved.length === 1 ? '' : 's'}` });
       }
