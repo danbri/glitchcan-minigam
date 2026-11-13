@@ -643,6 +643,43 @@ try {
   await f.evaluate(async () => { await foafos.pod.delete('notes/r2.txt'); await window.__files.go(''); });
   check(rec1[0] === 'notes/r2.txt' && rec1[1] === 'notes/r1.txt' && !rec2.includes('notes/r1.txt') && rec2[0] === 'notes/r2.txt' && recOpened === 'notes/r2.txt',
     `Recent lists files opened, newest first, leaves out what has gone, and opens them (${JSON.stringify({ rec1, rec2, recOpened })})`);
+  // By touch, with no keyboard: a long press chooses a file, a tap adds another, and the bar's
+  // Delete deletes both; the bar's Copy, then Paste here in another folder, copies one
+  await f.evaluate(async () => {
+    for (const n of ['t1', 't2', 't3']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
+    await window.__files.go('notes/');
+  });
+  await page.waitForTimeout(400);
+  const tcdp = await context.newCDPSession(page);
+  await tcdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  const tAt = async (sel) => { const h = await f.$(sel); const b = await h.boundingBox(); return { x: b.x + 30, y: b.y + b.height / 2 }; };
+  const touchHold = async (pt, ms) => {
+    await tcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [pt] });
+    await page.waitForTimeout(ms);
+    await tcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(250);
+  };
+  const tRow = (n) => `#items tbody tr[data-path="notes/${n}.txt"]`;
+  await touchHold(await tAt(tRow('t1')), 700);
+  const tOne = await f.evaluate(() => ({ chosen: [...document.querySelectorAll('#items tbody tr.chosen')].map((r) => r.dataset.path), bar: document.getElementById('choosebar')?.hidden === false, picked: window.__files.state().picked?.path || null }));
+  await touchHold(await tAt(tRow('t2')), 60);
+  const tTwo = await f.$$eval('#items tbody tr.chosen', (rs) => rs.map((r) => r.dataset.path));
+  await f.evaluate(() => [...document.querySelectorAll('#choosebar button')].find((b) => b.textContent === 'Delete').click());
+  await page.waitForTimeout(300);
+  await f.click('.ask button.danger');
+  await page.waitForTimeout(700);
+  const tGone = await f.evaluate(async () => [(await foafos.pod.get('notes/t1.txt')).ok, (await foafos.pod.get('notes/t2.txt')).ok]);
+  await touchHold(await tAt(tRow('t3')), 700);
+  await f.evaluate(() => [...document.querySelectorAll('#choosebar button')].find((b) => b.textContent === 'Copy').click());
+  await f.evaluate(() => window.__files.go(''));
+  await page.waitForTimeout(400);
+  const pasteLabel = await f.evaluate(() => [...document.querySelectorAll('#choosebar button')].map((b) => b.textContent).join('|'));
+  await f.evaluate(() => [...document.querySelectorAll('#choosebar button')].find((b) => /^Paste/.test(b.textContent)).click());
+  await page.waitForTimeout(700);
+  const tCopied = await f.evaluate(async () => { const r = (await foafos.pod.get('t3.txt')).body; await foafos.pod.delete('t3.txt'); await foafos.pod.delete('notes/t3.txt'); return r; });
+  await tcdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  check(String(tOne.chosen) === 'notes/t1.txt' && tOne.bar && String(tTwo) === 'notes/t1.txt,notes/t2.txt' && String(tGone) === 'false,false' && /Paste t3\.txt here/.test(pasteLabel) && tCopied === 't3',
+    `by touch: a long press chooses, a tap adds, and the bar deletes, copies and pastes (${JSON.stringify({ tOne, tTwo, tGone, pasteLabel, tCopied })})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });

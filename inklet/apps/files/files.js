@@ -95,10 +95,33 @@
       r.classList.toggle('chosen', on);
       r.setAttribute('aria-selected', String(on || (!chosen.size && picked?.path === r.dataset.path)));
     }
-    if (chosen.size) say(`${chosen.size} chosen. Delete to delete them, Escape to clear.`);
+    // The keys are named only where there is a keyboard; a phone has the bar below.
+    if (chosen.size) say(touchOnly ? `${chosen.size} chosen.` : `${chosen.size} chosen. Delete to delete them, Escape to clear.`);
+    drawChooseBar();
   };
+  // A bar for what is chosen and what is held, so all of it works without a keyboard (a phone):
+  // Copy, Cut, Delete and Clear for the chosen; Paste here for what was copied or cut.
+  function drawChooseBar() {
+    let bar = $('choosebar');
+    if (!bar) {
+      bar = h('div', { id: 'choosebar', class: 'choosebar', role: 'toolbar', 'aria-label': 'Chosen items' });
+      statusEl.before(bar);
+    }
+    const holding = held && !held.gone;
+    bar.hidden = !chosen.size && !holding;
+    const btn = (label, run, extra = {}) => h('button', { type: 'button', class: 'tool', on: { click: run }, ...extra }, label);
+    bar.replaceChildren(...[
+      chosen.size ? h('span', { class: 'choose-n' }, `${chosen.size} chosen`) : null,
+      chosen.size ? btn('Copy', () => holdChosen(false)) : null,
+      chosen.size && !inArchive() ? btn('Cut', () => holdChosen(true)) : null,
+      chosen.size && !inArchive() ? btn('Delete', askDeleteChosen, { class: 'tool danger' }) : null,
+      chosen.size ? btn('Clear', () => { clearChosen(); say(folderSummary()); }) : null,
+      holding && !inArchive() ? btn(`Paste ${held.paths.length === 1 ? nameOf(held.paths[0]) : `${held.paths.length} files`} here`, () => pasteHeld(), { class: 'tool tool-main' }) : null,
+    ].filter(Boolean));
+  }
   // A click in the list or the icon view: with Ctrl or Cmd it adds or removes, with Shift it takes a run.
   function clickItem(e, it) {
+    if (e.pointerType === 'touch' && chosen.size) { chosen.has(it.path) ? chosen.delete(it.path) : chosen.add(it.path); markChosen(); if (!chosen.size) say(folderSummary()); return; }
     if (e.metaKey || e.ctrlKey) { if (!chosen.size && picked?.path && picked.path !== it.path) chosen.add(picked.path); chosen.has(it.path) ? chosen.delete(it.path) : chosen.add(it.path); anchor = it.path; markChosen(); return; }
     if (e.shiftKey && anchor) {
       const paths = shown().map((x) => x.path), a = paths.indexOf(anchor), b = paths.indexOf(it.path);
@@ -144,6 +167,7 @@
     folder = path;
     keepFolder();
     chosen.clear(); anchor = null;
+    queueMicrotask(drawChooseBar);
     // Inside an archive nothing can be made, saved or dropped.
     for (const id of ['new-file', 'new-folder']) $(id).disabled = inArchive();
     recentOrder = false;
@@ -232,8 +256,23 @@
   // grid or the folder tree moves there: copied with If-None-Match (never over a file that is there),
   // then the original deleted with its ETag (only if unchanged). If either step fails, nothing is lost.
   const MOVE_TYPE = 'application/x-foafos-path';
+  const touchOnly = window.matchMedia?.('(pointer: coarse)').matches && !window.matchMedia?.('(any-pointer: fine)').matches;
+  // A long press on an item chooses it, as a phone's file manager does; taps then add or remove.
+  function asChoosable(el, it) {
+    let timer = 0, at = null;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return;
+      at = { x: e.clientX, y: e.clientY };
+      timer = setTimeout(() => { el._held = true; chosen.add(it.path); anchor = it.path; markChosen(); }, 500);
+    });
+    el.addEventListener('pointermove', (e) => { if (at && Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) clearTimeout(timer); });
+    for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, () => clearTimeout(timer));
+    el.addEventListener('contextmenu', (e) => { if (el._held || at) e.preventDefault(); });
+    el.addEventListener('click', (e) => { if (el._held) { el._held = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  }
   function asDraggable(el, it) {
-    if (it.container || inArchive()) return;
+    asChoosable(el, it);
+    if (it.container || inArchive() || touchOnly) return;
     el.draggable = true;
     // Dragging one of several chosen files takes them all, as a desktop's file manager does.
     el.addEventListener('dragstart', (e) => {
@@ -986,28 +1025,34 @@
   // name, so pasting it elsewhere gives something sensible. A copy never replaces a file; a cut
   // moves the file as a drag does, and only once.
   let held = null;
+  function holdPaths(paths, cut) {
+    const its = paths.map((p) => items.find((i) => i.path === p)).filter(Boolean);
+    const files = its.filter((i) => !i.container).map((i) => i.path);
+    if (!files.length) { say('Folders cannot be copied here yet; copy the files in it.', true); return null; }
+    if (cut && inArchive()) { say('This is inside an archive, which is read only. Copy instead.', true); return null; }
+    const names = files.map(nameOf);
+    held = { paths: files, cut, name: names.join('\n') };
+    const what = files.length === 1 ? names[0] : `${files.length} files`;
+    const left = its.length - files.length ? ` (${its.length - files.length} folder${its.length - files.length === 1 ? '' : 's'} left out)` : '';
+    say(`${cut ? 'Cut' : 'Copied'} ${what}${left}. Paste in a folder to ${cut ? 'move' : 'put a copy'} there.`);
+    drawChooseBar();
+    return held;
+  }
+  function holdChosen(cut) { holdPaths([...chosen], cut); }
   const onCopy = (e) => {
     if (e.target.closest?.('input, textarea, select, [contenteditable]') || window.getSelection()?.toString()) return;
     // The chosen items, if several are chosen; otherwise the one the keyboard is on, or the one picked.
     const one = document.activeElement?.closest?.('#items [data-path]')?.dataset.path || picked?.path;
     const paths = chosen.size > 1 ? [...chosen] : one ? [one] : [];
-    const its = paths.map((p) => items.find((i) => i.path === p)).filter(Boolean);
-    if (!its.length) return;
+    if (!paths.some((p) => items.find((i) => i.path === p))) return;
     e.preventDefault();
-    const files = its.filter((i) => !i.container).map((i) => i.path);
-    if (!files.length) { say('Folders cannot be copied here yet; copy the files in it.', true); return; }
-    if (e.type === 'cut' && inArchive()) { say('This is inside an archive, which is read only. Copy instead.', true); return; }
-    const names = files.map(nameOf);
-    held = { paths: files, cut: e.type === 'cut', name: names.join('\n') };
-    e.clipboardData?.setData('text/plain', held.name);
-    const what = files.length === 1 ? names[0] : `${files.length} files`;
-    const left = its.length - files.length ? ` (${its.length - files.length} folder${its.length - files.length === 1 ? '' : 's'} left out)` : '';
-    say(`${held.cut ? 'Cut' : 'Copied'} ${what}${left}. Paste in a folder to ${held.cut ? 'move' : 'put a copy'} there.`);
+    if (holdPaths(paths, e.type === 'cut')) e.clipboardData?.setData('text/plain', held.name);
   };
   document.addEventListener('copy', onCopy);
   document.addEventListener('cut', onCopy);
   async function pasteHeld() {
     const h0 = held;
+    queueMicrotask(drawChooseBar);
     const what = h0.paths?.length === 1 ? nameOf(h0.paths[0]) : 'Those files';
     if (h0.gone) { say(`${what} ${h0.paths?.length === 1 ? 'was' : 'were'} moved already.`); return; }
     if (h0.cut) {

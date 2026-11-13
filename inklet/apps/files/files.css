@@ -134,3 +134,8 @@
    room to read. */
 .pane-detail > * { flex-shrink: 0; }
 .pane-detail > .detail-body { flex-shrink: 1; min-height: 9rem; }
+
+/* What is chosen, and what is held to paste: a bar that works without a keyboard. */
+.choosebar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--p-line); background: var(--p-side); }
+.choosebar[hidden] { display: none; }
+.choosebar .choose-n { font-weight: 600; margin-right: 4px; }
