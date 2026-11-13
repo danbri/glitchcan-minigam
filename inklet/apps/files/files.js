@@ -1387,6 +1387,63 @@
   });
   // Drop files from the computer onto the list to add them to this folder: text up to 1 MiB,
   // anything else up to 8 MiB. A larger file is named and left out rather than silently lost.
+  // Drag a box over the empty space of the list or the icons to choose what it touches, as in
+  // Finder, Explorer and GNOME Files; with Ctrl or Cmd held, what it touches is added. A mouse or a
+  // pen only: a finger scrolls, and a phone chooses with a long press.
+  {
+    const box = $('items-pane');
+    let band = null, drewAt = -1e9;
+    // The click that ends a drawn box is not a click on what is under it.
+    box.addEventListener('click', (c) => { if (performance.now() - drewAt < 300) { c.stopPropagation(); c.preventDefault(); } }, true);
+    box.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' || e.button !== 0) return;
+      if (e.target.closest('tr[data-path], [role=option], button, input, a, .ask, #choosebar, .search-further')) return;
+      const r = box.getBoundingClientRect();
+      band = { x: e.clientX - r.left + box.scrollLeft, y: e.clientY - r.top + box.scrollTop, id: e.pointerId, keep: e.metaKey || e.ctrlKey ? new Set(chosen) : new Set(), el: null };
+    });
+    box.addEventListener('pointermove', (e) => {
+      if (!band || e.pointerId !== band.id) return;
+      const r = box.getBoundingClientRect();
+      const x = e.clientX - r.left + box.scrollLeft, y = e.clientY - r.top + box.scrollTop;
+      if (!band.el) {
+        if (Math.abs(x - band.x) + Math.abs(y - band.y) < 6) return;
+        // Where each item is, in the pane's own coordinates, measured once per box.
+        band.items = [...$('items').querySelectorAll('tbody tr[data-path], .grid [role=option][data-path]')].map((el) => {
+          const q = el.getBoundingClientRect();
+          return { path: el.dataset.path, l: q.left - r.left + box.scrollLeft, t: q.top - r.top + box.scrollTop, r: q.right - r.left + box.scrollLeft, b: q.bottom - r.top + box.scrollTop };
+        });
+        band.el = h('div', { class: 'band', 'aria-hidden': 'true' });
+        box.appendChild(band.el);
+        box.setPointerCapture?.(e.pointerId);
+      }
+      band.to = { x, y };
+      if (band.frame) return;
+      // At most once a frame, however fast the pointer moves.
+      band.frame = requestAnimationFrame(drawBand);
+    });
+    function drawBand() {
+        if (!band?.el) return;
+        band.frame = 0;
+        const { x, y } = band.to;
+        const L = Math.min(x, band.x), T = Math.min(y, band.y), R = Math.max(x, band.x), B = Math.max(y, band.y);
+        Object.assign(band.el.style, { left: `${L}px`, top: `${T}px`, width: `${R - L}px`, height: `${B - T}px` });
+        const on = new Set(band.keep);
+        for (const q of band.items) if (q.r > L && q.l < R && q.b > T && q.t < B) on.add(q.path);
+        if (on.size === chosen.size && [...on].every((p) => chosen.has(p))) return;
+        chosen.clear(); for (const p of on) chosen.add(p);
+        markChosen();
+    }
+    const end = (e) => {
+      if (!band || e.pointerId !== band.id) return;
+      const drew = !!band.el;
+      if (band.frame) { cancelAnimationFrame(band.frame); drawBand(); }   // the last move counts
+      band.el?.remove();
+      band = null;
+      if (drew) { drewAt = performance.now(); if (!chosen.size) say(folderSummary()); }
+    };
+    box.addEventListener('pointerup', end);
+    box.addEventListener('pointercancel', end);
+  }
   const pane = $('items-pane');
   pane.addEventListener('dragover', (e) => {
     if (![...(e.dataTransfer?.types || [])].includes('Files')) return;

@@ -1107,6 +1107,30 @@ try {
     check(zdl.suggestedFilename() === 'zipme.zip' && String(names) === 'zipme/a.txt,zipme/empty/,zipme/sub/b.txt' && aText === 'A',
       `a folder downloads as a .zip of all that is in it (${zdl.suggestedFilename()}: ${names})`);
   }
+  // Drag a box from the empty space below the list up over two rows: those two are chosen
+  {
+    await f.evaluate(async () => {
+      for (const n of ['m1.txt', 'm2.txt', 'm3.txt']) await foafos.pod.put(`notes/mq/${n}`, 'x', { contentType: 'text/plain' });
+      await window.__files.go('notes/mq/');
+    });
+    await page.waitForTimeout(300);
+    const pts = await f.evaluate(() => {
+      const rows = [...document.querySelectorAll('#items tbody tr[data-path]')].map((r) => r.getBoundingClientRect());
+      const pane = document.getElementById('items-pane').getBoundingClientRect();
+      const last = rows.at(-1);
+      return { x0: last.left + 40, y0: Math.min(pane.bottom - 10, last.bottom + 40), x1: last.left + 60, y1: rows[1].top + 4 };
+    });
+    const fr = await (await f.frameElement()).boundingBox();
+    await page.mouse.move(fr.x + pts.x0, fr.y + pts.y0);
+    await page.mouse.down();
+    for (let k = 1; k <= 8; k++) await page.mouse.move(fr.x + pts.x0 + (pts.x1 - pts.x0) * k / 8, fr.y + pts.y0 + (pts.y1 - pts.y0) * k / 8);
+    const band = await f.evaluate(() => !!document.querySelector('#items-pane .band'));
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    const got = await f.evaluate(() => [...document.querySelectorAll('#items tbody tr.chosen')].map((r) => r.dataset.path.split('/').pop()).join(','));
+    await f.evaluate(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); for (const n of ['m1.txt', 'm2.txt', 'm3.txt']) await foafos.pod.delete(`notes/mq/${n}`); await foafos.pod.delete('notes/mq/'); await window.__files.go('notes/'); });
+    check(band && got === 'm2.txt,m3.txt', `dragging a box over the list chooses what it touches (${band}, ${got})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

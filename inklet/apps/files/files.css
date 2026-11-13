@@ -166,3 +166,7 @@
 
 /* A phone has no folder picker: Upload a folder is for a computer. */
 @media (pointer: coarse) and (not (any-pointer: fine)) { .upload-dir { display: none; } }
+
+/* The box dragged over the list to choose what it touches. */
+#items-pane { position: relative; }
+#items-pane .band { position: absolute; z-index: 3; pointer-events: none; border: 1px solid var(--p-accent); background: color-mix(in srgb, var(--p-accent) 15%, transparent); }
