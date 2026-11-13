@@ -493,6 +493,18 @@
     const b = h('button', { type: 'button', title: label, on: { click: () => { $('panes').dataset.places = 'closed'; go(path); } } }, `${open ? '📂' : '📁'} ${label}`);
     if (path === folder) b.setAttribute('aria-current', 'true');
     asDropTarget(b, path);
+    // A folder in the side panel has a menu of its own, as in Finder's sidebar: what works on a
+    // folder from anywhere.
+    b.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const kept = favs().includes(path);
+      showMenu([
+        ['Open', '', () => go(path)],
+        inArchive() ? null : ['New folder in it', '', async () => { await go(path); askNewFolder(); }],
+        path ? ['Download as .zip', '', () => download([path])] : null,
+        path ? [kept ? 'Remove from the side panel' : 'Keep in the side panel', '', () => { const on = toggleFav(path); say(on ? `${nameOf(path)} is kept in the side panel.` : `${nameOf(path)} is no longer in the side panel.`); }] : null,
+      ], e.clientX, e.clientY, `Folder ${label}`, () => b.focus());
+    });
     const li = h('li', {}, b);
     const kids = open ? children.get(path) || [] : [];
     if (kids.length) li.append(h('ul', {}, kids.map((k) => treeNode(k, nameOf(k)))));

@@ -32,7 +32,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Recent files (desktops, phones) | Done: #1072 |
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
 | A right-click (or the Menu key, Shift+F10) on an item opens its menu: Open, Rename, Duplicate, Copy, Cut, Download, Compress, Trash; on several chosen, for them all (every desktop) | Done: #1155 |
-| A right-click or long press on a folder's empty space opens its menu: New file, New folder, Upload, Paste, Choose all, view, Look for changes; a long press on a phone (Finder, Explorer, Android) | Done: #1156, this PR |
+| A right-click or long press on a folder's empty space opens its menu: New file, New folder, Upload, Paste, Choose all, view, Look for changes; a long press on a phone (Finder, Explorer, Android) | Done: #1156, #1157 |
 | Duplicate a file, or a folder with all in it (macOS) | Done: #1034, #1149 |
 | Drop files from the computer; paste files, screenshots and text (desktops) | Done: #1009, #1053 |
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
@@ -55,6 +55,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Folders go to the Trash whole, and come back whole (desktops) | Done: #1115 |
 | Copy a folder and what is in it (desktops) | Done: #1082 |
 | Folders you use often, kept in the side panel (Finder sidebar, Explorer Quick access) | Done: #1081 |
+| A right-click on a folder in the side panel: Open, New folder in it, Download as .zip, Keep in or Remove from the side panel (Finder's sidebar, Explorer's navigation pane) | Done: this PR |
 
 ## Task switching
 
