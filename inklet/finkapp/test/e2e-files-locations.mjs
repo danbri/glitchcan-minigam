@@ -1395,6 +1395,18 @@ try {
     await page.emulateMedia({ forcedColors: 'none' });
     check(r.chosen !== r.plain, `in high contrast a chosen row still stands out (${JSON.stringify(r)})`);
   }
+  // For a screen reader, the list is a multi-select grid named after the folder, and a chosen row says so
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/sr/a.txt', 'a', { contentType: 'text/plain' }); await foafos.pod.put('notes/sr/b.txt', 'b', { contentType: 'text/plain' }); await window.__files.go('notes/sr/'); });
+    await page.waitForTimeout(300);
+    await f.click('#items tbody tr[data-path="notes/sr/a.txt"]', { modifiers: ['ControlOrMeta'] });
+    await f.click('#items tbody tr[data-path="notes/sr/b.txt"]', { modifiers: ['ControlOrMeta'] });
+    await page.waitForTimeout(200);
+    const tree = await f.locator('#items').ariaSnapshot();
+    const sortAttr = await f.evaluate(() => document.querySelector('#items thead th[aria-sort]')?.getAttribute('aria-sort'));
+    await f.evaluate(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); for (const p of ['notes/sr/a.txt', 'notes/sr/b.txt', 'notes/sr/']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
+    check(/grid "Items in sr"/.test(tree) && /row ".*a\.txt.*" \[selected\]/.test(tree) && /row ".*b\.txt.*" \[selected\]/.test(tree) && sortAttr === 'ascending', `the list is a grid a screen reader can follow, chosen rows and the sort marked (${sortAttr}; ${tree.replace(/\n/g, ' / ').slice(0, 260)})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

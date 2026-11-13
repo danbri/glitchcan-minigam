@@ -130,7 +130,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: #1091 |
 | Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: #1092 |
 | A phone's Back closes the innermost thing open: an app's sheet, a menu, the keys sheet, then All apps or All windows (Android) | Done: #1132 |
-| High contrast (Windows' contrast themes): chosen, pressed and best-match states stay visible, by the system's Highlight and outlines | Done: this PR |
+| High contrast (Windows' contrast themes): chosen, pressed and best-match states stay visible, by the system's Highlight and outlines | Done: #1164 |
+| A screen reader hears Files' list as a grid named after the folder, which rows are chosen, and how it is sorted (Finder and Explorer with VoiceOver, Narrator) | Done: this PR |
 | A phone's Back goes back inside the app that has the screen: Files closes a file's panel, then goes back a folder (foafos.setBack; Android) | Done: #1139 |
 
 ## Second round
