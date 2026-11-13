@@ -24,7 +24,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Where the space goes: a treemap (desktop disk tools) | Done: #1021, #1024 |
 | Status bar: items, size, room left under a limit (desktops) | Done: #1064 |
 | Opens at the folder you were in (desktops, phones) | Done: #1058 |
-| The folder keeps up with files saved by other apps; pull down to refresh on a phone (desktops, phones) | Done: this PR |
+| The folder keeps up with files saved by other apps; pull down to refresh on a phone (desktops, phones) | Done: #1108 |
 | Recent files (desktops, phones) | Done: #1072 |
 | New file, new folder, rename (F2), delete with a question (desktops) | Done: #1004 |
 | Duplicate (macOS) | Done: #1034 |
@@ -33,18 +33,18 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Download a folder as one .zip (web file managers) | Done: #1113 |
 | Upload files, or a folder keeping its shape, with the system picker (web and phone file managers) | Done: #1116 |
 | Rename a folder (F2 or Rename), and never rename over something already there (desktops) | Done: #1117 |
-| A picked folder says what is in it, and its total size on request (Get Info, Properties) | Done: this PR |
+| A picked folder says what is in it, and its total size on request (Get Info, Properties) | Done: #1118 |
 | Copy, cut and paste between folders (desktops) | Done: #1061, #1069 |
-| Move a folder, by drag or cut and paste; delete an empty folder (desktops) | Done: this PR |
+| Move a folder, by drag or cut and paste; delete an empty folder (desktops) | Done: #1114 |
 | Drag onto a folder to move (desktops) | Done: #1036, #1071 |
 | Choose several: Ctrl/Cmd + click, Shift + click, Ctrl/Cmd + A (desktops) | Done: #1067, #1070 |
 | Choose several by touch: long press, then taps, with a bar (phones) | Done: #1075 |
 | Archives open as folders (macOS, Windows, GNOME) | Done: #1026 |
-| Shift + arrows to extend a choice from the keyboard (desktops) | Done: this PR |
+| Shift + arrows to extend a choice from the keyboard (desktops) | Done: #1080 |
 | A Trash to take deleted files back from, and Undo right after a delete (desktops, phones) | Done: #1083 |
-| Folders go to the Trash whole, and come back whole (desktops) | Done: this PR |
-| Copy a folder and what is in it (desktops) | Done: this PR |
-| Folders you use often, kept in the side panel (Finder sidebar, Explorer Quick access) | Done: this PR |
+| Folders go to the Trash whole, and come back whole (desktops) | Done: #1115 |
+| Copy a folder and what is in it (desktops) | Done: #1082 |
+| Folders you use often, kept in the side panel (Finder sidebar, Explorer Quick access) | Done: #1081 |
 
 ## Task switching
 
@@ -52,7 +52,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
-| No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: this PR |
+| No window by that name: All windows offers the app, and Enter opens it (GNOME overview search) | Done: #1102 |
 | Swipe a card up to close it; tap the space around to leave (phones) | Done: #1006, #1031 |
 | The hint speaks of taps on a touch screen, keys on a keyboard | Done: #1056 |
 | Next and previous window by key (Ctrl ; j, k) | Done: #1002, #1032 |
@@ -60,7 +60,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Swipe sideways along a full-screen window's bar to switch (phones' bottom bar) | Done: #1063 |
 | Task Manager: everything running, pause, close, bring back a minimised one (desktops) | Done: #1011, #1073 |
 | Back closes All windows and All apps rather than leaving the shell (phones, browsers) | Done: #1060 |
-| A switcher that shows while a key is held and cycles while it is pressed again: Ctrl ; ; held (Alt+Tab held) | Done: this PR |
+| A switcher that shows while a key is held and cycles while it is pressed again: Ctrl ; ; held (Alt+Tab held) | Done: #1084 |
 
 ## App and widget discovery
 
@@ -86,11 +86,11 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Move and resize with the keyboard (Windows, GNOME) | Done: #1051 |
 | Reopens where it was left, at its size, maximised if it was (desktops) | Done: #1010, #1055 |
 | Reopen the app closed last (browsers' reopen closed tab) | Done: #1044 |
-| The windows you had open come back after a reload (browsers' tab restore, macOS reopening windows) | Done: this PR |
+| The windows you had open come back after a reload (browsers' tab restore, macOS reopening windows) | Done: #1104 |
 | Windows follow the page when it changes size (desktops, when a screen changes) | Done: #1050 |
 | Resize from any edge or corner, not only the bottom-right (all desktops) | Done: #1079 |
-| Double-click the top or bottom edge for the full height (Windows) | Done: this PR |
-| Keys for the four quarters: Ctrl ; i steps round them (Windows, GNOME) | Done: this PR |
+| Double-click the top or bottom edge for the full height (Windows) | Done: #1103 |
+| Keys for the four quarters: Ctrl ; i steps round them (Windows, GNOME) | Done: #1078 |
 
 ## Across all four
 
@@ -100,18 +100,18 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Every action named for screen readers; keys shown beside menu rows | Done: #1003, and each step above |
 | Touch targets of about 44 px on touch screens | Done: window buttons, All apps, the bars above |
 | On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: #1091 |
-| Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: this PR |
+| Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: #1092 |
 
 ## Second round
 
 | Feature | Status |
 |---|---|
-| Show the desktop: put every window away, and bring them all back (Win+D, F11 on a Mac, GNOME Super+D) | Done: this PR |
-| Minimise the others, from the window menu (a Mac's Hide Others) | Done: this PR |
-| Keep a window on top of the others, from the window menu (GNOME, Windows PowerToys "Always on Top") | Done: this PR |
-| Files: play sound and video in the preview (Quick Look, phones) | Done: this PR |
-| Files: show PDFs in the preview, a page at a time, with pdf.js (Quick Look, phones) | Done: this PR |
-| Files: "Show in folder" from Recent and search; "Show where it was" from the Trash (desktops) | Done: this PR |
-| Workspaces: more than one desktop of windows, Ctrl ; . and , (Spaces, virtual desktops, GNOME workspaces) | Done: this PR |
+| Show the desktop: put every window away, and bring them all back (Win+D, F11 on a Mac, GNOME Super+D) | Done: #1085 |
+| Minimise the others, from the window menu (a Mac's Hide Others) | Done: #1111 |
+| Keep a window on top of the others, from the window menu (GNOME, Windows PowerToys "Always on Top") | Done: #1086 |
+| Files: play sound and video in the preview (Quick Look, phones) | Done: #1088 |
+| Files: show PDFs in the preview, a page at a time, with pdf.js (Quick Look, phones) | Done: #1090 |
+| Files: "Show in folder" from Recent and search; "Show where it was" from the Trash (desktops) | Done: #1087 |
+| Workspaces: more than one desktop of windows, Ctrl ; . and , (Spaces, virtual desktops, GNOME workspaces) | Done: #1089 |
 | All windows has a button for each workspace (Mission Control's row of Spaces) | Done: #1106 |
-| Drag a window's card onto a workspace in All windows to move it there (Mission Control) | Done: this PR |
+| Drag a window's card onto a workspace in All windows to move it there (Mission Control) | Done: #1107 |
