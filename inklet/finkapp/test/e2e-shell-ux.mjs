@@ -308,7 +308,7 @@ try {
   await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /Minimise/.test(b.textContent)).click());
   const minimised = await page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('minimized'));
   await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); w.querySelector('.foafos-window-min').click(); FoafOS.raiseWindow(w); });
-  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Minimise=Ctrl ; h,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
+  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Keep on top=,Minimise=Ctrl ; h,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
     `right-click on a title bar opens the window menu with its keys, and it acts (${wmenu}, ${focusIn}, ${menuGone}, ${minimised})`);
 
   // Snapping
@@ -490,6 +490,31 @@ try {
   const dFront1 = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.style.zIndex === '2640')?.dataset.wid);
   check(dBefore.split(',').length >= 2 && dAway === '' && dBack === dBefore && dFront1 === dFront0,
     `ctrl ; d shows the desktop, and again brings the same windows back (${dBefore} → "${dAway}" → ${dBack}; front ${dFront0} → ${dFront1})`);
+
+  // Keep on top (window menu): the window stays over another raised after it, with a pin in its bar
+  const ot = await page.evaluate(async () => {
+    const sys = document.getElementById('foafos-session-win');
+    if (sys.classList.contains('minimized')) sys.querySelector('.foafos-window-min').click();
+    if (sys.classList.contains('maximized')) sys.querySelector('.foafos-window-max').click();
+    Object.assign(sys.style, { left: '100px', top: '100px', width: '400px', height: '300px' });
+    const other = [...document.querySelectorAll('.foafos-window:not(.minimized)')].find((w) => w !== sys && !w.classList.contains('maximized'));
+    Object.assign(other.style, { left: '200px', top: '150px', width: '400px', height: '300px' });
+    FoafOS.raiseWindow(sys);
+    const r = sys.querySelector('.foafos-window-bar span').getBoundingClientRect();
+    sys.querySelector('.foafos-window-bar').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.x + 20, clientY: r.y + 5 }));
+    [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /^Keep on top/.test(b.textContent)).click();
+    FoafOS.raiseWindow(other);
+    const hit = document.elementFromPoint(300, 200)?.closest('.foafos-window');
+    const pin = getComputedStyle(sys.querySelector('.foafos-window-bar > span:first-child'), '::before').content;
+    const inUse = other.style.zIndex === '2640';
+    // and off again
+    sys.querySelector('.foafos-window-bar').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.x + 20, clientY: r.y + 5 }));
+    [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /^Stop keeping on top/.test(b.textContent)).click();
+    FoafOS.raiseWindow(other);
+    const hit2 = document.elementFromPoint(300, 200)?.closest('.foafos-window');
+    return { onTop: hit === sys, pin, inUse, after: hit2 === other };
+  });
+  check(ot.onTop && /📌/.test(ot.pin) && ot.inUse && ot.after, `a window kept on top stays over one raised after it, and can be let go (${JSON.stringify(ot)})`);
 
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });

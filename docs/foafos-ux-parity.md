@@ -93,7 +93,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Feature | Status |
 |---|---|
 | Show the desktop: put every window away, and bring them all back (Win+D, F11 on a Mac, GNOME Super+D) | Done: this PR |
-| Keep a window on top of the others (GNOME, Windows PowerToys "Always on Top") | Open |
+| Keep a window on top of the others, from the window menu (GNOME, Windows PowerToys "Always on Top") | Done: this PR |
 | Files: play sound and video, and show PDFs, in the preview (Quick Look, phones) | Open |
 | Files: "Show in folder" from Recent, search and the Trash (desktops) | Open |
 | Workspaces: more than one desktop of windows (Spaces, virtual desktops, GNOME workspaces) | Open |
