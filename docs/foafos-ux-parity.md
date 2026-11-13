@@ -82,6 +82,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
 | Widgets opened from All apps show in Recent with the apps (phones' recent widgets, Start's Recent) | Done: #1137 |
 | Pinned apps in your own order: Alt+arrows, or Move earlier/later on a long press (docks, home screens) | Done: #1101 |
+| A pinned app by its place, Ctrl ; 1 to 9: open it, or bring its window forward (Windows' Win+1 to 9) | Done: this PR |
 | A dot under each app that is open (docks) | Done: #1049, #1057 |
 | Arrow keys through All apps; no on-screen keyboard thrown up on a phone | Done: #1008, #1013 |
 | A sheet of every key, from the menu or Ctrl ; / (desktops' keyboard help, "?" on the web) | Done: #1077 |
@@ -114,7 +115,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: #1091 |
 | Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: #1092 |
 | A phone's Back closes the innermost thing open: an app's sheet, a menu, the keys sheet, then All apps or All windows (Android) | Done: #1132 |
-| A phone's Back goes back inside the app that has the screen: Files closes a file's panel, then goes back a folder (foafos.setBack; Android) | Done: this PR |
+| A phone's Back goes back inside the app that has the screen: Files closes a file's panel, then goes back a folder (foafos.setBack; Android) | Done: #1139 |
 
 ## Second round
 

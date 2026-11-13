@@ -3959,6 +3959,23 @@ function buildUI() {
     return true;
   };
   FoafOS.pinnedApps = () => pinnedIds();
+  // The nth pinned app by key (Ctrl ; 1 to 9), as Windows' Win+1 to 9 does for its taskbar: its
+  // window on this workspace comes forward (the next one, pressed again), or it opens.
+  FoafOS.openPinned = (n) => {
+    const id = pinnedIds()[n - 1];
+    if (!id) { wsNote(`Nothing is pinned at ${n}; pin apps in All apps`); return null; }
+    const wins = [...document.querySelectorAll('.foafos-window[data-opened-as]:not(.ws-away)')].filter((w) => w.dataset.openedAs === id);
+    if (wins.length) {
+      const front = wins.find((w) => w.style.zIndex === '2640' && !w.classList.contains('minimized'));
+      const next = front ? wins[(wins.indexOf(front) + 1) % wins.length] : wins.at(-1);
+      if (next.classList.contains('minimized')) next.querySelector('.foafos-window-min')?.click();
+      FoafOS.raiseWindow(next);
+      return next;
+    }
+    if (id.startsWith('widget-')) { const w = WIDGET_CATALOG.find((x) => `widget-${x.key}` === id); return w ? openWidgetWindow(w) : null; }
+    noteRecent(id);
+    return launchApp(id);
+  };
   function noteRecent(id) {
     try {
       const was = JSON.parse(localStorage.getItem(RECENT_KEY)) || [];
