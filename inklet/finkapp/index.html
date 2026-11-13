@@ -66,7 +66,7 @@
          to a screen edge. A disclosure (button + panel of buttons), not an
          ARIA menu: every row is an ordinary button, reachable by Tab. -->
     <div id="wm-chrome" class="wm-hidden collapsed" role="group" aria-label="Game window">
-        <button type="button" id="wm-handle" aria-label="Window menu" aria-expanded="false" aria-controls="wm-buttons">☰</button>
+        <button type="button" id="wm-handle" aria-label="Window menu" aria-description="Tap for this menu, tap twice for All apps, hold for All windows, drag to move it" title="Tap: this menu · Tap twice: All apps · Hold: All windows · Drag: move it" aria-expanded="false" aria-controls="wm-buttons">☰</button>
         <span id="wm-unread" aria-hidden="true" hidden></span>
         <div id="wm-buttons" role="group" aria-label="Window menu">
             <!-- Which pane does this menu act on? In split there are two;

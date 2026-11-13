@@ -1000,6 +1000,21 @@ try {
   await phone.page.waitForTimeout(400);
   const small = await phone.page.evaluate(() => [...document.querySelectorAll('.foafos-window-btn')].filter((b) => b.offsetParent && b.getBoundingClientRect().height < 40).length);
   check(small === 0, 'window buttons are touch sized on a phone');
+  // A finger held on the menu handle opens All windows; a tap still opens the menu
+  {
+    await phone.page.evaluate(() => FoafOS.exitOverview(null));
+    await phone.page.waitForTimeout(400);
+    const hb = await phone.page.evaluate(() => { const r = document.getElementById('wm-handle').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+    const hcd = await phone.ctx.newCDPSession(phone.page);
+    await hcd.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [hb] });
+    await phone.page.waitForTimeout(800);
+    await hcd.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await phone.page.waitForTimeout(400);
+    const held = await phone.page.evaluate(() => ({ ov: document.body.classList.contains('foafos-overview-on'), menu: !document.getElementById('wm-chrome')?.classList.contains('collapsed') }));
+    await phone.page.evaluate(() => FoafOS.exitOverview(null));
+    await phone.page.waitForTimeout(500);
+    check(held.ov && !held.menu, `holding the menu handle opens All windows (${JSON.stringify(held)})`);
+  }
   // A finger held on the empty desktop opens the desktop's menu (iOS sends no contextmenu)
   {
     await phone.page.evaluate(async () => { document.getElementById('foafos-home')?.remove(); FoafOS.exitOverview(null); await new Promise((ok) => setTimeout(ok, 500)); if (document.querySelector('.foafos-window:not(.minimized):not(.ws-away)')) FoafOS.showDesktop(); });
