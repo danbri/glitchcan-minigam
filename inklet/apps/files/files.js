@@ -268,8 +268,9 @@
     $('forward').disabled = !ahead.length;
     $('up').disabled = !folder;
     const parts = folder.split('/').filter(Boolean);
-    $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => go('') } }, here()?.label || 'My files')),
-      ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', on: { click: () => go(parts.slice(0, i + 1).join('/') + '/') } }, p.endsWith('!') ? `🗜 ${p.slice(0, -1)}` : p))));
+    $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => (folder ? go('') : askGoTo()) } }, here()?.label || 'My files')),
+      ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', ...(i === parts.length - 1 ? { title: 'Go to another folder by typing its path (/)' } : {}),
+        on: { click: () => (i === parts.length - 1 && !inArchive() ? askGoTo() : go(parts.slice(0, i + 1).join('/') + '/')) } }, p.endsWith('!') ? `🗜 ${p.slice(0, -1)}` : p))));
     drawTree();
     drawItems();
   }
@@ -999,11 +1000,11 @@
   }
 
   // Questions are asked in the pane: a sandboxed frame has no reliable dialogs.
-  function ask(label, action, { value = '', danger = false, input = true } = {}, done) {
+  function ask(label, action, { value = '', danger = false, input = true, raw = false } = {}, done) {
     document.querySelector('.ask')?.remove();
     const field = input ? h('input', { type: 'text', value, 'aria-label': label }) : null;
     const close = () => bar.remove();
-    const submit = async (e) => { e.preventDefault(); const v = field ? cleanName(field.value) : ''; if (input && !v) return; close(); await done(v); };
+    const submit = async (e) => { e.preventDefault(); const v = field ? (raw ? field.value.trim() : cleanName(field.value)) : ''; if (input && !v) return; close(); await done(v); };
     const bar = h('form', { class: 'ask', on: { submit, keydown: (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } } } }, input ? null : h('span', {}, label), field,
       h('button', { class: `tool ${danger ? 'danger' : 'tool-main'}`, type: 'submit' }, action),
       h('button', { class: 'tool', type: 'button', on: { click: close } }, 'Cancel'));
@@ -1221,7 +1222,23 @@
     const back = (e.altKey && e.key === 'ArrowLeft') || (e.metaKey && e.key === '[');
     const fwd = (e.altKey && e.key === 'ArrowRight') || (e.metaKey && e.key === ']');
     if (back || fwd) { e.preventDefault(); (back ? goBack : goForward)(); }
+    // Go to a folder by its path: / as in GNOME Files, Cmd or Ctrl + Shift + G as in Finder.
+    if ((e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g')) { e.preventDefault(); askGoTo(); }
   });
+  // Go to folder: type a path in this location, as in an address bar. Typed with or without the
+  // slashes at either end; a folder that is not there says so and stays put.
+  function askGoTo() {
+    ask('Go to folder', 'Go', { value: folder, raw: true }, async (typed) => {
+      const parts = typed.split('/').map((p) => p.trim()).filter((p) => p && p !== '.');
+      if (parts.includes('..') || parts.some((p) => p.startsWith('.'))) { say('That is not a folder you can go to.', true); return; }
+      const to = parts.length ? `${parts.join('/')}/` : '';
+      if (to) {
+        const r = await foafos.pod.list(to);
+        if (!r.ok) { say(r.status === 404 ? `There is no folder ${to} here.` : explain(r), true); return; }
+      }
+      await go(to);
+    });
+  }
   document.addEventListener('mouseup', (e) => { if (e.button === 3) { e.preventDefault(); goBack(); } else if (e.button === 4) { e.preventDefault(); goForward(); } });
   $('up').addEventListener('click', () => go(parentOf(folder)));
   // Keys in the list, as in a desktop file browser: Backspace or Alt+Up goes up a
@@ -1305,7 +1322,7 @@
   let typed = '', typedAt = 0;
   $('items').addEventListener('keydown', (e) => {
     if (e.target.closest('input, textarea, select') || e.altKey || e.ctrlKey || e.metaKey) return;
-    if (e.key.length !== 1 || e.key === ' ') return;
+    if (e.key.length !== 1 || e.key === ' ' || e.key === '/') return;   // / is Go to folder
     const now = Date.now();
     typed = (now - typedAt > 800 ? '' : typed) + e.key.toLowerCase();
     typedAt = now;

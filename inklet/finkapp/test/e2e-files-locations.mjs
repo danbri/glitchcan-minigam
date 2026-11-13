@@ -1107,6 +1107,28 @@ try {
     check(zdl.suggestedFilename() === 'zipme.zip' && String(names) === 'zipme/a.txt,zipme/empty/,zipme/sub/b.txt' && aText === 'A',
       `a folder downloads as a .zip of all that is in it (${zdl.suggestedFilename()}: ${names})`);
   }
+  // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
+  // current folder's name opens it too
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/deep/er/x.txt', 'x', { contentType: 'text/plain' }); await window.__files.go('notes/'); });
+    await page.waitForTimeout(300);
+    await f.focus('#items tbody tr');
+    await f.press('#items tbody tr', '/');
+    await f.waitForSelector('.ask input', { timeout: 4000 });
+    const pre = await f.inputValue('.ask input');
+    await f.fill('.ask input', '/notes/deep/er');
+    await f.press('.ask input', 'Enter');
+    await f.waitForFunction(() => window.__files.state?.().folder === 'notes/deep/er/' || /x\.txt/.test(document.getElementById('items').textContent), null, { timeout: 5000 }).catch(() => {});
+    const got = await f.evaluate(() => [...document.querySelectorAll('#crumbs button')].map((b) => b.textContent).join('/'));
+    await f.evaluate(() => [...document.querySelectorAll('#crumbs button')].at(-1).click());
+    await f.fill('.ask input', 'notes/nowhere');
+    await f.press('.ask input', 'Enter');
+    await page.waitForTimeout(500);
+    const miss = await f.evaluate(() => ({ said: document.getElementById('status').textContent, crumbs: [...document.querySelectorAll('#crumbs button')].map((b) => b.textContent).join('/') }));
+    await f.evaluate(async () => { for (const p of ['notes/deep/er/x.txt', 'notes/deep/er/', 'notes/deep/']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
+    check(pre === 'notes/' && /notes\/deep\/er$/.test(got) && /no folder notes\/nowhere/.test(miss.said) && /er$/.test(miss.crumbs),
+      `Go to folder by its path, and a missing one says so (${pre}; ${got}; ${JSON.stringify(miss)})`);
+  }
   // Names sort as people expect: numbers by value, case aside
   {
     const order = await f.evaluate(async () => {
