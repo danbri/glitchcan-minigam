@@ -249,12 +249,14 @@
 
   let searchResults = false;
   let recentOrder = false;       // the list is Recent: newest first, not sorted     // the list holds search results: the filter does not narrow them again
+  const NAME_ORDER = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
   function shown() {
     const q = searchResults ? '' : $('filter').value.trim().toLowerCase();
     const rows = items.filter((i) => !q || nameOf(i.path).toLowerCase().includes(q));
     if (recentOrder) return rows;             // Recent keeps the order they were opened in
-    const byName = (a, b) => nameOf(a.path).toLowerCase().localeCompare(nameOf(b.path).toLowerCase());
-    const cmp = sort.key === 'kind' ? (a, b) => kindOf(a).name.localeCompare(kindOf(b).name)
+    // Names in the order people expect, as Finder and Explorer sort: "Photo 2" before "Photo 10".
+    const byName = (a, b) => NAME_ORDER.compare(nameOf(a.path), nameOf(b.path));
+    const cmp = sort.key === 'kind' ? (a, b) => NAME_ORDER.compare(kindOf(a).name, kindOf(b).name)
       : sort.key === 'size' ? (a, b) => (a.size ?? -1) - (b.size ?? -1)
       : sort.key === 'modified' ? (a, b) => String(a.modified || '').localeCompare(String(b.modified || ''))
       : byName;
