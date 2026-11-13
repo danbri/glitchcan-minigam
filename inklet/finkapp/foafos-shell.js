@@ -2971,7 +2971,15 @@ function buildUI() {
         if (match && !first) first = h;
       }
       first?.focus();
-      strip.querySelector('.foafos-ov-find').textContent = !q ? '' : first ? `“${q}”` : `No window is called “${q}”`;
+      // No window by that name: offer the app whose name best matches, as GNOME's overview finds apps
+      // too; Enter opens it.
+      strip._offer = null;
+      if (q && !first) {
+        const offered = APPS.filter((a) => a.surface !== 'chrome' && rootOffers(ROOT, a.id) && a.name);
+        strip._offer = offered.find((a) => a.name.toLowerCase().startsWith(q)) || offered.find((a) => a.name.toLowerCase().includes(q)) || null;
+      }
+      strip.querySelector('.foafos-ov-find').textContent = !q ? '' : first ? `“${q}”`
+        : strip._offer ? `No window is called “${q}”. Enter opens ${strip._offer.name}` : `No window is called “${q}”`;
     };
     // Arrow keys move between the cards that are showing, Enter picks one, Escape leaves.
     strip._keys = (e) => {
@@ -2986,6 +2994,7 @@ function buildUI() {
       if (e.key === 'Backspace' && strip._query) { e.preventDefault(); strip._find(strip._query.slice(0, -1)); return; }
       const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
       if (step && hits.length) { e.preventDefault(); hits[(at + step + hits.length) % hits.length]?.focus(); }
+      if (e.key === 'Enter' && strip._offer && !hits.length) { e.preventDefault(); const id = strip._offer.id; exitOverview(null); launchApp(id); }
     };
     document.addEventListener('keydown', strip._keys);
     // A tap on the empty space around the cards leaves, as a phone's task switcher does.

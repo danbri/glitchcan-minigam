@@ -421,6 +421,17 @@ try {
   check(!!target && narrowed.shown.every((n) => n.includes('syst')) && narrowed.shown.length < names.length && narrowed.focus === target && narrowed.said === '“syst”'
     && /No window is called “systzz”/.test(none.said) && none.dim === names.length && cleared.on && cleared.dim === 0 && cleared.said === '',
     `typing a name in All windows narrows the cards; Escape clears it first (${names.join('|')} → ${narrowed.shown.join('|')}, ${JSON.stringify(none)}, ${JSON.stringify(cleared)})`);
+  // No window by a name, but an app: All windows offers it, and Enter opens it
+  await page.keyboard.type('activ');
+  const offerSaid = await page.evaluate(() => document.querySelector('.foafos-ov-find').textContent);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(600);
+  const opened = await page.evaluate(() => ({ ov: document.body.classList.contains('foafos-overview-on'), activity: !!document.querySelector('.foafos-window[data-opened-as="activity"]') }));
+  check(/Enter opens Activity/.test(offerSaid) && !opened.ov && opened.activity, `All windows offers an app when no window has the name, and Enter opens it (${offerSaid}, ${JSON.stringify(opened)})`);
+  await page.evaluate(() => document.querySelector('.foafos-window[data-opened-as="activity"] .foafos-window-close')?.click());
+  await page.waitForTimeout(200);
+  await keys(page, [';', 's']);
+  await page.waitForTimeout(500);
   // A number key picks that card
   const second = await page.evaluate(() => document.querySelectorAll('.foafos-ov-hit')[1]?.closest('.foafos-window')?.dataset.wid);
   check(await page.evaluate(() => document.querySelectorAll('.foafos-ov-num b').length) >= 1, 'cards show their number');
