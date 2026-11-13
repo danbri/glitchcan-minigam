@@ -4044,6 +4044,25 @@ function buildUI() {
     const find = home.querySelector('.foafos-home-search input');
     // What an app does, with Open and Pin: a long press on a touch screen (where hover never comes),
     // a right-click, or the menu key. Escape or Close puts it away and goes back to the app.
+    const CAP_WORDS = {
+      'pod:read': (a) => a.wholePod ? 'see every file in your pod' : 'read its own folder in your pod',
+      'pod:write': (a) => a.wholePod ? 'change and delete any file in your pod' : 'save to its own folder in your pod',
+      storage: () => 'keep its settings on this device',
+      secrets: () => 'use keys you give it, without reading them back',
+      audio: () => 'play sound',
+      input: () => 'read the on-screen pad and game controllers',
+      shell: () => 'act on the shell: windows and apps',
+      'git:write': () => 'commit to a git repository you choose',
+      'story:launch': () => 'start stories', 'story:link': () => 'link into stories', 'story:navigate': () => 'move through a story',
+      'story:observe': () => 'follow what happens in a story', 'story:steer': () => 'change where a story goes',
+      'vars:read': () => 'read story values', 'vars:write': () => 'change story values',
+    };
+    // A widget (app.run) is a sandboxed toy with nothing granted; an app's list comes from its manifest.
+    const capWords = (app) => {
+      if (app.run) return [];
+      if (!Array.isArray(app.capabilities)) return null;
+      return [...new Set(app.capabilities.map((c) => CAP_WORDS[c]?.(app) || `hold "${c}"`))];
+    };
     const showSheet = (app, b) => {
       home.querySelector('.foafos-app-sheet')?.remove();
       const sheet = document.createElement('div');
@@ -4055,6 +4074,16 @@ function buildUI() {
       sheet.querySelector('.ico').textContent = app.icon || '';
       sheet.querySelector('h3').textContent = app.name;
       sheet.querySelector('p').textContent = app.desc || 'No description yet.';
+      // What it may do, in plain words, as a phone's App info lists permissions: from its manifest.
+      const may = capWords(app);
+      if (may) {
+        const box = document.createElement('div');
+        box.className = 'sheet-caps';
+        const h4 = document.createElement('h4'); h4.textContent = may.length ? 'It may' : 'It may do nothing outside its window';
+        box.appendChild(h4);
+        if (may.length) { const ul = document.createElement('ul'); for (const w of may) { const li = document.createElement('li'); li.textContent = w; ul.appendChild(li); } box.appendChild(ul); }
+        sheet.querySelector('p').after(box);
+      }
       const pin = b.parentElement?.querySelector('.foafos-app-pin');
       const pinB = sheet.querySelector('[data-act="pin"]');
       if (pin) { pinB.hidden = false; pinB.textContent = pin.classList.contains('on') ? 'Unpin' : 'Pin'; }

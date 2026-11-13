@@ -836,6 +836,23 @@ try {
     });
     check(r.pinned && r.label && !r.after, `the window menu pins and unpins the window's app (${JSON.stringify(r)})`);
   }
+  // An app's sheet says what it may do, in plain words
+  {
+    const r = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      const sheetFor = async (id) => {
+        if (document.getElementById('foafos-home')) { document.getElementById('foafos-home').remove(); await wait(400); }
+        FoafOS.openHome(); await wait(150);
+        document.querySelector(`#foafos-home .foafos-app[data-app="${id}"]`)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); await wait(100);
+        const out = [...document.querySelectorAll('.foafos-app-sheet .sheet-caps li')].map((li) => li.textContent);
+        document.getElementById('foafos-home')?.remove(); await wait(400);   // its history steps go back first
+        return out;
+      };
+      return { files: await sheetFor('files'), notes: await sheetFor('podnotes') };
+    });
+    check(r.files.includes('see every file in your pod') && r.files.includes('change and delete any file in your pod') && r.notes.includes('read its own folder in your pod'),
+      `an app's sheet says what it may do (${JSON.stringify(r)})`);
+  }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
