@@ -20,7 +20,16 @@ const SHELL = `${ORIGIN}/${basename(repo)}/inklet/finkapp/?root=office&app=files
 
 let failed = 0;
 const check = (cond, what) => { console.log(`${cond ? 'PASS' : 'FAIL'} ${what}`); if (!cond) failed++; };
-const site = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1', '--directory', dirname(repo)], { stdio: 'ignore' });
+// A static server that, as GitHub Pages does, sends Access-Control-Allow-Origin and serves .mjs as
+// JavaScript: an app frame loads modules (pdf.js) only so.
+const SERVE = `import http.server, functools, sys
+class H(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.mjs': 'text/javascript', '.js': 'text/javascript', '.wasm': 'application/wasm'}
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*'); super().end_headers()
+    def log_message(self, *a): pass
+http.server.ThreadingHTTPServer(('127.0.0.1', int(sys.argv[1])), functools.partial(H, directory=sys.argv[2])).serve_forever()`;
+const site = spawn('python3', ['-c', SERVE, String(PORT), dirname(repo)], { stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 900));
 const CONTAINER_CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const executablePath = process.env.CHROMIUM_PATH || (existsSync(CONTAINER_CHROME) ? CONTAINER_CHROME : undefined);
@@ -890,6 +899,41 @@ try {
     return r;
   });
   check(vid.skipped || (vid.player && vid.controls && vid.blob && vid.ready >= 1 && vid.w === 64), `video plays in the preview (${JSON.stringify(vid)})`);
+  // A PDF shows in the preview, a page at a time: a two-page PDF made here draws page 1 with text on it,
+  // and Next page shows page 2
+  const pdf = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const objs = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Contents 4 0 R /Resources << /Font << /F1 7 0 R >> >> >>',
+      null,
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Contents 6 0 R /Resources << /Font << /F1 7 0 R >> >> >>',
+      null,
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    ];
+    const stream = (t) => { const body = `BT /F1 36 Tf 20 90 Td (${t}) Tj ET`; return `<< /Length ${body.length} >>\nstream\n${body}\nendstream`; };
+    objs[3] = stream('Page one'); objs[5] = stream('Page two');
+    let out = '%PDF-1.4\n'; const offs = [];
+    objs.forEach((o, k) => { offs.push(out.length); out += `${k + 1} 0 obj\n${o}\nendobj\n`; });
+    const xref = out.length;
+    out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offs.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('') + `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    await foafos.pod.put('notes/two.pdf', new TextEncoder().encode(out), { contentType: 'application/pdf' });
+    await window.__files.go('notes/'); await wait(300);
+    document.querySelector('#items tbody tr[data-path="notes/two.pdf"]').click();
+    for (let k = 0; k < 80 && !document.querySelector('#detail .detail-pdf')?.dataset.pages && !document.querySelector('#detail .detail-pdf')?.dataset.error; k++) await wait(100);
+    const box = document.querySelector('#detail .detail-pdf');
+    const ink = () => { const c = box.querySelector('canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let dark = 0; for (let k = 0; k < d.length; k += 4) if (d[k + 3] > 0 && d[k] < 128) dark++; return dark; };
+    const r = { pages: box?.dataset.pages ?? null, page: box?.dataset.page ?? null, error: box?.dataset.error ?? null, where: box?.querySelector('.pdf-where')?.textContent, ink: box && box.dataset.pages ? ink() : 0 };
+    if (box?.dataset.pages) {
+      [...box.querySelectorAll('button')].find((b) => b.textContent === 'Next page').click();
+      for (let k = 0; k < 30 && box.dataset.page !== '2'; k++) await wait(100);
+      r.page2 = box.dataset.page; r.where2 = box.querySelector('.pdf-where').textContent;
+    }
+    await foafos.pod.delete('notes/two.pdf');
+    return r;
+  });
+  check(pdf.pages === '2' && pdf.page === '1' && pdf.ink > 50 && pdf.page2 === '2' && pdf.where2 === 'Page 2 of 2', `a PDF shows in the preview, a page at a time (${JSON.stringify(pdf)})`);
   await filt('');
   await f.evaluate(() => Promise.all(['apple.txt', 'avocado.txt'].map((n) => foafos.pod.delete?.(`notes/${n}`))));
   await f.evaluate(() => window.__files.go(''));
