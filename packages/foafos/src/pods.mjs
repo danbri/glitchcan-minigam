@@ -751,7 +751,11 @@ export class FoafPods {
     // `params.pod` is a handle. A pod's real id, another app's handle and nonsense all miss alike.
     const scope = shared ? { pod: shared.pod, prefix: '' } : this.scopeFor(appId, cap, params.pod ?? null);
     if (!scope) return this._refuse(appId, verb, 'denied', `${appId} may not "${verb}": no ${cap} grant`, { capability: cap });
-    const path = shared ? shared.path : FoafPods.target(scope, params.path, { container: verb === 'pod.list' || verb === 'pod.search' });
+    // pod.delete may name a folder (a path ending in /), never the top of the app's scope: the store
+    // removes it only if it is empty (an LWS container; a device folder), else 'not-empty'.
+    const rawPath = String(params.path ?? '');
+    const delFolder = verb === 'pod.delete' && rawPath.endsWith('/') && rawPath.replace(/\/+$/, '') !== '';
+    const path = shared ? shared.path : FoafPods.target(scope, params.path, { container: verb === 'pod.list' || verb === 'pod.search' || delFolder });
     if (path === null) {
       return this._refuse(appId, verb, 'bad-params', `${appId}'s "${verb}" path was refused`,
         { detail: verb === 'pod.list' ? 'a container path, without ".."' : 'a resource path, without ".." and not ending in "/"' });
@@ -1214,6 +1218,7 @@ export class FoafPods {
       const headers = params.etag ? { 'If-Match': String(params.etag) } : {};
       const r = await podFetch(url, { method: 'DELETE', headers });
       if (r.status === 412) return { ok: false, reason: 'conflict', status: 412 };
+      if (r.status === 409) return { ok: false, reason: 'not-empty', status: 409 };
       if (!r.ok) return { ok: false, reason: 'http', status: r.status };
       return { ok: true, status: r.status };
     }

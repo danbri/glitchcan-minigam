@@ -32,6 +32,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Download a file to this computer, one or several (web file managers) | Done: #1112 |
 | Download a folder as one .zip (web file managers) | Done: this PR |
 | Copy, cut and paste between folders (desktops) | Done: #1061, #1069 |
+| Move a folder, by drag or cut and paste; delete an empty folder (desktops) | Done: this PR |
 | Drag onto a folder to move (desktops) | Done: #1036, #1071 |
 | Choose several: Ctrl/Cmd + click, Shift + click, Ctrl/Cmd + A (desktops) | Done: #1067, #1070 |
 | Choose several by touch: long press, then taps, with a bar (phones) | Done: #1075 |

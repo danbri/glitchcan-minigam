@@ -293,11 +293,11 @@
   }
   function asDraggable(el, it) {
     asChoosable(el, it);
-    if (it.container || inArchive() || touchOnly) return;
+    if (inArchive() || touchOnly) return;
     el.draggable = true;
-    // Dragging one of several chosen files takes them all, as a desktop's file manager does.
+    // Dragging one of several chosen items takes them all, folders too, as a desktop's file manager does.
     el.addEventListener('dragstart', (e) => {
-      const many = chosen.size > 1 && chosen.has(it.path) ? [...chosen].filter((p) => !p.endsWith('/')) : [it.path];
+      const many = chosen.size > 1 && chosen.has(it.path) ? [...chosen] : [it.path];
       e.dataTransfer.setData(MOVE_TYPE, many.join('\n'));
       e.dataTransfer.effectAllowed = 'move';
     });
@@ -321,13 +321,44 @@
   }
   // Several files dragged at once: one listing and one report at the end.
   async function moveMany(paths, dir) {
-    if (paths.length === 1) { await moveFile(paths[0], dir); return; }
+    if (paths.length === 1 && !paths[0].endsWith('/')) { await moveFile(paths[0], dir); return; }
     const moved = [], not = [];
-    for (const p of paths) ((await moveFile(p, dir, { quiet: true })) ? moved : not).push(nameOf(p));
+    for (const p of paths) {
+      const r = p.endsWith('/') ? await moveFolder(p, dir) : { ok: await moveFile(p, dir, { quiet: true }) };
+      (r.ok ? moved : not).push(r.ok ? nameOf(p) : `${nameOf(p)}${r.why ? ` (${r.why})` : ''}`);
+    }
     chosen.clear();
     await go(folder, { remember: false });
-    const there = dir || here()?.label || 'the top folder';
-    say([moved.length ? `Moved ${moved.length} file${moved.length === 1 ? '' : 's'} to ${there}.` : '', not.length ? `Not moved: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !moved.length);
+    const there = dir === folder ? 'here' : `to ${dir || here()?.label || 'the top folder'}`;
+    const kind = paths.some((p) => p.endsWith('/')) ? 'items' : 'files';
+    say([moved.length ? `Moved ${moved.length === 1 ? moved[0] : `${moved.length} ${kind}`} ${there}.` : '', not.length ? `Not moved: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !moved.length);
+  }
+  // Move a folder and all that is in it, as a desktop does: copied first (never over anything that is
+  // there, and not onto a folder of the same name, which would mix the two), then the original taken
+  // away, deepest first. If part of the original cannot be removed, it says so, and nothing is lost.
+  async function moveFolder(src, dir) {
+    if (dir.startsWith(src)) return { ok: false, why: 'not into itself' };
+    if (parentOf(src) === dir) return { ok: false, why: 'it is here already' };
+    const to = dir + nameOf(src) + '/';
+    const there = await list(dir);
+    if (there.ok && there.items.some((i) => dir + i.path.replace(/^\/+/, '') === to)) return { ok: false, why: `a folder called ${nameOf(src)} is there already` };
+    const copied = await copyTree(src, to);
+    if (!copied.ok) return { ok: false, why: copied.why };
+    // Take the original away: every file, then each folder, deepest first.
+    const dirs = [], queue = [src];
+    let left = 0;
+    while (queue.length) {
+      const d = queue.shift(); dirs.push(d);
+      const r = await list(d);
+      for (const it of r.ok ? r.items : []) {
+        const p = d + it.path.replace(/^\/+/, '');
+        if (it.container) { queue.push(p); continue; }
+        forgetThumb(p);
+        if (!(await foafos.pod.delete(p)).ok) left++;
+      }
+    }
+    for (const d of dirs.reverse()) await foafos.pod.delete(d);
+    return left ? { ok: false, why: `copied, but ${left} file${left === 1 ? '' : 's'} could not be taken from the original` } : { ok: true };
   }
   // Returns whether the file moved. `quiet`: for a batch, which lists the folder and reports once.
   async function moveFile(from, dir, { quiet = false } = {}) {
@@ -1324,14 +1355,14 @@
     const its = paths.map((p) => items.find((i) => i.path === p)).filter(Boolean);
     const files = its.filter((i) => !i.container).map((i) => i.path);
     // A copy takes folders and all that is in them; a cut moves files only, for now.
-    const folders = cut ? [] : its.filter((i) => i.container).map((i) => i.path);
-    if (!files.length && !folders.length) { say('Folders cannot be cut yet: copy the folder, or cut the files in it.', true); return null; }
+    const folders = its.filter((i) => i.container).map((i) => i.path);
+    if (!files.length && !folders.length) return null;
     if (cut && inArchive()) { say('This is inside an archive, which is read only. Copy instead.', true); return null; }
     const names = [...files, ...folders].map(nameOf);
     held = { paths: files, folders, cut, name: names.join('\n') };
     const n = files.length + folders.length;
     const what = n === 1 ? names[0] : `${n} items`;
-    const left = cut && its.length - files.length ? ` (${its.length - files.length} folder${its.length - files.length === 1 ? '' : 's'} left out: folders can be copied, not cut, yet)` : '';
+    const left = '';
     say(`${cut ? 'Cut' : 'Copied'} ${what}${left}. Paste in a folder to ${cut ? 'move' : 'put a copy'} there.`);
     drawChooseBar();
     return held;
@@ -1355,11 +1386,8 @@
     if (h0.gone) { say(`${what} ${h0.paths?.length === 1 ? 'was' : 'were'} moved already.`); return; }
     if (h0.cut) {
       held = { ...h0, gone: true };
-      if (h0.paths.length === 1) { await moveFile(h0.paths[0], folder); return; }
-      const moved = [], not = [];
-      for (const p of h0.paths) ((await moveFile(p, folder, { quiet: true })) ? moved : not).push(nameOf(p));
-      await go(folder, { remember: false });
-      say([moved.length ? `Moved ${moved.length} file${moved.length === 1 ? '' : 's'} here.` : '', not.length ? `Not moved (already here, or a file of that name is here): ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !moved.length);
+      if (h0.paths.length === 1 && !(h0.folders || []).length) { await moveFile(h0.paths[0], folder); return; }
+      await moveMany([...(h0.folders || []), ...h0.paths], folder);
       return;
     }
     const made = [], not = [];

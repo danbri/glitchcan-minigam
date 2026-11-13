@@ -129,6 +129,19 @@ test('a device pod works through the ordinary pod verbs, and opens on first use'
   assert.equal((await pods.invoke('files', 'pod.delete', { path: 'a/b.txt' })).ok, true);
 });
 
+test('pod.delete removes an empty folder, refuses one with things in it, and never the top', async () => {
+  const pods = devicePods(async () => ({ ok: true, root: new Dir() }));
+  await pods.invoke('files', 'pod.put', { path: 'a/b/c.txt', body: 'x', contentType: 'text/plain' });
+  assert.equal((await pods.invoke('files', 'pod.delete', { path: 'a/' })).reason, 'not-empty');
+  assert.equal((await pods.invoke('files', 'pod.delete', { path: 'a/b/c.txt' })).ok, true);
+  assert.equal((await pods.invoke('files', 'pod.delete', { path: 'a/b/' })).ok, true);
+  assert.deepEqual((await pods.invoke('files', 'pod.list', { path: 'a/' })).items, []);
+  assert.equal((await pods.invoke('files', 'pod.delete', { path: 'a/' })).ok, true);
+  assert.deepEqual((await pods.invoke('files', 'pod.list', { path: '' })).items, []);
+  for (const top of ['', '/', '//']) assert.equal((await pods.invoke('files', 'pod.delete', { path: top })).ok, false, `top "${top}"`);
+  assert.equal((await pods.invoke('files', 'pod.delete', { path: '../x/' })).ok, false);
+});
+
 test('a folder needing the person\'s OK says so, and asks only when told it may', async () => {
   const asked = [];
   const pods = devicePods(async (rec, { ask }) => { asked.push(ask); return ask ? { ok: true, root: new Dir() } : { ok: false, status: 'needs-ok', detail: 'allow it' }; });

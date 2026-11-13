@@ -588,6 +588,51 @@ try {
   });
   check(kClip === 'k1.txt\nk2.txt' && /Pasted 2 files/.test(kSaid) && kc.k1 && kc.k2 && kc.k1kept && /Moved 2 files here/.test(cSaid) && kc.c1 && kc.c2 && !kc.c1left,
     `copy and cut act on all the chosen files (${JSON.stringify({ kClip, kSaid, cSaid, kc })})`);
+  // Folders move too: cut and paste, and dragging onto another folder; never into themselves or onto
+  // a folder of the same name
+  const mv = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const has = async (dir, name) => ((await foafos.pod.list(dir)).items || []).some((i) => i.path.replace(/^\/+/, '') === name);
+    for (const [p2, b] of [['notes/mvf/a.txt', 'A'], ['notes/mvf/sub/b.txt', 'B'], ['notes/dest/.folder', '']]) await foafos.pod.put(p2, b, { contentType: 'text/plain' });
+    await window.__files.go('notes/'); await wait(300);
+    const dt = new DataTransfer();
+    document.querySelector('#items tbody tr[data-path="notes/mvf/"]').dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+    const target = document.querySelector('#items tbody tr[data-path="notes/dest/"]');
+    target.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    target.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    for (let k = 0; k < 50 && !/^Moved/.test(document.getElementById('status').textContent); k++) await wait(100);
+    const r = { said: document.getElementById('status').textContent, a: (await foafos.pod.get('notes/dest/mvf/a.txt')).body, b: (await foafos.pod.get('notes/dest/mvf/sub/b.txt')).body, gone: !(await has('notes/', 'mvf/')) };
+    // into itself: refused
+    await window.__files.go('notes/dest/'); await wait(300);
+    const row = document.querySelector('#items tbody tr[data-path="notes/dest/mvf/"]'); row.focus();
+    const ct = new DataTransfer();
+    row.dispatchEvent(new ClipboardEvent('cut', { clipboardData: ct, bubbles: true, cancelable: true }));
+    await window.__files.go('notes/dest/mvf/sub/'); await wait(300);
+    document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: ct, bubbles: true, cancelable: true }));
+    for (let k = 0; k < 30 && !/Not moved/.test(document.getElementById('status').textContent); k++) await wait(100);
+    r.self = document.getElementById('status').textContent;
+    r.still = (await foafos.pod.get('notes/dest/mvf/a.txt')).body;
+    for (const p2 of ['notes/dest/mvf/a.txt', 'notes/dest/mvf/sub/b.txt', 'notes/dest/.folder']) await foafos.pod.delete(p2);
+    for (const p2 of ['notes/dest/mvf/sub/', 'notes/dest/mvf/', 'notes/dest/']) await foafos.pod.delete(p2);
+    await window.__files.go('notes/');
+    return r;
+  });
+  check(/^Moved mvf to notes\/dest\//.test(mv.said) && mv.a === 'A' && mv.b === 'B' && mv.gone && /Not moved: mvf \(not into itself\)/.test(mv.self) && mv.still === 'A',
+    `a folder moves, by drag or cut and paste, but not into itself (${JSON.stringify(mv)})`);
+  // An empty folder can be deleted (it could not be before: the pod refused any path ending in /)
+  const emptyDel = await f.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    await foafos.pod.put('notes/emptyf/.folder', '', { contentType: 'text/plain' });
+    await window.__files.go('notes/'); await wait(300);
+    const row = document.querySelector('#items tbody tr[data-path="notes/emptyf/"]'); row.focus();
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    for (let k = 0; k < 30 && !document.querySelector('.ask button.danger'); k++) await wait(100);
+    const asked = document.querySelector('.ask')?.textContent || '';
+    document.querySelector('.ask button.danger').click();
+    for (let k = 0; k < 30 && !/^Deleted/.test(document.getElementById('status').textContent); k++) await wait(100);
+    return { asked, said: document.getElementById('status').textContent, gone: !((await foafos.pod.list('notes/')).items || []).some((i) => i.path.replace(/^\/+/, '') === 'emptyf/') };
+  });
+  check(/Delete emptyf\?/.test(emptyDel.asked) && /^Deleted emptyf/.test(emptyDel.said) && emptyDel.gone, `an empty folder can be deleted (${JSON.stringify(emptyDel)})`);
   // In the icon view too: Ctrl + click chooses several, and Delete asks once for them
   await f.evaluate(async () => {
     for (const n of ['g1', 'g2']) await foafos.pod.put(`notes/${n}.txt`, n, { contentType: 'text/plain' });
