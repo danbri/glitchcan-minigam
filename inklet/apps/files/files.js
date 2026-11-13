@@ -1356,10 +1356,14 @@
   // something changed there, such as a file another app saved. On a touch screen, pulling the list
   // down from the top does the same. Not in Recent, search or the Trash, which are views.
   const sig = (list) => list.map((i) => `${i.path}|${i.size ?? ''}|${i.modified ?? ''}`).sort().join('\n');
-  let refreshing = false;
+  let refreshing = null;         // the look under way, if one is
+  // A look already under way is waited for, then a fresh one made: a pull (or a focus) that comes
+  // while another look is running still sees what was saved since that one began.
   async function refreshIfChanged() {
-    if (refreshing || searchResults || !current || document.querySelector('.ask')) return false;
-    refreshing = true;
+    if (refreshing) { await refreshing.catch(() => {}); return refreshIfChanged(); }
+    if (searchResults || !current || document.querySelector('.ask')) return false;
+    let done;
+    refreshing = new Promise((ok) => { done = ok; });
     try {
       const r = await list(folder);
       if (!r.ok) return false;
@@ -1370,7 +1374,7 @@
       if (was && items.some((i) => i.path === was)) await pick(items.find((i) => i.path === was));
       [...document.querySelectorAll('#items [data-path]')].find((r2) => r2.dataset.path === keep)?.focus();
       return true;
-    } finally { refreshing = false; }
+    } finally { const d = done; refreshing = null; d(); }
   }
   addEventListener('focus', () => { refreshIfChanged(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshIfChanged(); });
