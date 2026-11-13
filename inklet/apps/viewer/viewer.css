@@ -1,0 +1,11 @@
+html, body { margin: 0; height: 100%; background: transparent; font: 14px system-ui, sans-serif; color: CanvasText; }
+.view { display: flex; flex-direction: column; gap: 6px; padding: 8px; box-sizing: border-box; min-height: 100%; }
+.none { color: GrayText; margin: 8px; }
+.pdf-page { background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .25); align-self: center; max-width: 100%; }
+.pdf-nav { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.pdf-where { color: GrayText; font-size: 13px; }
+.view img, .view video { max-width: 100%; align-self: center; }
+.view audio { width: 100%; }
+.view pre { white-space: pre-wrap; word-break: break-word; margin: 0; font: 13px ui-monospace, monospace; }
+button { font: inherit; padding: 4px 10px; }
+@media (forced-colors: active) { .pdf-page { border: 1px solid CanvasText; box-shadow: none; } }

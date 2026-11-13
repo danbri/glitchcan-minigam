@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- The Viewer shows one file that its parent frame hands it, and nothing else.
+     No network: connect-src 'none'. Pictures and media only from the bytes it was given (blob:).
+     Scripts only from this site: its own, and pdf.js in third_party/pdfjs.
+     Why, and what it may not do: docs/foafos-viewer-20261113.md -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src blob: data:; media-src blob:; font-src blob: data:; worker-src 'self' blob:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewer</title>
+<link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+<main id="view" class="view" aria-live="polite">
+  <p class="none">Nothing to show.</p>
+</main>
+<script type="module" src="viewer.js"></script>
+</body>
+</html>

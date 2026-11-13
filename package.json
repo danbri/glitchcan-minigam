@@ -16,6 +16,7 @@
     "test:edot": "node magpie/edot/run-tests.mjs",
     "test:miniapps": "node --test magpie/miniapps/test/unit.mjs",
     "test:app-sdk": "node --test inklet/apps/test/app-sdk-tools.test.mjs",
+    "test:viewer": "node --test inklet/apps/viewer/test/pdfjs-pin.test.mjs",
     "test:debug": "playwright test --debug",
     "test:report": "playwright show-report",
     "server": "python -m http.server 8080",

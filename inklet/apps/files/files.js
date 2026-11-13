@@ -1144,52 +1144,47 @@
       h('button', { class: 'tool', type: 'button', on: { click: duplicate } }, 'Duplicate'),
       h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')]));
 
-  // A PDF shows in the preview, a page at a time, drawn by pdf.js (third_party/pdfjs, Apache-2.0):
-  // Chrome's own PDF viewer does not run in a sandboxed frame. It is loaded only when a PDF is
-  // picked.
-  let pdfjs = null;
-  async function loadPdfjs() {
-    if (pdfjs) return pdfjs;
-    const base = new URL('../../../third_party/pdfjs/', location.href);
-    const lib = await import(new URL('pdf.min.mjs', base).href);
-    // pdf.js starts its worker from this URL where it may, and where it may not (a frame with no
-    // origin of its own) runs the same code on the page instead.
-    lib.GlobalWorkerOptions.workerSrc = new URL('pdf.worker.min.mjs', base).href;
-    pdfjs = lib;
-    return lib;
-  }
+  // A PDF shows in the preview, a page at a time. pdf.js (third_party/pdfjs, Apache-2.0, third-party
+  // code) never runs in this frame, which holds every pod grant Files has: it runs in the Viewer
+  // (inklet/apps/viewer/), a frame inside this one with sandbox="allow-scripts" only, no foafos
+  // bridge and no network (its CSP). Files hands it a copy of the one file's bytes. What it sends
+  // back is untrusted: page numbers and short text, shown as text.
+  // https://github.com/danbri/glitchcan-minigam/issues/1171, docs/foafos-viewer-20261113.md
+  const VIEWER = new URL('../viewer/index.html', location.href).href;
   function pdfView(bytes, name) {
-    const canvas = h('canvas', { class: 'pdf-page', 'aria-label': `${name}, page 1` });
     const where = h('span', { class: 'pdf-where' }, 'Opening…');
-    const prev = h('button', { class: 'tool', type: 'button', disabled: true }, 'Previous page');
-    const next = h('button', { class: 'tool', type: 'button', disabled: true }, 'Next page');
-    const box = h('div', { class: 'detail-body detail-pdf' }, canvas, h('div', { class: 'pdf-nav' }, prev, where, next));
-    (async () => {
-      try {
-        const lib = await loadPdfjs();
-        const doc = await lib.getDocument({ data: new Uint8Array(bytes) }).promise;
-        let at = 1;
-        const show = async () => {
-          const page = await doc.getPage(at);
-          const width = Math.max(200, box.clientWidth - 16);
-          const vp0 = page.getViewport({ scale: 1 });
-          const vp = page.getViewport({ scale: (width / vp0.width) * (window.devicePixelRatio || 1) });
-          canvas.width = vp.width; canvas.height = vp.height;
-          canvas.style.width = `${width}px`;
-          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp, canvas }).promise;
-          where.textContent = `Page ${at} of ${doc.numPages}`;
-          canvas.setAttribute('aria-label', `${name}, page ${at} of ${doc.numPages}`);
-          prev.disabled = at <= 1; next.disabled = at >= doc.numPages;
-          box.dataset.page = String(at); box.dataset.pages = String(doc.numPages);
-        };
-        prev.addEventListener('click', () => { if (at > 1) { at--; show(); } });
-        next.addEventListener('click', () => { if (at < doc.numPages) { at++; show(); } });
-        await show();
-      } catch (err) {
-        where.textContent = 'This PDF could not be shown here.';
-        box.dataset.error = String(err?.message || err);
+    const frame = h('iframe', { class: 'pdf-frame', title: `${name}, in the Viewer` });
+    frame.setAttribute('sandbox', 'allow-scripts');       // set before src: no first script under other rules
+    frame.setAttribute('referrerpolicy', 'no-referrer');
+    const box = h('div', { class: 'detail-body detail-pdf' }, frame, where);
+    // A fresh ArrayBuffer of the file's bytes (the pod gives a Uint8Array or an ArrayBuffer): Files
+    // keeps its own for Rename and Duplicate, and this copy is transferred to the Viewer.
+    const u8 = bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const copy = u8.slice().buffer;
+    let sent = false;                                     // the copy is transferred once
+    const num = (v) => (Number.isInteger(v) && v >= 0 && v < 1e7 ? String(v) : null);
+    let shown = false;                                    // the frame has been in the page
+    const onMessage = (e) => {
+      // Files builds the panel before it puts it in the page, and other messages come meanwhile.
+      // Stop listening only once the frame has been shown and then taken away.
+      if (frame.isConnected) shown = true;
+      else { if (shown) window.removeEventListener('message', onMessage); return; }
+      if (e.source !== frame.contentWindow) return;
+      const d = e.data || {};
+      if (d.kind === 'viewer-ready') {
+        if (sent) return;
+        sent = true;
+        frame.contentWindow.postMessage({ kind: 'viewer-show', name, type: 'application/pdf', bytes: copy }, '*', [copy]);
+      } else if (d.kind === 'viewer-state') {
+        if (d.error) { where.textContent = 'This PDF could not be shown here.'; box.dataset.error = String(d.error).slice(0, 200); return; }
+        const page = num(d.page), pages = num(d.pages);
+        if (!page || !pages) return;
+        box.dataset.page = page; box.dataset.pages = pages; box.dataset.ink = num(d.ink) ?? '0';
+        where.textContent = `Page ${page} of ${pages}`;
       }
-    })();
+    };
+    window.addEventListener('message', onMessage);
+    frame.src = VIEWER;
     return box;
   }
 

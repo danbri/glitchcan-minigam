@@ -146,6 +146,10 @@ try {
   check(stale.reason === 'conflict', `a stale save is refused (${stale.reason})`);
 
   await f.click('#view');                     // icons, kept across the reload below
+  // Reload only once the choice is shown and has had time to be kept: the shell's store writes
+  // after the click, and a reload at once lost it (the check below failed 3 of 4 runs on a Mac).
+  await f.waitForFunction(() => document.getElementById('view').getAttribute('aria-pressed') === 'true', null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(500);
   await page.reload();
   f = await filesFrame(page);
   s = await state(f);
@@ -1013,17 +1017,39 @@ try {
     document.querySelector('#items tbody tr[data-path="notes/two.pdf"]').click();
     for (let k = 0; k < 80 && !document.querySelector('#detail .detail-pdf')?.dataset.pages && !document.querySelector('#detail .detail-pdf')?.dataset.error; k++) await wait(100);
     const box = document.querySelector('#detail .detail-pdf');
-    const ink = () => { const c = box.querySelector('canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let dark = 0; for (let k = 0; k < d.length; k += 4) if (d[k + 3] > 0 && d[k] < 128) dark++; return dark; };
-    const r = { pages: box?.dataset.pages ?? null, page: box?.dataset.page ?? null, error: box?.dataset.error ?? null, where: box?.querySelector('.pdf-where')?.textContent, ink: box && box.dataset.pages ? ink() : 0 };
-    if (box?.dataset.pages) {
-      [...box.querySelectorAll('button')].find((b) => b.textContent === 'Next page').click();
-      for (let k = 0; k < 30 && box.dataset.page !== '2'; k++) await wait(100);
-      r.page2 = box.dataset.page; r.where2 = box.querySelector('.pdf-where').textContent;
-    }
-    await foafos.pod.delete('notes/two.pdf');
-    return r;
+    const fr = box?.querySelector('iframe');
+    return { pages: box?.dataset.pages ?? null, page: box?.dataset.page ?? null, error: box?.dataset.error ?? null,
+      ink: Number(box?.dataset.ink || 0), sandbox: fr?.getAttribute('sandbox') ?? null,
+      // pdf.js is not loaded into Files' own frame: no request for it from here, and no module in scope.
+      pdfjsInFiles: performance.getEntriesByType('resource').some((r) => /third_party\/pdfjs\//.test(r.name)) || typeof globalThis.pdfjsLib !== 'undefined' };
   });
+  // The Viewer is the frame inside Files that shows it; Next page is clicked there, as a person would.
+  const viewer = page.frames().find((fr) => /\/apps\/viewer\/index\.html/.test(fr.url()));
+  if (viewer && pdf.pages) {
+    await viewer.getByRole('button', { name: 'Next page' }).click();
+    await f.waitForFunction(() => document.querySelector('#detail .detail-pdf')?.dataset.page === '2', null, { timeout: 5000 }).catch(() => {});
+    Object.assign(pdf, await f.evaluate(() => { const box = document.querySelector('#detail .detail-pdf'); return { page2: box?.dataset.page, where2: box?.querySelector('.pdf-where')?.textContent }; }));
+  }
   check(pdf.pages === '2' && pdf.page === '1' && pdf.ink > 50 && pdf.page2 === '2' && pdf.where2 === 'Page 2 of 2', `a PDF shows in the preview, a page at a time (${JSON.stringify(pdf)})`);
+  check(pdf.sandbox === 'allow-scripts' && pdf.pdfjsInFiles === false, `pdf.js runs in the Viewer frame (sandbox "allow-scripts" only), never in Files' frame (${JSON.stringify({ sandbox: pdf.sandbox, pdfjsInFiles: pdf.pdfjsInFiles })})`);
+  // What code in the Viewer can reach: no foafos bridge, not Files' document, not the network
+  // (connect-src 'none'), not a picture from elsewhere (img-src blob: data:).
+  const reach = viewer ? await viewer.evaluate(async (origin) => {
+    const out = { foafos: typeof globalThis.foafos, parentDoc: 'refused', fetch: 'refused', beacon: null, img: 'refused' };
+    try { void window.parent.document.body; out.parentDoc = 'READ'; } catch { /* cross-origin: refused */ }
+    try { await fetch(`${origin}/`, { mode: 'no-cors' }); out.fetch = 'SENT'; } catch { /* CSP: refused */ }
+    // sendBeacon may answer true and still be stopped by the CSP: count the violation report instead.
+    const blocked = [];
+    document.addEventListener('securitypolicyviolation', (e) => blocked.push(e.effectiveDirective));
+    try { navigator.sendBeacon(`${origin}/beacon`, 'x'); } catch { /* refused at once */ }
+    await new Promise((r) => setTimeout(r, 500));
+    out.beacon = blocked.includes('connect-src') ? 'refused' : 'SENT';
+    out.img = await new Promise((res) => { const i = new Image(); i.onload = () => res('LOADED'); i.onerror = () => res('refused'); i.src = `${origin}/favicon.ico`; setTimeout(() => res('refused'), 3000); });
+    return out;
+  }, ORIGIN) : null;
+  check(reach && reach.foafos === 'undefined' && reach.parentDoc === 'refused' && reach.fetch === 'refused' && reach.beacon === 'refused' && reach.img === 'refused',
+    `the Viewer has no bridge, cannot read Files, and cannot reach the network (${JSON.stringify(reach)})`);
+  await f.evaluate(() => foafos.pod.delete('notes/two.pdf'));
   // Adding many files waits its turn when the pod says "throttled", and a file refused for another
   // reason is named with that reason, not called too large
   const bulk = await f.evaluate(async () => {

@@ -161,8 +161,7 @@
 
 /* A PDF in the preview, a page at a time. */
 .detail-pdf { display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow: auto; }
-.detail-pdf .pdf-page { background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .25); align-self: center; }
-.detail-pdf .pdf-nav { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.detail-pdf .pdf-frame { border: 0; width: 100%; min-height: 420px; flex: 1; background: transparent; }
 .detail-pdf .pdf-where { color: var(--p-dim); font-size: 13px; }
 
 /* A phone has no folder picker: Upload a folder is for a computer. */
