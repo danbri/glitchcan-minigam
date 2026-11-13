@@ -80,10 +80,11 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Search files from All apps: a row hands what was typed to Files, which searches every folder with its own access (Start menu, Spotlight) | Done: #1131 |
 | What each app or widget does, in search and on a long press or right-click (phones, desktops) | Done: #997, #1007, #1062 |
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
+| Pin or unpin an app from its window's menu (a taskbar's Pin to taskbar, a dock's Keep in Dock) | Done: this PR |
 | Widgets opened from All apps show in Recent with the apps (phones' recent widgets, Start's Recent) | Done: #1137 |
 | Pinned apps in your own order: Alt+arrows, or Move earlier/later on a long press (docks, home screens) | Done: #1101 |
 | A pinned app by its place, Ctrl ; 1 to 9: open it, or bring its window forward (Windows' Win+1 to 9) | Done: #1140 |
-| The pinned apps as a row of icons at the top of the ☰ menu (a ring of their own in the ring menu), a dot under each open one (docks, taskbars) | Done: #1141, this PR |
+| The pinned apps as a row of icons at the top of the ☰ menu (a ring of their own in the ring menu), a dot under each open one (docks, taskbars) | Done: #1141, #1142 |
 | A dot under each app that is open (docks) | Done: #1049, #1057 |
 | Arrow keys through All apps; no on-screen keyboard thrown up on a phone | Done: #1008, #1013 |
 | A sheet of every key, from the menu or Ctrl ; / (desktops' keyboard help, "?" on the web) | Done: #1077 |

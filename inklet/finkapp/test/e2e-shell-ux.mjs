@@ -360,7 +360,7 @@ try {
   await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /Minimise/.test(b.textContent)).click());
   const minimised = await page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('minimized'));
   await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); w.querySelector('.foafos-window-min').click(); FoafOS.raiseWindow(w); });
-  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Keep on top=,Move to workspace 2=,Minimise=Ctrl ; h,Minimise the others=,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
+  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Keep on top=,Pin this app=,Move to workspace 2=,Minimise=Ctrl ; h,Minimise the others=,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
     `right-click on a title bar opens the window menu with its keys, and it acts (${wmenu}, ${focusIn}, ${menuGone}, ${minimised})`);
 
   // Snapping
@@ -814,6 +814,27 @@ try {
       return { top: top.slice(0, 3), inner, front, closed };
     });
     check(r.top[1] === 'Pinned' && /^Files.*Ctrl ; 1\)$/.test(r.inner[0] || '') && r.front === 'files' && r.closed, `the ring menu has a Pinned ring, and an app there opens (${JSON.stringify(r)})`);
+  }
+  // The window menu pins the window's app, and unpins it
+  {
+    const r = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      const was = localStorage.getItem('foafos.apps.pinned');
+      localStorage.setItem('foafos.apps.pinned', '[]');
+      const win = [...document.querySelectorAll('.foafos-window[data-opened-as]:not(.ws-away):not(.minimized)')][0];
+      const menu = () => { const r2 = win.querySelector('.foafos-window-bar span').getBoundingClientRect(); win.querySelector('.foafos-window-bar').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r2.x + 10, clientY: r2.y + 5 })); };
+      const row = (re) => [...document.querySelectorAll('#foafos-win-menu button')].find((b) => re.test(b.textContent));
+      menu(); await wait(100);
+      row(/^Pin this app/).click(); await wait(100);
+      const pinned = FoafOS.pinnedApps().includes(win.dataset.openedAs);
+      menu(); await wait(100);
+      const label = row(/^Unpin this app/)?.textContent;
+      row(/^Unpin this app/)?.click(); await wait(100);
+      const after = FoafOS.pinnedApps().includes(win.dataset.openedAs);
+      if (was === null) localStorage.removeItem('foafos.apps.pinned'); else localStorage.setItem('foafos.apps.pinned', was);
+      return { app: win.dataset.openedAs, pinned, label: !!label, after };
+    });
+    check(r.pinned && r.label && !r.after, `the window menu pins and unpins the window's app (${JSON.stringify(r)})`);
   }
   // All windows shows a button for each workspace; another one's button shows its windows
   const ovws = await page.evaluate(async () => {
