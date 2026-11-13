@@ -3622,6 +3622,20 @@ function buildUI() {
       const r = bar.getBoundingClientRect();
       windowMenu(win, e.clientX || r.left + 12, e.clientY || r.bottom);
     });
+    // A finger held still on the bar opens it too: iOS sends no contextmenu for a long press.
+    // Any drag or swipe begun by that touch is dropped.
+    let hold = 0, holdAt = null;
+    bar.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch' || e.target.closest('button')) return;
+      holdAt = { x: e.clientX, y: e.clientY };
+      clearTimeout(hold);
+      hold = setTimeout(() => {
+        drag = null; swipe = null; preview(null);
+        if (!document.getElementById('foafos-win-menu')) windowMenu(win, holdAt.x, holdAt.y + 12);
+      }, 550);
+    });
+    bar.addEventListener('pointermove', (e) => { if (holdAt && Math.hypot(e.clientX - holdAt.x, e.clientY - holdAt.y) > 10) clearTimeout(hold); });
+    for (const t of ['pointerup', 'pointercancel']) bar.addEventListener(t, () => { clearTimeout(hold); holdAt = null; });
     return win;
   }
 
