@@ -3754,6 +3754,13 @@ function buildUI() {
       }, true],
       [`Move to workspace ${FoafOS.workspace < 4 ? FoafOS.workspace + 1 : FoafOS.workspace - 1}`, '', () => FoafOS.moveToWorkspace(win, FoafOS.workspace < 4 ? FoafOS.workspace + 1 : FoafOS.workspace - 1), true],
       ['Minimise', keyOf('hide'), () => win.querySelector('.foafos-window-min')?.click(), true],
+      // As a Mac's Hide Others: every other open window on this workspace is minimised.
+      ['Minimise the others', '', () => {
+        const others = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].filter((w) => w !== win);
+        for (const w of others) w.querySelector('.foafos-window-min')?.click();
+        FoafOS.raiseWindow(win);
+        bus.publish('wm.others', { summary: `${others.length} other windows minimised` });
+      }, document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)').length > 1],
       ['Move or resize', keyOf('move'), () => FoafOS.moveFrontByKeys?.(), !max],
       ['Close', keyOf('close'), () => win.querySelector('.foafos-window-close')?.click(), true],
     ].filter((row) => row[3]);

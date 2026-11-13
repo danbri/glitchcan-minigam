@@ -334,7 +334,7 @@ try {
   await page.evaluate(() => [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /Minimise/.test(b.textContent)).click());
   const minimised = await page.evaluate(() => document.getElementById('foafos-session-win').classList.contains('minimized'));
   await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); w.querySelector('.foafos-window-min').click(); FoafOS.raiseWindow(w); });
-  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Keep on top=,Move to workspace 2=,Minimise=Ctrl ; h,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
+  check(String(wmenu) === 'Snap left=Ctrl ; l,Snap right=Ctrl ; r,Next quarter=Ctrl ; i,Maximise=Ctrl ; m,Keep on top=,Move to workspace 2=,Minimise=Ctrl ; h,Minimise the others=,Move or resize=Ctrl ; v,Close=Ctrl ; q' && focusIn && menuGone && minimised,
     `right-click on a title bar opens the window menu with its keys, and it acts (${wmenu}, ${focusIn}, ${menuGone}, ${minimised})`);
 
   // Snapping
@@ -701,6 +701,23 @@ try {
     check(before.includes('chat') && before.includes('files') && before.includes('widget-tally') && after === before && tallyWs.ws === '2' && tallyWs.hidden && tallyWs.count === 2 && !linked.includes('chat') && linked.includes('system'),
       `the windows you had open come back after a reload, on their workspaces, but not past a link to an app (${before} → ${after}, Tally ${JSON.stringify(tallyWs)}; with ?app=system: ${linked})`);
   }
+
+  // The window menu's "Minimise the others" leaves only that window open on this workspace
+  const others = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const open = () => [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
+    const before = open().length;
+    const w = open()[0];
+    const r = w.querySelector('.foafos-window-bar span').getBoundingClientRect();
+    w.querySelector('.foafos-window-bar').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.x + 10, clientY: r.y + 5 }));
+    [...document.querySelectorAll('#foafos-win-menu button')].find((b) => /^Minimise the others/.test(b.textContent)).click();
+    await wait(200);
+    const left = open();
+    const out = { before, left: left.length, same: left[0] === w, front: w.style.zIndex === '2640' };
+    for (const m of document.querySelectorAll('.foafos-window.minimized:not(.ws-away)')) m.querySelector('.foafos-window-min')?.click();
+    return out;
+  });
+  check(others.before >= 2 && others.left === 1 && others.same && others.front, `"Minimise the others" leaves one window open (${JSON.stringify(others)})`);
 
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
