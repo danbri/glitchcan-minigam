@@ -12,6 +12,7 @@
 @container (max-width: 900px) { #upload-dir { display: none; } }
 @container (max-width: 680px) {
   #new-folder { display: none; }
+  #sort-pick.sort-pick { display: inline-block; }
   #upload { font-size: 0; min-width: 36px; }
   #upload::before { content: "📤"; font-size: 17px; line-height: 1; }
   #new-file { font-size: 0; min-width: 36px; }
@@ -170,3 +171,6 @@
 /* The box dragged over the list to choose what it touches. */
 #items-pane { position: relative; }
 #items-pane .band { position: absolute; z-index: 3; pointer-events: none; border: 1px solid var(--p-accent); background: color-mix(in srgb, var(--p-accent) 15%, transparent); }
+
+/* The Sort picker: only where the list has no column heads to sort by (a narrow window). */
+#sort-pick { display: none; min-height: 34px; max-width: 6.5rem; padding: 0 4px; background: none; border: 1px solid var(--p-line); border-radius: var(--p-corner); color: inherit; font: inherit; }

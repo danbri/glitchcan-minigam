@@ -16,6 +16,12 @@
     <button id="up" class="tool" type="button" aria-label="Enclosing folder" title="Enclosing folder">↑</button>
     <ol id="crumbs" class="crumbs grow" aria-label="Location"></ol>
     <input id="filter" type="search" aria-label="Filter this folder" placeholder="Filter">
+    <select id="sort-pick" class="tool sort-pick" aria-label="Sort by" title="Sort by">
+      <option value="name:1">Name A–Z</option><option value="name:-1">Name Z–A</option>
+      <option value="modified:-1">Newest</option><option value="modified:1">Oldest</option>
+      <option value="size:-1">Largest</option><option value="size:1">Smallest</option>
+      <option value="kind:1">Kind</option>
+    </select>
     <button id="view" class="tool" type="button" aria-label="Show as icons" aria-pressed="false" title="Show as icons">▦</button>
     <button id="space" class="tool" type="button" aria-pressed="false" title="Where the space goes" aria-label="Show where the space goes">◫</button>
     <button id="new-file" class="tool tool-main" type="button" title="New file">New file</button>

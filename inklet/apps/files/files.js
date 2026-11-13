@@ -81,6 +81,13 @@
   const VIEW_KEY = 'files.view';
   let icons = false;
   let sort = { key: 'name', dir: 1 };
+  // In a narrow window the list has no column heads to sort by: a Sort picker, as phone file
+  // managers have, says how it is sorted and changes it.
+  const showSort = () => { const v = `${sort.key}:${sort.dir}`; const sel = document.getElementById('sort-pick'); if (sel && [...sel.options].some((o) => o.value === v)) sel.value = v; };
+  document.getElementById('sort-pick')?.addEventListener('change', (e) => {
+    const [key, dir] = e.target.value.split(':');
+    sort = { key, dir: Number(dir) }; recentOrder = false; keepView(); drawItems();
+  });
   const keepView = () => { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ icons, sort })); } catch { /* not kept */ } };
   // The folder you were in, for each location, so Files opens there again, as a desktop's file
   // manager does. A folder that has gone since opens the top instead, without a complaint.
@@ -652,7 +659,7 @@
       })));
       return;
     }
-    const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; recentOrder = false; keepView(); drawItems(); } } },
+    const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; recentOrder = false; keepView(); showSort(); drawItems(); } } },
       `${label}${sort.key === key ? (sort.dir > 0 ? ' ↑' : ' ↓') : ''}`));
     box.replaceChildren(h('table', { class: 'list' },
       h('thead', {}, h('tr', {}, head('name', 'Name'), head('kind', 'Kind'), head('size', 'Size'), head('modified', 'Modified'))),
@@ -1756,6 +1763,7 @@
     let kept = {};
     try { kept = JSON.parse(localStorage.getItem(VIEW_KEY)) || {}; } catch { /* the defaults */ }
     if (['name', 'kind', 'size', 'modified'].includes(kept.sort?.key) && [1, -1].includes(kept.sort?.dir)) sort = kept.sort;
+    showSort();
     icons = kept.icons === true;
     $('view').setAttribute('aria-pressed', String(icons));
     $('view').textContent = icons ? '☰' : '▦';
