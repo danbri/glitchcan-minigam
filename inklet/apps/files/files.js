@@ -342,9 +342,19 @@
     const to = dir + nameOf(src) + '/';
     const there = await list(dir);
     if (there.ok && there.items.some((i) => dir + i.path.replace(/^\/+/, '') === to)) return { ok: false, why: `a folder called ${nameOf(src)} is there already` };
+    return moveTree(src, to);
+  }
+  // Copy a folder's tree to `to`, then take the original away. If part of it cannot be removed,
+  // it says so, and nothing is lost.
+  async function moveTree(src, to) {
     const copied = await copyTree(src, to);
     if (!copied.ok) return { ok: false, why: copied.why };
-    // Take the original away: every file, then each folder, deepest first.
+    const left = await removeTree(src);
+    return left ? { ok: false, why: `copied, but ${left} file${left === 1 ? '' : 's'} could not be taken from the original` } : { ok: true };
+  }
+  // Remove a folder and everything in it: every file, then each folder, deepest first. Returns how
+  // many files could not be removed.
+  async function removeTree(src) {
     const dirs = [], queue = [src];
     let left = 0;
     while (queue.length) {
@@ -358,7 +368,7 @@
       }
     }
     for (const d of dirs.reverse()) await foafos.pod.delete(d);
-    return left ? { ok: false, why: `copied, but ${left} file${left === 1 ? '' : 's'} could not be taken from the original` } : { ok: true };
+    return left;
   }
   // Returns whether the file moved. `quiet`: for a batch, which lists the folder and reports once.
   async function moveFile(from, dir, { quiet = false } = {}) {
@@ -1021,6 +1031,14 @@
   }
   const writeTrash = (ix) => { trashCache = { loc: current, ix }; return foafos.pod.put(TRASH_INDEX, JSON.stringify(ix), { contentType: 'application/json' }); };
   async function toTrash(path, ix) {
+    if (path.endsWith('/')) {
+      const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      const name = nameOf(path);
+      const r = await moveTree(path, `${TRASH}${id}/${name}/`);
+      if (!r.ok) return { ok: false, why: r.why };
+      ix[id] = { from: path, name, folder: true, size: null, at: new Date().toISOString(), type: null };
+      return { ok: true, id };
+    }
     const got = await foafos.pod.get(path, { as: 'bytes' });
     if (!got.ok) return { ok: false, why: explain(got) };
     const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -1037,6 +1055,15 @@
   async function fromTrash(id, ix) {
     const e = ix[id];
     if (!e) return { ok: false, why: 'it is no longer in the Trash' };
+    if (e.folder) {
+      const there = await list(parentOf(e.from));
+      if (there.ok && there.items.some((i) => parentOf(e.from) + i.path.replace(/^\/+/, '') === e.from)) return { ok: false, why: `a folder called ${e.name} is there now` };
+      const r = await moveTree(`${TRASH}${id}/${e.name}/`, e.from);
+      if (!r.ok) return { ok: false, why: r.why };
+      await foafos.pod.delete(`${TRASH}${id}/`);
+      delete ix[id];
+      return { ok: true, path: e.from };
+    }
     const inTrash = `${TRASH}${id}/${e.name}`;
     const got = await foafos.pod.get(inTrash, { as: 'bytes' });
     if (!got.ok) return { ok: false, why: explain(got) };
@@ -1048,7 +1075,8 @@
   }
   async function purge(id, ix) {
     const e = ix[id];
-    if (e) await foafos.pod.delete(`${TRASH}${id}/${e.name}`);
+    if (e?.folder) await removeTree(`${TRASH}${id}/`);
+    else if (e) { await foafos.pod.delete(`${TRASH}${id}/${e.name}`); await foafos.pod.delete(`${TRASH}${id}/`); }
     delete ix[id];
   }
   async function trashMany(paths) {
@@ -1059,7 +1087,7 @@
     lastTrashed = moved;
     chosen.clear();
     await go(folder, { remember: false });
-    say([moved.length ? `Moved ${moved.length === 1 ? nameOf(paths[0]) : `${moved.length} files`} to the Trash.` : '', not.length ? `Not moved: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !moved.length);
+    say([moved.length ? `Moved ${moved.length === 1 ? nameOf(paths[0]) : `${moved.length} ${paths.some((x) => x.endsWith('/')) ? 'items' : 'files'}`} to the Trash.` : '', not.length ? `Not moved: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !moved.length);
     drawChooseBar();
   }
   async function undoTrash() {
@@ -1078,7 +1106,7 @@
     const ix = await readTrash();
     if (mine !== listing) return;
     const rows = Object.entries(ix).sort(([, a], [, b]) => String(b.at).localeCompare(String(a.at)))
-      .map(([id, e]) => ({ path: `${TRASH}${id}/${e.name}`, container: false, size: e.size, modified: e.at, contentType: e.type, trashId: id, from: e.from }));
+      .map(([id, e]) => ({ path: `${TRASH}${id}/${e.name}${e.folder ? '/' : ''}`, container: !!e.folder, size: e.size, modified: e.at, contentType: e.type, trashId: id, from: e.from }));
     items = rows; searchResults = true; recentOrder = true; trashView = true;
     $('filter').value = '';
     pick(null); draw();
@@ -1096,25 +1124,29 @@
   }
 
   const askDeleteChosen = () => {
-    const files = [...chosen].filter((p) => !p.endsWith('/'));
-    const folders = chosen.size - files.length;
-    if (!files.length) { say('Folders are deleted one at a time, once they are empty.', true); return; }
-    ask(`Move ${files.length} file${files.length === 1 ? '' : 's'} to the Trash? You can put ${files.length === 1 ? 'it' : 'them'} back from the Trash.`, 'Move to Trash', { input: false, danger: true }, async () => {
-      await trashMany(files);
-      if (folders) say(`${statusEl.textContent} Folders are left: delete them one at a time, once empty.`);
-    });
+    const all = [...chosen];
+    const files = all.filter((p) => !p.endsWith('/'));
+    const what = all.length === files.length ? `${files.length} file${files.length === 1 ? '' : 's'}` : `${all.length} items`;
+    ask(`Move ${what} to the Trash? You can put ${all.length === 1 ? 'it' : 'them'} back from the Trash.`, 'Move to Trash', { input: false, danger: true }, () => trashMany(all));
   };
   // One question for the chosen files, or the usual one for the item picked.
   const askDelete = () => (chosen.size > 1 ? askDeleteChosen() : askDeleteOne());
   const askDeleteOne = () => (picked.container ? askDeleteFolder() : picked.trashId ? askPurge() : ask(`Move ${nameOf(picked.path)} to the Trash? You can put it back from the Trash.`, 'Move to Trash', { input: false, danger: true }, () => trashMany([picked.path])));
   const askPurge = () => ask(`Delete ${nameOf(picked.path)} for good? This cannot be undone.`, 'Delete for good', { input: false, danger: true }, async () => { const ix = await readTrash(); await purge(picked.trashId, ix); await writeTrash(ix); await showTrash(); });
-  const askDeleteFolder = () => ask(`Delete ${nameOf(picked.path)}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
+  // An empty folder is deleted for good (there is nothing in it to lose); one with things in it goes
+  // to the Trash, whole, as on a desktop.
+  const askDeleteFolder = async () => {
+    const r = await list(picked.path);
+    const full = (r.items || []).some((i) => !hiddenName(i.path.replace(/\/$/, '')));
+    return full ? ask(`Move ${nameOf(picked.path)} and all that is in it to the Trash? You can put it back from the Trash.`, 'Move to Trash', { input: false, danger: true }, () => trashMany([picked.path])) : askDeleteEmptyFolder();
+  };
+  const askDeleteEmptyFolder = () => ask(`Delete ${nameOf(picked.path)}? This cannot be undone.`, 'Delete', { input: false, danger: true }, async () => {
     const name = nameOf(picked.path);
     let path = picked.path;
     if (picked.container) {
       const r = await list(path);
       const rest = (r.items || []).filter((i) => !hiddenName(i.path.replace(/\/$/, '')));
-      if (rest.length) { say('Empty this folder before deleting it.', true); return; }
+      if (rest.length) { await trashMany([path]); return; }
       await foafos.pod.delete(`${path}.folder`);
     }
     forgetThumb(path);

@@ -38,7 +38,8 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Choose several by touch: long press, then taps, with a bar (phones) | Done: #1075 |
 | Archives open as folders (macOS, Windows, GNOME) | Done: #1026 |
 | Shift + arrows to extend a choice from the keyboard (desktops) | Done: this PR |
-| A Trash to take deleted files back from, and Undo right after a delete (desktops, phones) | Done: this PR |
+| A Trash to take deleted files back from, and Undo right after a delete (desktops, phones) | Done: #1083 |
+| Folders go to the Trash whole, and come back whole (desktops) | Done: this PR |
 | Copy a folder and what is in it (desktops) | Done: this PR |
 | Folders you use often, kept in the side panel (Finder sidebar, Explorer Quick access) | Done: this PR |
 
