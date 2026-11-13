@@ -58,6 +58,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Feature | Status |
 |---|---|
 | All windows as cards, minimised ones too; pick by click, number or arrows (Mission Control, Task View) | Done: #993, #999, #1000 |
+| Close all from All windows, asking once first (Android's Clear all) | Done: this PR |
 | Hold the menu handle for All windows, as holding a phone's gesture bar shows recent apps; its title lists every gesture | Done: #1133 |
 | Type a name in All windows to narrow it (GNOME overview) | Done: #1047 |
 | A window's title says what is open in it (Files — notes, Notes — trip), the app's name always first: foafos.setTitle (every desktop) | Done: #1135, #1136 |
@@ -81,7 +82,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Search puts the best name match first, and Enter opens it (Spotlight, Start) | Done: #1054 |
 | Search files from All apps: a row hands what was typed to Files, which searches every folder with its own access (Start menu, Spotlight) | Done: #1131 |
 | What each app or widget does, in search and on a long press or right-click (phones, desktops) | Done: #997, #1007, #1062 |
-| An app's sheet says what it may do, in plain words, from its manifest (a phone's App info permissions) | Done: this PR |
+| An app's sheet says what it may do, in plain words, from its manifest (a phone's App info permissions) | Done: #1146 |
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
 | Pin or unpin an app from its window's menu (a taskbar's Pin to taskbar, a dock's Keep in Dock) | Done: #1143 |
 | Widgets opened from All apps show in Recent with the apps (phones' recent widgets, Start's Recent) | Done: #1137 |
