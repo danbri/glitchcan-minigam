@@ -3238,7 +3238,7 @@ function buildUI() {
   FoafOS.snapFront = (zone) => {
     const wins = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')];
     const front = wins.sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
-    front?._snap?.(zone);
+    front?._snap?.(zone, { keys: true });
   };
   // The quarters by key (Ctrl ; i): each press moves the front window to the next quarter,
   // top-left, top-right, bottom-right, bottom-left, as a desktop's quarter keys do. Only where
@@ -3524,7 +3524,7 @@ function buildUI() {
       drag.zone = snapZone(e);
       preview(drag.zone);
     });
-    win._snap = (zone, { assist = true } = {}) => {
+    win._snap = (zone, { assist = true, keys = false } = {}) => {
       document.getElementById('foafos-snap-assist')?.remove();
       if (zone === 'top') { maxBtn.click(); return; }   // the real Maximize, so its button stays true
       if (win.classList.contains('maximized')) maxBtn.click();
@@ -3532,7 +3532,7 @@ function buildUI() {
       win._zone = zone;
       const [l, t, w, h] = snapBox(zone);
       Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
-      if (assist && (zone === 'left' || zone === 'right')) snapAssist(win, zone === 'left' ? 'right' : 'left', snapBox(zone === 'left' ? 'right' : 'left'));
+      if (assist && (zone === 'left' || zone === 'right')) snapAssist(win, zone === 'left' ? 'right' : 'left', snapBox(zone === 'left' ? 'right' : 'left'), { keys });
     };
     // When the page changes size, as a desktop does when its screen does: a snapped window fills
     // its half or quarter of the new size, and a floating one comes back on screen. Its kept
@@ -3623,7 +3623,7 @@ function buildUI() {
 
   // Snap assist, as on a desktop: once a window fills one half, the other half offers the other
   // open windows to fill it. Pick one, or press any other key or click anywhere to carry on.
-  function snapAssist(win, side, [l, t, w, h]) {
+  function snapAssist(win, side, [l, t, w, h], { keys = false } = {}) {
     const others = [...document.querySelectorAll('.foafos-window:not(.minimized):not(.ws-away)')].filter((x) => x !== win && x._snap && !x.classList.contains('foafos-ov'));
     if (!others.length || window.innerWidth < 700) return;
     const box = document.createElement('div');
@@ -3641,7 +3641,13 @@ function buildUI() {
       b.addEventListener('click', () => { done(); o._snap(side, { assist: false }); FoafOS.raiseWindow(o); });
       box.appendChild(b);
     }
-    const done = () => { box.remove(); document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', key, true); };
+    // Snapped by the keys, the offer takes the focus, so arrows and Enter can pick; put away, the
+    // focus goes back to the snapped window.
+    const done = () => {
+      const had = box.contains(document.activeElement);
+      box.remove(); document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', key, true);
+      if (had) win.querySelector('.foafos-window-bar button')?.focus();
+    };
     const away = (e) => { if (!box.contains(e.target)) done(); };
     const key = (e) => {
       if (box.contains(e.target) && ['Tab', 'Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
@@ -3655,6 +3661,7 @@ function buildUI() {
       done();
     };
     document.body.appendChild(box);
+    if (keys) box.querySelector('button')?.focus();
     setTimeout(() => { document.addEventListener('pointerdown', away, true); document.addEventListener('keydown', key, true); }, 0);
   }
 

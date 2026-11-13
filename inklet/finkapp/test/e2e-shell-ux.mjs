@@ -457,6 +457,21 @@ try {
   const dismissed = await page.evaluate(() => !document.getElementById('foafos-snap-assist'));
   check(offer && offer.x >= 640 && offer.names.length >= 1 && filled === '640,0,640,800' && offered2 && dismissed,
     `snap assist offers the other windows for the other half, and fills it (${JSON.stringify({ offer, filled, offered2, dismissed })})`);
+  // By the keys: Ctrl ; l puts the focus on the offer; Down and Enter fill the other half; another key
+  // puts it away and the focus goes back to the snapped window
+  await page.evaluate(() => { const w = document.getElementById('foafos-session-win'); if (w.classList.contains('maximized')) w.querySelector('.foafos-window-max').click(); FoafOS.raiseWindow(w); });
+  await keys(page, [';', 'l']);
+  const kFocus = await page.evaluate(() => !!document.activeElement?.closest('#foafos-snap-assist'));
+  const kSecond = await page.evaluate(() => document.querySelectorAll('#foafos-snap-assist button')[1]?.textContent);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(200);
+  const kFilled = await page.evaluate((name) => { const w = [...document.querySelectorAll('.foafos-window')].find((x) => x.querySelector('.foafos-window-bar span')?.textContent === name); const r = w?.getBoundingClientRect(); return r ? [r.x, r.y, r.width, r.height].map(Math.round).join(',') : null; }, kSecond);
+  await page.evaluate(() => FoafOS.raiseWindow(document.getElementById('foafos-session-win')));
+  await keys(page, [';', 'l']);
+  await page.keyboard.press('x');
+  const kBack = await page.evaluate(() => ({ gone: !document.getElementById('foafos-snap-assist'), inWin: !!document.activeElement?.closest('#foafos-session-win') }));
+  check(kFocus && !!kSecond && kFilled === '640,0,640,800' && kBack.gone && kBack.inWin, `snap assist by the keys: focus on the offer, Down and Enter pick, another key returns (${JSON.stringify({ kFocus, kSecond, kFilled, kBack })})`);
 
   // Resize from any edge, in a page of its own: the left edge dragged left widens the window
   // leftwards; the top edge dragged down makes it shorter from the top
