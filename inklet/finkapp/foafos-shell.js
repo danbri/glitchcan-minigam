@@ -1475,17 +1475,24 @@ function closeOnBack(el, close) {
   history.pushState({ ...(history.state || {}), foafosOverlay: true }, '');
   const entry = { el, close };
   backStack.push(entry);
-  const watch = new MutationObserver(() => {
-    if (el.isConnected) return;
+  const drop = () => {
     watch.disconnect();
     const i = backStack.indexOf(entry);
     if (i < 0) return;                       // it was Back that closed it
-    backStack.splice(i, 1);
-    ignorePops++;
-    history.back();
-  });
+    // Only the newest entry can be taken off the history: one under another is marked spent, and
+    // goes when those above it have gone.
+    entry.spent = true;
+    while (backStack.length && backStack[backStack.length - 1].spent) {
+      backStack.pop();
+      ignorePops++;
+      history.back();
+    }
+  };
+  const watch = new MutationObserver(() => { if (!el.isConnected) drop(); });
+  entry.watch = watch;
   // The whole page is watched, so a sheet inside All apps is let go when All apps closes too.
   watch.observe(document.body, { childList: true, subtree: true });
+  return drop;                               // for an entry no longer wanted (an app with no step back)
 }
 FoafOS.closeOnBack = closeOnBack;
 window.addEventListener('popstate', (e) => {
@@ -1493,6 +1500,7 @@ window.addEventListener('popstate', (e) => {
   const top = backStack.pop();
   if (!top) return;
   e.stopImmediatePropagation();
+  top.watch?.disconnect();
   top.close();
 }, { capture: true });
 window.addEventListener('popstate', () => {
@@ -5644,6 +5652,16 @@ function buildUI() {
       // A window's title says what is open in it (Files — notes), as a desktop's windows do, so All
       // windows and the switcher can tell two windows of one app apart. The app's own name always
       // comes first, so no app can title itself as another; plain text, one line, 80 characters.
+      // Back inside an app: an app with a step back (a phone's Files, out of a file to its folder)
+      // says so, and the phone's Back (or the browser's) is handed to it, as Android's Back goes
+      // back within an app before leaving it. One entry per window at a time.
+      if (d.type === 'app.back-wanted') {
+        // Only where an app has the screen to itself (a phone): on a desktop the browser's Back stays the browser's.
+        if (d.on && !win._backDrop && window.innerWidth < 700) {
+          win._backDrop = closeOnBack(win, () => { win._backDrop = null; try { frame.contentWindow?.postMessage({ type: 'app.back' }, '*'); } catch { /* closed */ } });
+        } else if (!d.on && win._backDrop) { const drop = win._backDrop; win._backDrop = null; drop(); }
+        return;
+      }
       if (d.type === 'app.title') {
         const span = win?.querySelector('.foafos-window-bar span');
         if (!span) return;

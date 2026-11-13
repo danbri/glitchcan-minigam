@@ -1390,6 +1390,31 @@ try {
   const notes = page.frames().find((x) => /podnotes/.test(x.url()));
   const other = notes ? await notes.evaluate(() => Promise.all([foafos.pod.locations(), foafos.pod.use('device'), foafos.pod.addFolder()])) : null;
   check(denied && other?.every((r) => r.ok === false && r.reason === 'denied'), `an ordinary app cannot list or switch locations (${other?.map((r) => r.reason)})`);
+  // On a phone, Back inside Files: out of a file's panel to the list, then back a folder
+  {
+    const bp = await context.newPage();
+    await bp.setViewportSize({ width: 390, height: 780 });
+    await bp.goto(SHELL);
+    const bf = await filesFrame(bp);
+    const url0 = bp.url();
+    await bf.evaluate(async () => {
+      await foafos.pod.put('bk/in/f.txt', 'x', { contentType: 'text/plain' });
+      await window.__files.go('bk/');
+      await window.__files.go('bk/in/');
+      await window.__files.pick({ path: 'bk/in/f.txt', container: false });
+    });
+    await bp.waitForTimeout(400);
+    const s0 = await bf.evaluate(() => ({ show: document.getElementById('panes').dataset.show, folder: window.__files.state().folder }));
+    await bp.evaluate(() => history.back()); await bp.waitForTimeout(600);
+    const s1 = await bf.evaluate(() => ({ show: document.getElementById('panes').dataset.show, folder: window.__files.state().folder }));
+    await bp.evaluate(() => history.back()); await bp.waitForTimeout(800);
+    const s2 = await bf.evaluate(() => ({ show: document.getElementById('panes').dataset.show, folder: window.__files.state().folder }));
+    const still = bp.url() === url0 && await bp.evaluate(() => !!window.FoafOS?.launchApp);
+    await bf.evaluate(async () => { await foafos.pod.delete('bk/in/f.txt'); await foafos.pod.delete('bk/in/'); await foafos.pod.delete('bk/'); });
+    await bp.close();
+    check(s0.show === 'detail' && s1.show === 'items' && s1.folder === 'bk/in/' && s2.folder === 'bk/' && still,
+      `on a phone, Back closes a file's panel, then goes back a folder, and the shell stays (${JSON.stringify({ s0, s1, s2, still })})`);
+  }
   // Pulling the list down from the top, by touch, looks for changes too. In a page of its own, so the
   // touch emulation touches nothing else.
   {
@@ -1405,9 +1430,10 @@ try {
     for (let k = 1; k <= 6; k++) await pcdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y0 + k * 20 }] });
     await pcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     const pulled = await pf.waitForFunction(() => !!document.querySelector('#items [data-path="pulled.txt"]'), null, { timeout: 4000 }).then(() => true, () => false);
+    const pinfo = pulled ? '' : await pf.evaluate(() => JSON.stringify({ folder: window.__files.state().folder, status: window.__files.state().status, n: window.__files.state().items.length, top: document.getElementById('items-pane').scrollTop }));
     await pf.evaluate(() => foafos.pod.delete('pulled.txt'));
     await pp.close();
-    check(pulled, `pulling the list down by touch shows a file saved elsewhere (${pulled}${pdir})`);
+    check(pulled, `pulling the list down by touch shows a file saved elsewhere (${pulled}${pdir} ${pinfo})`);
   }
   check(!errors.length, `no page errors (${errors.slice(0, 2).join(' | ').slice(0, 160)})`);
 } catch (e) { check(false, `exception: ${e.message.slice(0, 1200).replace(/\n/g, " / ")}`); }

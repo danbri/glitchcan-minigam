@@ -39,7 +39,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | A picked folder says what is in it, and its total size on request (Get Info, Properties) | Done: #1118 |
 | Copy, cut and paste between folders (desktops) | Done: #1061, #1069 |
 | Move a folder, by drag or cut and paste; delete an empty folder (desktops) | Done: #1114 |
-| Drop a file or folder onto a folder in the path bar to move it there (Finder's path bar, Explorer's address bar) | Done: this PR |
+| Drop a file or folder onto a folder in the path bar to move it there (Finder's path bar, Explorer's address bar) | Done: #1138 |
 | Drag onto a folder to move (desktops) | Done: #1036, #1071 |
 | Choose several: Ctrl/Cmd + click, Shift + click, Ctrl/Cmd + A (desktops) | Done: #1067, #1070 |
 | Choose several by touch: long press, then taps, with a bar (phones) | Done: #1075 |
@@ -114,6 +114,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: #1091 |
 | Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: #1092 |
 | A phone's Back closes the innermost thing open: an app's sheet, a menu, the keys sheet, then All apps or All windows (Android) | Done: #1132 |
+| A phone's Back goes back inside the app that has the screen: Files closes a file's panel, then goes back a folder (foafos.setBack; Android) | Done: this PR |
 
 ## Second round
 
