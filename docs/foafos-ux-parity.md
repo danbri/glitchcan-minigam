@@ -100,6 +100,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Feature | Status |
 |---|---|
 | Show the desktop: put every window away, and bring them all back (Win+D, F11 on a Mac, GNOME Super+D) | Done: this PR |
+| Minimise the others, from the window menu (a Mac's Hide Others) | Done: this PR |
 | Keep a window on top of the others, from the window menu (GNOME, Windows PowerToys "Always on Top") | Done: this PR |
 | Files: play sound and video in the preview (Quick Look, phones) | Done: this PR |
 | Files: show PDFs in the preview, a page at a time, with pdf.js (Quick Look, phones) | Done: this PR |
