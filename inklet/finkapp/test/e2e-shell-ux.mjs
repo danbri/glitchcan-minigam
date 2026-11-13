@@ -783,8 +783,22 @@ try {
   await phone.page.evaluate(() => document.querySelector('.foafos-app-sheet [data-act="open"]').click());
   await phone.page.waitForTimeout(600);
   const files2 = await phone.page.evaluate(() => document.querySelectorAll('.foafos-window[data-opened-as="files"]').length);
-  check(sheet?.title === 'Files' && /files/i.test(sheet.desc) && String(sheet.acts) === 'Open,Pin,Close' && files1 === files0 && files2 >= files0,
+  check(sheet?.title === 'Files' && /files/i.test(sheet.desc) && String(sheet.acts) === (files0 ? `Open,Pin,${files0 === 1 ? 'Close its window' : `Close its ${files0} windows`},Close` : 'Open,Pin,Close') && files1 === files0 && files2 >= files0,
     `a long press on an app shows what it does, and Open opens it (${JSON.stringify(sheet)}, ${files0}/${files1}/${files2})`);
+  // Close its windows: every window of that app closes, and its open dot goes
+  const quit = await phone.page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    document.getElementById('foafos-home')?.remove();
+    FoafOS.openHome(); await wait(200);
+    const b = document.querySelector('#foafos-home .foafos-app[data-app="files"]');
+    if (!b) return { none: true };
+    const dot0 = b.classList.contains('running');
+    b.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); await wait(100);
+    const label = document.querySelector('.foafos-app-sheet [data-act="quit"]')?.textContent;
+    document.querySelector('.foafos-app-sheet [data-act="quit"]')?.click(); await wait(600);
+    return { dot0, label, left: document.querySelectorAll('.foafos-window[data-opened-as="files"]').length, dot: b.classList.contains('running') };
+  });
+  check(quit.dot0 && /^Close its/.test(quit.label || '') && quit.left === 0 && !quit.dot, `Close its windows, from an app's sheet, closes them all and the dot goes (${JSON.stringify(quit)})`);
   await phone.page.evaluate(() => document.getElementById('foafos-home')?.remove());
 
   // Swiping a full-screen window's title bar sideways goes to the next window, and back; a short swipe does not

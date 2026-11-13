@@ -3885,7 +3885,7 @@ function buildUI() {
       sheet.setAttribute('role', 'dialog');
       sheet.setAttribute('aria-label', `About ${app.name}`);
       sheet.innerHTML = `<div class="sheet-head"><span class="ico" aria-hidden="true"></span><h3></h3></div><p></p>
-        <div class="sheet-acts"><button type="button" class="fp-btn fp-primary" data-act="open">Open</button><button type="button" class="fp-btn" data-act="pin" hidden></button><button type="button" class="fp-btn" data-act="earlier" hidden>Move earlier</button><button type="button" class="fp-btn" data-act="later" hidden>Move later</button><button type="button" class="fp-btn" data-act="close">Close</button></div>`;
+        <div class="sheet-acts"><button type="button" class="fp-btn fp-primary" data-act="open">Open</button><button type="button" class="fp-btn" data-act="pin" hidden></button><button type="button" class="fp-btn" data-act="earlier" hidden>Move earlier</button><button type="button" class="fp-btn" data-act="later" hidden>Move later</button><button type="button" class="fp-btn" data-act="quit" hidden></button><button type="button" class="fp-btn" data-act="close">Close</button></div>`;
       sheet.querySelector('.ico').textContent = app.icon || '';
       sheet.querySelector('h3').textContent = app.name;
       sheet.querySelector('p').textContent = app.desc || 'No description yet.';
@@ -3894,12 +3894,29 @@ function buildUI() {
       if (pin) { pinB.hidden = false; pinB.textContent = pin.classList.contains('on') ? 'Unpin' : 'Pin'; }
       const order = pinnedIds(), at = order.indexOf(app.id);
       if (at >= 0) { sheet.querySelector('[data-act="earlier"]').hidden = at === 0; sheet.querySelector('[data-act="later"]').hidden = at === order.length - 1; }
+      // An app that is open can have all its windows closed from here, as a dock's Quit does.
+      const its = () => [...document.querySelectorAll('.foafos-window[data-opened-as]')].filter((w) => w.dataset.openedAs === app.id);
+      const quitB = sheet.querySelector('[data-act="quit"]');
+      const n = its().length;
+      if (n) { quitB.hidden = false; quitB.textContent = n === 1 ? 'Close its window' : `Close its ${n} windows`; }
       const close = () => { sheet.remove(); b.focus(); };
       sheet.addEventListener('click', (e) => {
         const act = e.target.closest('button')?.dataset.act;
         if (act === 'open') { sheet.remove(); b._sheet = false; b.click(); }
         else if (act === 'pin') { sheet.remove(); pin?.click(); }
         else if (act === 'earlier' || act === 'later') { sheet.remove(); reorderPin(app.id, act === 'earlier' ? -1 : 1); }
+        else if (act === 'quit') {
+          for (const w of its()) w.querySelector('.foafos-window-close')?.click();
+          close();
+          // The dot goes once the windows have gone (a window may ask first, and stay).
+          setTimeout(() => {
+            if (its().length) return;
+            for (const x of home.querySelectorAll(`.foafos-app[data-app="${CSS.escape(app.id)}"]`)) {
+              x.classList.remove('running');
+              x.setAttribute('aria-label', x.getAttribute('aria-label').replace(`${app.name}, open`, app.name));
+            }
+          }, 300);
+        }
         else if (act === 'close') close();
       });
       sheet.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
