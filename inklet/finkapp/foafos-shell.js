@@ -1484,8 +1484,10 @@ function closeOnBack(el, close) {
     ignorePops++;
     history.back();
   });
-  watch.observe(el.parentNode || document.body, { childList: true });
+  // The whole page is watched, so a sheet inside All apps is let go when All apps closes too.
+  watch.observe(document.body, { childList: true, subtree: true });
 }
+FoafOS.closeOnBack = closeOnBack;
 window.addEventListener('popstate', (e) => {
   if (ignorePops) { ignorePops--; e.stopImmediatePropagation(); return; }
   const top = backStack.pop();
@@ -3851,6 +3853,7 @@ function buildUI() {
       else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus(); }
     });
     document.body.appendChild(menu);
+    closeOnBack(menu, close);
     const mr = menu.getBoundingClientRect();
     menu.style.left = `${Math.max(4, Math.min(x, window.innerWidth - mr.width - 4))}px`;
     menu.style.top = `${Math.max(4, Math.min(y, window.innerHeight - mr.height - 4))}px`;
@@ -4027,6 +4030,7 @@ function buildUI() {
       });
       sheet.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
       home.appendChild(sheet);
+      closeOnBack(sheet, close);
       sheet.querySelector('button').focus();
     };
     const offerSheet = (app, b) => {

@@ -73,7 +73,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 |---|---|
 | All apps in folders, with search over names, descriptions and folders (Start, Launchpad, app drawers) | Done: #995, #1014 |
 | Search puts the best name match first, and Enter opens it (Spotlight, Start) | Done: #1054 |
-| Search files from All apps: a row hands what was typed to Files, which searches every folder with its own access (Start menu, Spotlight) | Done: this PR |
+| Search files from All apps: a row hands what was typed to Files, which searches every folder with its own access (Start menu, Spotlight) | Done: #1131 |
 | What each app or widget does, in search and on a long press or right-click (phones, desktops) | Done: #997, #1007, #1062 |
 | Pin apps and widgets to a Pinned folder (Start, docks, home screens) | Done: #1033, #1035 |
 | Pinned apps in your own order: Alt+arrows, or Move earlier/later on a long press (docks, home screens) | Done: #1101 |
@@ -108,6 +108,7 @@ round of items was added once the first was done (2026-11-13); the owner may add
 | Touch targets of about 44 px on touch screens | Done: window buttons, All apps, the bars above |
 | On a touch-only screen, menus leave out what needs a keyboard (phones) | Done: #1091 |
 | Everything a key does on a desktop can be reached on a phone too, e.g. workspaces from the menu | Done: #1092 |
+| A phone's Back closes the innermost thing open: an app's sheet, a menu, the keys sheet, then All apps or All windows (Android) | Done: this PR |
 
 ## Second round
 
