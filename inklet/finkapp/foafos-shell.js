@@ -5640,6 +5640,18 @@ function buildUI() {
         scoped.publish(String(d.topic || ''), d.data);
         return;
       }
+      // A window's title says what is open in it (Files — notes), as a desktop's windows do, so All
+      // windows and the switcher can tell two windows of one app apart. The app's own name always
+      // comes first, so no app can title itself as another; plain text, one line, 80 characters.
+      if (d.type === 'app.title') {
+        const span = win?.querySelector('.foafos-window-bar span');
+        if (!span) return;
+        if (win.dataset.baseTitle === undefined) win.dataset.baseTitle = span.textContent;
+        const text = String(d.text ?? '').replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+        const full = text ? `${win.dataset.baseTitle} — ${text}` : win.dataset.baseTitle;
+        if (span.textContent !== full) { span.textContent = full; win.setAttribute('aria-label', full); }
+        return;
+      }
 
       // SNAPSHOT (spec §5.5.4) for WINDOW apps, not just stage games.
       // A boxed story's playthrough lives in its frame, so closing the

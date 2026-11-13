@@ -499,6 +499,8 @@
 
     /** Say something the shell's announcer should read out. */
     announce: (text) => window.__mgA11y?.announce?.(text),
+    // What is open in this window, after the app's name in its title bar ("Files — notes").
+    setTitle: (text) => { post({ type: 'app.title', text: String(text ?? '') }); return foafos; },
     /** Explicit async store API for new code that does not want the shim. */
     store: {
       get: (k) => { try { return window.localStorage.getItem(k); } catch { return null; } },
