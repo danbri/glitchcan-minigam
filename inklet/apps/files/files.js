@@ -805,7 +805,7 @@
       return;
     }
     if (icons) {
-      box.replaceChildren(h('div', { class: 'grid', role: 'listbox', 'aria-label': 'Items' }, rows.map((it) => {
+      box.replaceChildren(h('div', { class: 'grid', role: 'listbox', 'aria-multiselectable': 'true', 'aria-label': `Items in ${nameOf(folder) || here()?.label || 'the top folder'}` }, rows.map((it) => {
         const k = kindOf(it);
         const btn = h('button', { type: 'button', role: 'option', 'aria-selected': String(picked?.path === it.path),
           on: { click: (e) => clickItem(e, it), dblclick: () => activate(it), keydown: (e) => { if (e.key === 'Enter') activate(it); } } },
@@ -820,9 +820,10 @@
       applyZoom();
       return;
     }
-    const head = (key, label) => h('th', { scope: 'col' }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; recentOrder = false; keepView(); showSort(); drawItems(); } } },
+    const head = (key, label) => h('th', { scope: 'col', ...(sort.key === key && !recentOrder ? { 'aria-sort': sort.dir > 0 ? 'ascending' : 'descending' } : {}) }, h('button', { type: 'button', on: { click: () => { sort = { key, dir: sort.key === key ? -sort.dir : 1 }; recentOrder = false; keepView(); showSort(); drawItems(); } } },
       `${label}${sort.key === key ? (sort.dir > 0 ? ' ↑' : ' ↓') : ''}`));
-    box.replaceChildren(h('table', { class: 'list' },
+    // A grid, so a screen reader hears which rows are chosen (aria-selected counts only in a grid).
+    box.replaceChildren(h('table', { class: 'list', role: 'grid', 'aria-multiselectable': 'true', 'aria-label': `Items in ${nameOf(folder) || here()?.label || 'the top folder'}` },
       h('thead', {}, h('tr', {}, head('name', 'Name'), head('kind', 'Kind'), head('size', 'Size'), head('modified', 'Modified'))),
       h('tbody', {}, rows.map((it) => {
         const k = kindOf(it);
