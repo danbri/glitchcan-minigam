@@ -1440,6 +1440,17 @@ try {
     await f.evaluate(async () => { await foafos.pod.delete('notes/dbl.txt'); });
     check(!!opened && text === 'double' && /Opened dbl\.txt in Notes/.test(said), `a double-click opens a text file in Notes (${!!opened}, ${JSON.stringify(text)}, ${said})`);
   }
+  // A right-click on the path lists the enclosing folders, nearest first; one goes there
+  {
+    await f.evaluate(async () => { await foafos.pod.put('notes/pa/pb/pc/x.txt', 'x', { contentType: 'text/plain' }); await window.__files.go('notes/pa/pb/pc/'); });
+    await page.waitForTimeout(300);
+    const rows = await f.evaluate(() => { const c = document.getElementById('crumbs'); const r = c.getBoundingClientRect(); c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.x + 5, clientY: r.y + 5 })); return [...document.querySelectorAll('.ctx-menu button span')].map((x) => x.textContent); });
+    await f.evaluate(() => [...document.querySelectorAll('.ctx-menu button')].find((b) => b.textContent.includes('pa'))?.click());
+    await page.waitForTimeout(400);
+    const now = await f.evaluate(() => window.__files.state().folder);
+    await f.evaluate(async () => { for (const p of ['notes/pa/pb/pc/x.txt', 'notes/pa/pb/pc/', 'notes/pa/pb/', 'notes/pa/']) await foafos.pod.delete(p); await window.__files.go('notes/'); });
+    check(rows.length === 4 && /pb$/.test(rows[0]) && /pa$/.test(rows[1]) && /notes$/.test(rows[2]) && /^🏠/.test(rows[3]) && now === 'notes/pa/', `a right-click on the path lists the enclosing folders, and one goes there (${JSON.stringify({ rows, now })})`);
+  }
   // Go to folder: / opens a field for a path; a folder that is not there says so; clicking the
   // current folder's name opens it too
   {

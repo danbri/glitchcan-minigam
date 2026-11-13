@@ -307,6 +307,18 @@
     $('crumbs').replaceChildren(h('li', {}, h('button', { type: 'button', on: { click: () => (folder ? go('') : askGoTo()) } }, here()?.label || 'My files')),
       ...parts.map((p, i) => h('li', {}, h('button', { type: 'button', ...(i === parts.length - 1 ? { title: 'Go to another folder by typing its path (/)' } : {}),
         on: { click: () => (i === parts.length - 1 && !inArchive() ? askGoTo() : go(parts.slice(0, i + 1).join('/') + '/')) } }, p.endsWith('!') ? `🗜 ${p.slice(0, -1)}` : p))));
+    // The whole path as a menu, from a right-click or a long press on the path (which shows only the
+    // folder's own name in a narrow window), as Finder's Cmd-click on a title and iOS Files' long press
+    // on Back do: each enclosing folder, nearest first, up to the top.
+    const pathMenu = (x, y) => showMenu([...parts.map((p, i) => [`📁 ${p.replace(/!$/, '')}`, '', () => go(parts.slice(0, i + 1).join('/') + '/')]).reverse().slice(1),
+      [`🏠 ${here()?.label || 'Top folder'}`, '', () => go('')]].filter(() => parts.length), x, y, 'Enclosing folders', null);
+    $('crumbs').oncontextmenu = (e) => { if (!parts.length) return; e.preventDefault(); pathMenu(e.clientX, e.clientY); };
+    {
+      let t = 0, at = null;
+      $('crumbs').onpointerdown = (e) => { if (e.pointerType !== 'touch' || !parts.length) return; at = { x: e.clientX, y: e.clientY }; t = setTimeout(() => pathMenu(at.x, at.y), 550); };
+      $('crumbs').onpointermove = (e) => { if (at && Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) clearTimeout(t); };
+      $('crumbs').onpointerup = $('crumbs').onpointercancel = () => { clearTimeout(t); at = null; };
+    }
     // A file or folder dragged onto a folder in the path moves there, as onto Finder's path bar.
     [...$('crumbs').querySelectorAll('button')].forEach((b, i, all) => { if (i < all.length - 1) asDropTarget(b, i ? `${parts.slice(0, i).join('/')}/` : ''); });
     drawTree();
