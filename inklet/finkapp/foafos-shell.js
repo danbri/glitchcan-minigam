@@ -3194,6 +3194,17 @@ function buildUI() {
     n.classList.add('on');
     clearTimeout(n._t); n._t = setTimeout(() => n.classList.remove('on'), 1600);
   }
+  // The menu's workspace rows, so a phone, with no keys, can move between them too: "Next workspace"
+  // (or "Workspace 2 of 3: next"), and "Workspace before" when there is one.
+  function wsRows() {
+    const next = document.getElementById('wm-sys-wsnext'), prev = document.getElementById('wm-sys-wsprev');
+    if (!next || !prev) return;
+    const at = FoafOS.workspace;
+    next.querySelector('.wm-label').textContent = wsCount > 1 ? `Workspace ${at} of ${wsCount}: next` : 'Next workspace';
+    next.hidden = at >= 4 || (at === wsCount && !wsWins(at).length);
+    prev.hidden = at <= 1;
+  }
+  FoafOS.wsRows = wsRows;
   FoafOS.goWorkspace = (n) => {
     n = Math.max(1, Math.min(4, n | 0));
     if (n > wsCount) wsCount = n;
@@ -3204,6 +3215,7 @@ function buildUI() {
     const front = wsWins(n).filter((w) => !w.classList.contains('minimized')).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0))[0];
     if (front) FoafOS.raiseWindow(front);
     wsNote(`Workspace ${n} of ${wsCount}`);
+    wsRows();
     bus.publish('wm.workspace', { summary: `workspace ${n} of ${wsCount}`, n, count: wsCount });
     return n;
   };
@@ -3218,6 +3230,7 @@ function buildUI() {
     win.dataset.ws = String(n);
     win.classList.toggle('ws-away', n !== FoafOS.workspace);
     wsNote(`${win.querySelector('.foafos-window-bar span')?.textContent || 'Window'} moved to workspace ${n}`);
+    wsRows();
   };
   FoafOS.workspaces = () => ({ at: FoafOS.workspace, count: wsCount });
 

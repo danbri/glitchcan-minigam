@@ -567,6 +567,23 @@ try {
   check(await phone.page.evaluate(() => document.activeElement?.id === 'foafos-home'), 'All apps on a phone does not open the keyboard');
   check(await phone.page.evaluate(() => ['wm-sys-keys', 'wm-sys-move'].every((id) => getComputedStyle(document.getElementById(id)).display === 'none') && getComputedStyle(document.getElementById('wm-sys-desktop')).display !== 'none'),
     'a phone menu leaves out the rows that need a keyboard (Keys, Move or resize)');
+  // and a phone can move between workspaces from the menu, with no keys
+  const pws = await phone.page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    FoafOS.goWorkspace(1);
+    window.FinkWM._setCollapsed(false); await wait(100);
+    const nextRow = document.getElementById('wm-sys-wsnext');
+    const r = { nextShown: !nextRow.hidden, prevShown: !document.getElementById('wm-sys-wsprev').hidden };
+    nextRow.click(); await wait(200);
+    r.at = FoafOS.workspaces().at;
+    window.FinkWM._setCollapsed(false); await wait(100);
+    r.label = document.querySelector('#wm-sys-wsnext .wm-label').textContent;
+    r.prevNow = !document.getElementById('wm-sys-wsprev').hidden;
+    document.getElementById('wm-sys-wsprev').click(); await wait(200);
+    r.back = FoafOS.workspaces().at;
+    return r;
+  });
+  check(pws.nextShown && !pws.prevShown && pws.at === 2 && pws.prevNow && pws.back === 1, `on a phone the menu moves between workspaces (${JSON.stringify(pws)})`);
   // A long press on an app shows what it does, with Open and Pin, and does not open it
   await phone.page.evaluate(() => { document.getElementById('foafos-home')?.remove(); FoafOS.openHome(); });   // openHome toggles
   await phone.page.waitForTimeout(300);
