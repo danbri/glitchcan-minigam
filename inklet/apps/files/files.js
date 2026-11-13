@@ -101,6 +101,7 @@
   };
   // A bar for what is chosen and what is held, so all of it works without a keyboard (a phone):
   // Copy, Cut, Delete and Clear for the chosen; Paste here for what was copied or cut.
+  const heldAll = () => [...(held?.paths || []), ...(held?.folders || [])];
   function drawChooseBar() {
     let bar = $('choosebar');
     if (!bar) {
@@ -116,7 +117,7 @@
       chosen.size && !inArchive() ? btn('Cut', () => holdChosen(true)) : null,
       chosen.size && !inArchive() ? btn('Delete', askDeleteChosen, { class: 'tool danger' }) : null,
       chosen.size ? btn('Clear', () => { clearChosen(); say(folderSummary()); }) : null,
-      holding && !inArchive() ? btn(`Paste ${held.paths.length === 1 ? nameOf(held.paths[0]) : `${held.paths.length} files`} here`, () => pasteHeld(), { class: 'tool tool-main' }) : null,
+      holding && !inArchive() ? btn(`Paste ${heldAll().length === 1 ? nameOf(heldAll()[0]) : `${heldAll().length} items`} here`, () => pasteHeld(), { class: 'tool tool-main' }) : null,
     ].filter(Boolean));
   }
   // A click in the list or the icon view: with Ctrl or Cmd it adds or removes, with Shift it takes a run.
@@ -1035,7 +1036,7 @@
   });
   // A name in this folder that is not taken: "image.png", then "image 2.png".
   const freeName = (name) => {
-    const taken = new Set(items.map((i) => i.path));
+    const taken = new Set(items.map((i) => i.path.replace(/\/$/, '')));   // a folder's name counts as taken too
     const dot = name.lastIndexOf('.');
     const stem = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
     let n = 1, to;
@@ -1071,12 +1072,15 @@
   function holdPaths(paths, cut) {
     const its = paths.map((p) => items.find((i) => i.path === p)).filter(Boolean);
     const files = its.filter((i) => !i.container).map((i) => i.path);
-    if (!files.length) { say('Folders cannot be copied here yet; copy the files in it.', true); return null; }
+    // A copy takes folders and all that is in them; a cut moves files only, for now.
+    const folders = cut ? [] : its.filter((i) => i.container).map((i) => i.path);
+    if (!files.length && !folders.length) { say('Folders cannot be cut yet: copy the folder, or cut the files in it.', true); return null; }
     if (cut && inArchive()) { say('This is inside an archive, which is read only. Copy instead.', true); return null; }
-    const names = files.map(nameOf);
-    held = { paths: files, cut, name: names.join('\n') };
-    const what = files.length === 1 ? names[0] : `${files.length} files`;
-    const left = its.length - files.length ? ` (${its.length - files.length} folder${its.length - files.length === 1 ? '' : 's'} left out)` : '';
+    const names = [...files, ...folders].map(nameOf);
+    held = { paths: files, folders, cut, name: names.join('\n') };
+    const n = files.length + folders.length;
+    const what = n === 1 ? names[0] : `${n} items`;
+    const left = cut && its.length - files.length ? ` (${its.length - files.length} folder${its.length - files.length === 1 ? '' : 's'} left out: folders can be copied, not cut, yet)` : '';
     say(`${cut ? 'Cut' : 'Copied'} ${what}${left}. Paste in a folder to ${cut ? 'move' : 'put a copy'} there.`);
     drawChooseBar();
     return held;
@@ -1096,7 +1100,7 @@
   async function pasteHeld() {
     const h0 = held;
     queueMicrotask(drawChooseBar);
-    const what = h0.paths?.length === 1 ? nameOf(h0.paths[0]) : 'Those files';
+    const what = heldAll().length === 1 ? nameOf(heldAll()[0]) : 'Those files';
     if (h0.gone) { say(`${what} ${h0.paths?.length === 1 ? 'was' : 'were'} moved already.`); return; }
     if (h0.cut) {
       held = { ...h0, gone: true };
@@ -1108,6 +1112,10 @@
       return;
     }
     const made = [], not = [];
+    for (const src of h0.folders || []) {
+      const r = await copyTree(src, folder + freeName(nameOf(src)) + '/');
+      if (r.ok) { made.push(nameOf(r.to)); items.push({ path: r.to, container: true }); } else not.push(`${nameOf(src)} (${r.why})`);
+    }
     for (const p of h0.paths) {
       const got = await foafos.pod.get(p, { as: 'bytes' });
       const to = folder + freeName(nameOf(p));
@@ -1116,7 +1124,32 @@
     }
     await go(folder, { remember: false });
     say([made.length ? `Pasted ${made.length === 1 ? made[0] : `${made.length} files`}.` : '', not.length ? `Not pasted: ${not.join(', ')}.` : ''].filter(Boolean).join(' '), !made.length);
-    if (made.length === 1) pick({ path: folder + made[0], container: false });
+    if (made.length === 1 && !(h0.folders || []).length) pick({ path: folder + made[0], container: false });
+  }
+  // Copy a folder and everything in it, its own marker and empty folders too, never over
+  // anything that is there. Stops at 500 files or 50 MB, and says how far it got.
+  async function copyTree(src, to) {
+    if (to.startsWith(src)) return { ok: false, why: 'not into itself' };
+    const queue = [src];
+    let files = 0, bytes = 0;
+    while (queue.length) {
+      const dir = queue.shift();
+      const r = await list(dir);
+      if (!r.ok) return { ok: false, why: explain(r) };
+      const dest = to + dir.slice(src.length);
+      if (!r.items.some((i) => i.path.replace(/^\/+/, '') === '.folder')) await foafos.pod.put(`${dest}.folder`, '', { contentType: 'text/plain', ifNoneMatch: true });
+      for (const it of r.items) {
+        const path = dir + it.path.replace(/^\/+/, '');
+        if (it.container) { queue.push(path); continue; }
+        if (files >= 500 || bytes > 50 * 1024 * 1024) return { ok: false, to, why: `stopped after ${files} files: a copy takes at most 500 files or 50 MB` };
+        const got = await foafos.pod.get(path, { as: 'bytes' });
+        if (!got.ok) return { ok: false, why: `${nameOf(path)}: ${explain(got)}` };
+        const put = await foafos.pod.put(to + path.slice(src.length), got.body, { contentType: got.contentType || 'application/octet-stream', ifNoneMatch: true });
+        if (!put.ok) return { ok: false, why: `${nameOf(path)}: ${explain(put)}` };
+        files++; bytes += got.body?.byteLength ?? got.body?.length ?? 0;
+      }
+    }
+    return { ok: true, to, files };
   }
   document.addEventListener('paste', async (e) => {
     if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;

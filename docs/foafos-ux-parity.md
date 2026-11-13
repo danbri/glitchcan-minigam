@@ -34,7 +34,7 @@ The finish line this proposes: every item below is done, or the owner has struck
 | Archives open as folders (macOS, Windows, GNOME) | Done: #1026 |
 | Shift + arrows to extend a choice from the keyboard (desktops) | Done: this PR |
 | Undo the last move, copy or delete; or a Trash to take files back from (desktops, phones) | Open |
-| Copy a folder and what is in it (desktops) | Open |
+| Copy a folder and what is in it (desktops) | Done: this PR |
 | Folders you use often, kept in the side panel (Finder sidebar, Explorer Quick access) | Done: this PR |
 
 ## Task switching

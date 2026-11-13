@@ -728,6 +728,31 @@ try {
   await f.evaluate(async () => { await foafos.pod.delete('notes/fav/a.txt'); await window.__files.go('notes/'); });
   check(favShown.title && String(favShown.items) === '⭐ fav' && favW > 100 && favWent === 'notes/fav/' && !favAfter.title && favAfter.n === 0,
     `a folder kept in the side panel opens from there, and ✕ takes it off (${JSON.stringify({ favShown, favW, favWent, favAfter })})`);
+  // Copying a folder takes all that is in it, an empty folder too; a second paste goes beside the first
+  const tree = await f.evaluate(async () => {
+    await foafos.pod.put('notes/trip/.folder', '', { contentType: 'text/plain' });
+    await foafos.pod.put('notes/trip/a.txt', 'A', { contentType: 'text/plain' });
+    await foafos.pod.put('notes/trip/sub/b.txt', 'B', { contentType: 'text/plain' });
+    await foafos.pod.put('notes/trip/empty/.folder', '', { contentType: 'text/plain' });
+    const filter = document.getElementById('filter'); filter.value = ''; filter.dispatchEvent(new Event('input'));
+    await window.__files.go('notes/');
+    await new Promise((r) => setTimeout(r, 300));
+    document.querySelector('#items tbody tr[data-path="notes/trip/"]').focus();
+    const dt = new DataTransfer();
+    document.activeElement.dispatchEvent(new ClipboardEvent('copy', { clipboardData: dt, bubbles: true, cancelable: true }));
+    await window.__files.go('');
+    const paste = async () => { document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); await new Promise((r) => setTimeout(r, 900)); };
+    await paste(); await paste();
+    const body = async (p) => (await foafos.pod.get(p)).body ?? null;
+    const has = async (dir, name) => ((await foafos.pod.list(dir)).items || []).some((i) => i.path.replace(/^\/+/, '') === name);
+    const out = { a: await body('trip/a.txt'), b: await body('trip/sub/b.txt'), empty: await has('trip/', 'empty/'), a2: await body('trip 2/a.txt'), b2: await body('trip 2/sub/b.txt'),
+      orig: await body('notes/trip/a.txt'), said: document.getElementById('status').textContent };
+    for (const root of ['trip/', 'trip 2/', 'notes/trip/']) for (const p of ['a.txt', 'sub/b.txt', 'sub/.folder', 'empty/.folder', '.folder']) await foafos.pod.delete(root + p);
+    await window.__files.go('notes/');
+    return out;
+  });
+  check(tree.a === 'A' && tree.b === 'B' && tree.empty && tree.a2 === 'A' && tree.b2 === 'B' && tree.orig === 'A' && /Pasted trip 2/.test(tree.said),
+    `copying a folder takes all that is in it, and a second paste goes beside it (${JSON.stringify(tree)})`);
   // In a short window the side panel scrolls rather than squeezing: the preview keeps its room,
   // and nothing in the panel lies over anything else
   await page.setViewportSize({ width: 1000, height: 560 });
