@@ -57,6 +57,10 @@ export const APPS = [
       "pod:write",
       "storage"
     ],
+    "actions": [
+      "show",
+      "search"
+    ],
     "silent": true,
     "tools": true
   },
