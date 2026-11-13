@@ -429,6 +429,8 @@
       extras: () => reqVerb({ type: 'pod', verb: 'pod.extras' }),
       // For an app that manages the whole pod, such as Files. Others are refused.
       locations: () => reqVerb({ type: 'pod', verb: 'pod.locations' }),
+      // Save a file the app may read to this computer (the shell does it; apps cannot download).
+      download: (path) => reqVerb({ type: 'pod', verb: 'pod.download', params: { path } }, 60000),
       use: (id) => reqVerb({ type: 'pod', verb: 'pod.use', params: { id } }, 120000),
       addFolder: () => reqVerb({ type: 'pod', verb: 'pod.addFolder' }, 120000),
       handlers: (path, contentType) => reqVerb({ type: 'pod', verb: 'pod.handlers', params: { path, contentType } }),
