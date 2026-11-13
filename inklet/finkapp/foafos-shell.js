@@ -3421,6 +3421,45 @@ function buildUI() {
       if (zone) win._snap(zone);
       if (was) win._keepGeom();
     };
+    // Resize from any edge or corner, as on every desktop, not only the bottom-right corner:
+    // thin handles along the inside of each edge, for a mouse or a finger. A snapped window
+    // that is resized becomes a plain one. Hidden while maximised, minimised or in All windows.
+    for (const dir of ['n', 's', 'e', 'w', 'ne', 'nw', 'sw']) {
+      const hd = document.createElement('div');
+      hd.className = `foafos-wedge foafos-wedge-${dir}`;
+      hd.setAttribute('aria-hidden', 'true');
+      hd.addEventListener('pointerdown', (e) => {
+        if (win.classList.contains('maximized')) return;
+        e.preventDefault(); e.stopPropagation();
+        // Moves are heard on the document, so the drag goes on even where capture is refused.
+        try { hd.setPointerCapture(e.pointerId); } catch { /* the document hears it anyway */ }
+        FoafOS.raiseWindow(win);
+        const r = win.getBoundingClientRect();
+        const start = { x: e.clientX, y: e.clientY, l: r.left, t: r.top, w: r.width, h: r.height };
+        const move = (m) => {
+          if (m.pointerType === 'mouse' && m.buttons === 0) { up(); return; }   // a release that never came: stop, do not follow the pointer
+          const dx = m.clientX - start.x, dy = m.clientY - start.y;
+          let { l, t, w, h } = start;
+          if (dir.includes('e')) w = Math.max(200, Math.min(window.innerWidth - l, start.w + dx));
+          if (dir.includes('s')) h = Math.max(120, Math.min(window.innerHeight - t, start.h + dy));
+          if (dir.includes('w')) { w = Math.max(200, start.w - dx); l = Math.max(0, start.l + start.w - w); w = start.l + start.w - l; }
+          if (dir.includes('n')) { h = Math.max(120, start.h - dy); t = Math.max(0, start.t + start.h - h); h = start.t + start.h - t; }
+          Object.assign(win.style, { left: `${l}px`, top: `${t}px`, width: `${w}px`, height: `${h}px`, maxWidth: 'none', maxHeight: 'none' });
+        };
+        const up = () => {
+          document.removeEventListener('pointermove', move, true);
+          document.removeEventListener('pointerup', up, true);
+          document.removeEventListener('pointercancel', up, true);
+          win._unsnap = null; win._zone = null;
+          win.dataset.userSized = '1';
+          win._keepGeom();
+        };
+        document.addEventListener('pointermove', move, true);
+        document.addEventListener('pointerup', up, true);
+        document.addEventListener('pointercancel', up, true);
+      });
+      win.appendChild(hd);
+    }
     // A resize by the corner is kept once it settles.
     let resizeTimer = 0;
     new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (win.isConnected && win.dataset.userSized) win._keepGeom(); }, 300); }).observe(win);

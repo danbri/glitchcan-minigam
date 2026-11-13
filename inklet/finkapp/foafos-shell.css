@@ -1598,3 +1598,15 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .wm-keys-table td { padding: 7px 8px; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
 .wm-keys-table td:last-child { text-align: right; white-space: nowrap; }
 .wm-keys-table kbd { font: inherit; padding: 2px 6px; border-radius: 5px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); }
+
+/* Resize from any edge or corner (the bottom-right corner is the browser's own). */
+.foafos-wedge { position: absolute; z-index: 5; touch-action: none; }
+.foafos-wedge-n { top: 0; left: 10px; right: 10px; height: 5px; cursor: ns-resize; }
+.foafos-wedge-s { bottom: 0; left: 10px; right: 18px; height: 5px; cursor: ns-resize; }
+.foafos-wedge-e { right: 0; top: 10px; bottom: 18px; width: 5px; cursor: ew-resize; }
+.foafos-wedge-w { left: 0; top: 10px; bottom: 10px; width: 5px; cursor: ew-resize; }
+.foafos-wedge-ne { top: 0; right: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+.foafos-wedge-nw { top: 0; left: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+.foafos-wedge-sw { bottom: 0; left: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+.foafos-window.maximized > .foafos-wedge, .foafos-window.minimized > .foafos-wedge, .foafos-window.foafos-ov > .foafos-wedge { display: none; }
+@media (pointer: coarse) { .foafos-wedge-n, .foafos-wedge-s { height: 12px; } .foafos-wedge-e, .foafos-wedge-w { width: 12px; } }

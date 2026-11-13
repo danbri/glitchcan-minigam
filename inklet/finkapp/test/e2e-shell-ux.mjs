@@ -436,6 +436,28 @@ try {
   check(offer && offer.x >= 640 && offer.names.length >= 1 && filled === '640,0,640,800' && offered2 && dismissed,
     `snap assist offers the other windows for the other half, and fills it (${JSON.stringify({ offer, filled, offered2, dismissed })})`);
 
+  // Resize from any edge, in a page of its own: the left edge dragged left widens the window
+  // leftwards; the top edge dragged down makes it shorter from the top
+  {
+    const { ctx: ectx, page: ep } = await open({ width: 1280, height: 800 });
+    await ep.evaluate(() => FoafOS.launchApp('system'));
+    await ep.waitForTimeout(600);
+    await ep.evaluate(() => { const w = document.getElementById('foafos-session-win'); if (w.classList.contains('maximized')) w.querySelector('.foafos-window-max').click(); Object.assign(w.style, { left: '300px', top: '150px', width: '460px', height: '400px' }); FoafOS.raiseWindow(w); });
+    const ebox = () => ep.evaluate(() => { const r = document.getElementById('foafos-session-win').getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); });
+    const edgeAt = (dir) => ep.evaluate((d) => { const r = document.querySelector(`#foafos-session-win .foafos-wedge-${d}`).getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, dir);
+    const dragBy = async (pt, dx, dy) => { await ep.mouse.move(pt.x, pt.y); await ep.mouse.down(); await ep.mouse.move(pt.x + dx, pt.y + dy, { steps: 6 }); await ep.mouse.up(); await ep.waitForTimeout(150); };
+    const e0 = await ebox();
+    await dragBy(await edgeAt('w'), -60, 0);
+    const e1 = await ebox();
+    await dragBy(await edgeAt('n'), 0, 40);
+    const e2 = await ebox();
+    await dragBy(await edgeAt('e'), 30, 0);
+    const e3 = await ebox();
+    check(e1[0] === e0[0] - 60 && e1[2] === e0[2] + 60 && e1[1] === e0[1] && e2[1] === e1[1] + 40 && e2[3] === e1[3] - 40 && e2[0] === e1[0] && e3[2] === e2[2] + 30 && e3[0] === e2[0],
+      `a window resizes from its left, top and right edges (${e0} → ${e1} → ${e2} → ${e3})`);
+    await ectx.close();
+  }
+
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
   await page.waitForTimeout(400);
