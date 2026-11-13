@@ -131,6 +131,7 @@
       chosen.size ? h('span', { class: 'choose-n' }, `${chosen.size} chosen`) : null,
       chosen.size ? btn('Copy', () => holdChosen(false)) : null,
       chosen.size ? btn('Download', () => download([...chosen])) : null,
+      chosen.size && !inArchive() ? btn('Compress', () => compress([...chosen])) : null,
       chosen.size && !inArchive() ? btn('Cut', () => holdChosen(true)) : null,
       chosen.size && !inArchive() ? btn('Delete', askDeleteChosen, { class: 'tool danger' }) : null,
       chosen.size ? btn('Clear', () => { clearChosen(); say(folderSummary()); }) : null,
@@ -814,6 +815,7 @@
         h('button', { class: 'tool tool-main', type: 'button', on: { click: () => go(it.path) } }, 'Open'), backBtn, favBtn,
         h('button', { class: 'tool', type: 'button', on: { click: askRename } }, 'Rename'),
         h('button', { class: 'tool', type: 'button', on: { click: () => download([it.path]) } }, 'Download as .zip'),
+        inArchive() ? null : h('button', { class: 'tool', type: 'button', on: { click: () => compress([it.path]) } }, 'Compress'),
         h('button', { class: 'tool', type: 'button', on: { click: () => folderSize(it.path, mine, head) } }, 'Work out its size'),
         h('button', { class: 'tool danger', type: 'button', on: { click: askDelete } }, 'Delete')));
       markPicked();
@@ -1503,6 +1505,50 @@
     await addFiles(files);
   });
   // A name in this folder that is not taken: "image.png", then "image 2.png".
+  // Compress, as Finder's: a .zip of a folder or of what is chosen, made beside them, never over a
+  // file that is there (name.zip, then name 2.zip). Stored, not squeezed, as Download's zip is; up to
+  // 500 files or 50 MB. The zip writer is loaded only when first used.
+  let zipWriter = null;
+  async function compress(paths) {
+    zipWriter ||= await import(new URL('../../../packages/foafos/src/zip-write.mjs', location.href).href);
+    say('Making a .zip…');
+    const entries = [];
+    let bytes = 0;
+    for (const p of paths) {
+      const top = nameOf(p);
+      if (!p.endsWith('/')) {
+        const g = await foafos.pod.get(p, { as: 'bytes' });
+        if (!g.ok) { say(`Not compressed: ${top} (${explain(g)}).`, true); return; }
+        const data = new Uint8Array(g.body); bytes += data.length;
+        entries.push({ name: top, data });
+        continue;
+      }
+      const queue = [p];
+      while (queue.length) {
+        const dir = queue.shift();
+        const r = await list(dir);
+        if (!r.ok) { say(`Not compressed: ${explain(r)}.`, true); return; }
+        const kids = r.items.filter((i) => !hiddenName(i.path.replace(/\/$/, '').split('/').pop()));
+        if (!kids.length) entries.push({ name: `${top}/${dir.slice(p.length)}` });
+        for (const it of kids) {
+          const q = dir + it.path.replace(/^\/+/, '');
+          if (it.container) { queue.push(q); continue; }
+          if (entries.length >= 500 || bytes > 50 * 1024 * 1024) { say('Not compressed: more than 500 files or 50 MB.', true); return; }
+          const g = await foafos.pod.get(q, { as: 'bytes' });
+          if (!g.ok) { say(`Not compressed: ${nameOf(q)} (${explain(g)}).`, true); return; }
+          const data = new Uint8Array(g.body); bytes += data.length;
+          entries.push({ name: `${top}/${q.slice(p.length)}`, data });
+        }
+      }
+    }
+    const name = freeName(paths.length === 1 ? `${nameOf(paths[0])}.zip` : 'Archive.zip');
+    const put = await foafos.pod.put(folder + name, zipWriter.makeStoredZip(entries).buffer, { contentType: 'application/zip', ifNoneMatch: true });
+    if (!put.ok) { say(`Not compressed: ${explain(put)}.`, true); return; }
+    clearChosen();
+    await go(folder, { remember: false });
+    say(`Made ${name}.`);
+    pick({ path: folder + name, container: false });
+  }
   const freeName = (name) => {
     const taken = new Set(items.map((i) => i.path.replace(/\/$/, '')));   // a folder's name counts as taken too
     const dot = name.lastIndexOf('.');
