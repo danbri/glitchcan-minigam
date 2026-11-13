@@ -479,6 +479,18 @@ try {
     await ectx.close();
   }
 
+  // Ctrl ; d shows the desktop: every window put away; again, the same ones back, the front one in front
+  const openWins = () => page.evaluate(() => [...document.querySelectorAll('.foafos-window:not(.minimized)')].map((w) => w.dataset.wid).sort().join(','));
+  const dBefore = await openWins();
+  const dFront0 = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.style.zIndex === '2640')?.dataset.wid);
+  await keys(page, [';', 'd']);
+  const dAway = await openWins();
+  await keys(page, [';', 'd']);
+  const dBack = await openWins();
+  const dFront1 = await page.evaluate(() => [...document.querySelectorAll('.foafos-window')].find((w) => w.style.zIndex === '2640')?.dataset.wid);
+  check(dBefore.split(',').length >= 2 && dAway === '' && dBack === dBefore && dFront1 === dFront0,
+    `ctrl ; d shows the desktop, and again brings the same windows back (${dBefore} → "${dAway}" → ${dBack}; front ${dFront0} → ${dFront1})`);
+
   // Notices
   await page.evaluate(() => { FoafOS.pods.add({ id: 'uxpod', label: 'Ux pod', base: 'https://pod.example/', carriage: 'https', auth: 'bearer' }); FoafOS.pods.setAppsPod('uxpod'); });
   await page.waitForTimeout(400);

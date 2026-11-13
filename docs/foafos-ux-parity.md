@@ -7,7 +7,8 @@ whether foafos has each one. "Done" items name the pull request and are each cov
 in `inklet/finkapp/test/e2e-shell-ux.mjs` or `e2e-files-locations.mjs`. "Open" items are the
 next small steps.
 
-The finish line this proposes: every item below is done, or the owner has struck it out.
+The finish line this proposes: every item below is done, or the owner has struck it out. A second
+round of items was added once the first was done (2026-11-13); the owner may add more rows.
 
 ## File browser (Files)
 
@@ -86,3 +87,13 @@ The finish line this proposes: every item below is done, or the owner has struck
 | A notice that does not cover a phone's title bar, and stays in the menu | Done: #1052 |
 | Every action named for screen readers; keys shown beside menu rows | Done: #1003, and each step above |
 | Touch targets of about 44 px on touch screens | Done: window buttons, All apps, the bars above |
+
+## Second round
+
+| Feature | Status |
+|---|---|
+| Show the desktop: put every window away, and bring them all back (Win+D, F11 on a Mac, GNOME Super+D) | Done: this PR |
+| Keep a window on top of the others (GNOME, Windows PowerToys "Always on Top") | Open |
+| Files: play sound and video, and show PDFs, in the preview (Quick Look, phones) | Open |
+| Files: "Show in folder" from Recent, search and the Trash (desktops) | Open |
+| Workspaces: more than one desktop of windows (Spaces, virtual desktops, GNOME workspaces) | Open |

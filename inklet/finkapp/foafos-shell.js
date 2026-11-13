@@ -3161,6 +3161,24 @@ function buildUI() {
     requestAnimationFrame(() => { refitQueued = false; for (const w of document.querySelectorAll('.foafos-window')) w._refit?.(); });
   });
 
+  // Show the desktop, as Win+D, a Mac's F11 or GNOME's Super+D do: every window is put away, and
+  // the same keys again bring back just those, in the order they were stacked (Ctrl ; d).
+  let putAway = [];
+  FoafOS.showDesktop = () => {
+    const open = [...document.querySelectorAll('.foafos-window:not(.minimized)')].filter((w) => !w.classList.contains('foafos-ov'));
+    if (open.length) {
+      putAway = open.sort((a, b) => Number(a.style.zIndex || 0) - Number(b.style.zIndex || 0));
+      for (const w of putAway) w.querySelector('.foafos-window-min')?.click();
+      bus.publish('wm.desktop', { summary: `desktop shown: ${putAway.length} windows put away` });
+      return 'shown';
+    }
+    const back = putAway.filter((w) => w.isConnected && w.classList.contains('minimized'));
+    putAway = [];
+    for (const w of back) { w.querySelector('.foafos-window-min')?.click(); FoafOS.raiseWindow(w); }
+    if (back.length) bus.publish('wm.desktop', { summary: `${back.length} windows back` });
+    return back.length ? 'back' : null;
+  };
+
   // Snap the front window, for the keyboard.
   FoafOS.snapFront = (zone) => {
     const wins = [...document.querySelectorAll('.foafos-window:not(.minimized)')];
